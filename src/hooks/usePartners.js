@@ -13,20 +13,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
   getPairWeekSignals, getLastCheerSentOn, getLastCheerReceived,
-  deleteLocalPairSharedData,
+  deleteLocalPairSharedData, getPartnerSharedBlock, deleteLocalPartnerSharedBlock,
 } from '../lib/database';
 import { todayLocalKey } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
 import { computeSharedStreak, buildSharedWeeks } from '../lib/partners/sharedStreak';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, unpairPartner, blockPartner,
+  proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
 } from '../lib/partners/service';
 import { writeOwnWeekSignals } from '../lib/partners/weekSignalWriter';
 
 const EMPTY = {
   loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
-  canAdd: true, reload: () => {},
+  sharedBlock: null, canAdd: true, reload: () => {},
 };
 
 // Pick the partnership to surface: an active one first, else a pending invite,
@@ -62,12 +63,13 @@ export default function usePartners(userId, tier) {
       writeOwnWeekSignals(userId).catch(() => {});
 
       const partnerId = primary.memberA === userId ? primary.memberB : primary.memberA;
-      const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals] = await Promise.all([
+      const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals, sharedBlock] = await Promise.all([
         getPartnerWeekSignal(primary.id, partnerId),
         getPartnerWeekSignal(primary.id, userId),
         getLastCheerSentOn(primary.id, userId),
         getLastCheerReceived(primary.id, userId),
         getPairWeekSignals(primary.id),
+        getPartnerSharedBlock(primary.id),
       ]);
 
       // Shared streak: pair the two members' finished weeks by week_start.
@@ -79,7 +81,7 @@ export default function usePartners(userId, tier) {
         loading: false,
         partnership: primary,
         rowState: partnerRowState({ partnership: primary, partnerWeek }),
-        partnerWeek, myWeek, sharedStreak, lastReceived, canAdd,
+        partnerWeek, myWeek, sharedStreak, lastReceived, sharedBlock, canAdd,
         cheerEnabled: cheerAllowed({ lastSentOn, today: todayLocalKey() }),
         reload: load,
       });
@@ -120,6 +122,28 @@ export default function usePartners(userId, tier) {
 
   const block = useCallback(async (blockedId) => blockPartner(userId, blockedId), [userId]);
 
-  return { ...state, invite, redeem, cheer, unpair, block };
+  // ── Shared training block (Wave 5 C5 A2) — online ops, local view refresh ──
+  const proposeBlock = useCallback(async (pairId, blockName) => {
+    const r = await proposeSharedBlock(userId, { pairId, blockName });
+    await load();
+    return r;
+  }, [userId, load]);
+
+  const adoptBlock = useCallback(async (pairId) => {
+    const r = await adoptSharedBlock(userId, pairId);
+    await load();
+    return r;
+  }, [userId, load]);
+
+  const leaveBlock = useCallback(async (pairId) => {
+    const r = await leaveSharedBlock(userId, pairId);
+    // Same immediate-local-effect rule as unpair: the cloud row is gone, so
+    // clear the mirror now rather than waiting for the next pull.
+    if (r.ok) { try { await deleteLocalPartnerSharedBlock(pairId); } catch (_) { /* best-effort */ } }
+    await load();
+    return r;
+  }, [userId, load]);
+
+  return { ...state, invite, redeem, cheer, unpair, block, proposeBlock, adoptBlock, leaveBlock };
 }
 

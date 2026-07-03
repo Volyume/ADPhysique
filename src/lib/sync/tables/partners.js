@@ -150,6 +150,30 @@ export async function pullPartners(sb, { userId } = {}) {
       } else if (!isMissingTableError(cErr, 'partner_cheers')) {
         errors += 1; logSyncError('sync.tables.partners.pullCheers', cErr);
       }
+
+      // 4. Shared training block for active pairs (Wave 5 C5 A1). One row per
+      //    pair; a pair the cloud returns NO row for has no (or no longer a)
+      //    shared block, so the local mirror is cleared — the partner leaving
+      //    the block must propagate to this device. Benign-skip a missing
+      //    cloud table (migrate_100 not applied yet).
+      const { data: blocks, error: bErr } = await sb.from('partner_shared_blocks')
+        .select('*').in('pair_id', activePairIds);
+      if (!bErr) {
+        const withBlock = new Set();
+        for (const row of (blocks || [])) {
+          withBlock.add(row.pair_id);
+          try { await db.upsertPartnerSharedBlockFromCloud(row); applied += 1; } catch (e) {
+            errors += 1; logSyncError('sync.tables.partners.upsertSharedBlock', e);
+          }
+        }
+        for (const pairId of activePairIds) {
+          if (!withBlock.has(pairId)) {
+            try { await db.deleteLocalPartnerSharedBlock(pairId); } catch (_) { /* best-effort */ }
+          }
+        }
+      } else if (!isMissingTableError(bErr, 'partner_shared_blocks')) {
+        errors += 1; logSyncError('sync.tables.partners.pullSharedBlocks', bErr);
+      }
     }
 
     // NEW-002 rebuild: the pull is the only moment a cheer (or the partner's

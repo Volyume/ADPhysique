@@ -151,6 +151,85 @@ export async function pushWeekSignal(userId, { pairId, weekStart, planned, done,
   }
 }
 
+// ── Shared training block (Wave 5 C5 A1) ──
+// One row per pair; the ONLY user-chosen content is the display name the
+// proposer deliberately shares (capped at 80 characters). Never plan content:
+// no exercises, days, sets or weights cross the wire (§5; pinned by
+// partnerPrivacy.guard.test.js). block_ref is server-minted.
+
+/**
+ * Propose training the same block: replace any previous row for the pair with
+ * a fresh proposal (a new proposal means a new server-minted block_ref).
+ * Emits partner_block_proposed (derived only — never the name).
+ */
+export async function proposeSharedBlock(userId, { pairId, blockName } = {}) {
+  const c = getSupabaseClient();
+  const name = String(blockName ?? '').trim().slice(0, 80);
+  if (!c || !userId || !pairId || !name) return fail('offline');
+  try {
+    // Delete-then-insert rather than upsert so a re-proposal mints a fresh
+    // block_ref (the DB default) instead of inheriting the old block's id.
+    const { error: delErr } = await c.from('partner_shared_blocks')
+      .delete().eq('pair_id', pairId);
+    if (delErr) return fail(delErr);
+    const { error } = await c.from('partner_shared_blocks').insert({
+      pair_id: pairId,
+      block_name: name,
+      proposed_by: userId,
+      status: 'proposed',
+      updated_at: new Date().toISOString(),
+    });
+    if (error) return fail(error);
+    track(userId, 'partner_block_proposed', {})?.catch?.(() => {});
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/**
+ * Adopt the block the partner proposed. Only the non-proposer can flip it to
+ * active (enforced here by the proposer filter; membership by RLS). Emits
+ * partner_block_adopted.
+ */
+export async function adoptSharedBlock(userId, pairId) {
+  const c = getSupabaseClient();
+  if (!c || !userId || !pairId) return fail('offline');
+  try {
+    const { data, error } = await c.from('partner_shared_blocks')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('pair_id', pairId)
+      .eq('status', 'proposed')
+      .neq('proposed_by', userId)
+      .select('pair_id');
+    if (error) return fail(error);
+    if (!data?.length) return fail('not_adoptable');
+    track(userId, 'partner_block_adopted', {})?.catch?.(() => {});
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/**
+ * Leave (or withdraw) the shared block: the row is DELETED for both sides —
+ * the same deletion promise as unpair, scoped to the block. Either member.
+ * Emits partner_block_left.
+ */
+export async function leaveSharedBlock(userId, pairId) {
+  const c = getSupabaseClient();
+  if (!c || !userId || !pairId) return fail('offline');
+  try {
+    const { error } = await c.from('partner_shared_blocks')
+      .delete().eq('pair_id', pairId);
+    if (error) return fail(error);
+    track(userId, 'partner_block_left', {})?.catch?.(() => {});
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /**
  * Read the partner view: the user's partnerships plus, for active ones, both
  * sides' recent week signals and cheers. Server-authoritative; the UI renders

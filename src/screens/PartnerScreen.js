@@ -25,6 +25,7 @@ import { appAlert } from '../components/AppAlert';
 import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha, alpha } from '../styles/theme';
 import Card from '../components/Card';
 import usePartners from '../hooks/usePartners';
+import { getAllProgrammes } from '../lib/database';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
@@ -38,6 +39,7 @@ const SEES = [
   'A shared streak that you build together, counted in weeks rather than days.',
   'A rest week or a quiet week, which simply shows as "Resting". It never counts against either of you and it never breaks the streak.',
   'A cheer you can send each other once a day, so a good week never goes unnoticed.',
+  'If you choose to train the same block, the block\u2019s name is shared between you. Never what is inside it.',
 ];
 const NEVER_SEES = [
   'The weights you lifted, your sets and reps, or anything else from a session.',
@@ -54,6 +56,9 @@ export default function PartnerScreen({ route }) {
   const [streakOn, setStreakOn] = useState(true);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  // Shared training block (Wave 5 C5 A2): inline programme picker state.
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false);
+  const [programmes, setProgrammes] = useState(null);
 
   // A partner invite link (volyume://partner/<CODE> or
   // https://volyume.app/partner/<CODE>) routes here with the code in params.
@@ -146,6 +151,45 @@ export default function PartnerScreen({ route }) {
   async function handleCheer() {
     const reciprocal = p.partnerWeek?.weekMet || (p.partnerWeek?.done > 0);
     await p.cheer(p.partnership.id, !!reciprocal);
+  }
+
+  // ── Shared training block (Wave 5 C5 A2) ──
+  async function openBlockPicker() {
+    setBlockPickerOpen(true);
+    if (programmes === null) {
+      try {
+        const all = await getAllProgrammes(user.id);
+        setProgrammes(all || []);
+      } catch (e) {
+        logError('PartnerScreen.loadProgrammes', e, { userId: user?.id });
+        setProgrammes([]);
+      }
+    }
+  }
+
+  async function handleProposeBlock(name) {
+    setBlockPickerOpen(false);
+    const r = await p.proposeBlock(p.partnership.id, name);
+    if (!r.ok) {
+      logError('PartnerScreen.proposeBlock', new Error(r.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not suggest the block. Check your connection and try again.', { variant: 'error' });
+    }
+  }
+
+  async function handleAdoptBlock() {
+    const r = await p.adoptBlock(p.partnership.id);
+    if (!r.ok) {
+      logError('PartnerScreen.adoptBlock', new Error(r.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not join the block. Check your connection and try again.', { variant: 'error' });
+    }
+  }
+
+  async function handleLeaveBlock(kind) {
+    const r = await p.leaveBlock(p.partnership.id);
+    if (!r.ok) {
+      logError('PartnerScreen.leaveBlock', new Error(r.error || 'unknown'), { userId: user?.id, kind });
+      toast.show('Could not update the block. Check your connection and try again.', { variant: 'error' });
+    }
   }
 
   // Used by both "End partnership" (active) and the pending-invite "Cancel".
@@ -244,6 +288,101 @@ export default function PartnerScreen({ route }) {
               {p.lastReceived ? (
                 <Text style={styles.caption}>{partnerName} cheered you recently.</Text>
               ) : null}
+            </View>
+
+            {/* ── Shared training block (Wave 5 C5 A2) — the block's NAME is the
+                 only shared content; the week compare above already shows both
+                 sides' derived counts. ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Train the same block</Text>
+              <Card style={styles.card}>
+                {!p.sharedBlock && (
+                  <>
+                    <Text style={styles.blockPitch}>
+                      Suggest a block and, if {partnerName} joins it, the week
+                      counts above become your shared week on the same plan.
+                      Only the block&apos;s name is shared. Never what is inside it.
+                    </Text>
+                    {!blockPickerOpen ? (
+                      <TouchableOpacity
+                        style={styles.blockBtn} onPress={openBlockPicker}
+                        accessibilityRole="button" accessibilityLabel="Suggest a block"
+                      >
+                        <Ionicons name="barbell-outline" size={16} color={colors.primary} />
+                        <Text style={styles.blockBtnText}>Suggest a block</Text>
+                      </TouchableOpacity>
+                    ) : programmes === null ? (
+                      <ActivityIndicator color={colors.primary} />
+                    ) : programmes.length === 0 ? (
+                      <Text style={styles.caption}>No plans yet. Build or pick one in Plans first.</Text>
+                    ) : (
+                      programmes.map((prog) => (
+                        <TouchableOpacity
+                          key={prog.id} style={styles.blockOption}
+                          onPress={() => handleProposeBlock(prog.name)}
+                          accessibilityRole="button" accessibilityLabel={`Suggest ${prog.name}`}
+                        >
+                          <Text style={styles.blockOptionText} numberOfLines={1}>{prog.name}</Text>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </>
+                )}
+
+                {p.sharedBlock?.status === 'proposed' && p.sharedBlock.proposedBy === user?.id && (
+                  <>
+                    <Text style={styles.blockPitch}>
+                      You suggested {p.sharedBlock.blockName}. Waiting for {partnerName}.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.blockLeaveRow} onPress={() => handleLeaveBlock('withdraw')}
+                      accessibilityRole="button" accessibilityLabel="Withdraw suggestion"
+                    >
+                      <Text style={styles.blockLeaveText}>Withdraw suggestion</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {p.sharedBlock?.status === 'proposed' && p.sharedBlock.proposedBy !== user?.id && (
+                  <>
+                    <Text style={styles.blockPitch}>
+                      {partnerName} suggested training {p.sharedBlock.blockName} together.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.blockBtn} onPress={handleAdoptBlock}
+                      accessibilityRole="button" accessibilityLabel="Train this block too"
+                    >
+                      <Ionicons name="checkmark" size={16} color={colors.primary} />
+                      <Text style={styles.blockBtnText}>Train this block too</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.blockLeaveRow} onPress={() => handleLeaveBlock('decline')}
+                      accessibilityRole="button" accessibilityLabel="Not for me"
+                    >
+                      <Text style={styles.blockLeaveText}>Not for me</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {p.sharedBlock?.status === 'active' && (
+                  <>
+                    <View style={styles.blockActiveRow}>
+                      <Ionicons name="barbell-outline" size={16} color={colors.primary} />
+                      <Text style={styles.blockActiveText} numberOfLines={2}>
+                        You are both training {p.sharedBlock.blockName}. The week
+                        counts above are your shared week on it.
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.blockLeaveRow} onPress={() => handleLeaveBlock('leave')}
+                      accessibilityRole="button" accessibilityLabel="Leave this block"
+                    >
+                      <Text style={styles.blockLeaveText}>Leave this block</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </Card>
             </View>
 
             <TouchableOpacity style={styles.manageRow} onPress={confirmUnpair} accessibilityRole="button" accessibilityLabel="End partnership">
@@ -470,4 +609,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, justifyContent: 'center', minHeight: 44,
   },
   codeBtnText: { ...type.label, color: colors.primary },
+
+  // Shared training block
+  blockPitch: { ...type.body, color: colors.textPrimary, lineHeight: 21 },
+  blockBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    paddingVertical: spacing.sm, minHeight: 44,
+  },
+  blockBtnText: { ...type.label, color: colors.primary, fontSize: fontSize.sm },
+  blockOption: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.sm, minHeight: 44,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
+  },
+  blockOptionText: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
+  blockActiveRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  blockActiveText: { flex: 1, ...type.body, color: colors.textPrimary, lineHeight: 21 },
+  blockLeaveRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, minHeight: 44 },
+  blockLeaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
 });

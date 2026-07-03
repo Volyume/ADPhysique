@@ -1470,6 +1470,22 @@ const SCHEMA_MIGRATIONS = [
   // LIKE. FTS5 is compiled into the shipped SQLCipher build on both
   // platforms (verified 2026-07-02).
   [ensureFoodSearchIndex],
+  // Wave 5 C5 A1: the pair-scoped shared training block (one row per pair;
+  // block reference + display name + proposed|active — never plan content).
+  // Local mirror of cloud migrate_100; the sync handler populates it and the
+  // §5 purge paths (unpair, ended pair on pull, sign-out) clear it alongside
+  // signals + cheers. Additive + idempotent.
+  [
+    `CREATE TABLE IF NOT EXISTS partner_shared_blocks (
+      pair_id     TEXT PRIMARY KEY NOT NULL,
+      block_ref   TEXT,
+      block_name  TEXT NOT NULL,
+      proposed_by TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'proposed',
+      created_at  INTEGER,
+      updated_at  INTEGER NOT NULL DEFAULT 0
+    )`,
+  ],
 ];
 
 // E3 search: the FTS5 index DDL, exported as a named function so the
@@ -4824,6 +4840,41 @@ export async function upsertPartnerCheerFromCloud(row) {
   );
 }
 
+// ── Shared training block (Wave 5 C5 A1) ──
+// One row per pair: block reference + the display name the proposer chose to
+// share + proposed|active. Never plan content — the §5 contract holds.
+
+/** The pair's shared block row, or null. */
+export async function getPartnerSharedBlock(pairId) {
+  if (!pairId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
+  return row ? rowToCamel(row) : null;
+}
+
+export async function upsertPartnerSharedBlockFromCloud(row) {
+  if (!row?.pair_id || !row?.block_name) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_shared_blocks
+       (pair_id, block_ref, block_name, proposed_by, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.pair_id, row.block_ref ?? null, String(row.block_name).slice(0, 80),
+      row.proposed_by ?? '', row.status === 'active' ? 'active' : 'proposed',
+      _toMsLocal(row.created_at), _toMsLocal(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+/** Remove the pair's shared block locally (leave, or cloud says it is gone). */
+export async function deleteLocalPartnerSharedBlock(pairId) {
+  if (!pairId) return;
+  const d = await db();
+  await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
+}
+
 /** Local "what cloud rows exist for my pairs" — used to prune unpaired rows on pull. */
 export async function getLocalPartnershipIds(userId) {
   if (!userId) return [];
@@ -4845,6 +4896,7 @@ export async function deleteLocalPairSharedData(pairId) {
   const d = await db();
   await d.runAsync('DELETE FROM partner_cheers WHERE pair_id = ?', [pairId]);
   await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
+  await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
 }
 
 /** Wipe all local partner data (sign-out guard). */
@@ -4852,6 +4904,7 @@ export async function clearLocalPartners() {
   const d = await db();
   await d.runAsync('DELETE FROM partner_cheers');
   await d.runAsync('DELETE FROM partner_week_signals');
+  await d.runAsync('DELETE FROM partner_shared_blocks');
   await d.runAsync('DELETE FROM partnerships');
 }
 

@@ -14,6 +14,7 @@ jest.mock('../../telemetry/transport', () => {
 import { postEvent } from '../../telemetry/transport';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, blockPartner, unpairPartner,
+  proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
 } from '../service';
 
 function fakeClient(overrides = {}) {
@@ -33,6 +34,30 @@ function fakeClient(overrides = {}) {
       update: jest.fn(() => ({ eq: jest.fn(() => Promise.resolve({ error: null })) })),
     })),
     ...overrides,
+  };
+}
+
+// Chainable fake for the shared-block table ops (delete/insert/update with
+// eq/neq/select). Records every call so tests can assert the written row.
+function sharedBlockClient({ insertError = null, adopted = [{ pair_id: 'p1' }] } = {}) {
+  const calls = { inserted: [], deleted: 0, updated: [] };
+  const chain = (result) => {
+    const c = {
+      eq: jest.fn(() => c), neq: jest.fn(() => c),
+      select: jest.fn(() => Promise.resolve(result)),
+      then: (res, rej) => Promise.resolve(result).then(res, rej),
+    };
+    return c;
+  };
+  return {
+    _calls: calls,
+    rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    functions: { invoke: jest.fn(() => Promise.resolve({ data: { ok: true }, error: null })) },
+    from: jest.fn(() => ({
+      delete: jest.fn(() => { calls.deleted += 1; return chain({ data: null, error: null }); }),
+      insert: jest.fn((row) => { calls.inserted.push(row); return Promise.resolve({ error: insertError }); }),
+      update: jest.fn((row) => { calls.updated.push(row); return chain({ data: adopted, error: null }); }),
+    })),
   };
 }
 
@@ -67,6 +92,68 @@ describe('redeemPartnerInvite', () => {
     const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
     expect(r).toEqual({ ok: false, error: 'invite_invalid' });
     expect(postEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe('shared training block (Wave 5 C5 A1)', () => {
+  test('propose replaces any previous row and writes ONLY the §5-reviewed columns', async () => {
+    const c = sharedBlockClient();
+    _setClientForTests(c);
+    const r = await proposeSharedBlock('u1', { pairId: 'p1', blockName: '  X-Frame  ' });
+    expect(r.ok).toBe(true);
+    expect(c._calls.deleted).toBe(1); // re-proposal mints a fresh server ref
+    const row = c._calls.inserted[0];
+    expect(row).toEqual({
+      pair_id: 'p1',
+      block_name: 'X-Frame', // trimmed
+      proposed_by: 'u1',
+      status: 'proposed',
+      updated_at: expect.any(String),
+    });
+    // block_ref is server-minted, never client-written.
+    expect('block_ref' in row).toBe(false);
+    expect(postEvent).toHaveBeenCalledWith('u1', 'partner_block_proposed', expect.any(Object));
+  });
+
+  test('propose caps the shared name at 80 characters', async () => {
+    const c = sharedBlockClient();
+    _setClientForTests(c);
+    await proposeSharedBlock('u1', { pairId: 'p1', blockName: 'x'.repeat(200) });
+    expect(c._calls.inserted[0].block_name).toHaveLength(80);
+  });
+
+  test('propose with an empty name never writes', async () => {
+    const c = sharedBlockClient();
+    _setClientForTests(c);
+    const r = await proposeSharedBlock('u1', { pairId: 'p1', blockName: '   ' });
+    expect(r.ok).toBe(false);
+    expect(c.from).not.toHaveBeenCalled();
+  });
+
+  test('adopt flips proposed -> active and emits partner_block_adopted', async () => {
+    const c = sharedBlockClient();
+    _setClientForTests(c);
+    const r = await adoptSharedBlock('u2', 'p1');
+    expect(r.ok).toBe(true);
+    expect(c._calls.updated[0]).toMatchObject({ status: 'active' });
+    expect(postEvent).toHaveBeenCalledWith('u2', 'partner_block_adopted', expect.any(Object));
+  });
+
+  test('adopt fails closed when no proposed row matched (proposer cannot self-adopt)', async () => {
+    const c = sharedBlockClient({ adopted: [] });
+    _setClientForTests(c);
+    const r = await adoptSharedBlock('u1', 'p1');
+    expect(r).toEqual({ ok: false, error: 'not_adoptable' });
+    expect(postEvent).not.toHaveBeenCalled();
+  });
+
+  test('leave deletes the row for both sides and emits partner_block_left', async () => {
+    const c = sharedBlockClient();
+    _setClientForTests(c);
+    const r = await leaveSharedBlock('u1', 'p1');
+    expect(r.ok).toBe(true);
+    expect(c._calls.deleted).toBe(1);
+    expect(postEvent).toHaveBeenCalledWith('u1', 'partner_block_left', expect.any(Object));
   });
 });
 

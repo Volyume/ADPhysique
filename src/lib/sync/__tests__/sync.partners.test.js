@@ -20,6 +20,8 @@ jest.mock('../../database', () => ({
   upsertPartnerWeekSignalFromCloud: jest.fn(),
   upsertPartnerCheerFromCloud: jest.fn(),
   deleteLocalPairSharedData: jest.fn(),
+  upsertPartnerSharedBlockFromCloud: jest.fn(),
+  deleteLocalPartnerSharedBlock: jest.fn(),
 }));
 
 const dbMock = require('../../database');
@@ -32,6 +34,8 @@ beforeEach(() => {
   dbMock.upsertPartnerWeekSignalFromCloud.mockResolvedValue(undefined);
   dbMock.upsertPartnerCheerFromCloud.mockResolvedValue(undefined);
   dbMock.deleteLocalPairSharedData.mockResolvedValue(undefined);
+  dbMock.upsertPartnerSharedBlockFromCloud.mockResolvedValue(undefined);
+  dbMock.deleteLocalPartnerSharedBlock.mockResolvedValue(undefined);
 });
 
 describe('pushPartners', () => {
@@ -75,7 +79,7 @@ describe('pushPartners', () => {
 });
 
 describe('pullPartners', () => {
-  function makeSb({ partnerships = [], signals = [], cheers = [] } = {}) {
+  function makeSb({ partnerships = [], signals = [], cheers = [], blocks = [], blocksError = null } = {}) {
     return {
       from: jest.fn((table) => {
         if (table === 'partnerships') {
@@ -86,6 +90,9 @@ describe('pullPartners', () => {
         }
         if (table === 'partner_cheers') {
           return { select: () => ({ in: () => Promise.resolve({ data: cheers, error: null }) }) };
+        }
+        if (table === 'partner_shared_blocks') {
+          return { select: () => ({ in: () => Promise.resolve(blocksError ? { data: null, error: blocksError } : { data: blocks, error: null }) }) };
         }
         return { select: () => ({}) };
       }),
@@ -144,6 +151,42 @@ describe('pullPartners', () => {
     await pullPartners(sb, { userId: 'me' });
     expect(dbMock.deleteLocalPairSharedData).not.toHaveBeenCalled();
     expect(dbMock.upsertPartnerWeekSignalFromCloud).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Shared training block (Wave 5 C5 A1) ──
+  test('restores the shared block row for an active pair', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      blocks: [{ pair_id: 'pair1', block_ref: 'ref1', block_name: 'X-Frame', proposed_by: 'sam', status: 'proposed' }],
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    expect(dbMock.upsertPartnerSharedBlockFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ pair_id: 'pair1', block_name: 'X-Frame' }),
+    );
+    expect(dbMock.deleteLocalPartnerSharedBlock).not.toHaveBeenCalled();
+  });
+
+  test('INVARIANT: an active pair with NO cloud block row clears the local mirror (partner left the block)', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      blocks: [],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.deleteLocalPartnerSharedBlock).toHaveBeenCalledWith('pair1');
+    expect(dbMock.upsertPartnerSharedBlockFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('a missing partner_shared_blocks cloud table (migrate_100 unapplied) is benign, never an error', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      blocksError: { code: 'PGRST205', message: 'partner_shared_blocks not found' },
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    // Missing table must NOT clear local rows: absence of the table is not
+    // evidence the partner left the block.
+    expect(dbMock.deleteLocalPartnerSharedBlock).not.toHaveBeenCalled();
   });
 
   test('a missing cloud partnerships table is a benign skip', async () => {

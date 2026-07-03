@@ -38,6 +38,11 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   'planned_count', 'done_count', 'week_met', 'state',
   'blocker_id', 'blocked_id',
   'id', 'created_at', 'updated_at',
+  // Wave 5 C5 A1 (§5-reviewed): the shared training block row. block_name is
+  // the ONE piece of user-chosen content, deliberately shared by the proposer
+  // (80-char cap); status is proposed|active; block_ref is server-minted and
+  // never client-written. No plan content ever crosses.
+  'block_name', 'proposed_by', 'status',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the
