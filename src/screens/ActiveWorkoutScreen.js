@@ -1710,8 +1710,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 if (uid2) {
                   // eslint-disable-next-line global-require
                   require('../lib/widgets/writer').writeWidgetSnapshot(uid2).catch(() => {});
+                  // Pass the sender's SCOFF score so an outbound freeze (§5)
+                  // fires on SCOFF >= 2 with no open flag exactly as on an open
+                  // flag; the writer applies the Number.isFinite && >= 2 rule.
                   // eslint-disable-next-line global-require
-                  require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2).catch(() => {});
+                  require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2, useAppStore.getState().userProfile?.scoffScore).catch(() => {});
                   // S6: a session just landed, so lay the next activation-nudge
                   // stage (or clear it once activated). Self-guarding and
                   // best-effort; never blocks the finish flow.

@@ -128,8 +128,13 @@ export default function usePartners(userId, tier) {
         // code) is spent — drop it so a later empty state mints fresh.
         clearCachedInvite();
         // Keep my own week signal current for the partner's ticks (fire-and-
-        // forget; the workout-finish path and sync layer also drive this).
-        writeOwnWeekSignals(userId).catch(() => {});
+        // forget; the workout-finish path and sync layer also drive this). Pass
+        // the sender's SCOFF score so an outbound freeze (§5) fires on SCOFF >= 2
+        // with no open flag exactly as it does on an open flag — the writer
+        // applies the Number.isFinite && >= 2 convention internally.
+        // eslint-disable-next-line global-require
+        const scoffScore = require('../store/useAppStore').default.getState().userProfile?.scoffScore;
+        writeOwnWeekSignals(userId, scoffScore).catch(() => {});
       }
 
       const pairs = await Promise.all(activeList.map((p) => enrichPair(p, userId)));
@@ -174,6 +179,12 @@ export default function usePartners(userId, tier) {
   }, [userId]);
 
   const redeem = useCallback(async (code) => {
+    // Cap guard on the redeem path itself (free = 1, pro = 3): every caller
+    // inherits it, not just the surfaces that happen to gate around it. Read the
+    // live active count so a just-synced pairing counts. Refuse before the RPC
+    // when at the limit; the caller surfaces the calm at-limit toast.
+    const activeCount = await getActivePartnerCount(userId).catch(() => 0);
+    if (!canAddPartner({ tier, activeCount })) return { ok: false, error: 'at_cap' };
     const r = await redeemPartnerInvite(userId, code);
     if (r.ok) {
       clearCachedInvite();
@@ -181,7 +192,7 @@ export default function usePartners(userId, tier) {
       await load();
     }
     return r;
-  }, [userId, load]);
+  }, [userId, tier, load]);
 
   const cheer = useCallback(async (pairId, reciprocal) => {
     const r = await sendCheer(userId, { pairId, reciprocal });

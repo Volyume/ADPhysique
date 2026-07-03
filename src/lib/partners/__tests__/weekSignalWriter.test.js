@@ -66,6 +66,25 @@ describe('computeCurrentWeekState', () => {
     expect(ws.hitPb).toBe(true);
   });
 
+  test('SCOFF >= 2 with NO open flag freezes outbound to resting, both booleans false', async () => {
+    db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 }); // live training
+    db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
+    meso.getBlockStatus.mockReturnValue({ status: 'complete' }); // would be true
+    db.getWeeklyPRCount.mockResolvedValue(3); // would be true
+    db.getOpenEdPatternFlag.mockResolvedValue(null); // NO open flag
+    const ws = await computeCurrentWeekState('u1', 2); // SCOFF >= 2 is the only lever
+    expect(ws.state).toBe('resting');
+    expect(ws.weekMet).toBe(true); // resting counts as met (never a fail)
+    expect(ws.completedBlock).toBe(false);
+    expect(ws.hitPb).toBe(false);
+  });
+
+  test('SCOFF below 2 with no flag does NOT freeze', async () => {
+    db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
+    const ws = await computeCurrentWeekState('u1', 1);
+    expect(ws.state).toBe('training');
+  });
+
   test('ED FREEZE forces BOTH milestone booleans false, even with a block + PB', async () => {
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });

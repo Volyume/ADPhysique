@@ -1,8 +1,8 @@
 /**
  * PartnerScreen (Step B rebuild) — the premium partner destination.
  * DESIGN-SPEC B2-B7. usePartners is mocked so each state shape is driven
- * directly; the moments module is mocked (virtual) so the parallel C3
- * dependency can never break this suite.
+ * directly; the moments module is mocked so this suite never depends on the
+ * real C3 module's behaviour.
  *
  * Pins:
  *  - multiple active pairs render as isolated cards, in paired-at order;
@@ -45,12 +45,20 @@ jest.mock('../../lib/partners/telemetry', () => ({
 
 const mockGetVisibleMoments = jest.fn(async () => []);
 const mockMarkMomentSeen = jest.fn(async () => {});
+// NOTE: no { virtual: true }. src/lib/partners/moments.js now resolves (C3
+// landed it), and a virtual mock on a RESOLVABLE module poisons Jest's
+// worker-level resolver cache under --runInBand: once an earlier suite
+// (screen-mount, which requires every screen) resolves the real module, this
+// virtual marker no longer intercepts and PartnerScreen loads the real module
+// (getVisibleMoments -> []), so the moment never renders. A plain mock is
+// order-independent. See src/__tests__/screen-mount.test.js lines 32-42.
 jest.mock('../../lib/partners/moments', () => ({
   getVisibleMoments: (...a) => mockGetVisibleMoments(...a),
   markMomentSeen: (...a) => mockMarkMomentSeen(...a),
-}), { virtual: true });
+}));
 
 import PartnerScreen from '../PartnerScreen';
+import { PARTNER_PRIVACY_NOTICE_VERSION } from '../../lib/partners/consent';
 
 function pair(overrides = {}) {
   return {
@@ -181,6 +189,26 @@ describe('milestone moment slot', () => {
     // The moment card carries its own cheer affordance.
     expect(findPress(tree, 'Send a cheer').length).toBeGreaterThan(0);
   });
+
+  test('a moment replaces the standing cheer row rather than adding a second', async () => {
+    // No moment: the standing cheer row is the pair's single cheer surface.
+    mockGetVisibleMoments.mockResolvedValue([]);
+    mockHook.value = base({ pairs: [pair({ cheerEnabled: true })] });
+    const withoutMoment = findPress(await mount(), 'Send a cheer').length;
+
+    // With a moment: the moment IS that day's cheer surface, so the standing
+    // row is hidden and the pair still shows exactly one cheer affordance, not
+    // a duplicated pair. (findPress counts each touchable more than once, so we
+    // compare the two mounts rather than pin an absolute number.)
+    mockGetVisibleMoments.mockResolvedValue([
+      { id: 'm1', pairId: 'p1', kind: 'streak_week_kept', line: 'Another week you both showed up.', atMs: Date.now() },
+    ]);
+    mockHook.value = base({ pairs: [pair({ cheerEnabled: true })] });
+    const withMoment = findPress(await mount(), 'Send a cheer').length;
+
+    expect(withoutMoment).toBeGreaterThan(0);
+    expect(withMoment).toBe(withoutMoment);
+  });
 });
 
 describe('empty state', () => {
@@ -256,6 +284,16 @@ describe('invite journey', () => {
     Linking.canOpenURL.mockRestore();
     Linking.openURL.mockRestore();
     Share.share.mockRestore();
+  });
+
+  test('beat 2 pins the notice version derived from the consent constant', async () => {
+    mockHook.value = base({ pairs: [] });
+    const tree = await mount();
+    await press(tree, 'Invite someone you train with');
+    await press(tree, 'Continue');
+    expect(allText(tree)).toContain(
+      `Pairing means you both agree to share this, and only this. Notice v${PARTNER_PRIVACY_NOTICE_VERSION}.`,
+    );
   });
 });
 

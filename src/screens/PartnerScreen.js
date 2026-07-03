@@ -38,6 +38,7 @@ import { getAllProgrammes } from '../lib/database';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
+import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -201,7 +202,12 @@ function PairCard({ pair, moment, onCheer, onManage, onOpenBlock }) {
         </TouchableOpacity>
       ) : null}
 
-      <CheerPill enabled={pair.cheerEnabled} onPress={() => onCheer(pair)} style={styles.cheerRowAlign} />
+      {/* The moment IS that day's cheer surface (it carries its own pill), so
+          the standing cheer row is hidden while a moment shows; it returns as
+          the pair's cheer affordance when no moment is visible. */}
+      {moment ? null : (
+        <CheerPill enabled={pair.cheerEnabled} onPress={() => onCheer(pair)} style={styles.cheerRowAlign} />
+      )}
     </Card>
   );
 }
@@ -381,7 +387,9 @@ export default function PartnerScreen({ route }) {
     const r = await p.redeem(toRedeem);
     setBusy(false);
     if (!r.ok) {
-      if (r.error === 'consent_failed') {
+      if (r.error === 'at_cap') {
+        toast.show('You are at your partner limit.', { variant: 'error' });
+      } else if (r.error === 'consent_failed') {
         toast.show('We could not record your agreement to share. Please try again.', { variant: 'error' });
       } else {
         toast.show('That invite did not work. It may have expired or already been used.', { variant: 'error' });
@@ -737,7 +745,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
             <EntranceView key="beat2" duration={motion.enter} style={styles.beat}>
               <PartnerPrivacyReceipt />
               <Text style={styles.beatConsent}>
-                Pairing means you both agree to share this, and only this. Notice v1.
+                Pairing means you both agree to share this, and only this. Notice v{PARTNER_PRIVACY_NOTICE_VERSION}.
               </Text>
               <TouchableOpacity
                 style={[styles.primaryBtn, minting && styles.primaryBtnDisabled]}
