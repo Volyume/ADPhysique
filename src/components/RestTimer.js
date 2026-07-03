@@ -34,7 +34,7 @@ import {
 } from '../lib/notifications/restForeground';
 
 // E6A: the exact-alarm ask happens exactly once per install, in context (the
-// first rest), and never again after either answer — the permanent surface
+// first rest), and never again after either answer, the permanent surface
 // is the Settings row. Keyed device-locally.
 const EXACT_ALARM_PROMPTED_KEY = '@volyume_exact_alarm_prompted';
 
@@ -156,7 +156,7 @@ export default function RestTimer() {
 
   // Persistent lock-screen notification with action buttons. Posted ONCE per
   // rest, and again only when the rest is re-anchored (a ±15s adjust changes
-  // restTimerEndsAt) — deliberately NOT re-presented every tick. It shows a
+  // restTimerEndsAt), deliberately NOT re-presented every tick. It shows a
   // static "Ends HH:MM"; the old per-second re-post flickered the shade, ran
   // ~half a second behind the in-app timer, and froze at its last value when
   // the app was backgrounded (JS suspends). Dismissed the moment the rest is no
@@ -221,7 +221,7 @@ export default function RestTimer() {
   // late; granting exact-alarm access makes it second-accurate with no other
   // change (expo-notifications upgrades automatically). Asked once ever, in
   // context, and only when the rest alert itself is on; either answer is
-  // final here — the Settings row remains for later.
+  // final here, the Settings row remains for later.
   // P9 TalkBack: one spoken edge when the rest begins (the per-second live
   // region is gone; see the timer-row comment below).
   useEffect(() => {

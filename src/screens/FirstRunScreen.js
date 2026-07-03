@@ -67,6 +67,7 @@ export default function FirstRunScreen({ navigation }) {
           onChangeText={setFirstName}
           placeholder="First name"
           placeholderTextColor={colors.textMuted}
+          accessibilityLabel="First name"
           autoCapitalize="words"
           autoCorrect={false}
           returnKeyType="go"

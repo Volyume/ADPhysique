@@ -55,7 +55,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [calm, setCalm] = useState(false);
   // Compare (enhancement B6): pick exactly two photos, view them side by side.
   // Local-only like the rest of the screen; the comparison shows dates and the
-  // photos themselves, nothing else (no deltas, measurements or judgements —
+  // photos themselves, nothing else (no deltas, measurements or judgements,
   // this surface is body-image adjacent, see CLAUDE.md ED-safety rules).
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState([]); // photo names, in tap order, max two

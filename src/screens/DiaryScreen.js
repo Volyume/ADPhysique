@@ -189,7 +189,7 @@ export default function DiaryScreen({ navigation }) {
   // day plan is ~6 meals of several foods each, so counting entries made the
   // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
   // Hostile review (E10 #4): in read-only, unconfirmed meal-plan scaffolding
-  // (is_planned = 1) must not read as food the user ate — it can never be
+  // (is_planned = 1) must not read as food the user ate, it can never be
   // confirmed or cleared from a view-only diary. Filter it from everything
   // the read-only state displays; the Pro diary is untouched.
   const viewEntries = useMemo(
@@ -469,7 +469,7 @@ export default function DiaryScreen({ navigation }) {
 
   // Wave A C7 (2026-07-03): two long-press-only fast paths had no visible
   // affordance for a sighted user (accessibilityHint/accessibilityLabel only)
-  // — holding a food row to edit its portion (FoodSearchScreen's "add again"
+  //, holding a food row to edit its portion (FoodSearchScreen's "add again"
   // rows) or to start multi-select here, and holding the water +/- to move
   // 500ml instead of 250. Each gets a single one-time caption, same
   // '@volyume_seen_*' convention as ActiveWorkoutScreen's info-button tip:
@@ -582,12 +582,12 @@ export default function DiaryScreen({ navigation }) {
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
   function gotoToday()     { setSelectedDate(isoDate(new Date())); }
 
-  // C5: a horizontal swipe on the diary body is a second way to change day —
+  // C5: a horizontal swipe on the diary body is a second way to change day,
   // the chevrons (day pager row below) stay as-is. Fling only activates on a
   // fast, predominantly-horizontal flick past its own threshold, so it never
   // contests the vertical ScrollView (or its pull-to-refresh) underneath it;
   // no simultaneous/waitFor wiring needed. Swipe LEFT reads as "go forward"
-  // (next day), swipe RIGHT as "go back" (previous day) — the same sense as
+  // (next day), swipe RIGHT as "go back" (previous day), the same sense as
   // paging through a calendar or photo gallery.
   //
   // Latest-ref pattern (same idiom as the VolyumeChart scrub gesture,
@@ -685,7 +685,7 @@ export default function DiaryScreen({ navigation }) {
   }, [selectionMode, selectedIds]);
 
   // Wave A C7: entering selection mode only ever happens via the long-press
-  // this hint is teaching, so it's the discovery signal — watched here rather
+  // this hint is teaching, so it's the discovery signal, watched here rather
   // than added inside enterSelection itself, so the long-press -> selection
   // wiring is untouched.
   useEffect(() => {
@@ -719,7 +719,7 @@ export default function DiaryScreen({ navigation }) {
   // Optimistic delete + Undo (food audit F-1). Rows are soft-deleted, so the
   // toast's Undo restores them; no confirm dialog (Toast reserves Alert for
   // account-level destructive actions). If the toast times out the rows simply
-  // stay deleted — the commit already happened.
+  // stay deleted, the commit already happened.
   const doDeleteSelected = useCallback(async () => {
     const sel = selectedEntries();
     if (sel.length === 0 || !canWrite()) return;
@@ -952,7 +952,7 @@ export default function DiaryScreen({ navigation }) {
       {/* C5: GestureDetector wraps the day content so a horizontal swipe
           changes day the same way the chevrons do (Directions.LEFT = next,
           Directions.RIGHT = previous). The chevrons and every touchable
-          inside are untouched — Fling only wins the gesture race on a fast
+          inside are untouched, Fling only wins the gesture race on a fast
           horizontal flick, so ordinary taps/scrolls pass straight through. */}
       <GestureDetector gesture={daySwipe}>
       <ScrollView
@@ -1187,7 +1187,7 @@ export default function DiaryScreen({ navigation }) {
                   <Ionicons name="add" size={18} color={colors.textSecondary} />
                   <Text style={styles.addMealLabel}>Add meal</Text>
                 </TouchableOpacity>
-                {/* Persistent route to the meal plan (and its swap) — previously
+                {/* Persistent route to the meal plan (and its swap), previously
                     only reachable from the empty-diary state, so once anything
                     was logged the plan + swap became unreachable from Today. */}
                 <TouchableOpacity
@@ -1204,8 +1204,8 @@ export default function DiaryScreen({ navigation }) {
           </>
         )}
 
-        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Moved down here —
-            below the meals / build-a-plan actions and just above water — so it
+        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Moved down here,
+            below the meals / build-a-plan actions and just above water, so it
             sits with the day's other food actions instead of competing with the
             ring at the top (founder 2026-06-20). Only when banking is allowed
             (not floored / cycling / refeed / ED flag). */}
@@ -1334,7 +1334,7 @@ export default function DiaryScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setMovePickerVisible(false)}
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setMovePickerVisible(false)}>
+        <Pressable style={styles.moveBackdrop} onPress={() => setMovePickerVisible(false)} accessibilityRole="button" accessibilityLabel="Close">
           <View style={styles.moveCard}>
             <Text style={styles.moveTitle}>Move to</Text>
             {mealSlots.map((s) => (
@@ -1358,7 +1358,7 @@ export default function DiaryScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setSaveMealItems(null)}
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setSaveMealItems(null)}>
+        <Pressable style={styles.moveBackdrop} onPress={() => setSaveMealItems(null)} accessibilityRole="button" accessibilityLabel="Close">
           <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
             <Text style={styles.moveTitle}>Save as meal</Text>
             <Text style={styles.saveMealHint}>
@@ -1394,7 +1394,7 @@ export default function DiaryScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setCopyDays(null)}
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setCopyDays(null)}>
+        <Pressable style={styles.moveBackdrop} onPress={() => setCopyDays(null)} accessibilityRole="button" accessibilityLabel="Close">
           <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
             <Text style={styles.moveTitle}>Copy a previous day</Text>
             {copyDays && copyDays.length === 0 ? (

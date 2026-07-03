@@ -35,7 +35,7 @@ import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 import { localWeekStartMs } from '../lib/dayKey';
 
-// COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
+// COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan,
 // no comparison, no rank. Founder copy review at PR.
 const STREAK_MILESTONE_COPY = {
   4: '4 weeks of showing up.',
@@ -326,8 +326,8 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   // R3 lifetime-stats panel: total reps performed across every working set
   // ever logged. Derived from the already-loaded set list (no new query),
-  // using the same filter as getLifetimeTonnage — warmups excluded, only
-  // sets with a positive weight and reps — so reps and tonnage describe the
+  // using the same filter as getLifetimeTonnage, warmups excluded, only
+  // sets with a positive weight and reps, so reps and tonnage describe the
   // same body of work.
   const lifetimeReps = useMemo(() => {
     let total = 0;
@@ -340,7 +340,7 @@ export default function AnalyticsScreen({ navigation, route }) {
     return total;
   }, [allSets]);
 
-  // COMP-005: ephemeral recap card — for the first 7 days of the month, once
+  // COMP-005: ephemeral recap card, for the first 7 days of the month, once
   // the user has unlocked recaps, a one-line nudge at the top of the insight
   // stack. Dismissable; gone after first open or day 7 (per-month key).
   const [recapCardHidden, setRecapCardHidden] = useState(true);
@@ -393,8 +393,8 @@ export default function AnalyticsScreen({ navigation, route }) {
         <ScreenHeader title="Progress" />
 
         {/* ── A5 dashboard opener (design audit 03): one large owned
-            visual — the weekly training-load hero with this week
-            highlighted and a display-size numeral — then sessions and
+            visual, the weekly training-load hero with this week
+            highlighted and a display-size numeral, then sessions and
             new-bests as two half-width sparkline cards. Free-safe training
             data only (tonnage, sessions, PRs); weight stays on its
             existing Pro trend card further down. Held back until there
@@ -435,7 +435,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         )}
 
         {/* ── This week (COMP-018): the one-glance answer to "am I on
-            track?" — sessions this week and the run state, directly under
+            track?", sessions this week and the run state, directly under
             the training-load hero. Free for all tiers; self-hides for a
             brand-new user and under an open wellbeing flag. ── */}
         {weeklyStreak.render && (
@@ -505,7 +505,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Phase-2 lifetime-tonnage landmark — independent of the streak strip.
+        {/* Phase-2 lifetime-tonnage landmark, independent of the streak strip.
             T9 (world-class audit 2026-07-03, identity-copy sweep): matches the
             "showing up" identity register the streak-milestone copy above
             already uses, rather than a bare number with a generic label. */}
@@ -696,7 +696,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             opens. */}
 
         {/* ── Lifetime totals (R3): a standing read-only panel of all-time
-            numbers — sessions, total weight lifted, total reps. No
+            numbers, sessions, total weight lifted, total reps. No
             comparison, no rank; just your own running totals. Self-hides
             until there is something logged. ── */}
         {hasData && completedWorkoutCount > 0 && (
@@ -819,8 +819,8 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 // Compact landing read for weekly volume. The full per-muscle picture lives on
 // the heatmap (the one volume home); this is a glanceable summary that drills
 // in: how many muscles were trained, how many sit outside their target, and
-// (A5) an inline stacked bar — one segment per trained muscle, sized by its
-// working sets and coloured through the volumeStatusColor grammar — so the
+// (A5) an inline stacked bar, one segment per trained muscle, sized by its
+// working sets and coloured through the volumeStatusColor grammar, so the
 // week's volume shape is visible without leaving the dashboard.
 function VolumeSummaryStrip({ volume, loading, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
@@ -898,7 +898,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
 
 // A5 hero: the dashboard opens on weekly training load (tonnage) over the
 // last 8 rolling weeks, drawn with the app's one chart engine (VolyumeChart's
-// bar variant — scrub haptics already no-op under Reduce Motion). The
+// bar variant, scrub haptics already no-op under Reduce Motion). The
 // display-size numeral reads the week under the finger while scrubbing and
 // the current week otherwise. Scrub state lives here so a scrub re-renders
 // this card only, never the whole screen (F7).
@@ -970,7 +970,7 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
 
 // A5 half-width sparkline card: a headline numeral over a compact 30-day
 // weekly series, doubling as the door to its detail screen. Free-safe
-// training data only (sessions, PRs) — never weight or calories.
+// training data only (sessions, PRs), never weight or calories.
 function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
   const [chartW, setChartW] = useState(0);
   return (

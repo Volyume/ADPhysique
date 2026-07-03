@@ -12,7 +12,7 @@ export default function LoginScreen() {
   // Apple/Google only. The email + password form was removed (founder
   // 2026-07-01): email confirmation was flaky and left users stranded on the
   // "check your email" step. OAuth needs no verification round-trip. Sign-up vs
-  // sign-in is not a distinction here — Apple/Google either create the account
+  // sign-in is not a distinction here, Apple/Google either create the account
   // or sign into the existing one, and RootNavigator's onAuthStateChange drives
   // all new-account routing (restoreSessionFromCloud + refreshTierFromCloud),
   // cross-user wipe, and the Article 9 consent gate. No anonymous mode
@@ -81,7 +81,7 @@ export default function LoginScreen() {
             onGoogle={() => handleOAuth('google')}
             disabled={loading}
           />
-          {/* A7: the only affordance while waiting was dimmed buttons — no
+          {/* A7: the only affordance while waiting was dimmed buttons, no
               indication anything is actually happening. A calm caption names
               what's in progress. */}
           {loading ? (

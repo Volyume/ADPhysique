@@ -92,7 +92,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
   async function activatePro(supabaseUserId, { isNew }) {
     // E12 step 1: profile mirrors to cloud via the registry runner (the
     // legacy per-save syncProfile dual writer is retired; its is_beta_tester
-    // soft tag went with it — the beta window is over and tier is
+    // soft tag went with it, the beta window is over and tier is
     // server-owned regardless).
     syncAll({ userId: supabaseUserId, localUserId: user?.id, triggeredBy: 'write' }).catch(() => {});
     if (isNew) {
@@ -175,7 +175,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
     }
     if (cascade.canStillTrial(userProfile)) {
       // The SERVER owns trial entitlement (users_profile.trial_state); the
-      // local read above can be stale — e.g. an account whose earlier
+      // local read above can be stale, e.g. an account whose earlier
       // deletion never cleared the server row still holds a consumed trial
       // (founder repro 2026-07-02). So branch on what start_cascade actually
       // returns instead of assuming it granted one. The old code swallowed
@@ -198,7 +198,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       const trialLive = ts === 'pro_trial_active' || ts === 'complete_trial_active';
       if (!trialLive) {
         // already_started with a consumed/expired state: this account cannot
-        // trial again. Fall through to the honest path, the Play purchase —
+        // trial again. Fall through to the honest path, the Play purchase,
         // Google's own intro-offer eligibility still gives an eligible buyer
         // their free week. startCascade mirrored the true trial_state into
         // the local profile, so canStillTrial and the CTA label correct

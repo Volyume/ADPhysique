@@ -25,7 +25,7 @@ export default function MealSection({
   const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
   // GAP #5: one-tap "usuals". Only on an empty slot (a slot with food doesn't
   // need the prompt) and never in selection mode (the card is a target then).
-  // E10 read-only lapse views: never in read-only either — logging a usual is
+  // E10 read-only lapse views: never in read-only either, logging a usual is
   // a write.
   const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on

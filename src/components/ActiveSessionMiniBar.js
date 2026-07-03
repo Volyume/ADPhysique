@@ -1,5 +1,5 @@
 /**
- * ActiveSessionMiniBar — the E15 flagship (greenlit 2026-07-02; design in
+ * ActiveSessionMiniBar, the E15 flagship (greenlit 2026-07-02; design in
  * audit/e15-signature-elements.md §1).
  *
  * A docked bar pinned directly above the tab bar on every tab while a
@@ -13,12 +13,12 @@
  * Performance contract (the §1 Android-honest note): this renders on every
  * frame of every screen mid-session, so the per-second rest tick is
  * isolated in the self-subscribing MiniBarStatus child (the HeaderRestChip
- * pattern) — only that slot re-renders per tick, never the bar or the app
+ * pattern), only that slot re-renders per tick, never the bar or the app
  * shell. The live-dot pulse is a single UI-thread opacity loop.
  *
  * Reduce Motion: appears/disappears instantly, the dot is static, the
  * countdown still ticks (a countdown is information, not decoration).
- * Calm/ED: exercise name + timer only — nothing celebratory, no
+ * Calm/ED: exercise name + timer only, nothing celebratory, no
  * weight/food-adjacent number, so no suppression applies.
  */
 import { useEffect } from 'react';
@@ -36,7 +36,7 @@ import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type } f
 const BAR_HEIGHT = 44;
 
 // Self-subscribing status slot: rest countdown while resting, set progress
-// otherwise — never a timer at 00:00, and never "Set 3 of 2" (past the
+// otherwise, never a timer at 00:00, and never "Set 3 of 2" (past the
 // recommended count it reads plain sets-done; that numbering confusion is
 // the class the founder retired on the Android notification).
 function MiniBarStatus() {

@@ -1,8 +1,8 @@
 /**
- * MealPlanScreen — the generated meal plan (deep-audit Theme G, surface
+ * MealPlanScreen, the generated meal plan (deep-audit Theme G, surface
  * G-b). One plan object, progressive disclosure:
  *
- *  - Besa first: "Here's your day" — plates with a single calm line each,
+ *  - Besa first: "Here's your day", plates with a single calm line each,
  *    Log this day, Swap on any plate, New meals. Calories lead; macros
  *    sit behind a tap. No jargon.
  *  - Eddie one tap deeper: per-meal grams + kcal, the day totals row vs
@@ -223,7 +223,7 @@ export default function MealPlanScreen({ navigation }) {
     const plannedCount = existing.filter((e) => e.is_planned).length;
     const eatenCount = existing.length - plannedCount;
 
-    // Already planned today, nothing eaten yet: never silently double the plan —
+    // Already planned today, nothing eaten yet: never silently double the plan,
     // warn and REPLACE the existing plan (founder 2026-06-20).
     if (plannedCount > 0 && eatenCount === 0) {
       appAlert(
@@ -241,7 +241,7 @@ export default function MealPlanScreen({ navigation }) {
     if (eatenCount > 0) {
       appAlert(
         'Food already logged today',
-        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten today. This won't remove it — the planned meals are added alongside.`,
+        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten today. This won't remove it, the planned meals are added alongside.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },
@@ -485,7 +485,7 @@ export default function MealPlanScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          {/* Day picker — only for a multi-day (week) plan; a "Plan my day"
+          {/* Day picker, only for a multi-day (week) plan; a "Plan my day"
               plan is a single day with no picker. */}
           {!isDayPlan ? (
           <View style={styles.dayRow} accessibilityRole="tablist">
@@ -526,7 +526,7 @@ export default function MealPlanScreen({ navigation }) {
               </Text>
             ) : null}
           </View>
-          {/* Training today? — per-day input (rethink §3.2). Defaults from
+          {/* Training today?, per-day input (rethink §3.2). Defaults from
               the plan's current variant for this day; always overridable.
               Changing it re-variants only this day. Hidden on a flat plan,
               where the answer changes nothing. */}

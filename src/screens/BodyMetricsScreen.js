@@ -137,7 +137,7 @@ const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
 const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
 function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
-  // All weight entries with a usable date, oldest → newest (no count slicing —
+  // All weight entries with a usable date, oldest → newest (no count slicing,
   // COMP-019 windows by date instead).
   const allWeights = useMemo(() => entries
     .filter(e => e.body_weight != null && e.metric_date)
@@ -1221,7 +1221,7 @@ export default function BodyMetricsScreen() {
 
 // Recomposition reframe card (ULTIMATE-RECOMP-01). Presentation-only: every fact
 // is pre-derived by deriveRecomp; this renders the numbers-first read plus one
-// plain sentence. Class-B body data — no valence colour (COMP-027). Returns null
+// plain sentence. Class-B body data, no valence colour (COMP-027). Returns null
 // when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
 function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
   if (!vm || !vm.render) return null;

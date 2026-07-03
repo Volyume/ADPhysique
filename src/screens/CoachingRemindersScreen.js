@@ -84,7 +84,7 @@ async function applyScheduled(prefs, permissionStatus) {
   // Cancel ONLY the two notifications this screen owns (morning weight +
   // weekly check-in). Previously this called cancelAllNotifications(), which
   // wiped every scheduled notification laid elsewhere (cascade gates, trial
-  // day-3, win-back, weekly coach-ready) until the next launch re-laid them —
+  // day-3, win-back, weekly coach-ready) until the next launch re-laid them,
   // the historic wipe-bug class NotificationSettingsScreen already fixed.
   // Each schedule* helper self-cancels its own ID too, so the explicit
   // cancels here only matter for the permission-not-granted case.

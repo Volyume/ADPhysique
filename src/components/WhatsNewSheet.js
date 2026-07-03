@@ -1,5 +1,5 @@
 /**
- * WhatsNewSheet — the v3 programme's "lightweight What's new" sharpener.
+ * WhatsNewSheet, the v3 programme's "lightweight What's new" sharpener.
  * One dismissible sheet, shown ONCE on the first launch after an update,
  * never on first install (a brand-new user has no update to hear about)
  * and never again for the same version. No nagging: dismissing is final

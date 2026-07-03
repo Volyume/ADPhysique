@@ -109,7 +109,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
 
   return (
     <View style={styles.container}>
-      {/* Weight Row — rendered for weight_reps and weighted_bodyweight only.
+      {/* Weight Row, rendered for weight_reps and weighted_bodyweight only.
           This branch is BYTE-IDENTICAL to the original single-schema layout. */}
       {showWeightReps && (
       <View style={styles.inputRow}>
@@ -171,7 +171,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
       </View>
       )}
 
-      {/* Duration — a mm:ss time field. Total seconds are stored in value.reps
+      {/* Duration, a mm:ss time field. Total seconds are stored in value.reps
           (reused as the seconds field), so the screen's existing reps->actual_reps
           write path persists the metric with no new set column. */}
       {exerciseType === 'duration' && (
@@ -212,7 +212,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
       </View>
       )}
 
-      {/* Distance — distance (in the user's units) + a mm:ss time field.
+      {/* Distance, distance (in the user's units) + a mm:ss time field.
           Distance is stored in value.weight (reused) and seconds in value.reps,
           so both metrics persist through the screen's existing weight/reps
           write path with no new set column. */}
@@ -292,7 +292,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
       </>
       )}
 
-      {/* Reps — rendered for weight_reps, weighted_bodyweight and reps_only.
+      {/* Reps, rendered for weight_reps, weighted_bodyweight and reps_only.
           reps_only hides only the Weight Row above; the reps field itself is
           unchanged. */}
       {(showWeightReps || exerciseType === 'reps_only') && (

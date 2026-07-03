@@ -47,7 +47,7 @@ const DEFAULT_REST = 90;
 // BuildWorkoutScreen's stepBtn touchables.
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
-// Formats seconds as "90s" / "2m" / "2m 15s" — ported verbatim from
+// Formats seconds as "90s" / "2m" / "2m 15s", ported verbatim from
 // BuildWorkoutScreen so rest reads identically wherever it's edited.
 function formatRest(secs) {
   if (secs < 60) return `${secs}s`;
@@ -473,7 +473,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // Exercises in a day that share the same supersetGroupId are one superset.
   // The user multi-selects rows (per day) then groups them; the engine and
   // ActiveWorkout already understand a shared supersetGroupId. We only write
-  // the existing field — no schema or write-path change.
+  // the existing field, no schema or write-path change.
 
   // { [dayIdx]: Set<exLocalId> } of rows currently selected for grouping.
   const [supersetSelection, setSupersetSelection] = useState({});

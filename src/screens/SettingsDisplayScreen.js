@@ -16,7 +16,7 @@ const THEME_OPTIONS = [
 ];
 
 // Food-energy display unit. kcal is the default; kJ matches EU food labelling
-// (which gives kilojoules first). Display-only — it never changes a stored
+// (which gives kilojoules first). Display-only, it never changes a stored
 // value, a nutrition target, or anything the coaching engine computes, so it
 // takes effect immediately with no reload.
 const ENERGY_OPTIONS = [

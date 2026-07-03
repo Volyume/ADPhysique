@@ -1,11 +1,11 @@
 /**
- * PartnerPrivacyReceipt (DESIGN-SPEC B4) — the brand's hero moment, shared by
+ * PartnerPrivacyReceipt (DESIGN-SPEC B4), the brand's hero moment, shared by
  * the empty-state pitch and invite Beat 2 (where it is the recorded consent
  * notice). Screenshot-worthy by typesetting, not decoration: two columns,
  * "what crosses" against "what never does", a hairline rule between them.
  *
  * Motion: a single fade-and-rise on mount (motion.hero, emphasized-decelerate),
- * once. Reduce Motion renders it static — the app's standard flatten rule, and
+ * once. Reduce Motion renders it static, the app's standard flatten rule, and
  * all new motion runs on the UI thread via Reanimated (never JS-thread
  * Animated). On narrow widths the two columns stack (see, then never) rather
  * than truncate. British English, no em dash, no exclamation marks.

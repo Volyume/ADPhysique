@@ -88,8 +88,8 @@ export default function ScanLabelScreen({ navigation, route }) {
   // COMP-022 arrival choice: a barcode miss lands here. Rather than dumping the
   // user straight into the camera, present a one-tap decision (scan the label /
   // type it in). Skipped when OCR isn't in the binary (the existing type-in CTA
-  // path covers that — State C). `reachable` picks honest copy: a confirmed
-  // miss (online) vs "couldn't check" (offline) — no waterfall hot-path change.
+  // path covers that, State C). `reachable` picks honest copy: a confirmed
+  // miss (online) vs "couldn't check" (offline), no waterfall hot-path change.
   const [arrivalChoice, setArrivalChoice] = useState(!!prefillBarcode && ocrAvailable);
   const [reachable, setReachable] = useState(null); // null = checking, treated as online
   useEffect(() => {
@@ -367,7 +367,7 @@ export default function ScanLabelScreen({ navigation, route }) {
                   <Text style={styles.skipText}>Add a name</Text>
                 </TouchableOpacity>
               ) : null}
-              {/* COMP-022: a barcode heal must never dead-end mid-capture — a
+              {/* COMP-022: a barcode heal must never dead-end mid-capture, a
                   persistent escape that keeps the barcode (✕ would discard it). */}
               {prefillBarcode && !busy ? (
                 <TouchableOpacity onPress={gotoManual} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Type it in">
@@ -381,7 +381,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* COMP-022 arrival choice — camera warm behind the scrim, one tap in. */}
+      {/* COMP-022 arrival choice: camera warm behind the scrim, one tap in. */}
       {arrivalChoice ? (
         <View style={styles.choiceOverlay}>
           <View style={styles.choiceScrim} />

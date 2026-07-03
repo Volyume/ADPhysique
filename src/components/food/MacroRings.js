@@ -89,7 +89,7 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // against target at a glance where competing small rings read slower. Protein
 // is the primary bar (the number this user defends): it carries the weight
 // emphasis. Each bar's fill is its macro's CATEGORY colour (`tint`, founder
-// decision 2026-06-29) — a fixed hue that says WHICH macro it is, never an
+// decision 2026-06-29), a fixed hue that says WHICH macro it is, never an
 // adherence judgement: the hue does not change on under/over target, so a bar
 // is never coloured "good" or "bad" (the overall calorie ring stays neutral
 // amber). Protein's tint is the brand amber.
@@ -97,7 +97,7 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // faded fill to the combined (eaten+planned) width behind the solid eaten
 // fill, matching the ring, and is shown in the value text as "+Ng planned".
 // `sub` is an optional quiet descriptive line under the bar (e.g. protein
-// g/kg today) — purely factual, never a target judgement.
+// g/kg today), purely factual, never a target judgement.
 //
 // `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
 // "Ng to go" remaining hint while under target but NEVER an "over" readout,
@@ -105,7 +105,7 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint = colors.primary }) {
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
-  // Remaining framing (factual value/target, no colour judgement — matches the
+  // Remaining framing (factual value/target, no colour judgement, matches the
   // adherence-neutral kcal ring). "Ng to go" while under, "Ng over" while over,
   // and nothing exactly on target. A more-is-fine macro never shows "over".
   const remaining = target != null && target > 0 ? target - value : null;
@@ -146,7 +146,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const f = Math.round(rollup?.fat_g ?? 0);
   // Planned-but-unconfirmed food (is_planned=1). Shown distinctly so a planned
   // day doesn't read as empty, but never folded into the eaten totals the coach
-  // and adherence use — those stay on `rollup` (eaten only).
+  // and adherence use, those stay on `rollup` (eaten only).
   const plannedKcal = Math.round(planned?.kcal ?? 0);
   const plannedP = Math.round(planned?.protein_g ?? 0);
   const plannedC = Math.round(planned?.carbs_g ?? 0);
@@ -165,7 +165,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   // Descriptive macro %-of-calories split (Cronometer-style). Purely factual:
   // what was eaten, computed from grams using the Atwater factors (protein 4,
   // carbs 4, fat 9 kcal/g). This is NOT a target judgement and carries no
-  // colour — it just explains how today's energy breaks down by macro.
+  // colour, it just explains how today's energy breaks down by macro.
   const pKcal = p * 4;
   const cKcal = c * 4;
   const fKcal = f * 9;
@@ -222,7 +222,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   // ring centre counts DOWN the calories left, with eaten/target shown as the
   // quiet reference beside it. Derived from the animated eaten total so it counts
   // as food lands. Stays adherence-NEUTRAL: "over" is shown factually in the same
-  // neutral ink as "left" — never a red/alarm colour (the ring colour is likewise
+  // neutral ink as "left", never a red/alarm colour (the ring colour is likewise
   // neutral amber, see bandColour).
   const remaining = kcalTarget != null ? Math.round(kcalTarget - kcal) : null;
   const over = remaining != null && remaining < 0;

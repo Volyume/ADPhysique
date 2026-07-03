@@ -1,10 +1,10 @@
 /**
- * COMP-030 — the pre-account plan PREVIEW (Variant B, §4B step 4).
+ * COMP-030, the pre-account plan PREVIEW (Variant B, §4B step 4).
  *
  * The reveal-lite "built for me" moment: the deterministic plan shape derived
  * locally from the quiz answers, with the endowment effect doing the work at the
  * account wall ("Save your plan", never "sign up to continue"). No calories or
- * macros — the honesty note says they come after, with permission.
+ * macros, the honesty note says they come after, with permission.
  */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

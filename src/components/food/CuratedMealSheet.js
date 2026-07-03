@@ -7,11 +7,11 @@ import { CURATED_MEALS, mealItems } from '../../lib/food/curatedMeals';
 import { getMealAdditions, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib/food/mealAdditions';
 
 /**
- * CuratedMealSheet — "visit" a suggested curated meal before logging it
+ * CuratedMealSheet, "visit" a suggested curated meal before logging it
  * (founder 2026-06-30). Shows the meal's items + macros, then a few FREE flavour
  * additions with a short "why" so a novice learns the meal is a base they can
  * season and build on (a friend asked if he could add saffron to chicken & rice).
- * The additions are educational only — they are NOT logged, so the diary stays
+ * The additions are educational only, they are NOT logged, so the diary stays
  * honest; the single action logs the MEAL itself via onLog.
  *
  * Props:

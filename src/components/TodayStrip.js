@@ -1,5 +1,5 @@
 /**
- * TodayStrip — COMP-027 Part B
+ * TodayStrip, COMP-027 Part B
  *
  * The "one big thing" Home hierarchy puts the session hero first; this strip is
  * the glanceable row that sits directly under it, replacing the stacked utility
@@ -11,10 +11,10 @@
  * hidden when cardio is off), and MEAL (D1, founder decision 2026-07-03): a
  * pure VERB chip ("Log Meal 2" by time of day) deep-linking into FoodSearch
  * scoped to the inferred slot. The rule of record from the 2026-06-30 food
- * cell removal: Home never carries food NUMBERS or food progress — the old
+ * cell removal: Home never carries food NUMBERS or food progress, the old
  * cell showed calories on the app's most-seen surface. A verb carries no
  * number, no progress, no valence, so it does not break that rule. Free tier
- * renders no strip at all (the parent only mounts this for Pro) — the chip is
+ * renders no strip at all (the parent only mounts this for Pro), the chip is
  * hidden on free, not locked. The steps cell stays retired (Google Play
  * policy).
  *
@@ -24,7 +24,7 @@
  * verbatim (same query, same focus/foreground).
  *
  * Colour rule (Part A grammar, Class B): the only state colour in the strip is
- * the logged tick — a confirmation, never a judgement of the number. No red on
+ * the logged tick, a confirmation, never a judgement of the number. No red on
  * weight ever. (The weight-cell sparkline was removed 2026-06-16; the trend lives
  * on Progress and via the COMP-004 door.)
  *
@@ -314,7 +314,7 @@ export default function TodayStrip({
     );
   }
 
-  // D1: the verb chip. No number, no progress, no valence — the label names
+  // D1: the verb chip. No number, no progress, no valence, the label names
   // the action and the time-appropriate meal, nothing else.
   function MealCell() {
     const verb = `Log ${mealSlotLabel(mealSlot)}`;

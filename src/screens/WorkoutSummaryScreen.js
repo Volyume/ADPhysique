@@ -320,7 +320,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   // COMP-005: block-end recap. When the session just finished sits in the final
   // planned week of the active mesocycle, offer the block story in-flow (no
-  // push needed — the user is right here). Heuristic detection: there is no
+  // push needed, the user is right here). Heuristic detection: there is no
   // status='completed' writer, so the final-week reached (weekIndex >=
   // plannedWeeks) is the signal, tolerant of training past the planned end.
   const [blockStory, setBlockStory] = useState(null);
@@ -449,7 +449,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
       // D1: claim the early-win milestone for this session. Skipped on the very
       // first session (COMP-013 owns that beat) and whenever suppressed. PRs are
-      // owned by PRCelebration, so everHitPR is held false here — first_pr never
+      // owned by PRCelebration, so everHitPR is held false here, first_pr never
       // fires a second celebration on top of the PR burst.
       if (!suppressed && totalCompleted > 1 && user?.id) {
         try {
@@ -542,7 +542,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     //
     // COMP-008: sleep is now captured pre-session and lives on the workout row,
     // so the value comes from preWorkoutReadiness rather than a post-workout
-    // rating. Only write when the lifter actually answered it — passing null
+    // rating. Only write when the lifter actually answered it, passing null
     // would clear a sleep value the weekly check-in (or an earlier session)
     // already set this week, since saveWeeklyCheckin treats explicit null as
     // "clear".
@@ -753,7 +753,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        {/* D1 (int-04 F1): the early-win milestone card — the celebratory beat
+        {/* D1 (int-04 F1): the early-win milestone card, the celebratory beat
             for a beginner crossing first week / 5 / 10 / 25 / 50 / 100 sessions.
             Sits at the top emotional peak, only rendered on the rare session a
             rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
@@ -845,7 +845,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
         </View>
 
-        {/* NEW-002 rebuild: the post-workout partner beat — where a cheer is
+        {/* NEW-002 rebuild: the post-workout partner beat, where a cheer is
             most natural (you just trained; here is where your partner stands).
             Paired + live path only; inherits calm/ED suppression; a resting
             partner never reads as a fail. */}
@@ -885,7 +885,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
-        {/* D2: programme-arc strip — where this session sits in the block, so
+        {/* D2: programme-arc strip, where this session sits in the block, so
             the work reads as a journey towards the recovery week, not an
             open-ended grind. Suppressed under calm/ED; needs a real ≥2-week
             block. Reuses the same BlockShapeCard as Home and Consistency. */}
@@ -1042,7 +1042,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
-        {/* D2: phase-completion celebration card — the full beat when a block's
+        {/* D2: phase-completion celebration card, the full beat when a block's
             final week closes (recap line + what's next), with the block story
             and a free share artefact (decision 4b). Suppressed under calm/ED,
             which falls back to the neutral link above. */}
@@ -1090,7 +1090,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
-        {/* COMP-015: confirmation row — closes the loop at the moment the user
+        {/* COMP-015: confirmation row, closes the loop at the moment the user
             is about to give the next round of feedback. Live path only. */}
         {!readOnly && sessionAdjustments.length > 0 && (
           <RevealSection delay={1520}>
@@ -1105,7 +1105,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
-        {/* D3 (design audit 03): the "tell the coach" zone — the session's
+        {/* D3 (design audit 03): the "tell the coach" zone, the session's
             inputs grouped into ONE distinct card at the end, separated from
             the celebratory "what happened" zone above. Same controls, same
             handlers; only the grouping and header treatment changed. */}
@@ -1148,7 +1148,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   style={styles.notesInput}
                   value={notes}
                   onChangeText={setNotes}
-                  placeholder="Anything notable from this session..."
+                  placeholder="Anything notable from this session…"
                   placeholderTextColor={colors.textMuted}
                   multiline
                 />
@@ -1184,7 +1184,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       {/* Flat token, NOT insets.bottom: the tab band renders below this
           screen and already absorbs the system inset, so adding it here
           doubled the gap under Close (founder screenshot 2026-07-03). The
-          inverse case — ActiveWorkout, where the band hides — is the one
+          inverse case, ActiveWorkout, where the band hides, is the one
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
       <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
         <View style={styles.footerRow}>
@@ -1426,7 +1426,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   partnerBeatText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
-  // D3: amber tint, not a second amber fill — the hero numeral is this
+  // D3: amber tint, not a second amber fill, the hero numeral is this
   // screen's one amber object.
   partnerCheerBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -1440,7 +1440,7 @@ const styles = StyleSheet.create({
   },
   partnerCheerText: { ...type.label, color: colors.primary, fontSize: fontSize.xs },
   partnerCheerTextDone: { color: colors.textSecondary },
-  // D2 programme-arc strip wrapper — surface card matching the other summary
+  // D2 programme-arc strip wrapper, surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
   blockArcSection: {
     gap: spacing.sm,
@@ -1486,7 +1486,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // D3: real section headers (design audit 03 rule 3) — the D0 `title` role,
+  // D3: real section headers (design audit 03 rule 3), the D0 `title` role,
   // not a body-sized label.
   sectionTitle: { ...type.title, color: colors.textPrimary },
   optionalLabel: { ...type.caption, color: colors.textMuted },
@@ -1596,7 +1596,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
-  // D3: quiet close — the summary's job is done, so leaving it is not the
+  // D3: quiet close, the summary's job is done, so leaving it is not the
   // screen's hero. The tonnage numeral carries the one amber; the footer
   // actions are neutral (Close) and amber-outline (share).
   doneBtn: {

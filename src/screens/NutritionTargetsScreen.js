@@ -107,7 +107,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
       <Text style={styles.macroLabel}>{label}</Text>
       {/* D3 (design audit 03): a thin proportional bar in the macro's
           category hue, sized by its share of the day's calories. Category
-          identity only, never adherence — it does not change on hit/miss. */}
+          identity only, never adherence, it does not change on hit/miss. */}
       {kcalPercent != null && barColor ? (
         <View style={styles.macroBarTrack}>
           <View
@@ -534,7 +534,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
 
               {/* U-C-1: the minimum inputs the engine needs (sex, age, height,
-                  weight — see formComplete) collected inline so the fast path
+                  weight, see formComplete) collected inline so the fast path
                   produces a real target instead of redirecting to the full form.
                   Prefilled from the saved body profile when available; activity,
                   protein approach and body fat % keep their defaults behind
@@ -606,7 +606,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
 
               {/* The same GDPR consent the full form requires, bound to the same
-                  state — only one of the two ever renders at a time. */}
+                  state, only one of the two ever renders at a time. */}
               <View style={styles.consentCard}>
                 <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
                 <View style={styles.consentBody}>
@@ -1007,9 +1007,9 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* ── Per-meal protein distribution ───────────────────
                   Guidance only, daily total unchanged. Splits the
-                  prescribed daily protein across 3–6 feedings, with
+                  prescribed daily protein across 3 to 6 feedings, with
                   the recommended count chosen to keep per-meal in the
-                  0.4–0.55 g/kg muscle protein synthesis window. */}
+                  0.4 to 0.55 g/kg muscle protein synthesis window. */}
               {results.proteinG > 0 && (() => {
                 // Derive bodyweight from form or back-calculate from results
                 const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
@@ -1437,7 +1437,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.sm,
   },
-  // D3: neutral edge — a static education row does not spend the amber.
+  // D3: neutral edge, a static education row does not spend the amber.
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.border, padding: spacing.md, marginTop: spacing.sm },
   // U-C-1: "Set it for me" fast-path card.
   fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
 
   // ── Section heading ───────────────────────────────────────────────────────────────────
 
-  // D3: real section headers (design audit 03 rule 3) — the D0 `title`
+  // D3: real section headers (design audit 03 rule 3), the D0 `title`
   // role, not a body-sized label.
   sectionHeading: {
     ...type.title,
@@ -1728,7 +1728,7 @@ const styles = StyleSheet.create({
   perMealValue: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
-    // D3: neutral — the daily kcal numeral is this screen's one amber
+    // D3: neutral, the daily kcal numeral is this screen's one amber
     // object; a second amber hero numeral competed with it.
     color: colors.textPrimary,
     lineHeight: 38,
@@ -1907,7 +1907,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 
-  // U6: female iron/micronutrient awareness card. D3: neutral surface —
+  // U6: female iron/micronutrient awareness card. D3: neutral surface,
   // only warnings and the EA ease-nudge keep tint (design audit 03).
   awarenessCard: {
     marginTop: spacing.md,

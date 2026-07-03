@@ -1,5 +1,5 @@
 /**
- * GradientCard — compatibility shim.
+ * GradientCard, compatibility shim.
  *
  * The component audit (design premium 2026-05-30, F4) found this was
  * identical to `Card` with a `tone` accent border: there is no gradient (the

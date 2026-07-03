@@ -37,7 +37,7 @@ function createParticle(index, palette = PR_PALETTE) {
 
 /**
  * MilestoneBurst (D2, design audit 03 win #4): the PR particle burst in an
- * all-gold dress for the big session rungs (50/100). No overlay card — the
+ * all-gold dress for the big session rungs (50/100). No overlay card, the
  * summary's milestone card carries the copy; this is pure celebration on top.
  * Renders nothing under reduce-motion (callers already gate on calm/ED).
  * Non-blocking: pointerEvents none, self-dismisses via onDone.
@@ -113,7 +113,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // didn't pass subdued. This keeps the app's reduce-motion discipline intact
   // at a flagship moment rather than breaking it here.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // Wave A A1: a first-ever lift is an honest first, not a record — it beats
+  // Wave A A1: a first-ever lift is an honest first, not a record, it beats
   // nothing, so it never gets the confetti/heavy-haptic PERSONAL RECORD
   // treatment. It always renders as the quiet toast variant below.
   const isFirstLift = pr?.type === 'first_lift';

@@ -131,7 +131,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
   // D7 (founder decision, 2026-07-03): the same ED-flag check
   // ProSetupCompleteScreen performs. Under an open flag (or an unknown flag
-  // state — fail closed, matching that screen) the deficit-phase framing and
+  // state, fail closed, matching that screen) the deficit-phase framing and
   // the eight-week diet-break notice give way to the neutral register; the
   // goal-change receipt itself stays honest. Tier-blind by construction.
   const [edFlagOpen, setEdFlagOpen] = useState(true); // closed until proven clear

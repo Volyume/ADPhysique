@@ -324,6 +324,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                   onChangeText={v => updateField(item.key, 'startingWeight', parseFloat(v) || 0)}
                   placeholder="0"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={`Starting weight in ${units}`}
                   keyboardType="decimal-pad"
                   maxLength={6}
                 />
@@ -401,8 +402,9 @@ export default function BuildWorkoutScreen({ navigation }) {
               style={styles.pickerSearch}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search exercises..."
+              placeholder="Search exercises…"
               placeholderTextColor={colors.textMuted}
+              accessibilityLabel="Search exercises"
               autoFocus
             />
             <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.pickerClose} accessibilityRole="button" accessibilityLabel="Close exercise picker">

@@ -36,7 +36,7 @@ function computeMuscleCoverage(exercises) {
     .map(([muscle, count]) => ({ muscle, count }));
 }
 
-// Factual chips only — NO balance warnings here (founder device-walk
+// Factual chips only: NO balance warnings here (founder device-walk
 // 2026-06-12). A split day is supposed to be "unbalanced": the old
 // day-level heuristic told every generated Back + Delts day it had "no
 // hamstring work" and a Chest + Arms day it had "no pulling work" -

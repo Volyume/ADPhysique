@@ -25,8 +25,8 @@ const BODY_WEIGHT_UNIT_OPTIONS = [
 // The "Workout & units" block is rendered inline here (Hevy teardown
 // 2026-06-29, R1/R2): body-weight unit, barbell weight, global default rest
 // timer, and auto-start rest. These wire over existing/new store setters so a
-// user who picked the wrong unit in onboarding — or wants a non-90s default
-// rest — is no longer stuck.
+// user who picked the wrong unit in onboarding, or wants a non-90s default
+// rest, is no longer stuck.
 export default function SettingsScreen({ navigation }) {
   const {
     user, tier,

@@ -47,7 +47,7 @@ export default function DifferentialBadge({
 
   // 14 days: the try_pro_14d CTA routes to ProUpgrade, the 14-day CARDLESS
   // trial (detectDifferentialTrigger only emits it while canStillTrial holds).
-  // The previous "7 days" label was the inverted rationale — it assumed this
+  // The previous "7 days" label was the inverted rationale, it assumed this
   // CTA led to Google's 7-day Play intro offer, which in fact only appears
   // later, on the paid purchase sheet once the cardless trial is spent
   // (the buy_pro variant below).

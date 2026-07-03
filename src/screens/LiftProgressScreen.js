@@ -51,7 +51,7 @@ function isRecentBest(row) {
 // number; the session value is the max of its sets (best effort that session),
 // except totalReps/volume which sum the session. Mirrors Hevy's bestSet /
 // heaviestWeight / totalReps / bestSetVolume enum, framed as the user's own
-// progress (no comparison, no rank). Reuses already-loaded sets — no new query.
+// progress (no comparison, no rank). Reuses already-loaded sets, no new query.
 const METRICS = [
   { key: 'e1rm', label: 'Best set' },
   { key: 'heaviest', label: 'Heaviest' },
@@ -284,7 +284,7 @@ export default function LiftProgressScreen({ navigation }) {
 
       {/* R1 per-exercise metric switcher: changes the lens every row's
           sparkline draws (best set / heaviest / total reps / volume),
-          recomputed from the loaded sets. Your own trend only — no rank. */}
+          recomputed from the loaded sets. Your own trend only, no rank. */}
       {rows.length > 0 && (
         <View style={styles.metricRow}>
           {METRICS.map(m => (
@@ -377,7 +377,7 @@ export default function LiftProgressScreen({ navigation }) {
                 </View>
               </View>
               <View style={styles.cardRight}>
-                {/* U-D-4: with only 1–2 points a sparkline reads as a near-flat
+                {/* U-D-4: with only 1 to 2 points a sparkline reads as a near-flat
                     line; show an encouragement "building" hint instead until a
                     real trend exists (3+ points). */}
                 {(series?.length ?? 0) > 2 ? (

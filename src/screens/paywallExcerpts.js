@@ -1,13 +1,13 @@
 /**
- * paywallExcerpts.js — COMP-007 Stage B: verified Play-review excerpts.
+ * paywallExcerpts.js: COMP-007 Stage B: verified Play-review excerpts.
  *
- * Content, NOT billing logic — deliberately kept out of src/lib/payments/.
+ * Content, NOT billing logic, deliberately kept out of src/lib/payments/.
  * The paywall review block renders ONLY when this list is non-empty, so it
  * ships DARK today (empty array) and lights up via a content-only edit once
- * the honesty bar below is met. `EXCERPTS.length === 0` IS the feature flag —
+ * the honesty bar below is met. `EXCERPTS.length === 0` IS the feature flag,
  * no flag infrastructure.
  *
- * THE HONESTY CONTRACT (do not relax — these are absolute):
+ * THE HONESTY CONTRACT (do not relax, these are absolute):
  *  1. SOURCE: only PUBLISHED Google Play reviews, read from Play Console
  *     (User feedback → Reviews). Never solicited copy, beta DMs, or paraphrase.
  *     Curation is manual + founder-approved; no runtime fetch (offline-first).
@@ -17,7 +17,7 @@
  *     literal source "Google Play", and month + year. No surnames, no invented
  *     demographics, no photos.
  *  4. RATING: the review's own stars (curate 5-star; a strong 4-star is fine
- *     later — show 4 then, never round up).
+ *     later, show 4 then, never round up).
  *  5. RECENCY: retire anything older than 12 months; refresh quarterly.
  *  6. ED-SAFETY (absolute): NO excerpt that states weight lost, rate of loss,
  *     body measurements, appearance judgements, or "finally thin" sentiment.
@@ -28,7 +28,7 @@
  *     if one objects, drop it next release.
  *
  * LAUNCH BAR: >= 3 usable excerpts (target 5 for rotation depth). Below 3, leave
- * the array empty — absence is the empty state, the block does not render.
+ * the array empty, absence is the empty state, the block does not render.
  *
  * Shape per entry: { stars: 1..5, quote: string (<=~140 chars, verbatim),
  *                    name: string, source: 'Google Play', date: 'Mon YYYY' }

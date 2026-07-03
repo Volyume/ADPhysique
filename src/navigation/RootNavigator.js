@@ -25,7 +25,7 @@ import {
   routeForNotificationType,
 } from '../lib/notifications';
 
-// Screens — deferred per-screen requires (F6b, audit PR-3). Statically
+// Screens, deferred per-screen requires (F6b, audit PR-3). Statically
 // importing all eighty screens here evaluated the entire screen module
 // graph (react-native-vision-camera at module scope in ScanBarcode
 // included) synchronously in one turn at boot, on the black pre-theme
@@ -35,13 +35,13 @@ import {
 // relies on (applyAccessibility mutates the theme tokens BEFORE
 // RootNavigator is required) still holds by construction: a screen's first
 // render is strictly later than that, so every screen-level
-// StyleSheet.create sees the post-a11y tokens exactly as before — and a11y
+// StyleSheet.create sees the post-a11y tokens exactly as before, and a11y
 // pref changes prompt a restart, so tokens never move under an
 // already-evaluated module. Every loader's require() keeps a static string
 // literal so Metro still bundles every screen. Each wrapper is a stable
 // module-scope constant, so React Navigation never remounts a screen
 // because of this indirection. Screens have no module-scope side effects
-// (verified across all 82 files, 2026-07-02) — deferral changes when a
+// (verified across all 82 files, 2026-07-02), deferral changes when a
 // module evaluates, never what it does.
 function lazyScreen(load) {
   let Screen = null;
@@ -149,7 +149,7 @@ let _lastAuthEnter = { uid: null, at: 0 };
 // Play directly for a paid_pro user and downgrade if the subscription has
 // lapsed (the RTDN Pub/Sub push that would normally report this is a separate
 // console step). No-op on the stub provider, on a failed Play read, and for any
-// user who is not paid_pro — see cascade.reconcilePaidEntitlement for the guards.
+// user who is not paid_pro, see cascade.reconcilePaidEntitlement for the guards.
 function _reconcilePaidEntitlement(userId = null) {
   try {
     // eslint-disable-next-line global-require
@@ -157,7 +157,7 @@ function _reconcilePaidEntitlement(userId = null) {
     return Promise.resolve(reconcilePaidEntitlement(useAppStore.getState().userProfile))
       .then((result) => {
         // COMP-025-A: an authoritative paid_pro→free lapse arms the post-churn
-        // win-back loop; a confirmed-active result clears it. Fire-and-forget —
+        // win-back loop; a confirmed-active result clears it. Fire-and-forget,
         // it must never block or alter the tier refresh. lapseDetect makes no
         // entitlement decision; it only reads this result.
         try {
@@ -232,7 +232,7 @@ const stackOptions = {
 // previous screen (ActiveWorkout opening from the Continue / Next
 // Session hero on Home, WorkoutSummary appearing after a finished
 // session, and the PlanDetail / RoutineDetail / ExerciseDetail screens
-// opening from their list cards — design audit D2, applied to every
+// opening from their list cards, design audit D2, applied to every
 // registration of those screens across the stacks below).
 // The destination fades in while scaling from 0.92 to 1.0
 // so it reads as the source card growing into a full screen rather
@@ -500,7 +500,7 @@ function MainTabs() {
   // area itself, exactly as the stock tabBarStyle here used to).
   return (
     <Tab.Navigator
-      // F6b (audit PR-2/UI-7): tabs are default-LAZY — each non-initial tab
+      // F6b (audit PR-2/UI-7): tabs are default-LAZY, each non-initial tab
       // stack mounts on its first focus instead of all five mounting (and
       // running their data effects) in one commit at boot. The old eager
       // setting was a deprecated navigator prop with no recorded rationale
@@ -520,7 +520,7 @@ function MainTabs() {
           haptics.selection();
         },
       })}
-      // E15 (greenlit 2026-07-02): the custom bottom band — sliding-pill tab
+      // E15 (greenlit 2026-07-02): the custom bottom band, sliding-pill tab
       // bar + the active-session mini-bar docked above it. VolyumeTabBar
       // emits tabPress exactly like the stock bar, so the M1 haptic above
       // and each stack's NAV-5 re-tap-to-root listener keep working. The
@@ -615,7 +615,7 @@ function ProOnboardingStack() {
 }
 
 // Deep-linking (U3 R5 / 09-navigation-ia.md). React Navigation's BUILT-IN
-// `linking` config — no new dependency. Maps a few `volyume://` paths to
+// `linking` config, no new dependency. Maps a few `volyume://` paths to
 // existing routes inside the signed-in MainTabs tree. The scheme `volyume`
 // is already registered in app.json (android.intentFilters + ios scheme).
 //
@@ -627,7 +627,7 @@ function ProOnboardingStack() {
 // (Welcome) instead of crashing. Once signed in and on MainTabs, the same
 // link resolves to the right tab + screen. Pro-gated destinations (Diary)
 // still render their withProGuard upgrade prompt for free users, exactly as
-// when reached by tab press — the link only navigates, it never bypasses a
+// when reached by tab press, the link only navigates, it never bypasses a
 // gate.
 //
 // Notification-tap routing (navigationRef.navigate in the onTap effect above)
@@ -769,7 +769,7 @@ export default function RootNavigator() {
     async function bootstrap() {
       try {
         // checkFirstRun / checkTier are AsyncStorage-only (see
-        // useAppStore) — they never touch SQLite — so start them BEFORE
+        // useAppStore), they never touch SQLite, so start them BEFORE
         // the database init rather than serially after it. Previously
         // the splash waited on DB open + migrations for two flags that
         // need none of it (audit PR-4). The catch handlers are attached
@@ -828,7 +828,7 @@ export default function RootNavigator() {
         // tier=null, fail the "currentTier === 'pro'" check, and accept
         // the cloud's spurious 'free' value. Result was Pro users being
         // silently demoted to Free on every app launch. (checkFirstRun
-        // stays fire-and-forget, exactly as before — only its start
+        // stays fire-and-forget, exactly as before, only its start
         // moved earlier.)
         await tierPromise;
 
@@ -1035,7 +1035,7 @@ export default function RootNavigator() {
             // "Switch accounts" snapshots first, then the existing flow runs.
             // Same-account and first-ever sign-ins fall straight through with no
             // modal. The existing cross-user wipe + last-account key write
-            // further down are unchanged — the gate is purely additive.
+            // further down are unchanged, the gate is purely additive.
             (async () => {
               try {
                 // SC-2 (Wave-3 review fix): finish a pending account deletion
@@ -1086,9 +1086,9 @@ export default function RootNavigator() {
                   });
                   if (choice !== 'switch') {
                     // Keep: never wipe, restore, or re-stamp. Sign the new
-                    // account back out — the SIGNED_OUT event resets routing but
+                    // account back out, the SIGNED_OUT event resets routing but
                     // does NOT wipe local SQLite (only an explicit sign-out
-                    // button does) — leaving this device's data intact and the
+                    // button does), leaving this device's data intact and the
                     // last-account key unchanged, so signing back in is silent.
                     try { await client.auth.signOut(); } catch (_) {}
                     // eslint-disable-next-line global-require
@@ -1377,7 +1377,7 @@ export default function RootNavigator() {
       return <SplashScreen />;
     }
     // Article 9 gate. Show it when consent was explicitly not granted
-    // (healthConsent === false), AND — audit 2026-07-01 #7/#12 — when a NEW user
+    // (healthConsent === false), AND, audit 2026-07-01 #7/#12, when a NEW user
     // (onboarding not finished) has UNRESOLVED consent (null) after a transient
     // consent-read failure. Previously the gate only fired on === false, so a
     // null (the value both consent-read error paths set) fell straight through
@@ -1387,7 +1387,7 @@ export default function RootNavigator() {
     // unresolved-consent new user to the gate is safe and recoverable: the
     // consent RPC writes independently of the failed read, and start_cascade is
     // server-idempotent. A RETURNING user (firstRunComplete) with a null
-    // consent read is NOT re-prompted — they fall through as before.
+    // consent read is NOT re-prompted, they fall through as before.
     const consentUnresolvedForNewUser = healthConsent == null && !firstRunComplete;
     if (user && !user.isLocal && healthConsentChecked && (healthConsent === false || consentUnresolvedForNewUser)) {
       return <Article9ConsentStack />;

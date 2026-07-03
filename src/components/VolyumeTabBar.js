@@ -1,5 +1,5 @@
 /**
- * VolyumeTabBar — the E15 tab-bar elevation (greenlit 2026-07-02; design in
+ * VolyumeTabBar, the E15 tab-bar elevation (greenlit 2026-07-02; design in
  * audit/e15-signature-elements.md §2), designed together with
  * ActiveSessionMiniBar as the shared bottom band.
  *
@@ -14,7 +14,7 @@
  *     stock bar, so the NAV-5 re-tap-to-root listeners keep working too);
  *   - under Reduce Motion the pill jumps instantly and icons do not scale.
  *
- * While ActiveWorkout is focused the whole band returns null — logging gets
+ * While ActiveWorkout is focused the whole band returns null, logging gets
  * the full screen, and the mini-bar is absent because you are ON the session
  * screen. On any other tab mid-session the mini-bar docks directly above
  * this bar. Hide-on-scroll deliberately not implemented (jittery on

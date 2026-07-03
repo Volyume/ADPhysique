@@ -329,7 +329,7 @@ export default function HomeScreen({ navigation, route }) {
       // WARNING: this destructure is POSITIONAL. Inserting, removing or
       // reordering entries in the array below silently feeds the WRONG
       // loader's result into the differential paywall context (index 0 =
-      // loadWeekStats, index 5 = loadPlateauBanner) — adjust the holes in the
+      // loadWeekStats, index 5 = loadPlateauBanner), adjust the holes in the
       // destructure together with any change to the array.
       const [weekSignals, , , , , plateauPick] = await Promise.all([
         loadWeekStats(),
@@ -393,13 +393,13 @@ export default function HomeScreen({ navigation, route }) {
       const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
       const trialStart = trialStartFromEndsAt(endsAt);
       if (trialStart == null) { setTrialBanner(null); return; }
-      // A3 (audit OB-4): the ledger runs from day 0, not day 2 — week one is
+      // A3 (audit OB-4): the ledger runs from day 0, not day 2, week one is
       // exactly when the paid promise is otherwise invisible. It retires when
       // the first review lands (coachOut below) or the trial ends.
       const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
       if (trialDay < 0 || trialDay > TRIAL_LENGTH_DAYS) { setTrialBanner(null); return; }
 
-      // A coach output existing means the first review already happened — the
+      // A coach output existing means the first review already happened, the
       // value moment is past, so the banner retires permanently.
       const [coachOut, workouts, weights, edFlag] = await Promise.all([
         getLatestCoachOutput(user.id).catch(() => null),
@@ -426,7 +426,7 @@ export default function HomeScreen({ navigation, route }) {
         variant, completedSessions, weighIns7d,
         unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
       });
-      // A3: the "what your coach is reading" ledger — live counts vs the
+      // A3: the "what your coach is reading" ledger, live counts vs the
       // published thresholds, from the same inputs as the banner line. Under
       // an open ED flag it is the neutral variant with no weigh-in counts.
       const ledger = buildCoachLedger({
@@ -1083,7 +1083,7 @@ export default function HomeScreen({ navigation, route }) {
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises, starter, routineName: routine.name };
       // D2 (founder decision 2026-07-03, Option A): a user who opted out of
-      // the readiness ask starts immediately with NO readiness signal — the
+      // the readiness ask starts immediately with NO readiness signal, the
       // exact Skip path, all-null inputs. Coaching input is never fabricated;
       // with nothing stated, session adjustments simply do not fire
       // (READINESS_RULES has no null key). Re-read each start so flipping the
@@ -1247,7 +1247,7 @@ export default function HomeScreen({ navigation, route }) {
   // phase nudge. Lower-priority banners still surface on a later load once the
   // one above is dismissed, so nothing is lost, just sequenced.
   // Only surface the "this week's review" banner when the coach actually has a
-  // review — i.e. it had enough data to assess the week. During the baseline
+  // review, i.e. it had enough data to assess the week. During the baseline
   // weeks the output is hasEnoughData:false ("Building your baseline,
   // adjustments start after week 2"), and advertising it as a ready review with
   // "what changed and why" was telling users coaching was live when it wasn't
@@ -1274,15 +1274,15 @@ export default function HomeScreen({ navigation, route }) {
     && !showCoachBanner && !showTrialCountdownBanner;
   const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner;
-  // B3 lift plateau banner: below deload and phase — recovery and targets
-  // outrank a single lift's stall — and dismissible per exercise + week. The
+  // B3 lift plateau banner: below deload and phase, recovery and targets
+  // outrank a single lift's stall, and dismissible per exercise + week. The
   // one-banner invariant holds.
   const showPlateauBanner = !!plateauBanner && !plateauBannerDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
   // S6 activation nudge: below the coaching/recovery banners but ABOVE the
   // free-tier upsell lines (founder call: retention over monetisation for a
   // barely-active new user). Tier-blind. The cold-start stage is deliberately
-  // NOT shown here — welcomeCard already owns the 0-session in-app moment; only
+  // NOT shown here, welcomeCard already owns the 0-session in-app moment; only
   // the two stall stages render a banner. Per-stage dismissible. One-banner
   // invariant holds.
   const showActivationBanner = !!activationNudge && activationNudge.stage !== NUDGE_STAGE.COLD_START
@@ -1515,7 +1515,7 @@ export default function HomeScreen({ navigation, route }) {
         )}
 
         {/* ── D3: the "worth your attention" card, low slot (free tier). The
-            internal priority — free_line over differential — is decided by
+            internal priority, free_line over differential, is decided by
             pickAttentionVariant, the card class's single decision point. ── */}
         {(showFreeCoachLine || showDifferentialBadge) && (
           <AttentionCard
@@ -1554,7 +1554,7 @@ export default function HomeScreen({ navigation, route }) {
             SQLite reads to complete on a fresh app start. */}
         {initialLoading && (
           <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
-            {/* COMP-027 Part B: the skeleton teaches the new hierarchy —
+            {/* COMP-027 Part B: the skeleton teaches the new hierarchy,
                 hero-shaped first, the Today strip second. */}
             <SkeletonCard height={160} />
             <SkeletonCard height={64} />
@@ -1562,7 +1562,7 @@ export default function HomeScreen({ navigation, route }) {
         )}
 
 
-        {/* COMP-013: the standalone first-run cue row retired here — its job
+        {/* COMP-013: the standalone first-run cue row retired here, its job
             folds into the hero first-run variant below (a net minus-one-card on
             Home, the direction COMP-027 demands: hero first, fewer stacked
             utilities). The dismissal key and gating are reused there. */}
@@ -1699,7 +1699,7 @@ export default function HomeScreen({ navigation, route }) {
             {/* The full planned session is the primary action for everyone
                 (founder 2026-06-30: the old first-run variant highlighted a
                 cut-down "short session" with the full one demoted below, which
-                read as the wrong default — start the actual session). */}
+                read as the wrong default, start the actual session). */}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
               <TouchableOpacity
@@ -1774,6 +1774,7 @@ export default function HomeScreen({ navigation, route }) {
                 </View>
                 <TouchableOpacity
                   style={styles.proRecoverBtn}
+                  accessibilityRole="button"
                   onPress={async () => {
                     const result = await generateAndSavePlan(user.id, userProfile);
                     if (result.ok) {
@@ -1912,7 +1913,7 @@ export default function HomeScreen({ navigation, route }) {
         )}
 
         {/* ── Last session (D3, design audit 03): demoted to one slim row.
-            Same tap-through to history, same Repeat action, same stats —
+            Same tap-through to history, same Repeat action, same stats,
             compressed to a label line, a one-line name and an inline meta
             line instead of a card-sized sibling to the hero. ── */}
         {lastSession && (
@@ -1978,6 +1979,7 @@ export default function HomeScreen({ navigation, route }) {
               </Text>
               <TouchableOpacity
                 style={styles.coachingNudgeBtn}
+                accessibilityRole="button"
                 onPress={() => {
                   dismissCoachingNudge();
                   navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
@@ -2016,6 +2018,8 @@ export default function HomeScreen({ navigation, route }) {
           style={styles.sheetBackdrop}
           activeOpacity={1}
           onPress={() => setShowBlockShape(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
         />
         <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
           <View style={styles.sheetHandle} />
@@ -2032,7 +2036,7 @@ export default function HomeScreen({ navigation, route }) {
               definitions of its terms live here, in the sheet it opens. */}
           <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
           <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)}>
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)} accessibilityRole="button">
             <Text style={styles.sheetCancelText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -2048,6 +2052,8 @@ export default function HomeScreen({ navigation, route }) {
           style={styles.sheetBackdrop}
           activeOpacity={1}
           onPress={() => setShowChangeWorkout(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
         />
         <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
           <View style={styles.sheetHandle} />
@@ -2092,7 +2098,7 @@ export default function HomeScreen({ navigation, route }) {
               );
             })}
           </ScrollView>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)}>
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)} accessibilityRole="button">
             <Text style={styles.sheetCancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -2168,13 +2174,14 @@ export default function HomeScreen({ navigation, route }) {
 
             <TouchableOpacity
               style={styles.intentSkip}
+              accessibilityRole="button"
               onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
               <Text style={styles.intentSkipText}>Skip</Text>
             </TouchableOpacity>
 
             {/* D2 (Option A): the standing opt-out. Persists, then starts this
-                session exactly as Skip would — null intent, no readiness, no
+                session exactly as Skip would, null intent, no readiness, no
                 fabricated input. Reversible in Settings, Coaching. */}
             <TouchableOpacity
               style={styles.intentOptOut}
@@ -2342,7 +2349,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
 
-  // (Morning-weight card styles retired with COMP-027 Part B — the weight cell
+  // (Morning-weight card styles retired with COMP-027 Part B, the weight cell
   //  now lives in TodayStrip.)
 
   // Training schedule context line
@@ -2374,7 +2381,7 @@ const styles = StyleSheet.create({
   // Hero plan card. Restrained: one primary CTA, two discreet text links
   // underneath. Stat goes in the eyebrow line so we don't waste a row on a
   // coloured pill that fights the workout name for attention.
-  // D3 (design audit 03): the hero is the screen's ONLY elevated object —
+  // D3 (design audit 03): the hero is the screen's ONLY elevated object,
   // surfaceElevated ranks it above every flat surface card in the stack.
   heroCard: {
     backgroundColor: colors.surfaceElevated,
@@ -2857,7 +2864,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   // Fresh coach review banner. D3 (design audit 03): banners are one slim
-  // line above the hero, not card-sized siblings — tighter padding, no
+  // line above the hero, not card-sized siblings, tighter padding, no
   // extra bottom margin (the content gap carries the rhythm).
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -2865,7 +2872,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md,
   },
-  // COMP-023 trial value banner, grown into the A3 coach ledger card —
+  // COMP-023 trial value banner, grown into the A3 coach ledger card,
   // headline row plus the live threshold rows; matches the banner system.
   // D3: the trial-banner and free-coach-line styles moved to AttentionCard
   // with their JSX (one card class, internal priority recorded there).
@@ -2963,7 +2970,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    // D3: tinted edge, not a solid amber border (amber-inflation rule) —
+    // D3: tinted edge, not a solid amber border (amber-inflation rule),
     // "Build my plan" above is the no-plan state's one amber fill.
     borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.lg,

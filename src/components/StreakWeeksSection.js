@@ -1,11 +1,11 @@
-// COMP-018 — "Your weeks", the deep home of the weekly consistency streak on
+// COMP-018, "Your weeks", the deep home of the weekly consistency streak on
 // ConsistencyScreen. Renders the run number, a 12-week glyph strip (CVD-safe:
 // shape differs per state, no red, no cross), "Longest run", the Pause control
-// and — for plan-less users — the weekly-goal editor.
+// and, for plan-less users, the weekly-goal editor.
 //
 // It reads the same useWeeklyStreak resolver the Progress strip uses, so the
 // two never disagree. Under an open ED/wellbeing flag the whole section is
-// absent (the resolver reports suppressed) — a visible streak artefact is a
+// absent (the resolver reports suppressed), a visible streak artefact is a
 // pressure cue for that population (§4.5). Copy is blueprint copy (§4.6),
 // founder review at PR. The word "streak" never appears; the unit is
 // "weeks running".
@@ -25,7 +25,7 @@ const PAUSE_OPTIONS = [
   { label: '8 weeks', weeks: 8 },
 ];
 
-// Per-state glyph (shape carries the meaning — no colour-only state, no red).
+// Per-state glyph (shape carries the meaning, no colour-only state, no red).
 // D4 (founder decision, updated 2026-07-03): the 'missed' glyph now carries a
 // calm on-screen label ("Quiet week") in the key, so the mark is not a mystery
 // to sighted users. This supersedes the earlier same-day note that left it off
@@ -69,13 +69,13 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   // D2: surface the otherwise-silent streak repair. A 'repaired' week is, by
   // the engine's bridge rule, always followed by a keeping week (the comeback),
   // so the comeback has just landed exactly when the second-to-last FINISHED
-  // week is 'repaired'. A calm, forgiving line — never shame, and it self-
+  // week is 'repaired'. A calm, forgiving line, never shame, and it self-
   // expires within a week as the next week finishes and rolls the strip on.
   const finishedWeeks = weeks.filter(w => w.state !== 'in-progress');
   const justRepaired = finishedWeeks[finishedWeeks.length - 2]?.state === 'repaired';
 
   // Text equivalent of the glyph strip for screen readers. D4 (founder,
-  // 2026-07-03): a missed week is spoken as a "quiet week" — never "missed".
+  // 2026-07-03): a missed week is spoken as a "quiet week", never "missed".
   const parts = [];
   const k = strength(weeks, 'kept'); if (k) parts.push(`${k} kept`);
   const r = strength(weeks, 'resting'); if (r) parts.push(`${r} recovery`);
@@ -149,7 +149,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         <Text style={styles.longest}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
       ) : null}
 
-      {/* Manual-goal editor — plan-less users only */}
+      {/* Manual-goal editor, plan-less users only */}
       {!hasTarget ? (
         <View style={styles.goalBlock}>
           <Text style={styles.goalLabel}>How many sessions a week are you aiming for?</Text>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   glyphKeyItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   glyphKeyLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   longest: { fontSize: fontSize.xs, color: colors.textMuted },
-  // D2 streak-repair line — calm, forgiving; primary tint (a positive bridge),
+  // D2 streak-repair line, calm, forgiving; primary tint (a positive bridge),
   // never a warning colour.
   repairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxs },
   repairLine: { ...type.captionTight, flex: 1, color: colors.textSecondary },

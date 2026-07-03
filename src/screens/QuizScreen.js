@@ -1,7 +1,7 @@
 /**
- * COMP-030 — the pre-account quiz (Variant B, §4B steps 2–3).
+ * COMP-030: the pre-account quiz (Variant B, §4B steps 2-3).
  *
- * Two sections — how you train, what you train for — answered before any
+ * Two sections, how you train, what you train for, answered before any
  * account exists. Answers go ONLY to the in-memory store slice (never persisted,
  * never transmitted: the privacy property). Reaches the plan preview, then the
  * "Save your plan" account wall. Options reuse coachingGoals as the single source

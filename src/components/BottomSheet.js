@@ -41,7 +41,7 @@ export default function BottomSheet({
   accessibilityLabel,
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // The sheet is a Modal anchored to the PHYSICAL screen bottom — it
+  // The sheet is a Modal anchored to the PHYSICAL screen bottom, it
   // overlays the tab band, so nothing absorbs the system inset for it.
   // Every consumer gets this for free (edge-to-edge sweep, 2026-07-03).
   const insets = useSafeAreaInsets();

@@ -1,10 +1,10 @@
 /**
- * CalorieBankSheet — "Plan a higher-calorie day" (CB-1).
+ * CalorieBankSheet, "Plan a higher-calorie day" (CB-1).
  * Source: docs/ultimate-audit-2026-06-13/pass4-blueprint-calorie-banking.md.
  *
  * Pick a day in the week and how much to bump it; the rest of the week gives up
  * an equal share so the WEEKLY TOTAL stays the same. All the safety maths
- * (floors, band cap, refusal) live in lib/food/calorieBank — this sheet only
+ * (floors, band cap, refusal) live in lib/food/calorieBank, this sheet only
  * previews the result and hands a valid plan back to the caller to persist. The
  * caller is responsible for only opening this when banking is allowed (no carb
  * cycle / refeed / floored target / open ED-pattern flag).

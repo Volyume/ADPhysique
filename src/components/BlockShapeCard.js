@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle } from '../styles/theme';
 
 /**
- * BlockShapeCard (COMP-010) — the shape of the training block as a row of
+ * BlockShapeCard (COMP-010), the shape of the training block as a row of
  * week dots with a jargon-free effort arc: Ease in -> Build -> Build ->
  * Push -> Recover. Makes periodisation visible and turns the recovery week
  * into a destination ("recovery week in N"), not a dip.

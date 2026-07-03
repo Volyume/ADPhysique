@@ -1,5 +1,5 @@
 /**
- * PartnerRow — the slim training-partner status row on ConsistencyScreen
+ * PartnerRow, the slim training-partner status row on ConsistencyScreen
  * (NEW-002 rebuild, bp-partner-system-rebuild.md). One line that says where
  * the pair stands and opens PartnerScreen; all interaction lives there.
  * Derived signals only; a resting partner never reads as a fail.

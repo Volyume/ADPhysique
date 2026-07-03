@@ -62,7 +62,7 @@ const WEEKLY_THRESHOLD = 14; // windows beyond this aggregate into weekly bars
 
 // Fibre has no per-user target in nutrition_targets (kcal/P/C/F only), so we
 // anchor adherence to the UK public reference: NHS Eatwell advises aiming for
-// 30 g of fibre a day. Fibre is a "more is fine" nutrient — a day counts when
+// 30 g of fibre a day. Fibre is a "more is fine" nutrient, a day counts when
 // it lands AT OR ABOVE this aim, never an upper bound (no over-target shame).
 const FIBRE_AIM_G = 30;
 
@@ -135,7 +135,7 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [days, rollupByDate, targets]);
 
   // Nutrient averages (build gap #18): factual mean grams/day of each tracked
-  // macro over the window's LOGGED days. Adherence-neutral — no target, no
+  // macro over the window's LOGGED days. Adherence-neutral, no target, no
   // colour, no streak. Aggregates the rollups the screen already loaded for the
   // window (no extra query); macro-level only (the rollup carries no
   // sodium/sugar, and micronutrients are decision-gated).
@@ -221,7 +221,7 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [proteinLine, targets]);
 
   // Weekly-average summary: avg kcal/day over the last 7 logged days vs the 7
-  // before that. Factual, no valence colour — just "this week / last week / the
+  // before that. Factual, no valence colour, just "this week / last week / the
   // change", so a quieter or busier week reads neutrally (locked coaching voice).
   const weeklyAvg = useMemo(() => {
     const avgOf = (isoList) => {
@@ -421,7 +421,7 @@ export default function FoodInsightsScreen({ navigation }) {
         {/* Protein-consistency headline (ULTIMATE-NUT-04): the single most
             behaviour-relevant figure, surfaced above the four-row macro block.
             Derived from the existing protein-hit count (within 10% of target,
-            NA-nutrition-8) — pDays / logged. Hidden until a day is logged,
+            NA-nutrition-8), pDays / logged. Hidden until a day is logged,
             mirroring the macro block's guard. */}
         {adherence && adherence.logged > 0 ? (
           <>
@@ -492,7 +492,7 @@ export default function FoodInsightsScreen({ navigation }) {
         </Card>
 
         {/* Nutrient averages (build gap #18): plain mean grams/day per macro
-            over the window. Adherence-NEUTRAL by design — value in textPrimary,
+            over the window. Adherence-NEUTRAL by design, value in textPrimary,
             label in textMuted, no good/bad colour, no target, no streak. Macro-
             level only (no sodium/sugar on the rollup; micronutrients gated). */}
         <Text style={styles.sectionLabel}>NUTRIENT AVERAGES</Text>
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
 
   // Weekly-average summary: headline numeral always textPrimary, delta neutral
-  // (textSecondary) — never a good/bad valence colour (locked coaching voice).
+  // (textSecondary), never a good/bad valence colour (locked coaching voice).
   summaryValue: { ...type.title, color: colors.textPrimary },
   summaryCaption: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   summaryDelta: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, marginTop: spacing.sm },
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   adherenceValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 44, textAlign: 'right' },
 
   // Nutrient averages (build gap #18): a plain two-column factual row, "Protein
-  // … 146 g/day". Label textMuted, value textPrimary — deliberately NO valence
+  // … 146 g/day". Label textMuted, value textPrimary, deliberately NO valence
   // colour, no bar, no target (adherence-neutral, ED-safety requirement).
   nutrientRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

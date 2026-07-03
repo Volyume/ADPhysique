@@ -1,5 +1,5 @@
 /**
- * PartnerScreen — the premium partner destination (DESIGN-SPEC B2–B7, Step B).
+ * PartnerScreen, the premium partner destination (DESIGN-SPEC B2 to B7, Step B).
  *
  * The flagship connection surface. Every active pairing is its own isolated
  * PairCard (no cross-pair totals, no ordering by performance): a shared-streak

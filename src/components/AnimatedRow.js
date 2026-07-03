@@ -3,7 +3,7 @@
  *
  * The list-mutation sibling of AnimatedEntrance (D2, design audit 03 win #2):
  * a row that enters with a small fade+rise, exits with a fade, and lets its
- * SIBLINGS glide into the freed space via a layout transition — so a Diary
+ * SIBLINGS glide into the freed space via a layout transition, so a Diary
  * delete or a logged set appearing is no longer a jump-cut.
  *
  * Reduce-motion aware: renders a plain View when the user asked for calmer

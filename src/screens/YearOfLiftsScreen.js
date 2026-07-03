@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha } from '../styles/theme';
 // M4 (audit 03b §2.2 item 1): the story tap zones were the flagship dead
-// tap — no pressed state, no haptic. The tick goes through the self-gating
+// tap, no pressed state, no haptic. The tick goes through the self-gating
 // vocabulary (selection = story advance, same class as a scrub tick).
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
@@ -83,7 +83,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
     });
   }
 
-  // 3. Volume — raw number stays the hero (numbers-first); a factual
+  // 3. Volume: raw number stays the hero (numbers-first); a factual
   // year-over-year anchor (ULTIMATE-WR-5, NA-wr-10: founder chose relative %)
   // is added only when there is a previous window and the year is up. A down
   // year is never negative-framed and neutral mode suppresses it; either way it
@@ -185,7 +185,7 @@ function parseDateText(t) {
   return Number.isNaN(ms) ? null : ms;
 }
 
-// COMP-005 — monthly recap deck (max 8 cards, empty ones dropped). `neutral`
+// COMP-005: monthly recap deck (max 8 cards, empty ones dropped). `neutral`
 // is set under calm mode or an open ED-pattern flag: month-vs-month deltas go
 // factual (comparison pressure is the calm-mode risk, never the training data).
 // A down month is never negative-framed.
@@ -362,7 +362,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   return cards;
 }
 
-// COMP-005 — block-end recap deck (3–5 cards). The "climb" slide (tonnageDelta)
+// COMP-005: block-end recap deck (3-5 cards). The "climb" slide (tonnageDelta)
 // is the unreplicable one; competitors have no blocks.
 export function buildBlockCards(data, units) {
   if (!data) return [];
@@ -592,7 +592,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   function handleShareYear() {
     if (!data) return;
     // COMP-005: same milestone canvas, eyebrow/title/hero/stats vary by variant.
-    // Factual training stats only — never bodyweight, measurements or notes.
+    // Factual training stats only: never bodyweight, measurements or notes.
     let milestoneData;
     if (variant === 'month') {
       const stats = [];

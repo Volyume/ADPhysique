@@ -385,7 +385,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
             ) : (
               <View style={styles.exerciseBreakdown}>
-                <Text style={styles.loadingText}>Loading exercises...</Text>
+                <Text style={styles.loadingText}>Loading exercises…</Text>
               </View>
             )}
 

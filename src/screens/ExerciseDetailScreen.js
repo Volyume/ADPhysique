@@ -67,7 +67,7 @@ const SCREEN_W = Dimensions.get('window').width;
 
 // The five lenses the detail chart can draw. Mirrors LiftProgressScreen's
 // metric switcher (best set / heaviest / total reps / volume) and adds best-set
-// volume — the heaviest single working set's load × its reps that session, a
+// volume, the heaviest single working set's load × its reps that session, a
 // cheap derive from the already-grouped sets. 'heaviest' is the historic
 // default ("Max weight"); 'e1rm' is the estimated max. Values come from
 // buildExerciseMetricSeries so distance/duration exercises (which reuse the
@@ -139,7 +139,7 @@ export function splitInstructionSteps(text) {
   const trimmed = text.trim();
   if (!trimmed) return [];
 
-  // Explicit line breaks win — already author-segmented.
+  // Explicit line breaks win, already author-segmented.
   const lines = trimmed.split(/\r?\n+/).map(l => l.trim()).filter(Boolean);
   if (lines.length > 1) return lines;
 
@@ -189,7 +189,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exerciseId]);
 
-  // COMP-019: pick the chart's initial window — persisted choice if it holds
+  // COMP-019: pick the chart's initial window, persisted choice if it holds
   // enough sessions, else widen to the narrowest window with >=2 (never dead).
   useEffect(() => {
     let cancelled = false;
@@ -817,6 +817,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             style={styles.modalBackdrop}
             activeOpacity={1}
             onPress={() => setGoalModalVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
@@ -834,6 +836,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               placeholder={`e.g. 100`}
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
+              accessibilityLabel={`Target weight in ${units}`}
             />
 
             <Text style={styles.inputLabel}>Target date (optional)</Text>
@@ -845,6 +848,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               autoCapitalize="words"
+              accessibilityLabel="Target date, optional"
             />
 
             <TouchableOpacity

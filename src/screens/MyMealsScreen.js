@@ -14,7 +14,7 @@
  * cloud saved_meals table in step (migration 015).
  *
  * C6 (Wave A, 2026-07-03): logging a meal used to gate behind an
- * appAlert confirm dialog. That's gone — tapping a row now logs
+ * appAlert confirm dialog. That's gone, tapping a row now logs
  * immediately (optimistic write) and shows a success + Undo toast, the
  * same contract as DiaryScreen's onLogUsual and FoodSearchScreen's
  * confirmLog. A saved meal fans out into MULTIPLE food_entries rows, so

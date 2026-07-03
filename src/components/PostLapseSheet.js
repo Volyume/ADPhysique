@@ -1,5 +1,5 @@
 /**
- * PostLapseSheet — COMP-025-A Moment 2
+ * PostLapseSheet, COMP-025-A Moment 2
  *
  * The one-time, first-app-open-after-lapse sheet. Catches store-settings
  * cancels that never passed through the in-app cancel sheet. Transactional and
@@ -7,7 +7,7 @@
  * asks the same single reason question ONLY if no reason was captured this
  * episode. Shown once per churn episode (winbackState.lapseSheetShown).
  *
- * Deliberately a one-time sheet, NOT a persistent Home banner (§4a) — it
+ * Deliberately a one-time sheet, NOT a persistent Home banner (§4a), it
  * respects COMP-027's "one big thing" Home hierarchy and never nags.
  *
  * Unlike Moment 1 there is no store handoff here (the lapse already happened);
@@ -80,7 +80,7 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
 
 /**
  * Mount once near the app root. Watches for an open churn episode whose sheet
- * hasn't been shown yet — on first app open after a lapse (cold start,
+ * hasn't been shown yet, on first app open after a lapse (cold start,
  * foreground, or the in-session tier flip to free) it surfaces the sheet a
  * single time.
  */

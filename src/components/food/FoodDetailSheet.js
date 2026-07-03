@@ -56,7 +56,7 @@ export default function FoodDetailSheet({
   const showSodium = useAppStore((s) => s.accessibility?.showSodium !== false);
   // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
   // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
-  // not gram arithmetic — the list row already shows serving_label, we keep it
+  // not gram arithmetic, the list row already shows serving_label, we keep it
   // here instead of throwing it away and demanding grams. Grams remain the
   // storage contract (scaleMacros(food, grams)); the unit only changes how the
   // amount is entered. Falls back to grams when a food has no named serving.
@@ -148,7 +148,7 @@ export default function FoodDetailSheet({
   const macros = macrosFor(food, quantityG);
   // Extra per-food nutrients (gap #16): shown only when the food actually
   // carries the datum (null = "no data", never a fake 0) and the user keeps the
-  // toggle on. Display-only — not logged, not totalled, not scored.
+  // toggle on. Display-only, not logged, not totalled, not scored.
   const sugarG = showSugar ? scaleSugarG(food, quantityG) : null;
   // E4: sodium displays in mg (stored grams per 100g; implausible values read
   // as no data inside the scaler). Same shown-when-the-food-carries-it rule.
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
   },
   // Unit selector (household serving vs grams) + amount stepper. The common
-  // case — one named serving — needs zero keystrokes: tap +/− or just Add.
+  // case, one named serving, needs zero keystrokes: tap +/− or just Add.
   unitRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
   unitBtn: {
     flex: 1,

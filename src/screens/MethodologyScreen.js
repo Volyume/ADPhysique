@@ -1,16 +1,16 @@
-// COMP-006 — "How Precision Coaching works".
+// COMP-006, "How Precision Coaching works".
 //
 // A static, offline, copy-only trust surface: six sections, the first always
 // open, the rest collapsible. No data dependencies, no Supabase reads, no
 // personalised state, so it renders identically for every user (including with
-// an ED-pattern flag open — it describes the safety system in general terms and
+// an ED-pattern flag open, it describes the safety system in general terms and
 // names no individual state). Reached from the You tab, from the coach-output
 // WhyBlock, and from the held-decisions card.
 //
 // FOUNDER COPY GATE: every string here is reviewed before ship and is kept
 // truthful against the engine. The §11 (2026-06-11) corrections are applied:
 //   - the two-week cooldown carries its safety exception (rapid loss + low
-//     energy can raise calories sooner — weeklyCoach.js:292),
+//     energy can raise calories sooner, weeklyCoach.js:292),
 //   - volume moves by -2..+3 sets (weeklyCoach.js:169), described as "removes
 //     up to 2 or adds up to 3",
 //   - the fat-free-mass floor figure (30 kcal/kg) is published; the absolute
@@ -32,7 +32,7 @@ const INTRO =
   'your training. It compares what happened to what was expected. That ' +
   'comparison drives the decision. Nothing is random. Everything can be explained.';
 
-// Sections 2–6: collapsible. Each opens with the rule and closes with the
+// Sections 2 to 6: collapsible. Each opens with the rule and closes with the
 // mechanism (the "why the rule works", not just what it is).
 const SECTIONS = [
   {
@@ -80,7 +80,7 @@ const SECTIONS = [
     key: 'safety',
     title: 'Safety floors',
     // Locked Pattern 10 (COACHING_VOICE_SYNTHESIS_LOCKED.md): plain-mechanism
-    // language — "lean mass", never "fat-free mass"/"FFM". The 30 kcal/kg
+    // language, "lean mass", never "fat-free mass"/"FFM". The 30 kcal/kg
     // number and mechanism are unchanged.
     body:
       'Precision Coaching will not suggest a calorie cut if your average intake over ' +

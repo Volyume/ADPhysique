@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 
 /**
- * "This week" strip (COMP-018) — the first section of the Progress tab.
+ * "This week" strip (COMP-018), the first section of the Progress tab.
  * One row: sessions this week on the left, the run state on the right.
  *
  * No-shame by construction (the hard rules live in the pure streak module):

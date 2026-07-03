@@ -1,5 +1,5 @@
 /**
- * ConsistencyEcho (S2 "forgiveness story", parts a + b) — a compact echo of the
+ * ConsistencyEcho (S2 "forgiveness story", parts a + b), a compact echo of the
  * weekly consistency run near the Home hero, plus a one-time explainer that
  * states the band-not-chain promise upfront.
  *

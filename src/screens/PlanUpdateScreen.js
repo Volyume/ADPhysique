@@ -134,7 +134,7 @@ export default function PlanUpdateScreen({ navigation }) {
   }
 
   // Step 1 (NEW): "Rebuild my plan" runs a dry-run + diff and opens the preview.
-  // Nothing is written until the user confirms — the active plan and profile are
+  // Nothing is written until the user confirms, the active plan and profile are
   // untouched if they back out.
   async function handleRebuildPress() {
     if (previewing || saving) return;

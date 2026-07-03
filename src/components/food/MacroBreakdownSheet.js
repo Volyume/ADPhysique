@@ -48,7 +48,7 @@ function round(s) {
 
 // Atwater factors (kcal per gram): protein 4, carbs 4, fat 9. Used to
 // self-explain the energy total and the descriptive %-of-calories split. This
-// is purely DESCRIPTIVE of what was eaten — no target, no colour judgement.
+// is purely DESCRIPTIVE of what was eaten, no target, no colour judgement.
 function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   const pKcal = protein * 4;
   const cKcal = carbs * 4;

@@ -1,5 +1,5 @@
 /**
- * ReasonPicker — COMP-025-A shared reason rows
+ * ReasonPicker, COMP-025-A shared reason rows
  *
  * Presentational, controlled list of the single-select churn reasons + the
  * conditional free-text field. Used by both the pre-store-handoff sheet

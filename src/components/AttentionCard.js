@@ -6,14 +6,14 @@
  * Home (trial-value ledger, free-tier weekly line, differential paywall
  * badge) now live here as variants of a single card. The four
  * coaching-signal banners (coach review, recovery week, phase mismatch,
- * plateau) stay distinct on HomeScreen — each has its own action.
+ * plateau) stay distinct on HomeScreen, each has its own action.
  *
  * INTERNAL PRIORITY (recorded per the founder's condition; highest wins):
- *   1. 'trial'        — the trial-value ledger. Pro-trial users only, so it
+ *   1. 'trial'        : the trial-value ledger. Pro-trial users only, so it
  *                        also outranks every coaching banner except a fresh
  *                        coach review (its historical slot, unchanged).
- *   2. 'free_line'    — the free-tier weekly one-liner.
- *   3. 'differential' — the differential paywall badge, always last.
+ *   2. 'free_line'    : the free-tier weekly one-liner.
+ *   3. 'differential' : the differential paywall badge, always last.
  * 'trial' can never co-occur with the other two (pro-trial vs free tier),
  * so in practice the order decides free_line vs differential; it is stated
  * in full so a future variant slots in deliberately, not by accident.

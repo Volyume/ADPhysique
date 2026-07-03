@@ -109,7 +109,7 @@ const RECOVERY_OPTIONS = [
 ];
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am–6pm
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am to 6pm
 
 function fmt12(h) {
   if (h === 0) return '12 am';
@@ -253,7 +253,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // never as a scheduled session. The user chooses what they do.
   const [cardioOn, setCardioOn] = useState(true);
 
-  // Step 1, account. OAuth only (Apple/Google) — the email + password path was
+  // Step 1, account. OAuth only (Apple/Google), the email + password path was
   // removed (founder 2026-07-01) because email confirmation was flaky. OAuth
   // completes the account inside handleOAuthOnboarding, which sets
   // accountCreated and advances to step 2; there is no signup/signin mode.
@@ -354,7 +354,7 @@ export default function ProOnboardingScreen({ navigation }) {
       setAccountCreated(true);
       // F11 seam: a draft persisted past step 2 whose sex is not an accepted
       // value (corrupt/hand-edited storage) must NOT restore past the sex
-      // gate — sex drives the sacred ED floor, and step 2's canContinue is
+      // gate, sex drives the sacred ED floor, and step 2's canContinue is
       // the only thing enforcing it. Clamp the restored step to 2 until the
       // draft carries a valid explicit choice.
       setStep((s) => Math.max(s, sexValid ? draft.step : Math.min(draft.step, 2)));
@@ -509,7 +509,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // The four honest stage lines, mapped to real _generatePlanInner phases.
   // Stage 2 gains a division-priorities suffix for the physique divisions
   // (it maps to applyGoalOverlay); stage 4 names the user's actual session
-  // length — the single highest-leverage word, proving the labels are real.
+  // length, the single highest-leverage word, proving the labels are real.
   function sequenceStages() {
     const divisionLabel = trainingGoal && trainingGoal !== 'general' ? GOAL_LABELS[trainingGoal] : null;
     return [
@@ -775,7 +775,7 @@ export default function ProOnboardingScreen({ navigation }) {
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
-          // COMP-013: a failed generation must abort the sequence — three
+          // COMP-013: a failed generation must abort the sequence, three
           // seconds of "building" followed by "didn't generate" is worse than
           // a bare spinner. Flag it; the post-try block falls back to the form
           // with this alert and never plays a completion tick.
@@ -800,7 +800,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     // Plan generation failed, but the profile + targets are saved. Abort the
     // sequence's celebratory hold instantly (no min-display pad, no completion
-    // tick) and still go to the completion screen — which handles the no-plan
+    // tick) and still go to the completion screen, which handles the no-plan
     // state and whose alert ("Open Home and tap Build my plan") then reads
     // correctly. Stranding the user on the step-5 form would not.
     // OB-3: the wizard is complete either way from here, so drop the resume
@@ -912,7 +912,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // Gate the Continue button on every required field (same pattern as steps
     // 3-5), so the step visibly REFUSES to advance until they are all valid.
     // Biological sex is the critical one: it must be an explicit male/female
-    // choice — a null must never progress (and must never be silently defaulted
+    // choice, a null must never progress (and must never be silently defaulted
     // downstream). Body weight and age are validated to their real ranges here
     // so the button matches advanceFrom2 exactly (no enabled-but-then-alert gap).
     const step2BwKg = localBWUnits === 'st'
@@ -1242,7 +1242,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     // A3 (audit 04 §4): the moment a focus is chosen, show the provisional
     // energy target from the SAME pure engine call the final plan uses.
-    // Display only — nothing persists until the wizard completes; the copy
+    // Display only, nothing persists until the wizard completes; the copy
     // says "provisionally" because steps 5's inputs can still move it.
     let provisionalKcal = null;
     if (trainingPhase && sex) {
@@ -1424,7 +1424,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     // COMP-013: the staged "Building your plan" sequence replaces the dead
     // button spinner. Same header furniture (brand row + a now-full progress
-    // bar), no new route — so a failure can fall back to the form below.
+    // bar), no new route, so a failure can fall back to the form below.
     if (sequenceActive) {
       const lines = sequenceStages();
       return (
@@ -1483,7 +1483,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             {/* U-E-1/A6: glosses "volume" for both this field's hint AND the
-                Header sub above ("Recovery affects your plan volume...") —
+                Header sub above ("Recovery affects your plan volume..."),
                 the Header carries no field label of its own to anchor a
                 tooltip to, so it shares this one on the field immediately
                 below it, per the existing bodyFatMethod/phase/division/

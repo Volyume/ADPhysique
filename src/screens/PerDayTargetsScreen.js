@@ -17,7 +17,7 @@ import {
 
 // gap #13: per-day-of-week calorie planning. A user who eats more at weekends
 // (or trims midweek) sets a kcal offset per weekday; the diary shows that day's
-// target shifted by it. PLANNING ONLY — the engine's stored target, the coach's
+// target shifted by it. PLANNING ONLY, the engine's stored target, the coach's
 // rolling average and every ED-safety gate are untouched. Every day is HARD-
 // clamped so it can never display below the safe floor (sex floor 1500/1200, FFM
 // floor); the clamp is shown live so a user always sees the real, safe number.

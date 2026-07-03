@@ -371,7 +371,7 @@ export default function CoachReviewScreen() {
     } catch (_e) {
       // U-B-6: distinguish a genuine read failure from an empty week. Show a
       // retryable error state instead of the false "no sessions" card (parity
-      // with the Pro CoachOutput screen). Data is not lost — this is a read fault.
+      // with the Pro CoachOutput screen). Data is not lost, this is a read fault.
       setLoadError(true);
     } finally {
       setLoading(false);

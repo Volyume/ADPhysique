@@ -7,7 +7,7 @@ import { colors, spacing, type, fontWeight } from '../styles/theme';
  * "seen" flag and decide when to stop rendering this (typically: the moment
  * the user performs the gesture it's teaching, or the "Got it" tap here).
  *
- * Deliberately plain: no icon, no background, no border — a single caption
+ * Deliberately plain: no icon, no background, no border, a single caption
  * line so it reads as a passing tip, not another card competing for
  * attention.
  */

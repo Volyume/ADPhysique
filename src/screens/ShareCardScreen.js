@@ -1,10 +1,10 @@
 /**
- * ShareCardScreen — build and share a workout / PR / milestone card.
+ * ShareCardScreen: build and share a workout / PR / milestone card.
  *
  * The card is drawn by ONE renderer (src/lib/shareCard/drawShareCard, Skia) for
  * BOTH the on-screen preview and the exported PNG, so what you see is exactly
  * what you share. This replaced the old split where the preview (RN views) and
- * the export (a hand-coded WebView canvas) were two renderers that drifted —
+ * the export (a hand-coded WebView canvas) were two renderers that drifted,
  * which is why the export didn't match the preview and the toggles did little.
  *
  * The "Save as PDF" path is a separate, clean one-page HTML→PDF summary and is
@@ -21,7 +21,7 @@ import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 
-// Optional native modules — guarded so the screen still mounts (e.g. in tests
+// Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
 let FileSystem; let Sharing; let Asset; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
@@ -34,8 +34,8 @@ try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont 
 
 // "Share to Stories" goes straight to the OS share sheet. The Instagram
 // Stories deep link (instagram-stories://share) cannot carry the rendered
-// image via a bare Linking.openURL — the full background+sticker handoff needs
-// the pasteboard (iOS) / intent extras (Android) per Instagram's Stories API —
+// image via a bare Linking.openURL, the full background+sticker handoff needs
+// the pasteboard (iOS) / intent extras (Android) per Instagram's Stories API,
 // so a deep link would open an EMPTY composer. The share sheet reliably hands
 // the PNG to Instagram (or any target the user picks), which is what we want.
 
@@ -226,7 +226,7 @@ export default function ShareCardScreen({ route }) {
   }, [typefaces, wordmark, buildParams, bgPhoto]);
 
   // Take a gym photo with the camera to use as the card background (all cards).
-  // Camera capture only — uses the CAMERA permission (same as barcode scanning),
+  // Camera capture only: uses the CAMERA permission (same as barcode scanning),
   // so no photo-library permission is needed.
   const takeGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
@@ -335,7 +335,7 @@ export default function ShareCardScreen({ route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Card type — shown per the data the screen was opened with. */}
+        {/* Card type: shown per the data the screen was opened with. */}
         <View style={styles.segmentRow}>
           {sessionData && (
             <SegmentBtn label="Session" active={cardType === 'session'} onPress={() => setCardType('session')} />
@@ -351,7 +351,7 @@ export default function ShareCardScreen({ route }) {
           )}
         </View>
 
-        {/* Format — the weekly recap is square-only, so the toggle is hidden. */}
+        {/* Format: the weekly recap is square-only, so the toggle is hidden. */}
         {!isWeekly && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Format</Text>
@@ -372,7 +372,7 @@ export default function ShareCardScreen({ route }) {
         </View>
         )}
 
-        {/* Background — optional gym photo behind any card (kept legible by a
+        {/* Background: optional gym photo behind any card (kept legible by a
             brand-colour scrim in the renderer). Only shown when the native image
             picker is available in the build. */}
         {ImagePicker ? (
@@ -397,7 +397,7 @@ export default function ShareCardScreen({ route }) {
         </View>
         ) : null}
 
-        {/* Preview — the exact image that gets shared, scaled down */}
+        {/* Preview: the exact image that gets shared, scaled down */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preview</Text>
           <View style={styles.previewOuter}>
@@ -480,7 +480,7 @@ export default function ShareCardScreen({ route }) {
           </Text>
         </View>
 
-        {/* Share to Story — Instagram + Facebook icons, opens the system share
+        {/* Share to Story: Instagram + Facebook icons, opens the system share
             sheet with the rendered PNG (founder 2026-06-30: present it as a Story
             share for Instagram/Facebook, but route through the normal share
             screen rather than a direct-composer intent, so no extra dependency or

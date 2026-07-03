@@ -1,5 +1,5 @@
 /**
- * COMP-019 Stage 1a — the time-window chip row shared by the hero charts
+ * COMP-019 Stage 1a, the time-window chip row shared by the hero charts
  * (weight trend, e1RM, weekly volume). One small, accessible control so the
  * three charts present windowing identically. Styling follows the in-house
  * precedent (VolumeHeatmapScreen's rolling-window selector).

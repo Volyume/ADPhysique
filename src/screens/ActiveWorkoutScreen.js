@@ -45,26 +45,26 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 // B8: keep-awake tag so this screen's activate/deactivate can never release
 // a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
 // screen is registered in three stacks (Home, FirstRun, ProOnboarding) and
-// expo-keep-awake tags are a set, not ref-counted — with a shared tag, two
+// expo-keep-awake tags are a set, not ref-counted, with a shared tag, two
 // mounted instances would trade one hold and blur ordering would decide who
 // wins.
 const KEEP_AWAKE_TAG = 'volyume-active-workout';
 let keepAwakeSeq = 0;
 
-// Equipment whose load is plates on a bar — the only exercises where the
+// Equipment whose load is plates on a bar, the only exercises where the
 // plate calculator makes sense. Seeded rows use snake_case ('barbell',
 // 'smith_machine', 'ez_bar'); CUSTOM exercises store the picker's display
-// spellings ('Barbell', 'Smith Machine', 'EZ Bar' — ExercisePickerModal),
+// spellings ('Barbell', 'Smith Machine', 'EZ Bar', ExercisePickerModal),
 // so the match is case-insensitive with a flexible separator.
 const PLATE_LOADED_EQUIPMENT = /(barbell|smith[\s_-]?machine|ez[\s_-]?bar)/i;
 
-// Barbell test for the warm-up ramp's empty-bar row — same custom-spelling
+// Barbell test for the warm-up ramp's empty-bar row, same custom-spelling
 // caveat as above ('barbell' seeded, 'Barbell' custom).
 const BARBELL_EQUIPMENT = /barbell/i;
 
 // Real-world plate colours by kg weight. These are physical equipment
 // standards (red 25, blue 20, yellow 15, green 10, white 5), not theme
-// colours, so they are deliberately literal — same recorded exception as
+// colours, so they are deliberately literal, same recorded exception as
 // the original calculator.
 /* eslint-disable no-restricted-syntax */
 const PLATE_COLOURS = {
@@ -246,14 +246,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
-  // B8 gym basics: both sheets open ONLY from the exercise overflow menu —
+  // B8 gym basics: both sheets open ONLY from the exercise overflow menu,
   // pull, never push (the recorded no-auto-suggest decision below stands).
   const [showWarmupRamp, setShowWarmupRamp] = useState(false);
   const [showPlates, setShowPlates] = useState(false);
   // The working weight the ramp is built from. Tapping a ramp row
   // overwrites the entry with the warm-up weight, so without this anchor a
   // reopened ramp would recompute from the WARM-UP weight and collapse
-  // ("no ramp needed") — losing the typed working weight entirely on a
+  // ("no ramp needed"), losing the typed working weight entirely on a
   // first-time exercise (Wave 4 review finding). Anchored on first open
   // while the entry holds a working (non-warm-up) weight; cleared on
   // exercise change and whenever the entry shows a working weight again.
@@ -279,7 +279,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
-  // survives screen remounts and the WK-1 crash restore — the a11y copy
+  // survives screen remounts and the WK-1 crash restore, the a11y copy
   // promises "Applies to the whole session" and now means it.
   const readinessDismissed = !!activeWorkout?.readinessDismissed;
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
@@ -302,7 +302,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const timerRef = useRef(null);
 
-  // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED —
+  // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED,
   // the phone sits propped on the bench between sets and must not sleep
   // mid-session. Focus-scoped, not mount-scoped: this screen stays mounted
   // in the Train stack while the user browses another tab mid-session, and
@@ -397,7 +397,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // Wave-3 review: when the readiness trim sets a LOWER target than the
   // COMP-015 line announces (the min() above discarded it), the readiness
-  // line must lead the in-session surface — a discarded "added a set" line
+  // line must lead the in-session surface, a discarded "added a set" line
   // fronting a reduced target read as a contradiction.
   const readinessDrivesTarget = readinessReduces
     && Number.isFinite(readinessSetCount)
@@ -411,7 +411,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? "Use your coach's targets instead"
     : 'Use planned targets instead';
 
-  // COMP-015: coverage telemetry — fire once per exercise when its adjustment
+  // COMP-015: coverage telemetry, fire once per exercise when its adjustment
   // line first becomes visible. muscle + direction + reasonCode only, no PII.
   const shownAdjRef = useRef(new Set());
   // Hydrate the device-local workout prefs (default rest, auto-start) once so a
@@ -786,7 +786,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // store), but completing a set runs through the shared in-app path
   // (cluster vs normal handling), so it must fire here on the screen. The
   // action opens the app to the foreground; this listener picks it up and
-  // runs handleCompleteSetPress — but ONLY when a rest is actually running,
+  // runs handleCompleteSetPress, but ONLY when a rest is actually running,
   // so a stale tap is ignored. handleCompleteSetPressRef keeps the latest
   // closure without re-installing the listener every render.
   const handleCompleteSetPressRef = useRef(null);
@@ -806,7 +806,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (!st.activeWorkout?.id || !st.restTimerActive) return;
       // Don't blind-log from the lock screen. If the current set is still a
       // ghost (the suggested next-set prefill the user hasn't confirmed),
-      // tapping "Complete set" would log a set they may not have performed —
+      // tapping "Complete set" would log a set they may not have performed,
       // so just let opensAppToForeground bring them in to confirm. When they've
       // entered real values (not a ghost), complete it one-tap as before.
       if (currentSetGhostRef.current) return;
@@ -888,7 +888,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setTargetReason(computedReason);
 
       // Pre-fill from what was ACTUALLY lifted last time for this set position
-      // (Strong / Hevy behaviour), NOT the computed progression target — the
+      // (Strong / Hevy behaviour), NOT the computed progression target, the
       // target felt random to users (e.g. 9.5kg prefilled after a 30kg set).
       // The target still shows as the suggestion chip (setTargets), so the
       // coaching cue is kept; it just no longer overrides the input.
@@ -998,7 +998,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Persist the in-progress set draft so leaving the app mid-set doesn't wipe
   // what was typed. iOS routinely terminates a memory-heavy app's JS process
   // while you're in another app, then remounts this screen on return (looks
-  // like "I just switched apps") — the in-memory entry would otherwise be lost.
+  // like "I just switched apps"), the in-memory entry would otherwise be lost.
   // Keyed per workout + exercise, tagged with the working-set index so it only
   // restores onto the same set (see loadHistory). An empty weight clears it.
   const draftSaveTimer = useRef(null);
@@ -1192,7 +1192,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // 1RM/heaviest detector over them would report meaningless "PRs".
       const prs = isWeightReps ? detectPR(setData, prHistory, exercise, units) : [];
       if (prs.length > 0 && prHistory.length === 0) {
-        // Wave A A1: the first-ever set of an exercise beats nothing —
+        // Wave A A1: the first-ever set of an exercise beats nothing,
         // detectPR compares against empty history, so "PERSONAL RECORD"
         // would be a false claim in the very session that builds trust.
         // Acknowledge the first honestly and quietly instead (PRCelebration
@@ -1318,10 +1318,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the store's current-exercise sets array, and the on-screen receipt; the
   // cloud copy ships on the next per-set push (updated_at is bumped by
   // updateWorkoutSet). PR detection is a log-time concern and is NOT re-run on
-  // an edit/delete — derived analytics recompute from the DB on next view.
+  // an edit/delete, derived analytics recompute from the DB on next view.
 
   // F7 (audit UI): stable identity so the memoised LoggedSetRow actually
-  // skips on the per-second timer tick — the previous inline `() =>
+  // skips on the per-second timer tick, the previous inline `() =>
   // openEditSet(s)` closure was a fresh prop every render, defeating the memo.
   const openEditSet = React.useCallback((set) => {
     setEditingSet(set);
@@ -1520,7 +1520,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.commit();
   }
 
-  // COMP-013: build the 15-minute starter — a true subset of Day 1. Reuses the
+  // COMP-013: build the 15-minute starter, a true subset of Day 1. Reuses the
   // shared applyTimeCrunch with starter options (first 4 exercises, 2 sets
   // each), then maps the result back onto the session: trimmed exercises are
   // marked _timeCrunchSkipped, kept exercises keep their lifts/targets but have
@@ -1545,7 +1545,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     // applyTimeCrunch's starter trim returns the first N entries in plan order,
     // so the first `keepCount` store entries are kept and the rest skipped. Map
-    // by INDEX, not exercise name — duplicate or unnamed exercises can't collide.
+    // by INDEX, not exercise name, duplicate or unnamed exercises can't collide.
     const keepCount = trimmed.length;
     store.setWorkoutExercises(prev => prev.map((entry, i) => {
       if (i >= keepCount) return { ...entry, _timeCrunchSkipped: true };
@@ -2257,7 +2257,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Priority (COMP-015/B2): session adjustment > readiness tweak >
                 stalled advice > coach reason. Absent while the deload banner is
                 showing (one context line at a time; deload never co-occurs with
-                an adjustment — the engine is silent on deload weeks). Tap opens
+                an adjustment, the engine is silent on deload weeks). Tap opens
                 the exercise info sheet, including the Adjusted today and
                 readiness sections. */}
             {currentSet.setType !== 'warmup' && workingLogged === 0 &&
@@ -2321,8 +2321,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.noteInput}
                 value={noteText}
                 onChangeText={setNoteText}
-                placeholder="Add a note..."
+                placeholder="Add a note…"
                 placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Add a note"
                 multiline
                 autoFocus
                 autoComplete="off"
@@ -2348,6 +2349,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   onChangeText={setClusterReps}
                   placeholder="Mini-set reps"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Mini-set reps"
                   keyboardType="number-pad"
                   returnKeyType="done"
                   onSubmitEditing={addMiniSet}
@@ -2382,7 +2384,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Action Buttons */}
           {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
               bar (thumb zone, stable position). In the scroll, only the
-              "Log another set" affordance remains — promoted to a full-size
+              "Log another set" affordance remains, promoted to a full-size
               outline button in the exact pixels the primary used to occupy,
               so the muscle-memory tap logs a set instead of navigating. */}
           {cluster ? null : (targetComplete && !extraSetArmed) ? (
@@ -2402,7 +2404,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
 
           {/* C3 (audit 2026-07-03): the 1.8s move to the next exercise used
-              to be a silent setTimeout — the only way to stay was to log
+              to be a silent setTimeout, the only way to stay was to log
               another set. Make the wait visible and give it its own
               cancel, alongside the "Log another set" affordance above. */}
           {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
@@ -2477,8 +2479,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
 
-        {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar —
-            the one-handed thumb zone, at a stable position — instead of
+        {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,
+            the one-handed thumb zone, at a stable position, instead of
             floating mid-scroll and swapping identity in the same pixels.
             Cluster flows keep their own in-card controls, so no bar then.
             insets.bottom IS required here: E15's VolyumeTabBar returns null
@@ -2696,6 +2698,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             style={styles.sheetOverlay}
             activeOpacity={1}
             onPress={() => setShowSetTypePicker(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
@@ -2735,7 +2739,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
         {/* B8: warm-up ramp sheet. Opens ONLY from the overflow menu (the
-            recorded no-auto-suggest decision stands — pull, never push).
+            recorded no-auto-suggest decision stands, pull, never push).
             Rows are the deterministic warmupRamp arithmetic; tapping one
             loads it into the set entry as a Warm-up via the same setType
             machinery as the manual picker. Nothing is logged for the user. */}
@@ -2749,6 +2753,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             style={styles.sheetOverlay}
             activeOpacity={1}
             onPress={() => setShowWarmupRamp(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
@@ -2826,6 +2832,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             style={styles.sheetOverlay}
             activeOpacity={1}
             onPress={() => setShowPlates(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
@@ -2909,6 +2917,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             style={styles.sheetOverlay}
             activeOpacity={1}
             onPress={() => setShowOverflow(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
@@ -2935,13 +2945,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.sheetOptionLabel}>Exercise info</Text>
               </View>
             </TouchableOpacity>
-            {/* B8 gym basics. Both live here in the overflow — secondary
+            {/* B8 gym basics. Both live here in the overflow, secondary
                 utilities off the permanent surface (COMP-001), and strictly
                 pull: the warm-up ramp NEVER auto-appears (recorded decision
                 at the set-entry card). */}
             {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
                 weight AND set type, and finishCluster commits from the
-                live entry — the one-tap path would mislog the whole
+                live entry, the one-tap path would mislog the whole
                 cluster as a light warm-up. */}
             {!cluster && (!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
               <TouchableOpacity
@@ -3058,6 +3068,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             style={styles.sheetOverlay}
             activeOpacity={1}
             onPress={() => setShowExecution(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
@@ -3077,7 +3089,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             ) : null}
 
-            {/* COMP-015: Adjusted today — the reason, the plain-words signals,
+            {/* COMP-015: Adjusted today, the reason, the plain-words signals,
                 and the one-tap revert. Shown for any visible adjustment; the
                 revert button only when there's a real set change to undo. */}
             {sessionAdjustment?.show ? (
@@ -3106,7 +3118,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             ) : null}
 
-            {/* B2: Eased for today — the intent-sheet answer's downward-only
+            {/* B2: Eased for today, the intent-sheet answer's downward-only
                 tweak, both written whys, and a one-tap session-wide dismiss.
                 Suggestions on the targets display only; the plan and logged
                 sets are never changed. */}
@@ -3424,7 +3436,7 @@ const styles = StyleSheet.create({
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   extraSetBtnText: { ...type.label, color: colors.textSecondary },
   // A2: "Log another set" promoted into the old primary slot as an OUTLINE
-  // button — full-size so the muscle-memory tap logs a set, but not filled,
+  // button, full-size so the muscle-memory tap logs a set, but not filled,
   // keeping the bottom bar's CTA the single filled-amber object on screen.
   extraSetBtnPromoted: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

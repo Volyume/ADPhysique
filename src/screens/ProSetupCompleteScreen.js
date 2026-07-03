@@ -50,7 +50,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // when the user enters the app.
   const [buildingMeals, setBuildingMeals] = useState(false);
   const [mealsBuilt, setMealsBuilt] = useState(false);
-  // A3 (audit OB-4): the first review is 5–11 days away and this reveal used
+  // A3 (audit OB-4): the first review is 5 to 11 days away and this reveal used
   // to say only "end of your training week". Name the actual date, computed
   // with the same helper the check-in gate honours (kept-promise rule).
   const [firstReviewLabel, setFirstReviewLabel] = useState(null);
@@ -151,7 +151,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const phaseLabel = PHASE_LABELS[userProfile?.trainingPhase] ?? null;
   const hasPlan = planRoutines.length > 0;
 
-  // COMP-013: the personalisation receipt — the one line that makes the user
+  // COMP-013: the personalisation receipt, the one line that makes the user
   // feel seen. Built only from inputs the engine acted on (division, weak
   // points the plan prioritised, days committed).
   const receiptLine = getSetupReceiptLine({

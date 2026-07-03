@@ -64,12 +64,12 @@ const EMPTY_COPY = {
 
 // The "Add again" re-log tabs (Move #1): a row tap here logs the food in one
 // tap at its remembered portion, the way MFP/Cronometer re-log a recent. The
-// live-search-results list (any 2+ char query) is NOT a re-log surface — a
+// live-search-results list (any 2+ char query) is NOT a re-log surface, a
 // never-logged food has no remembered portion, so it still opens the sheet.
 // Suggested + Custom are handled elsewhere and are not in this set.
 const RELOG_TABS = new Set(['recents', 'favourites', 'frequents']);
 
-// Wave A C7 (2026-07-03): shared with DiaryScreen's meal-list hint — same
+// Wave A C7 (2026-07-03): shared with DiaryScreen's meal-list hint, same
 // flag, same caption, because they're the two long-press "hold a food"
 // gestures a user meets across one diary-logging journey (edit the portion
 // here on the add-food picker, multi-select back on the diary's own list).
@@ -211,7 +211,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // The user's own foods (favourites, frequents, this slot's "add again"
   // recents) normalised into the ranker's single-food candidate shape, so the
   // Suggested tab can offer a single-food top-up ("Add 150g chicken breast")
-  // beside the curated meals — not meals alone. De-duped by food_ref (a food
+  // beside the curated meals, not meals alone. De-duped by food_ref (a food
   // can appear in more than one list) and with disliked + quick-add refs
   // dropped (a long-pressed "hidden" food must not resurface as a suggestion).
   // Pure mapping of already-loaded rows; no extra fetch, fully deterministic.
@@ -325,7 +325,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // opens the detail sheet for a custom quantity. Food audit F-2: prefer the
   // user's LAST logged portion for this slot+food when the row carries one (the
   // "Add again" recents list does), so one-tap re-add uses the remembered
-  // portion — matching the prefill the detail sheet already shows — instead of a
+  // portion, matching the prefill the detail sheet already shows, instead of a
   // generic serving. Falls back to the default serving, then 100 g.
   function addToPlate(food) {
     const servingG = resolveServingG(food);
@@ -344,7 +344,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   }
 
   // One-tap re-log (Move #1): on the "Add again" tabs a row tap logs the food
-  // immediately — no sheet — to the slot the search was opened for, at the
+  // immediately, no sheet, to the slot the search was opened for, at the
   // remembered portion (last_quantity_g -> serving_g -> 100 g, via
   // resolveServingG), ROUNDED to whole grams exactly as the detail sheet does.
   // Same write mechanics as the sheet's onSave (confirmLog): scaleMacros from
@@ -352,9 +352,9 @@ export default function FoodSearchScreen({ navigation, route }) {
   // and the long-press sheet now opens at this same remembered portion
   // (initialServingState honours initialQuantityG), so tap and long-press agree.
   // The 1–5000 g safety bound the sheet enforces (isValidEntryGrams) binds here
-  // too: a remembered portion outside it can't be silently logged — we open the
+  // too: a remembered portion outside it can't be silently logged, we open the
   // sheet instead so the user corrects it. An Undo toast (8s) deletes exactly
-  // the entry just created — the safety net for an accidental tap.
+  // the entry just created, the safety net for an accidental tap.
   async function quickLogRelog(food) {
     if (!userId || !food?.food_ref) return;
     // Round to whole grams (the sheet rounds; last_quantity_g is a REAL and can
@@ -559,7 +559,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       quantityG,
     }).catch(() => {}); // derived memory only; never fail the log
     // A2 (first-week trust): the FIRST food log (and every log after) gets the
-    // same success + Undo toast as a re-log or a diary "usual" — previously
+    // same success + Undo toast as a re-log or a diary "usual", previously
     // this path (the sheet's "Add to diary") showed nothing at all. Exact
     // pattern from DiaryScreen.onLogUsual; the toast survives the goBack
     // below because the Toast provider is mounted at the app root.
@@ -668,7 +668,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Lift the user's own foods (favourited / logged here recently / logged often)
   // above the generic database matches for a typed query, so "search" surfaces
   // what they actually eat first (MFP/Cronometer parity). Pure re-rank over the
-  // already-loaded personal sets — no extra fetch. recents/frequents are resolved
+  // already-loaded personal sets, no extra fetch. recents/frequents are resolved
   // food rows; map them to their refs for the membership test.
   const recentRefs = useMemo(() => new Set(recents.map((r) => r.food_ref)), [recents]);
   const frequentRefs = useMemo(() => new Set(frequentRows.map((f) => f.food_ref)), [frequentRows]);
@@ -834,8 +834,8 @@ export default function FoodSearchScreen({ navigation, route }) {
             ) : null}
             {/* Founder 2026-06-30: novices don't realise a suggested meal is a
                 base they can build on (season it, add veg, add basically-free
-                extras), not a fixed prescription. A quiet, pro-food note —
-                framed around flavour/enjoyment, never diet-culture restriction —
+                extras), not a fixed prescription. A quiet, pro-food note,
+                framed around flavour/enjoyment, never diet-culture restriction,
                 and honest ("most", "basically") since sugar alcohols and trace
                 seasoning calories aren't literally zero. */}
             <View style={styles.suggestNoteRow}>

@@ -17,7 +17,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError, logWarn } from '../lib/errorLog';
 
-// B2 — the FREE guided beginner on-ramp (founder decision 4a: this is free).
+// B2, the FREE guided beginner on-ramp (founder decision 4a: this is free).
 // Three plain questions -> one difficulty-0 library plan, installed and
 // activated, so a brand-new free user lands on Home with today's session
 // already answered. Reached from:

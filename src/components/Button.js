@@ -41,13 +41,13 @@ import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, motion } from '../styles/theme';
 
 const VARIANTS = {
-  // fg uses onPrimary (always-dark ink, theme.js:42) — NOT `background`, which flips
+  // fg uses onPrimary (always-dark ink, theme.js:42), NOT `background`, which flips
   // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
   primary: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
   secondary: { bg: colors.surface2, fg: colors.textPrimary, border: colors.border },
   tertiary: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
   outline: { bg: 'transparent', fg: colors.primary, border: colors.primary },
-  // fg uses onError (always-light ink, theme.js) — NOT textPrimary, which flips
+  // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
   // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
   destructive: { bg: colors.error, fg: colors.onError, border: 'transparent' },
 };

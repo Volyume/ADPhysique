@@ -1,13 +1,13 @@
-// VolyumeChart — the app's single line/area chart (COMP-019 Stage 1b).
+// VolyumeChart, the app's single line/area chart (COMP-019 Stage 1b).
 //
 // Renders through the hand-rolled SVG engine (react-native-svg + the
 // unit-tested maths in ../lib/chartGeometry). On top of that static render it
 // adds a tap-and-hold scrub: long-press (300ms) shows a crosshair + tooltip,
 // dragging snaps to the nearest point with a selection haptic per point
-// (haptics.selection() already no-ops under Reduce Motion — the off-switch the
+// (haptics.selection() already no-ops under Reduce Motion, the off-switch the
 // proposal requires). No pinch/pan (evidence: windowing > scrubbing > zoom).
 //
-// With `interactive={false}` (the default) it is a plain static chart — this is
+// With `interactive={false}` (the default) it is a plain static chart, this is
 // what the body-metrics, weight-trend and other non-scrub hosts use, so the app
 // keeps ONE line-chart engine. (It superseded the old standalone SvgLineChart,
 // now removed.)
@@ -149,7 +149,7 @@ export default function VolyumeChart({
   }
 
   // Keep the latest scrub handlers in a ref so the (stable) gesture always calls
-  // the CURRENT closure — never a stale `points`/`formatTooltip` captured when
+  // the CURRENT closure, never a stale `points`/`formatTooltip` captured when
   // the gesture was first built. Assigning in render is the standard latest-ref
   // pattern; it makes the gesture immune to data changes that leave point count
   // and domain unchanged (e.g. an in-place weight edit within the same range).
@@ -158,7 +158,7 @@ export default function VolyumeChart({
   handlersRef.current.end = endScrub;
 
   // Long-press-then-drag so a quick swipe still scrolls the page; only a
-  // deliberate hold begins a scrub. Stable (deps []) — freshness via the ref.
+  // deliberate hold begins a scrub. Stable (deps []), freshness via the ref.
   const pan = useMemo(() => {
     const onScrub = (x) => handlersRef.current.scrub(x);
     const onEnd = () => handlersRef.current.end();
@@ -278,7 +278,7 @@ export default function VolyumeChart({
         })}
       </Svg>
 
-      {/* Tooltip card (RN overlay — easier to style than SVG text) */}
+      {/* Tooltip card (RN overlay, easier to style than SVG text) */}
       {tip ? (
         <View style={[styles.tooltip, { left: tipLeft, width: TIP_W }]} pointerEvents="none">
           <Text style={styles.tooltipTitle} numberOfLines={1}>{tip.title}</Text>

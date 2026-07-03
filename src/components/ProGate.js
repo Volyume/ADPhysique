@@ -69,7 +69,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
   const [modalVisible, setModalVisible] = useState(false);
   // Bottom-anchored Modal below: it overlays the tab band, so the sheet
   // absorbs the system inset itself (edge-to-edge sweep, 2026-07-03).
-  // Called before the early return — hooks order.
+  // Called before the early return, hooks order.
   const insets = useSafeAreaInsets();
 
   // Pro users see the content. Free users must sign up and go through the
@@ -175,7 +175,7 @@ export function ProLocked({ feature = 'This' }) {
             Identity first (lock + what this is), the example day as the one
             piece of show-don't-tell, then the CTA. The full sell (prices,
             comparison, FAQ, held-seat reassurance) lives on ProUpgrade, which
-            the CTA opens — duplicating it here read as a mess. */}
+            the CTA opens, duplicating it here read as a mess. */}
         <View style={styles.lockedIcon}>
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
@@ -187,7 +187,7 @@ export function ProLocked({ feature = 'This' }) {
             below the headline so it reads in context. Food diary lock only.
             The teaser LOOKS tappable (four meal cards), so the whole block is
             one tap target routing to the same ProUpgrade the CTA below opens
-            (founder defect pass 2026-07-03, issue 2) — the cards themselves
+            (founder defect pass 2026-07-03, issue 2), the cards themselves
             stay illustrative, no per-meal Pro function is exposed. */}
         {showPlateTeaser ? (
           <TouchableOpacity

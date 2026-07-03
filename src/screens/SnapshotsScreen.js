@@ -1,4 +1,4 @@
-// COMP-009 — restore an automatic snapshot.
+// COMP-009: restore an automatic snapshot.
 //
 // Lists the rolling set of pre-migration / pre-account-switch DB snapshots and
 // offers a two-tap, explicitly-destructive restore: confirm → close the DB

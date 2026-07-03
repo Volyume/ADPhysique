@@ -160,7 +160,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       }
       // Food audit D-6: when an OCR-prefilled food is saved with fields still
       // holding their low-confidence read (the user didn't correct them), record
-      // how many — count only, no values — so OCR accuracy is measurable.
+      // how many, count only, no values, so OCR accuracy is measurable.
       if (userId && prefillConfidence) {
         const vals = { kcal, protein, carbs, fat, fibre };
         const flagged = Object.keys(vals).filter((k) => _unsure(k, vals[k])).length;
@@ -202,7 +202,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             });
           }
         } catch (_) { /* contribution is best-effort, never blocks the save */ }
-        // A heal chain completed — make the one-time OFF-consent card eligible
+        // A heal chain completed, make the one-time OFF-consent card eligible
         // (offered later on the Diary, never mid-task). Fire-and-forget.
         markScanChainCompleted().catch(() => {});
         // Confirm the healing: the loop-closing reward (COMP-022).
@@ -239,7 +239,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {dupeFood ? (
           <View style={styles.dupeBanner}>
             <Text style={styles.dupeText}>
-              You’ve saved this barcode before as {dupeFood.name}.
+              You've saved this barcode before as {dupeFood.name}.
             </Text>
             <Button
               title="Log that instead"

@@ -122,7 +122,7 @@ function weekRangeLabel(weekStartMs) {
 }
 
 // ─── Off-items / focus builders ───────────────────────────────────────────────
-// (U-B-3 §4: the local buildHeadline duplicate was removed — the engine
+// (U-B-3 §4: the local buildHeadline duplicate was removed, the engine
 // coachResponse acknowledgement/interpretation is the single narration lead.)
 
 function buildOffItems(output, checkin) {
@@ -293,7 +293,7 @@ function HoldEnter({ live, children }) {
 // label + the screen's ONE amber-filled Apply); every other row's Apply is
 // the quiet outline variant. `detail` is the NU-4 pre-tap absolute/duration
 // line; `holdNote` (NU-3) renders INSTEAD of the button when the computation
-// would write nothing, so an Apply can never end in silence — `holdArrived`
+// would write nothing, so an Apply can never end in silence, `holdArrived`
 // marks a tap-time hold so only that settle animates. `applyState` drives
 // the Button morph; while it is 'success' the button stays mounted through
 // its checkmark beat (the row is already applied underneath, so the chip
@@ -750,7 +750,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
               <Text style={styles.heldText}>{d.reason}</Text>
             </View>
           ))}
-          {/* COMP-006: only on standard holds — never alongside the ED-pattern
+          {/* COMP-006: only on standard holds, never alongside the ED-pattern
               or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
           {onLearnMore ? (
             <TouchableOpacity
@@ -901,8 +901,8 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         </View>
         <Text style={styles.insufficientTitle}>Building your baseline.</Text>
         {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
-            receipt — what the coach read, the rule it applied, and the named
-            unlock date — not a bare "come back later" panel. The neutral
+            receipt, what the coach read, the rule it applied, and the named
+            unlock date, not a bare "come back later" panel. The neutral
             (ED-flag) receipt has no rows by construction. */}
         {receipt?.ledger?.rows?.length ? (
           <View style={styles.receiptRows}>
@@ -936,7 +936,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
 
 // Shown when the coach load itself failed (network down, a cloud read threw).
 // Distinct from InsufficientDataView so a transient error never masquerades as
-// "you haven't logged enough" — it offers a retry instead of a dead end.
+// "you haven't logged enough", it offers a retry instead of a dead end.
 function LoadErrorView({ onRetry, onClose }) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -1025,7 +1025,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // race); keyed by adjustment. An Apply must never end in silence.
   const [applyNotice, setApplyNotice] = useState({});
   // M4 (audit 03b §3.3b): presentational success-beat markers, keyed by
-  // adjustment. The DATA truth (markApplied → setOutput) lands immediately —
+  // adjustment. The DATA truth (markApplied → setOutput) lands immediately,
   // the double-apply guards never wait on animation (fit rule 5); this only
   // keeps the Button mounted through its checkmark beat, after which
   // onSettled clears the key and the row swaps to its Applied chip. A floor
@@ -1033,7 +1033,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // success beat. The screen itself calls no haptic vocabulary; the amber
   // hero Apply fires the Button primitive's press-time selection tick (a
   // uniform press acknowledgement, not an outcome signal) and the commit
-  // beat only on a real success — a hold reaches neither (03b §3.3f: a
+  // beat only on a real success, a hold reaches neither (03b §3.3f: a
   // safety hold is never a success or error buzz).
   const [applySettling, setApplySettling] = useState({});
   // Settling WINS over loading: once the write has landed and set the marker,
@@ -1665,7 +1665,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           // Q1 ED-safety: the flag is raised here in the foreground, so cancel
           // the (now audible) weigh-in prompts immediately. Their weekly
           // triggers are otherwise laid days ahead and would fire in the
-          // background — where no delivery handler runs — under the open flag.
+          // background, where no delivery handler runs, under the open flag.
           // The schedule gate keeps restoreNotifications from re-laying them.
           try { await cancelMorningNotification(); } catch (_) {}
           await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
@@ -1775,7 +1775,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
 
       // A3 (audit 04 §4): when the coach holds for thin data, build the full
-      // held-decision receipt — the live counts vs the published thresholds,
+      // held-decision receipt, the live counts vs the published thresholds,
       // the rule (the engine's own hold message), and the named unlock date.
       // Neutral (no weigh-in counts) under an open ED flag.
       if (!result.hasEnoughData) {
@@ -1979,12 +1979,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   });
 
   // A "great week" (blueprint docs/blueprint-great-week-share-card-2026-06-22.md
-  // §5) is the only time we offer the celebratory recap share — and never while
+  // §5) is the only time we offer the celebratory recap share, and never while
   // any ED-safety signal is open. The CTA below is gated on this.
   const greatWeek = isGreatWeek(output).great;
 
   // Share the week as the Precision Coaching recap card. The card leads with the
-  // real achievement — the weight lost/gained this week and the PRs — built in
+  // real achievement, the weight lost/gained this week and the PRs, built in
   // ShareCardScreen via greatWeek.js. The card only fires on a safe, on-target
   // week, and under `suppress` (open ED flag or calm mode) every number is
   // stripped to the bare consistency wins. Only what the user chooses to share
@@ -2151,7 +2151,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
         </Reanimated.View>
 
-        {/* U-B-3 §4: the local headline duplicate was dropped — the engine
+        {/* U-B-3 §4: the local headline duplicate was dropped, the engine
             coachResponse lead below is the single narration source. */}
 
         {/* Coach response parts 1 and 2: the specific, data-referenced
@@ -2178,7 +2178,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           </Reanimated.View>
         ) : null}
 
-        {/* 2. The VERDICT — hero zone (U-B-1 §3 / A1 03 gap #1): the engine's
+        {/* 2. The VERDICT, hero zone (U-B-1 §3 / A1 03 gap #1): the engine's
             single top move (output.primary via the zones), promoted to the top
             of the screen directly after the coach lead. The card renders on
             surfaceElevated with the decision statement at verdict size and the
@@ -2198,7 +2198,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             ) : null}
           </Reanimated.View>
         ) : (
-          /* Wave A B6: "hold everything" is a decision too — on a good week
+          /* Wave A B6: "hold everything" is a decision too, on a good week
              the strongest one. Non-applyable, never amber (one-amber rule).
              When safety holds are active the copy defers to them rather than
              claiming the plan is simply working. */
@@ -2249,7 +2249,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           )}
         </Reanimated.View>
 
-        {/* Opt-in "share your week" — only on a genuinely great, ED-safe week
+        {/* Opt-in "share your week", only on a genuinely great, ED-safe week
             (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}
         {greatWeek && (
           /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
@@ -2340,7 +2340,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         </View>
 
         {/* P3: cardio recovery caution (one line, advisory, no Apply).
-            Wave A B9: caution and acknowledgement no longer share an icon —
+            Wave A B9: caution and acknowledgement no longer share an icon,
             distinguishable at a glance, same quiet register. */}
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
@@ -2366,7 +2366,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         ) : null}
 
         {/* (Carb-cycle + refeed cards moved into the "More adjustments"
-            secondary zone above — U-B-1 §3.) */}
+            secondary zone above, U-B-1 §3.) */}
 
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
@@ -2657,7 +2657,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     marginTop: spacing.xs,
   },
-  // Wave A B6: the hold-week hero — a verdict card with no Apply and no
+  // Wave A B6: the hold-week hero, a verdict card with no Apply and no
   // amber; the same elevated surface the applyable hero uses.
   holdHeroCard: {
     backgroundColor: colors.surfaceElevated,

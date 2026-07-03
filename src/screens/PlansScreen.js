@@ -788,7 +788,7 @@ export default function PlansScreen({ navigation }) {
             Deleting a folder unfiles its plans (they reappear under My plans);
             it never deletes a plan. Shown whenever the user has any plan at all
             (incl. the active one, which My plans filters out) or folders already
-            exist — so the "New folder" entry point never vanishes for someone
+            exist, so the "New folder" entry point never vanishes for someone
             who wants to start organising. */}
         {(myPlans.length > 0 || folders.length > 0 || !!activePlan) && (
           <View style={styles.section}>

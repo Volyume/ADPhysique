@@ -16,7 +16,7 @@ import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from 
  * lock). The onboarding interstitial that used to show this for
  * physique_competition / advanced_recomp was removed (founder,
  * 2026-05-29; see ProOnboardingScreen), so onboarding is no longer a
- * caller — the onContinue route param is kept for compatibility.
+ * caller, the onContinue route param is kept for compatibility.
  * Locked copy: COACHING_VOICE_SYNTHESIS_LOCKED.md Surface 4 (:360-395);
  * a source guard pins the load-bearing sentences.
  *

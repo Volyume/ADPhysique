@@ -30,7 +30,7 @@ import { freshnessBand } from '../lib/muscleRecovery';
 // shared stateColors grammar (the colour-blind-safe Okabe-Ito tokens) so the
 // recovery layer never invents a new hue that fails CVD. Fully recovered reads
 // as 'onTrack'/success (green = ready to train), mid-recovery as 'watch'/warning.
-// "Recently trained" is the resting state — deliberately 'neutral'/muted, NOT
+// "Recently trained" is the resting state, deliberately 'neutral'/muted, NOT
 // 'act'/error: training a muscle today is normal and expected, so a red dot
 // there wrongly read as a warning and collided with red = "too much volume" on
 // the volume bar. Muted reads as "worked, now resting", with no false alarm.
@@ -259,7 +259,7 @@ export default function VolumeHeatmapScreen() {
   // Always use the window's canonical phrase. We can't tell "window reaches
   // past the account start" apart from "a rest week sits inside the window"
   // without the first-workout date, and the latter must not read as "All N
-  // weeks" — so the volume takeaway names the window, not a guessed span.
+  // weeks", so the volume takeaway names the window, not a guessed span.
   const volTakeaway = volumeTakeaway({
     windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
   });
@@ -359,7 +359,7 @@ export default function VolumeHeatmapScreen() {
 
         {/* Recovery / freshness legend. A distinct layer from the volume bands
             above: this reads "how recently was each muscle trained", not "is it
-            at target". Numbers/labels first, calm — a small dot per band. */}
+            at target". Numbers/labels first, calm, a small dot per band. */}
         <View style={styles.legendRow}>
           <LegendItem color={FRESHNESS_META.fresh.color} label="Fresh" />
           <LegendItem color={FRESHNESS_META.recovering.color} label="Recovering" />

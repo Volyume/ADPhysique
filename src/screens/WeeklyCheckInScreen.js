@@ -147,7 +147,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [bioSex, setBioSex] = useState(null);          // 'male' | 'female' | null
   const [cycleEnabled, setCycleEnabled] = useState(false);
   const [cycle, setCycle] = useState(null);            // 'yes' | 'no' | null (GAP row 15)
-  const [step, setStep] = useState(0); // 0–3
+  const [step, setStep] = useState(0); // 0-3
   // COMP-008 Fast Check-In: when set, the user has chosen to expand the
   // condensed card into the full four-step wizard. Lets the fast path stay an
   // offer, never a cage.
@@ -187,7 +187,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getCycleTracking().then(setCycleEnabled).catch(() => {});
     // The week's registered steps: the trailing seven days up to the review
     // anchor (today normally; yesterday when a day late per OB-7, so the
-    // counts describe the week actually being reviewed — the effect re-runs
+    // counts describe the week actually being reviewed, the effect re-runs
     // when load() shifts the anchor).
     const toDate = activityDayKey(weekAnchorMs);
     const fromDate = activityDayKey(weekAnchorMs - 6 * 24 * 60 * 60 * 1000);
@@ -243,8 +243,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [alreadyLoggedToday, setAlreadyLoggedToday] = useState(false);
 
   // Step 1, How are you?
-  const [energyScore, setEnergyScore] = useState(null);   // 1–5
-  const [stressScore, setStressScore] = useState(null);   // 1–5
+  const [energyScore, setEnergyScore] = useState(null);   // 1-5
+  const [stressScore, setStressScore] = useState(null);   // 1-5
   const [sleepHours, setSleepHours] = useState('');
 
   // Step 2, This week
@@ -268,7 +268,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [stepsOverride, setStepsOverride] = useState(false);
 
   // Step 3, Recovery
-  const [sorenessScore, setSorenessScore] = useState(null); // 1–5
+  const [sorenessScore, setSorenessScore] = useState(null); // 1-5
   const [soreMuscles, setSoreMuscles] = useState([]);       // muscle group keys
   const [jointPain, setJointPain] = useState(null);         // 'yes'|'no'
   const [notes, setNotes] = useState('');
@@ -510,7 +510,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // COMP-008 Fast Check-In eligibility: every field the wizard would ask is
   // already confidently auto-derived for this week, so the only things left to
-  // gather are energy and soreness — the two inputs we deliberately never
+  // gather are energy and soreness, the two inputs we deliberately never
   // derive, because they feed the recovery score and the rapid-loss safety
   // calorie-raise and must stay a conscious tap. When that holds, the condensed
   // card replaces the four-step flow (with an "Add more detail" escape into the
@@ -613,7 +613,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
       // Reschedule the check-in reminder so we don't bug them again this week.
       // The prefs blob is FLAT (checkinEnabled, checkinDay, checkinHour,
-      // checkinMinute) — the shape CoachingRemindersScreen,
+      // checkinMinute), the shape CoachingRemindersScreen,
       // NotificationSettingsScreen and ProOnboardingScreen write and
       // restoreNotifications reads. This used to read a nested
       // prefs.checkin.enabled shape that nothing writes, so the post-submit
@@ -1171,7 +1171,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             </View>
           ))}
-          {/* Wave A B6: the fastest path was the least transparent — one
+          {/* Wave A B6: the fastest path was the least transparent, one
               muted provenance line so the confirm-not-recall promise is
               visibly grounded in the user's own logs. */}
           <Text style={styles.fastSummaryProvenance}>
@@ -1532,7 +1532,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Add more detail"
-              // M4 review: same as the back chevron — do not let the fast card
+              // M4 review: same as the back chevron, do not let the fast card
               // jump into the wizard mid-submit-beat and strand the marker.
               disabled={busy || submitSuccess}
               accessibilityState={{ disabled: busy || submitSuccess }}
