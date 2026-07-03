@@ -75,14 +75,16 @@ describe('S3: Home coach daily brief + runway (ongoing, post-first-review)', () 
     );
     expect(HOME).toMatch(/edFlagOpen: edSuppressed,/);
   });
-  test('the one-liner reads the SAME currentMesoWeek.isDeload signal the hero chip reads, no new phase logic', () => {
-    expect(HOME).toMatch(
-      /const dailyBriefLine = currentMesoWeek\s*\n\s*\? \(currentMesoWeek\.isDeload \? 'Deload week\. Lighter targets today\.' : 'Training week\. Same targets today\.'\)\s*\n\s*: null;/,
-    );
+  test('the one-liner mesocycle brief is gone (removed on the founder call 2026-07-03)', () => {
+    // The build-week variant said nothing and duplicated the hero chip's own
+    // deload/build state, so the whole one-liner was removed; the runway is the
+    // component now. Guard against it creeping back.
+    expect(HOME).not.toMatch(/dailyBriefLine/);
+    expect(HOME).not.toMatch(/Training week\. Same targets today\./);
   });
   test('CoachDailyBrief is placed below the plan card, runway gated to Pro and hidden during the trial window', () => {
     expect(HOME).toMatch(/import CoachDailyBrief from '\.\.\/components\/CoachDailyBrief';/);
-    expect(HOME).toMatch(/<CoachDailyBrief line=\{dailyBriefLine\} ledger=\{tier === 'pro' && !trialBanner \? coachRunway : null\} \/>/);
+    expect(HOME).toMatch(/<CoachDailyBrief ledger=\{tier === 'pro' && !trialBanner \? coachRunway : null\} \/>/);
   });
 });
 

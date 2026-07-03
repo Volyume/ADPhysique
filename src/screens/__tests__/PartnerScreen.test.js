@@ -212,13 +212,20 @@ describe('milestone moment slot', () => {
 });
 
 describe('empty state', () => {
-  test('carries the exact two sentences and the primary + secondary actions', async () => {
+  test('carries the plain-English pitch, the how-it-works explainer, and the primary + secondary actions', async () => {
     mockHook.value = base({ pairs: [], pendingInvite: null });
     const text = allText(await mount());
     expect(text).toContain('Train with a partner');
     expect(text).toContain(
-      'Training sticks better when someone you trust is in it with you. One partner, one calm weekly signal each way.',
+      'Pair up with one person you already train with. It is quiet accountability: someone you trust who knows whether you showed up.',
     );
+    // The plain-English "how it works" explainer (founder call 2026-07-03: the
+    // old pitch never said what the feature was or what a "signal" meant).
+    expect(text).toContain('HOW IT WORKS');
+    expect(text).toContain('Once a week, you each see whether the other trained, and nothing else.');
+    expect(text).toContain('No feed, no followers, no numbers to compare.');
+    // The word "signal" is gone from the pitch.
+    expect(text).not.toContain('signal');
     expect(text).toContain('Invite someone you train with');
     expect(text).toContain('I have a code');
   });

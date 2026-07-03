@@ -1231,16 +1231,6 @@ export default function HomeScreen({ navigation, route }) {
     ? rawCoachBrief
     : null;
 
-  // S3: the deterministic one-line-on-open, sourced from the SAME mesocycle
-  // week signal the hero's chip already reads (currentMesoWeek.isDeload) --
-  // no new phase logic, just a different sentence over the same state.
-  // Training-schedule data only (no weight/food), so no ED gating, matching
-  // the un-gated chip it sits beside. Null when there is no active
-  // mesocycle to read (nothing deterministic to say).
-  const dailyBriefLine = currentMesoWeek
-    ? (currentMesoWeek.isDeload ? 'Deload week. Lighter targets today.' : 'Training week. Same targets today.')
-    : null;
-
   // Banner priority: keep the primary "Start" action prominent by showing at
   // most one of the three attention banners at once. A fresh weekly coach
   // review outranks a suggested recovery week, which outranks the nutrition-
@@ -1882,7 +1872,7 @@ export default function HomeScreen({ navigation, route }) {
         {/* Runway suppressed while the trial-value banner is showing (the
             trial's first-review window) so weigh-ins/sessions are not said in
             two places at once; the schedule one-liner still shows. */}
-        <CoachDailyBrief line={dailyBriefLine} ledger={tier === 'pro' && !trialBanner ? coachRunway : null} />
+        <CoachDailyBrief ledger={tier === 'pro' && !trialBanner ? coachRunway : null} />
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
             hero with the same hero-first reorder. */}

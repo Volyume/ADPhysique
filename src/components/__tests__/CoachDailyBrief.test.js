@@ -1,10 +1,12 @@
 /**
- * CoachDailyBrief (S3) — the daily brief one-liner + "since your check-in"
- * runway below the Train home plan card. Pins: the runway renders straight
- * off a REAL buildCoachLedger result (never a hand-rolled shape, so the test
- * would catch a drift in the ledger's own contract), the 'days of data' row
- * is deliberately not shown here, and the neutral (ED-flag/calm) variant
- * never renders a weigh-in or session count, only the countdown.
+ * CoachDailyBrief (S3) — the "since your check-in" runway below the Train home
+ * plan card. (The one-line mesocycle brief that used to sit above it was
+ * removed on the founder's call 2026-07-03; the runway is the whole component
+ * now.) Pins: the runway renders straight off a REAL buildCoachLedger result
+ * (never a hand-rolled shape, so the test would catch a drift in the ledger's
+ * own contract), the 'days of data' row is deliberately not shown here, and
+ * the neutral (ED-flag/calm) variant never renders a weigh-in or session
+ * count, only the countdown.
  */
 import { create } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -32,7 +34,7 @@ function texts(r) {
 const has = (r, s) => texts(r).some((t) => t.includes(s));
 
 describe('CoachDailyBrief: nothing to say renders nothing', () => {
-  test('no line, no ledger: null', () => {
+  test('no ledger: null', () => {
     const r = create(<CoachDailyBrief />);
     expect(r.toJSON()).toBeNull();
   });
@@ -43,13 +45,6 @@ describe('CoachDailyBrief: nothing to say renders nothing', () => {
     const ledger = buildCoachLedger({ edFlagOpen: true, now: WED });
     const r = create(<CoachDailyBrief ledger={ledger} />);
     expect(r.toJSON()).toBeNull();
-  });
-});
-
-describe('CoachDailyBrief: the one-liner', () => {
-  test('renders the given line even with no ledger (free tier / no runway)', () => {
-    const r = create(<CoachDailyBrief line="Deload week. Lighter targets today." />);
-    expect(has(r, 'Deload week. Lighter targets today.')).toBe(true);
   });
 });
 
@@ -82,8 +77,8 @@ describe('CoachDailyBrief: the runway (full variant)', () => {
     expect(has(r, daysRow.label)).toBe(false);
   });
 
-  test('renders the runway even with no one-liner (e.g. no active mesocycle)', () => {
-    const r = create(<CoachDailyBrief line={null} ledger={ledger} />);
+  test('renders the runway as the whole component (no one-liner path)', () => {
+    const r = create(<CoachDailyBrief ledger={ledger} />);
     expect(has(r, 'Since your check-in')).toBe(true);
   });
 });

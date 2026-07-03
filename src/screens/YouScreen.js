@@ -103,7 +103,7 @@ export default function YouScreen({ navigation }) {
         partnerName: partners.partnership?.partnerFirstName,
         partnerWeek: partners.partnerWeek,
       })
-    : 'One partner, one calm weekly signal';
+    : 'Quiet accountability with someone you trust';
   const openPartners = useCallback(() => {
     trackPartnerSurfaceView('you_row');
     navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'you_row' });

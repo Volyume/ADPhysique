@@ -578,9 +578,20 @@ export default function PartnerScreen({ route }) {
             </View>
             <Text style={styles.emptyTitle}>Train with a partner</Text>
             <Text style={styles.emptyBody}>
-              Training sticks better when someone you trust is in it with you. One partner, one calm
-              weekly signal each way.
+              Pair up with one person you already train with. It is quiet accountability: someone you
+              trust who knows whether you showed up.
             </Text>
+
+            <View style={styles.howItWorks}>
+              <Text style={styles.howHeader}>HOW IT WORKS</Text>
+              <Text style={styles.howLine}>
+                Once a week, you each see whether the other trained, and nothing else.
+              </Text>
+              <Text style={styles.howLine}>
+                You build a streak of weeks you both showed up. A rest week never breaks it.
+              </Text>
+              <Text style={styles.howLine}>No feed, no followers, no numbers to compare.</Text>
+            </View>
 
             <PartnerPrivacyReceipt />
 
@@ -965,6 +976,17 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
+  // Plain-English "how it works", left-aligned so the three lines read as a
+  // short explainer rather than a centred paragraph. Sits between the pitch and
+  // the privacy receipt; the empty container's own xl gap spaces it.
+  howItWorks: { gap: spacing.sm },
+  howHeader: {
+    ...type.caption,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: letterSpacing.caption,
+  },
+  howLine: { ...type.body, color: colors.textPrimary },
   textRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, minHeight: 44 },
   textRowText: { ...type.body, color: colors.primary },
 
