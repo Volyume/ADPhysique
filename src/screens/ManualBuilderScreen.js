@@ -553,6 +553,34 @@ export default function ManualBuilderScreen({ navigation, route }) {
     }));
   }
 
+  // ── Reorder ───────────────────────────────────────────────────────────────
+  // T7 (docs/world-class-audit-2026-07-03/_SYNTHESIS.md:171): reorder
+  // exercises within a day. react-native-gesture-handler is in the tree, but
+  // no screen in the app builds a drag surface on it: RoutineDetailScreen's
+  // exercise list (the one existing reorder UI) swaps adjacent rows via
+  // up/down chevrons, so this matches that established convention rather
+  // than introducing a new interaction. Nothing writes to the DB here, same
+  // as every other edit on this page: the new order lives only in local
+  // state until Save, when persistDays() below re-inserts routine_exercises
+  // in array order (its `j` loop index becomes order_in_routine), so
+  // reordering the in-memory list is all that's needed for the new order to
+  // persist and reload correctly (getRoutineExercisesWithDetails reads back
+  // `ORDER BY re.order_in_routine ASC`).
+  function moveExercise(dayIndex, exLocalId, direction) {
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      const idx = d.exercises.findIndex(e => e.localId === exLocalId);
+      if (idx === -1) return d;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= d.exercises.length) return d;
+      const next = d.exercises.slice();
+      const temp = next[idx];
+      next[idx] = next[swapIdx];
+      next[swapIdx] = temp;
+      return { ...d, exercises: next };
+    }));
+  }
+
   // ── Validation & persistence ──────────────────────────────────────────────
 
   function validate(requireExercises = true) {
@@ -843,9 +871,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
               }
               return (
                 <View style={styles.exList}>
-                  {day.exercises.map(ex => {
+                  {day.exercises.map((ex, exIdx) => {
                     const isSelected = selected.has(ex.localId);
                     const groupIdx = ex.supersetGroupId ? groupOrder.indexOf(ex.supersetGroupId) : -1;
+                    const isFirst = exIdx === 0;
+                    const isLast = exIdx === day.exercises.length - 1;
                     return (
                       <TouchableOpacity
                         key={ex.localId}
@@ -914,6 +944,30 @@ export default function ManualBuilderScreen({ navigation, route }) {
                               onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'restSeconds', 15, 30, 600)}
                             />
                           </View>
+                        </View>
+                        <View style={styles.reorderCol}>
+                          <TouchableOpacity
+                            onPress={() => moveExercise(dayIdx, ex.localId, 'up')}
+                            disabled={isFirst}
+                            style={[styles.reorderBtn, isFirst && styles.reorderBtnDisabled]}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move ${ex.name} up`}
+                            accessibilityState={{ disabled: isFirst }}
+                          >
+                            <Ionicons name="chevron-up" size={14} color={isFirst ? colors.border : colors.textMuted} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => moveExercise(dayIdx, ex.localId, 'down')}
+                            disabled={isLast}
+                            style={[styles.reorderBtn, isLast && styles.reorderBtnDisabled]}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move ${ex.name} down`}
+                            accessibilityState={{ disabled: isLast }}
+                          >
+                            <Ionicons name="chevron-down" size={14} color={isLast ? colors.border : colors.textMuted} />
+                          </TouchableOpacity>
                         </View>
                         {groupIdx >= 0 && (
                           <TouchableOpacity
@@ -1203,6 +1257,24 @@ const styles = StyleSheet.create({
   exRowLeft: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  // T7: up/down reorder controls, same reorderActions/reorderBtn look as
+  // RoutineDetailScreen's existing exercise-reorder chevrons.
+  reorderCol: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  reorderBtn: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  reorderBtnDisabled: {
+    opacity: 0.3,
   },
   exNameRow: {
     flexDirection: 'row',

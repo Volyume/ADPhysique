@@ -295,3 +295,51 @@ describe('ManualBuilderScreen — editing an existing plan (S5)', () => {
     expect(updateRoutineName).toHaveBeenCalledWith('routine-existing-2', 'Pull Day');
   });
 });
+
+describe('ManualBuilderScreen — reorder exercises (T7)', () => {
+  async function buildTwoExercisePlan(planLabel) {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, planLabel);
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Row', primaryMuscle: 'back' }); });
+
+    return tree;
+  }
+
+  test('the first exercise cannot move up and the last cannot move down', async () => {
+    const tree = await buildTwoExercisePlan('Reorder Bounds');
+
+    expect(pressables(tree, 'Move Bench Press up')[0].props.accessibilityState.disabled).toBe(true);
+    expect(pressables(tree, 'Move Bench Press down')[0].props.accessibilityState.disabled).toBe(false);
+    expect(pressables(tree, 'Move Row up')[0].props.accessibilityState.disabled).toBe(false);
+    expect(pressables(tree, 'Move Row down')[0].props.accessibilityState.disabled).toBe(true);
+  });
+
+  test('moving the second exercise up swaps the pair, and Save persists the new order', async () => {
+    const tree = await buildTwoExercisePlan('Reorder Persist');
+
+    press(tree, 'Move Row up');
+
+    // Remove the empty second day so the activate gate is satisfiable
+    // (same pattern as the superset persistence test above).
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    // Row (ex-b) now saves at order 0, Bench Press (ex-a) at order 1 -
+    // persistDays' `j` loop index IS order_in_routine, so the in-memory
+    // swap is the entire reorder mechanism, no separate order write.
+    const calls = addExerciseToRoutine.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][1]).toBe('ex-b');
+    expect(calls[0][2]).toBe(0);
+    expect(calls[1][1]).toBe('ex-a');
+    expect(calls[1][2]).toBe(1);
+  });
+});
