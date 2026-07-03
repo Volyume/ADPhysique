@@ -1,0 +1,662 @@
+/**
+ * ProgressPhotoCompare (progress-photos upgrade B2).
+ *
+ * A self-contained, calm comparison surface for a user's own progress photos.
+ * It owns selection AND comparison: a pose filter, a dated thumbnail ribbon,
+ * two quick actions, and THREE switchable comparison modes:
+ *   1. Side by side  the calm DEFAULT (older-left / newer-right, dated).
+ *   2. Slider        an in-house reveal on reanimated + gesture-handler; the
+ *                    handle is an adjustable a11y control, static under
+ *                    Reduce Motion.
+ *   3. Overlay       an aligned onion-skin blend of the two photos on Skia,
+ *                    with an adjustable opacity control.
+ *
+ * ED-SAFETY COPY CONTRACT (pinned, identical to the legacy inline compare
+ * modal, A1 section 3). The ONLY words this surface renders about the body are
+ * neutral labels plus dates: "Earlier" / "Later" and the date. It must never
+ * contain: before, after, change, gained, lost, weight, kg, lbs, cm, delta,
+ * leaner, bigger, smaller, a percent sign, or an em dash. The colocated test
+ * asserts this ban with the same regex across every mode and the selection bar.
+ *
+ * SELF-GUARD. Comparison is one of the high-risk surfaces the shared
+ * suppression gate withholds. `usePhotoSuppression()` is read here and, when
+ * true (calm mode OR an open ED-pattern flag OR a fail-closed read error), the
+ * whole comparison is replaced by a calm neutral placeholder. The integrator
+ * gates entry too; this is a deliberate double-guard, fail closed.
+ *
+ * Photos never leave the device. This component reads only local files and the
+ * local metadata map; it performs no network or sync work.
+ */
+import { useEffect, useMemo, useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions,
+} from 'react-native';
+import Reanimated, {
+  useSharedValue, useAnimatedStyle, withTiming, runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Canvas, Image as SkiaImage, useImage } from '@shopify/react-native-skia';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  colors, spacing, radius, type, iconSize, motion, withAlpha,
+} from '../styles/theme';
+import { logError } from '../lib/errorLog';
+import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import useAppStore from '../store/useAppStore';
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const THUMB = 56;
+const HANDLE = 34;
+
+// Neutral date label. Dates carry no banned vocabulary, so this copy is safe.
+function formatDay(ts) {
+  try {
+    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (_) { return ''; }
+}
+
+// The pose filter chips. 'all' shows every photo; the others narrow to a pose
+// so comparisons stay like-for-like. Labels are function-neutral.
+const POSES = [
+  { key: 'all', label: 'All' },
+  { key: 'front', label: 'Front' },
+  { key: 'side', label: 'Side' },
+  { key: 'back', label: 'Back' },
+];
+
+const MODES = [
+  { key: 'sideBySide', label: 'Side by side', icon: 'copy-outline' },
+  { key: 'slider', label: 'Slider', icon: 'swap-horizontal-outline' },
+  { key: 'overlay', label: 'Overlay', icon: 'layers-outline' },
+];
+
+// A small segmented control shared by the pose filter and the mode switch.
+// Selection is announced via accessibilityState.selected; copy is token-styled.
+function Segmented({ options, value, onChange, groupLabel }) {
+  return (
+    <View style={styles.segmented} accessibilityLabel={groupLabel}>
+      {options.map((opt) => {
+        const active = opt.key === value;
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            style={[styles.segment, active && styles.segmentActive]}
+            onPress={() => onChange(opt.key)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={opt.label}
+          >
+            {opt.icon ? (
+              <Ionicons
+                name={opt.icon}
+                size={iconSize.sm}
+                color={active ? colors.onPrimary : colors.textMuted}
+              />
+            ) : null}
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// A dated pane: one bounded, resize-decoded image with its neutral label and
+// date. Shared by the side-by-side mode. `role` is 'Earlier' or 'Later'.
+function Pane({ item, role, w, h, failed, onError }) {
+  return (
+    <View style={styles.pane}>
+      {failed ? (
+        <View style={[styles.paneImage, styles.fallback, { width: w, height: h }]}>
+          <Text style={styles.fallbackText}>Could not load this photo.</Text>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: item.uri }}
+          style={[styles.paneImage, { width: w, height: h }]}
+          resizeMode="contain"
+          resizeMethod="resize"
+          accessible
+          accessibilityLabel={`${role} photo, ${formatDay(item.takenAt)}`}
+          onError={onError}
+        />
+      )}
+      <Text style={styles.paneRole}>{role}</Text>
+      <Text style={styles.paneDate}>{formatDay(item.takenAt)}</Text>
+    </View>
+  );
+}
+
+// The before/after SLIDER, relabelled neutrally. Bottom layer is the later
+// photo; a clip wrapper reveals the earlier photo from the left, its width
+// driven by a reanimated shared value so the handle tracks the finger on the
+// UI thread. The handle is the adjustable a11y control (increment/decrement in
+// ~10% steps). Reduce Motion drops the eased step to an instant jump.
+function CompareSlider({
+  earlier, later, w, h, reduceMotion, failed, onError,
+}) {
+  const divider = useSharedValue(w / 2);
+  const [pct, setPct] = useState(50);
+
+  const clipStyle = useAnimatedStyle(() => ({ width: divider.value }));
+  const handleStyle = useAnimatedStyle(() => ({ transform: [{ translateX: divider.value - HANDLE / 2 }] }));
+
+  const pan = Gesture.Pan().onUpdate((e) => {
+    const x = Math.max(0, Math.min(w, e.x));
+    divider.value = x;
+    runOnJS(setPct)(Math.round((x / w) * 100));
+  });
+
+  function moveTo(nextPct) {
+    const clamped = Math.max(0, Math.min(100, nextPct));
+    setPct(clamped);
+    const x = (clamped / 100) * w;
+    // Reduce Motion: jump, no easing. Otherwise a short micro-ease.
+    divider.value = reduceMotion ? x : withTiming(x, { duration: motion.micro });
+  }
+
+  function onAction(e) {
+    const name = e?.nativeEvent?.actionName;
+    if (name === 'increment') moveTo(pct + 10);
+    else if (name === 'decrement') moveTo(pct - 10);
+  }
+
+  return (
+    <View style={styles.stage}>
+      <View style={[styles.frame, { width: w, height: h }]}>
+        {failed.later ? (
+          <View style={[styles.fallback, { width: w, height: h }]}>
+            <Text style={styles.fallbackText}>Could not load this photo.</Text>
+          </View>
+        ) : (
+          <Image
+            source={{ uri: later.uri }}
+            style={{ width: w, height: h }}
+            resizeMode="contain"
+            resizeMethod="resize"
+            accessible
+            accessibilityLabel={`Later photo, ${formatDay(later.takenAt)}`}
+            onError={() => onError(later)}
+          />
+        )}
+        <Reanimated.View style={[styles.clip, clipStyle]} pointerEvents="none">
+          {failed.earlier ? (
+            <View style={[styles.fallback, { width: w, height: h }]}>
+              <Text style={styles.fallbackText}>Could not load this photo.</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: earlier.uri }}
+              style={{ width: w, height: h }}
+              resizeMode="contain"
+              resizeMethod="resize"
+              accessible
+              accessibilityLabel={`Earlier photo, ${formatDay(earlier.takenAt)}`}
+              onError={() => onError(earlier)}
+            />
+          )}
+        </Reanimated.View>
+
+        <GestureDetector gesture={pan}>
+          <Reanimated.View
+            style={[styles.handle, handleStyle]}
+            accessibilityRole="adjustable"
+            accessibilityLabel="Reveal slider"
+            accessibilityValue={{ min: 0, max: 100, now: pct }}
+            accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+            onAccessibilityAction={onAction}
+          >
+            <View style={styles.handleLine} />
+            <View style={styles.handleGrip}>
+              <Ionicons name="code-outline" size={iconSize.sm} color={colors.onPrimary} />
+            </View>
+          </Reanimated.View>
+        </GestureDetector>
+      </View>
+
+      <View style={styles.ends}>
+        <View style={styles.endBlock}>
+          <Text style={styles.paneRole}>Earlier</Text>
+          <Text style={styles.paneDate}>{formatDay(earlier.takenAt)}</Text>
+        </View>
+        <View style={[styles.endBlock, styles.endRight]}>
+          <Text style={styles.paneRole}>Later</Text>
+          <Text style={styles.paneDate}>{formatDay(later.takenAt)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// The aligned onion-skin OVERLAY on Skia: the earlier photo underneath, the
+// later photo blended on top at an adjustable opacity, so the two line up. The
+// opacity control is an adjustable a11y track (a drag on device, increment /
+// decrement for switch and screen-reader users).
+function CompareOverlay({
+  earlier, later, w, h,
+}) {
+  const earlierImg = useImage(earlier.uri);
+  const laterImg = useImage(later.uri);
+  const [pct, setPct] = useState(60);
+
+  const trackW = w;
+  const pan = Gesture.Pan().onUpdate((e) => {
+    const v = Math.max(0, Math.min(100, Math.round((e.x / trackW) * 100)));
+    setPct(v);
+  });
+
+  function step(delta) {
+    setPct((p) => Math.max(0, Math.min(100, p + delta)));
+  }
+  function onAction(e) {
+    const name = e?.nativeEvent?.actionName;
+    if (name === 'increment') step(10);
+    else if (name === 'decrement') step(-10);
+  }
+
+  return (
+    <View style={styles.stage}>
+      <View style={[styles.frame, { width: w, height: h }]}>
+        <Canvas style={{ width: w, height: h }}>
+          {earlierImg ? (
+            <SkiaImage image={earlierImg} x={0} y={0} width={w} height={h} fit="contain" />
+          ) : null}
+          {laterImg ? (
+            <SkiaImage
+              image={laterImg}
+              x={0}
+              y={0}
+              width={w}
+              height={h}
+              fit="contain"
+              opacity={pct / 100}
+            />
+          ) : null}
+        </Canvas>
+      </View>
+
+      <View
+        style={styles.trackWrap}
+        accessibilityRole="adjustable"
+        accessibilityLabel="Overlay opacity"
+        accessibilityValue={{ min: 0, max: 100, now: pct }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={onAction}
+      >
+        <GestureDetector gesture={pan}>
+          <View style={styles.track}>
+            <View style={[styles.trackFill, { width: `${pct}%` }]} />
+            <View style={[styles.trackThumb, { left: `${pct}%` }]} />
+          </View>
+        </GestureDetector>
+      </View>
+
+      <View style={styles.ends}>
+        <View style={styles.endBlock}>
+          <Text style={styles.paneRole}>Earlier</Text>
+          <Text style={styles.paneDate}>{formatDay(earlier.takenAt)}</Text>
+        </View>
+        <View style={[styles.endBlock, styles.endRight]}>
+          <Text style={styles.paneRole}>Later</Text>
+          <Text style={styles.paneDate}>{formatDay(later.takenAt)}</Text>
+        </View>
+      </View>
+      {/* The overlay has no auto-crossfade at all (a flicker would read as a
+          "reveal"), so it is inherently static and needs no Reduce-Motion
+          branch: the opacity only moves on a deliberate user action. */}
+    </View>
+  );
+}
+
+export default function ProgressPhotoCompare({ photos, onClose }) {
+  const suppressed = usePhotoSuppression();
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+
+  const [metaMap, setMetaMap] = useState(null);
+  const [poseFilter, setPoseFilter] = useState('all');
+  const [mode, setMode] = useState('sideBySide');
+  const [selected, setSelected] = useState([]); // photo names, tap order, max two
+  const [failed, setFailed] = useState({});
+
+  // Load the local metadata map (takenAt, pose) for the given photos. Never
+  // throws; a read failure falls back to filename-derived dates.
+  useEffect(() => {
+    let alive = true;
+    const names = (photos || []).map((p) => p.name);
+    (async () => {
+      const map = await getPhotoMetaMap(names);
+      if (alive) setMetaMap(map);
+    })();
+    return () => { alive = false; };
+  }, [photos]);
+
+  // Enrich each photo with its effective takenAt (meta, else the filename ts)
+  // and pose. A missing meta map resolves to the same values as today.
+  const enriched = useMemo(() => (photos || []).map((p) => {
+    const m = metaMap ? metaMap[p.name] : null;
+    const takenAt = Number.isFinite(m && m.takenAt) ? m.takenAt : p.ts;
+    return { name: p.name, uri: p.uri, ts: p.ts, takenAt, pose: (m && m.pose) || null };
+  }), [photos, metaMap]);
+
+  // The current pose scope, sorted oldest-first for stable ordering.
+  const scoped = useMemo(() => {
+    const list = poseFilter === 'all' ? enriched : enriched.filter((p) => p.pose === poseFilter);
+    return [...list].sort((a, b) => a.takenAt - b.takenAt);
+  }, [enriched, poseFilter]);
+
+  // Pose-aware default pair: prefer the latest photo's own pose when it has a
+  // partner, else the earliest and latest overall.
+  const defaultPair = useMemo(() => {
+    if (enriched.length < 2) return [];
+    const asc = [...enriched].sort((a, b) => a.takenAt - b.takenAt);
+    const latest = asc[asc.length - 1];
+    const samePose = latest.pose ? asc.filter((p) => p.pose === latest.pose) : asc;
+    const pool = samePose.length >= 2 ? samePose : asc;
+    return [pool[0].name, pool[pool.length - 1].name];
+  }, [enriched]);
+
+  // Seed the selection once a valid default is known, and never leave the
+  // selection pointing at a photo that has gone away.
+  useEffect(() => {
+    setSelected((prev) => {
+      const live = prev.filter((n) => enriched.some((e) => e.name === n));
+      if (live.length === 2) return live;
+      return defaultPair;
+    });
+  }, [defaultPair, enriched]);
+
+  // The chosen pair, always oldest-left / newest-right whatever the tap order.
+  const pair = useMemo(() => selected
+    .map((n) => enriched.find((e) => e.name === n))
+    .filter(Boolean)
+    .sort((a, b) => a.takenAt - b.takenAt), [selected, enriched]);
+  const ready = pair.length === 2;
+
+  // A neutral time-relative quick action: the latest photo paired with the one
+  // nearest to four weeks earlier, its real gap surfaced in the label.
+  const weeksBack = useMemo(() => {
+    if (scoped.length < 2) return null;
+    const latest = scoped[scoped.length - 1];
+    const target = latest.takenAt - 4 * WEEK_MS;
+    let best = scoped[0];
+    for (const p of scoped) {
+      if (p.name === latest.name) continue;
+      if (Math.abs(p.takenAt - target) < Math.abs(best.takenAt - target)) best = p;
+    }
+    const n = Math.max(1, Math.round((latest.takenAt - best.takenAt) / WEEK_MS));
+    return { latestName: latest.name, backName: best.name, n };
+  }, [scoped]);
+
+  function toggleSelect(name) {
+    setSelected((prev) => {
+      if (prev.includes(name)) return prev.filter((n) => n !== name);
+      if (prev.length < 2) return [...prev, name];
+      return [prev[1], name];
+    });
+  }
+
+  function pickEarliestLatest() {
+    if (scoped.length < 2) return;
+    setSelected([scoped[0].name, scoped[scoped.length - 1].name]);
+  }
+  function pickWeeksBack() {
+    if (!weeksBack) return;
+    setSelected([weeksBack.backName, weeksBack.latestName]);
+  }
+
+  function onImageError(item) {
+    logError('ProgressPhotoCompare.load', new Error('Compare photo failed to load'), { name: item.name });
+    setFailed((prev) => ({ ...prev, [item.name]: true }));
+  }
+
+  const win = Dimensions.get('window');
+  // Bounded decode: two half-width panes for side-by-side, one single frame for
+  // the slider and overlay. Every dimension is an explicit number kept inside
+  // the window, paired with resizeMethod="resize" on the RN images.
+  const paneW = (win.width - spacing.lg * 2 - spacing.sm) / 2;
+  const paneH = Math.min(Math.round(paneW * (4 / 3)), Math.round(win.height * 0.5));
+  const frameW = win.width - spacing.lg * 2;
+  const frameH = Math.min(Math.round(frameW * (5 / 4)), Math.round(win.height * 0.5));
+
+  // SELF-GUARD (fail closed). Comparison is a suppressed surface: under calm
+  // mode or an open ED-pattern flag (or a failed read), show a calm neutral
+  // placeholder instead of any comparison. Hooks above always run first.
+  if (suppressed) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Compare</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close compare"
+          >
+            <Ionicons name="close" size={26} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.placeholder}>
+          <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
+          <Text style={styles.placeholderText}>Comparing is resting for now.</Text>
+          <Text style={styles.placeholderSub}>Your photos stay private to this device.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const earlier = ready ? pair[0] : null;
+  const later = ready ? pair[1] : null;
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Compare</Text>
+        <TouchableOpacity
+          onPress={onClose}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close compare"
+        >
+          <Ionicons name="close" size={26} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      <Segmented
+        options={POSES}
+        value={poseFilter}
+        onChange={setPoseFilter}
+        groupLabel="Filter by pose"
+      />
+
+      <View style={styles.quickRow}>
+        <TouchableOpacity
+          style={styles.quick}
+          onPress={pickEarliestLatest}
+          disabled={scoped.length < 2}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: scoped.length < 2 }}
+          accessibilityLabel="Earliest and latest"
+        >
+          <Text style={styles.quickText}>Earliest and latest</Text>
+        </TouchableOpacity>
+        {weeksBack ? (
+          <TouchableOpacity
+            style={styles.quick}
+            onPress={pickWeeksBack}
+            accessibilityRole="button"
+            accessibilityLabel={`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
+          >
+            <Text style={styles.quickText}>
+              {`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {!ready ? (
+        <View style={styles.placeholder}>
+          <Ionicons name="images-outline" size={32} color={colors.textMuted} />
+          <Text style={styles.placeholderText}>Two photos are needed to compare.</Text>
+        </View>
+      ) : (
+        <View style={styles.body}>
+          {mode === 'sideBySide' ? (
+            <View style={styles.panes}>
+              <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} />
+              <Pane item={later} role="Later" w={paneW} h={paneH} failed={!!failed[later.name]} onError={() => onImageError(later)} />
+            </View>
+          ) : null}
+
+          {mode === 'slider' ? (
+            <CompareSlider
+              key={`${earlier.name}-${later.name}`}
+              earlier={earlier}
+              later={later}
+              w={frameW}
+              h={frameH}
+              reduceMotion={!!reduceMotion}
+              failed={{ earlier: !!failed[earlier.name], later: !!failed[later.name] }}
+              onError={onImageError}
+            />
+          ) : null}
+
+          {mode === 'overlay' ? (
+            <CompareOverlay
+              key={`${earlier.name}-${later.name}`}
+              earlier={earlier}
+              later={later}
+              w={frameW}
+              h={frameH}
+            />
+          ) : null}
+        </View>
+      )}
+
+      <View style={styles.modeBar}>
+        <Segmented options={MODES} value={mode} onChange={setMode} groupLabel="Comparison style" />
+      </View>
+
+      {/* Dated thumbnail ribbon. Tapping fills the two slots; a third tap
+          replaces the earlier choice so a tap always responds. */}
+      <View style={styles.ribbon}>
+        {scoped.map((item) => {
+          const isChosen = selected.includes(item.name);
+          return (
+            <TouchableOpacity
+              key={item.name}
+              onPress={() => toggleSelect(item.name)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isChosen }}
+              accessibilityLabel={`Photo from ${formatDay(item.takenAt)}`}
+            >
+              <Image
+                source={{ uri: item.uri }}
+                style={[styles.thumb, isChosen && styles.thumbChosen]}
+                resizeMode="cover"
+                resizeMethod="resize"
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  title: { ...type.h3, color: colors.textPrimary },
+
+  segmented: {
+    flexDirection: 'row', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  },
+  segment: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  segmentActive: { backgroundColor: colors.primaryFill },
+  segmentText: { ...type.label, color: colors.textMuted },
+  segmentTextActive: { color: colors.onPrimary },
+
+  quickRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  },
+  quick: {
+    flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderSubtle,
+    alignItems: 'center',
+  },
+  quickText: { ...type.label, color: colors.textPrimary },
+
+  body: { paddingHorizontal: spacing.lg },
+  panes: { flexDirection: 'row', gap: spacing.sm },
+  pane: { flex: 1, alignItems: 'center' },
+  paneImage: { borderRadius: radius.md, backgroundColor: colors.surface },
+  paneRole: { ...type.label, color: colors.textMuted, marginTop: spacing.sm },
+  paneDate: { ...type.bodyStrong, color: colors.textPrimary, marginTop: spacing.xxs },
+
+  stage: { alignItems: 'center' },
+  frame: {
+    borderRadius: radius.md, backgroundColor: colors.surface, overflow: 'hidden',
+    position: 'relative',
+  },
+  clip: {
+    position: 'absolute', top: 0, left: 0, bottom: 0, overflow: 'hidden',
+  },
+  handle: {
+    position: 'absolute', top: 0, bottom: 0, width: HANDLE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  handleLine: {
+    position: 'absolute', top: 0, bottom: 0, width: 2,
+    backgroundColor: withAlpha(colors.background, 0.85),
+  },
+  handleGrip: {
+    width: HANDLE, height: HANDLE, borderRadius: radius.full,
+    backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
+  },
+  ends: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    width: '100%', marginTop: spacing.sm,
+  },
+  endBlock: { alignItems: 'flex-start' },
+  endRight: { alignItems: 'flex-end' },
+
+  trackWrap: { width: '100%', paddingVertical: spacing.md },
+  track: {
+    height: 4, borderRadius: radius.hair, backgroundColor: colors.surface3,
+    justifyContent: 'center',
+  },
+  trackFill: { height: 4, borderRadius: radius.hair, backgroundColor: colors.primaryFill },
+  trackThumb: {
+    position: 'absolute', width: HANDLE / 2, height: HANDLE / 2, borderRadius: radius.full,
+    marginLeft: -HANDLE / 4, backgroundColor: colors.primaryFill,
+  },
+
+  modeBar: { marginTop: spacing.lg },
+  ribbon: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, marginTop: spacing.sm,
+  },
+  thumb: { width: THUMB, height: THUMB, borderRadius: radius.sm, backgroundColor: colors.surface },
+  thumbChosen: { borderWidth: 2, borderColor: colors.primary },
+
+  fallback: {
+    alignItems: 'center', justifyContent: 'center', padding: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+  },
+  fallbackText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
+
+  placeholder: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.lg },
+  placeholderText: { ...type.bodyStrong, color: colors.textPrimary, textAlign: 'center' },
+  placeholderSub: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
+});
