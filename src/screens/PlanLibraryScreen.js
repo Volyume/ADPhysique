@@ -297,47 +297,49 @@ export default function PlanLibraryScreen({ navigation, route }) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
+    // C4: one decision, one dialog. Both choices copy the plan; only what
+    // happens after the copy differs, so each button owns its own copy call
+    // and error handling (matches the copy-failure toast either way).
     appAlert(
-      'Add to my plans',
-      `Copy "${plan.name}" into your plans?`,
+      'Add this plan?',
+      fromFirstRun
+        ? `"${plan.name}" will be added to your plans. Start training now, or just add it for later.`
+        : `Copy "${plan.name}" into your plans. Make it active now, or just add it for later.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Add to my plans',
+          text: 'Just add',
           onPress: async () => {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
-              appAlert(
-                'Added to my plans',
-                fromFirstRun
-                  ? `"${plan.name}" added. Set it as your active plan and start logging?`
-                  : 'Set this as your active plan now?',
-                [
-                  {
-                    text: 'Not now',
-                    style: 'cancel',
-                    onPress: fromFirstRun ? () => navigation.navigate('ProSetupComplete') : () => navigation.goBack(),
-                  },
-                  {
-                    text: fromFirstRun ? 'Start training' : 'Set active',
-                    onPress: async () => {
-                      // Skip the mid-block confirm during first-run, there's
-                      // no prior block to disrupt (this IS their first plan).
-                      if (!fromFirstRun) {
-                        const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
-                        if (!ok) { navigation.goBack(); return; }
-                      }
-                      await activatePlanWithBlock(user.id, copy.id, plan.name);
-                      if (fromFirstRun) navigation.navigate('ProSetupComplete');
-                      else navigation.goBack();
-                    },
-                  },
-                ],
-              );
+              if (fromFirstRun) navigation.navigate('ProSetupComplete');
+              else navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
             }
+          },
+        },
+        {
+          text: fromFirstRun ? 'Start training' : 'Add and make active',
+          onPress: async () => {
+            let copy;
+            try {
+              copy = await copyPlanFromLibrary(plan.id, user.id);
+              if (!copy?.id) throw new Error('Copy failed.');
+            } catch (_e) {
+              toast.show("Couldn't copy plan, try again", { variant: 'error' });
+              return;
+            }
+            // Skip the mid-block confirm during first-run, there's no
+            // prior block to disrupt (this IS their first plan).
+            if (!fromFirstRun) {
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+              if (!ok) { navigation.goBack(); return; }
+            }
+            await activatePlanWithBlock(user.id, copy.id, plan.name);
+            if (fromFirstRun) navigation.navigate('ProSetupComplete');
+            else navigation.goBack();
           },
         },
       ],

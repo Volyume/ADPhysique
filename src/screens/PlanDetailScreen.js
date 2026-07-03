@@ -88,35 +88,39 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleAddToMyPlans() {
+    // C4: one decision, one dialog. Both choices copy the plan; only what
+    // happens after the copy differs, so each button owns its own copy call
+    // and error handling (matches the copy-failure toast either way).
     appAlert(
-      'Add to My Plans',
-      `Copy "${plan?.name}" into your plans?`,
+      'Add this plan?',
+      `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Add to My Plans',
+          text: 'Just add',
           onPress: async () => {
             try {
-              const copy = await copyPlanFromLibrary(planId, user.id);
-              appAlert(
-                'Added to My Plans',
-                'Set this as your Active Plan now?',
-                [
-                  { text: 'Not Now', style: 'cancel', onPress: () => navigation.goBack() },
-                  {
-                    text: 'Set Active',
-                    onPress: async () => {
-                      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
-                      if (!ok) { navigation.goBack(); return; }
-                      await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
-                      navigation.goBack();
-                    },
-                  },
-                ],
-              );
+              await copyPlanFromLibrary(planId, user.id);
+              navigation.goBack();
             } catch (_e) {
               toast.show('Could not copy plan. Try again.', { variant: 'error' });
             }
+          },
+        },
+        {
+          text: 'Add and make active',
+          onPress: async () => {
+            let copy;
+            try {
+              copy = await copyPlanFromLibrary(planId, user.id);
+            } catch (_e) {
+              toast.show('Could not copy plan. Try again.', { variant: 'error' });
+              return;
+            }
+            const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+            if (!ok) { navigation.goBack(); return; }
+            await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
+            navigation.goBack();
           },
         },
       ],
