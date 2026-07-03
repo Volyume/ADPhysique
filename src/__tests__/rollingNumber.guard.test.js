@@ -65,6 +65,14 @@ describe('RollingNumber: commissioned surfaces only', () => {
     expect(rings).not.toMatch(/from 'react-native'.*Animated|Animated.*from 'react-native'/);
   });
 
+  test('StartGlow has exactly one importer: the Home hero Start (E15-3)', () => {
+    const importers = walk(path.join(root, 'src'))
+      .filter((p) => !p.endsWith(`components${path.sep}StartGlow.js`))
+      .filter((p) => /from '.*StartGlow'/.test(fs.readFileSync(p, 'utf8')))
+      .map((p) => path.relative(root, p));
+    expect(importers).toEqual(['src/screens/HomeScreen.js']);
+  });
+
   test('Reduce Motion renders a static Text with the final value', () => {
     const src = read('src/components/RollingNumber.js');
     expect(src).toMatch(/if \(reduceMotion\) \{\s*\n\s*return <Text/);

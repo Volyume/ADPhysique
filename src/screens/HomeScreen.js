@@ -13,6 +13,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
+import StartGlow from '../components/StartGlow';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
@@ -1560,8 +1561,11 @@ export default function HomeScreen({ navigation, route }) {
                 cut-down "short session" with the full one demoted below, which
                 read as the wrong default — start the actual session). */}
             <View style={styles.startWorkoutRow}>
+              {/* E15 element 3: the app's one glow lives behind this button
+                  only (calm/ED suppressed inside StartGlow). */}
+              <StartGlow style={styles.startBtnSplit}>
               <TouchableOpacity
-                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                style={[styles.primaryBtn, { marginTop: 0 }, isStartingWorkout && { opacity: 0.6 }]}
                 onPress={() => handleStartNextWorkout(false)}
                 disabled={isStartingWorkout}
                 activeOpacity={0.85}
@@ -1573,6 +1577,7 @@ export default function HomeScreen({ navigation, route }) {
                   {isStartingWorkout ? 'Starting…' : 'Start workout'}
                 </Text>
               </TouchableOpacity>
+              </StartGlow>
               {displayWorkout?.routine?.id ? (
                 <TouchableOpacity
                   style={styles.viewWorkoutBtn}
