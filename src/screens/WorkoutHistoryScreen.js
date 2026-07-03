@@ -221,7 +221,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         const summary = workingSets.length > 0
           ? `${workingSets.length} × ${weightStr} × ${repsStr}`
           : `${g.sets.length} set${g.sets.length !== 1 ? 's' : ''} (warmup only)`;
-        return { name: g.name, summary, workingSetCount: workingSets.length };
+        return { exerciseId: id, name: g.name, summary, workingSetCount: workingSets.length };
       });
 
       setExpandedSets(prev => ({ ...prev, [workoutId]: grouped }));
@@ -365,14 +365,27 @@ export default function WorkoutHistoryScreen({ navigation }) {
             {exerciseDetail ? (
               <View style={styles.exerciseBreakdown}>
                 {exerciseDetail.map((ex, idx) => (
-                  <View key={idx} style={styles.exerciseBreakdownRow}>
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.exerciseBreakdownRow}
+                    onPress={() =>
+                      navigation.getParent()?.navigate('ProgressTab', {
+                        screen: 'ExerciseDetail',
+                        params: { exerciseId: ex.exerciseId },
+                        initial: false,
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`See progress for ${ex.name}`}
+                  >
                     <Text style={styles.exerciseBreakdownName} numberOfLines={1}>
                       {ex.name}
                     </Text>
                     <Text style={styles.exerciseBreakdownSummary} numberOfLines={1}>
                       {ex.summary}
                     </Text>
-                  </View>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
                 ))}
               </View>
             ) : (
@@ -872,8 +885,9 @@ const styles = StyleSheet.create({
   },
   exerciseBreakdownRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     gap: spacing.sm,
+    paddingVertical: spacing.xxs,
   },
   exerciseBreakdownName: {
     ...type.label,
