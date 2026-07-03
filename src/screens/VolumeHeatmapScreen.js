@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
@@ -54,6 +54,10 @@ export default function VolumeHeatmapScreen() {
   })));
   const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
+  // NAV-8: first paint showed an empty diagram while sets loaded; a quiet
+  // spinner covers the read instead. Only the FIRST load gates the render;
+  // window switches update in place.
+  const [loading, setLoading] = useState(true);
   const [previousVolume, setPreviousVolume] = useState({});
   const [windowWeeks, setWindowWeeks] = useState(1);
   const [customLandmarks, setCustomLandmarks] = useState(null);
@@ -91,7 +95,7 @@ export default function VolumeHeatmapScreen() {
   }
 
   async function loadData() {
-    if (!user?.id) return;
+    if (!user?.id) { setLoading(false); return; }
     try {
       const windowMs = windowWeeks * 7 * 24 * 60 * 60 * 1000;
       const now = Date.now();
@@ -165,6 +169,8 @@ export default function VolumeHeatmapScreen() {
       }
     } catch (e) {
       logError('VolumeHeatmapScreen.loadData', e, { userId: user?.id, windowWeeks });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -276,6 +282,14 @@ export default function VolumeHeatmapScreen() {
     if (daysAgo === 0) return 'Today';
     if (daysAgo === 1) return 'Yesterday';
     return `${daysAgo}d ago`;
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <ActivityIndicator style={{ marginTop: spacing.xxxl }} color={colors.primary} />
+      </SafeAreaView>
+    );
   }
 
   return (

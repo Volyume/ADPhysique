@@ -21,7 +21,7 @@ function texts(tree) {
     .map((n) => (Array.isArray(n.props.children) ? n.props.children.join('') : n.props.children))
     .filter((c) => typeof c === 'string');
 }
-const nav = { navigate: jest.fn() };
+const nav = { navigate: jest.fn(), goBack: jest.fn() };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -41,8 +41,10 @@ describe('QuizScreen', () => {
   test('selecting a chip writes to the in-memory slice', () => {
     let tree;
     act(() => { tree = create(<QuizScreen navigation={nav} />); });
+    // NAV-8 added a Back control above the chips; skip it.
     const chip = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
-      && typeof n.props.onPress === 'function')[0];
+      && typeof n.props.onPress === 'function'
+      && n.props.accessibilityLabel !== 'Back')[0];
     act(() => chip.props.onPress());
     expect(store.setQuizField).toHaveBeenCalled();
   });

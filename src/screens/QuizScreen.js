@@ -12,6 +12,7 @@
  */
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
@@ -61,7 +62,18 @@ export default function QuizScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.h1}>Eight quick questions.</Text>
+        {/* NAV-8: the flow had no way back (headerless stack screen), and the
+            headline promised eight questions while rendering six. */}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+        <Text style={styles.h1}>A few quick questions.</Text>
         <Text style={styles.lede}>Your plan takes shape as you answer.</Text>
 
         <Text style={styles.section}>How do you train?</Text>
@@ -127,6 +139,7 @@ export default function QuizScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  backBtn: { alignSelf: 'flex-start', marginBottom: spacing.sm },
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black },
