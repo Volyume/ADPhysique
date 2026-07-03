@@ -83,8 +83,21 @@ Body:  A two-minute check-in is all it takes, and your coach tunes next
 ### Training day reminder
 ```
 Title: Today's a training day
-Body:  You've got a session on for today. Enjoy it whenever it suits you.
+Body (plan known):  Your {Plan} plan has a session on today. Enjoy it
+                    whenever it suits you.
+Body (fallback):    You've got a session on for today. Enjoy it whenever
+                    it suits you.
 ```
+The body names the active PLAN by its stored name verbatim (matching
+`src/lib/planDisplay.js`), never a specific routine: plans rotate round-robin
+(decision D5), so a weekly repeating notification cannot know which routine
+will be next on a future date. The plan-agnostic fallback is used when no plan
+is active, the name can't be resolved, or the name is too long to fit the tray
+copy without truncation. The body is (re)resolved whenever reminders are
+scheduled and refreshed on plan activation (`buildTrainingReminderBody` /
+`scheduleTrainingReminders` in `trainingReminders.js`, hook in
+`database.activatePlanWithBlock`). Title unchanged. Added 2026-07-03 (Wave A
+C12).
 
 ### Cascade day 19 (trial winding down)
 ```

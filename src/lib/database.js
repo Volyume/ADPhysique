@@ -2984,6 +2984,17 @@ export async function activatePlanWithBlock(userId, planId, planName) {
   const { VOLUME_LANDMARKS } = await import('./algorithms');
   await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
 
+  // C12: refresh the weekly training reminders so their copy names the plan
+  // that just became active. Best-effort and self-gating (the scheduler no-ops
+  // when reminders are off or notification permission is absent); a lazy
+  // require keeps the data layer free of a static notifications dependency.
+  try {
+    // eslint-disable-next-line global-require
+    require('./notifications/trainingReminders')
+      .scheduleTrainingReminders(planName)
+      .catch(() => {});
+  } catch (_) { /* notifications layer unavailable -- reminders refresh on next schedule */ }
+
   return id;
 }
 

@@ -19,6 +19,50 @@ const TRAINING_REMINDER_CHANNEL = 'training-reminders';
 // can be cancelled as a group without touching other scheduled notifications.
 const NOTIF_ID_PREFIX = 'volyume_training_day_';
 
+// Longest plan name we fold into the tray copy. Beyond this the named
+// sentence overruns the notification body, so we fall back to the
+// plan-agnostic line rather than truncate mid-name.
+const MAX_PLAN_NAME_IN_BODY = 40;
+
+// ---------------------------------------------------------------------------
+// buildTrainingReminderBody (pure)
+// The reminder body. When the active plan is known we name it, referenced by
+// its stored name verbatim (matching src/lib/planDisplay.js so the reminder
+// can never drift from the Plans tab). We name the PLAN, never a specific
+// routine: the plan rotates round-robin (decision D5), so a weekly repeating
+// notification cannot know which routine will be next on a future date without
+// asserting a plan fact that may not hold. Warm and encouraging, never a
+// barked command. Exported for unit testing.
+// ---------------------------------------------------------------------------
+export function buildTrainingReminderBody(planName) {
+  const generic = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
+  const name = typeof planName === 'string' ? planName.trim() : '';
+  if (!name || name.length > MAX_PLAN_NAME_IN_BODY) return generic;
+  return `Your ${name} plan has a session on today. Enjoy it whenever it suits you.`;
+}
+
+// ---------------------------------------------------------------------------
+// resolveActivePlanName
+// Best-effort read of the active plan's name for the reminder copy. Lazy
+// requires keep this notifications utility free of a static database/store
+// dependency (and any import cycle); every failure path returns '' so the copy
+// falls back to the plan-agnostic line. Never throws.
+// ---------------------------------------------------------------------------
+async function resolveActivePlanName() {
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    const userId = store.getState()?.user?.id ?? null;
+    if (!userId) return '';
+    // eslint-disable-next-line global-require
+    const { getActivePlan } = require('../database');
+    const plan = await getActivePlan(userId).catch(() => null);
+    return plan && typeof plan.name === 'string' ? plan.name.trim() : '';
+  } catch (_) {
+    return '';
+  }
+}
+
 // expo-notifications uses 1=Sunday … 7=Saturday for weekly calendar triggers.
 // JS Date uses 0=Sunday … 6=Saturday, so we add 1.
 function jsWeekdayToExpo(jsDay) {
@@ -71,7 +115,7 @@ export async function cancelTrainingReminders() {
 // Reads the user's schedule and reminder preferences, then schedules one
 // weekly repeating notification per training day.
 // ---------------------------------------------------------------------------
-export async function scheduleTrainingReminders() {
+export async function scheduleTrainingReminders(planNameArg) {
   if (Platform.OS === 'web') return;
 
   try {
@@ -126,10 +170,12 @@ export async function scheduleTrainingReminders() {
     // 6. Cancel existing training reminders before rescheduling
     await cancelTrainingReminders();
 
-    // 7. Notification body. Kept generic on purpose: we don't load the full
-    // plan name here, to avoid a database dependency in this utility module.
-    // Warm and encouraging, never a barked command.
-    const body = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
+    // 7. Notification body. Names the active plan when we can resolve it: an
+    // explicit name passed by the plan-activation hook wins, else a best-effort
+    // self-source, else the plan-agnostic line (see buildTrainingReminderBody).
+    let planName = typeof planNameArg === 'string' ? planNameArg.trim() : '';
+    if (!planName) planName = await resolveActivePlanName();
+    const body = buildTrainingReminderBody(planName);
 
     // 8. Schedule one weekly notification per training day
     await Promise.all(

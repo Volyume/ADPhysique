@@ -33,6 +33,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: (...a) => mockGetItem(...a),
 }));
 
+// C12: the scheduler self-sources the active plan name for the copy via lazy
+// requires of the store + database. Mock both so that path is deterministic.
+const mockGetActivePlan = jest.fn();
+jest.mock('../database', () => ({ getActivePlan: (...a) => mockGetActivePlan(...a) }));
+const mockUserId = { id: 'u1' };
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ user: mockUserId.id ? { id: mockUserId.id } : null }) },
+}));
+
 const tr = require('../notifications/trainingReminders');
 
 function store(map) {
@@ -44,6 +54,8 @@ beforeEach(() => {
   mockPlatformOS = 'android';
   mockGetPerms.mockResolvedValue({ status: 'granted' });
   mockGetAll.mockResolvedValue([]);
+  mockUserId.id = 'u1';
+  mockGetActivePlan.mockResolvedValue(null); // no plan -> plan-agnostic copy
 });
 
 describe('scheduleTrainingReminders (D4)', () => {
@@ -75,5 +87,69 @@ describe('scheduleTrainingReminders (D4)', () => {
     mockGetPerms.mockResolvedValue({ status: 'denied' });
     await tr.scheduleTrainingReminders();
     expect(mockSchedule).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildTrainingReminderBody (C12, pure copy rules)', () => {
+  const GENERIC = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
+
+  test('no name -> the plan-agnostic line', () => {
+    expect(tr.buildTrainingReminderBody('')).toBe(GENERIC);
+    expect(tr.buildTrainingReminderBody('   ')).toBe(GENERIC);
+    expect(tr.buildTrainingReminderBody(null)).toBe(GENERIC);
+    expect(tr.buildTrainingReminderBody(undefined)).toBe(GENERIC);
+  });
+
+  test('a short plan name is folded in verbatim, warm and British', () => {
+    expect(tr.buildTrainingReminderBody('Push Pull Legs')).toBe(
+      'Your Push Pull Legs plan has a session on today. Enjoy it whenever it suits you.',
+    );
+    // trimmed, not truncated
+    expect(tr.buildTrainingReminderBody('  Upper Lower  ')).toContain('Your Upper Lower plan');
+  });
+
+  test('an over-long plan name falls back rather than truncating mid-name', () => {
+    const long = 'Beginner Full Body Strength And Conditioning Programme 3x Per Week';
+    expect(long.length).toBeGreaterThan(40);
+    expect(tr.buildTrainingReminderBody(long)).toBe(GENERIC);
+  });
+});
+
+describe('scheduleTrainingReminders names the active plan (C12)', () => {
+  beforeEach(() => {
+    store({
+      [tr.REMINDER_PREF_KEY]: 'true',
+      [tr.SCHEDULE_KEY]: JSON.stringify({ days: [1] }),
+    });
+  });
+
+  test('self-sources the plan name when none is passed', async () => {
+    mockGetActivePlan.mockResolvedValue({ id: 'p1', name: 'Push Pull Legs' });
+    await tr.scheduleTrainingReminders();
+    expect(mockGetActivePlan).toHaveBeenCalledWith('u1');
+    expect(mockSchedule.mock.calls[0][0].content.body).toContain('Your Push Pull Legs plan');
+  });
+
+  test('an explicit plan name wins and skips the DB read', async () => {
+    await tr.scheduleTrainingReminders('Upper Lower');
+    expect(mockGetActivePlan).not.toHaveBeenCalled();
+    expect(mockSchedule.mock.calls[0][0].content.body).toContain('Your Upper Lower plan');
+  });
+
+  test('no active plan (or no user): the plan-agnostic line', async () => {
+    mockGetActivePlan.mockResolvedValue(null);
+    await tr.scheduleTrainingReminders();
+    expect(mockSchedule.mock.calls[0][0].content.body).toBe(
+      'You\'ve got a session on for today. Enjoy it whenever it suits you.',
+    );
+  });
+
+  test('a DB read failure never blocks scheduling: falls back to the line', async () => {
+    mockGetActivePlan.mockRejectedValue(new Error('db locked'));
+    await tr.scheduleTrainingReminders();
+    expect(mockSchedule).toHaveBeenCalledTimes(1);
+    expect(mockSchedule.mock.calls[0][0].content.body).toBe(
+      'You\'ve got a session on for today. Enjoy it whenever it suits you.',
+    );
   });
 });
