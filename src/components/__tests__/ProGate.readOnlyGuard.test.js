@@ -41,9 +41,24 @@ async function flush() {
   await act(async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); });
 }
 
+// Every tree gets unmounted after its test. The guard arms a real 4s
+// fail-closed timer that only clears on unmount; a mounted tree left behind
+// fires it after the run ends, which Jest counts as a run failure (exit 1)
+// under --runInBand even with every test passing — exactly what broke the
+// release gate.
+const trees = [];
+
+afterEach(async () => {
+  for (const t of trees) {
+    try { await act(async () => { t.unmount(); }); } catch (_) { /* already gone */ }
+  }
+  trees.length = 0;
+});
+
 async function render(Guarded) {
   let tree;
   await act(async () => { tree = create(<Guarded />); });
+  trees.push(tree);
   await flush();
   return tree;
 }
@@ -98,6 +113,7 @@ describe('withReadOnlyProGuard (E10 lapse views)', () => {
       const Guarded = withReadOnlyProGuard(Screen, 'Food diary', never);
       let tree;
       await act(async () => { tree = create(<Guarded />); });
+      trees.push(tree);
       expect(hasScreen(tree)).toBe(false);
       expect(hasLock(tree)).toBe(false);
     } finally {
@@ -113,6 +129,7 @@ describe('withReadOnlyProGuard (E10 lapse views)', () => {
       const Guarded = withReadOnlyProGuard(Screen, 'Progress photos', never);
       let tree;
       await act(async () => { tree = create(<Guarded />); });
+      trees.push(tree);
       await act(async () => { jest.advanceTimersByTime(4001); });
       expect(hasScreen(tree)).toBe(false);
       expect(hasLock(tree)).toBe(true);
