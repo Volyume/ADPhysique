@@ -521,7 +521,7 @@ export default function PartnerScreen({ route }) {
 
   if (p.loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Partners" />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -536,7 +536,7 @@ export default function PartnerScreen({ route }) {
   const canInviteAnother = tier === 'pro' && pairs.length < PRO_MAX_PAIRS;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Partners" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
