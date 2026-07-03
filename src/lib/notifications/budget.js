@@ -43,6 +43,10 @@ export const EVENT_WEEKLY_CAP = 8;
 export const EVENT_PRIORITY = Object.freeze([
   CATEGORY.CASCADE_GATE,
   CATEGORY.WEEKLY_COACH_READY,
+  // S6 (founder call 2026-07-03, retention-first): a brand-new user one session
+  // short of activating is the highest-leverage save, so on a collision the
+  // activation nudge outranks an already-engaged user's missed-check-in push.
+  CATEGORY.ACTIVATION_NUDGE,
   CATEGORY.CHECKIN_MISSED,
   CATEGORY.TRIAL_DAY3,
   CATEGORY.WINBACK,

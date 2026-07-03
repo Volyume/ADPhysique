@@ -40,6 +40,7 @@ export const CATEGORY = Object.freeze({
   PLANNED_MEAL_CONFIRM: 'planned_meal_confirm', // F3: confirm planned meals
   REST_TIMER: 'rest_timer', // U1/F3: live lock-screen rest timer with actions
   MEAL_LOG_REMINDER: 'meal_log_reminder', // gap #4: opt-in, convenience-only meal-log nudge
+  ACTIVATION_NUDGE: 'activation_nudge', // S6: early-activation re-engagement (0/1/2-session stall)
 });
 
 /**
@@ -131,6 +132,12 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // the scheduler — this entry exists only so tap telemetry can resolve
   // a channel and to satisfy the "every category has channels" invariant.
   [CATEGORY.REST_TIMER]: [CHANNEL.PUSH],
+  // S6: the early-activation nudge. Push (the only channel that reaches a user
+  // who has stopped opening the app) + an in-app banner off the same stage
+  // data (zero extra budget). ED-flag suppression at BOTH schedule and delivery,
+  // quiet hours, the push budget, the one-tap toggle and the single-shot-per-
+  // stage flags all live in the scheduler + handler, exactly like CHECKIN_MISSED.
+  [CATEGORY.ACTIVATION_NUDGE]: [CHANNEL.PUSH, CHANNEL.IN_APP],
 });
 
 /**
@@ -185,6 +192,7 @@ export function categoryForDataType(type) {
     case 'winback': return CATEGORY.WINBACK;
     case 'partner_cheer': return CATEGORY.PARTNER_CHEER;
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
+    case 'activation_nudge': return CATEGORY.ACTIVATION_NUDGE;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
     case 'rest_timer': return CATEGORY.REST_TIMER;
     case 'rest_end': return CATEGORY.REST_TIMER; // A2: the end-of-rest alert

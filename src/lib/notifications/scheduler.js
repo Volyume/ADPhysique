@@ -45,6 +45,7 @@ import {
 } from '../trialActivation';
 import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
+import { resolveActivationNudge, activationNudgePush } from '../activationNudge';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_EVENING = 'volyume_evening_weight';
@@ -832,6 +833,107 @@ export async function scheduleMissedCheckinFollowups(userId) {
   }
 }
 
+// ─── S6: early-activation nudge ──────────────────────────────────────────────
+// A single-shot push per stall stage (0/1/2 completed sessions in the first 14
+// days) for a brand-new user, plus the matching Home banner (HomeScreen reads
+// the same resolveActivationNudge). Tier-blind (activation is a free action).
+// ED-flag suppressed at schedule AND delivery (handler), quiet-hours shifted,
+// budget-gated. The anchored fire dates keep re-lays single-shot: a slot whose
+// date has passed is never laid again (the missed-check-in pattern), so no
+// per-stage flag is needed. Wiped by cancelAllNotifications on restore, so
+// restoreNotifications re-lays it (which also lays the 0-session cold-start for
+// a user who never returns to complete a workout); the workout-completion hook
+// lays the next stage the instant a session lands.
+const NOTIF_ID_ACTIVATION_NUDGE = 'volyume_activation_nudge';
+const ACTIVATION_WINDOW_GRACE_MS = (14 + 3) * 86400000; // window + grace hard stop
+
+export async function cancelActivationNudge() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_ACTIVATION_NUDGE); } catch {}
+}
+
+export async function scheduleActivationNudge(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = userId ?? useAppStore.getState()?.user?.id ?? null;
+    if (!uid) { await cancelActivationNudge(); return; }
+
+    // Category toggle (default on).
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* defaults below */ }
+    if (prefs.activationNudgeEnabled === false) { await cancelActivationNudge(); return; }
+
+    // Account-creation date (install proxy) from the live session. Without it we
+    // cannot place the window, so we stand down rather than guess.
+    let accountCreatedAtMs = null;
+    try {
+      // eslint-disable-next-line global-require
+      const { getSupabaseClient } = require('../supabase');
+      const { data } = await getSupabaseClient().auth.getSession();
+      const iso = data?.session?.user?.created_at ?? null;
+      if (iso) accountCreatedAtMs = new Date(iso).getTime();
+    } catch (_) { accountCreatedAtMs = null; }
+    if (!Number.isFinite(accountCreatedAtMs)) { await cancelActivationNudge(); return; }
+
+    // Cheap early-out: past the window + grace the lever is done for this user
+    // (this also skips the workout read for every established user).
+    if (Date.now() - accountCreatedAtMs > ACTIVATION_WINDOW_GRACE_MS) { await cancelActivationNudge(); return; }
+
+    // Open ED/wellbeing flag → never lay (and retire anything laid). Silence is
+    // the respectful behaviour; the suppression is consumed here, never altered.
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => null);
+    if (edFlag) { await cancelActivationNudge(); return; }
+
+    // Completed-session start times only (never weight or calorie figures).
+    const workouts = await db.getAllWorkouts(uid).catch(() => []);
+    const completedStartedAtMs = workouts.filter((w) => w.isCompleted).map((w) => w.startedAt ?? 0);
+
+    const nudge = resolveActivationNudge({ accountCreatedAtMs, completedStartedAtMs, nowMs: Date.now() });
+    if (!nudge) { await cancelActivationNudge(); return; }
+
+    await cancelActivationNudge();
+    const fire = new Date(nudge.fireAtMs);
+    // A fire time already in the past is never chased: an anchored slot that has
+    // passed is not re-laid (single-shot per stage), matching missed check-in.
+    if (fire.getTime() <= Date.now()) return;
+
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    const slot = await requestEventPushSlot({ category: CATEGORY.ACTIVATION_NUDGE, fireDate: shifted });
+    if (!slot.allowed) return;
+    const copy = activationNudgePush(nudge.stage, greetName());
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_ACTIVATION_NUDGE,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'activation_nudge', stage: nudge.stage },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.ACTIVATION_NUDGE,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleActivationNudge', e?.message);
+    }
+  }
+}
+
 // ─── F3: planned-meal confirm reminder ───────────────────────────────────────
 const NOTIF_ID_PLANNED_MEAL_CONFIRM = 'volyume_planned_meal_confirm';
 
@@ -1126,6 +1228,15 @@ export async function restoreNotifications(prefs, userId = null) {
     const store = require('../../store/useAppStore').default;
     await schedulePlannedMealConfirm(userId ?? store.getState().user?.id ?? null);
   } catch (_) { /* planned-meal nudge re-lay is best-effort */ }
+
+  // S6: re-lay the early-activation nudge (self-guards: toggle, window elapsed,
+  // ED flag, activated, past slot skipped). This is also the path that lays the
+  // 0-session cold-start for a user who signs up and never returns.
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleActivationNudge(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* activation-nudge re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

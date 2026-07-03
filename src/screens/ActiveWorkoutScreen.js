@@ -1736,6 +1736,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   require('../lib/widgets/writer').writeWidgetSnapshot(uid2).catch(() => {});
                   // eslint-disable-next-line global-require
                   require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2).catch(() => {});
+                  // S6: a session just landed, so lay the next activation-nudge
+                  // stage (or clear it once activated). Self-guarding and
+                  // best-effort; never blocks the finish flow.
+                  // eslint-disable-next-line global-require
+                  require('../lib/notifications/scheduler').scheduleActivationNudge(uid2).catch(() => {});
                 }
               } catch (_) { /* tolerate */ }
               // Push to cloud IMMEDIATELY on finish. Previously the

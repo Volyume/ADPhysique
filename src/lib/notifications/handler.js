@@ -48,6 +48,14 @@ export function configureNotificationHandler() {
             && (await _checkedInRecently() || await _edFlagOpen())) {
           return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
         }
+        // S6: the activation nudge stands down if the user has progressed past
+        // the stage it was laid for (they trained since), or an ED flag has
+        // opened — schedule-time state can go stale before delivery. Suppression
+        // is consumed here, never altered.
+        if (dataType === 'activation_nudge'
+            && (await _activationStagePassed(notification?.request?.content?.data?.stage) || await _edFlagOpen())) {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
       } catch (_) {
         // Fall through to showing the notification on any DB error.
       }
@@ -139,5 +147,31 @@ async function _alreadyTrainedToday() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     return all.some(w => w.isCompleted && w.startedAt >= todayStart.getTime());
+  } catch (_) { return false; }
+}
+
+// S6: has the user progressed past the stage this activation nudge was laid
+// for? A cold_start (0 sessions) is stale once they have 1; stalled_1 once they
+// have 2; stalled_2 once they have 3. Counts only, no body data.
+async function _activationStagePassed(stage) {
+  try {
+    // eslint-disable-next-line global-require
+    const { NUDGE_STAGE } = require('../activationNudge');
+    const stageThreshold = {
+      [NUDGE_STAGE.COLD_START]: 0,
+      [NUDGE_STAGE.STALLED_1]: 1,
+      [NUDGE_STAGE.STALLED_2]: 2,
+    };
+    const threshold = stageThreshold[stage];
+    if (threshold == null) return false; // unknown stage: do not suppress
+    // eslint-disable-next-line global-require
+    const { getAllWorkouts } = require('../database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    const all = await getAllWorkouts(uid);
+    const completed = all.filter(w => w.isCompleted).length;
+    return completed > threshold;
   } catch (_) { return false; }
 }
