@@ -326,3 +326,57 @@ Rules that DO apply, unchanged:
   ED-flag suppression rules are not implicated.
 - Foreground delivery is suppressed (the in-app timer owns the moment); the
   alert is cancelled on skip, adjust, session end and sign-out.
+
+## PROPOSED ADDENDUM — early-activation nudge (S6, 2026-07-03)
+
+**Status: PROPOSED, founder reviews at PR.** A new re-engagement lever for the
+highest-churn moment: a brand-new user who stalls short of the activation
+threshold (< 3 completed sessions in their first 14 days = ~3-4x churn). Founder
+calls on record: broadest scope (0-session cold-start + the 1->2 and 2->3
+stalls), tier-blind, retention-first priority.
+
+- **Category:** `activation_nudge`. Channels: push + in-app.
+- **Stages (by completed-session count in the window):** 0 -> cold_start
+  (anchor = account creation + 3 days); 1 -> stalled_1 and 2 -> stalled_2
+  (anchor = last session + 4 days). At most one pending per user; each fires at
+  most once (anchored fire dates make a past slot never re-lay). Hard stop at
+  day 14 + 3 grace; an elapsed window is never chased (no lapseDetect hand-off).
+- **Reach:** the PUSH covers all three stages (the only channel that reaches a
+  gone-quiet user). The in-app Home BANNER covers the two stall stages only
+  (welcomeCard already owns the 0-session in-app moment); it slots below the
+  coaching/recovery banners but above the free-tier upsell lines.
+- **Tier:** tier-blind (free + trial). Activation is a free action. A deliberate
+  deviation from other levers' Pro-only gating.
+- **Budget priority:** in EVENT_PRIORITY directly above `checkin_missed` (a
+  brand-new user's activation outranks an engaged user's missed check-in on a
+  rare collision day). Fully budgeted like every event push.
+- **ED / quiet hours / one-per-topic:** suppressed under an open ED/wellbeing
+  flag at BOTH schedule and delivery time; the banner also fails CLOSED on a
+  failed flag read. Quiet hours always win. Budget + one-per-topic-per-day
+  apply. No shame copy ("you missed" / "behind" / streaks are banned).
+- **Disable:** one-tap toggle in You -> Notifications -> Getting started
+  (`activationNudgeEnabled`, default on, all tiers). The Android channel toggle
+  (coaching reminders) also works.
+- **No migration, no new dependency, no native rebuild.** Reads the existing
+  `workouts` table + the account-creation date from the session; telemetry
+  rides the existing `notification_sent/_tapped/_failed` events (counts/flags
+  only, never a session date, weight or any body value).
+- **Timing defaults** (4-day stall gap, 3-day grace) are reasoned first cuts,
+  tunable once `notification_sent/_tapped` telemetry accumulates.
+
+### Copy (voice sign-off required)
+```
+cold_start push:  Ready when you are{, First}
+                  Your plan is set up and waiting. Your first session is
+                  whenever it suits you.
+stalled_1 push:   One session down{, First}
+                  Whenever you're ready, your next one is waiting exactly where
+                  you left it.
+stalled_2 push:   Two sessions in{, First}
+                  One more and this starts feeling automatic. Your plan is ready
+                  whenever you are.
+stalled_1 banner: You've made a start / A second session is what turns a first
+                  one into a habit. Pick up wherever suits you today.
+stalled_2 banner: You're nearly there / Two sessions logged. A third is what
+                  makes the habit stick.
+```

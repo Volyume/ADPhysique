@@ -23,7 +23,7 @@ import {
   setPreference as setPrefRow,
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
-import { scheduleMealReminders } from '../lib/notifications/scheduler';
+import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge } from '../lib/notifications/scheduler';
 import { restoreNotifications } from '../lib/notifications';
 import {
   getQuietHours,
@@ -146,6 +146,18 @@ export default function NotificationSettingsScreen({ navigation }) {
   // doesn't fire only 2-3 days after the previous check-in.
   const [lastCheckinMs, setLastCheckinMs] = useState(0);
   const [trainingEnabled, setTrainingEnabled] = useState(false);
+  // S6: the early-activation nudge is tier-blind with its own one-tap disable.
+  // Blob-backed (the source the scheduler reads); default on.
+  const [activationNudgeEnabled, setActivationNudgeEnabled] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        const blob = raw ? (JSON.parse(raw) ?? {}) : {};
+        setActivationNudgeEnabled(blob.activationNudgeEnabled !== false);
+      } catch (_) { /* default on */ }
+    })();
+  }, []);
   const [trainingHour, setTrainingHour] = useState(8);
   const [trainingMinute, setTrainingMinute] = useState(0);
   const [mealReminders, setMealReminders] = useState(DEFAULT_MEAL_REMINDERS);
@@ -432,6 +444,26 @@ export default function NotificationSettingsScreen({ navigation }) {
     } catch (_) {}
   }
 
+  async function handleActivationNudgeToggle(value) {
+    setActivationNudgeEnabled(value);
+    try {
+      // Merge-write the blob so other schedule keys survive the toggle. The
+      // scheduler reads activationNudgeEnabled from this blob.
+      let blob = {};
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (raw) blob = JSON.parse(raw) ?? {};
+      } catch (_) {}
+      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({ ...blob, activationNudgeEnabled: value }));
+      const userId = useAppStore.getState().user?.id;
+      if (value) {
+        await scheduleActivationNudge(userId ?? null);
+      } else {
+        await cancelActivationNudge();
+      }
+    } catch (_) {}
+  }
+
   function handleTrainingTimePick() {
     const currentLabel = `${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`;
     appAlert(
@@ -642,6 +674,30 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
               Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
+            </Text>
+          </View>
+        </Card>
+
+        {/* S6: the early-activation nudge (tier-blind). Its own one-tap disable. */}
+        <Text style={styles.sectionLabel}>Getting started</Text>
+        <Card style={styles.card}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="rocket-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.toggleLabel}>Getting-started nudges</Text>
+            <Switch
+              value={activationNudgeEnabled}
+              onValueChange={handleActivationNudgeToggle}
+              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
+              thumbColor={colors.primary}
+              ios_backgroundColor={colors.surface2}
+              accessibilityLabel="Getting-started nudge toggle"
+            />
+          </View>
+          <View style={styles.helperRow}>
+            <Text style={styles.helperText}>
+              A gentle reminder in your first couple of weeks if you have not got a session in yet. It stops on its own once you are into a routine.
             </Text>
           </View>
         </Card>
