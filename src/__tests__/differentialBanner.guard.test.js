@@ -49,7 +49,7 @@ describe('NAV-4: the dead CoachOutput render stays removed', () => {
 describe('NAV-4: banner priority slot (one-banner invariant)', () => {
   test('renders only when EVERY other banner is absent, free coach line included', () => {
     expect(HOME).toMatch(
-      /const showDifferentialBadge = tier === 'free' && !!differentialBanner\?\.shown && !differentialDismissed\s*\n\s*&& !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner\s*\n\s*&& !showPlateauBanner && !showFreeCoachLine;/,
+      /const showDifferentialBadge = tier === 'free' && !!differentialBanner\?\.shown && !differentialDismissed\s*\n\s*&& !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner\s*\n\s*&& !showPlateauBanner && !showActivationBanner && !showFreeCoachLine;/,
     );
   });
 

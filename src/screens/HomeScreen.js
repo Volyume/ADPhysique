@@ -42,6 +42,7 @@ import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { activePlanLine } from '../lib/planDisplay';
+import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -237,6 +238,10 @@ export default function HomeScreen({ navigation, route }) {
   // dismissal has been read (the plateau/free-coach-line pattern).
   const [differentialBanner, setDifferentialBanner] = useState(null);
   const [differentialDismissed, setDifferentialDismissed] = useState(true);
+  // S6: the in-app half of the activation lever, for a still-present but stalled
+  // brand-new user (the push reaches the gone-quiet one). Tier-blind.
+  const [activationNudge, setActivationNudge] = useState(null);
+  const [activationNudgeDismissed, setActivationNudgeDismissed] = useState(true);
 
   // Pre-workout coaching brief
   const [briefDismissed, setBriefDismissed] = useState(false);
@@ -332,6 +337,7 @@ export default function HomeScreen({ navigation, route }) {
         loadScheduleContext(),
         loadBriefDismissal(),
         loadWelcome(),
+        loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
@@ -715,6 +721,46 @@ export default function HomeScreen({ navigation, route }) {
     if (user?.id) {
       AsyncStorage.setItem(
         `@volyume_differential_banner_dismissed_${user.id}_${localWeekStartMs()}`,
+        'true',
+      ).catch(() => {});
+    }
+  }
+
+  // S6: resolve the activation-nudge stage for the in-app banner. Same pure
+  // resolver as the push scheduler, so the two never disagree. Tier-blind.
+  async function loadActivationNudge() {
+    try {
+      if (!user?.id) { setActivationNudge(null); return; }
+      // ED-safety, fail CLOSED: a training-encouragement surface must never show
+      // over an open ED flag, calm mode, or a FAILED flag/wellbeing read.
+      const [edFlag, wellbeing] = await Promise.all([
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        getWellbeingMode().catch(() => 'read_failed'),
+      ]);
+      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setActivationNudge(null); return; }
+      // Account-creation date (install proxy) from the live session.
+      const createdIso = useAppStore.getState().session?.user?.created_at ?? null;
+      const accountCreatedAtMs = createdIso ? new Date(createdIso).getTime() : null;
+      if (!Number.isFinite(accountCreatedAtMs)) { setActivationNudge(null); return; }
+      const workouts = await getAllWorkouts(user.id).catch(() => []);
+      const completedStartedAtMs = workouts.filter((w) => w.isCompleted).map((w) => w.startedAt ?? 0);
+      const nudge = resolveActivationNudge({ accountCreatedAtMs, completedStartedAtMs, nowMs: Date.now() });
+      if (!nudge) { setActivationNudge(null); return; }
+      // Per-stage dismissal, read BEFORE reveal so a dismissed banner can't flash.
+      const dKey = `@volyume_home_activation_nudge_dismissed_${user.id}_${nudge.stage}`;
+      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+      setActivationNudgeDismissed(dv === 'true');
+      setActivationNudge(nudge);
+    } catch (_) {
+      setActivationNudge(null);
+    }
+  }
+
+  function dismissActivationNudge() {
+    setActivationNudgeDismissed(true);
+    if (user?.id && activationNudge?.stage) {
+      AsyncStorage.setItem(
+        `@volyume_home_activation_nudge_dismissed_${user.id}_${activationNudge.stage}`,
         'true',
       ).catch(() => {});
     }
@@ -1145,18 +1191,28 @@ export default function HomeScreen({ navigation, route }) {
   // one-banner invariant holds.
   const showPlateauBanner = !!plateauBanner && !plateauBannerDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
+  // S6 activation nudge: below the coaching/recovery banners but ABOVE the
+  // free-tier upsell lines (founder call: retention over monetisation for a
+  // barely-active new user). Tier-blind. The cold-start stage is deliberately
+  // NOT shown here — welcomeCard already owns the 0-session in-app moment; only
+  // the two stall stages render a banner. Per-stage dismissible. One-banner
+  // invariant holds.
+  const showActivationBanner = !!activationNudge && activationNudge.stage !== NUDGE_STAGE.COLD_START
+    && !activationNudgeDismissed
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
+    && !showPlateauBanner;
   // Free-tier weekly one-liner (founder decision 4c): lowest priority in
   // the banner stack, free tier only, dismissible per week. The
   // one-banner invariant holds.
   const showFreeCoachLine = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
-    && !showPlateauBanner;
+    && !showPlateauBanner && !showActivationBanner;
   // NAV-4 differential paywall badge: free tier only, the LOWEST priority in
   // the stack (below the free coach line), dismissible per week. The
   // one-banner invariant holds.
   const showDifferentialBadge = tier === 'free' && !!differentialBanner?.shown && !differentialDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
-    && !showPlateauBanner && !showFreeCoachLine;
+    && !showPlateauBanner && !showActivationBanner && !showFreeCoachLine;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1332,6 +1388,38 @@ export default function HomeScreen({ navigation, route }) {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Dismiss plateau banner"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* ── S6 activation nudge banner (stall stages only; cold-start is
+            welcomeCard's). Taps through to start the next session. ── */}
+        {showActivationBanner && (
+          <TouchableOpacity
+            style={styles.activationBanner}
+            onPress={() => handleStartNextWorkout(false)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
+          >
+            <View style={styles.activationBannerLeft}>
+              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.activationBannerTitle} numberOfLines={1}>
+                  {activationBannerLine(activationNudge.stage)?.title}
+                </Text>
+                <Text style={styles.activationBannerBody} numberOfLines={2}>
+                  {activationBannerLine(activationNudge.stage)?.body}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={dismissActivationNudge}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
             >
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -2709,6 +2797,22 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     flex: 1, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+
+  // S6 activation nudge banner (shares the plateau banner's card shape)
+  activationBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+  activationBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  activationBannerTitle: {
+    ...type.bodySm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  },
+  activationBannerBody: {
+    ...type.bodySm, color: colors.textMuted, marginTop: 2,
   },
 
   // Nutrition phase sync banner
