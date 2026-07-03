@@ -35,12 +35,33 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import Button from '../components/Button';
 import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
+
+// C8 (Wave A): remembers a "skip the name step" choice across scans, so a
+// user who never bothers with front-of-pack photos isn't asked every time.
+// Set-only from the UI (skipName below); nothing in this screen ever clears
+// it, so the only way back to name capture is the per-scan "Add a name" link.
+export const SKIP_NAME_KEY = '@volyume_scan_skip_name';
+
+// Pure: the step to open on given the persisted flag's raw AsyncStorage
+// value ('true' / null / anything else). Exported for the colocated test.
+export function getInitialStep(flagValue) {
+  return flagValue === 'true' ? 'nutrition' : 'front';
+}
+
+// Pure: whether the quiet "Add a name" link should show on the nutrition
+// step. Only offered when this scan's name step was skipped (this session's
+// tap, or the remembered flag auto-skipping on arrival) and never while busy
+// capturing/processing a photo.
+export function shouldOfferAddNameLink({ step, skipRemembered, busy }) {
+  return step === 'nutrition' && !!skipRemembered && !busy;
+}
 
 export default function ScanLabelScreen({ navigation, route }) {
   const mealSlot = route?.params?.mealSlot ?? 'snack';
@@ -53,6 +74,10 @@ export default function ScanLabelScreen({ navigation, route }) {
   // panel. productName carries the read name across to the nutrition step.
   const [step, setStep] = useState('front');
   const [productName, setProductName] = useState('');
+  // C8: true when this scan's name step was skipped (either just now via
+  // "Skip name", or on arrival because the remembered flag was already set).
+  // Drives the quiet "Add a name" way back on the nutrition step.
+  const [skipRemembered, setSkipRemembered] = useState(false);
   const [torch, setTorch] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [focused, setFocused] = useState(true);
@@ -85,6 +110,19 @@ export default function ScanLabelScreen({ navigation, route }) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => setAppActive(s === 'active'));
     return () => sub.remove();
+  }, []);
+
+  // C8: load the remembered "skip the name step" flag once on mount. If set,
+  // this scan opens straight on the nutrition step, same as tapping "Skip
+  // name" just now. Never overrides a step the user has already moved past.
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(SKIP_NAME_KEY).then((v) => {
+      if (cancelled || getInitialStep(v) !== 'nutrition') return;
+      setSkipRemembered(true);
+      setStep('nutrition');
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   const requestPermission = useCallback(async () => {
@@ -121,6 +159,9 @@ export default function ScanLabelScreen({ navigation, route }) {
           const nm = ocr ? pickProductName(ocr) : null;
           if (nm) setProductName(nm);
         }
+        // A real capture attempt this scan, not a skip, so the "Add a name"
+        // link has nothing to offer back to.
+        setSkipRemembered(false);
         setStep('nutrition');
         setBusy(false);
         return;
@@ -152,6 +193,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       });
     } catch {
       if (step === 'front') {
+        setSkipRemembered(false);
         setStep('nutrition');
         setBusy(false);
         return;
@@ -162,10 +204,21 @@ export default function ScanLabelScreen({ navigation, route }) {
     }
   }, [busy, navigation, mealSlot, entryDate, prefillBarcode, torch, step, productName]);
 
-  // Skip the name step and go straight to the nutrition panel.
+  // Skip the name step and go straight to the nutrition panel. C8: also
+  // remembers the choice for future scans (set-only; never cleared here).
   const skipName = () => {
     if (busy) return;
+    setSkipRemembered(true);
     setStep('nutrition');
+    AsyncStorage.setItem(SKIP_NAME_KEY, 'true').catch(() => {});
+  };
+
+  // C8: the quiet way back from the nutrition step to the name step, for
+  // this scan only. Does not clear the remembered flag, so the next scan
+  // still opens on nutrition unless the user comes back here again.
+  const addNameBack = () => {
+    if (busy) return;
+    setStep('front');
   };
 
   const gotoManual = () => {
@@ -304,6 +357,14 @@ export default function ScanLabelScreen({ navigation, route }) {
               {onFront && !busy ? (
                 <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
                   <Text style={styles.skipText}>Skip name</Text>
+                </TouchableOpacity>
+              ) : null}
+              {/* C8: quiet, discoverable way back to the name step for this
+                  scan only, when the step was skipped (this time or via the
+                  remembered flag). Never clears the flag. */}
+              {shouldOfferAddNameLink({ step, skipRemembered, busy }) ? (
+                <TouchableOpacity onPress={addNameBack} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Add a name">
+                  <Text style={styles.skipText}>Add a name</Text>
                 </TouchableOpacity>
               ) : null}
               {/* COMP-022: a barcode heal must never dead-end mid-capture — a
