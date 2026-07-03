@@ -13,11 +13,19 @@
  * deleteSavedMeal from src/lib/food/db.js. The sync layer keeps the
  * cloud saved_meals table in step (migration 015).
  *
+ * C6 (Wave A, 2026-07-03): logging a meal used to gate behind an
+ * appAlert confirm dialog. That's gone — tapping a row now logs
+ * immediately (optimistic write) and shows a success + Undo toast, the
+ * same contract as DiaryScreen's onLogUsual and FoodSearchScreen's
+ * confirmLog. A saved meal fans out into MULTIPLE food_entries rows, so
+ * Undo must delete every one of them, not just the first; see
+ * applySavedMealToDiary's `entryIds`.
+ *
  * Voice rules from CLAUDE.md: no em dashes, plain spoken, British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,11 +37,11 @@ import BackHeader from '../components/BackHeader';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import {
-  listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal,
+  listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal, deleteFoodEntry,
 } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { mealSlotLabel } from '../lib/food/mealSlots';
+import { audit } from '../lib/observability';
 import { logError } from '../lib/errorLog';
 
 export default function MyMealsScreen({ navigation, route }) {
@@ -64,29 +72,39 @@ export default function MyMealsScreen({ navigation, route }) {
 
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
+  // C6: one-tap log, no confirm dialog. Optimistic write + a success + Undo
+  // toast, exactly the DiaryScreen.onLogUsual / FoodSearchScreen.confirmLog
+  // contract. loggingRef guards a fast double-tap from minting the meal
+  // twice (mirrors loggingUsualRef / loggingPlateRef elsewhere in food).
+  const loggingRef = useRef(null);
   const onLog = useCallback(async (meal) => {
+    if (!userId || loggingRef.current) return;
+    loggingRef.current = meal.id;
+    audit('food.savedMeal', { mealId: meal.id, mealSlot, itemCount: meal.itemCount });
     try {
-      const n = await applySavedMealToDiary(userId, meal.id, { mealSlot, entryDate });
-      if (n > 0) {
+      const { logged, entryIds } = await applySavedMealToDiary(userId, meal.id, { mealSlot, entryDate });
+      if (logged > 0) {
+        toast.show(`${meal.name ?? 'Meal'} added.`, {
+          variant: 'undo',
+          action: {
+            label: 'Undo',
+            onPress: async () => {
+              // A saved meal fans out into several food_entries rows; Undo
+              // must remove every one, not just the first.
+              try { await Promise.all(entryIds.map((eid) => deleteFoodEntry(eid, userId))); } catch (_) { /* already gone */ }
+            },
+          },
+        });
         navigation.goBack();
       } else {
         toast.show('This meal has no foods in it.', { variant: 'info' });
       }
     } catch (_) {
       toast.show('Couldn\'t log.', { variant: 'error' });
+    } finally {
+      loggingRef.current = null;
     }
   }, [userId, mealSlot, entryDate, navigation, toast]);
-
-  function confirmLog(meal) {
-    appAlert(
-      `Log "${meal.name}"?`,
-      `Adds ${meal.itemCount} ${meal.itemCount === 1 ? 'food' : 'foods'} to ${mealSlotLabel(mealSlot)}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Log it', onPress: () => onLog(meal) },
-      ],
-    );
-  }
 
   function openMenu(meal) {
     appAlert(
@@ -143,7 +161,7 @@ export default function MyMealsScreen({ navigation, route }) {
     return (
       <TouchableOpacity
         style={styles.row}
-        onPress={() => confirmLog(item)}
+        onPress={() => onLog(item)}
         onLongPress={() => openMenu(item)}
         accessibilityRole="button"
         accessibilityLabel={`Log ${item.name}`}

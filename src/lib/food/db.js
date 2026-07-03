@@ -1052,21 +1052,25 @@ export async function deleteSavedMeal(userId, id) {
 /**
  * Log every food in a saved meal to the diary at the given slot + date.
  * Reuses logFoodEntry per item so rollup recompute, telemetry, and sync
- * scheduling all behave exactly like a manual log. Returns the number of
- * items logged. Items missing a foodRef or a positive quantity are
- * skipped rather than logged as junk.
+ * scheduling all behave exactly like a manual log. Items missing a foodRef
+ * or a positive quantity are skipped rather than logged as junk.
+ *
+ * Returns { logged, entryIds }: `logged` is the count (kept for the pre-C6
+ * `n > 0` callsite contract), `entryIds` is every food_entries id actually
+ * created, in insert order, so a caller can offer a full Undo (C6, Wave A)
+ * that removes exactly the entries this call made, not just one.
  */
 export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } = {}) {
   if (!mealSlot || !entryDate) {
     throw new Error('applySavedMealToDiary: mealSlot and entryDate are required');
   }
   const meal = await getSavedMeal(userId, id);
-  if (!meal) return 0;
-  let logged = 0;
+  if (!meal) return { logged: 0, entryIds: [] };
+  const entryIds = [];
   for (const it of meal.items) {
     const q = Number(it?.quantityG);
     if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
-    await logFoodEntry(userId, {
+    const entryId = await logFoodEntry(userId, {
       entryDate,
       mealSlot,
       foodRef: it.foodRef,
@@ -1077,9 +1081,9 @@ export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } 
       fatG: Number(it.fatG) || 0,
       fibreG: it.fibreG != null ? Number(it.fibreG) : null,
     });
-    logged += 1;
+    entryIds.push(entryId);
   }
-  return logged;
+  return { logged: entryIds.length, entryIds };
 }
 
 /**

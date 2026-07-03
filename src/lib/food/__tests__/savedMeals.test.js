@@ -143,13 +143,17 @@ describe('deleteSavedMeal', () => {
 });
 
 describe('applySavedMealToDiary', () => {
-  test('logs every valid item as a food_entries row at the chosen slot/date', async () => {
+  test('logs every valid item as a food_entries row at the chosen slot/date, returning its id', async () => {
     mockState.savedMealRow = { id: 'sm-1', name: 'Breakfast', items_json: JSON.stringify(ITEMS), created_at: 1, updated_at: 2 };
-    const n = await food.applySavedMealToDiary('u1', 'sm-1', { mealSlot: 'breakfast', entryDate: '2026-05-29' });
-    expect(n).toBe(2);
+    const { logged, entryIds } = await food.applySavedMealToDiary('u1', 'sm-1', { mealSlot: 'breakfast', entryDate: '2026-05-29' });
+    expect(logged).toBe(2);
+    expect(entryIds).toHaveLength(2);
+    entryIds.forEach((eid) => expect(typeof eid).toBe('string'));
     const inserts = runCalls.filter(c => /INSERT INTO food_entries/.test(c.sql));
     expect(inserts).toHaveLength(2);
     // logFoodEntry params order: id,user,entry_date,meal_slot,food_ref,quantity_g,...
+    expect(inserts[0].params[0]).toBe(entryIds[0]);
+    expect(inserts[1].params[0]).toBe(entryIds[1]);
     expect(inserts[0].params[2]).toBe('2026-05-29');
     expect(inserts[0].params[3]).toBe('breakfast');
     expect(inserts[0].params[4]).toBe('off:1');
@@ -163,14 +167,16 @@ describe('applySavedMealToDiary', () => {
       { foodRef: 'off:2', quantityG: 0 },        // zero qty
     ];
     mockState.savedMealRow = { id: 'sm-2', name: 'Mixed', items_json: JSON.stringify(dirty), created_at: 1, updated_at: 2 };
-    const n = await food.applySavedMealToDiary('u1', 'sm-2', { mealSlot: 'lunch', entryDate: '2026-05-29' });
-    expect(n).toBe(1);
+    const { logged, entryIds } = await food.applySavedMealToDiary('u1', 'sm-2', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(logged).toBe(1);
+    expect(entryIds).toHaveLength(1);
   });
 
-  test('returns 0 when the meal is missing', async () => {
+  test('returns an empty result when the meal is missing', async () => {
     mockState.savedMealRow = null;
-    const n = await food.applySavedMealToDiary('u1', 'gone', { mealSlot: 'lunch', entryDate: '2026-05-29' });
-    expect(n).toBe(0);
+    const { logged, entryIds } = await food.applySavedMealToDiary('u1', 'gone', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(logged).toBe(0);
+    expect(entryIds).toEqual([]);
   });
 
   test('requires mealSlot and entryDate', async () => {
