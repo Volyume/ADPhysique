@@ -20,7 +20,7 @@ export default function PlanPreviewScreen({ navigation }) {
   function toAccount() {
     // Route to the existing account wall; the post-account wizard reads the
     // quiz slice to prefill, so nothing is re-asked.
-    navigation.navigate('Login', { intent: 'pro_signup', fromQuiz: true });
+    navigation.navigate('Login');
   }
 
   return (

@@ -64,12 +64,12 @@ describe('PlanPreviewScreen', () => {
     expect(t).toContain('Create an account to keep it');
   });
 
-  test('the CTA routes to the account wall flagged fromQuiz', () => {
+  test('the CTA routes to the account wall', () => {
     store.onboardingQuiz = { daysPerWeek: 3, trainingGoal: 'general' };
     let tree;
     act(() => { tree = create(<PlanPreviewScreen navigation={nav} />); });
     const cta = tree.root.findAll((n) => n.props.accessibilityLabel === 'Create an account to keep your plan')[0];
     act(() => cta.props.onPress());
-    expect(nav.navigate).toHaveBeenCalledWith('Login', { intent: 'pro_signup', fromQuiz: true });
+    expect(nav.navigate).toHaveBeenCalledWith('Login');
   });
 });
