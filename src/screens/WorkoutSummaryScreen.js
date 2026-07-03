@@ -23,6 +23,7 @@ import { selection as hapticSelection, prAchieved as hapticMilestone } from '../
 import { MilestoneBurst } from '../components/PRCelebration';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
+import { getVisibleMoments, markMomentSeen } from '../lib/partners/moments';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
@@ -141,6 +142,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
   const [calmSuppressed, setCalmSuppressed] = useState(false);
+  // C3 milestone moment for the post-workout partner beat: when the engine has a
+  // moment for the active pair, the beat shows its calm line (with the same
+  // inline cheer) instead of the generic tick line. getVisibleMoments already
+  // applies the fail-closed ED/calm/SCOFF suppression and the frequency caps, so
+  // this holds null under any suppressed state. Marked seen on cheer or unmount.
+  const [partnerMoment, setPartnerMoment] = useState(null);
+  const partnerMomentRef = useRef(null);
   // Default-expanded so the energy + sleep prompts surface naturally
   // at the end of the session. The coach engine relies on these
   // signals; hiding them behind a tap was making the post-workout
@@ -195,6 +203,34 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     })();
     return () => { cancelled = true; };
   }, [routineId]);
+
+  // C3 milestone moment: only when the beat itself would render (paired live
+  // path, Pro, not calm/ED-suppressed). getVisibleMoments is fail-closed and
+  // additionally suppresses internally, so this is a second gate, never the
+  // safety boundary. Keeps the ref in step for the unmount mark-seen.
+  const beatEligible = !readOnly && !calmSuppressed && tier === 'pro'
+    && (partners.rowState === 'active' || partners.rowState === 'resting');
+  const activePairId = partners.partnership?.id;
+  useEffect(() => {
+    let cancelled = false;
+    if (!beatEligible || !user?.id || !activePairId) {
+      setPartnerMoment(null);
+      partnerMomentRef.current = null;
+      return undefined;
+    }
+    getVisibleMoments(user.id).then((moments) => {
+      if (cancelled) return;
+      const m = (moments || []).find((x) => x.pairId === activePairId) || null;
+      setPartnerMoment(m);
+      partnerMomentRef.current = m;
+    }).catch(() => { /* fail quiet: the beat falls back to the tick line */ });
+    return () => { cancelled = true; };
+  }, [beatEligible, user?.id, activePairId]);
+
+  // Mark the moment seen on unmount (the user saw it). Cheer marks it too.
+  useEffect(() => () => {
+    if (partnerMomentRef.current?.id) markMomentSeen(partnerMomentRef.current.id).catch(() => {});
+  }, []);
 
   // Contextual feedback prompt, fires ONCE after the user has
   // completed their first ~3 sessions. Suppressed thereafter via
@@ -819,15 +855,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <View style={styles.partnerBeatRow}>
               <Ionicons name="people-outline" size={18} color={colors.primary} />
               <Text style={styles.partnerBeatText}>
-                {partners.rowState === 'resting'
-                  ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
-                  : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
+                {partnerMoment
+                  ? partnerMoment.line
+                  : partners.rowState === 'resting'
+                    ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
+                    : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
               </Text>
               <TouchableOpacity
                 style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
                 onPress={() => {
                   const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
                   partners.cheer(partners.partnership.id, !!reciprocal);
+                  if (partnerMoment?.id) {
+                    markMomentSeen(partnerMoment.id).catch(() => {});
+                    partnerMomentRef.current = null;
+                    setPartnerMoment(null);
+                  }
                 }}
                 disabled={!partners.cheerEnabled}
                 accessibilityRole="button"
