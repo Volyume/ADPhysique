@@ -671,11 +671,6 @@ const linking = {
 };
 
 const SPLASH_MIN_MS = 1600;
-// A returning, already-set-up user doesn't need the full brand-splash hold —
-// the real readiness gate (firstRunChecked && tierChecked) keeps the splash up
-// only as long as bootstrap actually needs. This short floor (anti-flash only)
-// releases them ~1.2s sooner than the first-install ceiling above.
-const SPLASH_MIN_FLOOR_MS = 350;
 
 // CODE-001: route bootstrap fire-and-forget rejections through the error log,
 // not raw console.*, so every fault is captured with a scope and shipped like
@@ -720,16 +715,16 @@ export default function RootNavigator() {
     return () => clearTimeout(t);
   }, []);
 
-  // Release a returning, already-onboarded user as soon as the bootstrap checks
-  // resolve (after a short anti-flash floor), instead of holding them for the
-  // full first-install brand ceiling above. First-run users (firstRunComplete
-  // still false) keep the full SPLASH_MIN_MS hold. Never delays past the ceiling.
+  // E8 (founder decision 2026-07-02): a returning, already-onboarded user is
+  // released the moment the bootstrap checks resolve. The old 350ms
+  // anti-flash floor was an artificial delay; the render below is already
+  // gated on the same readiness flags, so removal cannot expose a
+  // half-ready frame. First-run users (firstRunComplete still false) keep
+  // the full SPLASH_MIN_MS brand hold, which masks first-run seeding.
   useEffect(() => {
     if (firstRunChecked && tierChecked && firstRunComplete) {
-      const t = setTimeout(() => setSplashReady(true), SPLASH_MIN_FLOOR_MS);
-      return () => clearTimeout(t);
+      setSplashReady(true);
     }
-    return undefined;
   }, [firstRunChecked, tierChecked, firstRunComplete]);
 
   useEffect(() => {
