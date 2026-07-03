@@ -22,7 +22,10 @@ jest.mock('../../store/useAppStore', () => {
 });
 
 import PartnerRow from '../PartnerRow';
-import PartnerScreen from '../../screens/PartnerScreen';
+// PartnerScreen's coverage moved to src/screens/__tests__/PartnerScreen.test.js
+// with the Step B rebuild (DESIGN-SPEC B2-B7): multi-pair cards, the invite
+// journey, the privacy receipt and the manage sheet. This file keeps the
+// Consistency slim-row (PartnerRow) contract.
 
 function base(overrides = {}) {
   return {
@@ -44,12 +47,6 @@ function allText(tree) {
 function renderRow() {
   let tree;
   act(() => { tree = create(<PartnerRow userId="u1" tier="free" onOpen={jest.fn()} />); });
-  return tree;
-}
-
-function renderScreen() {
-  let tree;
-  act(() => { tree = create(<PartnerScreen />); });
   return tree;
 }
 
@@ -85,72 +82,5 @@ describe('PartnerRow (Consistency slim row)', () => {
   test('pending reads as waiting', () => {
     mockHook.value = base({ rowState: 'pending', partnership: { id: 'p1', status: 'invited' } });
     expect(allText(renderRow())).toContain('Invitation sent. Waiting for your partner.');
-  });
-});
-
-describe('PartnerScreen (the first-class home)', () => {
-  test('paired: both sides of the week, the shared streak, and a cheer', () => {
-    mockHook.value = base({
-      rowState: 'active', partnership: { id: 'p1', partnerFirstName: 'Sam' },
-      myWeek: { done: 2, planned: 4 },
-      partnerWeek: { done: 3, planned: 4, weekMet: false }, cheerEnabled: true,
-      sharedStreak: { run: 6, status: 'counting' },
-    });
-    const text = allText(renderScreen());
-    expect(text).toContain('Sam');
-    expect(text).toContain('You');
-    expect(text).toContain('2 of 4');
-    expect(text).toContain('3 of 4');
-    expect(text).toContain('6 weeks running');
-    expect(text).toContain('Cheer');
-    expect(text).toContain('End partnership');
-  });
-
-  test('a spent cheer disables and reads "Cheer sent"', () => {
-    mockHook.value = base({
-      rowState: 'active', partnership: { id: 'p1', partnerFirstName: 'Sam' },
-      myWeek: { done: 4, planned: 4 },
-      partnerWeek: { done: 4, planned: 4, weekMet: true }, cheerEnabled: false,
-    });
-    const tree = renderScreen();
-    expect(allText(tree)).toContain('Cheer sent');
-    const btn = tree.root.findAll(
-      (n) => n.props.accessibilityLabel === 'Cheer sent' && typeof n.props.onPress === 'function',
-    )[0];
-    expect(btn.props.disabled).toBe(true);
-  });
-
-  test('a resting partner reads "Resting this week", never a fail word', () => {
-    mockHook.value = base({
-      rowState: 'resting', partnership: { id: 'p1', partnerFirstName: 'Sam' },
-      myWeek: { done: 1, planned: 3 },
-      partnerWeek: { state: 'resting' },
-    });
-    const text = allText(renderScreen());
-    expect(text).toContain('Resting this week');
-    expect(text.join(' ')).not.toMatch(/missed|fail|broke/i);
-  });
-
-  test('empty state carries the privacy receipt and pairing controls', () => {
-    mockHook.value = base({ rowState: 'empty' });
-    const text = allText(renderScreen());
-    expect(text).toContain('What you each see');
-    expect(text).toContain('What neither of you will ever see');
-    expect(text).toContain('Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.');
-    expect(text).toContain('The weights you lifted, your sets and reps, or anything else from a session.');
-    expect(text).toContain('Create invite');
-    expect(text).toContain("Or enter a partner's code");
-  });
-
-  test('free cap shows when another partner cannot be added', () => {
-    mockHook.value = base({ rowState: 'empty', canAdd: false });
-    expect(allText(renderScreen())).toContain('Free includes one training partner. With Pro you can train alongside up to three.');
-  });
-
-  test('ended state reads "Partnership ended." and offers re-pairing', () => {
-    mockHook.value = base({ rowState: 'ended', partnership: { id: 'p1', status: 'ended' } });
-    const text = allText(renderScreen());
-    expect(text).toContain('Partnership ended.');
-    expect(text).toContain('Create invite');
   });
 });

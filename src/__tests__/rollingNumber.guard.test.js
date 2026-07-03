@@ -28,6 +28,11 @@ const COMMISSIONED = [
   'src/screens/WorkoutSummaryScreen.js',
   'src/components/food/MacroRings.js',
   'src/screens/AnalyticsScreen.js',
+  // Partner shared-streak hero (DESIGN-SPEC B2, orchestrator-fixed 2026-07-03):
+  // the "N weeks running, together" count on PartnerScreen is a deliberately
+  // commissioned RollingNumber surface — the sanctioned streak-increment roll.
+  // The hard ED rule is untouched: no weight number ticks here.
+  'src/screens/PartnerScreen.js',
 ];
 
 function walk(dir) {

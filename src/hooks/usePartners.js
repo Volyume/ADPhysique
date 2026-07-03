@@ -30,7 +30,7 @@ import { readPendingPartnerCode, clearPendingPartnerCode } from '../lib/partners
 const EMPTY = {
   loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
-  sharedBlock: null, canAdd: true, reload: () => {},
+  sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, reload: () => {},
 };
 
 // Pick the partnership to surface: an active one first, else a pending invite,
@@ -42,6 +42,48 @@ function pickPrimary(partnerships) {
     || null;
 }
 
+// Paired-at ordering key: accepted-at (the moment the pairing became real),
+// falling back to created-at. Used to order the PairCards ascending so the
+// oldest partnership sits first — never by activity, streak or anything
+// performance-shaped (DESIGN-SPEC B2, the pair-isolation rule).
+function pairedAtMs(p) {
+  return Number(p?.acceptedAt) || Number(p?.createdAt) || 0;
+}
+
+// Enrich one active partnership with its OWN derived view: both sides' week
+// signals, the shared streak, the cheer allowance, the last cheer received and
+// the shared block. Each pair is a private world — nothing here is compared or
+// aggregated across pairs (DESIGN-SPEC B2).
+async function enrichPair(partnership, userId) {
+  const partnerId = partnership.memberA === userId ? partnership.memberB : partnership.memberA;
+  const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals, sharedBlock] = await Promise.all([
+    getPartnerWeekSignal(partnership.id, partnerId),
+    getPartnerWeekSignal(partnership.id, userId),
+    getLastCheerSentOn(partnership.id, userId),
+    getLastCheerReceived(partnership.id, userId),
+    getPairWeekSignals(partnership.id),
+    getPartnerSharedBlock(partnership.id),
+  ]);
+  const sharedStreak = partnership.streakEnabled
+    ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(pairSignals, userId, partnerId) })
+    : null;
+  return {
+    id: partnership.id,
+    partnership,
+    partnerId,
+    partnerFirstName: partnership.partnerFirstName || null,
+    rowState: partnerRowState({ partnership, partnerWeek }),
+    partnerWeek,
+    myWeek,
+    sharedStreak,
+    lastReceived,
+    sharedBlock,
+    cheerEnabled: cheerAllowed({ lastSentOn, today: todayLocalKey() }),
+    streakEnabled: !!partnership.streakEnabled,
+    pairedAt: pairedAtMs(partnership),
+  };
+}
+
 export default function usePartners(userId, tier) {
   const [state, setState] = useState(EMPTY);
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
@@ -50,8 +92,7 @@ export default function usePartners(userId, tier) {
   const load = useCallback(async () => {
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
     try {
-      const partnerships = await getPartnershipsLocal(userId);
-      let primary = pickPrimary(partnerships);
+      let partnerships = await getPartnershipsLocal(userId);
       let activeCount = await getActivePartnerCount(userId);
       let canAdd = canAddPartner({ tier, activeCount });
 
@@ -60,58 +101,57 @@ export default function usePartners(userId, tier) {
       // already paired, auto-open the redemption path once, expiry respected.
       // Runs before the render branches so a successful redeem lands the active
       // pairing on this same load pass.
-      if (tier === 'pro' && !pendingTriedRef.current && !(primary && primary.status === 'active')) {
+      if (tier === 'pro' && !pendingTriedRef.current && !partnerships.some((p) => p.status === 'active')) {
         pendingTriedRef.current = true;
         const storedCode = await readPendingPartnerCode();
         if (storedCode) {
           const rr = await redeemPartnerInvite(userId, storedCode);
           await clearPendingPartnerCode();
           if (rr.ok) {
-            const refreshed = await getPartnershipsLocal(userId).catch(() => partnerships);
-            primary = pickPrimary(refreshed);
+            partnerships = await getPartnershipsLocal(userId).catch(() => partnerships);
             activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
             canAdd = canAddPartner({ tier, activeCount });
           }
         }
       }
 
-      if (!primary || primary.status !== 'active') {
-        setState({
-          ...EMPTY, loading: false, partnership: primary,
-          rowState: partnerRowState({ partnership: primary }), canAdd, reload: load,
-        });
-        return;
+      // All active pairs, oldest-first. Each is rendered as its own isolated
+      // PairCard (DESIGN-SPEC B2); the single primary below is kept only for the
+      // existing single-pair consumers (Consistency PartnerRow, the post-workout
+      // beat) that have not moved to the list yet.
+      const activeList = partnerships
+        .filter((p) => p.status === 'active')
+        .sort((a, b) => pairedAtMs(a) - pairedAtMs(b));
+
+      if (activeList.length) {
+        // Paired now, so any cached pending invite (the inviter's single-mint
+        // code) is spent — drop it so a later empty state mints fresh.
+        clearCachedInvite();
+        // Keep my own week signal current for the partner's ticks (fire-and-
+        // forget; the workout-finish path and sync layer also drive this).
+        writeOwnWeekSignals(userId).catch(() => {});
       }
 
-      // Paired now, so any cached pending invite (the inviter's single-mint
-      // code) is spent — drop it so a later empty state mints fresh.
-      clearCachedInvite();
-
-      // Keep my own week signal current for the partner's ticks (fire-and-
-      // forget; the workout-finish path and sync layer also drive this).
-      writeOwnWeekSignals(userId).catch(() => {});
-
-      const partnerId = primary.memberA === userId ? primary.memberB : primary.memberA;
-      const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals, sharedBlock] = await Promise.all([
-        getPartnerWeekSignal(primary.id, partnerId),
-        getPartnerWeekSignal(primary.id, userId),
-        getLastCheerSentOn(primary.id, userId),
-        getLastCheerReceived(primary.id, userId),
-        getPairWeekSignals(primary.id),
-        getPartnerSharedBlock(primary.id),
-      ]);
-
-      // Shared streak: pair the two members' finished weeks by week_start.
-      const sharedStreak = primary.streakEnabled
-        ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(pairSignals, userId, partnerId) })
+      const pairs = await Promise.all(activeList.map((p) => enrichPair(p, userId)));
+      const pendingInvite = partnerships.find((p) => p.status === 'invited') || null;
+      const primary = pickPrimary(partnerships);
+      const primaryPair = primary && primary.status === 'active'
+        ? pairs.find((pp) => pp.id === primary.id) || null
         : null;
 
       setState({
         loading: false,
-        partnership: primary,
-        rowState: partnerRowState({ partnership: primary, partnerWeek }),
-        partnerWeek, myWeek, sharedStreak, lastReceived, sharedBlock, canAdd,
-        cheerEnabled: cheerAllowed({ lastSentOn, today: todayLocalKey() }),
+        pairs,
+        pendingInvite,
+        canAdd,
+        partnership: primaryPair ? primaryPair.partnership : primary,
+        rowState: primaryPair ? primaryPair.rowState : partnerRowState({ partnership: primary }),
+        partnerWeek: primaryPair?.partnerWeek ?? null,
+        myWeek: primaryPair?.myWeek ?? null,
+        sharedStreak: primaryPair?.sharedStreak ?? null,
+        lastReceived: primaryPair?.lastReceived ?? null,
+        sharedBlock: primaryPair?.sharedBlock ?? null,
+        cheerEnabled: primaryPair?.cheerEnabled ?? false,
         reload: load,
       });
     } catch (_) {

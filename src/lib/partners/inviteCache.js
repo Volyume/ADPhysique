@@ -17,8 +17,14 @@
 
 let _cache = null; // { userId, code, data, mintedAt }
 
-// Matches the invite's server-side 7-day expiry.
-const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+// The invite's server-side expiry, in DAYS. Exported so the surfaces that tell
+// the user how long a code lasts (the invite journey Beat 3 line and the
+// pending-invite card) read the real number from here rather than hard-coding a
+// second copy that could drift from the server rule (DESIGN-SPEC B5).
+export const INVITE_EXPIRY_DAYS = 7;
+
+// Matches the invite's server-side expiry.
+const EXPIRY_MS = INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
 /** The cached pending invite for this user, or null if none / expired / stale. */
 export function getCachedInvite(userId) {
