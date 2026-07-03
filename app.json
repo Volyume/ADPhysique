@@ -162,6 +162,13 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Volyume uses the camera so you can line up and take your progress photos. Your photos stay on this device and are never uploaded.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
