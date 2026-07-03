@@ -42,6 +42,13 @@ describe('P9: logging a set is spoken', () => {
   });
 });
 
+describe('P9/E11: the PR celebration is announced, not just shown', () => {
+  test('announceForAccessibility fires on mount, before the subdued branch', () => {
+    const src = read('src/components/PRCelebration.js');
+    expect(src).toMatch(/announceForAccessibility\([\s\S]{0,40}`Personal record\./);
+  });
+});
+
 describe('P9: diary entry row is a button with a delete action', () => {
   const src = read('src/components/food/EntryRow.js');
   test('row role and custom delete action', () => {

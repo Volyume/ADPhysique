@@ -6,6 +6,7 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  AccessibilityInfo,
 } from 'react-native';
 import * as haptics from '../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,6 +127,16 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   useEffect(() => {
     const timers = [];
+    // P9/E11: the celebration must be ANNOUNCED, not just shown. Spoken on
+    // both paths (a subdued or calm user still gets the fact; only the
+    // visual party is suppressed). No-op without a screen reader.
+    try {
+      const spokenLabel = pr?.type === '1rm_estimate' ? 'New estimated max lift' :
+        pr?.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
+      AccessibilityInfo.announceForAccessibility(
+        `Personal record. ${spokenLabel}${pr?.label ? `: ${pr.label}` : ''}.`,
+      );
+    } catch (_) { /* best-effort */ }
     if (subduedMode) {
       // D2: the vocabulary call replaces raw expo-haptics, so the
       // reduce-motion gate covers this flagship moment too.
