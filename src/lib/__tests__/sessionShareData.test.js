@@ -72,7 +72,7 @@ describe('shareSessionName', () => {
   });
 
   test('falls back to a generic label with no routine and no exercises', () => {
-    expect(shareSessionName('', [])).toBe('Session Complete');
-    expect(shareSessionName(undefined)).toBe('Session Complete');
+    expect(shareSessionName('', [])).toBe('Workout complete');
+    expect(shareSessionName(undefined)).toBe('Workout complete');
   });
 });

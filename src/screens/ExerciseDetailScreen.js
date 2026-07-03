@@ -591,7 +591,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               goalProgress >= 1 && { color: colors.primary },
             ]}>
               {goalProgress >= 1
-                ? 'Goal reached!'
+                ? 'Goal reached.'
                 : `${goalKgToGo.toFixed(1)}${units} to go`}
             </Text>
           </View>
@@ -661,7 +661,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             )}
             {chartMetric === 'e1rm' && (
               <Text style={styles.e1rmNote}>
-                Estimated from top set using the Epley formula. Best for rep ranges 2–10.
+                Estimated from top set using the Epley formula. Best for rep ranges 2 to 10.
               </Text>
             )}
           </View>

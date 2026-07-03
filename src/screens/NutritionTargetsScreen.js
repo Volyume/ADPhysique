@@ -464,7 +464,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 '• Target: your maintenance adjusted for your goal (e.g. around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.\n\n' +
                 'How your targets are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
-                '• Fat: set by phase (0.7–1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.\n' +
+                '• Fat: set by phase (0.7 to 1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
                 'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.'
               }
@@ -1382,7 +1382,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Fat</Text>
-                    <Text style={styles.calcValue}>Per phase (0.7–1.0 g/kg BW) · min 0.5 g/kg</Text>
+                    <Text style={styles.calcValue}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Carbs</Text>

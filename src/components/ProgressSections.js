@@ -254,7 +254,7 @@ export function WorkloadCard({ data }) {
     <View style={styles.workloadCard}>
       <View style={styles.rowBetween}>
         <Text style={styles.workloadTitle}>Training load</Text>
-        <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8–1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
+        <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8 to 1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
       </View>
 
       <View style={styles.workloadBarBg}>

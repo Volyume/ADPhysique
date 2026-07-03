@@ -51,14 +51,14 @@ tags:
 # BuildWorkout route and is deliberately not used here.)
 - runFlow:
     when:
-      visible: "Start your first session"
+      visible: "Start your first workout"
     commands:
-      - tapOn: "Start your first session"
+      - tapOn: "Start your first workout"
 - runFlow:
     when:
-      visible: 'Just want to log\? Start a blank session'
+      visible: 'Just want to log\? Start a blank workout'
     commands:
-      - tapOn: 'Just want to log\? Start a blank session'
+      - tapOn: 'Just want to log\? Start a blank workout'
 
 # Empty session: add an exercise from the picker.
 - extendedWaitUntil:
@@ -148,5 +148,5 @@ tags:
     timeout: 10000
 - tapOn: "Finish"
 - extendedWaitUntil:
-    visible: "Session Complete"
+    visible: "Workout complete"
     timeout: 45000

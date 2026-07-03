@@ -262,7 +262,7 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   }
 
   const heroFont = font(p.isSquare ? 64 : 78);
-  const lines = wrapText(heroFont, p.sessionName || 'Session Complete', W - pad * 2).slice(0, 2);
+  const lines = wrapText(heroFont, p.sessionName || 'Workout complete', W - pad * 2).slice(0, 2);
   lines.forEach((l) => {
     text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 64 : 78) * 0.82 * s), heroFont, PALETTE.text, 'left');
     y += Math.round((p.isSquare ? 64 : 78) * 1.05 * s);

@@ -65,7 +65,7 @@ const SECTIONS = [
       'When the trend is on target, when there is not enough data yet, when ' +
       'recovery is low, or when a safety signal fires, Precision Coaching holds ' +
       'rather than acts. The held-decision card on your weekly review shows exactly ' +
-      'which of these applied. A held week is the system working, not the system asleep.',
+      'which of these applied. A held week is Precision Coaching working, not asleep.',
   },
   {
     key: 'training',
@@ -85,7 +85,7 @@ const SECTIONS = [
       'mass. That floor is 30 calories per kilogram of fat-free mass a day, taken ' +
       'from sports-medicine guidance on energy availability. Below it, the body ' +
       'starts breaking down muscle to fuel itself. There is also a fixed minimum ' +
-      'below which we never suggest cutting, whatever the maths says. These checks ' +
+      'below which Precision Coaching never suggests cutting, whatever the maths says. These checks ' +
       'are there by design. They are not bugs.',
   },
   {

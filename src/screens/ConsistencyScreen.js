@@ -59,7 +59,7 @@ export default function ConsistencyScreen({ navigation }) {
               </Text>
             </View>
             <InfoTooltip text={
-              'A lighter recovery week means keeping the same exercises but dropping the weights by around 10–20%. ' +
+              'A lighter recovery week means keeping the same exercises but dropping the weights by around 10 to 20%. ' +
               'Stop well before failure. Sessions should feel almost too easy.\n\n' +
               'This gives your body a chance to recover and absorb all the work you have been putting in.\n\n' +
               'Most people feel noticeably stronger in the first session back after a proper recovery week.'

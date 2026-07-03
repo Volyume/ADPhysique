@@ -77,9 +77,12 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>A note about aggressive cuts</Text>
+        <Text style={styles.title}>A note on aggressive cuts</Text>
+        {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
+            Precision Coaching named as the decider, signals named plainly,
+            no vague personification. */}
         <Text style={styles.body}>
-          You picked a goal that involves aggressive calorie cuts. That's fine. Volyume can support that, but it also has safety checks that hold a cut when your body is telling us something's wrong. We want you to know they're there.
+          You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
 
         <Text style={styles.fieldLabel}>Confirm one of these</Text>

@@ -157,7 +157,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="flag-outline"
               label="Update your plan"
-              sub="Change your goal, phase, schedule, equipment or experience. We rebuild the plan and your nutrition targets around the new answers."
+              sub="Change your goal, phase, schedule, equipment or experience. Precision Coaching rebuilds the plan and your nutrition targets around the new answers."
               onPress={() => navigation.navigate('ProGoalSetup')}
             />
             <NavRow

@@ -1036,7 +1036,7 @@ export default function HomeScreen({ navigation, route }) {
       navigation.navigate('ActiveWorkout');
     } catch (e) {
       logError('HomeScreen.startBlankSession', e, { userId: user?.id });
-      toast.show("Couldn't start session, try again", { variant: 'error' });
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 
@@ -1706,13 +1706,13 @@ export default function HomeScreen({ navigation, route }) {
               <PressableCard
                 style={styles.quickStartCard}
                 onPress={() => startBlankSession()}
-                accessibilityLabel="Start your first session"
+                accessibilityLabel="Start your first workout"
               >
                 <View style={styles.quickStartIcon}>
                   <Ionicons name="barbell-outline" size={28} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quickStartTitle}>Start your first session</Text>
+                  <Text style={styles.quickStartTitle}>Start your first workout</Text>
                   <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -1724,9 +1724,9 @@ export default function HomeScreen({ navigation, route }) {
                 style={styles.blankSessionLink}
                 onPress={() => startBlankSession()}
                 accessibilityRole="button"
-                accessibilityLabel="Just want to log? Start a blank session"
+                accessibilityLabel="Just want to log? Start a blank workout"
               >
-                <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank session</Text>
+                <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank workout</Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
               </TouchableOpacity>
             )}

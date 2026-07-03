@@ -75,7 +75,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'manual',
     icon: 'create-outline',
     title: 'Build your own',
-    description: 'Hand-pick every exercise and day. The coach keeps reading your data the same way.',
+    description: 'Hand-pick every exercise and day. Precision Coaching keeps reading your data the same way.',
     screen: 'ManualBuilder',
   },
 ];

@@ -63,5 +63,5 @@ export function shareSessionName(routineName, exerciseNames = []) {
   if (exerciseNames.length > 0) {
     return exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '');
   }
-  return 'Session Complete';
+  return 'Workout complete';
 }

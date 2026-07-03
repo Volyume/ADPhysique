@@ -89,10 +89,10 @@ export default function NutritionEducationScreen() {
             Volyume calculates a starting point for you from your goal, age,
             weight and activity. The rough idea:
           </Body>
-          <PhaseLine name="Cut" rate="lose 0.5–0.8% bodyweight per week" gist="calories down, protein up to protect muscle" />
+          <PhaseLine name="Cut" rate="lose 0.5 to 0.8% bodyweight per week" gist="calories down, protein up to protect muscle" />
           <PhaseLine name="Maintain" rate="weight steady" gist="calories at maintenance, protein moderate" />
-          <PhaseLine name="Lean gain" rate="gain 0.25–0.5% per week" gist="small surplus, slow tissue gain, minimal fat" />
-          <PhaseLine name="Bulk" rate="gain 0.5–1% per week" gist="larger surplus, faster growth, some fat comes with it" />
+          <PhaseLine name="Lean gain" rate="gain 0.25 to 0.5% per week" gist="small surplus, slow tissue gain, minimal fat" />
+          <PhaseLine name="Bulk" rate="gain 0.5 to 1% per week" gist="larger surplus, faster growth, some fat comes with it" />
           <KeyPoint>
             You don't have to do the maths. Log your morning weight and weekly
             check-in. Your coach watches the trend and nudges these numbers
@@ -118,13 +118,13 @@ export default function NutritionEducationScreen() {
           <BulletRow num="B">
             <Body>
               <Strong>Weigh the protein source dry/raw,</Strong> eyeball the
-              rest. A palm of chicken ≈ 25–30g protein. A cupped hand of rice
+              rest. A palm of chicken is roughly 25 to 30g protein. A cupped hand of rice
               ≈ 40g carbs. A thumb of oil/butter ≈ 10g fat.
             </Body>
           </BulletRow>
           <BulletRow num="C">
             <Body>
-              <Strong>Or repeat meals.</Strong> The simplest plan is 3–5 meals
+              <Strong>Or repeat meals.</Strong> The simplest plan is 3 to 5 meals
               you already know the totals for, eaten in the same proportions
               every day. No tracking needed once you've measured them once.
             </Body>
@@ -178,7 +178,7 @@ export default function NutritionEducationScreen() {
             builder that doesn't exist. */}
 
         <Text style={styles.footer}>
-          Volyume's starting numbers are estimates. The 2–4 week trend is what
+          Volyume's starting numbers are estimates. The 2 to 4 week trend is what
           counts. That's exactly what the coach watches for you.
         </Text>
       </ScrollView>

@@ -126,7 +126,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // COMP-013: the calibrated first-session acknowledgement, shown only on the
   // live summary of a user's very first completed session. null = not the first
   // session, or suppressed under calmer experience / an open ED pattern flag
-  // (the header's neutral "Session Complete" is acknowledgement enough; no push).
+  // (the header's neutral "Workout complete" is acknowledgement enough; no push).
   const [firstSessionLine, setFirstSessionLine] = useState(null);
   // D1 (int-04 F1): the beginner early-win ladder. The single milestone rung
   // crossed by this session (first_week, 5/10/25/50/100 sessions), or null.
@@ -704,7 +704,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            <Text style={styles.completionTitle}>Session Complete</Text>
+            <Text style={styles.completionTitle}>Workout complete</Text>
           </View>
           <Text style={styles.completionDate}>{completionDate}</Text>
           {firstSessionLine ? (
