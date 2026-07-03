@@ -1146,6 +1146,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
+      // The first-time hint has done its job the moment a set lands. Persist
+      // the same seen-flag the overflow tap writes, so the hint (and the info
+      // pulse) never come back on later sessions or new exercises. The
+      // overflow menu itself stays put, so form guidance remains one tap away.
+      if (showInfoTipPulse) {
+        infoPulseLoop.current?.stop();
+        infoPulseAnim.setValue(1);
+        setShowInfoTipPulse(false);
+        AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+      }
       audit('workout.set.logged', {
         exerciseId: exercise.id,
         setType: setData.setType,
@@ -2445,12 +2455,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             the one-handed thumb zone, at a stable position — instead of
             floating mid-scroll and swapping identity in the same pixels.
             Cluster flows keep their own in-card controls, so no bar then.
-            No insets.bottom here (founder 2026-07-02): this screen sits
-            inside the tab navigator, whose bar already absorbs the system
-            inset — adding it again painted a dead band between the CTA and
-            the tabs and squeezed the content. */}
+            insets.bottom IS required here: E15's VolyumeTabBar returns null
+            while ActiveWorkout is focused (VolyumeTabBar.js), so nothing else
+            absorbs the system inset and a flat spacing.md left Log set half
+            behind the Android gesture pill (founder screenshot 2026-07-03).
+            The earlier "no insets here" note (2026-07-02) described the stock
+            always-visible tab bar and no longer holds. Math.max keeps the
+            old padding on devices that report no bottom inset. */}
         {cluster ? null : (
-          <View style={[styles.bottomBar, { paddingBottom: spacing.md }]}>
+          <View style={[styles.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
             {targetComplete && !extraSetArmed ? (
               isLastExercise ? (
                 <TouchableOpacity
