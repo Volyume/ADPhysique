@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import Button from '../components/Button';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 import {
   colors, spacing, radius, fontSize, fontWeight, type,
 } from '../styles/theme';
@@ -398,23 +399,26 @@ export default function ProgressPhotosScreen({ navigation }) {
         ) : null}
       />
 
-      <Text style={styles.note}>
-        {calm
-          ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Use these only if they help you, and skip them if they do not.'
-          : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to.'}
-        {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
-      </Text>
-
-      <TouchableOpacity
-        onPress={onHowItWorks}
-        style={styles.howRow}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel="How progress photos work"
-      >
-        <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-        <Text style={styles.howLink}>How it works</Text>
-      </TouchableOpacity>
+      {/* Info box on the shared Card surface (matches Train's boxes) rather
+          than bare text, so the feature reads as part of one app. */}
+      <Card padding="md" style={styles.infoCard}>
+        <Text style={styles.note}>
+          {calm
+            ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Use these only if they help you, and skip them if they do not.'
+            : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to.'}
+          {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
+        </Text>
+        <TouchableOpacity
+          onPress={onHowItWorks}
+          style={styles.howRow}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="How progress photos work"
+        >
+          <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+          <Text style={styles.howLink}>How it works</Text>
+        </TouchableOpacity>
+      </Card>
 
       {!loading && photos.length > 0 && (
         <View style={styles.filterRow} accessibilityLabel="Filter by pose">
@@ -579,11 +583,8 @@ export default function ProgressPhotosScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  note: {
-    ...type.bodySm,
-    color: colors.textMuted,
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
-  },
+  infoCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
+  note: { ...type.bodySm, color: colors.textMuted },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
@@ -612,10 +613,7 @@ const styles = StyleSheet.create({
   poseBadgeText: { ...type.caption, color: colors.primary },
   // "How it works" affordance under the privacy note, always available so the
   // feature explains itself (compare, guide, poses, before/after card).
-  howRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
-  },
+  howRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   howLink: { ...type.bodySm, color: colors.primary, fontWeight: fontWeight.semibold },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },

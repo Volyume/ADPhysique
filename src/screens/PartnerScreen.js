@@ -582,7 +582,7 @@ export default function PartnerScreen({ route }) {
               trust who knows whether you showed up.
             </Text>
 
-            <View style={styles.howItWorks}>
+            <Card style={styles.howItWorks}>
               <Text style={styles.howHeader}>HOW IT WORKS</Text>
               <Text style={styles.howLine}>
                 Once a week, you each see whether the other trained, and nothing else.
@@ -591,7 +591,7 @@ export default function PartnerScreen({ route }) {
                 You build a streak of weeks you both showed up. A rest week never breaks it.
               </Text>
               <Text style={styles.howLine}>No feed, no followers, no numbers to compare.</Text>
-            </View>
+            </Card>
 
             <PartnerPrivacyReceipt />
 
