@@ -42,13 +42,14 @@ a brand-new user who has stalled just short of the activation threshold.**
 - **One-tap disable** as its own category.
 
 ## Draft copy (voice sign-off required at PR)
-- Stage 1 push: *"One session down" / "Whenever you're ready, your next one is
-  waiting exactly where you left it."*
+- Stage 1 push: *"One session down" / "Your next session is ready in your plan
+  whenever you are."*
 - Stage 1 banner: *"You've made a start" / "A second session is what turns a
-  first one into a habit. Pick up wherever suits you today."*
-- Stage 2 push: *"Two sessions in" / "One more and this starts feeling
-  automatic. Your plan's ready whenever you are."*
-- Stage 2 banner: *"You're nearly there" / "Two sessions logged. A third is what
+  first one into a habit. Your next one is ready in your plan whenever you
+  are."*
+- Stage 2 push: *"Two sessions in" / "One more and this starts to feel
+  automatic. Your plan is ready whenever you are."*
+- Stage 2 banner: *"You're nearly there" / "That's two done. A third is what
   makes the habit stick."*
 
 ## The founder's calls (this is what needs your sign-off)

@@ -367,16 +367,18 @@ stalls), tier-blind, retention-first priority.
 ### Copy (voice sign-off required)
 ```
 cold_start push:  Ready when you are{, First}
-                  Your plan is set up and waiting. Your first session is
+                  Your plan is set up and your first session is waiting. Start
                   whenever it suits you.
 stalled_1 push:   One session down{, First}
-                  Whenever you're ready, your next one is waiting exactly where
-                  you left it.
+                  Your next session is ready in your plan whenever you are.
 stalled_2 push:   Two sessions in{, First}
-                  One more and this starts feeling automatic. Your plan is ready
+                  One more and this starts to feel automatic. Your plan is ready
                   whenever you are.
+cold_start banner:Your plan is ready / Your first session is set up and waiting.
+                  Start whenever it suits you.
 stalled_1 banner: You've made a start / A second session is what turns a first
-                  one into a habit. Pick up wherever suits you today.
-stalled_2 banner: You're nearly there / Two sessions logged. A third is what
-                  makes the habit stick.
+                  one into a habit. Your next one is ready in your plan whenever
+                  you are.
+stalled_2 banner: You're nearly there / That's two done. A third is what makes
+                  the habit stick.
 ```

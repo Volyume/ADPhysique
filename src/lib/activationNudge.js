@@ -103,17 +103,17 @@ export function activationNudgePush(stage, name = '') {
     case NUDGE_STAGE.COLD_START:
       return {
         title: `Ready when you are${name}`,
-        body: 'Your plan is set up and waiting. Your first session is whenever it suits you.',
+        body: 'Your plan is set up and your first session is waiting. Start whenever it suits you.',
       };
     case NUDGE_STAGE.STALLED_1:
       return {
         title: `One session down${name}`,
-        body: 'Whenever you\'re ready, your next one is waiting exactly where you left it.',
+        body: 'Your next session is ready in your plan whenever you are.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {
         title: `Two sessions in${name}`,
-        body: 'One more and this starts feeling automatic. Your plan is ready whenever you are.',
+        body: 'One more and this starts to feel automatic. Your plan is ready whenever you are.',
       };
     default:
       return null;
@@ -129,17 +129,17 @@ export function activationBannerLine(stage) {
     case NUDGE_STAGE.COLD_START:
       return {
         title: 'Your plan is ready',
-        body: 'Your first session is set up and waiting. Start whenever suits you today.',
+        body: 'Your first session is set up and waiting. Start whenever it suits you.',
       };
     case NUDGE_STAGE.STALLED_1:
       return {
         title: 'You\'ve made a start',
-        body: 'A second session is what turns a first one into a habit. Pick up wherever suits you today.',
+        body: 'A second session is what turns a first one into a habit. Your next one is ready in your plan whenever you are.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {
         title: 'You\'re nearly there',
-        body: 'Two sessions logged. A third is what makes the habit stick.',
+        body: 'That\'s two done. A third is what makes the habit stick.',
       };
     default:
       return null;
