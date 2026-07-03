@@ -1645,7 +1645,7 @@ export async function db() {
 // shared connection (its own docs: "not exclusive and can be interrupted by
 // other async queries"). When two transaction blocks overlap on the single
 // connection — e.g. plan generation (generateMesocycleWeeks) running while
-// the offline-sync queue flushes (sync/queue.js), which both fire during
+// the offline-sync retry queue drains (syncQueue.js), which both fire during
 // onboarding — SQLite rejects the second BEGIN with "cannot start a
 // transaction within a transaction". That surfaced as plan setup failing
 // with "NativeDatabase.execAsync has been rejected".

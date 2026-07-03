@@ -13,7 +13,7 @@
  *   getStatus()
  *     → snapshot for the UI status indicator.
  *
- * Plus re-exports of the registry helpers and queue surface so
+ * Plus re-exports of the registry helpers so
  * tests and the eventual UI status sheet can introspect without
  * deep imports.
  */
@@ -26,14 +26,5 @@ export {
   listBidirectionalTables,
   listPullOnlyTables,
 } from './registry';
-export {
-  ensureSyncQueueTable,
-  enqueue,
-  listPending,
-  getQueueDepth,
-  markSucceeded,
-  markFailed,
-  clearQueue,
-} from './queue';
 export { resolve as resolveConflict } from './conflict';
 export { trackSyncRun, trackSyncConflictResolved } from './telemetry';

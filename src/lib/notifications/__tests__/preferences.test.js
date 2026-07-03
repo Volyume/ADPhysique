@@ -8,11 +8,8 @@
 
 const mockState = { rows: [] };
 
-const mockEnqueue = jest.fn(async () => {});
-jest.mock('../../sync/queue', () => ({
-  ensureSyncQueueTable: jest.fn(async () => {}),
-  enqueue: mockEnqueue,
-}));
+// (The old registry sync/queue module was deleted in E12 step 0; the
+// no-enqueue rule below is pinned at source level instead.)
 
 jest.mock('../../database', () => ({
   db: jest.fn(async () => ({
@@ -77,7 +74,6 @@ import {
 
 beforeEach(() => {
   mockState.rows = [];
-  mockEnqueue.mockClear();
 });
 
 describe('setPreference + getPreference', () => {
@@ -138,10 +134,9 @@ describe('getPreferencesUpdatedSince', () => {
 });
 
 describe('applyPreferenceFromPull', () => {
-  test('applies newer cloud rows without enqueueing', async () => {
+  test('applies newer cloud rows', async () => {
     await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
     const before = await getPreference('u1', 'morning_weight');
-    mockEnqueue.mockClear();
     const did = await applyPreferenceFromPull('u1', 'morning_weight', {
       enabled: false,
       time_pref: '09:00',
@@ -152,7 +147,6 @@ describe('applyPreferenceFromPull', () => {
     expect(after.enabled).toBe(false);
     expect(after.time_pref).toBe('09:00');
     expect(after.updated_at).toBe(before.updated_at + 1000);
-    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   test('ignores stale cloud rows', async () => {
@@ -203,22 +197,21 @@ describe('migrateFromLegacyBlob', () => {
   });
 });
 
-describe('setPreference does not enqueue into sync_queue', () => {
+describe('setPreference does not enqueue into any sync queue', () => {
   // notification_preferences syncs through its own registry handler
   // (pushNotificationPreferences reads the table directly) and bulk_upload
-  // ships the whole table on sign-in. sync_queue has no drainer, so the old
-  // per-row enqueue was never consumed and only inflated getQueueDepth(),
-  // sticking the Settings sync line on "N changes waiting to upload" after any
-  // toggle. setPreference must NOT enqueue.
-  test('no enqueue on a single write', async () => {
-    await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
-    expect(mockEnqueue).not.toHaveBeenCalled();
-  });
-
-  test('no enqueue across multiple writes', async () => {
-    await setPreference('u1', 'morning_weight', { enabled: true });
-    await setPreference('u1', 'weekly_checkin_reminder', { enabled: true });
-    expect(mockEnqueue).not.toHaveBeenCalled();
+  // ships the whole table on sign-in. The old registry sync_queue had no
+  // drainer, so the per-row enqueue was never consumed and only inflated the
+  // Settings sync line ("N changes waiting to upload" forever). The queue
+  // module is deleted (E12 step 0); this guard pins that no queue import or
+  // enqueue call creeps back into preferences.js.
+  test('preferences.js has no queue import and no enqueue call', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'preferences.js'), 'utf8');
+    expect(src).not.toMatch(/from\s+['"].*sync\/queue['"]/);
+    expect(src).not.toMatch(/require\(['"].*sync\/queue['"]\)/);
+    expect(src).not.toMatch(/\benqueue\s*\(/);
   });
 });
 

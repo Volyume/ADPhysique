@@ -52,7 +52,7 @@ export async function ensureTable() {
 /**
  * Upsert a single preference from a USER action (toggle, time
  * picker, etc.). Bumps updated_at to now and enqueues into
- * sync_queue so the registry-driven push picks it up.
+ * the registry-driven push picks it up on the next cycle.
  *
  * For applying rows pulled from the cloud, use
  * applyPreferenceFromPull() instead, it preserves the server
@@ -80,13 +80,12 @@ export async function setPreference(userId, category, { enabled, time_pref }) {
       updatedAt,
     ],
   );
-  // No sync_queue enqueue here. notification_preferences pushes through its
+  // No queue enqueue here. notification_preferences pushes through its
   // own registry handler (src/lib/sync/tables, pushNotificationPreferences),
   // which reads the table directly, and bulk_upload ships the whole table on
-  // sign-in. sync_queue has no drainer, so an enqueue here was never consumed:
+  // sign-in. (The old registry sync_queue was deleted in E12 step 0:
   // it only inflated getQueueDepth(), which left the Settings sync line stuck
-  // on "N changes waiting to upload" forever after any preference toggle. The
-  // runner purges any rows left by the old build (see purgeQueuedTable).
+  // on "N changes waiting to upload" forever after any preference toggle.)
 }
 
 /**

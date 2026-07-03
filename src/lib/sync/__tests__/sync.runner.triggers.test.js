@@ -8,10 +8,10 @@
  * non-write triggers (foreground, network reconnect, periodic).
  */
 
-jest.mock('../queue', () => ({
-  ensureSyncQueueTable: jest.fn(async () => {}),
-  getQueueDepth: jest.fn(async () => 0),
-  purgeQueuedTable: jest.fn(async () => {}),
+// E12 step 0: the orphan registry queue is gone; the runner reads its
+// depth from the live retry queue (src/lib/syncQueue.js).
+jest.mock('../../syncQueue', () => ({
+  getQueueStats: jest.fn(async () => ({ pending: 0, failed: 0 })),
 }));
 
 jest.mock('../telemetry', () => ({

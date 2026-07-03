@@ -14,7 +14,11 @@
  *   from TESTING_STRATEGY_LOCKED.md lines 144-160.
  */
 
-import { ensureSyncQueueTable, getQueueDepth, purgeQueuedTable } from './queue';
+// E12 step 0 (memo docs/e12-sync-consolidation-memo-2026-07-03.md): the
+// registry sync_queue was built but never fed and never drained, so its
+// depth could only mislead the "changes waiting" line. It is deleted; the
+// LIVE retry queue is legacy pending_sync_ops (src/lib/syncQueue.js) and
+// status depth now reads that. Lazy-required to avoid an import cycle.
 import { trackSyncRun } from './telemetry';
 import { listSyncableTables } from './registry';
 import { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } from './transport';
@@ -24,6 +28,20 @@ let _runLock = false;
 let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
 let _lastRunAt = 0;
 let _lastError = null;
+
+async function _livePendingCount(userId) {
+  try {
+    // eslint-disable-next-line global-require
+    const { getQueueStats } = require('../syncQueue');
+    // eslint-disable-next-line global-require
+    const uid = userId ?? require('../../store/useAppStore').default.getState().user?.id;
+    if (!uid) return 0;
+    const stats = await getQueueStats(uid);
+    return stats?.pending ?? 0;
+  } catch (_) {
+    return 0;
+  }
+}
 // Resolvers waiting for the in-flight run to finish (whenSyncIdle). Notified in
 // the syncAll finally when the run-lock is released.
 let _idleWaiters = [];
@@ -108,17 +126,10 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
   let pushCountPerTable = {};
 
   try {
-    await ensureSyncQueueTable();
-    // Clear the dead notification_preferences rows the old build enqueued.
-    // That table syncs via its own registry handler and sync_queue has no
-    // drainer, so the rows were never consumed and only inflated the depth,
-    // sticking the Settings line on "N changes waiting to upload". Best
-    // effort; a failure here must not abort the run.
-    await purgeQueuedTable('notification_preferences').catch(() => {});
     // Reset the food-domain coordinator cache so this cycle's
     // first food-table push/pull call drives a fresh bulk RPC.
     beginFoodRun();
-    queueBefore = await getQueueDepth();
+    queueBefore = await _livePendingCount(userId);
 
     if (!userId) {
       status = 'success';
@@ -257,7 +268,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       }
     }
 
-    queueAfter = await getQueueDepth();
+    queueAfter = await _livePendingCount(userId);
     if (erroredCount > 0) status = queueAfter < queueBefore ? 'partial' : 'failure';
 
     // Deleted-account residual sync (CURRENT_STATUS 2026-06-09, the
@@ -363,11 +374,7 @@ export async function syncTable(name, { userId, localUserId, triggeredBy = 'manu
  *   }
  */
 export async function getStatus() {
-  let queueDepth = 0;
-  try {
-    await ensureSyncQueueTable();
-    queueDepth = await getQueueDepth();
-  } catch (_) { /* tolerate */ }
+  const queueDepth = await _livePendingCount();
   return {
     status: _lastStatus,
     queue_depth: queueDepth,

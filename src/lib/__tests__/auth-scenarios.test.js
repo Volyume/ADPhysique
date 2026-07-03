@@ -200,10 +200,9 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
   // The push-first runs syncAll so everything is pushed before the local wipe.
   // We abort only when we can't prove the push reached cloud: 'error', 'skipped'
   // (our push didn't run), or errored_count > 0. We do NOT abort on 'pending':
-  // getQueueDepth (the source of 'pending') counts the vestigial, never-drained
-  // sync_queue (notification-prefs bookkeeping), so blocking on it locked out
-  // anyone who toggled a notification setting. The data itself is covered by the
-  // full push + errored_count.
+  // since E12 step 0 the depth behind 'pending' is the live retry queue
+  // (pending_sync_ops), whose ops carry data the same cycle's FULL push
+  // already re-pushed from SQLite; a genuine failure shows in errored_count.
   const sync = require('../sync');
 
   test.each(['error', 'skipped'])(

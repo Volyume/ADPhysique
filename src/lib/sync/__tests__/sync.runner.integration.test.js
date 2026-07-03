@@ -105,10 +105,10 @@ jest.mock('../telemetry', () => ({
   logSyncError: jest.fn(),
 }));
 
-jest.mock('../queue', () => ({
-  ensureSyncQueueTable: jest.fn().mockResolvedValue(undefined),
-  getQueueDepth: jest.fn().mockResolvedValue(0),
-  purgeQueuedTable: jest.fn().mockResolvedValue(undefined),
+// E12 step 0: the orphan registry queue is gone; the runner reads its
+// depth from the live retry queue (src/lib/syncQueue.js).
+jest.mock('../../syncQueue', () => ({
+  getQueueStats: jest.fn().mockResolvedValue({ pending: 0, failed: 0 }),
 }));
 
 // Replace the legacy sync.js helpers the runner falls back to.
@@ -121,7 +121,7 @@ const { getSupabaseClient } = require('../../supabase');
 const prefsModule = require('../../notifications/preferences');
 const dbModule = require('../../database');
 const telemetry = require('../telemetry');
-const queue = require('../queue');
+const syncQueue = require('../../syncQueue');
 const legacy = require('../../sync.js');
 const { syncAll, whenSyncIdle, _resetRunnerForTests } = require('../runner');
 const { MIGRATED_TABLES } = require('../transport');
@@ -330,7 +330,9 @@ describe('syncAll integration', () => {
     expect(legacy.pullFromCloud).not.toHaveBeenCalled();
     expect(dbModule.insertWeeklyCheckinFromCloud).not.toHaveBeenCalled();
     expect(result.status).toBe('synced');
-    expect(queue.ensureSyncQueueTable).toHaveBeenCalled();
+    // No user -> the live-queue depth read short-circuits without touching
+    // the retry queue (E12 step 0).
+    expect(syncQueue.getQueueStats).not.toHaveBeenCalled();
   });
 
   test('deduplicates concurrent syncAll calls via the run lock', async () => {

@@ -42,10 +42,13 @@ describe('public sync surface (importable via require("../lib/sync"))', () => {
     expect(publicSync.SYNC_REGISTRY.length).toBeGreaterThan(10);
   });
 
-  test('queue helpers are functions', () => {
-    expect(typeof publicSync.ensureSyncQueueTable).toBe('function');
-    expect(typeof publicSync.enqueue).toBe('function');
-    expect(typeof publicSync.getQueueDepth).toBe('function');
+  test('the deleted registry queue is NOT re-exported (E12 step 0)', () => {
+    // The orphan registry sync_queue (queue.js) was deleted 2026-07-03; the
+    // live retry queue lives in src/lib/syncQueue.js and is not part of this
+    // surface. A reappearance here means someone resurrected the dead module.
+    expect(publicSync.ensureSyncQueueTable).toBeUndefined();
+    expect(publicSync.enqueue).toBeUndefined();
+    expect(publicSync.getQueueDepth).toBeUndefined();
   });
 
   test('legacy helpers are still exported (App.js uses bulkUploadLocalData)', () => {

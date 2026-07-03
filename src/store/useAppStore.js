@@ -350,17 +350,17 @@ const useAppStore = create((set, get) => ({
         //                       signal: the sign-out syncAll re-pushes every
         //                       table from SQLite, so a genuine failure shows
         //                       here.
-        // We deliberately do NOT block on 'pending'. getQueueDepth (the source
-        // of 'pending') counts the `sync_queue` table, whose only writer is the
-        // notification-preferences enqueue and which has no drainer, so it is
-        // permanently > 0 for anyone who toggled a notification setting. Those
-        // rows are vestigial bookkeeping: the preferences themselves already
-        // push via the registry pushTable in this same cycle. Blocking on it
-        // locked such users out of sign-out entirely (re-audit finding). The
-        // real single-entity retry queue (pending_sync_ops) is a different
-        // table, drained separately with a retry cap, and is covered by the
-        // full push + errored_count above. Caller shows a "couldn't sign out,
-        // try again on a stronger connection" toast.
+        // We deliberately do NOT block on 'pending'. Since E12 step 0 the
+        // depth behind 'pending' is the live retry queue (pending_sync_ops,
+        // src/lib/syncQueue.js): per-entity retries queued by earlier failed
+        // saves. The data those ops carry is covered by this same cycle's
+        // FULL push (bulkUploadLocalData re-pushes every table from SQLite),
+        // so a leftover retry op does not mean unsynced data — a genuine
+        // failure surfaces through errored_count above. Blocking on depth
+        // historically locked users out of sign-out entirely (re-audit
+        // finding, when the dead registry sync_queue inflated it). Caller
+        // shows a "couldn't sign out, try again on a stronger connection"
+        // toast.
         // AUTH-5: unless the caller forced it (the "sign out anyway" escape
         // hatch), abort when we can't prove the push reached cloud, so the user
         // doesn't silently lose unsynced edits. force=true means the user was
