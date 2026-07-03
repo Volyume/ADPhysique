@@ -21,7 +21,7 @@ import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { toEnergy, energyUnitLabel } from '../lib/format';

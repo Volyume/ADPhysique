@@ -20,7 +20,7 @@ import {
   Share, Switch, ActivityIndicator, Linking, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { appAlert } from '../components/AppAlert';
 import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha, alpha } from '../styles/theme';
 import Card from '../components/Card';

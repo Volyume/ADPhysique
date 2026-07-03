@@ -11,7 +11,7 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 

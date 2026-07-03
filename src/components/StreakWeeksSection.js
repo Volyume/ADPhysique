@@ -11,7 +11,7 @@
 // "weeks running".
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import { addPause, setManualGoal } from '../lib/streakState';

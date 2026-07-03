@@ -11,7 +11,7 @@
  */
 
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, iconSize } from '../styles/theme';
 
 export default function SearchBar({

@@ -34,7 +34,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import Button from '../components/Button';
 import NetInfo from '@react-native-community/netinfo';

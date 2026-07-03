@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
 import { View, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;

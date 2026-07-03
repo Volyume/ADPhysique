@@ -29,7 +29,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 import Button from './Button';
 import { logError } from '../lib/errorLog';

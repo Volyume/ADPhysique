@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';

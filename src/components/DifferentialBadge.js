@@ -14,7 +14,7 @@
  */
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 
 // paywall_shown impressions already sent this JS session, keyed by trigger.

@@ -21,7 +21,7 @@ import {
   View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha } from '../styles/theme';
 // M4 (audit 03b §2.2 item 1): the story tap zones were the flagship dead
 // tap — no pressed state, no haptic. The tick goes through the self-gating

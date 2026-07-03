@@ -9,7 +9,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import * as haptics from '../lib/haptics';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle } from '../styles/theme';
 

@@ -5,7 +5,7 @@
  * Derived signals only; a resting partner never reads as a fail.
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';

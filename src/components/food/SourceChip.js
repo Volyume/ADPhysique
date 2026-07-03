@@ -16,7 +16,7 @@
  * beside labels elsewhere (e.g. NutritionTargetsScreen).
  */
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, spacing, radius, withAlpha, alpha } from '../../styles/theme';
 

@@ -4,7 +4,7 @@ import {
   Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import ExercisePickerModal from '../components/ExercisePickerModal';

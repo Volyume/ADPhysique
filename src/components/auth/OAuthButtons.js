@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../../styles/theme';
 
 // expo-apple-authentication is iOS-only; require it lazily and only on iOS so

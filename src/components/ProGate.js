@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';

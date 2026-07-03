@@ -18,7 +18,7 @@
  *            optically centred against the back chevron.
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 

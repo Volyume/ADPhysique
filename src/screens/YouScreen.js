@@ -12,7 +12,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Application from 'expo-application';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';

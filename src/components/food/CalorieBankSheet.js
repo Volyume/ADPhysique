@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
 import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';

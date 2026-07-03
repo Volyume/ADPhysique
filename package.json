@@ -40,7 +40,8 @@
       "^expo-sharing$": "<rootDir>/__mocks__/expo-sharing.js",
       "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js",
       "^expo-keep-awake$": "<rootDir>/__mocks__/expo-keep-awake.js",
-      "^@shopify/flash-list$": "<rootDir>/__mocks__/shopify-flash-list.js"
+      "^@shopify/flash-list$": "<rootDir>/__mocks__/shopify-flash-list.js",
+      "^@expo/vector-icons/Ionicons$": "<rootDir>/__mocks__/expo-vector-icons-ionicons.js"
     }
   },
   "dependencies": {

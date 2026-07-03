@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, fontSize, radius, type } from '../styles/theme';
 
 // Shared collapsible section, extracted from MethodologyScreen (U-B-1 §3) and

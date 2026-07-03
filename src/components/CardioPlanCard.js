@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';

@@ -21,7 +21,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { storeName } from '../lib/storeName';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
 import { LINKS } from '../lib/links';
 import TierComparisonStrip from '../components/TierComparisonStrip';
