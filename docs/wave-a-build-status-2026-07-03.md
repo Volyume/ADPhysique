@@ -212,14 +212,17 @@ dead-tap class). Guard `src/__tests__/navigateCrossTab.guard.test.js` bans the
 raw idiom. Re-anchored: `navigationTargets.guard.test.js`,
 `plateauBanner.guard.test.js`, `lazyScreens.guard.test.js`.
 
-### S6 — activation instrumentation — **SPEC READY, BUILD ON FABLE.**
-Full execute-only spec: `docs/s6-build-spec-2026-07-03.md`. Founder chose "flip
-to Fable, then build". Research finding recorded there: both S6 metrics
-(sessions-in-first-14-days AND the 90s install-to-first-set benchmark) are
-largely derivable from already-shipped events (`account_created`,
-`workout_started/completed`, durable `first_workout_logged`), so the safest S6
-may add NO new event and NO migration — the Fable window decides (Option A
-derive, recommended, vs Option B one gated event).
+### S6 — activation nudge lever — **BUILT + GATE GREEN (review running).**
+Founder escalated S6 from "measure" to "intervene": build the lever. Design +
+founder calls: `docs/s6-activation-nudge-design-2026-07-03.md` (broadest scope
+0/1/2-session, tier-blind, retention-first priority). Built on Opus (founder
+cleared it). Commits: `36f78c6` pure activation model, `53be6b0` staged
+state-machine + copy, `8a36a9a` push wiring (category/budget/scheduler/handler/
+completion hook), `2b89653` Home banner, `cd39adb` toggle + locked-doc addendum.
+Single-shot per stage (anchored past-date guard, no flag), ED-suppressed at
+schedule AND delivery, quiet-hours + budget, no body data, no migration, no dep.
+S6 adversarial self-review in flight (workflow `wf_4094b107-c63`); triage +
+delivery note pending its findings.
 
 ---
 
