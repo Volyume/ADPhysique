@@ -65,12 +65,12 @@ describe('RollingNumber: commissioned surfaces only', () => {
     expect(rings).not.toMatch(/from 'react-native'.*Animated|Animated.*from 'react-native'/);
   });
 
-  test('StartGlow has exactly one importer: the Home hero Start (E15-3)', () => {
+  test('StartGlow is fully removed: no component file, no importers (founder 2026-07-03)', () => {
+    expect(fs.existsSync(path.join(root, 'src/components/StartGlow.js'))).toBe(false);
     const importers = walk(path.join(root, 'src'))
-      .filter((p) => !p.endsWith(`components${path.sep}StartGlow.js`))
       .filter((p) => /from '.*StartGlow'/.test(fs.readFileSync(p, 'utf8')))
       .map((p) => path.relative(root, p));
-    expect(importers).toEqual(['src/screens/HomeScreen.js']);
+    expect(importers).toEqual([]);
   });
 
   test('Reduce Motion renders a static Text with the final value', () => {
