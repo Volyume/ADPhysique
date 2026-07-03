@@ -21,6 +21,7 @@ import {
   loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone, pendingPerfectMonth,
 } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 const WEEKS = 12;
 const WEEK_MS = 7 * 86400000;
@@ -72,11 +73,12 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       const weekStarts = [];
       for (let i = WEEKS - 1; i >= 0; i--) weekStarts.push(currentWeekStart - i * WEEK_MS);
 
-      const [statsList, deloadWeeks, edFlag, streakState] = await Promise.all([
+      const [statsList, deloadWeeks, edFlag, streakState, wellbeing] = await Promise.all([
         Promise.all(weekStarts.map((ws) => getWeeklySessionStats(userId, ws).catch(() => ({ completed: 0, planned: 0 })))),
         getDeloadWeeksInRange(userId, oldestWeekStart, currentWeekStart + WEEK_MS).catch(() => []),
         getOpenEdPatternFlag(userId).catch(() => null),
         loadStreakState(userId),
+        getWellbeingMode().catch(() => 'read_failed'),
       ]);
 
       // Generosity (blueprint §4.1): the manual goal is never auto-raised by a
@@ -100,7 +102,14 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
         isCurrent: i === weekStarts.length - 1,
       }));
 
-      const edSuppressed = !!edFlag || (Number.isFinite(scoffScore) && scoffScore >= 2);
+      // Suppress the run/streak surfaces under an open ED flag, a positive
+      // SCOFF screen, OR calm mode — bringing them in line with the coach
+      // surfaces. A failed wellbeing read fails closed (suppress), so a streak
+      // artefact never shows over a possibly-calm/flagged state.
+      const edSuppressed = !!edFlag
+        || (Number.isFinite(scoffScore) && scoffScore >= 2)
+        || wellbeing === 'read_failed'
+        || isCalm(wellbeing);
       const streak = computeStreak({ weeks, edSuppressed });
 
       // High-water: a shown run never shrinks retroactively (deleting a workout
