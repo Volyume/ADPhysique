@@ -26,7 +26,9 @@ import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { getSupabaseClient } from '../supabase';
 
-// v1: the receipt copy shipped with STEP A. Bump on any material receipt change.
+// v1 IS the receipt as first shipped, including the "Your first name" line
+// (added pre-release, before any user was shown any notice, so no bump was
+// due). Bump on any material receipt change from here on.
 export const PARTNER_PRIVACY_NOTICE_VERSION = 1;
 
 /**
