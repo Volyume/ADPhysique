@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
@@ -99,10 +100,27 @@ export default function SettingsCoachingScreen() {
     }
   }
 
+  // D2 (founder decision 2026-07-03, Option A): the readiness ask before each
+  // session. ON asks; OFF starts sessions immediately with no readiness
+  // signal, so session adjustments never fire (absent input is never filled
+  // in). Stored inverted ('@volyume_intent_prompt_off') because asking is the
+  // default.
+  const [readinessAsk, setReadinessAsk] = useState(true);
+  async function toggleReadinessAsk(value) {
+    haptics.selection();
+    setReadinessAsk(value);
+    try {
+      if (value) await AsyncStorage.removeItem('@volyume_intent_prompt_off');
+      else await AsyncStorage.setItem('@volyume_intent_prompt_off', 'true');
+    } catch (_) { /* the Home start path re-reads each session */ }
+  }
+
   useFocusEffect(
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
       getCycleTracking().then(setCycleEnabled).catch(() => {});
+      AsyncStorage.getItem('@volyume_intent_prompt_off')
+        .then(v => setReadinessAsk(v !== 'true')).catch(() => {});
       if (user?.id) getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
     }, [user?.id]),
   );
@@ -121,6 +139,22 @@ export default function SettingsCoachingScreen() {
               onValueChange={toggleCalmMode}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={calmEnabled ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+        <SettingRow
+          icon="pulse-outline"
+          label="Session readiness check"
+          sub={readinessAsk
+            ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
+            : 'Off. Sessions start straight away and are never adjusted to how you are feeling.'}
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={readinessAsk}
+              onValueChange={toggleReadinessAsk}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={readinessAsk ? colors.primary : colors.textMuted}
             />
           }
         />
