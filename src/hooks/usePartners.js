@@ -14,6 +14,7 @@ import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
   getPairWeekSignals, getLastCheerSentOn, getLastCheerReceived,
   deleteLocalPairSharedData, getPartnerSharedBlock, deleteLocalPartnerSharedBlock,
+  upsertPartnerSharedBlockFromCloud,
 } from '../lib/database';
 import { todayLocalKey } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
@@ -123,14 +124,43 @@ export default function usePartners(userId, tier) {
   const block = useCallback(async (blockedId) => blockPartner(userId, blockedId), [userId]);
 
   // ── Shared training block (Wave 5 C5 A2) — online ops, local view refresh ──
+  // Each success writes the local mirror BEFORE load(): load() reads only
+  // SQLite and the next pull may be minutes away, so without this the screen
+  // would keep showing the pre-action state (A3 review finding, 2026-07-03).
   const proposeBlock = useCallback(async (pairId, blockName) => {
     const r = await proposeSharedBlock(userId, { pairId, blockName });
+    if (r.ok) {
+      try {
+        await upsertPartnerSharedBlockFromCloud({
+          pair_id: pairId,
+          block_name: String(blockName ?? '').trim().slice(0, 80),
+          proposed_by: userId,
+          status: 'proposed',
+          updated_at: new Date().toISOString(),
+        });
+      } catch (_) { /* best-effort; the pull heals the mirror */ }
+    }
     await load();
     return r;
   }, [userId, load]);
 
   const adoptBlock = useCallback(async (pairId) => {
     const r = await adoptSharedBlock(userId, pairId);
+    if (r.ok) {
+      try {
+        const existing = await getPartnerSharedBlock(pairId);
+        if (existing) {
+          await upsertPartnerSharedBlockFromCloud({
+            pair_id: pairId,
+            block_ref: existing.blockRef ?? null,
+            block_name: existing.blockName,
+            proposed_by: existing.proposedBy,
+            status: 'active',
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (_) { /* best-effort; the pull heals the mirror */ }
+    }
     await load();
     return r;
   }, [userId, load]);

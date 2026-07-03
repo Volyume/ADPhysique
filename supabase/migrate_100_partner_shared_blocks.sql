@@ -94,24 +94,35 @@ CREATE POLICY "Member proposes shared block" ON partner_shared_blocks
     )
   );
 
--- Adopt (update) and leave (delete): either member of the pair.
+-- Adopt: the ONLY client UPDATE is the non-proposer flipping the row to
+-- active (A3 review 2026-07-03: the invariant "the proposer cannot
+-- self-adopt" must hold at the RLS boundary, not just in service.js).
+-- Column-level grants below additionally pin client updates to
+-- status/updated_at, so block_name / proposed_by / block_ref are immutable
+-- once proposed (a re-proposal goes through delete + insert).
 DROP POLICY IF EXISTS "Pair members update shared block" ON partner_shared_blocks;
-CREATE POLICY "Pair members update shared block" ON partner_shared_blocks
+DROP POLICY IF EXISTS "Partner adopts proposed block" ON partner_shared_blocks;
+CREATE POLICY "Partner adopts proposed block" ON partner_shared_blocks
   FOR UPDATE USING (
-    EXISTS (
+    proposed_by <> auth.uid() AND EXISTS (
       SELECT 1 FROM partnerships p
       WHERE p.id = partner_shared_blocks.pair_id
         AND p.status = 'active'
         AND (auth.uid() = p.member_a OR auth.uid() = p.member_b)
     )
   ) WITH CHECK (
-    EXISTS (
+    status = 'active' AND proposed_by <> auth.uid() AND EXISTS (
       SELECT 1 FROM partnerships p
       WHERE p.id = partner_shared_blocks.pair_id
         AND p.status = 'active'
         AND (auth.uid() = p.member_a OR auth.uid() = p.member_b)
     )
   );
+
+REVOKE UPDATE ON partner_shared_blocks FROM authenticated;
+GRANT UPDATE (status, updated_at) ON partner_shared_blocks TO authenticated;
+
+-- Leave (delete): either member of the pair.
 
 DROP POLICY IF EXISTS "Pair members delete shared block" ON partner_shared_blocks;
 CREATE POLICY "Pair members delete shared block" ON partner_shared_blocks
