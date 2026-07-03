@@ -465,22 +465,22 @@ export default function MealPlanScreen({ navigation }) {
           </Text>
 
           <View style={styles.planOption}>
-            <Text style={styles.planOptionTitle}>Plan my day</Text>
-            <Text style={styles.planOptionDesc}>
-              One day of meals for today. Tweak it, then add it straight to today&apos;s diary.
-              Best when you just want today sorted.
-            </Text>
-            <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
-          </View>
-
-          <View style={styles.planOption}>
             <Text style={styles.planOptionTitle}>Plan my week</Text>
             <Text style={styles.planOptionDesc}>
               Seven days of meals plus a shopping list, so you can prep ahead. Add the
               whole week to your diary in one go (days you&apos;ve already logged are left
               untouched). Best for a weekly shop and meal prep.
             </Text>
-            <Button title="Plan my week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Plan my week" onPress={handleGenerateWeek} loading={busy} fullWidth />
+          </View>
+
+          <View style={styles.planOption}>
+            <Text style={styles.planOptionTitle}>Plan my day</Text>
+            <Text style={styles.planOptionDesc}>
+              One day of meals for today. Tweak it, then add it straight to today&apos;s diary.
+              Best when you just want today sorted.
+            </Text>
+            <Button title="Plan my day" variant="secondary" onPress={handleGenerateDay} loading={busy} fullWidth />
           </View>
         </View>
       ) : (

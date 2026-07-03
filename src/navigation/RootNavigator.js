@@ -427,7 +427,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
-      <Stack.Screen name="Partner" component={GatedPartner} options={{ title: 'Training partner' }} />
+      <Stack.Screen name="Partner" component={GatedPartner} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise', ...heroZoomTransition }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />

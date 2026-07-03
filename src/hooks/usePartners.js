@@ -13,7 +13,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
   getPairWeekSignals, getLastCheerSentOn, getLastCheerReceived,
-  deleteLocalPairSharedData, getPartnerSharedBlock, deleteLocalPartnerSharedBlock,
+  deleteLocalPairSharedData, markLocalPartnershipEnded,
+  getPartnerSharedBlock, deleteLocalPartnerSharedBlock,
   upsertPartnerSharedBlockFromCloud,
 } from '../lib/database';
 import { todayLocalKey } from '../lib/dayKey';
@@ -209,6 +210,11 @@ export default function usePartners(userId, tier) {
       // Cancelling a pending invite (or ending a pairing) frees the single-mint
       // code so a fresh invite can be minted next time.
       clearCachedInvite();
+      // Move the local row to the 'ended' tombstone too (the RPC did this
+      // server-side). load() reads only SQLite, so without this the cancelled
+      // invite's row stays status='invited' and its pending card keeps showing
+      // until the next pull ("Cancel doesn't do anything", founder 2026-07-03).
+      try { await markLocalPartnershipEnded(pairId); } catch (_) { /* best-effort */ }
       try { await deleteLocalPairSharedData(pairId); } catch (_) { /* best-effort */ }
     }
     await load();

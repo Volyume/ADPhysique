@@ -4939,6 +4939,25 @@ export async function deleteLocalPairSharedData(pairId) {
   await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
 }
 
+/**
+ * Mark a local partnership as ended, mirroring what end_partnership does
+ * server-side. Cancelling a pending invite (or ending an active pairing) has
+ * to move the local row out of both the active and the pending derivations at
+ * once: usePartners.load reads only SQLite and the next pull may be minutes
+ * away, so without this the cancelled invite's card keeps showing (its row is
+ * still status='invited') even though the cancel succeeded. Keeps the row as an
+ * 'ended' tombstone rather than deleting it, matching deleteLocalPairSharedData.
+ */
+export async function markLocalPartnershipEnded(pairId) {
+  if (!pairId) return;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    "UPDATE partnerships SET status = 'ended', ended_at = ?, updated_at = ? WHERE id = ?",
+    [now, now, pairId],
+  );
+}
+
 /** Wipe all local partner data (sign-out guard). */
 export async function clearLocalPartners() {
   const d = await db();

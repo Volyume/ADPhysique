@@ -9,10 +9,11 @@
  *
  * Cells: WEIGHT (load-bearing, keeps logging), CARDIO ("+ Log" entry point,
  * hidden when cardio is off), and MEAL (D1, founder decision 2026-07-03): a
- * pure VERB chip ("Log Meal 2" by time of day) deep-linking into FoodSearch
- * scoped to the inferred slot. The rule of record from the 2026-06-30 food
- * cell removal: Home never carries food NUMBERS or food progress, the old
- * cell showed calories on the app's most-seen surface. A verb carries no
+ * pure VERB chip (a plain "Log", matching the weight and cardio cells)
+ * deep-linking into FoodSearch scoped to the time-inferred slot. The rule of
+ * record from the 2026-06-30 food cell removal: Home never carries food NUMBERS
+ * or food progress, the old cell showed calories on the app's most-seen
+ * surface. A verb carries no
  * number, no progress, no valence, so it does not break that rule. Free tier
  * renders no strip at all (the parent only mounts this for Pro), the chip is
  * hidden on free, not locked. The steps cell stays retired (Google Play
@@ -314,21 +315,24 @@ export default function TodayStrip({
     );
   }
 
-  // D1: the verb chip. No number, no progress, no valence, the label names
-  // the action and the time-appropriate meal, nothing else.
+  // D1: the verb chip. No number, no progress, no valence. The visible label is
+  // a plain "Log" so the cell matches WEIGHT and CARDIO exactly (founder review
+  // 2026-07-03: the meal-slot number read as odd and inconsistent beside the
+  // clean cardio "Log", and the extra text crowded the cell). The tap still
+  // targets the time-inferred slot, and the slot name stays in the
+  // accessibility label so screen-reader users keep the context.
   function MealCell() {
-    const verb = `Log ${mealSlotLabel(mealSlot)}`;
     return (
       <TouchableOpacity
         style={styles.cellInner}
         onPress={() => onLogMeal(mealSlot)}
         accessibilityRole="button"
-        accessibilityLabel={verb}
+        accessibilityLabel={`Log ${mealSlotLabel(mealSlot)}`}
       >
         <Text style={styles.cellLabel}>MEAL</Text>
         <View style={styles.loggedRow}>
           <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
-          <Text style={styles.logPrompt} numberOfLines={1}>{verb}</Text>
+          <Text style={styles.logPrompt} numberOfLines={1}>Log</Text>
         </View>
       </TouchableOpacity>
     );
