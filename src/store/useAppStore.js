@@ -574,6 +574,19 @@ const useAppStore = create((set, get) => ({
   })),
   dismissCloudSyncStatus: () => set({ cloudSyncStatus: 'idle', cloudSyncError: null }),
 
+  // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): whether there is an
+  // unseen weekly coach review, for the You-tab icon badge (VolyumeTabBar).
+  // Mirrors the exact condition HomeScreen already uses for its own banner
+  // (tier pro, a fresh hasEnoughData output, not yet dismissed, inside its
+  // 7-day window), set by HomeScreen and cleared by CoachOutputScreen once the
+  // review is actually viewed. Both read/write the SAME per-week AsyncStorage
+  // flag the Home banner's own dismiss control already used
+  // (@volyume_coach_banner_dismissed_<weekStart>) -- no second persistence
+  // scheme. Defaults false so a cold launch never flashes a badge before
+  // HomeScreen's effect has run.
+  hasUnseenCoachChange: false,
+  setHasUnseenCoachChange: (value) => set({ hasUnseenCoachChange: !!value }),
+
   // True while restoreSessionFromCloud is in flight. The navigator
   // gates routing decisions on this so the wizard doesn't briefly
   // mount during the ~8s cloud read for returning users (the

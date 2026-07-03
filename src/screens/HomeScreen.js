@@ -1188,6 +1188,16 @@ export default function HomeScreen({ navigation, route }) {
   const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachOutput.hasEnoughData
     && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
+  // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): today this signal
+  // surfaces ONLY on this banner, and dismissing it loses the reminder for the
+  // rest of the week. Mirror the exact same condition into the store so the
+  // You-tab icon can carry a calm badge too; CoachOutputScreen clears both the
+  // badge and this banner (same per-week dismissal flag) the moment the
+  // review is actually viewed, not just when the banner's own close button is
+  // tapped.
+  useEffect(() => {
+    useAppStore.getState().setHasUnseenCoachChange(showCoachBanner);
+  }, [showCoachBanner]);
   // COMP-023 trial value banner: second priority, below a fresh coach review and
   // suppressed by the day-of coaching nudge so two voices never say the same
   // thing. Slots above deload/phase; the one-banner invariant holds.

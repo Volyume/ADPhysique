@@ -1755,6 +1755,19 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       setOutput(result);
 
+      // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): viewing a real
+      // review counts as "seen" even if the user never taps the Home banner's
+      // own dismiss control. Reuses the SAME per-week flag the Home banner
+      // writes (HomeScreen.js @volyume_coach_banner_dismissed_<weekStart>)
+      // rather than a second scheme, so the You-tab badge (which mirrors that
+      // same flag into the store) clears the moment this screen actually
+      // shows the review. The insufficient-data ("building your baseline")
+      // view is not a coach change, so it clears nothing.
+      if (result.hasEnoughData) {
+        AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${weekStart}`, 'true').catch(() => {});
+        useAppStore.getState().setHasUnseenCoachChange(false);
+      }
+
       // A3 (audit 04 §4): when the coach holds for thin data, build the full
       // held-decision receipt — the live counts vs the published thresholds,
       // the rule (the engine's own hold message), and the named unlock date.

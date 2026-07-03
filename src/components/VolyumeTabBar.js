@@ -21,6 +21,16 @@
  * mid-range Android, unpredictable mid-set); no centre action button (the
  * log-food candidate is Pro-gated, and a paywalled centre button violates
  * the free/pro exposure rule).
+ *
+ * T2 (world-class-audit-2026-07-03/05-cohesion.md #4): the You tab (where
+ * CoachOutput is registered, see RootNavigator's ProfileStack) carries a
+ * small amber dot when there is an unseen weekly coach review. Sourced from
+ * the store's hasUnseenCoachChange flag, which HomeScreen mirrors from its
+ * own coach-banner condition and CoachOutputScreen clears the moment the
+ * review is actually viewed (both via the SAME per-week AsyncStorage
+ * dismissal flag the Home banner already used, no second scheme). Amber, not
+ * red: the theme defines no alarm-dot treatment, and amber matches the
+ * sparkles icon on the banner itself, so a coaching update reads as calm.
  */
 import { useEffect, useState } from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
@@ -31,7 +41,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
-import { colors, fontSize, fontWeight, radius, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, radius, spacing, motion } from '../styles/theme';
 
 const PILL_WIDTH = 56;
 // Sits behind the ACTIVE ICON only. Height + top are tuned so the pill clears
@@ -58,6 +68,9 @@ function TabIcon({ focused, reduceMotion, children }) {
 export default function VolyumeTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useAppStore((s) => !!s.accessibility?.reduceMotion);
+  // T2: unseen weekly coach review, mirrored into the store by HomeScreen and
+  // cleared by CoachOutputScreen (see the header comment above).
+  const hasUnseenCoachChange = useAppStore((s) => !!s.hasUnseenCoachChange);
 
   const [barWidth, setBarWidth] = useState(0);
   const tabWidth = state.routes.length > 0 ? barWidth / state.routes.length : 0;
@@ -91,6 +104,10 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
           const isFocused = state.index === index;
           const color = isFocused ? colors.primary : colors.textMuted;
           const label = options.title ?? route.name;
+          // T2: CoachOutput lives in ProfileStack only (RootNavigator), so
+          // the You tab is the one that carries the unseen-review badge.
+          const showCoachBadge = route.name === 'ProfileTab' && hasUnseenCoachChange;
+          const accessibilityLabel = options.tabBarAccessibilityLabel ?? label;
 
           const onPress = () => {
             // Emitted exactly like the stock bar so the navigator's
@@ -117,13 +134,16 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
               onLongPress={onLongPress}
               accessibilityRole="tab"
               accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+              accessibilityLabel={showCoachBadge ? `${accessibilityLabel}, new coaching update` : accessibilityLabel}
             >
-              <TabIcon focused={isFocused} reduceMotion={reduceMotion}>
-                {options.tabBarIcon
-                  ? options.tabBarIcon({ focused: isFocused, color, size: 22 })
-                  : null}
-              </TabIcon>
+              <View style={styles.iconWrap}>
+                <TabIcon focused={isFocused} reduceMotion={reduceMotion}>
+                  {options.tabBarIcon
+                    ? options.tabBarIcon({ focused: isFocused, color, size: 22 })
+                    : null}
+                </TabIcon>
+                {showCoachBadge ? <View style={styles.badgeDot} pointerEvents="none" /> : null}
+              </View>
               <Text style={[styles.label, { color }]} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
@@ -149,5 +169,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 2, paddingTop: 4 },
+  iconWrap: { position: 'relative' },
+  // T2: a calm amber dot, not an alarm-red one (the theme defines no such
+  // treatment). It matches the sparkles icon colour on the coach banner it
+  // stands in for; the hairline border cuts it out from the icon glyph
+  // underneath it.
+  badgeDot: {
+    position: 'absolute',
+    top: -spacing.xxs,
+    right: -spacing.xxs,
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.surfaceElevated,
+  },
   label: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
 });

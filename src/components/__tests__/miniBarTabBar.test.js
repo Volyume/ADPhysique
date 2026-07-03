@@ -13,6 +13,9 @@
  *     focused nor prevented;
  *   - the whole band returns null while ActiveWorkout is focused (the
  *     session screen owns the full height, mini-bar absent by design).
+ *   - T2: the You tab (ProfileTab) carries a calm badge, and an updated
+ *     accessibility label, when the store's hasUnseenCoachChange flag is
+ *     set, and only that tab, never another one.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -186,5 +189,48 @@ describe('VolyumeTabBar', () => {
     const txt = texts(tree);
     expect(txt).toContain('Bench Press'); // mini-bar present
     expect(tabNodes(tree)).toHaveLength(3);
+  });
+
+  describe('T2: unseen-coach-change badge on the You tab', () => {
+    const routesWithProfile = [
+      { key: 'home-1', name: 'HomeTab' },
+      { key: 'profile-1', name: 'ProfileTab' },
+    ];
+    const descriptorsWithProfile = Object.fromEntries(routesWithProfile.map((r) => [r.key, {
+      options: { title: r.name === 'ProfileTab' ? 'You' : r.name.replace('Tab', ''), tabBarIcon: () => null },
+    }]));
+    // The badge is a plain RN View; TabIcon's own wrapper is Animated.View (a
+    // distinct host type in the reanimated mock), so counting 'View' nodes
+    // inside a tab isolates the badge without depending on style values.
+    const viewCount = (node) => node.findAll((n) => n.type === 'View').length;
+
+    test('shows the badge and appends the a11y hint when a coach change is unseen', () => {
+      setStore({ activeWorkout: null, hasUnseenCoachChange: true });
+      const tree = create(
+        <VolyumeTabBar state={{ index: 0, routes: routesWithProfile }} descriptors={descriptorsWithProfile} navigation={makeNav()} />
+      );
+      const tabs = tabNodes(tree);
+      expect(tabs[1].props.accessibilityLabel).toBe('You, new coaching update');
+      expect(viewCount(tabs[1])).toBe(viewCount(tabs[0]) + 1);
+    });
+
+    test('no badge and the plain label when there is nothing unseen', () => {
+      setStore({ activeWorkout: null, hasUnseenCoachChange: false });
+      const tree = create(
+        <VolyumeTabBar state={{ index: 0, routes: routesWithProfile }} descriptors={descriptorsWithProfile} navigation={makeNav()} />
+      );
+      const tabs = tabNodes(tree);
+      expect(tabs[1].props.accessibilityLabel).toBe('You');
+      expect(viewCount(tabs[1])).toBe(viewCount(tabs[0]));
+    });
+
+    test('the badge never rides on another tab even while the flag is set', () => {
+      setStore({ activeWorkout: null, hasUnseenCoachChange: true });
+      const tree = create(
+        <VolyumeTabBar state={{ index: 0, routes: routesWithProfile }} descriptors={descriptorsWithProfile} navigation={makeNav()} />
+      );
+      const tabs = tabNodes(tree);
+      expect(tabs[0].props.accessibilityLabel).toBe('Home');
+    });
   });
 });
