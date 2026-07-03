@@ -19,10 +19,14 @@ const TRAINING_REMINDER_CHANNEL = 'training-reminders';
 // can be cancelled as a group without touching other scheduled notifications.
 const NOTIF_ID_PREFIX = 'volyume_training_day_';
 
-// Longest plan name we fold into the tray copy. Beyond this the named
-// sentence overruns the notification body, so we fall back to the
-// plan-agnostic line rather than truncate mid-name.
-const MAX_PLAN_NAME_IN_BODY = 40;
+// Longest total reminder body we allow. A warm, complete sentence may run a
+// little over the ~80-char copy target (the locked convention prefers warmth to
+// terseness), but beyond this an oversized user-named plan would dominate or
+// truncate in the notification tray, so we fall back to the plan-agnostic line.
+// Bounding the WHOLE body (not the name alone) is deliberate: the fixed wording
+// is ~55 chars, so a name-length guard let realistic plan names overrun the
+// body convention (C12 review finding).
+const MAX_REMINDER_BODY_CHARS = 90;
 
 // ---------------------------------------------------------------------------
 // buildTrainingReminderBody (pure)
@@ -37,8 +41,9 @@ const MAX_PLAN_NAME_IN_BODY = 40;
 export function buildTrainingReminderBody(planName) {
   const generic = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
   const name = typeof planName === 'string' ? planName.trim() : '';
-  if (!name || name.length > MAX_PLAN_NAME_IN_BODY) return generic;
-  return `Your ${name} plan has a session on today. Enjoy it whenever it suits you.`;
+  if (!name) return generic;
+  const named = `Your ${name} plan is on today. Enjoy it whenever it suits you.`;
+  return named.length <= MAX_REMINDER_BODY_CHARS ? named : generic;
 }
 
 // ---------------------------------------------------------------------------

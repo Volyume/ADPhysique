@@ -2985,13 +2985,17 @@ export async function activatePlanWithBlock(userId, planId, planName) {
   await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
 
   // C12: refresh the weekly training reminders so their copy names the plan
-  // that just became active. Best-effort and self-gating (the scheduler no-ops
-  // when reminders are off or notification permission is absent); a lazy
-  // require keeps the data layer free of a static notifications dependency.
+  // that just became active. Read the name back from the persisted active plan
+  // (not the raw planName arg, which above labels the mesocycle) so the push can
+  // never name anything other than the plan the Plans tab shows. Best-effort and
+  // self-gating (the scheduler no-ops when reminders are off or permission is
+  // absent); a lazy require keeps the data layer free of a static notifications
+  // dependency, and every path here leaves plan activation itself unaffected.
   try {
+    const activeForReminder = await getActivePlan(userId).catch(() => null);
     // eslint-disable-next-line global-require
     require('./notifications/trainingReminders')
-      .scheduleTrainingReminders(planName)
+      .scheduleTrainingReminders(activeForReminder?.name)
       .catch(() => {});
   } catch (_) { /* notifications layer unavailable -- reminders refresh on next schedule */ }
 

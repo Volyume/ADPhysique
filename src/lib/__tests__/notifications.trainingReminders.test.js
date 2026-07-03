@@ -92,6 +92,7 @@ describe('scheduleTrainingReminders (D4)', () => {
 
 describe('buildTrainingReminderBody (C12, pure copy rules)', () => {
   const GENERIC = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
+  const MAX_BODY = 90; // mirrors MAX_REMINDER_BODY_CHARS in trainingReminders.js
 
   test('no name -> the plan-agnostic line', () => {
     expect(tr.buildTrainingReminderBody('')).toBe(GENERIC);
@@ -102,15 +103,40 @@ describe('buildTrainingReminderBody (C12, pure copy rules)', () => {
 
   test('a short plan name is folded in verbatim, warm and British', () => {
     expect(tr.buildTrainingReminderBody('Push Pull Legs')).toBe(
-      'Your Push Pull Legs plan has a session on today. Enjoy it whenever it suits you.',
+      'Your Push Pull Legs plan is on today. Enjoy it whenever it suits you.',
     );
     // trimmed, not truncated
     expect(tr.buildTrainingReminderBody('  Upper Lower  ')).toContain('Your Upper Lower plan');
   });
 
-  test('an over-long plan name falls back rather than truncating mid-name', () => {
+  test('every real shipped library plan name stays named and within the body cap', () => {
+    // Regression for the C12 review finding: the guard bounds the whole body,
+    // not the name alone, so realistic plan names are named without overrunning.
+    const realNames = [
+      'Aesthetic Upper Rotation',
+      'Beginner Push / Pull / Legs',
+      '4-Day Muscle Building Bro Split',
+      'Push Pull Legs 3×/Week',
+    ];
+    for (const nm of realNames) {
+      const body = tr.buildTrainingReminderBody(nm);
+      expect(body).toContain(`Your ${nm} plan`);
+      expect(body.length).toBeLessThanOrEqual(MAX_BODY);
+    }
+  });
+
+  test('the body cap is pinned at the exact boundary (whole body, not name)', () => {
+    // Fixed wording "Your  plan is on today. Enjoy it whenever it suits you." is
+    // 55 chars, so a 35-char name -> 90 (kept), a 36-char name -> 91 (falls back).
+    const at = 'N'.repeat(35);
+    const over = 'N'.repeat(36);
+    expect(tr.buildTrainingReminderBody(at)).toBe(`Your ${at} plan is on today. Enjoy it whenever it suits you.`);
+    expect(tr.buildTrainingReminderBody(at).length).toBe(MAX_BODY);
+    expect(tr.buildTrainingReminderBody(over)).toBe(GENERIC);
+  });
+
+  test('an over-long plan name falls back rather than truncating in the tray', () => {
     const long = 'Beginner Full Body Strength And Conditioning Programme 3x Per Week';
-    expect(long.length).toBeGreaterThan(40);
     expect(tr.buildTrainingReminderBody(long)).toBe(GENERIC);
   });
 });
