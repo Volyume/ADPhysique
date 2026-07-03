@@ -29,6 +29,7 @@
 
 import { checkJargon } from './whyThisTemplates';
 import { getLatestEwma, getEwmaSevenDaysAgo } from './weeklyCoach';
+import { pairAppliedWithOutcome } from './coachOutcome';
 
 // ---------------------------------------------------------------------------
 // Guards
@@ -305,6 +306,63 @@ function buildForward({ output, weighInsThisWeek, checkinDayName, suppress }) {
 }
 
 // ---------------------------------------------------------------------------
+// Part 6: the pre-commitment line + its next-week answer (S1c, "give the coach
+// a memory"). The coach names, in advance, the specific thing the next read
+// will check; the following week visibly answers it. Presentation only over
+// data already persisted; deterministic. Both suppress under an open
+// ED/wellbeing flag or calm mode (trend-response language is rate-adjacent).
+// ---------------------------------------------------------------------------
+
+/** This week's calorie call as { amount, direction }, or null when none. */
+export function preCommitmentFacts(output) {
+  const change = output?.adjustments?.calories?.change;
+  if (!Number.isFinite(change) || change === 0) return null;
+  return { amount: Math.abs(change), direction: change < 0 ? 'cut' : 'increase' };
+}
+
+/**
+ * Whether LAST week's applied calorie call has been answered by THIS week's
+ * trend, as { amount, direction, onTarget }, or null. Reuses the coachOutcome
+ * pairing so this prose and the coaching-history outcome chip can never
+ * disagree: null unless last week's calorie call was APPLIED, the two weeks are
+ * calendar-consecutive (the pairing's own ~7-day window), and this week carries
+ * a boolean trend verdict. Fails safe (null) when weekStartMs is unknown, so it
+ * never mislabels a gap in history as "last week".
+ */
+export function commitmentOutcomeFacts({ output, history = [], weekStartMs } = {}) {
+  if (!output || !Number.isFinite(weekStartMs)) return null;
+  const prior = Array.isArray(history) ? history[0] : null;
+  const priorChange = prior?.adjustments?.calories?.change;
+  if (!Number.isFinite(priorChange) || priorChange === 0) return null;
+  // Most-recent-first, with the current week stamped so the pairing can verdict
+  // the prior week's applied call against this week's trend.
+  const desc = [{ ...output, weekStart: weekStartMs }, ...(Array.isArray(history) ? history : [])];
+  const pair = pairAppliedWithOutcome(desc).find(
+    (p) => p.domain === 'calories' && p.verdictWeekStart === weekStartMs,
+  );
+  if (!pair) return null;
+  return { amount: Math.abs(priorChange), direction: priorChange < 0 ? 'cut' : 'increase', onTarget: pair.onTarget };
+}
+
+function buildPreCommitment({ output, checkinDayName, suppress }) {
+  if (suppress) return null;
+  const facts = preCommitmentFacts(output);
+  if (!facts) return null;
+  const when = checkinDayName ? `Next ${checkinDayName}, the read` : 'The next read';
+  return clean(`${when} checks whether the trend responds to this ${facts.amount} kcal ${facts.direction}.`);
+}
+
+function buildCommitmentAnswer({ output, history, weekStartMs, suppress }) {
+  if (suppress) return null;
+  const facts = commitmentOutcomeFacts({ output, history, weekStartMs });
+  if (!facts) return null;
+  const verdict = facts.onTarget
+    ? 'The trend has responded, it is back on the set rate.'
+    : 'The trend has not responded yet, it is still off the set rate.';
+  return clean(`Last week's ${facts.amount} kcal ${facts.direction} was the call to watch. ${verdict}`);
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -333,6 +391,7 @@ export function buildCoachResponse({
   edFlagOpen = false,
   calmMode = false,
   checkinDayName = null,
+  weekStartMs = null,
 } = {}) {
   const suppress = !!edFlagOpen || !!calmMode;
 
@@ -343,6 +402,8 @@ export function buildCoachResponse({
       decision: null,
       cue: null,
       forward: null,
+      preCommitment: null,
+      commitmentAnswer: null,
       suppressed: suppress,
     };
   }
@@ -362,12 +423,16 @@ export function buildCoachResponse({
   // still points at the highest-leverage behaviour, and the forward
   // line still anchors the next check-in.
   if (output.hasEnoughData === false) {
+    // Cold start: no calorie call and no trend verdict yet, so both S1c parts
+    // are null rather than fabricated.
     return {
       acknowledgement,
       interpretation: null,
       decision: null,
       cue: buildCue({ output, checkin, weighInsThisWeek, suppress }),
       forward: buildForward({ output, weighInsThisWeek, checkinDayName, suppress }),
+      preCommitment: null,
+      commitmentAnswer: null,
       suppressed: suppress,
     };
   }
@@ -378,6 +443,8 @@ export function buildCoachResponse({
     decision: buildDecision({ output }),
     cue: buildCue({ output, checkin, weighInsThisWeek, suppress }),
     forward: buildForward({ output, weighInsThisWeek, checkinDayName, suppress }),
+    preCommitment: buildPreCommitment({ output, checkinDayName, suppress }),
+    commitmentAnswer: buildCommitmentAnswer({ output, history, weekStartMs, suppress }),
     suppressed: suppress,
   };
 }

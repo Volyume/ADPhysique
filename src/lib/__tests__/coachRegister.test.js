@@ -77,7 +77,7 @@ const precise = (overrides = {}) =>
 const supportive = (overrides = {}) =>
   buildRegisteredCoachResponse({ ...baseArgs(overrides), coachTone: 'supportive' });
 
-const PARTS = ['acknowledgement', 'interpretation', 'decision', 'cue', 'forward'];
+const PARTS = ['acknowledgement', 'interpretation', 'decision', 'cue', 'forward', 'preCommitment', 'commitmentAnswer'];
 
 function allStrings(resp) {
   return PARTS.map((k) => resp[k]).filter((s) => typeof s === 'string');
@@ -236,6 +236,24 @@ describe('precise rendering', () => {
   });
   test('forward names the check-in day', () => {
     expect(precise().forward).toMatch(/^Next check-in: Sunday\./);
+  });
+  test('S1c pre-commitment renders figure-led in precise', () => {
+    const output = fakeOutput({ adjustments: { calories: { change: -150 }, training: { signal: 'hold' } } });
+    expect(precise({ output }).preCommitment).toBe('Next Sunday: does the trend respond to the 150 kcal cut.');
+    expect(supportive({ output }).preCommitment)
+      .toBe('Next Sunday, the read checks whether the trend responds to this 150 kcal cut.');
+  });
+  test('S1c commitment answer renders figure-led in precise, same verdict as supportive', () => {
+    const WEEK = 7 * 86400000;
+    const NOW = 3 * WEEK;
+    const overrides = {
+      output: fakeOutput({ trend: { delta: -0.4, onTarget: true } }),
+      weekStartMs: NOW,
+      history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true } }, trend: { onTarget: false } }],
+    };
+    expect(precise(overrides).commitmentAnswer).toBe('Last 150 kcal cut: trend responded, back on rate.');
+    expect(supportive(overrides).commitmentAnswer)
+      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
   });
   test('deterministic: same inputs, same strings', () => {
     expect(precise()).toEqual(precise());

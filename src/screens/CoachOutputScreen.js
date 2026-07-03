@@ -1953,6 +1953,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     edFlagOpen: edPatternOpen,
     calmMode,
     checkinDayName,
+    weekStartMs: weekStart,
     coachTone: userProfile?.coachTone ?? 'automatic',
     experienceLevel: userProfile?.experienceLevel ?? null,
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
@@ -2137,13 +2138,18 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Coach response parts 1 and 2: the specific, data-referenced
             acknowledgement and the plain-language trend read lead the
             card before any decision detail. */}
-        {(coachResponse.acknowledgement || coachResponse.interpretation) ? (
+        {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || coachResponse.interpretation) ? (
           <Reanimated.View
             entering={stage(1)}
             style={styles.coachLeadCard}
             accessible
-            accessibilityLabel={[coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
+            accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
           >
+            {/* S1c: last week's pre-commitment, answered. Leads the card, it is
+                the "did the coach get it right" payoff that pulls users back. */}
+            {coachResponse.commitmentAnswer ? (
+              <Text style={styles.coachLeadCommitment}>{coachResponse.commitmentAnswer}</Text>
+            ) : null}
             {coachResponse.acknowledgement ? (
               <Text style={styles.coachLeadAck}>{coachResponse.acknowledgement}</Text>
             ) : null}
@@ -2388,6 +2394,12 @@ export default function CoachOutputScreen({ navigation, route }) {
             onLearnMore={() => navigation.navigate('Methodology', { source: 'held_decisions' })}
           />
         )}
+
+        {/* S1c pre-commitment: the specific, checkable thing next week's read
+            will answer, named in advance. Sits with the forward-pull. */}
+        {coachResponse.preCommitment ? (
+          <Text style={styles.preCommitmentLine}>{coachResponse.preCommitment}</Text>
+        ) : null}
 
         {/* Coach response part 5: the forward-pull anchor closes the response
             below the always-visible safety shelf. */}
@@ -2655,10 +2667,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 22,
   },
+  // S1c: the answered pre-commitment, leading the card. Emphasised but never
+  // verdict-coloured (no green/red reward or shame; the one-amber rule holds).
+  coachLeadCommitment: {
+    ...type.bodyStrong,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
   coachLeadInterpretation: {
     ...type.body,
     color: colors.textSecondary,
     lineHeight: 22,
+  },
+  // S1c: the forward pre-commitment. A touch stronger than the sign-off below
+  // it (textPrimary vs the forward line's textSecondary), never amber.
+  preCommitmentLine: {
+    ...type.bodySm,
+    color: colors.textPrimary,
+    paddingHorizontal: spacing.xs,
   },
   forwardLine: {
     ...type.bodySm,

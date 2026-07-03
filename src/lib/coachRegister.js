@@ -38,7 +38,7 @@
  */
 
 import { checkJargon } from './whyThisTemplates';
-import { buildCoachResponse } from './coachResponse';
+import { buildCoachResponse, preCommitmentFacts, commitmentOutcomeFacts } from './coachResponse';
 
 // ---------------------------------------------------------------------------
 // Guards (same pattern as coachResponse.clean)
@@ -234,6 +234,23 @@ function preciseForward({ output, weighInsThisWeek, checkinDayName }) {
   return clean(`${opener} ${tail}`);
 }
 
+// S1c precise renderers. Same facts (shared preCommitmentFacts /
+// commitmentOutcomeFacts), figure-led prose; they self-null on the same facts
+// as the supportive builders, so structural parity holds.
+function precisePreCommitment({ output, checkinDayName }) {
+  const facts = preCommitmentFacts(output);
+  if (!facts) return null;
+  const when = checkinDayName ? `Next ${checkinDayName}` : 'Next read';
+  return clean(`${when}: does the trend respond to the ${facts.amount} kcal ${facts.direction}.`);
+}
+
+function preciseCommitmentAnswer({ output, history, weekStartMs }) {
+  const facts = commitmentOutcomeFacts({ output, history, weekStartMs });
+  if (!facts) return null;
+  const verdict = facts.onTarget ? 'trend responded, back on rate.' : 'no response yet, off rate.';
+  return clean(`Last ${facts.amount} kcal ${facts.direction}: ${verdict}`);
+}
+
 // ---------------------------------------------------------------------------
 // Public API — the registered five-part response
 // ---------------------------------------------------------------------------
@@ -265,7 +282,7 @@ export function buildRegisteredCoachResponse({
     return { ...base, register: 'supportive' };
   }
 
-  const { output, checkin = null, history = [], weighInsThisWeek = null, units = 'kg', checkinDayName = null } = args;
+  const { output, checkin = null, history = [], weighInsThisWeek = null, units = 'kg', checkinDayName = null, weekStartMs = null } = args;
 
   return {
     acknowledgement: base.acknowledgement != null
@@ -286,6 +303,12 @@ export function buildRegisteredCoachResponse({
       : null,
     forward: base.forward != null
       ? preciseForward({ output, weighInsThisWeek, checkinDayName })
+      : null,
+    preCommitment: base.preCommitment != null
+      ? precisePreCommitment({ output, checkinDayName })
+      : null,
+    commitmentAnswer: base.commitmentAnswer != null
+      ? preciseCommitmentAnswer({ output, history, weekStartMs })
       : null,
     suppressed: base.suppressed,
     register: 'precise',

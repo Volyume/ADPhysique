@@ -499,6 +499,8 @@ describe('missing-data fallbacks', () => {
       decision: null,
       cue: null,
       forward: null,
+      preCommitment: null,
+      commitmentAnswer: null,
       suppressed: false,
     });
   });
@@ -675,5 +677,90 @@ describe('determinism', () => {
   test('the free line is deterministic too', () => {
     const args = { sessionsThisWeek: 2, morningWeights: weights(-0.5) };
     expect(buildFreeCoachLine(args)).toBe(buildFreeCoachLine(args));
+  });
+});
+
+// ─── S1c: pre-commitment + its next-week answer ──────────────────────────────
+
+describe('S1c pre-commitment line', () => {
+  const calOut = (change) => fakeOutput({ adjustments: { calories: { change }, training: { signal: 'hold' } } });
+
+  test('names this week calorie cut and the check-in day', () => {
+    expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday' }).preCommitment)
+      .toBe('Next Sunday, the read checks whether the trend responds to this 150 kcal cut.');
+  });
+
+  test('reads "increase" for a calorie rise, and drops the day when unknown', () => {
+    expect(buildCoachResponse({ output: calOut(120), checkinDayName: null }).preCommitment)
+      .toBe('The next read checks whether the trend responds to this 120 kcal increase.');
+  });
+
+  test('null when there is no calorie change', () => {
+    expect(buildCoachResponse({ output: fakeOutput(), checkinDayName: 'Sunday' }).preCommitment).toBeNull();
+  });
+
+  test('suppressed under an ED flag or calm mode', () => {
+    expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday', edFlagOpen: true }).preCommitment).toBeNull();
+    expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday', calmMode: true }).preCommitment).toBeNull();
+  });
+});
+
+describe('S1c commitment answer', () => {
+  const WEEK = 7 * DAY;
+  const NOW = 3 * WEEK;
+  const priorApplied = (change, gapWeeks = 1) => ([
+    { weekStart: NOW - gapWeeks * WEEK, adjustments: { calories: { change, applied: true } }, trend: { onTarget: false } },
+  ]);
+
+  test('applied cut that landed on target reads as responded', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { delta: -0.4, onTarget: true } }),
+      weekStartMs: NOW,
+      history: priorApplied(-150),
+    });
+    expect(r.commitmentAnswer)
+      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
+  });
+
+  test('applied cut that is still off target reads as no response yet', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { delta: -0.1, onTarget: false } }),
+      weekStartMs: NOW,
+      history: priorApplied(-150),
+    });
+    expect(r.commitmentAnswer)
+      .toBe("Last week's 150 kcal cut was the call to watch. The trend has not responded yet, it is still off the set rate.");
+  });
+
+  test('null when last week call was never applied', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      weekStartMs: NOW,
+      history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: false } }, trend: {} }],
+    });
+    expect(r.commitmentAnswer).toBeNull();
+  });
+
+  test('null across a gap in history (a missed week is never called "last week")', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      weekStartMs: NOW,
+      history: priorApplied(-150, 2), // prior stored week is two weeks back
+    });
+    expect(r.commitmentAnswer).toBeNull();
+  });
+
+  test('null without a weekStartMs (fails safe, never mislabels the gap)', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      history: priorApplied(-150),
+    });
+    expect(r.commitmentAnswer).toBeNull();
+  });
+
+  test('suppressed under an ED flag or calm mode', () => {
+    const args = { output: fakeOutput({ trend: { onTarget: true } }), weekStartMs: NOW, history: priorApplied(-150) };
+    expect(buildCoachResponse({ ...args, edFlagOpen: true }).commitmentAnswer).toBeNull();
+    expect(buildCoachResponse({ ...args, calmMode: true }).commitmentAnswer).toBeNull();
   });
 });
