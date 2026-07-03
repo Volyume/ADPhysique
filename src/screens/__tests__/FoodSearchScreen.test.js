@@ -55,8 +55,10 @@ jest.mock('../../lib/food/db', () => ({
   getRollupForDay: jest.fn(() => Promise.resolve(null)),
   getLoggedMealSlotsForDay: jest.fn(() => Promise.resolve([])),
   applyCuratedMealToDiary: jest.fn(),
+  applySavedMealToDiary: jest.fn(),
   upsertSlotRecent: jest.fn(() => Promise.resolve()),
   getSlotRecents: jest.fn(() => Promise.resolve([])),
+  resolveSlotRecentRef: jest.fn(() => Promise.resolve(null)),
 }));
 jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/curatedMeals', () => ({ getCuratedCandidates: jest.fn(() => []) }));

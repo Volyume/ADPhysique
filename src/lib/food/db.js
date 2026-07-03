@@ -1059,6 +1059,16 @@ export async function deleteSavedMeal(userId, id) {
  * `n > 0` callsite contract), `entryIds` is every food_entries id actually
  * created, in insert order, so a caller can offer a full Undo (C6, Wave A)
  * that removes exactly the entries this call made, not just one.
+ *
+ * T1 (world-class audit 2026-07-03): also writes ONE food_slot_recents row
+ * for the meal itself, keyed on a synthetic 'meal:<id>' ref (never written
+ * to food_entries, so it can never leak into the diary, CSV export or
+ * resolveFoodRef's food-row contract). This is the same client-only,
+ * unsynced table and the same log_count/last_logged_at ranking single foods
+ * already use for "Add again" (see food_slot_recents above); it does not
+ * touch the per-item slot-recent rows below, so a meal log doesn't inflate
+ * its individual ingredients' own recency. Derived memory only; never fails
+ * the log.
  */
 export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } = {}) {
   if (!mealSlot || !entryDate) {
@@ -1083,7 +1093,52 @@ export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } 
     });
     entryIds.push(entryId);
   }
+  if (entryIds.length > 0) {
+    // quantityG has no meaning for a whole meal (it isn't measured in grams),
+    // so 0 is stored; nothing reads last_quantity_g for a meal: ref.
+    await upsertSlotRecent(userId, { mealSlot, foodRef: `meal:${id}`, quantityG: 0 }).catch(() => {});
+  }
   return { logged: entryIds.length, entryIds };
+}
+
+/**
+ * Resolve a food_slot_recents ref for the "Add again" pool, including a
+ * saved meal's synthetic 'meal:<id>' ref (T1, world-class audit 2026-07-03).
+ * A saved meal fans out into several food_entries rows rather than one (see
+ * applySavedMealToDiary), so it has no single per-100g profile to resolve
+ * the way resolveFoodRef does for a real food or a recipe; it gets its own
+ * display shape here instead, treating the whole meal as "one serving" on a
+ * 100 g basis (the same convention resolveFoodRef already uses for a
+ * curated food with no serving size) so FoodRow's existing kcal-per-serving
+ * maths shows the meal's true totals with no change to FoodRow itself.
+ * `savedMealId` and `itemCount` ride along for the caller's relog + audit
+ * use; they are not part of resolveFoodRef's food-row contract.
+ *
+ * Every other ref (global/custom/curated/recipe) passes straight through to
+ * resolveFoodRef unchanged, so single-food and recipe resolution behave
+ * exactly as before.
+ */
+export async function resolveSlotRecentRef(userId, foodRef) {
+  if (typeof foodRef === 'string' && foodRef.startsWith('meal:')) {
+    const id = foodRef.slice('meal:'.length);
+    const meal = await getSavedMeal(userId, id);
+    if (!meal) return null;
+    return {
+      food_ref: foodRef,
+      savedMealId: meal.id,
+      itemCount: meal.itemCount,
+      name: meal.name,
+      source: null,
+      brand: null,
+      serving_g: null,
+      serving_label: `${meal.itemCount} ${meal.itemCount === 1 ? 'food' : 'foods'}`,
+      kcal_100g: meal.totals.kcal,
+      protein_100g: meal.totals.protein,
+      carbs_100g: meal.totals.carbs,
+      fat_100g: meal.totals.fat,
+    };
+  }
+  return resolveFoodRef(userId, foodRef);
 }
 
 /**
@@ -1282,6 +1337,14 @@ export async function applyMealPlanRowFromCloud(userId, row) {
  * Reuses the same per-100g maths as a normal food log. Returns the new
  * entry id, or null when the recipe is missing or has no resolvable
  * ingredients (so nothing junk is written).
+ *
+ * T1 (world-class audit 2026-07-03): also writes a food_slot_recents row,
+ * same as every other log path (FoodSearchScreen's quickLogRelog/confirmLog/
+ * logPlate, DiaryScreen's onLogUsual). Without this a recipe could never
+ * earn a place in the "Add again" ranked relog pool no matter how often it
+ * was logged; resolveFoodRef already resolves 'recipe:<id>' into a normal
+ * food-shaped row, so once it has a slot-recent row it joins that pool with
+ * zero further changes. Derived memory only; never fails the log.
  */
 export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate, servings = 1 } = {}) {
   if (!mealSlot || !entryDate) {
@@ -1293,10 +1356,11 @@ export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate
   if (!food || !(Number(food.serving_g) > 0)) return null;
   const quantityG = Math.round(food.serving_g * n * 10) / 10;
   const factor = quantityG / 100;
-  return logFoodEntry(userId, {
+  const foodRef = `recipe:${recipeId}`;
+  const entryId = await logFoodEntry(userId, {
     entryDate,
     mealSlot,
-    foodRef: `recipe:${recipeId}`,
+    foodRef,
     quantityG,
     kcal: Math.round((food.kcal_100g ?? 0) * factor),
     proteinG: Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
@@ -1304,6 +1368,8 @@ export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate
     fatG: Math.round((food.fat_100g ?? 0) * factor * 10) / 10,
     fibreG: food.fibre_100g != null ? Math.round((food.fibre_100g) * factor * 10) / 10 : null,
   });
+  await upsertSlotRecent(userId, { mealSlot, foodRef, quantityG }).catch(() => {});
+  return entryId;
 }
 
 /**

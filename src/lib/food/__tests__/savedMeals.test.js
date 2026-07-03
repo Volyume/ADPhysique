@@ -46,6 +46,7 @@ jest.mock('../../database', () => ({
 jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
 
 const food = require('../db');
+const { resolveFoodRef } = require('../sources/localCache');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -181,5 +182,74 @@ describe('applySavedMealToDiary', () => {
 
   test('requires mealSlot and entryDate', async () => {
     await expect(food.applySavedMealToDiary('u1', 'sm-1', {})).rejects.toThrow(/mealSlot and entryDate/);
+  });
+});
+
+describe('applySavedMealToDiary writes a meal-level food_slot_recents row (T1: joins the "Add again" pool)', () => {
+  function slotRecentInserts() {
+    return runCalls.filter(c => /INSERT INTO food_slot_recents/.test(c.sql));
+  }
+
+  test('upserts exactly ONE row keyed "meal:<id>", not one per item', async () => {
+    mockState.savedMealRow = { id: 'sm-1', name: 'Breakfast', items_json: JSON.stringify(ITEMS), created_at: 1, updated_at: 2 };
+    await food.applySavedMealToDiary('u1', 'sm-1', { mealSlot: 'breakfast', entryDate: '2026-05-29' });
+    const rows = slotRecentInserts();
+    expect(rows).toHaveLength(1);
+    // params: user0 slot1 ref2 lastLoggedAt3 quantity4 (see slotRecents.test.js)
+    expect(rows[0].params[0]).toBe('u1');
+    expect(rows[0].params[1]).toBe('breakfast');
+    expect(rows[0].params[2]).toBe('meal:sm-1');
+  });
+
+  test('writes nothing when every item was skipped (nothing was actually logged)', async () => {
+    const dirty = [{ foodRef: '', quantityG: 100 }, { foodRef: 'off:2', quantityG: 0 }];
+    mockState.savedMealRow = { id: 'sm-empty', name: 'Empty', items_json: JSON.stringify(dirty), created_at: 1, updated_at: 2 };
+    await food.applySavedMealToDiary('u1', 'sm-empty', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(slotRecentInserts()).toHaveLength(0);
+  });
+
+  test('writes nothing when the meal is missing', async () => {
+    mockState.savedMealRow = null;
+    await food.applySavedMealToDiary('u1', 'gone', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(slotRecentInserts()).toHaveLength(0);
+  });
+});
+
+describe('resolveSlotRecentRef (T1: the "Add again" resolver a saved meal needs)', () => {
+  test('resolves a saved meal\'s synthetic ref into a display shape carrying its totals as "one serving"', async () => {
+    mockState.savedMealRow = { id: 'sm-1', name: 'Go-to dinner', items_json: JSON.stringify(ITEMS), created_at: 1, updated_at: 2 };
+    const row = await food.resolveSlotRecentRef('u1', 'meal:sm-1');
+    expect(row).toEqual({
+      food_ref: 'meal:sm-1',
+      savedMealId: 'sm-1',
+      itemCount: 2,
+      name: 'Go-to dinner',
+      source: null,
+      brand: null,
+      serving_g: null,
+      serving_label: '2 foods',
+      kcal_100g: 400,
+      protein_100g: 18,
+      carbs_100g: 60,
+      fat_100g: 10,
+    });
+  });
+
+  test('a single-item meal reads "1 food", not "1 foods"', async () => {
+    mockState.savedMealRow = { id: 'sm-solo', name: 'Solo', items_json: JSON.stringify([ITEMS[0]]), created_at: 1, updated_at: 2 };
+    const row = await food.resolveSlotRecentRef('u1', 'meal:sm-solo');
+    expect(row.serving_label).toBe('1 food');
+  });
+
+  test('returns null for a missing/deleted meal id (the caller drops it, same as an unresolvable food ref)', async () => {
+    mockState.savedMealRow = null;
+    expect(await food.resolveSlotRecentRef('u1', 'meal:gone')).toBeNull();
+  });
+
+  test('delegates every non-meal ref to resolveFoodRef unchanged, so single-food and recipe resolution are untouched', async () => {
+    const direct = await resolveFoodRef('u1', 'curated:oats');
+    const viaResolver = await food.resolveSlotRecentRef('u1', 'curated:oats');
+    expect(direct).not.toBeNull();
+    expect(viaResolver).toEqual(direct);
   });
 });

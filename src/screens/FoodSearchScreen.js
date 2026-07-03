@@ -33,7 +33,7 @@ import {
   logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
-  upsertSlotRecent, getSlotRecents,
+  upsertSlotRecent, getSlotRecents, applySavedMealToDiary, resolveSlotRecentRef,
 } from '../lib/food/db';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
@@ -153,7 +153,11 @@ export default function FoodSearchScreen({ navigation, route }) {
       const [recentRows, favRows, disRows, customRaw] = await Promise.all([
         // "Add again" (COMP-002): this slot's most-logged foods, not the
         // global recency list. last_quantity_g rides along so the detail
-        // sheet pre-fills the portion the user used here last time.
+        // sheet pre-fills the portion the user used here last time. T1
+        // (world-class audit 2026-07-03): a saved meal or recipe that has
+        // earned its own slot-recent row (via applySavedMealToDiary /
+        // applyRecipeToDiary) ranks in this exact same list, by the exact
+        // same log_count/last_logged_at order, no separate pool.
         getSlotRecents(userId, mealSlot, 10),
         getFavourites(userId),
         getDislikes(userId),
@@ -161,7 +165,10 @@ export default function FoodSearchScreen({ navigation, route }) {
       ]);
       const recentResolved = [];
       for (const r of recentRows) {
-        const food = await resolveFoodRef(userId, r.food_ref);
+        // resolveSlotRecentRef handles a saved meal's synthetic 'meal:<id>'
+        // ref (no per-100g profile to resolve) and defers everything else,
+        // including a recipe's 'recipe:<id>' ref, to resolveFoodRef unchanged.
+        const food = await resolveSlotRecentRef(userId, r.food_ref);
         if (food) recentResolved.push({ ...food, last_quantity_g: r.last_quantity_g });
       }
       setRecents(recentResolved);
@@ -386,6 +393,42 @@ export default function FoodSearchScreen({ navigation, route }) {
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('FoodSearch.quickLogRelog', e, { foodRef: food.food_ref }); } catch (_) {}
       toast.show("Couldn't add that food, try again.", { variant: 'error', duration: 4000 });
+    } finally {
+      loggingQuickRef.current = false;
+    }
+  }
+
+  // One-tap re-log for a saved meal (T1, world-class audit 2026-07-03): a
+  // frequently-used saved meal earns a place in this same "Add again" list
+  // (see resolveSlotRecentRef), but it fans out into one food_entries row
+  // per item rather than a single scaled entry, so it reuses
+  // applySavedMealToDiary (MyMealsScreen.onLog's exact contract) instead of
+  // quickLogRelog's scaleMacros + single logFoodEntry. Undo removes every
+  // entry the meal created, not just one. Shares loggingQuickRef with
+  // quickLogRelog: only one relog can be in flight from this screen at a time.
+  async function quickLogRelogMeal(food) {
+    if (!userId || !food?.savedMealId || loggingQuickRef.current) return;
+    loggingQuickRef.current = true;
+    try {
+      audit('food.savedMeal', { mealId: food.savedMealId, mealSlot, itemCount: food.itemCount, surface: 'relog' });
+      const { logged, entryIds } = await applySavedMealToDiary(userId, food.savedMealId, { mealSlot, entryDate });
+      if (logged > 0) {
+        toast.show(`${food.name ?? 'Meal'} added.`, {
+          variant: 'undo',
+          action: {
+            label: 'Undo',
+            onPress: async () => {
+              try { await Promise.all(entryIds.map((eid) => deleteFoodEntry(eid, userId))); } catch (_) { /* already gone */ }
+            },
+          },
+        });
+      } else {
+        toast.show('This meal has no foods in it.', { variant: 'info' });
+      }
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('FoodSearch.quickLogRelogMeal', e, { mealId: food.savedMealId }); } catch (_) {}
+      toast.show("Couldn't add that meal, try again.", { variant: 'error', duration: 4000 });
     } finally {
       loggingQuickRef.current = false;
     }
@@ -674,6 +717,24 @@ export default function FoodSearchScreen({ navigation, route }) {
       );
     }
     const food = item.food;
+    // T1 (world-class audit 2026-07-03): a saved meal earns its way into
+    // this same "Add again" list via its own 'meal:<id>' slot-recent row
+    // (resolveSlotRecentRef), but it has none of the single-food affordances
+    // below (no per-100g quantity to edit in the sheet, no plate add, no
+    // favourite/dislike) since logging it means fanning out several
+    // food_entries via applySavedMealToDiary, not scaling one. A recipe's
+    // 'recipe:<id>' ref needs none of this branch: resolveFoodRef already
+    // gives it a normal food shape, so it flows through the existing
+    // single-food path below untouched.
+    if (typeof food.food_ref === 'string' && food.food_ref.startsWith('meal:')) {
+      return (
+        <FoodRow
+          food={food}
+          preference={null}
+          onPress={() => quickLogRelogMeal(food)}
+        />
+      );
+    }
     const preference = favouriteRefs.has(food.food_ref) ? 'fav'
       : dislikeRefs.has(food.food_ref) ? 'dislike'
       : null;

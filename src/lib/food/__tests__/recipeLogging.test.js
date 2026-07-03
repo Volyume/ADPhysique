@@ -124,3 +124,25 @@ describe('applyRecipeToDiary', () => {
     await expect(food.applyRecipeToDiary('u1', 'r1', {})).rejects.toThrow(/mealSlot and entryDate/);
   });
 });
+
+describe('applyRecipeToDiary writes a food_slot_recents row (T1: joins the "Add again" pool)', () => {
+  function slotRecentInserts() {
+    return runCalls.filter(c => /INSERT INTO food_slot_recents/.test(c.sql));
+  }
+
+  test('upserts one row keyed "recipe:<id>" at the logged gram amount, so a re-logged recipe can rank in Recents', async () => {
+    await food.applyRecipeToDiary('u1', 'r1', { mealSlot: 'dinner', entryDate: '2026-05-29', servings: 1 });
+    const rows = slotRecentInserts();
+    expect(rows).toHaveLength(1);
+    // params: user0 slot1 ref2 lastLoggedAt3 quantity4 (see slotRecents.test.js)
+    expect(rows[0].params[0]).toBe('u1');
+    expect(rows[0].params[1]).toBe('dinner');
+    expect(rows[0].params[2]).toBe('recipe:r1');
+    expect(rows[0].params[4]).toBe(250); // one serving = 250 g, matching the food_entries row
+  });
+
+  test('writes nothing when the recipe is unknown (nothing was logged)', async () => {
+    await food.applyRecipeToDiary('u1', 'nope', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(slotRecentInserts()).toHaveLength(0);
+  });
+});

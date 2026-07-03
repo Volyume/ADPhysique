@@ -58,8 +58,18 @@ jest.mock('../../lib/food/db', () => ({
   getRollupForDay: jest.fn(() => Promise.resolve(null)),
   getLoggedMealSlotsForDay: jest.fn(() => Promise.resolve([])),
   applyCuratedMealToDiary: jest.fn(),
+  applySavedMealToDiary: jest.fn(),
   upsertSlotRecent: jest.fn(() => Promise.resolve()),
   getSlotRecents: jest.fn(() => Promise.resolve([{ food_ref: 'off:chicken', last_quantity_g: 150 }])),
+  // T1: recents now resolve through resolveSlotRecentRef (not resolveFoodRef
+  // directly), so it can also resolve a saved meal's synthetic 'meal:<id>'
+  // ref. Every ref in THIS file is a normal food ref, so it mirrors the
+  // resolveFoodRef mock below exactly; the hold-hint behaviour under test is
+  // unaffected by that indirection.
+  resolveSlotRecentRef: jest.fn(() => Promise.resolve({
+    food_ref: 'off:chicken', name: 'Chicken breast', kcal_100g: 165,
+    protein_100g: 31, carbs_100g: 0, fat_100g: 3.6,
+  })),
 }));
 jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/curatedMeals', () => ({ getCuratedCandidates: jest.fn(() => []) }));
