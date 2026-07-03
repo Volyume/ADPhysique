@@ -21,8 +21,9 @@ import {
   loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone, pendingPerfectMonth,
   pendingLongestRunPb, seedLongestRunPbSeen,
 } from '../lib/streakState';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 
 const WEEKS = 12;
 const WEEK_MS = 7 * 86400000;
@@ -77,9 +78,14 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       const [statsList, deloadWeeks, edFlag, streakState, wellbeing] = await Promise.all([
         Promise.all(weekStarts.map((ws) => getWeeklySessionStats(userId, ws).catch(() => ({ completed: 0, planned: 0 })))),
         getDeloadWeeksInRange(userId, oldestWeekStart, currentWeekStart + WEEK_MS).catch(() => []),
-        getOpenEdPatternFlag(userId).catch(() => null),
+        // Fail CLOSED: a genuine flag-read error maps to a truthy sentinel that
+        // suppresses (via !!edFlag), never to null which would read as "no flag".
+        getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
         loadStreakState(userId),
-        getWellbeingMode().catch(() => 'read_failed'),
+        // Read wellbeing raw so a GENUINE failure is distinguishable from
+        // 'unspecified' (normal UX) and fails closed. getWellbeingMode swallows
+        // failures to 'unspecified', which would fail OPEN here.
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
 
       // Generosity (blueprint §4.1): the manual goal is never auto-raised by a
@@ -104,9 +110,9 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       }));
 
       // Suppress the run/streak surfaces under an open ED flag, a positive
-      // SCOFF screen, OR calm mode — bringing them in line with the coach
-      // surfaces. A failed wellbeing read fails closed (suppress), so a streak
-      // artefact never shows over a possibly-calm/flagged state.
+      // SCOFF screen, OR calm mode, bringing them in line with the coach
+      // surfaces. A failed ED-flag OR wellbeing read fails closed (suppress),
+      // so a streak artefact never shows over a possibly-calm/flagged state.
       const edSuppressed = !!edFlag
         || (Number.isFinite(scoffScore) && scoffScore >= 2)
         || wellbeing === 'read_failed'
