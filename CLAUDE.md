@@ -183,6 +183,19 @@ yes.
 
 ## 4. WORKFLOW RULES
 
+**NO SILENT CORNER-CUTTING OR PARKING (ABSOLUTE, founder rule 2026-07-03).**
+Never park, defer, hold, mark "for later / tunable", or ship a reduced /
+simpler / "safer" / "easier" version of specified work without an explicit
+founder decision made IN ADVANCE. The spec/research is authoritative — build it
+in FULL. Every fork between "do the full thing" and "do less" is the FOUNDER's
+call, surfaced as a detailed multiple-choice question BEFORE proceeding — never
+pre-decided, and never framed with the lighter option as the recommendation.
+If work genuinely cannot finish now, that too is a founder decision: ask, do
+not park. "I disclosed it" / "I noted it" is NOT permission — only an explicit
+founder answer is. Present options and let the founder choose; never choose the
+easy path for them. This applies retroactively: every previously parked / held
+/ deferred item must be surfaced to the founder as a question, not left sitting.
+
 **Before any task:** state assumptions; if unclear, ask. Multiple approaches →
 present them. Anything bigger than a one-liner → plan first, wait for "go".
 Work from SOURCE documents (audits/blueprints/specs) — open and read them in
