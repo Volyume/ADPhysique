@@ -111,8 +111,12 @@ If a task touches any of this: STOP and ask first.
 RootNavigator (healthConsent) must not be weakened, reordered, or made
 skippable. Data minimisation: no PII to Sentry/analytics (sentryScrub.js),
 EU-Dublin residency, share cards never include name/bodyweight/measurements/
-private notes. Consent flows fail CLOSED for new users (a transient read
-failure must not bypass the gate).
+private notes — with the single founder-approved exception (progress-photos
+programme, 2026-07-03) of the Pro before/after progress card, which may show
+bodyweight beside each photo; that card is withheld entirely under calm mode
+or an open ED flag, and name/measurements/private notes stay banned on it.
+Consent flows fail CLOSED for new users (a transient read failure must not
+bypass the gate).
 
 **Billing.** Never change billing without permission — state exactly what and
 why, wait for explicit "proceed". Product IDs `pro_monthly` and `pro_annual`
