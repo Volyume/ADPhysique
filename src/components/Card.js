@@ -26,13 +26,34 @@ const TONES = {
   neutral: colors.border,
 };
 
+// The surface tiers Card can sit on. Lets the ONE Card component absorb the
+// surface2 / surface3 boxes the app previously hand-rolled, so those stop being
+// a reason to bypass Card.
+const SURFACES = {
+  surface: colors.surface,
+  surfaceElevated: colors.surfaceElevated,
+  surface2: colors.surface2,
+  surface3: colors.surface3,
+};
+
 export default function Card({
   children,
   tone,
-  // `elevated` sits the card on the raised surface tier, for a card nested
-  // inside another card so its depth reads against the parent.
+  // `elevated` sits the card on the raised surface tier (surfaceElevated), for a
+  // card nested inside another card so its depth reads against the parent. For
+  // any other tier pass `surface` explicitly.
   elevated = false,
+  // `surface` overrides the background tier: 'surface' (default) |
+  // 'surfaceElevated' | 'surface2' | 'surface3'. Lets the one Card absorb the
+  // surface2/3 boxes the app used to hand-roll.
+  surface,
+  // `radius` overrides the corner radius token: 'hair'|'xs'|'sm'|'md'|'lg'
+  // (default)|'xl'. Lets Card express the tighter-cornered boxes (radius.md etc.)
+  // that previously had to stay hand-rolled to avoid a corner-radius regression.
+  radius: radiusKey = 'lg',
   borderless = false,
+  // `padding` is a spacing token key, or 'none' for a full-bleed card whose
+  // children self-pad (e.g. list sections with edge-to-edge rows).
   padding = 'lg',
   onPress,
   onLongPress,
@@ -41,10 +62,13 @@ export default function Card({
   accessibilityRole,
 }) {
   const accent = tone ? (TONES[tone] || TONES.primary) : null;
+  const backgroundColor = surface
+    ? (SURFACES[surface] || colors.surface)
+    : elevated ? colors.surfaceElevated : colors.surface;
+  const pad = padding === 'none' ? 0 : (spacing[padding] ?? spacing.lg);
   const cardStyle = [
     styles.base,
-    elevated && styles.elevated,
-    { padding: spacing[padding] ?? spacing.lg },
+    { backgroundColor, borderRadius: radius[radiusKey] ?? radius.lg, padding: pad },
     borderless && styles.borderless,
     // alpha.mid so the accent reads as a border, not a fill (replaces the
     // old `accent + '55'` hex concat via the withAlpha helper).
@@ -74,12 +98,12 @@ export default function Card({
 }
 
 const styles = StyleSheet.create({
+  // backgroundColor / borderRadius / padding are set per-instance in the
+  // component (so surface + radius + padding props can override); base only
+  // owns the hairline border, which every tier shares.
   base: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  elevated: { backgroundColor: colors.surfaceElevated },
   borderless: { borderWidth: 0 },
 });
