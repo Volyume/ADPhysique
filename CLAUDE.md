@@ -241,15 +241,31 @@ kill and relaunch). Founder decisions needed → ask structured multi-choice
 questions and keep working; never silently downgrade a degraded tool/method
 and present the output as if the order was followed.
 
-**Agent tier (founder 2026-07-02, INVIOLABLE).** The premium session model
-(Fable or whatever the top tier is) runs ONLY in the main loop, hands-on.
-Every subagent and every workflow agent() call MUST carry an explicit model
-of 'sonnet' or 'haiku' — an omitted model silently inherits the expensive
-session tier, which once burned a large share of a weekly token allowance on
-a review fleet. Enforced mechanically by `.claude/hooks/agent-tier-guard.py`
-(wired in `.claude/settings.json`), which blocks any Agent/Task/Workflow
-dispatch that violates this. Only the founder loosens it, by editing that
-hook.
+**Agent tier (founder 2026-07-02, INVIOLABLE; refined 2026-07-04).** The
+premium session model (Fable, or whatever the top tier is) runs ONLY in the
+main loop, hands-on. Every subagent and every workflow agent() call MUST
+carry an explicit model of 'opus', 'sonnet' or 'haiku' — an omitted model
+silently inherits the expensive session tier, which once burned a large
+share of a weekly token allowance on a review fleet. Enforced mechanically
+by `.claude/hooks/agent-tier-guard.py` (wired in `.claude/settings.json`),
+which blocks any Agent/Task/Workflow dispatch that violates this. Only the
+founder loosens it, by editing that hook.
+
+Within that allowed set, pick the tier by what the work needs, not by
+default:
+- **Opus** — the default for anything that must land at Fable-level
+  standard: audits, design/UX judgement, research synthesis, non-trivial
+  feature builds, hostile/adversarial review. Dispatched work expected to
+  match the quality bar of hands-on Fable work uses Opus.
+- **Sonnet** — solid mid-weight implementation: well-specified builds,
+  mechanical multi-file edits, test-writing against a clear spec, research
+  fan-out where a synthesis step (Opus or hands-on) will catch gaps.
+- **Haiku** — cheap, bounded, mechanical work only: basic file writes,
+  simple greps/renames, straightforward triage passes, anything narrow
+  enough that quality variance doesn't matter.
+- **Fable** — never in a subagent or workflow call. Reserved for the main
+  loop: architecture calls, safety-adjacent code, and judgement the founder
+  is relying on directly.
 
 ---
 
