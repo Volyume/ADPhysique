@@ -15,12 +15,13 @@
  *   - veg is never used as a macro sink (stays within its clamp, curated-sized);
  *   - every meal carries a real protein anchor and no meal skews protein absurdly;
  *   - the DAY calorie + macro totals still land on target (pure redistribution);
- *   - a FLOORED target degrades gracefully: per-meal balance is NOT imposed, the
- *     day is flagged for Fable's review, and the floor is never fought.
+ *   - a FLOORED target now ALSO gets per-meal balance (M-2, founder-APPROVED),
+ *     with the tighter FLOORED_PER_MEAL_BALANCE profile, and the floor is never
+ *     fought (it self-relaxes rather than break the day total).
  *
- * ED-safety: the floored case is asserted to remain flagged + at/above the floor;
- * this suite deliberately does NOT assert per-meal shaping at a floored target —
- * that is Fable's decision (see FLAG in mealPlanAssembler.assembleDayPlan).
+ * ED-safety: the floored case is asserted to remain at/above the floor (or flagged
+ * honestly). The FULL M-2 per-meal shaping at a floored target (no ~100 g plate,
+ * day total held) is pinned in mealPlanFlooredBalance.test.js.
  */
 import { assembleDayPlanBestOf } from '../mealPlanAssembler';
 import { roleOf, gramRangeOf } from '../foodRoles';
@@ -140,7 +141,7 @@ describe('determinism', () => {
   });
 });
 
-describe('FLOORED target degrades gracefully (ED-safety; Fable review)', () => {
+describe('FLOORED target gets per-meal balance too (M-2), never fighting the floor', () => {
   // A REAL floored engine target: small, light, aggressive-cut female = 1200 kcal
   // floor with a very high protein target (the audit's 297 g-steak trigger).
   const floored = calculateNutritionTargets({
@@ -152,16 +153,17 @@ describe('FLOORED target degrades gracefully (ED-safety; Fable review)', () => {
     expect(floored.floorApplied).toBe(true);
   });
 
-  test('per-meal balance is NOT imposed at a floored target, and it is flagged', () => {
+  test('per-meal balance IS imposed at a floored target (M-2), flagged, floor held', () => {
     for (const seed of [1, 2, 3, 4]) {
       const day = assembleDayPlanBestOf({
         target: { kcal: floored.targetKcal, proteinG: floored.proteinG, carbsG: floored.carbsG, fatG: floored.fatG },
         band: { kcalMin: floored.kcalMin, kcalMax: floored.kcalMax },
         prefs: { mealsPerDay: 3 }, variant: 'rest', seed, targetFloored: true,
       });
-      // Flagged for Fable: balance intentionally not applied at a floor-level target.
+      // M-2: the floor flag is still set, and per-meal balance is now applied
+      // (unless the pool is infeasible, in which case it self-relaxes and flags).
       expect(day.targetFloored).toBe(true);
-      expect(day.perMealBalanced).toBe(false);
+      expect(day.perMealBalanced || day.perMealRelaxed).toBe(true);
       // The floor is never fought: the day sits at/above the engine floor, or says
       // so honestly (never silently under the floor).
       if (day.totals.kcal < floored.kcalMin) {

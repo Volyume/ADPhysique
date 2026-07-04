@@ -327,6 +327,41 @@ const PER_MEAL_BALANCE = Object.freeze({
   carbCeilFactor: 1.7,
 });
 
+// FLOORED-TARGET per-meal balance (M-2, founder-APPROVED 2026-07-04; audit ED-1).
+// Near a floored target (a light aggressive-cut female raised to the 1200 kcal
+// floor with P165 = 3 g/kg) the day-level solver dumps protein onto one plate —
+// the audit's 297 g steak / 103 g-protein meal, reproduced here as [26,122,19] g
+// across three meals. M-2 EXTENDS the per-meal even-out to floored targets too,
+// as far as physically possible, WITHOUT ever fighting the floor:
+//   - A hard 0.55 g/kg per-meal cap is PHYSICALLY IMPOSSIBLE here: at 1200 kcal /
+//     P165 over 3 meals the even mean is 55 g/meal, so a ~30 g cap (0.55 g/kg for
+//     55 kg) would force dropping ~75 g of the prescribed protein. Instead the
+//     ceiling is the day's even per-meal protein MEAN x proteinCeilFactor — high
+//     enough to be achievable, low enough to even the plates. 1.4 (a 77 g cap
+//     here) turns the skewed [26,122,19] into an evened spread with no plate over
+//     ~77 g (e.g. [39,77,50] / [47,59,59]) while the day total is held.
+//   - The day's calorie/protein TARGET is NEVER changed (nutritionEngine owns the
+//     floor). This is pure redistribution WITHIN the day, aggregate-safe exactly
+//     as PER_MEAL_BALANCE is (ceilings sum > target, anchor floor sums < target),
+//     and it self-relaxes on an infeasible pool: the call site degrades to the
+//     unconstrained solve and flags the day, never breaking the day total or the
+//     floor (see assembleDayPlan). Worst case is exactly the pre-M-2 behaviour.
+// The protein ceiling is a touch tighter than the non-floored 1.6 because the even
+// mean is already high near the floor, so a smaller multiple still clears every
+// plate's real protein need; the anchor floor and carb ceiling are unchanged.
+const FLOORED_PER_MEAL_BALANCE = Object.freeze({
+  proteinCeilFactor: 1.4,
+  proteinFloorFactor: 0.5,
+  carbCeilFactor: 1.7,
+  // The ceiling caps the meal's TOTAL protein (anchor + incidental protein from
+  // carb/fat staples and veg), not just its protein-role grams. Near the floor a
+  // fat-role food like light cheddar can carry ~17 g protein, so a protein-role-
+  // only cap would still let a plate reach ~93 g. Capping the whole plate's
+  // protein is what actually evens the day (audit ED-1). Non-floored keeps the
+  // role-only cap (the +12 g incidental margin its test already allows).
+  mealProteinCeilTotal: true,
+});
+
 /**
  * The day-plan precision solver, extracted so it can run WITH per-meal balance
  * constraints and, if that leaves the day out of tolerance, be re-run WITHOUT
@@ -344,12 +379,22 @@ const PER_MEAL_BALANCE = Object.freeze({
  * When `perMeal` is true, each protein/carb staple additionally clamps to its
  * meal's protein/carb ceiling (and the meal anchor to its protein floor), so the
  * day cannot be closed by skewing one plate. When false, the bounds are exactly
- * the food gram ranges — bit-identical to the pre-2026-07-04 solver.
+ * the food gram ranges — bit-identical to the pre-2026-07-04 solver. `balance`
+ * selects the per-meal factor set: PER_MEAL_BALANCE for a normal target, the
+ * tighter FLOORED_PER_MEAL_BALANCE near a floored target (M-2). It defaults to
+ * PER_MEAL_BALANCE so the non-floored call is unchanged.
  */
-function solvePlacedStaples({ placed, consumed, want, perMeal }) {
+function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEAL_BALANCE }) {
   const staples = [];
   const byMealProtein = new Map();
   const byMealCarb = new Map();
+  // For the floored meal-TOTAL protein ceiling (M-2): every staple in a meal (any
+  // role) and the meal's FIXED protein (incidental protein from the veg/free items
+  // the solver never rescales), so the anchor can be capped by the meal's WHOLE
+  // protein, not only its protein-role grams.
+  const byMealAll = new Map();
+  const fixedProteinByMeal = new Map();
+  const addFixedProtein = (pi, g) => fixedProteinByMeal.set(pi, (fixedProteinByMeal.get(pi) || 0) + g);
   placed.forEach((p, pi) => {
     if (!p.components) return;
     p.components.forEach((c, ci) => {
@@ -357,7 +402,9 @@ function solvePlacedStaples({ placed, consumed, want, perMeal }) {
       if (!(item.kcal > 0) || c.g <= 0) return;
       const role = roleOf(c.food);
       // SF-1: volume foods are never a macro lever; leave them at curated grams.
-      if (role === 'veg' || role === 'free') return;
+      // Their (small) protein is still real on the plate, so it counts towards the
+      // floored meal-total protein ceiling.
+      if (role === 'veg' || role === 'free') { addFixedProtein(pi, item.proteinG); return; }
       const per = { // per-GRAM macros
         kcal: item.kcal / c.g, protein: item.proteinG / c.g,
         carbs: item.carbsG / c.g, fat: item.fatG / c.g,
@@ -365,6 +412,8 @@ function solvePlacedStaples({ placed, consumed, want, perMeal }) {
       const [lo, hi] = gramRangeOf(c.food);
       const idx = staples.length;
       staples.push({ pi, ci, role, per, lo, hi, g: c.g, baseProtein: item.proteinG });
+      if (!byMealAll.has(pi)) byMealAll.set(pi, []);
+      byMealAll.get(pi).push(idx);
       if (role === 'protein') {
         if (!byMealProtein.has(pi)) byMealProtein.set(pi, []);
         byMealProtein.get(pi).push(idx);
@@ -380,9 +429,9 @@ function solvePlacedStaples({ placed, consumed, want, perMeal }) {
   const nMeals = Math.max(1, placed.filter((p) => p.components).length);
   const evenP = want.protein / nMeals;
   const evenC = want.carbs / nMeals;
-  const pCeilG = evenP * PER_MEAL_BALANCE.proteinCeilFactor;
-  const pFloorG = evenP * PER_MEAL_BALANCE.proteinFloorFactor;
-  const cCeilG = evenC * PER_MEAL_BALANCE.carbCeilFactor;
+  const pCeilG = evenP * balance.proteinCeilFactor;
+  const pFloorG = evenP * balance.proteinFloorFactor;
+  const cCeilG = evenC * balance.carbCeilFactor;
   // Only a meal's largest protein source carries the anchor floor (a second,
   // small protein staple should not be forced up).
   const anchorIdx = new Set();
@@ -396,6 +445,15 @@ function solvePlacedStaples({ placed, consumed, want, perMeal }) {
   const otherMacroInMeal = (list, k, macro) => {
     let s = 0;
     for (const j of list) if (j !== k) s += staples[j].g * staples[j].per[macro];
+    return s;
+  };
+
+  // Sum of ALL other protein in a meal (every other staple, any role, at current
+  // grams, plus the meal's fixed veg/free protein) — for the floored meal-TOTAL
+  // protein ceiling (M-2). Non-floored keeps the role-only bound above, unchanged.
+  const otherProteinInMeal = (pi, k) => {
+    let s = fixedProteinByMeal.get(pi) || 0;
+    for (const j of (byMealAll.get(pi) || [])) if (j !== k) s += staples[j].g * staples[j].per.protein;
     return s;
   };
 
@@ -427,7 +485,10 @@ function solvePlacedStaples({ placed, consumed, want, perMeal }) {
         // Tighten the box with this meal's per-macro budget (coordinate descent
         // with a projected coupled bound; deterministic and convergent).
         if (st.role === 'protein' && st.per.protein > 0) {
-          const other = otherMacroInMeal(byMealProtein.get(st.pi) || [], k, 'protein');
+          // Floored: cap by the meal's WHOLE protein (M-2); else the role-only cap.
+          const other = balance.mealProteinCeilTotal
+            ? otherProteinInMeal(st.pi, k)
+            : otherMacroInMeal(byMealProtein.get(st.pi) || [], k, 'protein');
           hi = Math.min(hi, (pCeilG - other) / st.per.protein);
           if (anchorIdx.has(k)) lo = Math.max(lo, pFloorG / st.per.protein);
         } else if (st.role === 'carb' && st.per.carbs > 0) {
@@ -740,28 +801,31 @@ export function assembleDayPlan({
   // steak / 45 g-oats-vs-huge artefacts). The bounds are aggregate-safe, so this
   // is pure redistribution WITHIN the day — the day target is never changed.
   //
-  // ED-SAFETY / graceful degradation: near a floored target (targetFloored) we
-  // do NOT impose per-meal balance — that is deliberately Fable's call, and the
-  // constraints must never fight a floor-level target (see FLAG in the return).
-  // Otherwise we solve WITH balance; only if that leaves the day out of the hard
-  // tolerance (calories out of band, or protein short) while an unconstrained
-  // solve would have made it, do we relax for this day and record it.
+  // ED-SAFETY / graceful degradation. We ALWAYS solve WITH per-meal balance now,
+  // choosing the factor set by whether the engine floored the target:
+  //   - non-floored: PER_MEAL_BALANCE (unchanged from the 2026-07-04 build);
+  //   - floored: FLOORED_PER_MEAL_BALANCE (M-2, founder-APPROVED) — a tighter
+  //     protein ceiling (the even MEAN x 1.4, not a 0.55 g/kg cap that the floor
+  //     makes physically impossible), so the audit's [26,122,19] near-floor plate
+  //     evens out. It NEVER fights the floor: the day target is untouched, and if
+  //     balance leaves the day out of the hard tolerance (kcal out of band, or
+  //     protein short) while an unconstrained solve would have made it, we relax
+  //     for this day and flag it — worst case is exactly the pre-M-2 solve.
   const inBand = (kc) => kc >= kcalMin && kc <= kcalMax;
   const dayTolerant = (s) => inBand(s.consumed.kcal) && s.consumed.protein >= want.protein * 0.85;
   let perMealBalanced = false;
   let perMealRelaxed = false;
-  const balanced = solvePlacedStaples({ placed, consumed, want, perMeal: !targetFloored });
+  const balanceProfile = targetFloored ? FLOORED_PER_MEAL_BALANCE : PER_MEAL_BALANCE;
+  const balanced = solvePlacedStaples({ placed, consumed, want, perMeal: true, balance: balanceProfile });
   let solved = balanced;
   if (balanced.changed) {
-    if (!targetFloored) {
-      perMealBalanced = true;
-      if (!dayTolerant(balanced)) {
-        const free = solvePlacedStaples({ placed, consumed, want, perMeal: false });
-        if (free.changed && dayTolerant(free) && !dayTolerant(balanced)) {
-          solved = free;
-          perMealBalanced = false;
-          perMealRelaxed = true;
-        }
+    perMealBalanced = true;
+    if (!dayTolerant(balanced)) {
+      const free = solvePlacedStaples({ placed, consumed, want, perMeal: false });
+      if (free.changed && dayTolerant(free) && !dayTolerant(balanced)) {
+        solved = free;
+        perMealBalanced = false;
+        perMealRelaxed = true;
       }
     }
     placed = solved.placed;
@@ -824,13 +888,15 @@ export function assembleDayPlan({
     // day needed (0-20). A high count means the day only just fit; the service
     // emits it so slow-converging profiles are visible in production.
     closeOutIterations: guard,
-    // Per-meal balance signals (founder 2026-07-04). `perMealBalanced` = the
-    // per-meal protein-anchor + macro-split constraints were applied to this day.
-    // `perMealRelaxed` = they were dropped because they left the day out of
-    // tolerance (an infeasible pool). `targetFloored` = the engine floored this
-    // target, so per-meal balance was intentionally not imposed — FLAG for Fable:
-    // any per-meal shaping at a floored target is ED-safety-adjacent and must be
-    // that review's decision, never made here.
+    // Per-meal balance signals (founder 2026-07-04; floored path M-2 2026-07-04).
+    // `perMealBalanced` = the per-meal protein-anchor + macro-split constraints
+    // were applied to this day (now for floored targets too, with the tighter
+    // FLOORED_PER_MEAL_BALANCE profile). `perMealRelaxed` = they were dropped
+    // because they left the day out of tolerance (an infeasible pool), so the day
+    // fell back to the unconstrained solve — the floor is never fought.
+    // `targetFloored` = the engine floored this target; per-meal balance still
+    // applies (M-2, founder-APPROVED) but never changes the day's calorie/protein
+    // target, and self-relaxes rather than fight the floor.
     perMealBalanced,
     perMealRelaxed,
     targetFloored,
