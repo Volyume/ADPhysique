@@ -192,7 +192,7 @@ export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMea
   const snap = plan.targetSnapshot || {};
   const band = { kcalMin: snap.kcalMin, kcalMax: snap.kcalMax };
   const day = assembleDayPlanBestOf({
-    target, band, prefs: plan.prefs, variant, seed, savedMeals,
+    target, band, prefs: plan.prefs, variant, seed, savedMeals, targetFloored: targetWasFloored(snap),
   });
 
   const days = plan.days.map((d, i) => (i === idx ? day : d));
@@ -302,6 +302,9 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     prefs,
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
+    // Thread the floor flag so per-meal balance degrades gracefully near a floor
+    // (ED-safety), consistent with the week path (see assembleDayPlan).
+    targetFloored: targetWasFloored(engineTarget),
   });
   emitPlanMetrics(userId, 'day', [day]);
   const plan = buildDayPlanSnapshot({ day, engineTarget, prefs });

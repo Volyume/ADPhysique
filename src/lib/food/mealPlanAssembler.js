@@ -300,6 +300,180 @@ export function diagnoseDayPlan({
   };
 }
 
+// ─── Per-meal macro constraints (founder 2026-07-04) ────────────────────────
+//
+// The day-level precision solver (solvePlacedStaples below) minimises SUMMED
+// day-level %-deviation. Left unconstrained it will happily dump a macro onto a
+// single staple to close the day — the meal-builder audit's 500 g potato, the
+// 297 g / 103 g-protein steak, a 45 g-oats meal beside a huge one. Real coaching
+// plans spread the load: every meal carries a protein anchor and no single macro
+// absurdly dominates a plate. These factors express that as per-meal bounds the
+// solver must respect.
+//
+// AGGREGATE-SAFE BY CONSTRUCTION: the ceilings sum to MORE than the day target
+// (nMeals x even x >1) and the floor sums to LESS (nMeals x even x <1). So the
+// per-meal bounds can NEVER make the day target unreachable — they only
+// redistribute WITHIN the day. The day's calorie/macro target is untouched
+// (nutritionEngine owns it); this is pure redistribution for per-meal balance.
+const PER_MEAL_BALANCE = Object.freeze({
+  // No meal carries more than this multiple of the day's even protein share
+  // (spreads the anchor; kills the single 100 g-protein steak meal).
+  proteinCeilFactor: 1.6,
+  // Each meal's protein ANCHOR (its largest protein source) carries at least
+  // this multiple of the even share, so no meal is a negligible-protein plate.
+  proteinFloorFactor: 0.5,
+  // No meal carries more than this multiple of the even carb share (kills the
+  // 500 g-potato / carb-dumped plate; carbs land more evenly across meals).
+  carbCeilFactor: 1.7,
+});
+
+/**
+ * The day-plan precision solver, extracted so it can run WITH per-meal balance
+ * constraints and, if that leaves the day out of tolerance, be re-run WITHOUT
+ * them (graceful degradation near a floor — ED-safety). Pure: returns NEW
+ * placed[] + consumed, never mutates its inputs.
+ *
+ * Each free staple's grams is a variable; we minimise the summed squared
+ * %-deviation across kcal/protein/carbs/fat (a convex quadratic → an analytic
+ * per-variable 1-D minimum, swept a few times at 1 g resolution and clamped to
+ * each food's sane range). VEG and FREE volume foods are NEVER variables (audit
+ * SF-1): they are micronutrient/volume, not a macro the engine targets, so the
+ * solver can no longer inflate green beans to 500 g as a carb sink — they hold
+ * their curated plate size. Saved meals (no components) and pins are untouched.
+ *
+ * When `perMeal` is true, each protein/carb staple additionally clamps to its
+ * meal's protein/carb ceiling (and the meal anchor to its protein floor), so the
+ * day cannot be closed by skewing one plate. When false, the bounds are exactly
+ * the food gram ranges — bit-identical to the pre-2026-07-04 solver.
+ */
+function solvePlacedStaples({ placed, consumed, want, perMeal }) {
+  const staples = [];
+  const byMealProtein = new Map();
+  const byMealCarb = new Map();
+  placed.forEach((p, pi) => {
+    if (!p.components) return;
+    p.components.forEach((c, ci) => {
+      const item = p.items[ci];
+      if (!(item.kcal > 0) || c.g <= 0) return;
+      const role = roleOf(c.food);
+      // SF-1: volume foods are never a macro lever; leave them at curated grams.
+      if (role === 'veg' || role === 'free') return;
+      const per = { // per-GRAM macros
+        kcal: item.kcal / c.g, protein: item.proteinG / c.g,
+        carbs: item.carbsG / c.g, fat: item.fatG / c.g,
+      };
+      const [lo, hi] = gramRangeOf(c.food);
+      const idx = staples.length;
+      staples.push({ pi, ci, role, per, lo, hi, g: c.g, baseProtein: item.proteinG });
+      if (role === 'protein') {
+        if (!byMealProtein.has(pi)) byMealProtein.set(pi, []);
+        byMealProtein.get(pi).push(idx);
+      } else if (role === 'carb') {
+        if (!byMealCarb.has(pi)) byMealCarb.set(pi, []);
+        byMealCarb.get(pi).push(idx);
+      }
+    });
+  });
+  if (!staples.length) return { placed, consumed, changed: false };
+
+  // Per-meal ceilings/floors in grams, from the day's even share across meals.
+  const nMeals = Math.max(1, placed.filter((p) => p.components).length);
+  const evenP = want.protein / nMeals;
+  const evenC = want.carbs / nMeals;
+  const pCeilG = evenP * PER_MEAL_BALANCE.proteinCeilFactor;
+  const pFloorG = evenP * PER_MEAL_BALANCE.proteinFloorFactor;
+  const cCeilG = evenC * PER_MEAL_BALANCE.carbCeilFactor;
+  // Only a meal's largest protein source carries the anchor floor (a second,
+  // small protein staple should not be forced up).
+  const anchorIdx = new Set();
+  byMealProtein.forEach((list) => {
+    let best = -1; let bestG = -1;
+    list.forEach((k) => { if (staples[k].baseProtein > bestG) { bestG = staples[k].baseProtein; best = k; } });
+    if (best >= 0) anchorIdx.add(best);
+  });
+
+  // Sum of a role's CURRENT grams-of-macro across a meal's staples, excluding k.
+  const otherMacroInMeal = (list, k, macro) => {
+    let s = 0;
+    for (const j of list) if (j !== k) s += staples[j].g * staples[j].per[macro];
+    return s;
+  };
+
+  // kcal + protein are the hard gates, so weight them a touch higher.
+  const terms = [
+    { key: 'kcal', want: want.kcal, w: 2 },
+    { key: 'protein', want: want.protein, w: 1.5 },
+    { key: 'carbs', want: want.carbs, w: 1.2 },
+    { key: 'fat', want: want.fat, w: 1 },
+  ].filter((t) => t.want > 0);
+  const cur = { kcal: consumed.kcal, protein: consumed.protein, carbs: consumed.carbs, fat: consumed.fat };
+
+  for (let sweep = 0; sweep < 16; sweep += 1) {
+    let moved = false;
+    for (let k = 0; k < staples.length; k += 1) {
+      const st = staples[k];
+      // total_m(x) = base_m + per_m·x, base_m = cur_m − per_m·g.
+      // minimise Σ w·((base+per·x − want)/want)²  →  x* = −Σ[coef·(base−want)] / Σ[coef·per]
+      let num = 0; let den = 0;
+      for (const t of terms) {
+        const base = cur[t.key] - st.per[t.key] * st.g;
+        const coef = (t.w * st.per[t.key]) / (t.want * t.want);
+        num += coef * (base - t.want);
+        den += coef * st.per[t.key];
+      }
+      if (!(den > 0)) continue;
+      let lo = st.lo; let hi = st.hi;
+      if (perMeal) {
+        // Tighten the box with this meal's per-macro budget (coordinate descent
+        // with a projected coupled bound; deterministic and convergent).
+        if (st.role === 'protein' && st.per.protein > 0) {
+          const other = otherMacroInMeal(byMealProtein.get(st.pi) || [], k, 'protein');
+          hi = Math.min(hi, (pCeilG - other) / st.per.protein);
+          if (anchorIdx.has(k)) lo = Math.max(lo, pFloorG / st.per.protein);
+        } else if (st.role === 'carb' && st.per.carbs > 0) {
+          const other = otherMacroInMeal(byMealCarb.get(st.pi) || [], k, 'carbs');
+          hi = Math.min(hi, (cCeilG - other) / st.per.carbs);
+        }
+      }
+      lo = Math.ceil(lo); hi = Math.floor(hi);
+      if (hi < st.lo) hi = st.lo;   // never clamp below the food's own floor
+      if (lo > hi) lo = hi;         // the ceiling wins if it crosses the anchor floor
+      let x = Math.round(-num / den);
+      if (x < lo) x = lo; else if (x > hi) x = hi;
+      if (x !== st.g) {
+        for (const t of terms) cur[t.key] += st.per[t.key] * (x - st.g);
+        st.g = x;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  // Write solved grams back into NEW placed entries; recompute consumed from the
+  // actual placed totals (the source of truth, incl. fixed saved-meal blocks and
+  // the untouched veg/free items).
+  const nextPlaced = placed.slice();
+  staples.forEach((st) => {
+    const p = nextPlaced[st.pi];
+    const g = st.g;
+    const newItems = p.items.map((it, i) => (i === st.ci ? {
+      ...it, quantityG: g,
+      kcal: r0(st.per.kcal * g), proteinG: r1(st.per.protein * g),
+      carbsG: r1(st.per.carbs * g), fatG: r1(st.per.fat * g),
+    } : it));
+    nextPlaced[st.pi] = {
+      ...p, items: newItems,
+      components: p.components.map((cc, i) => (i === st.ci ? { ...cc, g } : cc)),
+      totals: mealTotals(newItems),
+    };
+  });
+  const nextConsumed = nextPlaced.reduce((acc, p) => ({
+    kcal: r0(acc.kcal + p.totals.kcal), protein: r1(acc.protein + p.totals.protein),
+    carbs: r1(acc.carbs + p.totals.carbs), fat: r1(acc.fat + p.totals.fat),
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  return { placed: nextPlaced, consumed: nextConsumed, changed: true };
+}
+
 // ─── The day assembler ──────────────────────────────────────────────────
 
 /**
@@ -310,6 +484,12 @@ export function diagnoseDayPlan({
  * @param target  ONE day-variant target { kcal, proteinG, carbsG, fatG }
  *                plus band { kcalMin, kcalMax } taken from the engine
  *                target via the band ratio (passed in `band`).
+ * @param targetFloored  did the engine raise this target to a safety floor?
+ *                Threaded from the engine target (assembleWeekPlan) so the
+ *                per-meal balance constraints degrade gracefully near a floor
+ *                and never fight it (ED-safety; see the precision solver). A
+ *                direct caller that does not know may omit it — the constraints
+ *                are aggregate-safe and also self-relax on an infeasible day.
  */
 export function assembleDayPlan({
   target,
@@ -319,6 +499,7 @@ export function assembleDayPlan({
   seed = 1,
   recentlyUsed = new Map(),
   savedMeals = [],
+  targetFloored = false,
 } = {}) {
   const prefs = normalisePreferences(rawPrefs);
   const rng = mulberry32(seed);
@@ -341,7 +522,7 @@ export function assembleDayPlan({
     fat: Number(target.fatG) || 0,
   };
 
-  const placed = [];
+  let placed = [];
   const usedIds = new Set();
   let consumed = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
 
@@ -550,83 +731,41 @@ export function assembleDayPlan({
   // Initial calorie close-out (a warm start before the precision solver).
   const guard = closeKcal();
 
-  // ── Macro precision solver (founder 2026-06-23: hold all macros to ~1%) ─────
-  // Replaces the old coarse 5 g protein↔carb trade (which left days protein-heavy
-  // / carb-light). Each free staple's grams is a variable; we minimise the summed
-  // squared %-deviation across kcal/protein/carbs/fat. The objective is a convex
-  // quadratic (sum of squares of linear terms), so an analytic per-variable 1-D
-  // minimum, swept a few times at 1 g resolution and clamped to each food's sane
-  // range, converges to the tightest split the fixed food pool allows. Saved
-  // meals (no components) and pins are untouched. NB fat can remain >1% when 1%
-  // is sub-gram for the chosen foods — that is whole-food granularity, not the
-  // solver.
-  const solveStaples = [];
-  placed.forEach((p, pi) => {
-    if (!p.components) return;
-    p.components.forEach((c, ci) => {
-      const item = p.items[ci];
-      if (!(item.kcal > 0) || c.g <= 0) return;
-      const per = { // per-GRAM macros
-        kcal: item.kcal / c.g, protein: item.proteinG / c.g,
-        carbs: item.carbsG / c.g, fat: item.fatG / c.g,
-      };
-      const [lo, hi] = gramRangeOf(c.food);
-      solveStaples.push({ pi, ci, per, lo, hi, g: c.g });
-    });
-  });
-  if (solveStaples.length) {
-    // kcal + protein are the hard gates, so weight them a touch higher.
-    const terms = [
-      { key: 'kcal', want: want.kcal, w: 2 },
-      { key: 'protein', want: want.protein, w: 1.5 },
-      { key: 'carbs', want: want.carbs, w: 1.2 },
-      { key: 'fat', want: want.fat, w: 1 },
-    ].filter((t) => t.want > 0);
-    const cur = { kcal: consumed.kcal, protein: consumed.protein, carbs: consumed.carbs, fat: consumed.fat };
-    for (let sweep = 0; sweep < 16; sweep += 1) {
-      let moved = false;
-      for (const st of solveStaples) {
-        // total_m(x) = base_m + per_m·x, base_m = cur_m − per_m·g.
-        // minimise Σ w·((base+per·x − want)/want)²  →  x* = −Σ[coef·(base−want)] / Σ[coef·per]
-        // with coef = w·per/want².
-        let num = 0; let den = 0;
-        for (const t of terms) {
-          const base = cur[t.key] - st.per[t.key] * st.g;
-          const coef = (t.w * st.per[t.key]) / (t.want * t.want);
-          num += coef * (base - t.want);
-          den += coef * st.per[t.key];
-        }
-        if (!(den > 0)) continue;
-        let x = Math.round(-num / den);
-        if (x < st.lo) x = st.lo; else if (x > st.hi) x = st.hi;
-        if (x !== st.g) {
-          for (const t of terms) cur[t.key] += st.per[t.key] * (x - st.g);
-          st.g = x;
-          moved = true;
+  // ── Macro precision solver (founder 2026-06-23: hold all macros to ~1%) with
+  // PER-MEAL BALANCE (founder 2026-07-04) ─────────────────────────────────────
+  // solvePlacedStaples minimises the summed squared day-level %-deviation across
+  // kcal/protein/carbs/fat. With per-meal balance on, each plate additionally
+  // respects its protein anchor floor + protein/carb ceilings, so the day can no
+  // longer be closed by dumping a macro onto one staple (the 500 g potato / 103 g
+  // steak / 45 g-oats-vs-huge artefacts). The bounds are aggregate-safe, so this
+  // is pure redistribution WITHIN the day — the day target is never changed.
+  //
+  // ED-SAFETY / graceful degradation: near a floored target (targetFloored) we
+  // do NOT impose per-meal balance — that is deliberately Fable's call, and the
+  // constraints must never fight a floor-level target (see FLAG in the return).
+  // Otherwise we solve WITH balance; only if that leaves the day out of the hard
+  // tolerance (calories out of band, or protein short) while an unconstrained
+  // solve would have made it, do we relax for this day and record it.
+  const inBand = (kc) => kc >= kcalMin && kc <= kcalMax;
+  const dayTolerant = (s) => inBand(s.consumed.kcal) && s.consumed.protein >= want.protein * 0.85;
+  let perMealBalanced = false;
+  let perMealRelaxed = false;
+  const balanced = solvePlacedStaples({ placed, consumed, want, perMeal: !targetFloored });
+  let solved = balanced;
+  if (balanced.changed) {
+    if (!targetFloored) {
+      perMealBalanced = true;
+      if (!dayTolerant(balanced)) {
+        const free = solvePlacedStaples({ placed, consumed, want, perMeal: false });
+        if (free.changed && dayTolerant(free) && !dayTolerant(balanced)) {
+          solved = free;
+          perMealBalanced = false;
+          perMealRelaxed = true;
         }
       }
-      if (!moved) break;
     }
-    // Write solved grams back; recompute consumed from the actual placed totals
-    // (the source of truth, including any fixed saved-meal blocks).
-    solveStaples.forEach((st) => {
-      const p = placed[st.pi];
-      const g = st.g;
-      const newItems = p.items.map((it, i) => (i === st.ci ? {
-        ...it, quantityG: g,
-        kcal: r0(st.per.kcal * g), proteinG: r1(st.per.protein * g),
-        carbsG: r1(st.per.carbs * g), fatG: r1(st.per.fat * g),
-      } : it));
-      placed[st.pi] = {
-        ...p, items: newItems,
-        components: p.components.map((cc, i) => (i === st.ci ? { ...cc, g } : cc)),
-        totals: mealTotals(newItems),
-      };
-    });
-    consumed = placed.reduce((acc, p) => ({
-      kcal: r0(acc.kcal + p.totals.kcal), protein: r1(acc.protein + p.totals.protein),
-      carbs: r1(acc.carbs + p.totals.carbs), fat: r1(acc.fat + p.totals.fat),
-    }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    placed = solved.placed;
+    consumed = solved.consumed;
   }
 
   const residual = {
@@ -685,6 +824,16 @@ export function assembleDayPlan({
     // day needed (0-20). A high count means the day only just fit; the service
     // emits it so slow-converging profiles are visible in production.
     closeOutIterations: guard,
+    // Per-meal balance signals (founder 2026-07-04). `perMealBalanced` = the
+    // per-meal protein-anchor + macro-split constraints were applied to this day.
+    // `perMealRelaxed` = they were dropped because they left the day out of
+    // tolerance (an infeasible pool). `targetFloored` = the engine floored this
+    // target, so per-meal balance was intentionally not imposed — FLAG for Fable:
+    // any per-meal shaping at a floored target is ED-safety-adjacent and must be
+    // that review's decision, never made here.
+    perMealBalanced,
+    perMealRelaxed,
+    targetFloored,
     seed,
   };
 }
@@ -777,6 +926,9 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
     allowCycling: allowDayCycling && prefs.variety !== 0,
   });
   const band = { kcalMin: engineTarget?.kcalMin, kcalMax: engineTarget?.kcalMax };
+  // Thread the engine's floor flag so per-meal balance degrades gracefully near a
+  // floor (ED-safety); the day flags it for Fable's review (see assembleDayPlan).
+  const targetFloored = targetWasFloored(engineTarget);
 
   const days = [];
   if (prefs.variety === 0) {
@@ -786,14 +938,14 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
     // different seeds, so identical-calorie days came out with the SAME meals
     // in a DIFFERENT ORDER — confusing, and not a repeat.
     const oneDay = assembleDayPlanBestOf({
-      target: variants.rest, band, prefs, variant: 'rest', seed, savedMeals,
+      target: variants.rest, band, prefs, variant: 'rest', seed, savedMeals, targetFloored,
     });
     week.forEach(() => days.push(oneDay));
   } else {
     const recentlyUsed = new Map(); // mealId -> days since used
     week.forEach((v, i) => {
       const day = assembleDayPlanBestOf({
-        target: variants[v], band, prefs, variant: v, seed: seed + i * 7919, recentlyUsed, savedMeals,
+        target: variants[v], band, prefs, variant: v, seed: seed + i * 7919, recentlyUsed, savedMeals, targetFloored,
       });
       days.push(day);
       recentlyUsed.forEach((age, id) => recentlyUsed.set(id, age + 1));

@@ -180,11 +180,15 @@ const TAGS = Object.freeze({
 // Role-appropriate sane portion ranges (g), so a solver can never produce
 // 700 g of chicken or 4 g of rice. Per-key overrides where a role default
 // is wrong for the food's density (oil, whey, condiment-scale items).
+// SF-2 (meal-builder audit 2026-06-13, applied 2026-07-04): veg is capped at a
+// realistic single-meal portion. 500 g of green beans in one meal is not a plate
+// anyone eats; the assembler also no longer uses veg as a carb lever (SF-1, see
+// the mealPlanAssembler precision solver), and this caps the hand-built case too.
 const ROLE_GRAM_RANGE = Object.freeze({
   protein: [50, 350],
   carb: [15, 400],
   fat: [5, 60],
-  veg: [40, 500],
+  veg: [40, 300],
   free: [5, 150],
 });
 
@@ -193,7 +197,10 @@ const GRAM_RANGE_OVERRIDES = Object.freeze({
   whey: [15, 60], soy_protein: [15, 60], pea_protein: [15, 60], vegan_protein_blend: [15, 60],
   honey: [5, 40],
   avocado: [30, 150],
-  white_potato: [80, 500], sweet_potato: [80, 500], potato_wedges: [80, 400],
+  // Starchy staples capped to a realistic single serving (2026-07-04): a large
+  // jacket/portion is ~400 g; 500 g in one meal was the solver using potato as a
+  // carb sink. Rice/pasta remain the day's larger carb levers.
+  white_potato: [80, 400], sweet_potato: [80, 400], potato_wedges: [80, 400],
   milk_skimmed: [50, 400], soy_milk: [50, 400],
   eggs: [50, 250], egg_whites: [60, 400],
   banana: [60, 240], apple: [80, 300], berries: [50, 250],
