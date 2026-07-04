@@ -28,6 +28,7 @@ import {
   getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
+import { createRaceGuard } from '../lib/food/loadRaceGuard';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
@@ -39,6 +40,7 @@ import { loadPerDayOffsets, offsetForDate, DEFAULT_PERDAY_OFFSETS } from '../lib
 import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
+import DiaryDatePicker from '../components/food/DiaryDatePicker';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -124,8 +126,20 @@ export default function DiaryScreen({ navigation }) {
   // pressed).
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
 
+  // BUG-1 (elite audit 2026-07-04): the day-load had no in-flight guard, so
+  // rapid date navigation (or a focus-triggered load landing mid-flight)
+  // could put two loads for different days in flight at once; whichever
+  // resolved LAST used to win regardless of which day it was for, briefly
+  // painting a stale day's calories/entries under the newer, currently-
+  // selected date. loadGuardRef hands out a token per load() call; a load
+  // only commits its result if it is still the most recently started one
+  // when its awaits settle, so a slower stale request is silently dropped.
+  const loadGuardRef = useRef(null);
+  if (!loadGuardRef.current) loadGuardRef.current = createRaceGuard();
+
   const load = useCallback(async () => {
     if (!userId) return;
+    const loadToken = loadGuardRef.current.next();
     const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
@@ -142,6 +156,9 @@ export default function DiaryScreen({ navigation }) {
       getLatestBodyComposition(userId).catch(() => null),
       getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
     ]);
+    // A newer load has started since this one began; drop this stale result
+    // before doing any more work with it (never mind committing it).
+    if (!loadGuardRef.current.isCurrent(loadToken)) return;
     // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
     // weight; when present we use the engine's own computeFFMFloor (with body
     // fat if logged, else its sex-based fallback), matching the coach's RED-S
@@ -174,6 +191,9 @@ export default function DiaryScreen({ navigation }) {
         return { ...entry, _name: null, _brand: null };
       }
     }));
+    // Check again: the enrichment await above is itself a second point where
+    // a newer load could have started and already committed its own result.
+    if (!loadGuardRef.current.isCurrent(loadToken)) return;
     setEntries(enriched);
     setRollup(r);
     setWaterMl(w);
@@ -389,8 +409,14 @@ export default function DiaryScreen({ navigation }) {
     toast.show('Higher-calorie day cleared.', { variant: 'info' });
   }, [canWrite, setCalorieBank, toast, userId, calorieBank, load]);
 
+  // BUG-1: this used to also fire from a plain `useEffect(() => { load(); },
+  // [load])` alongside the useFocusEffect below. useFocusEffect already
+  // re-runs on every `load` change (new selectedDate/macroCycle/refeed/sex)
+  // whenever the screen is focused, same as a bare effect would, so the two
+  // triggers doubled every load's concurrency for no benefit and made the
+  // stale-result race easier to hit. One trigger is enough: mount, refocus,
+  // and every dependency change while this tab is the one in view.
   useFocusEffect(useCallback(() => { load(); }, [load]));
-  useEffect(() => { load(); }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -586,6 +612,17 @@ export default function DiaryScreen({ navigation }) {
   function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
   function gotoToday()     { setSelectedDate(isoDate(new Date())); }
+
+  // NAV-3 (elite audit 2026-07-04): the diary only had single-day chevrons
+  // for the whole history, so correcting food from three weeks ago meant
+  // ~21 chevron taps. Tapping the date label opens the native date picker
+  // (DiaryDatePicker) to jump straight to any day; the chevrons and swipe
+  // are untouched. A read (viewing a different day), so it stays available
+  // read-only too, same as the chevrons.
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const openDatePicker = useCallback(() => setDatePickerVisible(true), []);
+  const closeDatePicker = useCallback(() => setDatePickerVisible(false), []);
+  const onPickDate = useCallback((iso) => setSelectedDate(iso), []);
 
   // C5: a horizontal swipe on the diary body is a second way to change day,
   // the chevrons (day pager row below) stay as-is. Fling only activates on a
@@ -984,7 +1021,16 @@ export default function DiaryScreen({ navigation }) {
             <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous day">
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+            {/* NAV-3: the date itself is the jump-to-date affordance, opening
+                the native date picker so any day is reachable directly. */}
+            <TouchableOpacity
+              onPress={openDatePicker}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={`${friendlyDate(selectedDate)}. Jump to a date`}
+            >
+              <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next day">
               <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -1435,6 +1481,14 @@ export default function DiaryScreen({ navigation }) {
         onApply={applyBank}
         onClear={clearBank}
         dayLabel={weekdayShort}
+      />
+      {/* NAV-3: date-jump. A read (viewing a different day), available in
+          read-only too, same as the chevrons it sits beside. */}
+      <DiaryDatePicker
+        visible={datePickerVisible}
+        valueIso={selectedDate}
+        onChange={onPickDate}
+        onClose={closeDatePicker}
       />
     </SafeAreaView>
   );
