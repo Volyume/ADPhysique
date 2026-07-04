@@ -13,9 +13,18 @@
  */
 import * as FileSystem from 'expo-file-system/legacy';
 
-const DIR = `${FileSystem.documentDirectory}progress_photos/`;
+const BASE_DIR = `${FileSystem.documentDirectory}progress_photos/`;
+const LEGACY_OWNER_FILE = `${BASE_DIR}owner.txt`;
 
-export function photoDir() { return DIR; }
+function safeUserSegment(userId) {
+  if (!userId) return null;
+  return String(userId).replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+export function photoDir(userId) {
+  const safe = safeUserSegment(userId);
+  return safe ? `${BASE_DIR}users/${safe}/` : BASE_DIR;
+}
 
 // Parse the epoch-ms timestamp from a `<ms>.jpg` filename, or null if it isn't
 // one of ours (so stray files never crash the gallery).
@@ -27,30 +36,40 @@ export function timestampFromName(name) {
 // Newest-first ordering of a raw filename list into display rows. Pure.
 export function orderPhotos(names) {
   return (names || [])
-    .map((name) => ({ name, uri: DIR + name, ts: timestampFromName(name) }))
+    .map((name) => ({ name, uri: BASE_DIR + name, ts: timestampFromName(name) }))
     .filter((p) => p.ts != null)
     .sort((a, b) => b.ts - a.ts);
 }
 
-export async function ensurePhotoDir() {
+function orderPhotosInDir(names, dir) {
+  return (names || [])
+    .map((name) => ({ name, uri: dir + name, ts: timestampFromName(name) }))
+    .filter((p) => p.ts != null)
+    .sort((a, b) => b.ts - a.ts);
+}
+
+export async function ensurePhotoDir(userId) {
+  const dir = photoDir(userId);
   try {
-    const info = await FileSystem.getInfoAsync(DIR);
-    if (!info.exists) await FileSystem.makeDirectoryAsync(DIR, { intermediates: true });
+    const info = await FileSystem.getInfoAsync(dir);
+    if (!info.exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
   } catch (_) { /* tolerate */ }
 }
 
-export async function listProgressPhotos() {
-  await ensurePhotoDir();
+export async function listProgressPhotos(userId) {
+  const dir = photoDir(userId);
+  await ensurePhotoDir(userId);
   try {
-    return orderPhotos(await FileSystem.readDirectoryAsync(DIR));
+    return orderPhotosInDir(await FileSystem.readDirectoryAsync(dir), dir);
   } catch (_) { return []; }
 }
 
 // Copy a picked/captured image into the private dir under a timestamp name.
 // `nowMs` is injectable for tests/determinism.
-export async function saveProgressPhoto(srcUri, nowMs) {
+export async function saveProgressPhoto(srcUri, nowMs, userId) {
   if (!srcUri) return null;
-  await ensurePhotoDir();
+  await ensurePhotoDir(userId);
+  const dir = photoDir(userId);
   let ts = Number.isFinite(nowMs) ? nowMs : Date.now();
   // Collision guard (gap #11): the filename IS the photo id, so two saves in
   // the same millisecond would copy to an identical path and silently
@@ -58,12 +77,12 @@ export async function saveProgressPhoto(srcUri, nowMs) {
   // `<ms>.jpg` scheme and the timestampFromName regex are preserved, the id
   // just lands on the next free millisecond. Best-effort: if existence can't be
   // probed we fall through to the copy (matching the old behaviour).
-  let uri = `${DIR}${ts}.jpg`;
+  let uri = `${dir}${ts}.jpg`;
   try {
     // eslint-disable-next-line no-await-in-loop
     while ((await FileSystem.getInfoAsync(uri)).exists) {
       ts += 1;
-      uri = `${DIR}${ts}.jpg`;
+      uri = `${dir}${ts}.jpg`;
     }
   } catch (_) { /* can't probe; fall through and copy under the current ts */ }
   await FileSystem.copyAsync({ from: srcUri, to: uri });
@@ -85,13 +104,11 @@ export async function deleteProgressPhoto(uri) {
 // user uses the screen, so existing installs pick it up on their next visit;
 // with no marker the check fails CLOSED (ProLocked, never the gallery).
 
-const OWNER_FILE = `${DIR}owner.txt`;
-
 export async function markPhotosOwner(userId) {
   if (!userId) return;
   try {
     await ensurePhotoDir();
-    await FileSystem.writeAsStringAsync(OWNER_FILE, String(userId));
+    await FileSystem.writeAsStringAsync(LEGACY_OWNER_FILE, String(userId));
   } catch (_) { /* best-effort; the guard fails closed without it */ }
 }
 
@@ -103,9 +120,16 @@ export async function markPhotosOwner(userId) {
 export async function photosViewableBy(userId) {
   if (!userId) return false;
   try {
-    const photos = await listProgressPhotos();
-    if (photos.length === 0) return false;
-    const owner = await FileSystem.readAsStringAsync(OWNER_FILE);
+    const scoped = await listProgressPhotos(userId);
+    if (scoped.length > 0) return true;
+    const legacy = await listProgressPhotos();
+    if (legacy.length === 0) return false;
+    const owner = await FileSystem.readAsStringAsync(LEGACY_OWNER_FILE);
     return String(owner).trim() === String(userId);
   } catch (_) { return false; }
+}
+
+export async function wipeProgressPhotoDirectory() {
+  await FileSystem.deleteAsync(BASE_DIR, { idempotent: true });
+  return true;
 }

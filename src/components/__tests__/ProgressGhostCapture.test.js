@@ -113,13 +113,17 @@ test('capture saves the photo, then records the pose, then calls onCaptured (in 
     await captureBtn.props.onPress();
   });
 
-  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg');
+  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg', undefined, undefined);
   expect(upsertPhotoMeta).toHaveBeenCalledWith(
     undefined, // no signed-in user in this bare test store
     '1700000000000.jpg',
     { pose: 'side' },
   );
-  expect(onCaptured).toHaveBeenCalledWith('1700000000000.jpg');
+  expect(onCaptured).toHaveBeenCalledWith('1700000000000.jpg', {
+    name: '1700000000000.jpg',
+    ts: 1700000000000,
+    uri: 'file:///photos/1700000000000.jpg',
+  });
   // Order is load-bearing: the meta row keys off the saved filename.
   expect(order).toEqual(['save', 'meta']);
 });

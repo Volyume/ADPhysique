@@ -15,8 +15,7 @@
  *     under the shared fail-closed suppression gate — a double guard with the
  *     component's own self-suppression;
  *   - the Share entry is Pro-gated AND withheld under suppression;
- *   - the calm-mode wellbeing note is byte-identical to the pre-upgrade wording
- *     (the base screen's raw fail-closed read must not be weakened);
+ *   - the suppression copy stays neutral and does not show analysis pressure;
  *   - the E10 read-only (free-tier) rules: no add, tiles inert (no editable
  *     viewer, no delete), Compare still available (pure viewing).
  */
@@ -105,8 +104,6 @@ async function render(photos = [NEW, MID, OLD], {
   useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
   useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
   usePhotoSuppression.mockReturnValue(suppressed);
-  // The screen reads the wellbeing flag RAW via AsyncStorage (fail-closed
-  // sweep, 2026-07-03) rather than through the getWellbeingMode() helper.
   await AsyncStorage.setItem(WELLBEING_KEY, mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
   let tree;
@@ -278,7 +275,7 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     listProgressPhotos.mockClear();
     await act(async () => { await viewer.props.onDelete(OLD.name); });
     expect(deleteProgressPhoto).toHaveBeenCalledWith(OLD.uri);
-    expect(deletePhotoMeta).toHaveBeenCalledWith(OLD.name);
+    expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', OLD.name);
     expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
   });
 });
@@ -330,22 +327,18 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
   });
 });
 
-describe('ProgressPhotosScreen wellbeing gate unchanged', () => {
-  test('calm-mode note keeps the ED calm guidance, with the feature present', async () => {
+describe('ProgressPhotosScreen suppression copy', () => {
+  test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    // The privacy wording was reworded (founder 2026-07-03: "not shared"
-    // contradicted the deliberate share option), but the ED calm guidance must
-    // stay: use only if it helps, skip if not.
     expect(text).toContain('Use these only if they help you, and skip them if they do not.');
     expect(text).toContain('nothing is shared unless you choose to');
-    // Compare stays reachable in calm mode when NOT otherwise suppressed (the
-    // suppression hook is the single gate; here it reports false).
-    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
+    expect(text).toContain('detailed scan estimates are hidden right now');
+    expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });
 
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
-    const tree = await render([NEW, OLD], { mode: 'normal' });
+    const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('We never upload or sync your photos, and nothing is shared unless you choose to.');
     expect(text).not.toContain('Not synced, not shared');

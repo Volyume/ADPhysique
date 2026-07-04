@@ -17,6 +17,7 @@ import path from 'path';
 
 const root = path.resolve(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const relPath = (p) => path.relative(root, p).split(path.sep).join('/');
 
 const WEIGHT_SURFACES = [
   'src/components/WeightTrendCard.js',
@@ -57,7 +58,7 @@ describe('RollingNumber: commissioned surfaces only', () => {
     const importers = walk(path.join(root, 'src'))
       .filter((p) => !p.endsWith(`components${path.sep}RollingNumber.js`))
       .filter((p) => /from '.*RollingNumber'/.test(fs.readFileSync(p, 'utf8')))
-      .map((p) => path.relative(root, p))
+      .map(relPath)
       .sort();
     expect(importers).toEqual([...COMMISSIONED].sort());
   });
@@ -74,7 +75,7 @@ describe('RollingNumber: commissioned surfaces only', () => {
     expect(fs.existsSync(path.join(root, 'src/components/StartGlow.js'))).toBe(false);
     const importers = walk(path.join(root, 'src'))
       .filter((p) => /from '.*StartGlow'/.test(fs.readFileSync(p, 'utf8')))
-      .map((p) => path.relative(root, p));
+      .map(relPath);
     expect(importers).toEqual([]);
   });
 

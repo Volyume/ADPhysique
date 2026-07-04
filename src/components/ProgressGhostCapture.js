@@ -40,6 +40,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import useAppStore from '../store/useAppStore';
@@ -52,6 +53,7 @@ import {
   spacing,
   radius,
   type,
+  fontWeight,
   iconSize,
   hitSlop,
   withAlpha,
@@ -80,6 +82,8 @@ const OPACITY_MIN = 0.15;
 const OPACITY_MAX = 0.85;
 const OPACITY_DEFAULT = 0.3;
 const OPACITY_STEP = 0.05;
+const CAMERA_FACING_PREF = '@volyume_progress_scan_camera_facing';
+const TIMER_PREF = '@volyume_progress_scan_timer_seconds';
 
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;
@@ -149,6 +153,8 @@ export default function ProgressGhostCapture({
   onCaptured,
   onClose,
   onFallback,
+  title,
+  subtitle,
 }) {
   const toast = useToast();
   const userId = useAppStore((s) => s.user?.id);
@@ -160,11 +166,30 @@ export default function ProgressGhostCapture({
   const [opacity, setOpacity] = useState(OPACITY_DEFAULT);
   const [showGrid, setShowGrid] = useState(true);
   const [facing, setFacing] = useState('back');
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [countdown, setCountdown] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [tilt, setTilt] = useState(null); // degrees; null => no level sensor
 
   const cameraAvailable = !!CameraView;
   const granted = !!permission?.granted;
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [savedFacing, savedTimer] = await Promise.all([
+          AsyncStorage.getItem(CAMERA_FACING_PREF),
+          AsyncStorage.getItem(TIMER_PREF),
+        ]);
+        if (!alive) return;
+        if (savedFacing === 'front' || savedFacing === 'back') setFacing(savedFacing);
+        const n = Number(savedTimer);
+        if ([0, 5, 10].includes(n)) setTimerSeconds(n);
+      } catch (_) { /* keep defaults */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   // Ask once when we have a permission object that is not yet granted and the
   // OS still lets us ask. Denied-for-good routes to the fallback below.
@@ -209,10 +234,10 @@ export default function ProgressGhostCapture({
     try {
       const pic = await cam.takePictureAsync({ quality: 0.7 });
       if (!pic?.uri) return;
-      const saved = await saveProgressPhoto(pic.uri);
+      const saved = await saveProgressPhoto(pic.uri, undefined, userId);
       if (!saved?.name) return;
       await upsertPhotoMeta(userId, saved.name, { pose });
-      onCaptured?.(saved.name);
+      onCaptured?.(saved.name, saved);
     } catch (e) {
       logError('ProgressGhostCapture.capture', e, { pose });
       toast.show('Could not save that photo. Please try again.', { variant: 'error' });
@@ -220,6 +245,40 @@ export default function ProgressGhostCapture({
       setCapturing(false);
     }
   }, [capturing, userId, pose, onCaptured, toast]);
+
+  const startCapture = useCallback(() => {
+    if (capturing || countdown != null) return;
+    if (timerSeconds > 0) {
+      setCountdown(timerSeconds);
+      return;
+    }
+    capture();
+  }, [capture, capturing, countdown, timerSeconds]);
+
+  useEffect(() => {
+    if (countdown == null) return undefined;
+    if (countdown <= 0) {
+      setCountdown(null);
+      capture();
+      return undefined;
+    }
+    const id = setTimeout(() => setCountdown((n) => (n == null ? null : n - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [capture, countdown]);
+
+  const chooseTimer = useCallback((seconds) => {
+    const next = [0, 5, 10].includes(seconds) ? seconds : 0;
+    setTimerSeconds(next);
+    AsyncStorage.setItem(TIMER_PREF, String(next)).catch(() => {});
+  }, []);
+
+  const flipCamera = useCallback(() => {
+    setFacing((f) => {
+      const next = f === 'back' ? 'front' : 'back';
+      AsyncStorage.setItem(CAMERA_FACING_PREF, next).catch(() => {});
+      return next;
+    });
+  }, []);
 
   // ── Fallback surface: no camera module or permission declined ─────────────
   if (!cameraAvailable || (permission && !permission.granted && !permission.canAskAgain)) {
@@ -317,18 +376,25 @@ export default function ProgressGhostCapture({
             />
           </View>
         ) : null}
+
+        {countdown != null ? (
+          <View style={styles.countdownWrap} pointerEvents="none" accessible={false}>
+            <Text style={styles.countdownText}>{countdown}</Text>
+            <Text style={styles.countdownHint}>Step into the frame</Text>
+          </View>
+        ) : null}
       </CameraView>
 
       {/* Top bar: framing copy + close. */}
       <View style={styles.topBar} pointerEvents="box-none">
         <View style={styles.topCopy} pointerEvents="none">
           <Text style={styles.title}>
-            {hasReference ? 'Line up your last photo' : 'Take your progress photo'}
+            {title || (hasReference ? 'Line up your last photo' : 'Take your progress photo')}
           </Text>
           <Text style={styles.subtitle}>
-            {hasReference
+            {subtitle || (hasReference
               ? 'Match the angle and distance from last time. Your own pace.'
-              : 'Frame it however suits you. Your own pace.'}
+              : 'Frame it however suits you. Your own pace.')}
           </Text>
         </View>
         <Pressable
@@ -346,6 +412,23 @@ export default function ProgressGhostCapture({
       <View style={styles.controls} pointerEvents="box-none">
         {hasReference ? <OpacitySlider value={opacity} onChange={setOpacity} /> : null}
 
+        <View style={styles.timerRow}>
+          {[0, 5, 10].map((seconds) => (
+            <Pressable
+              key={seconds}
+              style={[styles.timerChip, timerSeconds === seconds && styles.timerChipActive]}
+              onPress={() => chooseTimer(seconds)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: timerSeconds === seconds }}
+              accessibilityLabel={seconds === 0 ? 'Timer off' : `${seconds} second timer`}
+            >
+              <Text style={[styles.timerChipText, timerSeconds === seconds && styles.timerChipTextActive]}>
+                {seconds === 0 ? 'Off' : `${seconds}s`}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <View style={styles.controlRow} pointerEvents="box-none">
           <Pressable
             style={styles.pillBtn}
@@ -360,18 +443,18 @@ export default function ProgressGhostCapture({
 
           <Pressable
             style={styles.captureBtn}
-            onPress={capture}
-            disabled={capturing}
+            onPress={startCapture}
+            disabled={capturing || countdown != null}
             accessibilityRole="button"
-            accessibilityLabel="Take photo"
-            accessibilityState={{ disabled: capturing }}
+            accessibilityLabel={timerSeconds > 0 ? `Start ${timerSeconds} second timer` : 'Take photo'}
+            accessibilityState={{ disabled: capturing || countdown != null }}
           >
             <View style={styles.captureInner} />
           </Pressable>
 
           <Pressable
             style={styles.pillBtn}
-            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            onPress={flipCamera}
             hitSlop={hitSlop}
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
@@ -419,6 +502,29 @@ const styles = StyleSheet.create({
     width: 80,
     height: 2,
     borderRadius: radius.hair,
+  },
+  countdownWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '38%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  countdownText: {
+    ...type.display,
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  countdownHint: {
+    ...type.bodySm,
+    color: withAlpha(colors.textPrimary, 0.9),
+    backgroundColor: withAlpha(colors.background, 0.5),
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
 
   // Top bar.
@@ -502,6 +608,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: withAlpha(colors.background, 0.5),
+  },
+  timerChip: {
+    minWidth: 48,
+    minHeight: 34,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  timerChipActive: {
+    backgroundColor: colors.primaryFill,
+  },
+  timerChipText: {
+    ...type.caption,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.bold,
+  },
+  timerChipTextActive: {
+    color: colors.onPrimary,
   },
   pillBtn: {
     width: 48,

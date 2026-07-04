@@ -1550,7 +1550,101 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `ALTER TABLE partner_cheers ADD COLUMN kind TEXT DEFAULT 'here'`,
   ],
+  // v56, Progress Scan foundation. Local-only, no cloud counterpart:
+  //   1) rebuild progress_photo_meta as user-scoped so one account cannot read
+  //      another account's photo metadata on a shared device;
+  //   2) create scan-session tables for the flagship Progress Scan flow.
+  // Raw photos, assets and analysis stay on-device and are deliberately NOT in
+  // SYNC_REGISTRY.
+  [
+    migrateProgressPhotoMetaUserScope,
+    `CREATE TABLE IF NOT EXISTS progress_scan_sessions (
+      id                         TEXT PRIMARY KEY NOT NULL,
+      user_id                    TEXT NOT NULL,
+      captured_at                INTEGER NOT NULL,
+      status                     TEXT NOT NULL DEFAULT 'draft',
+      analysis_status            TEXT NOT NULL DEFAULT 'none',
+      consent_version            TEXT,
+      camera_facing              TEXT,
+      timer_seconds              INTEGER NOT NULL DEFAULT 0,
+      required_poses_complete    INTEGER NOT NULL DEFAULT 0,
+      estimate_body_fat_percent  REAL,
+      estimate_range_low         REAL,
+      estimate_range_high        REAL,
+      estimate_confidence        TEXT,
+      estimate_source            TEXT,
+      trend_direction            TEXT,
+      trend_magnitude_pct_points REAL,
+      quality_score              REAL,
+      quality_label              TEXT,
+      model_version              TEXT,
+      estimator_version          TEXT,
+      signals_json               TEXT,
+      abstention_reasons_json    TEXT,
+      bias_flags_json            TEXT,
+      copy_summary               TEXT,
+      created_at                 INTEGER NOT NULL,
+      updated_at                 INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS progress_scan_assets (
+      id                      TEXT PRIMARY KEY NOT NULL,
+      scan_id                 TEXT NOT NULL,
+      user_id                 TEXT NOT NULL,
+      pose                    TEXT NOT NULL,
+      photo_name              TEXT NOT NULL,
+      uri                     TEXT NOT NULL,
+      taken_at                INTEGER NOT NULL,
+      quality_score           REAL,
+      landmark_confidence     REAL,
+      segmentation_confidence REAL,
+      blur_score              REAL,
+      lighting_score          REAL,
+      framing_score           REAL,
+      camera_tilt_degrees     REAL,
+      created_at              INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_progress_photo_meta_user_taken ON progress_photo_meta(user_id, taken_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_progress_scan_sessions_user_time ON progress_scan_sessions(user_id, captured_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_progress_scan_assets_scan ON progress_scan_assets(scan_id, pose)',
+  ],
 ];
+
+async function migrateProgressPhotoMetaUserScope(d) {
+  const cols = await d.getAllAsync('PRAGMA table_info(progress_photo_meta)').catch(() => []);
+  if (!Array.isArray(cols) || cols.length === 0) {
+    await d.execAsync(`CREATE TABLE IF NOT EXISTS progress_photo_meta (
+      user_id    TEXT,
+      name       TEXT NOT NULL,
+      taken_at   INTEGER NOT NULL,
+      pose       TEXT,
+      weight_kg  REAL,
+      note       TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, name)
+    )`);
+    return;
+  }
+  if (cols.some((c) => c?.name === 'user_id')) return;
+
+  await d.execAsync('ALTER TABLE progress_photo_meta RENAME TO progress_photo_meta_legacy_v55');
+  await d.execAsync(`CREATE TABLE IF NOT EXISTS progress_photo_meta (
+    user_id    TEXT,
+    name       TEXT NOT NULL,
+    taken_at   INTEGER NOT NULL,
+    pose       TEXT,
+    weight_kg  REAL,
+    note       TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, name)
+  )`);
+  await d.execAsync(`INSERT OR REPLACE INTO progress_photo_meta
+      (user_id, name, taken_at, pose, weight_kg, note, created_at, updated_at)
+    SELECT NULL, name, taken_at, pose, weight_kg, note, created_at, updated_at
+      FROM progress_photo_meta_legacy_v55`);
+  await d.execAsync('DROP TABLE progress_photo_meta_legacy_v55');
+}
 
 // E3 search: the FTS5 index DDL, exported as a named function so the
 // migration test can drive the REAL statements against a real SQLite build
@@ -4104,6 +4198,7 @@ export const WIPE_DIRECT_TABLES = [
   // per-slot food-logging memory. plan_folders (migration 089) and
   // food_slot_recents (client-only) both DELETE cleanly by user_id.
   'plan_folders', 'food_slot_recents',
+  'progress_photo_meta', 'progress_scan_sessions', 'progress_scan_assets',
 ];
 
 export async function wipeAllUserData(userId) {
@@ -4185,6 +4280,20 @@ export async function wipeAllUserData(userId) {
         // shouldn't abort the whole wipe.
         logError(`database.wipeAllUserData.${table}`, e, { userId });
       }
+    }
+
+    try {
+      await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL');
+    } catch (e) {
+      logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
+    }
+
+    try {
+      // Lazy require keeps expo-file-system out of database.js's module graph.
+      // eslint-disable-next-line global-require
+      await require('./progressPhotos').wipeProgressPhotoDirectory();
+    } catch (e) {
+      logError('database.wipeAllUserData.progress_photo_files', e, { userId });
     }
 
     // 6. Custom exercises. Canonical seed exercises are shared library data

@@ -36,6 +36,7 @@ import {
   activityDayKey,
   getActivePeakWeekPlan,
 } from '../lib/database';
+import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { summariseWeekCardio, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
@@ -1012,6 +1013,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // the coach has enough data).
   const [holdReceipt, setHoldReceipt] = useState(null);
   const [calmMode, setCalmMode] = useState(false);
+  const [progressScanCoachContext, setProgressScanCoachContext] = useState(null);
   const [checkinDayName, setCheckinDayName] = useState(null);
   // U-B-1 §3: the "More adjustments" secondary zone is collapsed by default.
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1449,7 +1451,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Fail closed: an unreadable wellbeing read tightens the response (calm),
       // matching the open-ED-flag path; getWellbeingMode swallows failures.
       const wbMode = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
-      setCalmMode(isCalm(wbMode) || wbMode === 'read_failed');
+      const calmNow = isCalm(wbMode) || wbMode === 'read_failed';
+      setCalmMode(calmNow);
       // Check-in day for the forward-pull anchor; same preference read as
       // HomeScreen. Falls back to "the next check-in" when unset. The numeric
       // day also feeds the A3 hold receipt's unlock date below.
@@ -1575,6 +1578,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // possibly-flagged user (matches the contest-countdown read above).
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
       const edPatternOpen = !!openFlag;
+      const scanCoachContext = await getProgressScanCoachSummary(user.id, {
+        suppressed: edPatternOpen || calmNow,
+      }).catch(() => null);
 
       // Cardio (QA P2/P3/D1): the week's logged sessions vs the applied target,
       // so the coach can escalate/hold from real compliance, flag high load,
@@ -1657,6 +1663,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         cardioWeekSummary,
         cardioEnabled: userProfile?.cardioEnabled !== false,
       });
+      const resultEdPatternOpen = edPatternOpen
+        || !!result.edPatternFired
+        || !!(result.heldDecisions ?? []).some(d => d.type === 'ed_pattern_lockout');
+      setProgressScanCoachContext(resultEdPatternOpen || calmNow ? null : scanCoachContext);
 
       // Persist ED-pattern state machine transition + telemetry.
       // Raise on first fire, clear on confirmed clearance.
@@ -1932,6 +1942,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // flag the chip drops to neutral entirely. The weight numeral itself is
   // always textPrimary (set on the value below), colour lives on the icon.
   const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
+  const canShowProgressScanCoachContext = !!progressScanCoachContext && !edPatternOpen && !calmMode;
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
@@ -2247,6 +2258,16 @@ export default function CoachOutputScreen({ navigation, route }) {
             />
           )}
         </Reanimated.View>
+
+        {canShowProgressScanCoachContext ? (
+          <View style={styles.planEditCard} accessibilityRole="summary">
+            <Text style={styles.planEditHead}>Progress Scan context</Text>
+            <Text style={styles.planEditBody}>
+              {progressScanCoachContext.copy}
+              {' I am treating this as low-confidence trend context, not a reason to change calories on its own.'}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Opt-in "share your week", only on a genuinely great, ED-safe week
             (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}

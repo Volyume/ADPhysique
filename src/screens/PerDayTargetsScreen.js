@@ -52,8 +52,8 @@ export default function PerDayTargetsScreen() {
       if (bodyWeight?.weightKg > 0) {
         try {
           const ffm = computeFFMFloor(bodyWeight.weightKg, {
-            bodyFatPercent: bodyComp?.body_fat_percent ?? null,
-            bodyFatSource: bodyComp?.body_fat_source ?? null,
+            bodyFatPercent: bodyComp?.bodyFatPercent ?? null,
+            bodyFatSource: bodyComp?.bodyFatSource ?? null,
             sex,
           });
           floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });

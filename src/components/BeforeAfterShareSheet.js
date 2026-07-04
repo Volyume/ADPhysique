@@ -263,7 +263,7 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
     let alive = true;
     const names = [older, newer].filter(Boolean).map((p) => p.name);
     if (names.length === 0) { setMetaMap({}); return undefined; }
-    getPhotoMetaMap(names).then((m) => {
+    getPhotoMetaMap(names, userId).then((m) => {
       if (!alive) return;
       const map = m || {};
       setMetaMap(map);
