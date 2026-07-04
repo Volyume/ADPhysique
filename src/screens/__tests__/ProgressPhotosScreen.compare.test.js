@@ -72,7 +72,8 @@ import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { listProgressPhotos, deleteProgressPhoto } from '../../lib/progressPhotos';
 import { deletePhotoMeta } from '../../lib/progressPhotoMeta';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
-import ProgressPhotosScreen from '../ProgressPhotosScreen';
+import ProgressPhotosScreen, { filterAndSort } from '../ProgressPhotosScreen';
+import PhotoDateRangeSheet from '../../components/PhotoDateRangeSheet';
 
 // Same formatter the screen uses, so the expected labels track the ICU data.
 const fmt = (ts) => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -193,6 +194,71 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('See your progress over time');
     expect(text).toContain('How it works');
+  });
+});
+
+// Sort + date-range navigation (NAV-4). Neutral controls that compose with the
+// pose filter; no cadence, no streak, no comparison forcing. buildTimeline
+// groups by contiguous month, so oldest-first simply reverses the sections.
+describe('ProgressPhotosScreen timeline sort toggle', () => {
+  const headers = (tree) => flashList(tree).props.data
+    .filter((d) => d.type === 'header').map((d) => d.label);
+
+  test('defaults to newest-first, and the Oldest toggle reverses the order', async () => {
+    const tree = await render();
+    expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
+    await press(tree, 'Sort oldest first');
+    expect(headers(tree)).toEqual(['January 2026', 'March 2026', 'June 2026']);
+    // First tile of the first row is now the OLDEST photo.
+    const first = flashList(tree).props.data.find((d) => d.type === 'row');
+    expect(first.photos[0].name).toBe(OLD.name);
+    // Toggling back restores newest-first.
+    await press(tree, 'Sort newest first');
+    expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
+  });
+});
+
+describe('ProgressPhotosScreen date-range filter', () => {
+  const headers = (tree) => flashList(tree).props.data
+    .filter((d) => d.type === 'header').map((d) => d.label);
+  const rangeSheet = (tree) => tree.root.findAllByType(PhotoDateRangeSheet)[0];
+
+  test('applying a From bound narrows the timeline to photos on or after it', async () => {
+    const tree = await render(); // OLD (Jan), MID (Mar), NEW (Jun)
+    expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
+    // Apply "from 1 March 2026" (drops January's OLD photo). The sheet hands the
+    // screen day-bounded ms; drive it directly to exercise the screen wiring.
+    const fromMs = new Date(2026, 2, 1).getTime();
+    await act(async () => { rangeSheet(tree).props.onApply({ fromMs, toMs: null }); });
+    expect(headers(tree)).toEqual(['June 2026', 'March 2026']);
+    expect(flashList(tree).props.data.some((d) => d.type === 'header' && d.label === 'January 2026')).toBe(false);
+    // Clearing the range restores the full timeline.
+    await press(tree, 'Clear the date filter');
+    expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
+  });
+});
+
+describe('filterAndSort (pure)', () => {
+  const items = [
+    { name: 'a', takenAt: 100, pose: 'front' },
+    { name: 'b', takenAt: 200, pose: 'side' },
+    { name: 'c', takenAt: 300, pose: 'front' },
+  ];
+
+  test('newest-first by default, oldest-first when asked', () => {
+    expect(filterAndSort(items).map((p) => p.name)).toEqual(['c', 'b', 'a']);
+    expect(filterAndSort(items, { sortOrder: 'oldest' }).map((p) => p.name)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('a date range narrows the list to the inclusive bounds', () => {
+    expect(filterAndSort(items, { rangeFrom: 150, rangeTo: 250 }).map((p) => p.name)).toEqual(['b']);
+    expect(filterAndSort(items, { rangeFrom: 200 }).map((p) => p.name)).toEqual(['c', 'b']);
+    expect(filterAndSort(items, { rangeTo: 200 }).map((p) => p.name)).toEqual(['b', 'a']);
+  });
+
+  test('pose, range and sort compose', () => {
+    expect(filterAndSort(items, { poseFilter: 'front', rangeFrom: 150, sortOrder: 'oldest' }).map((p) => p.name))
+      .toEqual(['c']);
   });
 });
 

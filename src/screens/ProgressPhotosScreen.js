@@ -11,7 +11,7 @@ import Button from '../components/Button';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import {
-  colors, spacing, radius, fontSize, fontWeight, type,
+  colors, spacing, radius, fontSize, fontWeight, type, iconSize,
 } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
@@ -28,6 +28,7 @@ import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
+import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -47,8 +48,23 @@ const POSES = [
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 
+// Timeline sort. Newest-first is the unchanged default; oldest-first lets
+// someone read forwards from their first photo. Neutral temporal wording only,
+// never "before/after" or any transformation framing (spec PART 2). buildTimeline
+// groups by contiguous month, so it works with either direction unchanged.
+const SORTS = [
+  { key: 'newest', label: 'Newest', a11y: 'Sort newest first' },
+  { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
+];
+
 function formatDay(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch (_) { return ''; }
+}
+
+// Compact date for the range pill (no year, to fit); the sheet shows full dates.
+function formatShort(ts) {
+  try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
   catch (_) { return ''; }
 }
 
@@ -84,6 +100,22 @@ export function buildTimeline(list) {
   return out;
 }
 
+// Compose the pose filter, the date-range filter and the sort order into the
+// timeline source list. Pure, so the screen test can drive it directly. The
+// date bounds are inclusive epoch-ms day bounds (rangeFrom = start of a day,
+// rangeTo = end of a day); either may be null to leave that side open. This is
+// neutral navigation of the user's own photos only (spec PART 2): it never
+// nudges, ranks or forces a comparison.
+export function filterAndSort(list, {
+  poseFilter = 'all', sortOrder = 'newest', rangeFrom = null, rangeTo = null,
+} = {}) {
+  let out = poseFilter === 'all' ? list : list.filter((p) => p.pose === poseFilter);
+  if (Number.isFinite(rangeFrom)) out = out.filter((p) => p.takenAt >= rangeFrom);
+  if (Number.isFinite(rangeTo)) out = out.filter((p) => p.takenAt <= rangeTo);
+  const dir = sortOrder === 'oldest' ? 1 : -1;
+  return [...out].sort((a, b) => (a.takenAt - b.takenAt) * dir);
+}
+
 export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
@@ -116,6 +148,14 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [busy, setBusy] = useState(false);
   const [calm, setCalm] = useState(false);
   const [poseFilter, setPoseFilter] = useState('all');
+  // Timeline navigation (neutral, spec PART 2): a newest/oldest sort and an
+  // optional date-range filter. Both compose with the pose filter; both are
+  // pure viewing of the user's own photos and never touch the suppression,
+  // compare/share, or weight rules.
+  const [sortOrder, setSortOrder] = useState('newest');
+  const [rangeFrom, setRangeFrom] = useState(null);
+  const [rangeTo, setRangeTo] = useState(null);
+  const [rangeOpen, setRangeOpen] = useState(false);
 
   // Overlay surfaces (all device-local; rendered as Modals over the timeline).
   const [viewerName, setViewerName] = useState(null);
@@ -273,13 +313,23 @@ export default function ProgressPhotosScreen({ navigation }) {
     return { name: p.name, uri: p.uri, ts: p.ts, takenAt, pose: (m && m.pose) || null };
   }), [photos, metaMap]);
 
-  // The current pose scope, newest-first for a descending timeline.
-  const filtered = useMemo(() => {
-    const list = poseFilter === 'all' ? enriched : enriched.filter((p) => p.pose === poseFilter);
-    return [...list].sort((a, b) => b.takenAt - a.takenAt);
-  }, [enriched, poseFilter]);
+  // The current scope: pose filter, then date-range filter, then sort. Defaults
+  // (all poses, no range, newest-first) reproduce the previous behaviour exactly.
+  const filtered = useMemo(
+    () => filterAndSort(enriched, {
+      poseFilter, sortOrder, rangeFrom, rangeTo,
+    }),
+    [enriched, poseFilter, sortOrder, rangeFrom, rangeTo],
+  );
 
   const timeline = useMemo(() => buildTimeline(filtered), [filtered]);
+
+  const hasRange = Number.isFinite(rangeFrom) || Number.isFinite(rangeTo);
+  // Plain label for the date-range pill; "to" reads calmer than a dash and
+  // sidesteps the em-dash lint entirely.
+  const rangeLabel = hasRange
+    ? `${Number.isFinite(rangeFrom) ? formatShort(rangeFrom) : 'Any'} to ${Number.isFinite(rangeTo) ? formatShort(rangeTo) : 'Any'}`
+    : 'Any dates';
 
   function openGhostCapture() {
     if (useAppStore.getState().tier !== 'pro') return;
@@ -440,6 +490,51 @@ export default function ProgressPhotosScreen({ navigation }) {
         </View>
       )}
 
+      {/* Neutral timeline navigation: sort order and an optional date range.
+          Both are pure viewing controls (spec PART 2): no cadence, no streak,
+          no comparison forcing. They compose with the pose filter above and
+          read as the same chip family. */}
+      {!loading && photos.length > 0 && (
+        <View style={styles.controlRow}>
+          <View style={styles.sortGroup} accessibilityLabel="Sort order">
+            {SORTS.map((s) => {
+              const active = s.key === sortOrder;
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.sortChip, active && styles.filterChipActive]}
+                  onPress={() => setSortOrder(s.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={s.a11y}
+                >
+                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{s.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity
+            style={[styles.datesChip, hasRange && styles.datesChipActive]}
+            onPress={() => setRangeOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
+          >
+            <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
+            <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+            {hasRange ? (
+              <TouchableOpacity
+                onPress={() => { setRangeFrom(null); setRangeTo(null); }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Clear the date filter"
+              >
+                <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </TouchableOpacity>
+        </View>
+      )}
+
       {showActions && (
         <View style={styles.actionRow}>
           {canCompare && (
@@ -496,7 +591,13 @@ export default function ProgressPhotosScreen({ navigation }) {
       ) : timeline.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="images-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.emptyText}>No photos with this pose yet.</Text>
+          <Text style={styles.emptyText}>
+            {poseFilter !== 'all' && hasRange
+              ? 'No photos match this pose and date range.'
+              : hasRange
+                ? 'No photos in this date range.'
+                : 'No photos with this pose yet.'}
+          </Text>
         </View>
       ) : (
         <FlashList
@@ -577,6 +678,16 @@ export default function ProgressPhotosScreen({ navigation }) {
         onConfirm={onDetailsConfirm}
         onCancel={onDetailsCancel}
       />
+
+      {/* Date-range filter for the timeline. Neutral navigation only; its own
+          Modal, only mounted while open. */}
+      <PhotoDateRangeSheet
+        visible={rangeOpen}
+        fromMs={rangeFrom}
+        toMs={rangeTo}
+        onApply={({ fromMs, toMs }) => { setRangeFrom(fromMs); setRangeTo(toMs); setRangeOpen(false); }}
+        onCancel={() => setRangeOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -596,6 +707,24 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: colors.primaryFill },
   filterChipText: { ...type.label, color: colors.textMuted },
   filterChipTextActive: { color: colors.onPrimary },
+  // Sort + date-range row: same chip family as the pose filter above.
+  controlRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  },
+  sortGroup: { flexDirection: 'row', gap: spacing.xs, flex: 1 },
+  sortChip: {
+    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
+    borderRadius: radius.sm, backgroundColor: colors.surface2,
+  },
+  datesChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radius.sm, backgroundColor: colors.surface2,
+  },
+  datesChipActive: { backgroundColor: colors.primaryBg },
+  datesChipText: { ...type.label, color: colors.textMuted },
+  datesChipTextActive: { color: colors.primary },
   actionRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
