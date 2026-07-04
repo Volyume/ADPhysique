@@ -1073,6 +1073,12 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     // Internal-only tags consumed by trimToTimeBudget, stripped before output.
     exObj._m = muscle;                              // owning muscle
     exObj._req = covered.has(entry.sub) && requiredSubs.includes(entry.sub); // covers a required subregion
+    // Internal-only tags read by assignSupersets: the param tier (compound vs
+    // machine vs isolation) and the equipment-modality proximity proxy. Both
+    // are stripped before output alongside _m/_req/_muscle.
+    exObj._paramKey = entry.p;
+    exObj._eq = Array.isArray(entry.eq) ? entry.eq : [];
+    exObj._equipmentCategory = entry.equipmentCategory ?? null;
     result.push(exObj);
   }
 
@@ -1964,9 +1970,13 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
 //
 // Mutates entries in place by adding `supersetGroupId` to paired pairs.
 
-// Muscle pairs that superset cleanly. Symmetric, pair-lookup checks both
-// directions. Excludes same-muscle pairs and competing pairs like
-// chest+triceps or back+biceps (shared fatigue from compounds).
+// Muscle pairs that superset cleanly WITHOUT competing for fatigue. Symmetric
+// (pair-lookup checks both directions). This is the tier-3 "non-competing"
+// floor: it excludes same-muscle pairs and the synergist pairs that share
+// fatigue from a compound (chest+triceps, back+biceps, chest+front_delts,
+// front_delts+triceps, both never listed) so the only synergist crosstalk the
+// matcher can ever consider is already ruled out here. True antagonists live
+// in ANTAGONIST_PAIRS below and are ranked ABOVE these.
 const SUPERSET_COMPATIBLE = {
   // Push ↔ Pull (antagonist)
   chest:       ['back', 'biceps', 'rear_delts', 'abs', 'calves'],
@@ -1993,6 +2003,114 @@ function canSuperset(muscleA, muscleB) {
   return Array.isArray(compat) && compat.includes(muscleB);
 }
 
+// True antagonist pairs across a single joint: the textbook agonist-antagonist
+// superset (each muscle opposes the other's action, so neither pre-fatigues the
+// other and both express near-full load). Ranked highest by the matcher.
+const ANTAGONIST_PAIRS = [
+  ['chest', 'back'],           // horizontal push / pull
+  ['biceps', 'triceps'],       // elbow flexion / extension
+  ['quads', 'hamstrings'],     // knee extension / flexion
+  ['front_delts', 'rear_delts'], // shoulder flexion / horizontal abduction
+];
+
+function isAntagonistPair(muscleA, muscleB) {
+  return ANTAGONIST_PAIRS.some(
+    ([x, y]) => (muscleA === x && muscleB === y) || (muscleA === y && muscleB === x),
+  );
+}
+
+// Param tier for an already-built exercise entry. Prefers the internal
+// `_paramKey` tag; falls back to the rest period (mod/heavy compound >= 150,
+// machine 120, isolation otherwise) so the matcher still works on any entry.
+function supersetParam(ex) {
+  if (ex._paramKey) return ex._paramKey;
+  const r = ex.restSec ?? 0;
+  if (r >= 150) return 'mod_compound';
+  if (r >= 120) return 'machine';
+  return 'isolation';
+}
+
+// Equipment MODALITY, used as a gym-proximity proxy. The engine has no explicit
+// gym-location coordinate, so modality stands in for "which zone of the gym a
+// lift lives in": selectorised/plate-loaded machines and the Smith frame are
+// the machine zone; cables share the pin/pulley area (machines and cables both
+// carry the `machines_cables` equipment profile, so they are treated as
+// adjacent); dumbbells are the rack; barbells / EZ / landmine are the
+// racks-and-platforms zone; bodyweight is portable. Derived from the granular
+// equipmentCategory when the library supplies it, else the exercise name, else
+// the equipment-profile list. Returns 'other' when genuinely ambiguous.
+function supersetModality(ex) {
+  const cat = ex._equipmentCategory;
+  if (cat) {
+    if (cat === 'machine_selectorised' || cat === 'machine_plate_loaded' || cat === 'smith') return 'machine';
+    if (cat === 'cable') return 'cable';
+    if (cat === 'dumbbell') return 'dumbbell';
+    if (cat === 'barbell' || cat === 'ez_bar' || cat === 'landmine') return 'barbell';
+    if (cat === 'bodyweight' || cat === 'band') return 'bodyweight';
+  }
+  const name = (ex.exerciseName || '').toLowerCase();
+  const has = (kw) => name.includes(kw);
+  if (has('push-up') || has('pull-up') || has('plank') || has('rollout')
+      || has('nordic') || has('inverted row') || has('sissy') || has('glute bridge')
+      || has('bodyweight')) return 'bodyweight';
+  if (has('cable') || has('rope') || has('pushdown') || has('pulldown')
+      || has('pull-through') || has('crossover') || has('pullover')
+      || has('woodchop') || has('pallof') || has('face pull')) return 'cable';
+  if (has('machine') || has('leg press') || has('hack squat') || has('pendulum')
+      || has('pec deck') || has('smith')) return 'machine';
+  if (has('dumbbell')) return 'dumbbell';
+  if (has('barbell') || has('ez bar') || has('ez-bar') || has('t-bar')
+      || has('skull crusher') || has('preacher') || has('landmine')) return 'barbell';
+  // Fall back to the equipment-profile list: a lift available in exactly one
+  // profile zone belongs to that zone; anything else is left ambiguous.
+  const eq = Array.isArray(ex._eq) ? ex._eq : [];
+  const mc = eq.includes('machines_cables');
+  const db = eq.includes('dumbbells_only');
+  const bb = eq.includes('barbell_plates');
+  if (mc && !db && !bb) return 'machine';
+  if (db && !mc && !bb) return 'dumbbell';
+  if (bb && !mc && !db) return 'barbell';
+  return 'other';
+}
+
+// Proximity between two modalities. 'same' (same zone) is ideal, 'adjacent'
+// (machine/cable share a zone; bodyweight is portable; ambiguous 'other' is
+// left neutral) is acceptable, 'far' means opposite ends of the gym and is
+// rejected outright.
+const MACHINE_ZONE = new Set(['machine', 'cable']);
+function modalityProximity(modA, modB) {
+  if (modA === 'other' || modB === 'other') return 'adjacent';
+  if (modA === 'bodyweight' || modB === 'bodyweight') return 'adjacent';
+  if (modA === modB) return 'same';
+  if (MACHINE_ZONE.has(modA) && MACHINE_ZONE.has(modB)) return 'adjacent';
+  return 'far';
+}
+
+// Relationship tier for a candidate pair. Lower is better:
+//   1  true antagonist across a joint (textbook agonist-antagonist)
+//   2  deliberate compound (machine) -> same-area isolation (post-exhaust)
+//   3  non-competing complementary (small-muscle filler, delt/arm, etc.)
+//  null  reject (same-muscle without the compound->isolation intent, or a
+//        synergist / incompatible relationship)
+function relationshipTier(exA, exB) {
+  const mA = exA._muscle;
+  const mB = exB._muscle;
+  if (!mA || !mB) return null;
+  if (mA === mB) {
+    // Same muscle only pairs as a deliberate compound -> isolation set: one
+    // member a machine compound, the other an isolation. Two isolations (or
+    // two machines) of one muscle back to back is not a coach-logical superset.
+    const pA = supersetParam(exA);
+    const pB = supersetParam(exB);
+    const oneMachine = pA === 'machine' || pB === 'machine';
+    const oneIsolation = pA === 'isolation' || pB === 'isolation';
+    return (oneMachine && oneIsolation && pA !== pB) ? 2 : null;
+  }
+  if (isAntagonistPair(mA, mB)) return 1;
+  if (canSuperset(mA, mB)) return 3;
+  return null;
+}
+
 // Goal families that benefit most from supersets (volume + pump emphasis).
 // Keyed off `internalGoal` (legacy IDs), the strength_size phase deliberately
 // stays OUT of this set so compound work isn't rushed under fatigue.
@@ -2002,6 +2120,19 @@ const SUPERSET_GOAL_ALLOWLIST = new Set([
   'bikini', 'wellness', 'figure', 'womens_physique',
 ]);
 
+// Tiered PRACTICAL superset matcher (replaces the old greedy first-adjacent
+// walk). For every eligible accessory pair it scores, in priority order:
+//   1. Relationship quality  (relationshipTier: antagonist > compound->isolation
+//      > non-competing filler; synergists and same-muscle junk rejected).
+//   2. Equipment/location    (modalityProximity: same zone > adjacent zone;
+//      cross-gym pairs rejected outright).
+//   3. Safety                (every existing gate kept: opener protected, no
+//      restSec >= 150 member, <= 2 pairs/workout, quads+hams once, beginners
+//      and strength goals excluded, and no member that pre-fatigues a later
+//      compound of the same muscle).
+// Great-or-nothing: if no pair clears the bar, the slot gets NO superset.
+// Deterministic: candidate pairs are ranked by a fixed key and stable index
+// order, no randomness.
 function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) {
   if (!Array.isArray(exercises) || exercises.length < 4) return;
   // Gate: skip if beginner (form takes priority over time efficiency)
@@ -2014,7 +2145,7 @@ function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) 
   if (!goalAllows && !timeConstrained) return;
 
   // Find the start of the accessory portion: skip leading exercises that look
-  // like heavy compounds (long rest period > 150s indicates main lift).
+  // like heavy compounds (long rest period >= 150s indicates main lift).
   let accessoryStart = 0;
   while (
     accessoryStart < exercises.length &&
@@ -2023,41 +2154,117 @@ function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) 
   // Always leave at least the first exercise alone, even if rest is short.
   if (accessoryStart === 0) accessoryStart = 1;
 
-  // Walk adjacent pairs from the accessory portion. Cap pairs per workout at 2
-  // so we don't superset every accessory, that's exhausting and the engine
-  // shouldn't make every session feel like circuit training.
-  const MAX_PAIRS_PER_WORKOUT = 2;
-  let pairsAssigned = 0;
-  let quadsHamsPairAlreadyUsed = false;
-  let i = accessoryStart;
-  while (i < exercises.length - 1 && pairsAssigned < MAX_PAIRS_PER_WORKOUT) {
-    const a = exercises[i];
-    const b = exercises[i + 1];
-    // Skip if either is already paired (defensive, shouldn't happen on first
-    // assignment) or either is a heavy compound (long rest period).
-    if (a.supersetGroupId != null || b.supersetGroupId != null
-        || (a.restSec ?? 0) >= 150 || (b.restSec ?? 0) >= 150) {
-      i++;
-      continue;
-    }
-    if (canSuperset(a._muscle, b._muscle)) {
-      const isQuadsHamsPair =
-        (a._muscle === 'quads' && b._muscle === 'hamstrings') ||
-        (a._muscle === 'hamstrings' && b._muscle === 'quads');
-      if (isQuadsHamsPair && quadsHamsPairAlreadyUsed) {
-        i++;
-        continue;
-      }
-      const groupId = `sg_${i}_${pairsAssigned}`;
-      a.supersetGroupId = groupId;
-      b.supersetGroupId = groupId;
-      if (isQuadsHamsPair) quadsHamsPairAlreadyUsed = true;
-      pairsAssigned++;
-      i += 2; // skip past the pair so we don't try to chain
-    } else {
-      i++;
+  // For the pre-fatigue guard: the latest position at which each muscle appears
+  // as a compound (restSec >= 150). A candidate whose muscle is trained by a
+  // compound LATER in the session must not be pre-fatigued by a superset.
+  const lastCompoundPos = new Map();
+  for (let k = 0; k < exercises.length; k++) {
+    if ((exercises[k].restSec ?? 0) >= 150 && exercises[k]._muscle) {
+      lastCompoundPos.set(exercises[k]._muscle, k);
     }
   }
+  function preFatiguesLaterCompound(ex, pos) {
+    const last = lastCompoundPos.get(ex._muscle);
+    return last != null && last > pos;
+  }
+
+  // Eligible accessory indices: past the opener, short rest, not a compound.
+  const eligible = [];
+  for (let k = accessoryStart; k < exercises.length; k++) {
+    if ((exercises[k].restSec ?? 0) < 150) eligible.push(k);
+  }
+
+  const MAX_PAIRS_PER_WORKOUT = 2;
+  const paired = new Set();       // indices already assigned to a pair
+  const assignedPairs = [];       // { first, second } in intended session order
+  let quadsHamsPairAlreadyUsed = false;
+
+  const proximityRank = { same: 0, adjacent: 1 };
+
+  for (let n = 0; n < MAX_PAIRS_PER_WORKOUT; n++) {
+    let best = null; // { i, j, tier, prox, first, second }
+    for (let ai = 0; ai < eligible.length; ai++) {
+      const i = eligible[ai];
+      if (paired.has(i)) continue;
+      for (let bj = ai + 1; bj < eligible.length; bj++) {
+        const j = eligible[bj];
+        if (paired.has(j)) continue;
+        const a = exercises[i];
+        const b = exercises[j];
+
+        // Relationship quality bar.
+        const tier = relationshipTier(a, b);
+        if (tier == null) continue;
+
+        // Equipment/location practicality bar (reject cross-gym pairs).
+        const prox = modalityProximity(supersetModality(a), supersetModality(b));
+        if (prox === 'far') continue;
+
+        // Safety: never pre-fatigue a later compound of the same muscle.
+        if (preFatiguesLaterCompound(a, i) || preFatiguesLaterCompound(b, j)) continue;
+
+        // Safety: quads+hams antagonist pair at most once per workout.
+        const isQuadsHamsPair =
+          (a._muscle === 'quads' && b._muscle === 'hamstrings') ||
+          (a._muscle === 'hamstrings' && b._muscle === 'quads');
+        if (isQuadsHamsPair && quadsHamsPairAlreadyUsed) continue;
+
+        // Intended order: for a compound->isolation set, the compound (machine)
+        // leads; otherwise keep session order (earlier index first).
+        let first = i;
+        let second = j;
+        if (tier === 2 && supersetParam(a) === 'isolation') {
+          first = j;
+          second = i;
+        }
+
+        const candidate = {
+          i, j, first, second, isQuadsHamsPair,
+          tier,
+          proxRank: proximityRank[prox] ?? 2,
+          indexSum: i + j,
+        };
+        // Rank: relationship tier, then proximity, then earliest indices.
+        if (best == null
+            || candidate.tier < best.tier
+            || (candidate.tier === best.tier && candidate.proxRank < best.proxRank)
+            || (candidate.tier === best.tier && candidate.proxRank === best.proxRank
+                && candidate.indexSum < best.indexSum)) {
+          best = candidate;
+        }
+      }
+    }
+
+    if (best == null) break; // no pair clears the bar: great-or-nothing.
+
+    const groupId = `sg_${best.first}_${n}`;
+    exercises[best.first].supersetGroupId = groupId;
+    exercises[best.second].supersetGroupId = groupId;
+    paired.add(best.i);
+    paired.add(best.j);
+    if (best.isQuadsHamsPair) quadsHamsPairAlreadyUsed = true;
+    assignedPairs.push({ first: best.first, second: best.second });
+  }
+
+  if (assignedPairs.length === 0) return;
+
+  // Reorder so paired members sit adjacently (first member then its partner),
+  // preserving the relative order of everything else. The live session and the
+  // persisted routine key off supersetGroupId, but keeping partners adjacent
+  // keeps the plan readable and matches long-standing behaviour.
+  const partnerAfter = new Map(); // firstIdx -> secondIdx
+  const skip = new Set();         // secondIdx (emitted next to its first)
+  for (const p of assignedPairs) {
+    partnerAfter.set(p.first, p.second);
+    skip.add(p.second);
+  }
+  const reordered = [];
+  for (let k = 0; k < exercises.length; k++) {
+    if (skip.has(k)) continue;
+    reordered.push(exercises[k]);
+    if (partnerAfter.has(k)) reordered.push(exercises[partnerAfter.get(k)]);
+  }
+  exercises.splice(0, exercises.length, ...reordered);
 }
 
 export function generatePlan(inputs) {
@@ -2203,9 +2410,10 @@ function _generatePlanInner(inputs) {
     // Assign superset pairings while we still have the internal _muscle tag
     // available. Function mutates entries in place adding `supersetGroupId`.
     assignSupersets(trimmed, { goal, experience, sessionLengthMinutes });
-    // Strip internal-only tags (_m, _req used by trimming; _muscle by
-    // assignSupersets). supersetGroupId is public and survives the strip.
-    const clean = trimmed.map(({ _m, _req, _muscle, ...rest }) => rest);
+    // Strip internal-only tags (_m, _req used by trimming; _muscle, _paramKey,
+    // _eq, _equipmentCategory by assignSupersets). supersetGroupId is public
+    // and survives the strip.
+    const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, ...rest }) => rest);
     const dur = Math.ceil(estimateSessionMinutes(clean, equipment));
     const out = { name: w.name, exercises: clean, estimatedDurationMinutes: dur };
     // A session that the time-trim left meaningfully over the preferred length
