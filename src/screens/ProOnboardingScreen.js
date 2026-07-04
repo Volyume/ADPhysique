@@ -77,6 +77,32 @@ function daysToFreqBucket(daysPerWeek) {
 const SEX_OPTIONS = [{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }];
 const ACCEPTED_SEX_VALUES = SEX_OPTIONS.map((o) => o.value);
 
+// ONBOARD-001: height bounds (cm) for the required-details gate. Height feeds
+// BMR and the calorie / FFM targets, so the step-2 gate refuses to advance until
+// the entered height parses to a realistic figure. The band is deliberately
+// wide, it spans the 13-100 age range the wizard allows, while still rejecting
+// typos (a single digit, or a body weight typed into the height field). The
+// nutrition engine keeps its OWN [100, 250] clamp; this gate is the user-facing
+// refusal so a default is never silently treated as a confirmed height.
+const MIN_HEIGHT_CM = 120;
+const MAX_HEIGHT_CM = 250;
+
+// Resolve the step-2 height inputs to a single cm value, in whichever unit the
+// user is using. Returns NaN when the required field is blank, so the button's
+// canContinue predicate and advanceFrom2 read the SAME result and can never
+// drift apart (F11 spirit, mirroring the sex gate). Imperial requires feet;
+// inches default to 0 for an exact "N ft" height.
+function resolveHeightCm(units, cm, ft, inches) {
+  if (units === 'imperial') {
+    return ft.trim() !== '' ? ftInToCm(ft, inches) : NaN;
+  }
+  return parseFloat(cm);
+}
+
+function isValidHeightCm(hcm) {
+  return Number.isFinite(hcm) && hcm >= MIN_HEIGHT_CM && hcm <= MAX_HEIGHT_CM;
+}
+
 const EXPERIENCE_OPTIONS = [
   { value: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
   { value: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
@@ -178,9 +204,15 @@ export default function ProOnboardingScreen({ navigation }) {
   const [sex, setSex] = useState(null);
   // OB-5: age starts empty too (see the body-weight note above).
   const [age, setAge] = useState('');
-  const [heightCm, setHeightCm] = useState('175');
-  const [heightFt, setHeightFt] = useState('5');
-  const [heightIn, setHeightIn] = useState('9');
+  // ONBOARD-001 (audit): height starts BLANK and joins sex / body weight / age
+  // as an explicit-entry field. The old '175' cm / 5 ft 9 in seed was a real,
+  // plausible height that validated untouched, so calorie / FFM / BMR targets
+  // could be computed on a height the user never confirmed. The example values
+  // now live in the placeholders; the step-2 Continue stays disabled
+  // (canContinue) and advanceFrom2 refuses until a realistic height is entered.
+  const [heightCm, setHeightCm] = useState('');
+  const [heightFt, setHeightFt] = useState('');
+  const [heightIn, setHeightIn] = useState('');
 
   // Step 2, training setup (all dropdowns / segments)
   const [experience, setExperience] = useState(null);
@@ -474,6 +506,15 @@ export default function ProOnboardingScreen({ navigation }) {
       appAlert('Age', 'Enter your age (13 to 100).');
       return;
     }
+    // Height is REQUIRED (ONBOARD-001): it feeds BMR and the calorie / FFM
+    // targets. No silent 175cm default, refuse to advance until a realistic
+    // height is entered in whichever unit the user is using. This matches the
+    // Continue button's canContinue exactly (both call the shared resolver).
+    const enteredHeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
+    if (!isValidHeightCm(enteredHeightCm)) {
+      appAlert('Height', 'Enter your height so we can calculate your calorie targets.');
+      return;
+    }
     emitStepDone(2);
     setStep(3);
   }
@@ -628,7 +669,13 @@ export default function ProOnboardingScreen({ navigation }) {
       const ageNum = parseInt(age, 10) || null;
 
       const safeWeightKg = (!isNaN(bwKg) && bwKg > 0) ? bwKg : 80;
-      const safeHeightCm = hcm || 175;
+      // ONBOARD-001: height is gated in step 2 (advanceFrom2 + canContinue both
+      // require a realistic height), so hcm is the user's confirmed entry here.
+      // No 175cm fallback, a silent default would feed BMR / calorie / FFM as if
+      // the user had provided it. The nutrition engine keeps its own finite-guard
+      // (safeHeight clamp) for the unreachable corrupt-draft edge; the screen
+      // never fabricates a plausible height that reads as user data.
+      const safeHeightCm = hcm;
       const safeAge = ageNum || 28;
       // Parse body fat the same way NutritionTargetsScreen does, and only treat
       // it as set when it is a sane percentage, so a typo can't poison the calc.
@@ -919,11 +966,15 @@ export default function ProOnboardingScreen({ navigation }) {
       ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
       : parseBodyWeightToKg(bodyWeight, localBWUnits);
     const step2Age = parseInt(age, 10);
+    // ONBOARD-001: height is a required field too. Resolve it through the same
+    // shared helper advanceFrom2 uses so the button and the gate can never drift.
+    const step2HeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
     const canContinue =
       !!firstName.trim()
       && (sex === 'male' || sex === 'female')
       && !!step2BwKg && !Number.isNaN(step2BwKg) && step2BwKg >= 30 && step2BwKg <= 300
-      && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100;
+      && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100
+      && isValidHeightCm(step2HeightCm);
     return (
       <SafeAreaView key="step-2" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
