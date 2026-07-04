@@ -64,6 +64,24 @@ describe('computeEWMA', () => {
     expect(computeEWMA(null)).toEqual([]);
   });
 
+  // DATA-001 (EN-6 parity with weeklyCoach.computeEWMA): a non-positive weight
+  // is a corrupt row. It must be dropped so a single 0 kg / negative import or
+  // sync artefact cannot drag the smoothed trend into a fake rapid-loss signal.
+  test('drops non-positive weights (negative and zero), keeping only real weigh-ins', () => {
+    const data = [
+      { weightKg: 80, date: '2024-01-01' },
+      { weightKg: -5, date: '2024-01-02' },
+      { weightKg: 0, date: '2024-01-03' },
+      { weightKg: 81, date: '2024-01-04' },
+    ];
+    const result = computeEWMA(data);
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r.weightKg)).toEqual([80, 81]);
+    // Every surviving point smooths only positive values, so the trend stays in
+    // a sane positive band and is never dragged toward 0 / negative.
+    result.forEach((r) => expect(r.ewma).toBeGreaterThan(70));
+  });
+
   test('single entry returns the entry with ewma equal to its weight', () => {
     const data = [{ weightKg: 80, date: '2024-01-01' }];
     const result = computeEWMA(data);

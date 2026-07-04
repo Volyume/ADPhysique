@@ -47,8 +47,9 @@ import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
+import { formatBodyWeight, formatBodyWeightShort } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
+import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
@@ -107,7 +108,9 @@ const SCREEN_W = Dimensions.get('window').width;
 // ─── Phase detection ──────────────────────────────────────────────────────────
 
 function detectPhase(entries) {
-  const withWeight = entries.filter(e => e.body_weight != null);
+  // DATA-001: require a real positive weight, not just non-null. A stray 0 kg
+  // or negative row (legacy import artefact) must not skew the slope.
+  const withWeight = entries.filter(e => Number(e.body_weight) > 0);
   if (withWeight.length < 3) return null;
 
   // Use most recent 8 entries (sorted oldest first)
@@ -141,7 +144,8 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   // All weight entries with a usable date, oldest → newest (no count slicing,
   // COMP-019 windows by date instead).
   const allWeights = useMemo(() => entries
-    .filter(e => e.body_weight != null && e.metric_date)
+    // DATA-001: > 0, not just non-null, so an impossible weight never plots.
+    .filter(e => Number(e.body_weight) > 0 && e.metric_date)
     .sort((a, b) => a.metric_date.localeCompare(b.metric_date)), [entries]);
 
   const [windowKey, setWindowKey] = useState(DEFAULT_WINDOW_KEY);
@@ -246,7 +250,8 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
 function BodyFatTrendChart({ entries }) {
   const withData = useMemo(() => {
     return entries
-      .filter(e => e.body_fat != null)
+      // DATA-001: > 0, not just non-null (a 0 or negative body-fat is corrupt).
+      .filter(e => Number(e.body_fat) > 0)
       .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
       .slice(-12);
   }, [entries]);
@@ -311,7 +316,8 @@ function BodyFatTrendChart({ entries }) {
 function MeasurementTrendChart({ entries, measureKey, label }) {
   const withData = useMemo(() => {
     return entries
-      .filter(e => e[measureKey] != null)
+      // DATA-001: > 0, not just non-null, so an impossible measurement is dropped.
+      .filter(e => Number(e[measureKey]) > 0)
       .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
       .slice(-12);
   }, [entries, measureKey]);
@@ -611,7 +617,9 @@ export default function BodyMetricsScreen() {
       setHistory(entries);
       const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
       const weightPoints = sorted
-        .filter(m => m.body_weight)
+        // DATA-001: require a positive weight, not just a truthy value, so a
+        // 0 kg / negative row can't feed the EWMA smoother.
+        .filter(m => Number(m.body_weight) > 0)
         .map(m => ({ date: m.metric_date, weightKg: m.body_weight }));
       if (weightPoints.length >= 3) {
         const ewma = computeEWMA(weightPoints);
@@ -661,41 +669,19 @@ export default function BodyMetricsScreen() {
     // Live-tier re-check (hostile review E10 #1 class): a pro-to-free flip
     // while the form is open must not let this closure write.
     if (useAppStore.getState().tier !== 'pro') return;
-    const hasBW = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
-    if (!hasBW && !form.chest && !form.body_fat) {
-      toast.show('Enter at least body weight, body fat, or one measurement.', { variant: 'warning' });
+    // DATA-001: one shared, pure save-gate. "At least one measurement" now means
+    // ANY non-empty VALID field (body weight, body fat, or any single
+    // circumference, not just chest), and any impossible value (non-finite,
+    // non-positive or outside a realistic range) is rejected here with a calm
+    // toast rather than silently stored. See src/lib/bodyMetricValidate.js.
+    const result = validateBodyMetricForm(form, { bwu });
+    if (!result.ok) {
+      toast.show(result.message, { variant: 'warning' });
       return;
     }
+    const data = result.data;
     setSaving(true);
     try {
-      const data = { notes: form.notes || null };
-      const d = form.metric_date ? new Date(form.metric_date) : new Date();
-      data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
-      // Body weight, convert to kg for storage
-      if (bwu === 'st' && form.body_weight_st) {
-        const kg = stoneLbsToKg(form.body_weight_st, form.body_weight_st_lbs || '0');
-        if (!isNaN(kg) && kg > 0) data.weightKg = kg;
-      } else if (form.body_weight) {
-        const kg = parseBodyWeightToKg(form.body_weight, bwu);
-        if (!isNaN(kg) && kg > 0) data.weightKg = kg;
-      }
-      // Body fat %, manual entry. Stored with its source so a future
-      // scale/scan import can be told apart from a typed-in value.
-      if (form.body_fat !== '' && form.body_fat != null) {
-        const bf = parseFloat(form.body_fat);
-        if (Number.isFinite(bf) && bf > 0 && bf <= 75) {
-          data.bodyFatPercent = Math.round(bf * 10) / 10;
-          data.bodyFatSource = 'manual';
-        }
-      }
-      // Measurements (cm), stored as-is
-      for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
-        if (formKey === 'body_weight') continue; // handled above
-        if (form[formKey] !== '' && form[formKey] != null) {
-          const n = parseFloat(form[formKey]);
-          if (!isNaN(n)) data[dbField] = n;
-        }
-      }
       // Optimistic UI: insert the new entry at the top of the history
       // list immediately so the user sees it land in real time, rather
       // than waiting for the SQLite write + a full reload. Same pattern

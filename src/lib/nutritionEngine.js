@@ -169,8 +169,11 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
   if (!Array.isArray(weightData)) return [];
   // Drop malformed rows (null entries, missing or non-numeric weightKg) so one
   // corrupt weigh-in can neither crash the smoother nor poison every later
-  // point with NaN.
-  const clean = weightData.filter((p) => p && Number.isFinite(Number(p.weightKg)));
+  // point with NaN. DATA-001 (EN-6 parity): a non-positive weight is corrupt
+  // too — require Number(weightKg) > 0 (matching weeklyCoach.computeEWMA), so a
+  // single 0 kg / negative import artefact can't drag the trend into a fake
+  // rapid-loss signal. Defensive filter only; no target/floor maths change.
+  const clean = weightData.filter((p) => p && Number.isFinite(Number(p.weightKg)) && Number(p.weightKg) > 0);
   if (clean.length === 0) return [];
   const result = [];
   let ewma = Number(clean[0].weightKg);
