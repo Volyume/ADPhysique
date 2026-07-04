@@ -164,7 +164,7 @@ describe('disclosure rule: the FULL variant never reveals screening or safety st
         adjustments: { training: { signal: 'push', note: 'SENTINEL-TRAINING fine week.' } },
         heldDecisions: [
           { type: 'ed_pattern_lockout', reason: ENGINE_DISCLOSURE_REASONS[0] },
-          { type: 'ffm_floor', reason: 'Calorie target held. Your seven-day average intake of 1400 kcal is at or below your safety floor of 1500 kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.' },
+          { type: 'ffm_floor', reason: 'Calorie target held. Your seven-day average intake of 1400 kcal is at or below your safety floor of 1500 kcal. Eating below this level for long stretches can compromise recovery and lean mass.' },
           { type: 'calories', reason: ENGINE_DISCLOSURE_REASONS[2] },
           { type: 'calories', reason: 'Calories held. Trend is on target.' },
         ],

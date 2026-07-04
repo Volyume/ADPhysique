@@ -8,7 +8,7 @@ exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R1 [must
   "confidence": "high",
   "expectedKgPerWeek": -0.545,
   "floorHeld": false,
-  "insight": "Your weight has fallen 0.35 kg/week. Trimming 108 kcal/day to match your true energy needs.",
+  "insight": "Your weight has fallen 0.35 kg/week. Trimming 108 kcal/day to match what your recent trend suggests you are burning.",
   "weeks": 4,
 }
 `;
@@ -21,7 +21,7 @@ exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R2 [must
   "confidence": "high",
   "expectedKgPerWeek": -0.727,
   "floorHeld": false,
-  "insight": "Your weight has held steady. Trimming 400 kcal/day to match your true energy needs.",
+  "insight": "Your weight has held steady. Trimming 400 kcal/day to match what your recent trend suggests you are burning.",
   "weeks": 4,
 }
 `;
@@ -34,7 +34,7 @@ exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R3 [expe
   "confidence": "high",
   "expectedKgPerWeek": -0.136,
   "floorHeld": false,
-  "insight": "Your weight has held steady. Trimming 75 kcal/day to match your true energy needs.",
+  "insight": "Your weight has held steady. Trimming 75 kcal/day to match what your recent trend suggests you are burning.",
   "weeks": 4,
 }
 `;

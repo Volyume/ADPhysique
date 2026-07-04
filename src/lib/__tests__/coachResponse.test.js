@@ -314,7 +314,7 @@ describe('part 3: decision and reason (reuses existing decision data)', () => {
   });
 
   test('the FFM floor hold reason is reused verbatim', () => {
-    const reason = 'Calorie target held. Your seven-day average intake of 1600 kcal is at or below your safety floor of 1700 kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.';
+    const reason = 'Calorie target held. Your seven-day average intake of 1600 kcal is at or below your safety floor of 1700 kcal. Eating below this level for long stretches can compromise recovery and lean mass.';
     const r = build({
       output: fakeOutput({ heldDecisions: [{ type: 'ffm_floor', reason }] }),
     });

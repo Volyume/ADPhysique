@@ -368,8 +368,8 @@ export function computeAdaptiveTDEEAdjustment({
     const dir = actualKgPerWeek > 0 ? 'risen' : actualKgPerWeek < 0 ? 'fallen' : 'held steady';
     const move = actualKgPerWeek === 0 ? 'Your weight has held steady' : `Your weight has ${dir} ${rate} kg/week`;
     const action = adjustmentKcal < 0
-      ? `Trimming ${absAdj} kcal/day to match your true energy needs.`
-      : `Adding ${absAdj} kcal/day to match your true energy needs.`;
+      ? `Trimming ${absAdj} kcal/day to match what your recent trend suggests you are burning.`
+      : `Adding ${absAdj} kcal/day to match what your recent trend suggests you are burning.`;
     insight = `${move}. ${action}`;
   }
 
@@ -399,7 +399,7 @@ export function computeAdaptiveTDEEAdjustment({
       // Clamp the cut. Increases are never clamped.
       floorHeld = true;
       finalAdjustmentKcal = 0;
-      finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`;
+      finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`;
     }
   }
 

@@ -1240,7 +1240,7 @@ export function runWeeklyCoach(inputs) {
   if (ffmFloorHeld && ffmFloorContext) {
     heldDecisions.push({
       type: 'ffm_floor',
-      reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`,
+      reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`,
     });
   }
 

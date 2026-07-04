@@ -903,7 +903,7 @@ export default function BodyMetricsScreen() {
                 </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
                   <Text style={styles.burnMuted}>
-                    Precision Coaching works out your real daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
+                    Precision Coaching estimates your daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
                   </Text>
                 ) : (
                   <>
