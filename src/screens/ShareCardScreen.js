@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
@@ -332,7 +333,8 @@ export default function ShareCardScreen({ route }) {
   const previewH = cardHeight(PREVIEW_DISPLAY_W, isSquare);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Share card" />
       <ScrollView contentContainerStyle={styles.content}>
 
         {/* Card type: shown per the data the screen was opened with. */}

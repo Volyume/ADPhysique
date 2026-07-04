@@ -25,6 +25,7 @@ function safeFormatDate(value, fmt) {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import VolyumeChart from '../components/VolyumeChart';
 import Card from '../components/Card';
+import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
@@ -726,14 +727,21 @@ export default function BodyMetricsScreen() {
   }
 
   // Loading state, return the dark background, not null, to avoid a white flash
-  if (physiqueEnabled === null) return <SafeAreaView style={styles.safe} edges={['bottom']} />;
+  if (physiqueEnabled === null) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Body metrics" />
+      </SafeAreaView>
+    );
+  }
 
   // Opt-in gate. Read-only users skip it (hostile review E10 #7): it is a
   // tracking pitch, and the lapse state is about SEEING history, not
   // enabling tracking. The calm-mode re-confirmation below still applies.
   if (!physiqueEnabled && !readOnly) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
           <PhysiqueOptIn onEnable={enablePhysique} />
         </ScrollView>
@@ -744,7 +752,8 @@ export default function BodyMetricsScreen() {
   // Calmer experience: gentle re-confirmation once per app session.
   if (calm && !sessionConfirmed) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={styles.confirmCard}>
             <Ionicons name="leaf-outline" size={32} color={colors.primary} />
@@ -782,7 +791,8 @@ export default function BodyMetricsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Body metrics" />
       <ScrollView contentContainerStyle={styles.content}>
 
         {/* E10 read-only lapse views: say plainly what this state is, and keep

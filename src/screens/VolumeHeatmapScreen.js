@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
@@ -287,14 +288,16 @@ export default function VolumeHeatmapScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Volume heatmap" />
         <ActivityIndicator style={{ marginTop: spacing.xxxl }} color={colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Volume heatmap" />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         {/* Anatomical body heatmap, tap a muscle to jump to its bar below */}
         <BodyDiagramHeatmap

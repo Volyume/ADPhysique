@@ -8,6 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns/format';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
@@ -308,7 +309,8 @@ export default function LiftProgressScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Lifts" />
       <FlashList
         data={data}
         keyExtractor={r => String(r.exerciseId)}

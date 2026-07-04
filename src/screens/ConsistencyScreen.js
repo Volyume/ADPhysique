@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, type } from '../styles/theme';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import InfoTooltip from '../components/InfoTooltip';
@@ -36,7 +37,8 @@ export default function ConsistencyScreen({ navigation }) {
   } = useProgressData();
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Consistency" />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

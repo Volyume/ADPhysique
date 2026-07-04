@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -105,7 +106,7 @@ function CardioTrend({ weeks, goal }) {
   );
 }
 
-export default function CardioHistoryScreen({ navigation }) {
+export default function CardioHistoryScreen() {
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
     user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
@@ -160,13 +161,7 @@ export default function CardioHistoryScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cardio history</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <BackHeader title="Cardio history" />
 
       {sections.length === 0 ? (
         <EmptyState
@@ -210,12 +205,6 @@ export default function CardioHistoryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   dayHeader: {
     fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary,
