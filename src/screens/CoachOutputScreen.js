@@ -37,6 +37,11 @@ import {
   getActivePeakWeekPlan,
 } from '../lib/database';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
+import {
+  applyProgressScanCoachContext,
+  resolveProgressScanCoachNote,
+} from '../lib/progressScanCoachResolver';
+import { getProgressScanHideExactPreference } from '../lib/progressScanPreferences';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { summariseWeekCardio, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
@@ -1452,6 +1457,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       // matching the open-ED-flag path; getWellbeingMode swallows failures.
       const wbMode = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
       const calmNow = isCalm(wbMode) || wbMode === 'read_failed';
+      const hideExactScanRanges = await getProgressScanHideExactPreference();
       setCalmMode(calmNow);
       // Check-in day for the forward-pull anchor; same preference read as
       // HomeScreen. Falls back to "the next check-in" when unset. The numeric
@@ -1578,7 +1584,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       // possibly-flagged user (matches the contest-countdown read above).
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
       const edPatternOpen = !!openFlag;
-      const scanCoachContext = await getProgressScanCoachSummary(user.id, {
+      const scanCoachSummary = await getProgressScanCoachSummary(user.id, {
         suppressed: edPatternOpen || calmNow,
       }).catch(() => null);
 
@@ -1666,7 +1672,12 @@ export default function CoachOutputScreen({ navigation, route }) {
       const resultEdPatternOpen = edPatternOpen
         || !!result.edPatternFired
         || !!(result.heldDecisions ?? []).some(d => d.type === 'ed_pattern_lockout');
-      setProgressScanCoachContext(resultEdPatternOpen || calmNow ? null : scanCoachContext);
+      setProgressScanCoachContext(resolveProgressScanCoachNote({
+        scan: scanCoachSummary,
+        output: result,
+        suppressed: resultEdPatternOpen || calmNow,
+        trendOnly: hideExactScanRanges,
+      }));
 
       // Persist ED-pattern state machine transition + telemetry.
       // Raise on first fire, clear on confirmed clearance.
@@ -1972,7 +1983,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // user's register (C1, founder decision #2): tone preference wins, else
   // automatic keys off experience. Same facts, same decisions; suppression
   // (open ED flag or calm mode) renders the supportive base untouched.
-  const coachResponse = buildRegisteredCoachResponse({
+  const baseCoachResponse = buildRegisteredCoachResponse({
     output,
     checkin,
     history: coachHistory,
@@ -1986,6 +1997,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     experienceLevel: userProfile?.experienceLevel ?? null,
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
   });
+  const coachResponse = applyProgressScanCoachContext(baseCoachResponse, canShowProgressScanCoachContext ? progressScanCoachContext : null);
 
   // A "great week" (blueprint docs/blueprint-great-week-share-card-2026-06-22.md
   // §5) is the only time we offer the celebratory recap share, and never while
@@ -2261,10 +2273,9 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {canShowProgressScanCoachContext ? (
           <View style={styles.planEditCard} accessibilityRole="summary">
-            <Text style={styles.planEditHead}>Progress Scan context</Text>
+            <Text style={styles.planEditHead}>{progressScanCoachContext.title}</Text>
             <Text style={styles.planEditBody}>
-              {progressScanCoachContext.copy}
-              {' I am treating this as low-confidence trend context, not a reason to change calories on its own.'}
+              {progressScanCoachContext.body}
             </Text>
           </View>
         ) : null}

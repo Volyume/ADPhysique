@@ -5,10 +5,10 @@ import {
   retakeCopyForVisionResult,
 } from '../progressScanVision';
 
-function syntheticPersonMask({ width = 256, height = 256, shiftX = 0 } = {}) {
+function syntheticPersonMask({
+  width = 256, height = 256, shiftX = 0, top = 26, bottom = 236,
+} = {}) {
   const mask = new Float32Array(width * height).fill(0.04);
-  const top = 26;
-  const bottom = 236;
   const bodyHeight = bottom - top;
   for (let y = top; y <= bottom; y += 1) {
     const rel = (y - top) / bodyHeight;
@@ -55,6 +55,24 @@ describe('Progress Scan vision signal extraction', () => {
     expect(retakeCopyForVisionResult(result)).toMatch(/too dark/i);
   });
 
+  test('letterboxed preprocessing measures ratios inside the content rect, not padding', () => {
+    const mask = syntheticPersonMask({ top: 82, bottom: 174 });
+    const padded = measureMaskSignals(mask, {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+    const contentMeasured = measureMaskSignals(mask, {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+      contentRect: { x: 0, y: 64, width: 256, height: 128 },
+    });
+    expect(contentMeasured.contentRect).toEqual({ x: 0, y: 64, width: 256, height: 128 });
+    expect(contentMeasured.silhouetteRatios.bboxHeightRatio).toBeGreaterThan(padded.silhouetteRatios.bboxHeightRatio);
+    expect(contentMeasured.bodyBox.y).toBeCloseTo((82 - 64) / 128, 2);
+  });
+
   test('asset fields persist bounded metrics, not raw image data', () => {
     const result = measureMaskSignals(syntheticPersonMask(), {
       lightingScore: 0.9,
@@ -63,7 +81,7 @@ describe('Progress Scan vision signal extraction', () => {
     });
     const fields = assetFieldsFromVisionResult(result);
     expect(fields.qualityScore).toBeGreaterThan(0.7);
-    expect(fields.landmarkConfidence).toBeNull();
+    expect(fields.landmarkConfidence).toBeGreaterThan(0.7);
     expect(fields.signals.modelBacked).toBe(true);
     expect(JSON.stringify(fields)).not.toMatch(/file:|base64|rgbBase64/i);
   });

@@ -49,7 +49,13 @@ describe('Progress Scan coach isolation guard', () => {
   test('rendered scan context is gated by current ED and calm suppression', () => {
     expect(lineContaining(SCREEN, 'canShowProgressScanCoachContext')).toMatch(/progressScanCoachContext/);
     expect(SCREEN).toMatch(/canShowProgressScanCoachContext = .*progressScanCoachContext.*!edPatternOpen.*!calmMode/s);
-    expect(SCREEN).toMatch(/setProgressScanCoachContext\(resultEdPatternOpen \|\| calmNow \? null : scanCoachContext\)/);
+    expect(SCREEN).toMatch(/resolveProgressScanCoachNote\(\{/);
+    expect(SCREEN).toMatch(/suppressed:\s*resultEdPatternOpen \|\| calmNow/);
+  });
+
+  test('scan context is folded into the main coach response through the out-of-engine adapter', () => {
+    expect(SCREEN).toMatch(/applyProgressScanCoachContext\(baseCoachResponse,\s*canShowProgressScanCoachContext \? progressScanCoachContext : null\)/);
+    expect(callBody(SCREEN, 'runWeeklyCoach')).not.toMatch(/progressScan|photo_scan|estimateBodyFatPercent|rangeLow|rangeHigh/i);
   });
 
   test('nutrition engine uses an explicit authoritative-source allowlist', () => {

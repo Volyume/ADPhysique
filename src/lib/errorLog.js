@@ -41,7 +41,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // on-device redaction is at least as wide as the wire-to-Sentry scrub
 // (kcal*/protein*/weight* etc. variants the exact-key list below misses).
 // One source of truth; never duplicate the patterns here.
-import { isSensitiveKey } from './observability/sentryScrub';
+import { isSensitiveKey, scrubValue } from './observability/sentryScrub';
 
 const LOG_KEY = '@volyume_error_log_v1';
 const CRASH_LOG_KEY = '@volyume_crash_log';
@@ -96,11 +96,11 @@ function redactPII(value, depth = 0) {
 
 function safeStringify(v) {
   if (v == null) return '';
-  if (typeof v === 'string') return v.slice(0, MAX_MSG);
+  if (typeof v === 'string') return String(scrubValue(v)).slice(0, MAX_MSG);
   // Redact PII keys recursively before stringifying. The buffer can be
   // exported by the user, so workout notes, body weights, emails etc.
   // must not land in it verbatim.
-  try { return JSON.stringify(redactPII(v)).slice(0, MAX_MSG); }
+  try { return JSON.stringify(scrubValue(redactPII(v))).slice(0, MAX_MSG); }
   catch (_) { return String(v).slice(0, MAX_MSG); }
 }
 
@@ -120,7 +120,7 @@ function sanitizeStack(stack) {
     if (/^\s*\|/.test(clean)) continue;
     out.push(line);
   }
-  return out.join('\n').slice(0, MAX_STACK);
+  return String(scrubValue(out.join('\n'))).slice(0, MAX_STACK);
 }
 
 function buildEntry(level, scope, errOrMsg, context) {
@@ -130,7 +130,7 @@ function buildEntry(level, scope, errOrMsg, context) {
     level,
     scope: String(scope || 'app').slice(0, 80),
     message: isError
-      ? String(errOrMsg.message || errOrMsg).slice(0, MAX_MSG)
+      ? String(scrubValue(errOrMsg.message || errOrMsg)).slice(0, MAX_MSG)
       : safeStringify(errOrMsg),
     stack: isError && errOrMsg.stack ? sanitizeStack(errOrMsg.stack) : '',
     context: context ? safeStringify(context) : '',

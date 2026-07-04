@@ -8,8 +8,11 @@ const RETAKE_REASONS = new Set([
   'too_dark',
   'too_blurry',
   'whole_body_not_visible',
-  'multiple_people_detected',
+  'multiple_people',
   'segmentation_low_confidence',
+  'clothing_or_background_uncertain',
+  'pose_not_clear',
+  'camera_tilted',
 ]);
 
 let modelPromise = null;
@@ -27,6 +30,19 @@ function clamp(n, min, max) {
 function round(n, places = 3) {
   const f = 10 ** places;
   return Math.round(n * f) / f;
+}
+
+function normaliseContentRect(rect, width, height) {
+  const x = Math.max(0, Math.floor(finiteNumber(rect?.x) ?? 0));
+  const y = Math.max(0, Math.floor(finiteNumber(rect?.y) ?? 0));
+  const w = Math.max(1, Math.floor(finiteNumber(rect?.width) ?? width));
+  const h = Math.max(1, Math.floor(finiteNumber(rect?.height) ?? height));
+  return {
+    x: Math.min(width - 1, x),
+    y: Math.min(height - 1, y),
+    width: Math.max(1, Math.min(w, width - x)),
+    height: Math.max(1, Math.min(h, height - y)),
+  };
 }
 
 function exactBuffer(view) {
@@ -124,6 +140,24 @@ function widthAtBand(binary, width, height, bbox, ratio) {
   return maxX >= minX ? maxX - minX + 1 : null;
 }
 
+function centerAtBand(binary, width, height, bbox, ratio) {
+  if (!bbox) return null;
+  const yCentre = Math.round(bbox.minY + bbox.height * ratio);
+  const band = Math.max(1, Math.round(bbox.height * 0.018));
+  let minX = width;
+  let maxX = -1;
+  for (let y = Math.max(0, yCentre - band); y <= Math.min(height - 1, yCentre + band); y += 1) {
+    const row = y * width;
+    for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
+      if (binary[row + x]) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+      }
+    }
+  }
+  return maxX >= minX ? (minX + maxX + 1) / 2 : null;
+}
+
 function connectedComponents(binary, width, height) {
   const visited = new Uint8Array(binary.length);
   const queue = new Int32Array(binary.length);
@@ -172,6 +206,8 @@ export function measureMaskSignals(mask, opts = {}) {
   if (!mask || mask.length < total) {
     return unavailableVisionResult('mask_shape_unusable');
   }
+  const contentRect = normaliseContentRect(opts.contentRect, width, height);
+  const contentArea = contentRect.width * contentRect.height;
 
   const binary = new Uint8Array(total);
   let foreground = 0;
@@ -183,25 +219,27 @@ export function measureMaskSignals(mask, opts = {}) {
   let maxX = -1;
   let maxY = -1;
 
-  for (let i = 0; i < total; i += 1) {
-    const p = clamp(Number(mask[i]) || 0, 0, 1);
-    if (p >= 0.5) {
-      binary[i] = 1;
-      foreground += 1;
-      fgProb += p;
-      const x = i % width;
-      const y = Math.floor(i / width);
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    } else {
-      bgProb += p;
-      bgCount += 1;
+  for (let y = contentRect.y; y < contentRect.y + contentRect.height; y += 1) {
+    const row = y * width;
+    for (let x = contentRect.x; x < contentRect.x + contentRect.width; x += 1) {
+      const i = row + x;
+      const p = clamp(Number(mask[i]) || 0, 0, 1);
+      if (p >= 0.5) {
+        binary[i] = 1;
+        foreground += 1;
+        fgProb += p;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      } else {
+        bgProb += p;
+        bgCount += 1;
+      }
     }
   }
 
-  if (foreground < total * 0.06) return unavailableVisionResult('no_person_detected');
+  if (foreground < contentArea * 0.06) return unavailableVisionResult('no_person_detected');
 
   const bbox = {
     minX,
@@ -210,8 +248,8 @@ export function measureMaskSignals(mask, opts = {}) {
     maxY,
     width: maxX - minX + 1,
     height: maxY - minY + 1,
-    centerX: (minX + maxX + 1) / (2 * width),
-    centerY: (minY + maxY + 1) / (2 * height),
+    centerX: ((minX + maxX + 1) / 2 - contentRect.x) / contentRect.width,
+    centerY: ((minY + maxY + 1) / 2 - contentRect.y) / contentRect.height,
   };
 
   const components = connectedComponents(binary, width, height);
@@ -225,19 +263,21 @@ export function measureMaskSignals(mask, opts = {}) {
     1,
   ), 3);
 
-  const touchesTop = minY <= 1;
-  const touchesBottom = maxY >= height - 2;
-  const touchesSide = minX <= 1 || maxX >= width - 2;
-  const heightRatio = bbox.height / height;
-  const widthRatio = bbox.width / width;
+  const touchesTop = minY <= contentRect.y + 1;
+  const touchesBottom = maxY >= contentRect.y + contentRect.height - 2;
+  const touchesSide = minX <= contentRect.x + 1 || maxX >= contentRect.x + contentRect.width - 2;
+  const heightRatio = bbox.height / contentRect.height;
+  const widthRatio = bbox.width / contentRect.width;
   const centreScore = 1 - clamp(Math.abs(bbox.centerX - 0.5) / 0.35, 0, 1);
   const heightScore = 1 - clamp(Math.abs(heightRatio - 0.74) / 0.32, 0, 1);
   const cropPenalty = (touchesTop || touchesBottom ? 0.32 : 0) + (touchesSide ? 0.16 : 0);
   const framingScore = round(clamp((centreScore * 0.35) + (heightScore * 0.5) + 0.15 - cropPenalty, 0, 1), 3);
 
   const shoulderWidth = widthAtBand(binary, width, height, bbox, 0.24);
+  const shoulderCenter = centerAtBand(binary, width, height, bbox, 0.24);
   const waistWidth = widthAtBand(binary, width, height, bbox, 0.52);
   const hipWidth = widthAtBand(binary, width, height, bbox, 0.66);
+  const hipCenter = centerAtBand(binary, width, height, bbox, 0.66);
   const thighWidth = widthAtBand(binary, width, height, bbox, 0.80);
   const shoulderToHeight = shoulderWidth != null ? shoulderWidth / bbox.height : null;
   const waistToHeight = waistWidth != null ? waistWidth / bbox.height : null;
@@ -247,6 +287,9 @@ export function measureMaskSignals(mask, opts = {}) {
   const hipToShoulder = hipWidth != null && shoulderWidth > 0 ? hipWidth / shoulderWidth : null;
   const verticality = widthRatio > 0 ? heightRatio / widthRatio : null;
   const poseConfidence = round(clamp(((verticality ?? 0) - 1.15) / 1.2, 0, 1), 3);
+  const bodyTiltDegrees = shoulderCenter != null && hipCenter != null
+    ? round((Math.atan2(hipCenter - shoulderCenter, Math.max(1, bbox.height * 0.42)) * 180) / Math.PI, 2)
+    : null;
   const lightingScore = finiteNumber(opts.lightingScore);
   const blurScore = finiteNumber(opts.blurScore);
 
@@ -255,12 +298,16 @@ export function measureMaskSignals(mask, opts = {}) {
   if (blurScore != null && blurScore < 0.45) reasons.push('too_blurry');
   if (framingScore < 0.55) reasons.push('whole_body_not_visible');
   if (segmentationConfidence < 0.55) reasons.push('segmentation_low_confidence');
-  if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people_detected');
+  if (separation < 0.45) reasons.push('clothing_or_background_uncertain');
+  if (poseConfidence < 0.45) reasons.push('pose_not_clear');
+  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 6) reasons.push('camera_tilted');
+  if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people');
 
   return {
     modelBacked: true,
     modelVersion: PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
     inputSize: width,
+    contentRect,
     pose: opts.pose || null,
     quality: {
       segmentationConfidence,
@@ -268,17 +315,19 @@ export function measureMaskSignals(mask, opts = {}) {
       blurScore,
       lightingScore,
       poseConfidence,
+      cameraTiltDegrees: bodyTiltDegrees,
+      backgroundSeparation: round(separation, 3),
       componentDominance: round(componentDominance, 3),
       connectedComponents: components.count,
     },
     mask: {
-      foregroundRatio: round(foreground / total, 4),
+      foregroundRatio: round(foreground / contentArea, 4),
       foregroundMeanProbability: round(fgMean, 3),
       backgroundMeanProbability: round(bgMean, 3),
     },
     bodyBox: {
-      x: round(minX / width, 4),
-      y: round(minY / height, 4),
+      x: round((minX - contentRect.x) / contentRect.width, 4),
+      y: round((minY - contentRect.y) / contentRect.height, 4),
       width: round(widthRatio, 4),
       height: round(heightRatio, 4),
       centerX: round(bbox.centerX, 4),
@@ -292,7 +341,7 @@ export function measureMaskSignals(mask, opts = {}) {
       waistToHip: waistToHip == null ? null : round(waistToHip, 4),
       hipToShoulder: hipToShoulder == null ? null : round(hipToShoulder, 4),
       thighToHeight: thighWidth == null ? null : round(thighWidth / bbox.height, 4),
-      bodyAreaRatio: round(foreground / total, 4),
+      bodyAreaRatio: round(foreground / contentArea, 4),
       bboxHeightRatio: round(heightRatio, 4),
       bboxWidthRatio: round(widthRatio, 4),
     },
@@ -329,12 +378,12 @@ export function assetFieldsFromVisionResult(result) {
     : null;
   return {
     qualityScore,
-    landmarkConfidence: null,
+    landmarkConfidence: finiteNumber(quality.poseConfidence),
     segmentationConfidence: finiteNumber(quality.segmentationConfidence),
     blurScore: finiteNumber(quality.blurScore),
     lightingScore: finiteNumber(quality.lightingScore),
     framingScore: finiteNumber(quality.framingScore),
-    cameraTiltDegrees: null,
+    cameraTiltDegrees: finiteNumber(quality.cameraTiltDegrees),
     signals: result || unavailableVisionResult(),
   };
 }
@@ -345,9 +394,12 @@ export function retakeCopyForVisionResult(result) {
   if (reasons.has('too_dark')) return 'The photo is too dark for a reliable scan. Move into brighter, even light and take this pose again.';
   if (reasons.has('too_blurry')) return 'The photo is too blurred for a reliable scan. Keep the phone still and use the timer before retaking.';
   if (reasons.has('whole_body_not_visible')) return 'Your full outline is not clear enough in frame. Step back until your whole body is visible, then retake.';
-  if (reasons.has('multiple_people_detected')) return 'The scan can only read one person. Retake with only you in frame.';
+  if (reasons.has('multiple_people')) return 'The scan can only read one person. Retake with only you in frame.';
   if (reasons.has('segmentation_low_confidence')) return 'Your outline was not clear enough for the scan. Try a plain background and brighter light.';
-  return 'This photo is not reliable enough for analysis. Retake it now, or save the photo without an estimate.';
+  if (reasons.has('clothing_or_background_uncertain')) return 'Your outline blends into the background or clothing too much for a reliable scan. Try plain fitted clothing against a plain background.';
+  if (reasons.has('pose_not_clear')) return 'Your stance was not clear enough for the scan. Stand tall, face the camera squarely, and retake.';
+  if (reasons.has('camera_tilted')) return 'The camera looks tilted for this scan. Keep the phone upright and retake.';
+  return 'This photo is not reliable enough for analysis. Retake it now, or use the photo without analysis.';
 }
 
 export async function analyseProgressScanPhoto({ uri, pose } = {}) {
@@ -371,6 +423,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       rgb,
       blurScore: blurScoreFromRgb(rgb, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE),
       lightingScore: extracted.lightingScore,
+      contentRect: extracted.contentRect,
       pose,
     });
   } catch (e) {

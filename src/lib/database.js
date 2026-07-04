@@ -4207,6 +4207,12 @@ export const WIPE_DIRECT_TABLES = [
   'progress_photo_meta', 'progress_scan_sessions', 'progress_scan_assets',
 ];
 
+export const FATAL_LOCAL_WIPE_TABLES = new Set([
+  'progress_photo_meta',
+  'progress_scan_sessions',
+  'progress_scan_assets',
+]);
+
 export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
@@ -4285,6 +4291,7 @@ export async function wipeAllUserData(userId) {
         // Continue with other tables. A missing table on an older schema
         // shouldn't abort the whole wipe.
         logError(`database.wipeAllUserData.${table}`, e, { userId });
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
       }
     }
 
@@ -4292,6 +4299,7 @@ export async function wipeAllUserData(userId) {
       await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL');
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
+      throw e;
     }
 
     try {
@@ -4300,6 +4308,18 @@ export async function wipeAllUserData(userId) {
       await require('./progressPhotos').wipeProgressPhotoDirectory();
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_files', e, { userId });
+      throw e;
+    }
+
+    try {
+      // SQLite snapshots are byte-for-byte DB copies. Purge them on user
+      // boundary changes so local-only scan/photo rows cannot survive in a
+      // retained pre-wipe snapshot.
+      // eslint-disable-next-line global-require
+      await require('./dbSnapshot').purgeSnapshots();
+    } catch (e) {
+      logError('database.wipeAllUserData.snapshots', e, { userId });
+      throw e;
     }
 
     // 6. Custom exercises. Canonical seed exercises are shared library data

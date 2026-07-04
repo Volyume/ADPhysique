@@ -4,6 +4,7 @@ import {
   coachSummaryFromScan,
   compareScanEstimates,
   deriveProgressScanBiasFlagsFromProfile,
+  explainMeasuredScanDelta,
   estimateBodyFatFromScanAssets,
   measuredSignalsSummaryFromAssets,
   uncertaintyMarginPctPoints,
@@ -77,19 +78,14 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.biasFlags).toContain('female_overestimation_risk');
   });
 
-  test('model-backed silhouette signals produce a provisional range without a manual estimate', () => {
+  test('model-backed silhouette signals produce measured context without a body-fat estimate', () => {
     const estimate = estimateBodyFatFromScanAssets({
       assets: modelBackedAssets,
       sex: 'male',
       heightCm: 180,
       weightKg: 82,
     });
-    expect(estimate).toMatchObject({
-      source: 'photo_scan',
-      confidence: 'low',
-      estimatorVersion: 'progress_scan_silhouette_regressor_v1',
-    });
-    expect(estimate.limitations).toContain('not_dexa_equivalent');
+    expect(estimate).toBeNull();
 
     const out = analyseProgressScan({
       assets: modelBackedAssets,
@@ -97,34 +93,30 @@ describe('Progress Scan uncertainty and abstention', () => {
       heightCm: 180,
       weightKg: 82,
     });
-    expect(out.analysisStatus).toBe('complete');
-    expect(out.estimate).toBeGreaterThan(5);
-    expect(out.range.low).toBeLessThan(out.estimate);
-    expect(out.range.high).toBeGreaterThan(out.estimate);
+    expect(out.analysisStatus).toBe('measured');
+    expect(out.estimate).toBeNull();
+    expect(out.range).toBeNull();
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
-    expect(out.copySummary).toMatch(/provisional/i);
+    expect(out.copySummary).toMatch(/not a body-fat estimate/i);
   });
 
-  test('demographic and physique validation gaps materially widen the displayed range', () => {
-    const base = analyseProgressScan({
-      assets: modelBackedAssets,
-      sex: 'male',
-      heightCm: 180,
-      weightKg: 82,
-      userBiasFlags: [],
+  test('demographic and physique validation gaps materially widen any future displayed range', () => {
+    const base = buildEstimateRange(20, {
+      quality: { label: 'good' },
+      biasFlags: ['physique_athlete_validation_pending', 'skin_tone_not_collected_validation_gap'],
     });
-    const flagged = analyseProgressScan({
-      assets: modelBackedAssets,
-      sex: 'female',
-      heightCm: 168,
-      weightKg: 62,
-      userBiasFlags: ['darker_skin_overestimation_risk', 'stage_lean_or_prep', 'very_muscular'],
+    const flagged = buildEstimateRange(20, {
+      quality: { label: 'usable' },
+      biasFlags: [
+        'female_overestimation_risk',
+        'darker_skin_overestimation_risk',
+        'stage_lean_or_prep',
+        'very_muscular',
+        'physique_athlete_validation_pending',
+        'skin_tone_not_collected_validation_gap',
+      ],
     });
-    const baseWidth = base.range.high - base.range.low;
-    const flaggedWidth = flagged.range.high - flagged.range.low;
-    expect(flaggedWidth).toBeGreaterThan(baseWidth);
-    expect(flagged.biasFlags).toContain('female_overestimation_risk');
-    expect(flagged.biasFlags).toContain('darker_skin_overestimation_risk');
+    expect(flagged.high - flagged.low).toBeGreaterThan(base.high - base.low);
   });
 
   test('profile context creates concrete uncertainty flags without guessing from the photo', () => {
@@ -155,25 +147,67 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(trend.explanation).toMatch(/inside the scan range/i);
   });
 
+  test('measured delta explanation never fabricates visual observations', () => {
+    const current = {
+      analysisStatus: 'measured',
+      qualityLabel: 'good',
+      stats: { weightKg: 80 },
+      signals: {
+        assets: [{ pose: 'front' }, { pose: 'back' }],
+        estimatorInputs: {
+          waistToHeight: 0.18,
+          waistToShoulder: 0.61,
+        },
+      },
+    };
+    const previous = {
+      analysisStatus: 'measured',
+      qualityLabel: 'good',
+      signals: {
+        stats: { weightKg: 82 },
+        assets: [{ pose: 'front' }, { pose: 'back' }],
+        estimatorInputs: {
+          waistToHeight: 0.21,
+          waistToShoulder: 0.66,
+        },
+      },
+    };
+
+    const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
+    expect(out.measuredSignalsOnly).toBe(true);
+    expect(out.comparisonStatus).toBe('comparable');
+    expect(out.summary).toMatch(/not a body-fat estimate/i);
+    expect(out.summary).not.toMatch(/estimate moved|estimate is/i);
+    expect(out.summary).toMatch(/waist-to-height/i);
+    expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
+  });
+
   test('coach summary is suppressed under calm or ED mode', () => {
     const scan = {
-      analysisStatus: 'complete',
+      analysisStatus: 'measured',
       capturedAt: 1,
-      estimateBodyFatPercent: 20,
-      estimateRangeLow: 16,
-      estimateRangeHigh: 24,
       estimateConfidence: 'low',
       qualityLabel: 'good',
       trendDirection: 'steady',
-      trendMagnitudePctPoints: 0.4,
+      signalsJson: JSON.stringify({
+        deltaExplanation: {
+          comparisonStatus: 'comparable',
+          comparableCount: 1,
+          trendDirection: 'steady',
+          lines: ['Measured scan signals are broadly steady.'],
+          coachSummary: 'Measured scan signals are broadly steady. I am treating it as low-confidence context only.',
+        },
+      }),
       biasFlagsJson: JSON.stringify(['physique_athlete_validation_pending']),
     };
     expect(coachSummaryFromScan(scan, { suppressed: true })).toBeNull();
     expect(coachSummaryFromScan(scan, { suppressed: false })).toMatchObject({
       source: 'photo_scan',
-      estimateBodyFatPercent: 20,
       confidence: 'low',
       trendDirection: 'steady',
+      comparisonStatus: 'comparable',
+      comparableCount: 1,
     });
+    expect(JSON.stringify(coachSummaryFromScan(scan, { suppressed: false }))).not.toMatch(/estimateBodyFatPercent|rangeLow|rangeHigh/);
   });
 });

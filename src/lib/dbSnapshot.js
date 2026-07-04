@@ -105,6 +105,16 @@ export async function pruneSnapshots(keep = KEEP) {
   }
 }
 
+export async function purgeSnapshots() {
+  try {
+    await FileSystem.deleteAsync(SNAP_DIR, { idempotent: true });
+    return true;
+  } catch (e) {
+    logWarn('database.snapshot.purge', e?.message ?? 'purge failed');
+    throw e;
+  }
+}
+
 // For the restore screen: newest-first list with label + size.
 export async function listSnapshots() {
   try {
