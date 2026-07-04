@@ -80,9 +80,30 @@ export function AppAlertHost() {
 
   return (
     <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={onBackdrop}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onBackdrop}>
-        <TouchableOpacity activeOpacity={1} style={styles.card} onPress={() => {}}>
-          {!!title && <Text style={styles.title}>{title}</Text>}
+      <TouchableOpacity
+        style={styles.backdrop}
+        activeOpacity={1}
+        onPress={onBackdrop}
+        // AX-3: when cancelable, name the backdrop so a screen reader
+        // announces tap-to-dismiss instead of landing on a blank control.
+        // When not cancelable the tap is already a no-op, so it stays
+        // roleless/unlabelled rather than announcing a dead "Close".
+        accessibilityRole={cancelable ? 'button' : undefined}
+        accessibilityLabel={cancelable ? 'Close' : undefined}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.card}
+          onPress={() => {}}
+          // accessible={false} stops the backdrop's "Close" label from
+          // swallowing the card's own content into one opaque node; the
+          // title/message/buttons below stay individually reachable.
+          // accessibilityViewIsModal traps screen-reader navigation to
+          // the dialog while it's open (same pattern as BottomSheet.js).
+          accessible={false}
+          accessibilityViewIsModal
+        >
+          {!!title && <Text style={styles.title} accessibilityRole="header">{title}</Text>}
           {!!message && <Text style={styles.message}>{message}</Text>}
           <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
             {buttons.map((b, i) => {

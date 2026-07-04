@@ -36,11 +36,13 @@ import {
   Camera, useCameraDevice, useCodeScanner,
 } from 'react-native-vision-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import NetInfo from '@react-native-community/netinfo';
 import { planReady as hapticScanSuccess } from '../lib/haptics';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -53,6 +55,7 @@ const CODE_TYPES = ['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128'];
 export default function ScanBarcodeScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
@@ -128,10 +131,31 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       }
     } catch (e) {
       logError('ScanBarcode.resolveThrew', e, { data: value, message: e?.message });
+      // ST-2: a thrown lookup means the waterfall couldn't answer at all
+      // (a genuine "not found" already resolves to `food === null` above
+      // and routes to ScanLabel with the barcode prefilled, no exception
+      // involved). Tell the user this is a reachability problem, not a
+      // miss, and distinguish "you're offline" from a live-but-failing
+      // lookup so re-scanning into the void doesn't look like doing
+      // nothing. Mirrors ScanLabelScreen's NetInfo check.
+      let offline = false;
+      try {
+        const state = await NetInfo.fetch();
+        offline = state?.isConnected === false || state?.isInternetReachable === false;
+      } catch (_) {
+        // Connectivity check itself failed: fall back to the generic
+        // reachability message rather than guessing offline.
+      }
+      toast.show(
+        offline
+          ? "You're offline. Check your connection and try again."
+          : "Couldn't reach the food database. Try again.",
+        { variant: 'error' }
+      );
       scanLock.current = false;
       setResolving(false);
     }
-  }, [navigation, userId, mealSlot, entryDate]);
+  }, [navigation, userId, mealSlot, entryDate, toast]);
 
   const codeScanner = useCodeScanner({
     codeTypes: CODE_TYPES,
