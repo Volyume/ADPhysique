@@ -39,6 +39,15 @@ import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
+// FOOD-002: an ingredient row is only persisted (and only resolves later) when
+// it has a food_ref and a finite, positive gram amount. This mirrors exactly
+// the filter setRecipeIngredients applies, so the builder can block a save that
+// would otherwise drop rows and leave an unresolvable shell.
+function isUsableIngredient(ing) {
+  const q = Number(ing?.quantity_g);
+  return !!ing?.food_ref && Number.isFinite(q) && q > 0;
+}
+
 export default function RecipeBuilderScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
@@ -202,6 +211,30 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
   async function onSave() {
     if (!canSave) return;
+    // FOOD-002: never persist an empty or unusable recipe. setRecipeIngredients
+    // silently drops rows with no food_ref or a non-positive quantity, so a
+    // recipe with none left saves as a shell that resolveFoodRef can't resolve
+    // (grams <= 0 returns null) and the user could never log. Validate here and
+    // keep the user on the builder with a clear, actionable reason rather than
+    // silently filtering rows away.
+    if (ingredients.length === 0) {
+      toast.show('Add at least one ingredient before saving.', { variant: 'warning' });
+      return;
+    }
+    const usable = ingredients.filter(isUsableIngredient);
+    if (usable.length === 0) {
+      toast.show('Give each ingredient an amount in grams before saving.', { variant: 'warning' });
+      return;
+    }
+    if (usable.length < ingredients.length) {
+      toast.show('Every ingredient needs an amount above 0 g. Fix or remove the empty ones.', { variant: 'warning' });
+      return;
+    }
+    const servingsNum = Number(totalServings);
+    if (!Number.isFinite(servingsNum) || servingsNum <= 0) {
+      toast.show('Set how many servings this recipe makes.', { variant: 'warning' });
+      return;
+    }
     setSaving(true);
     try {
       let id = recipeId;

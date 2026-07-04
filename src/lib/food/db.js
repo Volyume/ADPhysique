@@ -12,6 +12,7 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
+import { isValidEntryGrams } from './servingEntry';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
@@ -40,12 +41,31 @@ export async function logFoodEntry(userId, entry) {
   const d = await db();
   const id = uid();
   const now = Date.now();
-  // Defence in depth. quantity_g, kcal, protein_g, carbs_g and fat_g are all
-  // NOT NULL. A non-finite value (a NaN from a bad upstream calc) would bind
+  // Defence in depth (FOOD-001): the amount eaten must reconcile with the
+  // scaled macros. A quick-add carries no grams by design (foodRef 'quick:*',
+  // a deliberate quantity of 0 with macros entered directly), so 0 is allowed
+  // for it alone. Every real food must fall inside the shared 1 to 5000 g
+  // safety bound (isValidEntryGrams) — the same gate FoodDetailSheet and the
+  // custom-food screen enforce. Anything else (negative, zero, blank, NaN, or
+  // over 5000 g) is rejected here so a corrupt weight can never be persisted as
+  // a diary row whose grams and macros disagree. Clamping is deliberately NOT
+  // used: the macros are already scaled by the caller for the passed grams, so
+  // silently changing the grams here would re-introduce the very mismatch.
+  const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
+  const qtyIn = Number(entry.quantityG);
+  if (isQuickAdd) {
+    if (qtyIn !== 0 && !isValidEntryGrams(qtyIn)) {
+      throw new Error('logFoodEntry: quick-add quantity must be 0 or between 1 and 5000 g');
+    }
+  } else if (!isValidEntryGrams(qtyIn)) {
+    throw new Error('logFoodEntry: quantity must be between 1 and 5000 g');
+  }
+  // The five numeric columns (quantity_g, kcal, protein_g, carbs_g, fat_g) are
+  // all NOT NULL. A non-finite macro (a NaN from a bad upstream calc) would bind
   // as NULL and throw an opaque constraint error, crashing a diary write the
   // user can do dozens of times a day. Coerce to a finite number (default 0)
-  // so logging never hard-fails; a stray entry is editable. fibre_g is
-  // nullable, so it keeps its null.
+  // so logging never hard-fails on the macros; a stray entry is editable. The
+  // quantity is already validated above. fibre_g is nullable, so it keeps null.
   const finite = (v) => (Number.isFinite(v) ? v : 0);
   // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
   // rollup/adherence/FFM/sync until the user confirms they ate it (adherence

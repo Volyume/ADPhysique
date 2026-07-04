@@ -25,6 +25,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
+import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 
 
@@ -110,6 +111,17 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   async function onSave() {
     if (!canSave || saving) return;
+    // FOOD-001: the amount eaten must fall inside the shared 1 to 5000 g safety
+    // bound (isValidEntryGrams), the same gate FoodDetailSheet enforces, so a
+    // negative, zero, blank or extreme quantity can never be logged as a diary
+    // row whose weight and macros disagree. logFoodEntry re-checks this as
+    // defence in depth. Blank/0 no longer silently falls back to the serving
+    // size; the user is asked for a real amount.
+    const qty = Number(quantityG);
+    if (!isValidEntryGrams(qty)) {
+      toast.show('Enter an amount between 1 and 5000 g.', { variant: 'warning' });
+      return;
+    }
     setSaving(true);
     try {
       const sanity = checkFoodSanity(food);
@@ -174,10 +186,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           } catch (_) {}
         }
       }
-      const qty = Number(quantityG) || food.servingG;
       // Macros for the logged entry are scaled from per-100g to the actual
-      // quantity logged. This denormalises at log time so future edits to the
-      // custom food don't rewrite history. Shared helper (food review U-M2).
+      // quantity logged (qty, validated above). This denormalises at log time so
+      // future edits to the custom food don't rewrite history. Shared helper
+      // (food review U-M2).
       await logFoodEntry(userId, {
         entryDate,
         mealSlot,
