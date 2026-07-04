@@ -10,14 +10,16 @@
  */
 import { SYNC_REGISTRY } from '../registry';
 
-describe('progress_photo_meta is never synced', () => {
-  test('SYNC_REGISTRY has no progress_photo_meta entry', () => {
+describe('progress photos and scans are never synced', () => {
+  test('SYNC_REGISTRY has no progress photo or scan entries', () => {
     const tables = SYNC_REGISTRY.map((e) => e.table);
     expect(tables).not.toContain('progress_photo_meta');
+    expect(tables).not.toContain('progress_scan_sessions');
+    expect(tables).not.toContain('progress_scan_assets');
   });
 
   test('SYNC_REGISTRY has no photo-related table at all', () => {
     const tables = SYNC_REGISTRY.map((e) => e.table);
-    expect(tables.some((t) => /photo/i.test(t))).toBe(false);
+    expect(tables.some((t) => /photo|scan/i.test(t))).toBe(false);
   });
 });

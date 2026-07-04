@@ -35,6 +35,11 @@ function defaultMeta(name) {
   };
 }
 
+function resolveArgs(a, b) {
+  if (b === undefined) return { userId: null, name: a };
+  return { userId: a ?? null, name: b };
+}
+
 function rowToMeta(row) {
   return {
     name: row.name,
@@ -50,14 +55,22 @@ function rowToMeta(row) {
  * shape, or the derived defaults when there is no row (never null, never
  * throws).
  */
-export async function getPhotoMeta(name) {
+export async function getPhotoMeta(userIdOrName, maybeName) {
+  const { userId, name } = resolveArgs(userIdOrName, maybeName);
   if (!name) return defaultMeta(name);
   try {
     const d = await db();
-    const row = await d.getFirstAsync(
-      'SELECT * FROM progress_photo_meta WHERE name = ?',
-      [name],
-    );
+    const row = userId
+      ? await d.getFirstAsync(
+        `SELECT * FROM progress_photo_meta
+          WHERE name = ? AND user_id = ?
+          LIMIT 1`,
+        [name, userId],
+      )
+      : await d.getFirstAsync(
+        'SELECT * FROM progress_photo_meta WHERE name = ? AND user_id IS NULL LIMIT 1',
+        [name],
+      );
     return row ? rowToMeta(row) : defaultMeta(name);
   } catch (e) {
     logError('ProgressPhotoMeta.get', e, { name });
@@ -70,7 +83,7 @@ export async function getPhotoMeta(name) {
  * every requested name is present, missing rows falling back to defaults. Never
  * throws (a read failure yields all-defaults, i.e. today's behaviour).
  */
-export async function getPhotoMetaMap(names) {
+export async function getPhotoMetaMap(names, userId = null) {
   const list = Array.isArray(names) ? names.filter(Boolean) : [];
   const map = {};
   for (const n of list) map[n] = defaultMeta(n);
@@ -78,10 +91,16 @@ export async function getPhotoMetaMap(names) {
   try {
     const d = await db();
     const placeholders = list.map(() => '?').join(', ');
-    const rows = await d.getAllAsync(
-      `SELECT * FROM progress_photo_meta WHERE name IN (${placeholders})`,
-      list,
-    );
+    const rows = userId
+      ? await d.getAllAsync(
+        `SELECT * FROM progress_photo_meta
+          WHERE name IN (${placeholders}) AND user_id = ?`,
+        [...list, userId],
+      )
+      : await d.getAllAsync(
+        `SELECT * FROM progress_photo_meta WHERE name IN (${placeholders}) AND user_id IS NULL`,
+        list,
+      );
     for (const row of rows) map[row.name] = rowToMeta(row);
   } catch (e) {
     logError('ProgressPhotoMeta.getMap', e, { count: list.length });
@@ -107,8 +126,12 @@ export async function upsertPhotoMeta(userId, name, patch = {}) {
     const d = await db();
     const now = Date.now();
     const existing = await d.getFirstAsync(
-      'SELECT * FROM progress_photo_meta WHERE name = ?',
-      [name],
+      userId
+        ? `SELECT * FROM progress_photo_meta
+            WHERE name = ? AND user_id = ?
+            LIMIT 1`
+        : 'SELECT * FROM progress_photo_meta WHERE name = ? AND user_id IS NULL LIMIT 1',
+      userId ? [name, userId] : [name],
     );
 
     const prevTakenAt = existing ? existing.taken_at : null;
@@ -130,18 +153,34 @@ export async function upsertPhotoMeta(userId, name, patch = {}) {
     }
 
     const createdAt = existing ? existing.created_at : now;
-    await d.runAsync(
-      `INSERT INTO progress_photo_meta
-         (name, taken_at, pose, weight_kg, note, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(name) DO UPDATE SET
-         taken_at   = excluded.taken_at,
-         pose       = excluded.pose,
-         weight_kg  = excluded.weight_kg,
-         note       = excluded.note,
-         updated_at = excluded.updated_at`,
-      [name, takenAt, pose ?? null, weightKg ?? null, note ?? null, createdAt, now],
-    );
+    if (userId) {
+      await d.runAsync(
+        `INSERT INTO progress_photo_meta
+           (user_id, name, taken_at, pose, weight_kg, note, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id, name) DO UPDATE SET
+           taken_at   = excluded.taken_at,
+           pose       = excluded.pose,
+           weight_kg  = excluded.weight_kg,
+           note       = excluded.note,
+           updated_at = excluded.updated_at`,
+        [userId, name, takenAt, pose ?? null, weightKg ?? null, note ?? null, createdAt, now],
+      );
+    } else if (existing) {
+      await d.runAsync(
+        `UPDATE progress_photo_meta
+          SET taken_at = ?, pose = ?, weight_kg = ?, note = ?, updated_at = ?
+          WHERE user_id IS NULL AND name = ?`,
+        [takenAt, pose ?? null, weightKg ?? null, note ?? null, now, name],
+      );
+    } else {
+      await d.runAsync(
+        `INSERT INTO progress_photo_meta
+           (user_id, name, taken_at, pose, weight_kg, note, created_at, updated_at)
+         VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)`,
+        [name, takenAt, pose ?? null, weightKg ?? null, note ?? null, createdAt, now],
+      );
+    }
 
     return { name, takenAt, pose: pose ?? null, weightKg: weightKg ?? null, note: note ?? null };
   } catch (e) {
@@ -154,11 +193,16 @@ export async function upsertPhotoMeta(userId, name, patch = {}) {
  * Remove the metadata row for a deleted photo. Call this whenever a photo file
  * is deleted so no orphan row lingers. Idempotent; never throws.
  */
-export async function deletePhotoMeta(name) {
+export async function deletePhotoMeta(userIdOrName, maybeName) {
+  const { userId, name } = resolveArgs(userIdOrName, maybeName);
   if (!name) return false;
   try {
     const d = await db();
-    await d.runAsync('DELETE FROM progress_photo_meta WHERE name = ?', [name]);
+    if (userId) {
+      await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id = ? AND name = ?', [userId, name]);
+    } else {
+      await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL AND name = ?', [name]);
+    }
     return true;
   } catch (e) {
     logError('ProgressPhotoMeta.delete', e, { name });

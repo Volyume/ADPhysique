@@ -668,4 +668,11 @@ describe('calculateNutritionTargets is NaN-safe', () => {
     // A real body-fat input changes the BMR formula, so the result should differ.
     expect(withBf.bmrKcal).not.toBe(without.bmrKcal);
   });
+
+  test('photo_scan body fat never gains Katch-McArdle authority', () => {
+    const withPhotoScan = calculateNutritionTargets({ ...valid, bodyFatPercent: 12, bodyFatSource: 'photo_scan' });
+    const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
+    expect(withPhotoScan.bmrKcal).toBe(without.bmrKcal);
+    expect(withPhotoScan.confidence).toBe('low');
+  });
 });

@@ -54,6 +54,12 @@ describe('wipeAllUserData direct-table set (A4)', () => {
     expect(WIPE_DIRECT_TABLES).toContain('food_slot_recents');
   });
 
+  test('includes local-only progress photo and scan tables', () => {
+    expect(WIPE_DIRECT_TABLES).toContain('progress_photo_meta');
+    expect(WIPE_DIRECT_TABLES).toContain('progress_scan_sessions');
+    expect(WIPE_DIRECT_TABLES).toContain('progress_scan_assets');
+  });
+
   test('has no duplicate entries', () => {
     expect(new Set(WIPE_DIRECT_TABLES).size).toBe(WIPE_DIRECT_TABLES.length);
   });

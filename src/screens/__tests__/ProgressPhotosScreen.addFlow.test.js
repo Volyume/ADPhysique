@@ -4,7 +4,7 @@
  *
  * Pins the core new behaviour: picking an image no longer saves silently at
  * file-time. It opens the calm Photo details step, and only on confirm does it
- * saveProgressPhoto(uri) THEN upsertPhotoMeta(userId, name, { takenAt, pose }),
+ * saveProgressPhoto(uri, undefined, userId) THEN upsertPhotoMeta(userId, name, { takenAt, pose }),
  * which snapshots the weigh-in nearest the CHOSEN date. This is what makes the
  * founder's target scenario work: add last week's photo today, set the date to
  * last week, and it indexes under last week with last week's weight.
@@ -130,7 +130,7 @@ test('confirming with the default date saves then snapshots weight for today', a
   await pressLabel(tree, 'Save the photo');
   await flush();
 
-  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg');
+  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
   expect(upsertPhotoMeta).toHaveBeenCalledTimes(1);
   const [uid, name, patch] = upsertPhotoMeta.mock.calls[0];
   expect(uid).toBe(USER_ID);
@@ -164,7 +164,7 @@ test('setting the date to the past indexes the photo under that past day (the fo
   await pressLabel(tree, 'Save the photo');
   await flush();
 
-  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg');
+  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
   const patch = upsertPhotoMeta.mock.calls[0][2];
   expect(patch.takenAt).toBe(pastDay);
 });

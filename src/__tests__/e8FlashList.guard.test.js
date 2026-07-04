@@ -63,7 +63,7 @@ describe('E8: lists render through FlashList', () => {
     const root = path.resolve(__dirname, '../..');
     const offenders = walk(path.join(root, 'src'))
       .filter((p) => /<FlatList/.test(fs.readFileSync(p, 'utf8')))
-      .map((p) => path.relative(root, p))
+      .map((p) => path.relative(root, p).split(path.sep).join('/'))
       .sort();
     expect(offenders).toEqual([
       'src/screens/PlanLibraryScreen.js',

@@ -387,17 +387,10 @@ jobs:
             exit 1
           fi
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: volyume-release-apk-${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 30
-
       # IMP-001: release quality gate. Runs the release:check script (strict
       # type-check, lint, full test suite, then the production audit) BEFORE the
-      # AAB is published as an artifact, so a build that fails type-check, lint
-      # or tests never produces an uploadable Play bundle. A failure here fails
+      # APK/AAB are published as artifacts, so a build that fails type-check,
+      # lint or tests never produces an uploadable release artifact. A failure here fails
       # the job. See package.json "release:check".
       # DEP-001: the production audit (`release:audit`) reports the Expo
       # build-chain advisories (@xmldom/xmldom, postcss, uuid) but no longer
@@ -407,6 +400,13 @@ jobs:
       # printed in the log; revisit on the next Expo SDK bump.
       - name: Release gate (release:check)
         run: npm run release:check
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: volyume-release-apk-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
 
       - name: Upload AAB artifact (Play Store)
         uses: actions/upload-artifact@v4

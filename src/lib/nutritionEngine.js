@@ -570,6 +570,10 @@ export function computeStepTrendModifier({ stepRows, todayKey, adjustmentSign = 
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+export function isAuthoritativeBodyFatSource(bodyFatSource) {
+  return bodyFatSource === 'dexa' || bodyFatSource === 'caliper' || bodyFatSource === 'bia';
+}
+
 function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSource) {
   const useKatchMcArdle =
     Number.isFinite(bodyFatPercent) &&
@@ -579,9 +583,7 @@ function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSourc
     // already enforces, and fall back to Mifflin outside it.
     bodyFatPercent > 0 &&
     bodyFatPercent < 60 &&
-    bodyFatSource !== null &&
-    bodyFatSource !== undefined &&
-    bodyFatSource !== 'visual';
+    isAuthoritativeBodyFatSource(bodyFatSource);
 
   if (useKatchMcArdle) {
     const lbm = weightKg * (1 - bodyFatPercent / 100);
@@ -627,8 +629,7 @@ export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource
     isFinite(bodyFatPercent) &&
     bodyFatPercent > 0 &&
     bodyFatPercent < 60 &&
-    bodyFatSource !== null &&
-    bodyFatSource !== 'visual';
+    isAuthoritativeBodyFatSource(bodyFatSource);
 
   if (credibleBF) {
     const ffmKg = weightKg * (1 - bodyFatPercent / 100);
@@ -700,7 +701,7 @@ export function energyAvailabilityCaution(targetKcal, maintenanceKcal, { weightK
 function calcConfidence(bodyFatSource) {
   if (bodyFatSource === 'dexa' || bodyFatSource === 'caliper') return 'high';
   if (bodyFatSource === 'bia') return 'medium';
-  if (bodyFatSource === 'visual') return 'low';
+  if (bodyFatSource === 'visual' || bodyFatSource === 'photo_scan') return 'low';
   return 'medium'; // no body fat provided
 }
 
@@ -732,9 +733,7 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'opti
     lbm !== null &&
     lbm !== undefined &&
     lbm > 0 &&
-    bodyFatSource !== null &&
-    bodyFatSource !== undefined &&
-    bodyFatSource !== 'visual';
+    isAuthoritativeBodyFatSource(bodyFatSource);
 
   let proteinG;
   let basis;

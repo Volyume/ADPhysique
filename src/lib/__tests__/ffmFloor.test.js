@@ -32,6 +32,14 @@ describe('computeFFMFloor: credible BF% path (Katch-McArdle)', () => {
     expect(out.source).toBe('fallback');
   });
 
+  test('photo_scan source is trend context only and NEVER counts as credible', () => {
+    const out = computeFFMFloor(80, { bodyFatPercent: 15, bodyFatSource: 'photo_scan', sex: 'male' });
+    const fallback = computeFFMFloor(80, { bodyFatPercent: null, bodyFatSource: null, sex: 'male' });
+    expect(out.source).toBe('fallback');
+    expect(out.floorKcal).toBe(fallback.floorKcal);
+    expect(out.ffmKg).toBe(fallback.ffmKg);
+  });
+
   test('null BF source falls back even if percentage is supplied', () => {
     const out = computeFFMFloor(80, { bodyFatPercent: 15, bodyFatSource: null, sex: 'male' });
     expect(out.source).toBe('fallback');

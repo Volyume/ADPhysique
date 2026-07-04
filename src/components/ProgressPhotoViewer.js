@@ -105,7 +105,7 @@ export default function ProgressPhotoViewer({
     let alive = true;
     (async () => {
       try {
-        const map = await getPhotoMetaMap(photos.map((p) => p.name));
+        const map = await getPhotoMetaMap(photos.map((p) => p.name), userId);
         if (alive) setMetaMap(map);
       } catch (e) {
         logError('ProgressPhotoViewer.loadMeta', e, { count: photos.length });
@@ -113,7 +113,7 @@ export default function ProgressPhotoViewer({
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [namesKey]);
+  }, [namesKey, userId]);
 
   const safeIndex = clamp(index, 0, Math.max(0, photos.length - 1));
   const current = photos[safeIndex] || null;

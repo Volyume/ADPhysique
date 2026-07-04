@@ -319,6 +319,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
   const [mode, setMode] = useState('sideBySide');
   const [selected, setSelected] = useState([]); // photo names, tap order, max two
   const [failed, setFailed] = useState({});
+  const userId = useAppStore((s) => s.user?.id);
 
   // Load the local metadata map (takenAt, pose) for the given photos. Never
   // throws; a read failure falls back to filename-derived dates.
@@ -326,11 +327,11 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
     let alive = true;
     const names = (photos || []).map((p) => p.name);
     (async () => {
-      const map = await getPhotoMetaMap(names);
+      const map = await getPhotoMetaMap(names, userId);
       if (alive) setMetaMap(map);
     })();
     return () => { alive = false; };
-  }, [photos]);
+  }, [photos, userId]);
 
   // Enrich each photo with its effective takenAt (meta, else the filename ts)
   // and pose. A missing meta map resolves to the same values as today.

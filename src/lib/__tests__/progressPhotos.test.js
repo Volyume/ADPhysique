@@ -14,11 +14,12 @@ jest.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: jest.fn(async () => { throw new Error('no marker'); }),
   writeAsStringAsync: jest.fn(async () => {}),
   copyAsync: jest.fn(async () => {}),
+  deleteAsync: jest.fn(async () => {}),
 }));
 
 import {
   timestampFromName, orderPhotos, photoDir, photosViewableBy, markPhotosOwner,
-  saveProgressPhoto,
+  saveProgressPhoto, wipeProgressPhotoDirectory,
 } from '../progressPhotos';
 
 // The mocked module itself, so tests can steer the per-call behaviour.
@@ -50,7 +51,9 @@ describe('photosViewableBy (E10 read-only guard, fail closed)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFs.getInfoAsync.mockResolvedValue({ exists: true });
-    mockFs.readDirectoryAsync.mockResolvedValue(['100.jpg', '200.jpg']);
+    mockFs.readDirectoryAsync.mockImplementation(async (dir) => (
+      dir === photoDir() ? ['100.jpg', '200.jpg'] : []
+    ));
   });
 
   test('true only when photos exist AND the owner marker names this user', async () => {
@@ -86,6 +89,15 @@ describe('photosViewableBy (E10 read-only guard, fail closed)', () => {
 
   test('the owner sidecar never appears in the gallery listing', () => {
     expect(orderPhotos(['owner.txt', '100.jpg']).map((r) => r.name)).toEqual(['100.jpg']);
+  });
+
+  test('user-scoped photos are viewable without the legacy owner marker', async () => {
+    mockFs.readDirectoryAsync.mockImplementation(async (dir) => {
+      if (dir === photoDir('user-a')) return ['100.jpg'];
+      return [];
+    });
+    expect(await photosViewableBy('user-a')).toBe(true);
+    expect(mockFs.readAsStringAsync).not.toHaveBeenCalled();
   });
 });
 
@@ -123,5 +135,23 @@ describe('saveProgressPhoto collision guard (gap #11)', () => {
   test('a null source returns null and never copies', async () => {
     expect(await saveProgressPhoto(null, 1000)).toBeNull();
     expect(mockFs.copyAsync).not.toHaveBeenCalled();
+  });
+
+  test('a user-scoped save writes under that user directory', async () => {
+    const res = await saveProgressPhoto('src://d.jpg', 1000, 'user-a');
+    expect(res).toEqual({ name: '1000.jpg', uri: `${photoDir('user-a')}1000.jpg`, ts: 1000 });
+    expect(mockFs.copyAsync).toHaveBeenCalledWith({ from: 'src://d.jpg', to: `${photoDir('user-a')}1000.jpg` });
+  });
+});
+
+describe('wipeProgressPhotoDirectory', () => {
+  test('deletes the whole progress photo directory idempotently', async () => {
+    await wipeProgressPhotoDirectory();
+    expect(mockFs.deleteAsync).toHaveBeenCalledWith(photoDir(), { idempotent: true });
+  });
+
+  test('surfaces filesystem delete failures to the account wipe caller', async () => {
+    mockFs.deleteAsync.mockRejectedValueOnce(new Error('disk busy'));
+    await expect(wipeProgressPhotoDirectory()).rejects.toThrow('disk busy');
   });
 });
