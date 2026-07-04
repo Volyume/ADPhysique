@@ -5,8 +5,11 @@ import {
   PHOTO_SCAN_SOURCE,
   PROGRESS_SCAN_CONSENT_VERSION,
   PROGRESS_SCAN_ESTIMATOR_VERSION,
+  PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
   analyseProgressScan,
   coachSummaryFromScan,
+  deriveProgressScanBiasFlagsFromProfile,
+  measuredSignalsSummaryFromAssets,
   requiredPosesComplete,
   parseMaybeJson,
 } from './progressScanAnalysis';
@@ -71,6 +74,8 @@ function rowToAsset(row) {
     lightingScore: row.lighting_score ?? null,
     framingScore: row.framing_score ?? null,
     cameraTiltDegrees: row.camera_tilt_degrees ?? null,
+    signals: parseMaybeJson(row.signals_json, null),
+    signalsJson: row.signals_json ?? null,
     createdAt: row.created_at,
   };
 }
@@ -114,14 +119,14 @@ export async function addProgressScanAsset(userId, scanId, asset = {}) {
     `INSERT INTO progress_scan_assets
       (id, scan_id, user_id, pose, photo_name, uri, taken_at, quality_score,
        landmark_confidence, segmentation_confidence, blur_score, lighting_score,
-       framing_score, camera_tilt_degrees, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       framing_score, camera_tilt_degrees, signals_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, scanId, userId, asset.pose, asset.photoName, asset.uri,
       asset.takenAt ?? t, asset.qualityScore ?? null, asset.landmarkConfidence ?? null,
       asset.segmentationConfidence ?? null, asset.blurScore ?? null,
       asset.lightingScore ?? null, asset.framingScore ?? null,
-      asset.cameraTiltDegrees ?? null, t,
+      asset.cameraTiltDegrees ?? null, asJson(asset.signals ?? null), t,
     ],
   );
   return getProgressScanAsset(userId, id);
@@ -183,14 +188,24 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
   if (!session) return null;
   const assets = await getProgressScanAssets(userId, scanId);
   const previous = await getPreviousAnalysedProgressScan(userId, session.capturedAt);
+  const profileBiasFlags = deriveProgressScanBiasFlagsFromProfile({
+    trainingGoal: opts.trainingGoal ?? null,
+    trainingPhase: opts.trainingPhase ?? opts.goalPhase ?? null,
+    darkerSkinOverestimationRisk: opts.darkerSkinOverestimationRisk === true,
+  });
   const analysis = analyseProgressScan({
     assets,
     previousScan: previous,
     modelEstimate: opts.modelEstimate ?? null,
     sex: opts.sex ?? null,
-    userBiasFlags: opts.userBiasFlags ?? [],
+    heightCm: opts.heightCm ?? null,
+    weightKg: opts.weightKg ?? null,
+    userBiasFlags: [...profileBiasFlags, ...(opts.userBiasFlags ?? [])],
     modelValidated: false,
   });
+  const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null);
+  const modelVersion = analysis.modelEstimate?.modelVersion
+    ?? (signalsSummary.modelBacked ? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION : opts.modelVersion ?? null);
   const complete = requiredPosesComplete(assets);
   const t = nowMs();
   await d.runAsync(
@@ -228,9 +243,9 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       analysis.trend?.magnitudePctPoints ?? null,
       analysis.qualityScore ?? null,
       analysis.qualityLabel ?? null,
-      opts.modelVersion ?? null,
-      PROGRESS_SCAN_ESTIMATOR_VERSION,
-      asJson({ measuredSignalsOnly: true, assets: assets.map((a) => ({ pose: a.pose, qualityScore: a.qualityScore })) }),
+      modelVersion,
+      analysis.modelEstimate?.estimatorVersion ?? PROGRESS_SCAN_ESTIMATOR_VERSION,
+      asJson(signalsSummary),
       asJson(analysis.abstentionReasons),
       asJson(analysis.biasFlags),
       analysis.copySummary ?? null,

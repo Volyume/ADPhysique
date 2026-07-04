@@ -1,0 +1,7 @@
+{
+  "name": "progress-scan-image",
+  "version": "0.1.0",
+  "description": "Still-image RGB preprocessing for Volyume Progress Scan.",
+  "main": "index.ts",
+  "private": true
+}

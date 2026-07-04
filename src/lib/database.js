@@ -1607,6 +1607,12 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_progress_scan_sessions_user_time ON progress_scan_sessions(user_id, captured_at DESC)',
     'CREATE INDEX IF NOT EXISTS idx_progress_scan_assets_scan ON progress_scan_assets(scan_id, pose)',
   ],
+  // v57, Progress Scan v1 on-device model signals. Each asset may carry the
+  // local TFLite mask-derived measurements used to finish the scan session.
+  // Still local-only and deliberately absent from SYNC_REGISTRY.
+  [
+    'ALTER TABLE progress_scan_assets ADD COLUMN signals_json TEXT',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
