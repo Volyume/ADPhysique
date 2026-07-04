@@ -542,7 +542,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // was wrong, and the framing doesn't fit a science-led app. Everyone
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
-    // screen under You for anyone who wants it.
+    // screen under Coach for anyone who wants it.
     emitStepDone(4);
     setStep(5);
   }
@@ -613,7 +613,7 @@ export default function ProOnboardingScreen({ navigation }) {
     let planFailed = false;
     try {
       if (morningEnabled || checkinEnabled) {
-        // Flat schema: CoachingReminders, WeeklyCheckIn and the You tab
+        // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
         // all read these top-level keys. An earlier nested shape
         // (prefs.checkin.weekday, prefs.morning.hour) was silently
         // dropped by every reader, defaulting every enrolled user to

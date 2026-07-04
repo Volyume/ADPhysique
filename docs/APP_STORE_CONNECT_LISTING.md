@@ -96,7 +96,7 @@ PRIVATE BY DESIGN
 
 Your training data belongs to you. No social feed. No public profiles. No sharing your stats with anyone.
 
-All data is stored on your device. If you create an account, it syncs to your private cloud backup — visible only to you. Export your full workout history at any time as a CSV and take it with you wherever you go.
+All data is stored on your device. If you create an account, it syncs to your private cloud backup with row-level security; support access is limited to helping with your account. Progress photo and Physique Scan image files stay on your device unless you choose to share or export them. Export your workout sets as CSV or create an app-data JSON backup at any time.
 
 FEATURES
 
@@ -120,6 +120,8 @@ Progress
 Body
 • Body weight log with trend chart
 • Body measurements tracking (waist, chest, arms, and more)
+• Progress photos stored on your device
+• Physique Scan visual leanness score, confidence and progress signal
 
 Nutrition (Pro)
 • Daily calorie and macro targets
@@ -312,7 +314,11 @@ These data types are collected and linked to the user's account (only if the use
 | Contact Info | Email Address | Account creation, app functionality | Yes — account is optional |
 | Contact Info | Name (first name only) | Personalisation within the app | Yes |
 | Health & Fitness | Fitness Information (workouts, sets, weights, reps) | Core app functionality | No — required for the app to work |
-| Health & Fitness | Health Information (body weight, measurements) | App functionality, coaching calculations | Yes |
+| Health & Fitness | Health Information (body weight, measurements, entered body fat, cardio, steps, check-ins) | App functionality, coaching calculations | Yes |
+| Health & Fitness | Nutrition / food logs | Food diary, calorie and macro targets | Yes |
+| Health & Fitness | Progress photo metadata and Physique Scan outputs | Progress tracking; image files stay device-local unless user shares/exports | Yes |
+| Usage Data | Product Interaction | First-party usage telemetry; opt-out in Settings | Yes |
+| Diagnostics | Crash Data and Performance Data | Crash reporting and app reliability through scrubbed Sentry events | No |
 
 ---
 
@@ -339,8 +345,7 @@ Volyume does not collect:
 - Contacts
 - Emails or text messages
 - Gameplay content or customer support data
-- Crash data or performance data sent off-device
-- Other diagnostic data
+- Precise photo image files collected by Volyume servers
 
 ---
 
@@ -348,7 +353,8 @@ Volyume does not collect:
 
 - All workout data is stored locally on-device by default.
 - Cloud sync is optional and requires account creation.
-- Cloud-synced data is private to the user — not shared with any third party.
+- Cloud-synced data is private to the user and protected by row-level security; support access is limited to account help.
+- Progress photo and Physique Scan image files stay device-local unless the user chooses to share or export them.
 - Users can delete their account and all associated data from within the app.
 - Data is encrypted in transit and at rest.
 

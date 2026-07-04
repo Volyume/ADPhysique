@@ -158,7 +158,7 @@ export default function SettingsDataScreen({ navigation }) {
       const { bytes } = await exportBackup();
       appAlert(
         'Backup created',
-        `Your entire Volyume database (${(bytes / 1024).toFixed(0)} KB) was exported. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
+        `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes database records such as workouts, nutrition logs, body metrics, progress photo metadata and Physique Scan metadata. Private photo image files are not bundled. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
       appAlert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
@@ -168,7 +168,7 @@ export default function SettingsDataScreen({ navigation }) {
   function handleRestoreBackup() {
     appAlert(
       'Restore from backup?',
-      'This replaces ALL current data (workouts, routines, plans, body metrics and settings) with the contents of the backup file you choose. This cannot be undone.',
+      'This replaces ALL current app database records (workouts, routines, plans, nutrition logs, body metrics, progress metadata and settings) with the contents of the backup file you choose. Private photo image files are not restored from this JSON file. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -241,7 +241,8 @@ export default function SettingsDataScreen({ navigation }) {
         />
         <SettingRow
           icon="save-outline"
-          label="Back up everything (JSON)"
+          label="Back up app data (JSON)"
+          sub="Database records; photo image files stay on this device"
           onPress={handleFullBackup}
         />
         <SettingRow
@@ -258,6 +259,7 @@ export default function SettingsDataScreen({ navigation }) {
         <SettingRow
           icon="download-outline"
           label="Export workout log (CSV)"
+          sub="Workout sets only"
           onPress={exportData}
         />
         <SettingRow
@@ -275,7 +277,7 @@ export default function SettingsDataScreen({ navigation }) {
         />
       </View>
       <Text style={styles.dataPrivacyNote}>
-        Your data is always yours. Export or back up any time, no account required.
+        Your data is always yours. Export workout sets or back up app database records any time, no account required.
       </Text>
     </SettingsPage>
   );

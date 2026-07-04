@@ -21,6 +21,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 jest.mock('../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
 jest.mock('../../lib/payments/restore', () => ({ restorePurchases: jest.fn() }));
+jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
 // ProLocked renders the example-day teaser for the 'Food diary' label; its
 // real module graph (meal assembler, food db) is irrelevant to the guard.
 jest.mock('../food/TodaysPlateTeaser', () => {

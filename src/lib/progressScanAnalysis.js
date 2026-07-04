@@ -512,9 +512,9 @@ export function buildPhysiqueAssessment({
 }
 
 function progressScanAssessmentCopy(assessment = null) {
-  if (!assessment) return 'Progress Scan saved. I could not read enough from the photos for a useful scan result.';
+  if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful scan result.';
   if (assessment.scanConfidenceTier === 'not_enough' || assessment.visualLeannessScore == null) {
-    return 'Progress Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, full body in frame, and the same setup next time.';
+    return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, full body in frame, and the same setup next time.';
   }
   const score = `${assessment.visualLeannessScore}/100`;
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
@@ -584,7 +584,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       lines: ['This is your baseline scan.'],
       summary: 'This is your baseline scan. Future scans will compare only measured changes from stored scan signals.',
       trendSummary: 'Baseline scan saved.',
-      coachSummary: 'Progress Scan has a baseline saved, but no like-for-like trend yet.',
+      coachSummary: 'Physique Scan has a baseline saved, but no like-for-like trend yet.',
     };
   }
   if (!comparability.comparable) {
@@ -596,7 +596,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       lines: [comparability.reason],
       summary: `This scan is saved, but I am not comparing it yet. ${comparability.reason}`,
       trendSummary: 'Not enough like-for-like scan data yet.',
-      coachSummary: 'Progress Scan is saved, but I am not using it as a comparison because the scan setup was not like-for-like.',
+      coachSummary: 'Physique Scan is saved, but I am not using it as a comparison because the scan setup was not like-for-like.',
     };
   }
 
@@ -676,7 +676,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       lines: ['There are not enough measured scan signals to compare these photos yet.'],
       summary: 'This scan is saved, but I am not comparing it yet. There are not enough measured scan signals to make a like-for-like comparison.',
       trendSummary: 'Not enough measured scan data yet.',
-      coachSummary: 'Progress Scan is saved, but I am not using it as a comparison because the measured scan signals are incomplete.',
+      coachSummary: 'Physique Scan is saved, but I am not using it as a comparison because the measured scan signals are incomplete.',
     };
   }
 

@@ -293,7 +293,7 @@ Sentry (crash reporting) are service providers / processors, so their data is
 | Email address | Personal info | Yes (account) | No | No (account needs it) | Yes | Yes | Account management, app functionality |
 | Name (first name) | Personal info | Yes | No | Yes | Yes | Yes | App functionality (personalisation) |
 | Workouts, sets, reps, weights, programmes | Health & fitness (fitness) | Yes | No | No | Yes | Yes | App functionality |
-| Body weight, measurements, body fat, steps, cardio | Health & fitness (health) | Yes | No | Yes | Yes | Yes | App functionality |
+| Body weight, measurements, body fat, steps, cardio, progress photo metadata, Physique Scan outputs | Health & fitness (health) | Yes | No | Yes | Yes | Yes | App functionality |
 | Food / nutrition logs | Health & fitness | Yes | No | Yes | Yes | Yes | App functionality |
 | In-app events (analytics, e.g. workout/paywall) | App activity (app interactions) | Yes | No | Yes (opt-out in Settings) | Yes | Yes | Analytics, app functionality |
 | Crash logs | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Crash reporting |
@@ -302,9 +302,10 @@ Sentry (crash reporting) are service providers / processors, so their data is
 
 **Data NOT collected:** Financial / payment info (Google Play handles the
 purchase; the app never receives card data), location, contacts, messages,
-calendar, web-browsing history, audio. **Photos / camera:** the camera is used
-for barcode and nutrition-label scanning, processed **on-device** (MLKit /
-vision-camera); no image is collected, uploaded, or stored.
+calendar, web-browsing history, audio. **Photos / camera:** barcode and
+nutrition-label scans are processed on-device (MLKit / vision-camera) and are
+not uploaded or stored by Volyume. Progress photo and Physique Scan image files
+are stored on-device only unless the user chooses to share or export them.
 
 **Third-party destinations (all processor / functional, no PII sold):**
 - **Supabase**: encrypted cloud backup of the account's own data (RLS, own-rows).

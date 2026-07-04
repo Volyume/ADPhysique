@@ -43,8 +43,8 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import useAppStore from '../store/useAppStore';
-import { saveProgressPhoto } from '../lib/progressPhotos';
-import { upsertPhotoMeta } from '../lib/progressPhotoMeta';
+import { deleteProgressPhoto, saveProgressPhoto } from '../lib/progressPhotos';
+import { deletePhotoMeta, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
 import {
   getProgressScanCapturePreferences,
@@ -232,9 +232,19 @@ export default function ProgressGhostCapture({
     try {
       const pic = await cam.takePictureAsync({ quality: 0.7 });
       if (!pic?.uri) return;
+      if (useAppStore.getState().tier !== 'pro') return;
       const saved = await saveProgressPhoto(pic.uri, undefined, userId);
       if (!saved?.name) return;
+      if (useAppStore.getState().tier !== 'pro') {
+        await deleteProgressPhoto(userId, saved.uri).catch(() => false);
+        return;
+      }
       await upsertPhotoMeta(userId, saved.name, { pose });
+      if (useAppStore.getState().tier !== 'pro') {
+        await deletePhotoMeta(userId, saved.name).catch(() => false);
+        await deleteProgressPhoto(userId, saved.uri).catch(() => false);
+        return;
+      }
       onCaptured?.(saved.name, saved);
     } catch (e) {
       logError('ProgressGhostCapture.capture', e, { pose });

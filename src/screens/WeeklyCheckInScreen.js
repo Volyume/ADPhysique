@@ -778,7 +778,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               </View>
             ) : (
               <Text style={styles.skipNote}>
-                No morning weights logged this week. Log each morning from the Train tab. One reading per day makes the trend far more accurate.
+                No morning weights logged this week. Log each morning from the Today tab. One reading per day makes the trend far more accurate.
               </Text>
             )}
           </View>
@@ -1254,7 +1254,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
             </Text>
             <Text style={styles.gateBody}>
-              You can change the day in Settings → Coaching reminders. In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
+              You can change the day in Settings → Coaching reminders. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
@@ -1348,10 +1348,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {'\n\n'}
             Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
             {'\n\n'}
-            Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Train tab and come back on {dayName}.
+            Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Today tab and come back on {dayName}.
           </Text>
           {/* OB-8: the label promises an action, so perform it. Deep-link to
-              the Train tab's weight cell (TodayStrip) and pop its input open.
+              the Today tab's weight cell (TodayStrip) and pop its input open.
               This screen lives in ProfileStack, so a bare navigate('Home')
               would be silently dropped in production (the F4 bug class);
               route via the parent tab navigator. The fresh param value means

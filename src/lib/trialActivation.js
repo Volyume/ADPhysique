@@ -128,7 +128,7 @@ export function trialDay3Push({ variant, completedSessions = 0, weighIns7d = 0, 
   }
   return {
     title: 'Your plan is ready when you are',
-    body: `One session this week is all it takes to start your first coaching review. It's waiting on the Train tab.`,
+    body: `One session this week is all it takes to start your first coaching review. It's waiting on the Today tab.`,
   };
 }
 

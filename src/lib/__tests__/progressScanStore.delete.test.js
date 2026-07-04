@@ -40,6 +40,7 @@ jest.mock('../uuid', () => ({
 const { deleteProgressScanSession, detachProgressScanPhoto, finishProgressScanSession } = require('../progressScanStore');
 const { deleteProgressPhoto } = require('../progressPhotos');
 const { deletePhotoMeta } = require('../progressPhotoMeta');
+const { logError } = require('../errorLog');
 
 function seedAsset() {
   mockRows.splice(0, mockRows.length, {
@@ -60,6 +61,7 @@ beforeEach(() => {
   mockSession = null;
   deleteProgressPhoto.mockClear();
   deletePhotoMeta.mockClear();
+  logError.mockClear();
   deleteProgressPhoto.mockResolvedValue(true);
   deletePhotoMeta.mockResolvedValue(true);
 });
@@ -129,34 +131,48 @@ function seedCompletedSessionAssets() {
 }
 
 describe('deleteProgressScanSession cleanup', () => {
-  test('does not delete scan rows when photo file cleanup fails', async () => {
+  test('deletes scan rows first and logs when photo file cleanup fails', async () => {
     seedAsset();
     deleteProgressPhoto.mockResolvedValue(false);
 
     const ok = await deleteProgressScanSession('user-1', 'scan-1', { deleteFiles: true });
 
-    expect(ok).toBe(false);
-    expect(mockRunCalls.map((c) => c.sql).join('\n')).not.toMatch(/DELETE FROM progress_scan_(assets|sessions)/);
+    expect(ok).toBe(true);
+    expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_assets/);
+    expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_sessions/);
+    expect(logError).toHaveBeenCalledWith(
+      'progressScanStore.delete.files',
+      expect.any(Error),
+      { userId: 'user-1', scanId: 'scan-1' },
+    );
   });
 
-  test('does not delete scan rows when photo metadata cleanup fails', async () => {
+  test('deletes scan rows first and leaves the file retryable when metadata cleanup fails', async () => {
     seedAsset();
     deletePhotoMeta.mockResolvedValue(false);
 
     const ok = await deleteProgressScanSession('user-1', 'scan-1', { deleteFiles: true });
 
-    expect(ok).toBe(false);
-    expect(mockRunCalls.map((c) => c.sql).join('\n')).not.toMatch(/DELETE FROM progress_scan_(assets|sessions)/);
+    expect(ok).toBe(true);
+    expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_assets/);
+    expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_sessions/);
+    expect(deleteProgressPhoto).not.toHaveBeenCalled();
+    expect(logError).toHaveBeenCalledWith(
+      'progressScanStore.delete.files',
+      expect.any(Error),
+      { userId: 'user-1', scanId: 'scan-1' },
+    );
   });
 
-  test('deletes scan rows only after photo file and metadata cleanup succeed', async () => {
+  test('deletes scan rows and then removes metadata before the photo file', async () => {
     seedAsset();
 
     const ok = await deleteProgressScanSession('user-1', 'scan-1', { deleteFiles: true });
 
     expect(ok).toBe(true);
-    expect(deleteProgressPhoto).toHaveBeenCalledWith('user-1', 'file:///doc/progress_photos/users/user-1/100.jpg');
     expect(deletePhotoMeta).toHaveBeenCalledWith('user-1', '100.jpg');
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('user-1', 'file:///doc/progress_photos/users/user-1/100.jpg');
+    expect(deletePhotoMeta.mock.invocationCallOrder[0]).toBeLessThan(deleteProgressPhoto.mock.invocationCallOrder[0]);
     expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_assets/);
     expect(mockRunCalls.map((c) => c.sql).join('\n')).toMatch(/DELETE FROM progress_scan_sessions/);
   });

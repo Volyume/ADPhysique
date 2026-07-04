@@ -211,6 +211,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const readOnly = tier !== 'pro';
   const userId = useAppStore((s) => s.user?.id);
   const userSex = useAppStore((s) => s.userProfile?.sex ?? null);
+  const canWrite = useCallback(() => useAppStore.getState().tier === 'pro', []);
 
   // Shared ED-safety gate (spec §3.2, PART 2). Fail-closed calm-OR-open-ED read
   // that withholds the NEW high-risk surfaces (comparison entry, the share
@@ -305,7 +306,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   async function pickFrom(source) {
     // Live-tier re-check (hostile review E10 #1 class): the add alert can be
     // open when the tier flips pro-to-free; its callback must not save then.
-    if (useAppStore.getState().tier !== 'pro') return;
+    if (!canWrite()) return;
     setScanFlow(null);
     setCapturePose(null);
     if (!ImagePicker) { toast.show('Photos need a rebuild on this device.', { variant: 'warning' }); return; }
@@ -334,7 +335,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function pickScanPoseFromLibrary(flow = scanFlow, pose = capturePose) {
-    if (useAppStore.getState().tier !== 'pro') return;
+    if (!canWrite()) return;
     if (!flow?.scanId || !pose) {
       pickFrom('library');
       return;
@@ -349,10 +350,20 @@ export default function ProgressPhotosScreen({ navigation }) {
       if (result?.canceled) return;
       const uri = result?.assets?.[0]?.uri;
       if (!uri) return;
+      if (!canWrite()) return;
       const uid = useAppStore.getState().user?.id ?? userId;
       const saved = await saveProgressPhoto(uri, undefined, uid);
       if (!saved?.name || !saved?.uri) throw new Error('progress_scan_library_save_failed');
+      if (!canWrite()) {
+        await deleteProgressPhoto(uid, saved.uri).catch(() => false);
+        return;
+      }
       await upsertPhotoMeta(uid, saved.name, { pose });
+      if (!canWrite()) {
+        await deletePhotoMeta(uid, saved.name).catch(() => false);
+        await deleteProgressPhoto(uid, saved.uri).catch(() => false);
+        return;
+      }
       setBusy(false);
       await onScanCaptured(saved.name, saved);
     } catch (e) {
@@ -397,7 +408,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     setDetailsOpen(false);
     // Live-tier re-check (the add-alert write-guard class): a pro-to-free flip
     // with the sheet open must not save or write metadata.
-    if (useAppStore.getState().tier !== 'pro') { resetPending(); return; }
+    if (!canWrite()) { resetPending(); return; }
     const uid = useAppStore.getState().user?.id;
     setBusy(true);
     try {
@@ -455,7 +466,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     : 'Any dates';
 
   function openGhostCapture() {
-    if (useAppStore.getState().tier !== 'pro') return;
+    if (!canWrite()) return;
     setScanFlow(null);
     // Seed the overlay against the remembered reference when set, else the
     // latest photo of the pose in view (or the latest overall). Carry that
@@ -472,10 +483,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function openProgressScan() {
-    if (useAppStore.getState().tier !== 'pro' || !userId) return;
+    if (!canWrite() || !userId) return;
     const latestCompleted = scans.find((s) => s?.status === 'complete' && s?.requiredPosesComplete);
     if (latestCompleted?.capturedAt && Date.now() - latestCompleted.capturedAt < PROGRESS_SCAN_MIN_INTERVAL_MS) {
-      appAlert('Give the scan time', 'Progress Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still take a normal progress photo today.', [
+      appAlert('Give the scan time', 'Physique Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still take a normal progress photo today.', [
         { text: 'Take single photo', onPress: openGhostCapture },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -483,6 +494,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     try {
       const capturePrefs = await getProgressScanCapturePreferences();
+      if (!canWrite()) return;
       const session = await createProgressScanSession(userId, capturePrefs);
       if (!session?.id) throw new Error('No scan session');
       setScanFlow({ scanId: session.id, pose: 'front' });
@@ -501,11 +513,30 @@ export default function ProgressPhotosScreen({ navigation }) {
     await setProgressScanHideExactPreference(next);
   }
 
+  async function abandonLapsedScanFlow(flow, name = null, saved = null) {
+    const uid = useAppStore.getState().user?.id ?? userId;
+    setCaptureOpen(false);
+    setCapturePose(null);
+    setScanFlow(null);
+    if (uid && saved?.uri) await deleteProgressPhoto(uid, saved.uri).catch(() => false);
+    if (uid && name) await deletePhotoMeta(uid, name).catch(() => false);
+    if (uid && flow?.scanId) await deleteProgressScanSession(uid, flow.scanId, { deleteFiles: true }).catch(() => false);
+    await refresh();
+  }
+
   async function finishScan(scanId) {
     if (!userId || !scanId) return;
+    if (!canWrite()) {
+      await abandonLapsedScanFlow({ scanId });
+      return;
+    }
     try {
       const profile = useAppStore.getState().userProfile || {};
       const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
+      if (!canWrite()) {
+        await abandonLapsedScanFlow({ scanId });
+        return;
+      }
       const sex = profile.sex ?? bodyProfile?.sex ?? userSex;
       await finishProgressScanSession(userId, scanId, {
         sex,
@@ -528,14 +559,14 @@ export default function ProgressPhotosScreen({ navigation }) {
       setScanFlow({ scanId: flow.scanId, pose: 'back' });
       setCapturePose('back');
       appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
-        { text: 'Continue', onPress: () => setCaptureOpen(true) },
+        { text: 'Continue', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setCaptureOpen(true); } },
       ], { cancelable: false });
       return;
     }
     if (pose === 'back') {
       appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
-        { text: 'Finish scan', onPress: () => { setScanFlow(null); finishScan(flow.scanId); } },
-        { text: 'Take side', onPress: () => { setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
+        { text: 'Finish scan', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
+        { text: 'Take side', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
       ], { cancelable: false });
       return;
     }
@@ -544,6 +575,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function saveScanAssetAndContinue(flow, pose, name, saved, vision) {
+    if (!canWrite()) {
+      await abandonLapsedScanFlow(flow, name, saved);
+      return;
+    }
     const assetFields = assetFieldsFromVisionResult(vision);
     const inserted = await addProgressScanAsset(userId, flow.scanId, {
       pose,
@@ -562,6 +597,10 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function retakeScanPose(flow, pose, name, saved) {
     try {
+      if (!canWrite()) {
+        await abandonLapsedScanFlow(flow, name, saved);
+        return;
+      }
       if (saved?.uri) {
         const fileDeleted = await deleteProgressPhoto(userId, saved.uri);
         if (!fileDeleted) throw new Error('progress_scan_retake_photo_delete_failed');
@@ -628,10 +667,18 @@ export default function ProgressPhotosScreen({ navigation }) {
       openDetailsForCaptured(name, pose);
       return;
     }
+    if (!canWrite()) {
+      await abandonLapsedScanFlow(flow, name, saved);
+      return;
+    }
     try {
       setBusy(true);
       const vision = await analyseProgressScanPhoto({ uri: saved.uri, pose });
       setBusy(false);
+      if (!canWrite()) {
+        await abandonLapsedScanFlow(flow, name, saved);
+        return;
+      }
       const retakeCopy = retakeCopyForVisionResult(vision);
       if (retakeCopy) {
         appAlert('Retake this photo?', retakeCopy, [
@@ -669,7 +716,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function onAdd() {
-    appAlert('Progress Scan', 'Stored only on this device.', [
+    appAlert('Physique Scan', 'Stored only on this device.', [
       { text: 'Start guided scan', onPress: openProgressScan },
       { text: 'Single guided photo', onPress: openGhostCapture },
       { text: 'Take photo', onPress: () => pickFrom('camera') },
@@ -682,7 +729,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   // has to guess. No cadence pressure, no streak: "at your own pace" by design.
   function onHowItWorks() {
     appAlert(
-      'How Progress Scan works',
+      'How Physique Scan works',
       'Your photos stay on this device. They are never synced or shared unless you choose to.\n\n'
       + 'A guided scan takes front and back photos. A side photo is optional.\n\n'
       + 'Use the camera flip and the 5 or 10 second timer when you need to set the phone down and step into position.\n\n'
@@ -704,18 +751,18 @@ export default function ProgressPhotosScreen({ navigation }) {
   // Re-checks the live tier (a pro-to-free flip with the confirm open must not
   // delete); the viewer also re-checks before calling this.
   const onViewerDelete = useCallback(async (name) => {
-    if (useAppStore.getState().tier !== 'pro') return;
+    if (!canWrite()) return;
     const uid = useAppStore.getState().user?.id ?? userId;
     const item = photos.find((p) => p.name === name);
     try {
+      const detached = await detachProgressScanPhoto(uid, name);
+      if (!detached) throw new Error('progress_scan_detach_photo_failed');
+      const metaDeleted = await deletePhotoMeta(uid, name);
+      if (!metaDeleted) throw new Error('progress_photo_meta_delete_failed');
       if (item) {
         const fileDeleted = await deleteProgressPhoto(uid, item.uri);
         if (!fileDeleted) throw new Error('progress_photo_delete_failed');
       }
-      const metaDeleted = await deletePhotoMeta(uid, name);
-      if (!metaDeleted) throw new Error('progress_photo_meta_delete_failed');
-      const detached = await detachProgressScanPhoto(uid, name);
-      if (!detached) throw new Error('progress_scan_detach_photo_failed');
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
       toast.show('Could not delete that photo. Please try again.', { variant: 'error' });
@@ -724,7 +771,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     setReferenceName((prev) => (prev === name ? null : prev));
     setViewerOpen(false);
     await refresh();
-  }, [photos, refresh, toast, userId]);
+  }, [canWrite, photos, refresh, toast, userId]);
 
   function openCompare() { setCompareOpen(true); }
   function openScanCompare() { setScanCompareOpen(true); }
@@ -783,7 +830,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           rest of the app. The add action rides the header's right slot; it is a
           write, so it is hidden in the E10 view-only lapse state. */}
       <BackHeader
-        title="Progress Scan"
+        title="Physique Scan"
         onBack={() => navigation.goBack()}
         right={!readOnly ? (
           <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add a photo">
@@ -798,7 +845,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <Text style={styles.note}>
           {suppressed
             ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Guided photos are saved privately and physique scan details are hidden right now. Use these only if they help you, and skip them if they do not.'
-            : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Progress Scan guides front and back photos, then shows a Volyume Leanness Score, Leanness Band, Scan Confidence and Progress Signal when the photo read is strong enough.'}
+            : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Physique Scan guides front and back photos, then shows a Volyume Leanness Score, Leanness Band, Scan Confidence and Progress Signal when the photo read is strong enough.'}
           {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
         </Text>
         <TouchableOpacity
@@ -806,7 +853,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           style={styles.howRow}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="How Progress Scan works"
+          accessibilityLabel="How Physique Scan works"
         >
           <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
           <Text style={styles.howLink}>How it works</Text>
@@ -818,7 +865,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             onPress={openProgressScan}
             fullWidth
             style={styles.scanCta}
-            accessibilityLabel="Start guided Progress Scan"
+            accessibilityLabel="Start guided Physique Scan"
           />
         ) : null}
       </Card>
@@ -902,6 +949,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 key={p.key}
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setPoseFilter(p.key)}
+                hitSlop={8}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={p.label}
@@ -927,6 +975,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   key={s.key}
                   style={[styles.sortChip, active && styles.filterChipActive]}
                   onPress={() => setSortOrder(s.key)}
+                  hitSlop={8}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={s.a11y}
@@ -968,7 +1017,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               fullWidth={false}
               icon="git-compare-outline"
               onPress={openScanCompare}
-              accessibilityLabel="Compare two Progress Scan entries"
+              accessibilityLabel="Compare two Physique Scan entries"
             />
           )}
           {canCompare && (
@@ -1067,7 +1116,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         />
       ) : null}
 
-      {/* Scan comparison. This is the Progress Scan specific over-time view:
+      {/* Scan comparison. This is the Physique Scan specific over-time view:
           dated entries, visual score/band context, measured deltas, and
           pose-matched photos. It self-suppresses through usePhotoSuppression
           too. */}
@@ -1186,7 +1235,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
   filterChip: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    minHeight: 44, paddingVertical: spacing.sm,
     borderRadius: radius.sm, backgroundColor: colors.surface2,
   },
   filterChipActive: { backgroundColor: colors.primaryFill },
@@ -1199,12 +1249,13 @@ const styles = StyleSheet.create({
   },
   sortGroup: { flexDirection: 'row', gap: spacing.xs, flex: 1 },
   sortChip: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    minHeight: 44, paddingVertical: spacing.sm,
     borderRadius: radius.sm, backgroundColor: colors.surface2,
   },
   datesChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    minHeight: 44, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     borderRadius: radius.sm, backgroundColor: colors.surface2,
   },
   datesChipActive: { backgroundColor: colors.primaryBg },

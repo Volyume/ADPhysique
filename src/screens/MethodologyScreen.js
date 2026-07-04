@@ -4,7 +4,7 @@
 // open, the rest collapsible. No data dependencies, no Supabase reads, no
 // personalised state, so it renders identically for every user (including with
 // an ED-pattern flag open, it describes the safety system in general terms and
-// names no individual state). Reached from the You tab, from the coach-output
+// names no individual state). Reached from the Coach tab, from the coach-output
 // WhyBlock, and from the held-decisions card.
 //
 // FOUNDER COPY GATE: every string here is reviewed before ship and is kept

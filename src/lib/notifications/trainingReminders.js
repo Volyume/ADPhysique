@@ -32,7 +32,7 @@ const MAX_REMINDER_BODY_CHARS = 90;
 // buildTrainingReminderBody (pure)
 // The reminder body. When the active plan is known we name it, referenced by
 // its stored name verbatim (matching src/lib/planDisplay.js so the reminder
-// can never drift from the Plans tab). We name the PLAN, never a specific
+// can never drift from the Train tab). We name the PLAN, never a specific
 // routine: the plan rotates round-robin (decision D5), so a weekly repeating
 // notification cannot know which routine will be next on a future date without
 // asserting a plan fact that may not hold. Warm and encouraging, never a

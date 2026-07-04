@@ -62,6 +62,23 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/if \(!metaDeleted\) throw new Error\('progress_photo_meta_delete_failed'\)/);
   });
 
+  test('post-capture scan writes re-check the live tier and abandon drafts on lapse', () => {
+    expect(SCREEN).toMatch(/const canWrite = useCallback\(\(\) => useAppStore\.getState\(\)\.tier === 'pro', \[\]\);/);
+    expect(SCREEN).toMatch(/abandonLapsedScanFlow/);
+    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{\s*await abandonLapsedScanFlow\(flow, name, saved\);/);
+    expect(SCREEN).toMatch(/const vision = await analyseProgressScanPhoto\(\{ uri: saved\.uri, pose \}\);[\s\S]*if \(!canWrite\(\)\) \{[\s\S]*await abandonLapsedScanFlow\(flow, name, saved\);/);
+    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{ abandonLapsedScanFlow\(flow\); return; \} setCaptureOpen\(true\);/);
+  });
+
+  test('viewer delete detaches scan analysis before deleting the source photo', () => {
+    const detachIndex = SCREEN.indexOf('const detached = await detachProgressScanPhoto(uid, name);');
+    const metaIndex = SCREEN.indexOf('const metaDeleted = await deletePhotoMeta(uid, name);', detachIndex);
+    const fileIndex = SCREEN.indexOf('const fileDeleted = await deleteProgressPhoto(uid, item.uri);', metaIndex);
+    expect(detachIndex).toBeGreaterThan(-1);
+    expect(metaIndex).toBeGreaterThan(detachIndex);
+    expect(fileIndex).toBeGreaterThan(metaIndex);
+  });
+
   test('scan sessions capture camera preferences and finish uses canonical body profile fallback', () => {
     expect(SCREEN).toMatch(/getProgressScanCapturePreferences/);
     expect(SCREEN).toMatch(/createProgressScanSession\(userId, capturePrefs\)/);

@@ -7,7 +7,7 @@
 import { routeForNotificationType } from '../notificationRoute';
 
 describe('routeForNotificationType', () => {
-  test('weekly_checkin opens the check-in in the You tab', () => {
+  test('weekly_checkin opens the check-in in the Coach tab', () => {
     expect(routeForNotificationType('weekly_checkin')).toEqual({
       tab: 'ProfileTab', screen: 'WeeklyCheckIn',
     });
@@ -52,7 +52,7 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('winback opens the Subscription screen in the You tab (COMP-025-A/B)', () => {
+  test('winback opens the Subscription screen in the Coach tab (COMP-025-A/B)', () => {
     expect(routeForNotificationType('winback')).toEqual({
       // COMP-025-B: fromWinback carries through so the resubscribe prefers the
       // win-back Play offer (inert when none is configured).

@@ -135,7 +135,7 @@ export default function SettingsDisplayScreen() {
         <SettingRow
           icon="restaurant-outline"
           label="Show nutrition on Home"
-          sub="A remaining-calories glance and a quick way into your diary, on the Train tab."
+          sub="A remaining-calories glance and a quick way into your diary, on the Today tab."
           showArrow={false}
           rightElement={
             <Switch

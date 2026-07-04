@@ -13,7 +13,7 @@
  *     focused nor prevented;
  *   - the whole band returns null while ActiveWorkout is focused (the
  *     session screen owns the full height, mini-bar absent by design).
- *   - T2: the You tab (ProfileTab) carries a calm badge, and an updated
+ *   - T2: the Coach tab (ProfileTab) carries a calm badge, and an updated
  *     accessibility label, when the store's hasUnseenCoachChange flag is
  *     set, and only that tab, never another one.
  */
@@ -105,7 +105,10 @@ describe('VolyumeTabBar', () => {
     { key: 'diary-1', name: 'DiaryTab' },
   ];
   const descriptors = Object.fromEntries(routes.map((r) => [r.key, {
-    options: { title: r.name.replace('Tab', ''), tabBarIcon: () => null },
+    options: {
+      title: r.name === 'HomeTab' ? 'Today' : r.name === 'PlansTab' ? 'Train' : r.name === 'DiaryTab' ? 'Nutrition' : r.name.replace('Tab', ''),
+      tabBarIcon: () => null,
+    },
   }]));
 
   function makeNav() {
@@ -127,7 +130,7 @@ describe('VolyumeTabBar', () => {
     const tabs = tabNodes(tree);
     expect(tabs).toHaveLength(3);
     expect(tabs[1].props.accessibilityState).toEqual({ selected: true });
-    expect(texts(tree)).toContain('Plans');
+    expect(texts(tree)).toContain('Train');
   });
 
   test('a press emits tabPress (M1 haptic + NAV-5 both ride this) and navigates when unfocused', async () => {
@@ -182,7 +185,7 @@ describe('VolyumeTabBar', () => {
   });
 
   test('mid-session on another tab, the mini-bar docks above the tab row', () => {
-    setStore(); // live session, Diary focused
+    setStore(); // live session, Nutrition focused
     const tree = create(
       <VolyumeTabBar state={{ index: 2, routes }} descriptors={descriptors} navigation={makeNav()} />
     );
@@ -191,13 +194,13 @@ describe('VolyumeTabBar', () => {
     expect(tabNodes(tree)).toHaveLength(3);
   });
 
-  describe('T2: unseen-coach-change badge on the You tab', () => {
+  describe('T2: unseen-coach-change badge on the Coach tab', () => {
     const routesWithProfile = [
       { key: 'home-1', name: 'HomeTab' },
       { key: 'profile-1', name: 'ProfileTab' },
     ];
     const descriptorsWithProfile = Object.fromEntries(routesWithProfile.map((r) => [r.key, {
-      options: { title: r.name === 'ProfileTab' ? 'You' : r.name.replace('Tab', ''), tabBarIcon: () => null },
+      options: { title: r.name === 'ProfileTab' ? 'Coach' : r.name.replace('Tab', ''), tabBarIcon: () => null },
     }]));
     // The badge is a plain RN View; TabIcon's own wrapper is Animated.View (a
     // distinct host type in the reanimated mock), so counting 'View' nodes
@@ -210,7 +213,7 @@ describe('VolyumeTabBar', () => {
         <VolyumeTabBar state={{ index: 0, routes: routesWithProfile }} descriptors={descriptorsWithProfile} navigation={makeNav()} />
       );
       const tabs = tabNodes(tree);
-      expect(tabs[1].props.accessibilityLabel).toBe('You, new coaching update');
+      expect(tabs[1].props.accessibilityLabel).toBe('Coach, new coaching update');
       expect(viewCount(tabs[1])).toBe(viewCount(tabs[0]) + 1);
     });
 
@@ -220,7 +223,7 @@ describe('VolyumeTabBar', () => {
         <VolyumeTabBar state={{ index: 0, routes: routesWithProfile }} descriptors={descriptorsWithProfile} navigation={makeNav()} />
       );
       const tabs = tabNodes(tree);
-      expect(tabs[1].props.accessibilityLabel).toBe('You');
+      expect(tabs[1].props.accessibilityLabel).toBe('Coach');
       expect(viewCount(tabs[1])).toBe(viewCount(tabs[0]));
     });
 

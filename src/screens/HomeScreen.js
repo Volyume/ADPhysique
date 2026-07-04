@@ -1208,7 +1208,7 @@ export default function HomeScreen({ navigation, route }) {
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
   // Canonical plan reference (issue 4): plan name + day descriptor from the
-  // shared formatter, so this card can never drift from the Plans tab again.
+  // shared formatter, so this card can never drift from the Train tab again.
   const planProgress = displayWorkout
     ? activePlanLine(activePlan?.name, displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
     : null;
@@ -1307,7 +1307,7 @@ export default function HomeScreen({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* ── Branded header ── */}
-        <ScreenHeader title="Train" subtitle={getGreeting(userProfile?.firstName)} />
+        <ScreenHeader title="Today" subtitle={getGreeting(userProfile?.firstName)} />
 
         {/* ── Training schedule context line ── */}
         {scheduleContext && (
@@ -1340,7 +1340,7 @@ export default function HomeScreen({ navigation, route }) {
           <View style={styles.phaseBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: spacing.hair }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
-              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them under You to reflect your current plan.
+              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Coach to reflect your current plan.
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
@@ -2305,9 +2305,9 @@ function getRelativeDay(ts) {
 
 const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
 const BRIEF_BORDER = {
-  go:      withAlpha(colors.primary, 0.188),
-  caution: withAlpha(colors.warning, 0.188),
-  recover: withAlpha(colors.success, 0.188),
+  go:      withAlpha(colors.primary, alpha.soft),
+  caution: withAlpha(colors.warning, alpha.soft),
+  recover: withAlpha(colors.success, alpha.soft),
 };
 const BRIEF_ICON_COLOR = {
   go:      colors.primary,
@@ -2368,7 +2368,7 @@ const styles = StyleSheet.create({
   continueInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   continueIcon: {
     width: 40, height: 40, borderRadius: radius.xl,
-    backgroundColor: withAlpha(colors.background, 0.2),
+    backgroundColor: withAlpha(colors.background, alpha.soft),
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
@@ -2491,7 +2491,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: circle(22),
-    backgroundColor: withAlpha(colors.primary, 0.15),
+    backgroundColor: withAlpha(colors.primary, alpha.tint),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -2529,7 +2529,7 @@ const styles = StyleSheet.create({
   },
   noPlanIconWrap: {
     width: 56, height: 56, borderRadius: circle(56),
-    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: withAlpha(colors.primary, 0.314),
+    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: withAlpha(colors.primary, alpha.mid),
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.xs,
   },
@@ -2550,7 +2550,7 @@ const styles = StyleSheet.create({
   starterCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.sm,
@@ -2620,7 +2620,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   repeatBtnText: {
     fontSize: fontSize.xs,
@@ -2664,7 +2664,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.376) },
+  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, alpha.strong) },
   dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumActive: { color: colors.primary },
   pickerName: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2672,7 +2672,7 @@ const styles = StyleSheet.create({
   nextBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   sheetDefn: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
@@ -2689,7 +2689,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   coachingNudgeLeft: {
     width: 36, height: 36, borderRadius: radius.sm,
@@ -2822,7 +2822,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2846,7 +2846,7 @@ const styles = StyleSheet.create({
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md,
   },
   // COMP-023 trial value banner, grown into the A3 coach ledger card,
@@ -2860,7 +2860,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
@@ -2871,7 +2871,7 @@ const styles = StyleSheet.create({
   plateauBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -2886,7 +2886,7 @@ const styles = StyleSheet.create({
   activationBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -2906,7 +2906,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

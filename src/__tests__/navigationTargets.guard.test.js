@@ -52,7 +52,7 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
       .toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'SettingsPrivacy'/);
   });
 
-  test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Train tab weight logger", () => {
+  test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Today tab weight logger", () => {
     const src = read('src/screens/WeeklyCheckInScreen.js');
     // WeeklyCheckIn lives in ProfileStack; Home lives in HomeStack, so the
     // deep-link must use the parent-tab form (a bare navigate('Home') is the

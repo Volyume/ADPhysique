@@ -49,6 +49,15 @@ jest.mock('../../lib/progressPhotoMeta', () => ({
   }),
   deletePhotoMeta: jest.fn(async () => true),
 }));
+const mockDetachProgressScanPhoto = jest.fn(async () => true);
+jest.mock('../../lib/progressScanStore', () => ({
+  addProgressScanAsset: jest.fn(async () => true),
+  createProgressScanSession: jest.fn(async () => ({ id: 'scan-test' })),
+  detachProgressScanPhoto: (...args) => mockDetachProgressScanPhoto(...args),
+  deleteProgressScanSession: jest.fn(async () => true),
+  finishProgressScanSession: jest.fn(async () => true),
+  listProgressScanEntries: jest.fn(async () => []),
+}));
 // The shared ED-safety gate is driven directly here; its own logic is unit-
 // tested in usePhotoSuppression.test.js.
 jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: jest.fn(() => false) }));
@@ -274,8 +283,9 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     const viewer = hostNode(tree, 'ProgressPhotoViewer');
     listProgressPhotos.mockClear();
     await act(async () => { await viewer.props.onDelete(OLD.name); });
-    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', OLD.uri);
+    expect(mockDetachProgressScanPhoto).toHaveBeenCalledWith('u-test', OLD.name);
     expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', OLD.name);
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', OLD.uri);
     expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
   });
 });

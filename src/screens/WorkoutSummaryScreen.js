@@ -562,7 +562,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
     // Write adaptation events for engine decisions. These are an
     // in-session record of how each muscle responded (soreness /
-    // performance / pump / joint), surfaced in the Engine Log on the You tab.
+    // performance / pump / joint), surfaced in the Engine Log on the Coach tab.
     //
     // The per-session engine no longer writes NEXT-WEEK planned volume.
     // Founder decision 2026-05-28: the weekly coach owns next-week

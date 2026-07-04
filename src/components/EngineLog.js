@@ -2,7 +2,7 @@
  * EngineLog
  *
  * The coaching-decision log from the retired Athlete Hub dashboard, now
- * shown on the You tab inside the Strategic journal. Lists recent engine
+ * shown on the Coach tab inside the Strategic journal. Lists recent engine
  * adaptations (set added/dropped, deload, exercise rotation) plus
  * rep-regression warnings detected from logged sets. Collapsible.
  *

@@ -296,6 +296,7 @@ function Stepper({ icon, label, sub, value, onMinus, onPlus }) {
         <TouchableOpacity
           style={local.stepBtn}
           onPress={onMinus}
+          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Decrease ${label}`}
         >
@@ -305,6 +306,7 @@ function Stepper({ icon, label, sub, value, onMinus, onPlus }) {
         <TouchableOpacity
           style={local.stepBtn}
           onPress={onPlus}
+          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Increase ${label}`}
         >
@@ -324,15 +326,15 @@ const local = StyleSheet.create({
     gap: spacing.xxs,
     marginTop: spacing.sm,
   },
-  segBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
+  segBtn: { flex: 1, minHeight: 44, paddingVertical: spacing.sm, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
   segBtnActive: { backgroundColor: colors.primaryFill },
   segText: { ...type.label, color: colors.textSecondary },
   segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',

@@ -32,7 +32,7 @@ const CONSENT_KEY_PFX = '@volyume_health_consent_';
 // audit trail (Art 7(1) / EDPB: the record should capture which consent copy
 // was presented, not just the app version). Bump this whenever the consent
 // body copy changes. Mirrors the locked-copy date in PRIVACY_CONSENT_LOCKED.md.
-const CONSENT_VERSION = '2026-06-06';
+const CONSENT_VERSION = '2026-07-04';
 
 export default function Article9ConsentScreen({ navigation }) {
   const { user, healthConsentGranted } = useAppStore(s => ({
@@ -185,7 +185,12 @@ export default function Article9ConsentScreen({ navigation }) {
           'Everything you log to your food diary',
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
+          'Progress photos you choose to take, plus Physique Scan quality, confidence, leanness band, visual score and progress signal when you use that feature',
         ]} />
+
+        <Text style={styles.body}>
+          Physique Scan is a visual progress tool, not a medical assessment, DEXA scan, or exact body-fat percentage. It may abstain or ask for a retake when photo quality is poor.
+        </Text>
 
         <Text style={styles.subhead}>An automated safety check:</Text>
         <Text style={styles.body}>
@@ -201,9 +206,9 @@ export default function Article9ConsentScreen({ navigation }) {
 
         <Text style={styles.subhead}>Where it lives:</Text>
         <BulletList items={[
-          'On your phone, in encrypted local storage',
-          'On our servers in the UK, with row-level security so only you and the team supporting your account can see it',
-          'If you delete your account, all of it is removed straight away',
+          'On your phone, in encrypted local storage. Progress photos and scan image files stay on this device unless you choose to share or export them',
+          'In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it',
+          'If you delete your account, cloud removal starts immediately, this device is wiped, and backup copies are purged within 30 days',
         ]} />
 
         <Pressable
@@ -224,7 +229,7 @@ export default function Article9ConsentScreen({ navigation }) {
         {/* Art 7(3): the user must be informed of the right to withdraw BEFORE
             giving consent, and withdrawal must be as easy as giving it. */}
         <Text style={styles.withdrawNote}>
-          You can withdraw this consent at any time in You {'→'} Privacy.
+          You can withdraw this consent at any time in Settings {'>'} Privacy & legal.
         </Text>
 
         <TouchableOpacity

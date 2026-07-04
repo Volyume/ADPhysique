@@ -5,7 +5,7 @@
  * on the Progress tab: training milestones, recovery signals, muscle
  * readiness and the recovery-capacity trend. Self-loading from local
  * SQLite given the signed-in user and tier. Coaching management (check-in,
- * nutrition, body metrics) lives on the You tab and is not duplicated here.
+ * nutrition, body metrics) lives in Coach and the Athlete Profile and is not duplicated here.
  *
  * Voice rules: CLAUDE.md. No em dashes.
  */

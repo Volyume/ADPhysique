@@ -1003,10 +1003,10 @@ export default function DiaryScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Diary" />
+        <ScreenHeader title="Nutrition" />
 
         {/* Day pager + insights icon. Sits under the standard
-            ScreenHeader so the Diary tab now matches Train, Plans,
+            ScreenHeader so the Nutrition tab now matches Today, Train,
             Progress and You at the top, with day navigation as a
             secondary row rather than the whole header bar. */}
         <View style={styles.dayPagerRow}>

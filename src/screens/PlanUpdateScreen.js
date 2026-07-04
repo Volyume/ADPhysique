@@ -54,9 +54,9 @@ const RECOVERY_OPTIONS = [
   { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
 ];
 
-// Training-only plan update for the Plans tab. Changes training parameters and
+// Training-only plan update for the Train tab. Changes training parameters and
 // rebuilds the plan around them. It deliberately does NOT touch calories or
-// macros: nutrition targets are recalculated only from the You tab (Update your
+// macros: nutrition targets are recalculated only from the Coach tab (Update goal
 // plan / Nutrition targets), which is the single place body composition and
 // goal drive the calorie maths.
 export default function PlanUpdateScreen({ navigation }) {
@@ -208,7 +208,7 @@ export default function PlanUpdateScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.sectionSub}>
-          Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the You tab.
+          Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
         </Text>
 
         {/* ── Physique category (optional) ── */}

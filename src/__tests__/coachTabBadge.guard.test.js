@@ -1,6 +1,6 @@
 /**
  * T2 (world-class-audit-2026-07-03/05-cohesion.md #4) wiring guards: the
- * unseen-coach-change badge on the You tab.
+ * unseen-coach-change badge on the Coach tab.
  *
  * The badge's own render logic is behaviourally tested against the real
  * component in components/__tests__/miniBarTabBar.test.js. These are scoped
