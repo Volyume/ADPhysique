@@ -84,6 +84,10 @@ module.exports = [
     ignores: [
       'node_modules/**',
       '.expo/**',
+      // Agent worktrees are full transient copies of the repo under .claude/;
+      // linting them double-counts every file (and lints old/other branch
+      // states), the same reason jest ignores this path. Not app source.
+      '.claude/**',
       'android/**',
       'ios/**',
       'coverage/**',
