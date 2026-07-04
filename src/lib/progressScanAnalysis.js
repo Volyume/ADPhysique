@@ -2,7 +2,7 @@ export const REQUIRED_SCAN_POSES = ['front', 'back'];
 export const OPTIONAL_SCAN_POSES = ['side'];
 export const PHOTO_SCAN_SOURCE = 'photo_scan';
 export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
-export const PROGRESS_SCAN_ESTIMATOR_VERSION = 'progress_scan_silhouette_regressor_v1';
+export const PROGRESS_SCAN_ESTIMATOR_VERSION = 'progress_scan_measured_outline_v1';
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
 
 const COMPETITION_GOALS = new Set([
@@ -47,6 +47,19 @@ export function requiredPosesComplete(assets = []) {
   return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
 }
 
+function canonicalReason(reason) {
+  if (reason === 'multiple_people_detected') return 'multiple_people';
+  return reason;
+}
+
+function assetSignals(asset = {}) {
+  return parseMaybeJson(asset.signals ?? asset.signalsJson, null);
+}
+
+function hasModelBackedAssets(assets = []) {
+  return (assets || []).some((asset) => assetSignals(asset)?.modelBacked);
+}
+
 export function qualityScoreForAsset(asset = {}) {
   const values = QUALITY_KEYS
     .map((key) => finiteNumber(asset[key]))
@@ -68,22 +81,25 @@ export function abstentionReasonsForAssets(assets = []) {
   const reasons = new Set();
   if (!requiredPosesComplete(assets)) reasons.add('missing_required_pose');
   for (const asset of assets || []) {
-    const signals = parseMaybeJson(asset.signals ?? asset.signalsJson, null);
+    const signals = assetSignals(asset);
     for (const reason of signals?.abstentionReasons || []) {
-      if (reason && reason !== 'model_unavailable') reasons.add(reason);
+      const canonical = canonicalReason(reason);
+      if (canonical && canonical !== 'model_unavailable') reasons.add(canonical);
     }
     const lighting = finiteNumber(asset.lightingScore);
     const blur = finiteNumber(asset.blurScore);
     const framing = finiteNumber(asset.framingScore);
-    const landmarks = finiteNumber(asset.landmarkConfidence);
+    const landmarks = finiteNumber(asset.landmarkConfidence ?? signals?.quality?.poseConfidence);
     const segmentation = finiteNumber(asset.segmentationConfidence);
-    const tilt = finiteNumber(asset.cameraTiltDegrees);
+    const tilt = finiteNumber(asset.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees);
+    const separation = finiteNumber(signals?.quality?.backgroundSeparation);
     if (lighting != null && lighting < 0.45) reasons.add('too_dark');
     if (blur != null && blur < 0.45) reasons.add('too_blurry');
     if (framing != null && framing < 0.55) reasons.add('whole_body_not_visible');
     if (landmarks != null && landmarks < 0.55) reasons.add('pose_not_clear');
     if (segmentation != null && segmentation < 0.55) reasons.add('segmentation_low_confidence');
     if (tilt != null && Math.abs(tilt) > 6) reasons.add('camera_tilted');
+    if (separation != null && separation < 0.45) reasons.add('clothing_or_background_uncertain');
   }
   return [...reasons];
 }
@@ -167,10 +183,196 @@ export function compareScanEstimates(current, previous) {
   };
 }
 
+function scanSignals(scan = {}) {
+  return parseMaybeJson(scan.signals ?? scan.signalsJson, null) || {};
+}
+
+function averagedSignalRatios(signals = {}) {
+  if (signals.estimatorInputs) {
+    return {
+      waistToShoulder: finiteNumber(signals.estimatorInputs.waistToShoulder),
+      waistToHip: finiteNumber(signals.estimatorInputs.waistToHip),
+      waistToHeight: finiteNumber(signals.estimatorInputs.waistToHeight),
+      bodyAreaRatio: finiteNumber(signals.estimatorInputs.bodyAreaRatio),
+    };
+  }
+  const assets = Array.isArray(signals.assets) ? signals.assets : [];
+  const avg = (key) => averageFinite(assets.map((a) => a?.silhouetteRatios?.[key]));
+  return {
+    waistToShoulder: avg('waistToShoulder'),
+    waistToHip: avg('waistToHip'),
+    waistToHeight: avg('waistToHeight'),
+    bodyAreaRatio: avg('bodyAreaRatio'),
+  };
+}
+
+function roundedRatio(value) {
+  const n = finiteNumber(value);
+  return n == null ? null : Math.round(n * 1000) / 1000;
+}
+
+function measuredInputsFromAssets(assets = []) {
+  const signals = (assets || []).map((asset) => assetSignals(asset)).filter(Boolean);
+  const avg = (key) => averageFinite(signals.map((signal) => signal?.silhouetteRatios?.[key]));
+  return {
+    waistToShoulder: roundedRatio(avg('waistToShoulder')),
+    waistToHip: roundedRatio(avg('waistToHip')),
+    waistToHeight: roundedRatio(avg('waistToHeight')),
+    bodyAreaRatio: roundedRatio(avg('bodyAreaRatio')),
+  };
+}
+
+function scanPoseSet(scan = {}) {
+  const signals = scanSignals(scan);
+  const signalAssets = Array.isArray(signals.assets) ? signals.assets : [];
+  const directAssets = Array.isArray(scan.assets) ? scan.assets : [];
+  return new Set([...signalAssets, ...directAssets].map((asset) => normalisePose(asset?.pose)).filter(Boolean));
+}
+
+function hasRequiredPoseSet(scan = {}) {
+  const poses = scanPoseSet(scan);
+  return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
+}
+
+export function scanComparability(currentScan = null, previousScan = null) {
+  if (!currentScan) {
+    return { comparable: false, status: 'missing_current', reason: 'Current scan is missing.', comparableCount: 0 };
+  }
+  if (!previousScan) {
+    return { comparable: false, status: 'baseline', reason: 'This is the first scan in the comparison set.', comparableCount: 0 };
+  }
+  const currentStatus = currentScan.analysisStatus ?? currentScan.analysis_status ?? 'measured';
+  const previousStatus = previousScan.analysisStatus ?? previousScan.analysis_status ?? 'measured';
+  if (!['complete', 'measured'].includes(currentStatus) || !['complete', 'measured'].includes(previousStatus)) {
+    return { comparable: false, status: 'not_comparable', reason: 'One scan was withheld by the quality gate.', comparableCount: 0 };
+  }
+  if (!hasRequiredPoseSet(currentScan) || !hasRequiredPoseSet(previousScan)) {
+    return { comparable: false, status: 'not_comparable', reason: 'Front and back photos are needed on both scans.', comparableCount: 0 };
+  }
+  const currentQuality = currentScan.qualityLabel ?? 'unknown';
+  const previousQuality = previousScan.qualityLabel ?? 'unknown';
+  if (['poor', 'unknown'].includes(currentQuality) || ['poor', 'unknown'].includes(previousQuality)) {
+    return { comparable: false, status: 'not_comparable', reason: 'Scan quality was not strong enough for a like-for-like comparison.', comparableCount: 0 };
+  }
+  return { comparable: true, status: 'comparable', reason: 'Like-for-like front and back scan.', comparableCount: 1 };
+}
+
+function scanWeightKg(scan = {}) {
+  const signals = scanSignals(scan);
+  return finiteNumber(signals.stats?.weightKg ?? scan.stats?.weightKg);
+}
+
+function ratioDeltaLine({ current, previous, key, label, threshold = 0.015, lowerText, higherText }) {
+  const cur = finiteNumber(current?.[key]);
+  const prev = finiteNumber(previous?.[key]);
+  if (cur == null || prev == null) return null;
+  const delta = cur - prev;
+  if (Math.abs(delta) < threshold) return null;
+  return `${label} ${delta < 0 ? lowerText : higherText}.`;
+}
+
+export function explainMeasuredScanDelta({ currentScan = null, previousScan = null } = {}) {
+  if (!currentScan) return null;
+  const comparability = scanComparability(currentScan, previousScan);
+  if (!previousScan) {
+    return {
+      measuredSignalsOnly: true,
+      comparisonStatus: 'baseline',
+      comparableCount: 0,
+      trendDirection: 'uncertain',
+      lines: ['This is your baseline scan.'],
+      summary: 'This is your baseline scan. Future scans will compare only measured changes from stored scan signals.',
+      trendSummary: 'Baseline scan saved.',
+      coachSummary: 'Progress Scan has a baseline saved, but no like-for-like trend yet.',
+    };
+  }
+  if (!comparability.comparable) {
+    return {
+      measuredSignalsOnly: true,
+      comparisonStatus: comparability.status,
+      comparableCount: 0,
+      trendDirection: 'uncertain',
+      lines: [comparability.reason],
+      summary: `This scan is saved, but I am not comparing it yet. ${comparability.reason}`,
+      trendSummary: 'Not enough like-for-like scan data yet.',
+      coachSummary: 'Progress Scan is saved, but I am not using it as a comparison because the scan setup was not like-for-like.',
+    };
+  }
+
+  const lines = [];
+  const trendVotes = [];
+
+  const curWeight = scanWeightKg(currentScan);
+  const prevWeight = scanWeightKg(previousScan);
+  if (curWeight != null && prevWeight != null) {
+    const delta = rounded1(curWeight - prevWeight);
+    if (Math.abs(delta) >= 0.2) {
+      lines.push(`Bodyweight snapshot is ${delta < 0 ? 'down' : 'up'} ${Math.abs(delta)} kg from the nearest logged weigh-in.`);
+    } else {
+      lines.push('Bodyweight snapshot is broadly level against the nearest logged weigh-in.');
+    }
+  }
+
+  const curRatios = averagedSignalRatios(scanSignals(currentScan));
+  const prevRatios = averagedSignalRatios(scanSignals(previousScan));
+  const ratioLines = [
+    ratioDeltaLine({
+      current: curRatios,
+      previous: prevRatios,
+      key: 'waistToHeight',
+      label: 'Measured waist-to-height signal is',
+      threshold: 0.01,
+      lowerText: 'lower',
+      higherText: 'higher',
+    }),
+    ratioDeltaLine({
+      current: curRatios,
+      previous: prevRatios,
+      key: 'waistToShoulder',
+      label: 'Measured waist-to-shoulder signal is',
+      threshold: 0.015,
+      lowerText: 'lower',
+      higherText: 'higher',
+    }),
+  ].filter(Boolean);
+  lines.push(...ratioLines.slice(0, 2));
+  if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('down');
+  if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('up');
+
+  if (lines.length === 0) {
+    lines.push('Measured scan signals are broadly steady against the last comparable scan.');
+  }
+  const downVotes = trendVotes.filter((v) => v === 'down').length;
+  const upVotes = trendVotes.filter((v) => v === 'up').length;
+  const trendDirection = downVotes > upVotes ? 'down' : upVotes > downVotes ? 'up' : 'steady';
+  const trendSummary = trendDirection === 'down'
+    ? 'Measured scan signals point lower than the last like-for-like scan.'
+    : trendDirection === 'up'
+      ? 'Measured scan signals point higher than the last like-for-like scan.'
+      : 'Measured scan signals are broadly steady against the last like-for-like scan.';
+
+  return {
+    measuredSignalsOnly: true,
+    comparisonStatus: 'comparable',
+    comparableCount: comparability.comparableCount,
+    trendDirection,
+    lines,
+    summary: `${lines.slice(0, 3).join(' ')} This is measured trend context, not a body-fat estimate.`,
+    trendSummary,
+    coachSummary: `${trendSummary} I am treating it as low-confidence context only.`,
+  };
+}
+
 export function explainProgressScan(scan) {
   if (!scan) return null;
   if (scan.analysisStatus === 'abstained') {
     return 'The scan was saved, but the estimate was withheld because the data was not reliable enough.';
+  }
+  if (scan.analysisStatus === 'measured') {
+    const signals = scanSignals(scan);
+    return signals.deltaExplanation?.trendSummary
+      || scan.copySummary
+      || 'The scan measured outline signals only. It is not a body-fat estimate.';
   }
   if (scan.estimateRangeLow != null && scan.estimateRangeHigh != null) {
     const trend = scan.trendDirection && scan.trendDirection !== 'uncertain'
@@ -182,12 +384,7 @@ export function explainProgressScan(scan) {
 }
 
 function signalForAsset(asset = {}) {
-  return parseMaybeJson(asset.signals ?? asset.signalsJson, null);
-}
-
-function signalByPose(assets = [], pose) {
-  const asset = (assets || []).find((a) => normalisePose(a.pose) === pose && signalForAsset(a)?.modelBacked);
-  return asset ? signalForAsset(asset) : null;
+  return assetSignals(asset);
 }
 
 function averageFinite(values = []) {
@@ -196,70 +393,12 @@ function averageFinite(values = []) {
   return nums.reduce((sum, v) => sum + v, 0) / nums.length;
 }
 
-function ratio(signal, key) {
-  return finiteNumber(signal?.silhouetteRatios?.[key]);
-}
-
-function bmiFrom({ heightCm = null, weightKg = null } = {}) {
-  const h = finiteNumber(heightCm);
-  const w = finiteNumber(weightKg);
-  if (h == null || w == null || h < 100 || h > 230 || w < 35 || w > 250) return null;
-  return w / ((h / 100) ** 2);
-}
-
 export function estimateBodyFatFromScanAssets({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
-  const front = signalByPose(assets, 'front');
-  const back = signalByPose(assets, 'back');
-  if (!front || !back) return null;
-
-  const waistToShoulder = averageFinite([ratio(front, 'waistToShoulder'), ratio(back, 'waistToShoulder')]);
-  const waistToHip = averageFinite([ratio(front, 'waistToHip'), ratio(back, 'waistToHip')]);
-  const waistToHeight = averageFinite([ratio(front, 'waistToHeight'), ratio(back, 'waistToHeight')]);
-  const bodyAreaRatio = averageFinite([ratio(front, 'bodyAreaRatio'), ratio(back, 'bodyAreaRatio')]);
-  const segmentationConfidence = averageFinite([
-    front.quality?.segmentationConfidence,
-    back.quality?.segmentationConfidence,
-  ]);
-  const framingScore = averageFinite([front.quality?.framingScore, back.quality?.framingScore]);
-
-  if (waistToShoulder == null || waistToHip == null || waistToHeight == null || bodyAreaRatio == null) return null;
-  if ((segmentationConfidence ?? 0) < 0.55 || (framingScore ?? 0) < 0.55) return null;
-
-  const bmi = bmiFrom({ heightCm, weightKg });
-  const isFemale = sex === 'female';
-  const isMale = sex === 'male';
-  const base = isFemale ? 22 : isMale ? 14.5 : 18;
-  const waistShoulderTerm = (waistToShoulder - (isFemale ? 0.66 : isMale ? 0.62 : 0.64)) * (isFemale ? 30 : 35);
-  const waistHeightTerm = (waistToHeight - (isFemale ? 0.20 : isMale ? 0.18 : 0.19)) * (isFemale ? 40 : 42);
-  const areaTerm = (bodyAreaRatio - (isFemale ? 0.32 : isMale ? 0.29 : 0.30)) * (isFemale ? 18 : 20);
-  const waistHipTerm = (waistToHip - (isFemale ? 0.74 : isMale ? 0.76 : 0.75)) * 8;
-  const bmiTerm = bmi == null ? 0 : (bmi - (isFemale ? 23 : 24)) * (isFemale ? 0.35 : 0.45);
-  const qualityPenalty = Math.max(0, 0.82 - Math.min(segmentationConfidence ?? 0.82, framingScore ?? 0.82)) * 2.2;
-  const raw = base + waistShoulderTerm + waistHeightTerm + areaTerm + waistHipTerm + bmiTerm + qualityPenalty;
-  const min = isFemale ? 10 : isMale ? 5 : 7;
-  const max = isFemale ? 48 : isMale ? 42 : 46;
-
-  return {
-    value: rounded1(clamp(raw, min, max)),
-    source: PHOTO_SCAN_SOURCE,
-    modelVersion: PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
-    estimatorVersion: PROGRESS_SCAN_ESTIMATOR_VERSION,
-    confidence: 'low',
-    inputs: {
-      waistToShoulder: rounded1(waistToShoulder * 100) / 100,
-      waistToHip: rounded1(waistToHip * 100) / 100,
-      waistToHeight: rounded1(waistToHeight * 100) / 100,
-      bodyAreaRatio: rounded1(bodyAreaRatio * 100) / 100,
-      bmi: bmi == null ? null : rounded1(bmi),
-      segmentationConfidence: segmentationConfidence == null ? null : rounded1(segmentationConfidence),
-      framingScore: framingScore == null ? null : rounded1(framingScore),
-    },
-    limitations: [
-      'silhouette_only',
-      'provisional_calibration',
-      'not_dexa_equivalent',
-    ],
-  };
+  void assets;
+  void sex;
+  void heightCm;
+  void weightKg;
+  return null;
 }
 
 function modelEstimateValue(modelEstimate) {
@@ -267,13 +406,15 @@ function modelEstimateValue(modelEstimate) {
   return finiteNumber(modelEstimate);
 }
 
-export function measuredSignalsSummaryFromAssets(assets = [], estimate = null) {
+export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, extras = {}) {
   return {
     measuredSignalsOnly: true,
     modelBacked: (assets || []).some((a) => signalForAsset(a)?.modelBacked),
     modelVersion: estimate?.modelVersion ?? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
     estimatorVersion: estimate?.estimatorVersion ?? PROGRESS_SCAN_ESTIMATOR_VERSION,
-    estimatorInputs: estimate?.inputs ?? null,
+    estimatorInputs: estimate?.inputs ?? measuredInputsFromAssets(assets),
+    stats: extras.stats ?? null,
+    deltaExplanation: extras.deltaExplanation ?? null,
     assets: (assets || []).map((a) => {
       const signals = signalForAsset(a);
       return {
@@ -300,12 +441,12 @@ export function analyseProgressScan({
   userBiasFlags = [],
   modelValidated = false,
 } = {}) {
+  void heightCm;
+  void weightKg;
   const quality = aggregateQuality(assets);
   const reasons = abstentionReasonsForAssets(assets);
   const biasFlags = deriveBiasFlags({ sex, userFlags: userBiasFlags, modelValidated, quality });
-  const resolvedModelEstimate = modelEstimate == null
-    ? estimateBodyFatFromScanAssets({ assets, sex, heightCm, weightKg })
-    : modelEstimate;
+  const resolvedModelEstimate = modelEstimate == null ? null : modelEstimate;
   const resolvedEstimateValue = modelEstimateValue(resolvedModelEstimate);
 
   if (reasons.length > 0) {
@@ -323,6 +464,22 @@ export function analyseProgressScan({
   }
 
   if (resolvedEstimateValue == null) {
+    if (hasModelBackedAssets(assets)) {
+      return {
+        analysisStatus: 'measured',
+        qualityScore: quality.score,
+        qualityLabel: quality.label,
+        estimate: null,
+        range: null,
+        modelEstimate: null,
+        trend: previousScan
+          ? { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This scan needs a like-for-like previous scan before a trend is shown.' }
+          : { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This is your baseline scan.' },
+        abstentionReasons: [],
+        biasFlags,
+        copySummary: 'Scan measured and saved. This is not a body-fat estimate; use it as trend context across like-for-like scans.',
+      };
+    }
     return {
       analysisStatus: 'abstained',
       qualityScore: quality.score,
@@ -372,24 +529,27 @@ export function analyseProgressScan({
 }
 
 export function coachSummaryFromScan(scan, { suppressed = false } = {}) {
-  if (suppressed || !scan || scan.analysisStatus !== 'complete') return null;
-  if (scan.estimateBodyFatPercent == null || scan.estimateRangeLow == null || scan.estimateRangeHigh == null) return null;
+  if (suppressed || !scan || !['complete', 'measured'].includes(scan.analysisStatus)) return null;
+  const signals = scanSignals(scan);
+  const delta = signals.deltaExplanation ?? null;
   return {
     source: PHOTO_SCAN_SOURCE,
     capturedAt: scan.capturedAt,
-    estimateBodyFatPercent: scan.estimateBodyFatPercent,
-    rangeLow: scan.estimateRangeLow,
-    rangeHigh: scan.estimateRangeHigh,
     confidence: scan.estimateConfidence || 'low',
     qualityLabel: scan.qualityLabel || 'unknown',
-    trendDirection: scan.trendDirection || 'uncertain',
+    trendDirection: delta?.trendDirection || scan.trendDirection || 'uncertain',
     trendMagnitudePctPoints: scan.trendMagnitudePctPoints ?? null,
-    supportingSignals: [],
+    comparisonStatus: delta?.comparisonStatus || 'baseline',
+    comparableCount: delta?.comparableCount ?? 0,
+    supportingSignals: Array.isArray(delta?.lines) ? delta.lines.slice(0, 3) : [],
     limitations: [
       'photo_scan_low_confidence',
+      'measured_outline_context_only',
+      'not_body_fat_estimate',
       ...parseMaybeJson(scan.biasFlagsJson),
     ],
     copy: explainProgressScan(scan),
+    deltaSummary: delta?.coachSummary ?? null,
   };
 }
 

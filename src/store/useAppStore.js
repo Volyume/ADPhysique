@@ -285,7 +285,8 @@ const useAppStore = create((set, get) => ({
   //
   // Returns:
   //   { ok: true }                    sign-out succeeded, local wiped
-  //   { ok: false, reason: 'unsynced' }   push failed, sign-out aborted
+  //   { ok: false, reason: 'unsynced' }    push failed, sign-out aborted
+  //   { ok: false, reason: 'wipe_failed' } local wipe failed, sign-out aborted
   clearAuthStateForSignOut: async ({ force = false } = {}) => {
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
@@ -433,9 +434,11 @@ const useAppStore = create((set, get) => ({
         log.logInfo('clearAuthStateForSignOut.wipe.ok', `local SQLite wiped for ${prevUid}`);
       } catch (e) {
         log.logError('clearAuthStateForSignOut.wipe.failed', e, { prevUid });
-        // Don't abort here -- if wipe partly fails, in-memory clear
-        // still proceeds; next sign-in's cross-user-wipe path is the
-        // safety net.
+        try {
+          // eslint-disable-next-line global-require
+          require('../lib/sync/signOutGuard').setSignOutWiping(false);
+        } catch (_) { /* tolerate */ }
+        return { ok: false, reason: 'wipe_failed' };
       }
     }
 

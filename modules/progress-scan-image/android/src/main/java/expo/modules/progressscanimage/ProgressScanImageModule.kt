@@ -3,7 +3,11 @@ package expo.modules.progressscanimage
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
 import android.net.Uri
 import android.util.Base64
 import androidx.exifinterface.media.ExifInterface
@@ -16,6 +20,7 @@ import java.io.InputStream
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class ProgressScanImageModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -36,12 +41,27 @@ class ProgressScanImageModule : Module() {
         }
 
         val oriented = orientBitmap(context, uri, decoded)
-        val scaled = Bitmap.createScaledBitmap(oriented, width, height, true)
+        val target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val scale = min(width.toFloat() / oriented.width.toFloat(), height.toFloat() / oriented.height.toFloat())
+        val scaledWidth = max(1, (oriented.width * scale).roundToInt())
+        val scaledHeight = max(1, (oriented.height * scale).roundToInt())
+        val left = ((width - scaledWidth) / 2.0f)
+        val top = ((height - scaledHeight) / 2.0f)
+        val contentRect = RectF(left, top, left + scaledWidth, top + scaledHeight)
+        val canvas = Canvas(target)
+        canvas.drawColor(Color.BLACK)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        canvas.drawBitmap(oriented, null, contentRect, paint)
         val pixels = IntArray(width * height)
-        scaled.getPixels(pixels, 0, width, 0, 0, width, height)
+        target.getPixels(pixels, 0, width, 0, 0, width, height)
 
         val rgb = ByteArray(width * height * 3)
         var luminanceSum = 0.0
+        var luminanceCount = 0
+        val contentLeft = max(0, left.roundToInt())
+        val contentTop = max(0, top.roundToInt())
+        val contentRight = min(width, (left + scaledWidth).roundToInt())
+        val contentBottom = min(height, (top + scaledHeight).roundToInt())
         for (i in pixels.indices) {
           val colour = pixels[i]
           val r = (colour shr 16) and 0xff
@@ -51,10 +71,15 @@ class ProgressScanImageModule : Module() {
           rgb[j] = r.toByte()
           rgb[j + 1] = g.toByte()
           rgb[j + 2] = b.toByte()
-          luminanceSum += 0.2126 * r + 0.7152 * g + 0.0722 * b
+          val x = i % width
+          val y = i / width
+          if (x >= contentLeft && x < contentRight && y >= contentTop && y < contentBottom) {
+            luminanceSum += 0.2126 * r + 0.7152 * g + 0.0722 * b
+            luminanceCount += 1
+          }
         }
 
-        val meanLum = luminanceSum / max(1, pixels.size)
+        val meanLum = luminanceSum / max(1, luminanceCount)
         val lightingScore = clamp01(1.2 - (abs(meanLum - 128.0) / 96.0))
 
         promise.resolve(mapOf(
@@ -62,6 +87,14 @@ class ProgressScanImageModule : Module() {
           "height" to height,
           "originalWidth" to decoded.width,
           "originalHeight" to decoded.height,
+          "orientedWidth" to oriented.width,
+          "orientedHeight" to oriented.height,
+          "contentRect" to mapOf(
+            "x" to contentLeft,
+            "y" to contentTop,
+            "width" to max(1, contentRight - contentLeft),
+            "height" to max(1, contentBottom - contentTop),
+          ),
           "rgbBase64" to Base64.encodeToString(rgb, Base64.NO_WRAP),
           "lightingScore" to lightingScore,
         ))

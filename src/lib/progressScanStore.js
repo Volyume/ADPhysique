@@ -9,10 +9,13 @@ import {
   analyseProgressScan,
   coachSummaryFromScan,
   deriveProgressScanBiasFlagsFromProfile,
+  explainMeasuredScanDelta,
   measuredSignalsSummaryFromAssets,
   requiredPosesComplete,
   parseMaybeJson,
 } from './progressScanAnalysis';
+import { getPhotoMetaMap, deletePhotoMeta } from './progressPhotoMeta';
+import { deleteProgressPhoto } from './progressPhotos';
 
 function nowMs() {
   return Date.now();
@@ -77,6 +80,44 @@ function rowToAsset(row) {
     signals: parseMaybeJson(row.signals_json, null),
     signalsJson: row.signals_json ?? null,
     createdAt: row.created_at,
+  };
+}
+
+function finiteNumber(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function averageFinite(values = []) {
+  const nums = values.map(finiteNumber).filter((v) => v != null);
+  if (nums.length === 0) return null;
+  return Math.round((nums.reduce((sum, v) => sum + v, 0) / nums.length) * 10) / 10;
+}
+
+async function statsForAssets(userId, assets = []) {
+  const names = (assets || []).map((a) => a.photoName).filter(Boolean);
+  const metaMap = await getPhotoMetaMap(names, userId).catch(() => ({}));
+  const weights = names.map((name) => metaMap?.[name]?.weightKg).filter((v) => finiteNumber(v) != null);
+  const poses = [...new Set((assets || []).map((a) => a.pose).filter(Boolean))];
+  return {
+    weightKg: averageFinite(weights),
+    photoCount: assets.length,
+    poses,
+    requiredPosesComplete: requiredPosesComplete(assets),
+  };
+}
+
+async function scanEntry(userId, scan) {
+  if (!userId || !scan?.id) return scan;
+  const assets = await getProgressScanAssets(userId, scan.id);
+  const stats = await statsForAssets(userId, assets);
+  const signals = scan.signals || parseMaybeJson(scan.signalsJson, null) || {};
+  return {
+    ...scan,
+    assets,
+    stats: signals.stats ?? stats,
+    deltaExplanation: signals.deltaExplanation ?? null,
   };
 }
 
@@ -168,17 +209,18 @@ export async function listProgressScans(userId, limit = 20) {
 export async function getPreviousAnalysedProgressScan(userId, beforeMs) {
   if (!userId) return null;
   const d = await db();
-  const row = await d.getFirstAsync(
+  const rows = await d.getAllAsync(
     `SELECT * FROM progress_scan_sessions
       WHERE user_id = ?
-        AND analysis_status = 'complete'
-        AND estimate_body_fat_percent IS NOT NULL
+        AND status = 'complete'
+        AND required_poses_complete = 1
+        AND analysis_status IN ('complete', 'measured')
         AND captured_at < ?
       ORDER BY captured_at DESC
-      LIMIT 1`,
+      LIMIT 10`,
     [userId, beforeMs ?? nowMs()],
-  ).catch(() => null);
-  return rowToScan(row);
+  ).catch(() => []);
+  return (rows || []).map(rowToScan).find(Boolean) ?? null;
 }
 
 export async function finishProgressScanSession(userId, scanId, opts = {}) {
@@ -187,6 +229,7 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
   const session = await getProgressScanSession(userId, scanId);
   if (!session) return null;
   const assets = await getProgressScanAssets(userId, scanId);
+  const scanStats = await statsForAssets(userId, assets);
   const previous = await getPreviousAnalysedProgressScan(userId, session.capturedAt);
   const profileBiasFlags = deriveProgressScanBiasFlagsFromProfile({
     trainingGoal: opts.trainingGoal ?? null,
@@ -199,11 +242,29 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
     modelEstimate: opts.modelEstimate ?? null,
     sex: opts.sex ?? null,
     heightCm: opts.heightCm ?? null,
-    weightKg: opts.weightKg ?? null,
+    weightKg: opts.weightKg ?? scanStats.weightKg ?? null,
     userBiasFlags: [...profileBiasFlags, ...(opts.userBiasFlags ?? [])],
     modelValidated: false,
   });
-  const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null);
+  const baseSignalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, { stats: scanStats });
+  const currentForDelta = {
+    analysisStatus: analysis.analysisStatus,
+    qualityLabel: analysis.qualityLabel,
+    assets,
+    estimateBodyFatPercent: analysis.estimate ?? null,
+    estimateRangeLow: analysis.range?.low ?? null,
+    estimateRangeHigh: analysis.range?.high ?? null,
+    trendDirection: analysis.trend?.direction ?? 'uncertain',
+    signals: baseSignalsSummary,
+    stats: scanStats,
+  };
+  const deltaExplanation = ['complete', 'measured'].includes(analysis.analysisStatus)
+    ? explainMeasuredScanDelta({ currentScan: currentForDelta, previousScan: previous })
+    : null;
+  const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, {
+    stats: scanStats,
+    deltaExplanation,
+  });
   const modelVersion = analysis.modelEstimate?.modelVersion
     ?? (signalsSummary.modelBacked ? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION : opts.modelVersion ?? null);
   const complete = requiredPosesComplete(assets);
@@ -237,9 +298,9 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       analysis.estimate ?? null,
       analysis.range?.low ?? null,
       analysis.range?.high ?? null,
-      analysis.analysisStatus === 'complete' ? 'low' : null,
-      analysis.analysisStatus === 'complete' ? PHOTO_SCAN_SOURCE : null,
-      analysis.trend?.direction ?? 'uncertain',
+      analysis.estimate != null ? 'low' : null,
+      analysis.estimate != null ? PHOTO_SCAN_SOURCE : null,
+      deltaExplanation?.trendDirection ?? analysis.trend?.direction ?? 'uncertain',
       analysis.trend?.magnitudePctPoints ?? null,
       analysis.qualityScore ?? null,
       analysis.qualityLabel ?? null,
@@ -248,13 +309,18 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       asJson(signalsSummary),
       asJson(analysis.abstentionReasons),
       asJson(analysis.biasFlags),
-      analysis.copySummary ?? null,
+      deltaExplanation?.summary ?? analysis.copySummary ?? null,
       t,
       userId,
       scanId,
     ],
   );
   return getProgressScanSession(userId, scanId);
+}
+
+export async function listProgressScanEntries(userId, limit = 20) {
+  const scans = await listProgressScans(userId, limit);
+  return Promise.all(scans.map((scan) => scanEntry(userId, scan)));
 }
 
 export async function getProgressScanCoachSummary(userId, { suppressed = false } = {}) {
@@ -264,11 +330,12 @@ export async function getProgressScanCoachSummary(userId, { suppressed = false }
     const row = await d.getFirstAsync(
       `SELECT * FROM progress_scan_sessions
         WHERE user_id = ?
-          AND analysis_status = 'complete'
-          AND estimate_source = ?
+          AND status = 'complete'
+          AND required_poses_complete = 1
+          AND analysis_status IN ('complete', 'measured')
         ORDER BY captured_at DESC
         LIMIT 1`,
-      [userId, PHOTO_SCAN_SOURCE],
+      [userId],
     ).catch(() => null);
     return coachSummaryFromScan(rowToScan(row), { suppressed });
   } catch (e) {
@@ -277,15 +344,73 @@ export async function getProgressScanCoachSummary(userId, { suppressed = false }
   }
 }
 
-export async function deleteProgressScanSession(userId, scanId) {
+export async function deleteProgressScanSession(userId, scanId, opts = {}) {
   if (!userId || !scanId) return false;
   try {
+    const assets = await getProgressScanAssets(userId, scanId);
+    if (opts.deleteFiles) {
+      for (const asset of assets) {
+        if (asset?.uri) {
+          // eslint-disable-next-line no-await-in-loop
+          await deleteProgressPhoto(userId, asset.uri);
+        }
+        if (asset?.photoName) {
+          // eslint-disable-next-line no-await-in-loop
+          await deletePhotoMeta(userId, asset.photoName);
+        }
+      }
+    }
     const d = await db();
     await d.runAsync('DELETE FROM progress_scan_assets WHERE user_id = ? AND scan_id = ?', [userId, scanId]);
     await d.runAsync('DELETE FROM progress_scan_sessions WHERE user_id = ? AND id = ?', [userId, scanId]);
     return true;
   } catch (e) {
     logError('progressScanStore.delete', e, { userId, scanId });
+    return false;
+  }
+}
+
+export async function detachProgressScanPhoto(userId, photoName) {
+  if (!userId || !photoName) return false;
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      'SELECT DISTINCT scan_id FROM progress_scan_assets WHERE user_id = ? AND photo_name = ?',
+      [userId, photoName],
+    ).catch(() => []);
+    await d.runAsync('DELETE FROM progress_scan_assets WHERE user_id = ? AND photo_name = ?', [userId, photoName]);
+    const scanIds = (rows || []).map((row) => row.scan_id).filter(Boolean);
+    const t = nowMs();
+    for (const scanId of scanIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync(
+        `UPDATE progress_scan_sessions SET
+           status = 'failed',
+           analysis_status = 'abstained',
+           required_poses_complete = 0,
+           estimate_body_fat_percent = NULL,
+           estimate_range_low = NULL,
+           estimate_range_high = NULL,
+           estimate_confidence = NULL,
+           estimate_source = NULL,
+           trend_direction = 'uncertain',
+           trend_magnitude_pct_points = NULL,
+           abstention_reasons_json = ?,
+           copy_summary = ?,
+           updated_at = ?
+         WHERE user_id = ? AND id = ?`,
+        [
+          asJson(['scan_photo_deleted']),
+          'A photo from this scan was deleted, so the scan analysis has been removed.',
+          t,
+          userId,
+          scanId,
+        ],
+      );
+    }
+    return true;
+  } catch (e) {
+    logError('progressScanStore.detachPhoto', e, { userId, photoName });
     return false;
   }
 }

@@ -113,6 +113,10 @@ export const SENSITIVE_VALUE_SUBSTRINGS = Object.freeze([
   'daily_intake_rollups',
   'ed_pattern_flags',
   'health_data_consent',
+  'progress_photo_meta',
+  'progress_scan_sessions',
+  'progress_scan_assets',
+  'progress_photos/',
 ]);
 
 // ────────────────────────────────────────────────────────────────────

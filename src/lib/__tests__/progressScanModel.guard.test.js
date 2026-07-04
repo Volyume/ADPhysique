@@ -44,4 +44,19 @@ describe('Progress Scan on-device TFLite model guard', () => {
       .toBeLessThan(block.indexOf('saveScanAssetAndContinue(flow, pose, name, saved, vision)'));
     expect(block).toMatch(/retakeCopyForVisionResult/);
   });
+
+  test('segmentation model is not promoted into a fake body-fat estimator', () => {
+    const analysis = read('src/lib/progressScanAnalysis.js');
+    expect(analysis).toMatch(/progress_scan_measured_outline_v1/);
+    expect(analysis).toMatch(/export function estimateBodyFatFromScanAssets/);
+    expect(analysis).toMatch(/return null;/);
+    expect(analysis).not.toMatch(/silhouette_regressor|waistShoulderTerm|bmiTerm/);
+  });
+
+  test('Android release workflow verifies native 16 KB page-size compatibility', () => {
+    expect(read('scripts/verify-android-elf-page-size.cjs')).toMatch(/PT_LOAD/);
+    expect(read('package.json')).toMatch(/verify:android:16kb/);
+    expect(read('.github/workflows/build-android.yml')).toMatch(/verify:android:16kb/);
+    expect(read('.github/workflows/build-android.yml')).toMatch(/app-release\.aab/);
+  });
 });

@@ -89,7 +89,25 @@ export async function saveProgressPhoto(srcUri, nowMs, userId) {
   return { name: `${ts}.jpg`, uri, ts };
 }
 
-export async function deleteProgressPhoto(uri) {
+function isLegacyPhotoUri(uri) {
+  if (typeof uri !== 'string') return false;
+  if (!uri.startsWith(BASE_DIR)) return false;
+  if (uri.startsWith(`${BASE_DIR}users/`)) return false;
+  return /^\d+\.jpg$/.test(uri.slice(BASE_DIR.length));
+}
+
+export function isProgressPhotoUriForUser(userId, uri) {
+  if (typeof uri !== 'string') return false;
+  if (userId && uri.startsWith(photoDir(userId))) return true;
+  return isLegacyPhotoUri(uri);
+}
+
+export async function deleteProgressPhoto(userIdOrUri, maybeUri) {
+  const hasUser = maybeUri !== undefined;
+  const userId = hasUser ? userIdOrUri : null;
+  const uri = hasUser ? maybeUri : userIdOrUri;
+  if (hasUser && !isProgressPhotoUriForUser(userId, uri)) return false;
+  if (!hasUser && typeof uri === 'string' && !uri.startsWith(BASE_DIR)) return false;
   try { await FileSystem.deleteAsync(uri, { idempotent: true }); return true; } catch (_) { return false; }
 }
 

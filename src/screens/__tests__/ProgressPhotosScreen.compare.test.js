@@ -274,7 +274,7 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     const viewer = hostNode(tree, 'ProgressPhotoViewer');
     listProgressPhotos.mockClear();
     await act(async () => { await viewer.props.onDelete(OLD.name); });
-    expect(deleteProgressPhoto).toHaveBeenCalledWith(OLD.uri);
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', OLD.uri);
     expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', OLD.name);
     expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
   });

@@ -12,4 +12,4 @@
 The app uses this only as a person-mask/silhouette model. It is not a body-fat
 model, not a medical device, not a DEXA replacement, and not an authority for
 nutrition safety floors. Progress Scan v1 converts measured silhouette signals
-into a provisional, low-confidence trend range with abstention gates.
+into low-confidence measured trend context with abstention gates.

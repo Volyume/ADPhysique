@@ -14,6 +14,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",
+    "verify:android:16kb": "node scripts/verify-android-elf-page-size.cjs",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand && npm run release:audit",
     "release:audit": "npm audit --omit=dev --audit-level=high"
   },

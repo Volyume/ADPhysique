@@ -12,7 +12,9 @@
  * on the exported list (one source of truth shared with the wipe loop), not a
  * live-DB assertion.
  */
-import { WIPE_DIRECT_TABLES } from '../database';
+import { FATAL_LOCAL_WIPE_TABLES, WIPE_DIRECT_TABLES } from '../database';
+import fs from 'fs';
+import path from 'path';
 
 describe('wipeAllUserData direct-table set (A4)', () => {
   test('includes every user-scoped food table', () => {
@@ -58,6 +60,19 @@ describe('wipeAllUserData direct-table set (A4)', () => {
     expect(WIPE_DIRECT_TABLES).toContain('progress_photo_meta');
     expect(WIPE_DIRECT_TABLES).toContain('progress_scan_sessions');
     expect(WIPE_DIRECT_TABLES).toContain('progress_scan_assets');
+  });
+
+  test('photo and scan wipe failures are fatal, not best-effort', () => {
+    expect(FATAL_LOCAL_WIPE_TABLES.has('progress_photo_meta')).toBe(true);
+    expect(FATAL_LOCAL_WIPE_TABLES.has('progress_scan_sessions')).toBe(true);
+    expect(FATAL_LOCAL_WIPE_TABLES.has('progress_scan_assets')).toBe(true);
+  });
+
+  test('account-bound wipe purges SQLite snapshots', () => {
+    const database = fs.readFileSync(path.resolve(__dirname, '../database.js'), 'utf8');
+    const snapshots = fs.readFileSync(path.resolve(__dirname, '../dbSnapshot.js'), 'utf8');
+    expect(snapshots).toMatch(/export async function purgeSnapshots/);
+    expect(database).toMatch(/purgeSnapshots\(\)/);
   });
 
   test('has no duplicate entries', () => {

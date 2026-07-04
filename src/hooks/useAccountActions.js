@@ -87,6 +87,13 @@ export default function useAccountActions() {
               // stays signed in (unless they choose "Sign out anyway").
               const result = await clearAuthStateForSignOut();
               if (result?.ok === false) {
+                if (result.reason === 'wipe_failed') {
+                  appAlert(
+                    "Couldn't sign out safely",
+                    'Local photo and scan data could not be removed from this device. Try again before signing out.',
+                  );
+                  return;
+                }
                 // AUTH-5 escape hatch: rather than a dead-end "couldn't sign
                 // out", let the user decide. 'skipped'/'error' often means the
                 // device is offline or a background sync held the lock; the
@@ -102,7 +109,14 @@ export default function useAccountActions() {
                       onPress: async () => {
                         setSigningOut(true);
                         try {
-                          await clearAuthStateForSignOut({ force: true });
+                          const forced = await clearAuthStateForSignOut({ force: true });
+                          if (forced?.ok === false && forced.reason === 'wipe_failed') {
+                            appAlert(
+                              "Couldn't sign out safely",
+                              'Local photo and scan data could not be removed from this device. Try again before signing out.',
+                            );
+                            return;
+                          }
                           await finishCloudSignOut();
                         } finally {
                           setSigningOut(false);
@@ -248,6 +262,9 @@ export default function useAccountActions() {
               catch (e) { logError('SettingsScreen.deleteAccount.logFallback', e, { userId }); }
             }
           }
+        } else {
+          cloudOk = false;
+          logError('SettingsScreen.deleteAccount.supabaseMissing', new Error('Supabase client unavailable'), { userId });
         }
 
         // CRITICAL: if the cloud wipe failed, ABORT. Previously we still
@@ -272,7 +289,15 @@ export default function useAccountActions() {
       // Wipe local SQLite. Reached only when (a) cloud user and cloud
       // wipe succeeded, or (b) local-only user (no cloud to wipe).
       try { await wipeAllUserData(userId); }
-      catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
+      catch (e) {
+        logError('SettingsScreen.deleteAccount.wipeLocal', e);
+        appAlert(
+          "Couldn't finish deletion on this device",
+          'Local photo and scan data could not be removed. Try again before uninstalling or sharing this device.',
+        );
+        setDeletingAccount(false);
+        return;
+      }
       // Clear in-memory state.
       await clearAuthStateForSignOut();
       // Delete-account is the "truly wipe everything" path, distinct

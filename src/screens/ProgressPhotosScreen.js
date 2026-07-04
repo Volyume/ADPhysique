@@ -25,10 +25,15 @@ import { getPhotoMetaMap, deletePhotoMeta, upsertPhotoMeta } from '../lib/progre
 import {
   addProgressScanAsset,
   createProgressScanSession,
+  detachProgressScanPhoto,
   deleteProgressScanSession,
   finishProgressScanSession,
-  listProgressScans,
+  listProgressScanEntries,
 } from '../lib/progressScanStore';
+import {
+  getProgressScanHideExactPreference,
+  setProgressScanHideExactPreference,
+} from '../lib/progressScanPreferences';
 import {
   analyseProgressScanPhoto,
   assetFieldsFromVisionResult,
@@ -59,6 +64,7 @@ const POSES = [
   { key: 'back', label: 'Back' },
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+const PROGRESS_SCAN_MIN_INTERVAL_MS = 14 * 86400000;
 
 // Timeline sort. Newest-first is the unchanged default; oldest-first lets
 // someone read forwards from their first photo. Neutral temporal wording only,
@@ -83,6 +89,40 @@ function formatShort(ts) {
 function monthLabel(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
   catch (_) { return ''; }
+}
+
+function trendOnlyScanCopy(scan) {
+  const direction = scan?.trendDirection || 'uncertain';
+  if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup was not like-for-like.';
+  if (direction === 'down') return 'Trend context: measured signals point lower than the last like-for-like scan.';
+  if (direction === 'up') return 'Trend context: measured signals point higher than the last like-for-like scan.';
+  if (direction === 'steady') return 'Trend context: measured signals are broadly steady.';
+  return 'Trend context: baseline scan saved.';
+}
+
+function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
+  if (suppressed) return 'Scan saved privately. Detailed scan numbers are hidden right now.';
+  if (scan?.analysisStatus === 'complete' && scan.estimateRangeLow != null && scan.estimateRangeHigh != null) {
+    if (hideExact) return `${trendOnlyScanCopy(scan)} Exact scan ranges are hidden.`;
+    return `Estimated range ${scan.estimateRangeLow}-${scan.estimateRangeHigh}%. ${scan.copySummary || 'Use the trend across comparable scans.'}`;
+  }
+  if (scan?.analysisStatus === 'measured') {
+    return hideExact
+      ? trendOnlyScanCopy(scan)
+      : (scan?.copySummary || 'Scan measured and saved. This is not a body-fat estimate; use it as trend context across like-for-like scans.');
+  }
+  return scan?.copySummary || 'Saved as a scan. Body-composition estimates are withheld until there is a validated estimator.';
+}
+
+function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
+  const stats = scan?.stats || {};
+  const parts = [];
+  if (Number.isFinite(stats.photoCount)) parts.push(`${stats.photoCount} photo${stats.photoCount === 1 ? '' : 's'}`);
+  if (!suppressed && !hideExact && Number.isFinite(stats.weightKg)) parts.push(`${stats.weightKg} kg weight snapshot`);
+  if (Array.isArray(stats.poses) && stats.poses.length) {
+    parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
+  }
+  return parts.length ? parts.join(' | ') : 'Stored scan photos';
 }
 
 // Group a newest-first photo list into a flat timeline of month headers and
@@ -181,6 +221,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [capturePose, setCapturePose] = useState(null);
   const [scanFlow, setScanFlow] = useState(null);
   const [scans, setScans] = useState([]);
+  const [hideExactScans, setHideExactScans] = useState(false);
 
   // The "Photo details" step (date + pose) shown after an image is obtained and
   // BEFORE it is finalised. A picked camera/library image carries `pendingUri`
@@ -202,14 +243,16 @@ export default function ProgressPhotosScreen({ navigation }) {
       // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
       // (which swallows a storage read error down to 'unspecified'). A genuine
       // read failure must be treated as calm/suppressed.
-      const [rows, scanRows, mode] = await Promise.all([
+      const [rows, scanRows, mode, hideExact] = await Promise.all([
         listProgressPhotos(userId),
-        userId ? listProgressScans(userId, 5).catch(() => []) : Promise.resolve([]),
+        userId ? listProgressScanEntries(userId, 5).catch(() => []) : Promise.resolve([]),
         AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+        getProgressScanHideExactPreference(),
       ]);
       setPhotos(rows);
       setScans(scanRows || []);
       setCalm(isCalm(mode) || mode === 'read_failed');
+      setHideExactScans(!!hideExact);
       // Load the per-photo metadata (taken_at, pose) for the dated, pose-typed
       // timeline. Missing rows resolve to filename-derived defaults, so this
       // never requires a row to exist.
@@ -370,6 +413,14 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function openProgressScan() {
     if (useAppStore.getState().tier !== 'pro' || !userId) return;
+    const latestCompleted = scans.find((s) => s?.status === 'complete' && s?.requiredPosesComplete);
+    if (latestCompleted?.capturedAt && Date.now() - latestCompleted.capturedAt < PROGRESS_SCAN_MIN_INTERVAL_MS) {
+      appAlert('Give the scan time', 'Progress Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still take a normal progress photo today.', [
+        { text: 'Take single photo', onPress: openGhostCapture },
+        { text: 'OK', style: 'cancel' },
+      ]);
+      return;
+    }
     try {
       const session = await createProgressScanSession(userId);
       if (!session?.id) throw new Error('No scan session');
@@ -381,6 +432,12 @@ export default function ProgressPhotosScreen({ navigation }) {
       logError('ProgressPhotos.startScan', e, { userId });
       toast.show('Could not start the scan. Please try again.', { variant: 'error' });
     }
+  }
+
+  async function toggleHideExactScans() {
+    const next = !hideExactScans;
+    setHideExactScans(next);
+    await setProgressScanHideExactPreference(next);
   }
 
   async function finishScan(scanId) {
@@ -396,7 +453,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         trainingPhase: profile.trainingPhase ?? profile.goal ?? null,
         darkerSkinOverestimationRisk: profile.darkerSkinOverestimationRisk === true,
       });
-      setScans(await listProgressScans(userId, 5));
+      setScans(await listProgressScanEntries(userId, 5));
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
@@ -438,7 +495,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function retakeScanPose(flow, pose, name, saved) {
     try {
-      if (saved?.uri) await deleteProgressPhoto(saved.uri);
+      if (saved?.uri) await deleteProgressPhoto(userId, saved.uri);
       if (name) await deletePhotoMeta(userId, name);
     } catch (e) {
       logError('ProgressPhotos.scanRetakeDelete', e, { userId, pose });
@@ -454,11 +511,32 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCapturePose(null);
     if (!userId || !scanId) return;
     try {
-      await deleteProgressScanSession(userId, scanId);
-      setScans(await listProgressScans(userId, 5));
+      await deleteProgressScanSession(userId, scanId, { deleteFiles: true });
+      setScans(await listProgressScanEntries(userId, 5));
+      await refresh();
     } catch (e) {
       logError('ProgressPhotos.discardScan', e, { userId, scanId });
     }
+  }
+
+  async function deleteScanEntry(scan) {
+    if (!userId || !scan?.id || readOnly) return;
+    appAlert('Delete scan?', 'This removes the scan photos and stored scan analysis from this device.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteProgressScanSession(userId, scan.id, { deleteFiles: true });
+            await refresh();
+          } catch (e) {
+            logError('ProgressPhotos.deleteScan', e, { userId, scanId: scan.id });
+            toast.show('Could not delete that scan. Please try again.', { variant: 'error' });
+          }
+        },
+      },
+    ]);
   }
 
   async function onScanCaptured(name, saved) {
@@ -478,7 +556,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         appAlert('Retake this photo?', retakeCopy, [
           { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
           {
-            text: 'Save without estimate',
+            text: 'Use photo without analysis',
             onPress: () => {
               saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
                 logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
@@ -489,7 +567,18 @@ export default function ProgressPhotosScreen({ navigation }) {
         ]);
         return;
       }
-      await saveScanAssetAndContinue(flow, pose, name, saved, vision);
+      appAlert('Use this photo?', 'Check the pose, framing and lighting. Use it only if it looks like a fair like-for-like scan photo.', [
+        { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
+        {
+          text: 'Use photo',
+          onPress: () => {
+            saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
+              logError('ProgressPhotos.scanUsePhoto', e, { userId, pose });
+              toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
+            });
+          },
+        },
+      ]);
     } catch (e) {
       logError('ProgressPhotos.scanCaptured', e, { userId, pose });
       toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
@@ -538,8 +627,9 @@ export default function ProgressPhotosScreen({ navigation }) {
     const uid = useAppStore.getState().user?.id ?? userId;
     const item = photos.find((p) => p.name === name);
     try {
-      if (item) await deleteProgressPhoto(item.uri);
+      if (item) await deleteProgressPhoto(uid, item.uri);
       await deletePhotoMeta(uid, name);
+      await detachProgressScanPhoto(uid, name);
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
     }
@@ -561,7 +651,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   const canShare = !loading && !readOnly && photos.length >= 2 && !suppressed;
   const showActions = canCompare || canShare;
   const visibleScans = scans.filter((s) => s?.status !== 'draft' && s?.requiredPosesComplete);
-  const latestScan = visibleScans[0] ?? null;
 
   function renderTile(item) {
     const dateLabel = formatDay(item.takenAt);
@@ -636,19 +725,73 @@ export default function ProgressPhotosScreen({ navigation }) {
         ) : null}
       </Card>
 
-      {!loading && latestScan ? (
+      {!loading && visibleScans.length > 0 ? (
         <Card padding="md" style={styles.scanCard}>
           <View style={styles.scanCardHeader}>
-            <Text style={styles.scanTitle}>Latest scan</Text>
-            <Text style={styles.scanDate}>{formatDay(latestScan.capturedAt)}</Text>
+            <Text style={styles.scanTitle}>Scan history</Text>
+            <TouchableOpacity
+              onPress={toggleHideExactScans}
+              hitSlop={8}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: hideExactScans }}
+              accessibilityLabel={hideExactScans ? 'Show exact scan ranges' : 'Hide exact scan ranges'}
+              style={styles.hideExactToggle}
+            >
+              <Ionicons
+                name={hideExactScans ? 'eye-off-outline' : 'eye-outline'}
+                size={iconSize.sm}
+                color={colors.primary}
+              />
+              <Text style={styles.hideExactText}>{hideExactScans ? 'Trend only' : 'Show range'}</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.scanBody}>
-            {suppressed
-              ? 'Scan saved privately. Detailed scan estimates are hidden right now.'
-              : latestScan.analysisStatus === 'complete' && latestScan.estimateRangeLow != null
-              ? `Estimated range ${latestScan.estimateRangeLow}-${latestScan.estimateRangeHigh}%. ${latestScan.copySummary || 'Use the trend across comparable scans.'}`
-              : latestScan.copySummary || 'Saved as a scan. Body-composition estimates are withheld until the analysis is reliable enough.'}
-          </Text>
+          {visibleScans.map((scan) => (
+            <View key={scan.id} style={styles.scanEntry}>
+              <View style={styles.scanEntryHeader}>
+                <View style={styles.scanEntryTitleGroup}>
+                  <Text style={styles.scanDate}>{formatDay(scan.capturedAt)}</Text>
+                  <Text style={styles.scanQuality}>
+                    {scan.deltaExplanation?.comparisonStatus === 'comparable' ? 'like-for-like' : scan.qualityLabel || 'saved'}
+                  </Text>
+                </View>
+                {!readOnly ? (
+                  <TouchableOpacity
+                    onPress={() => deleteScanEntry(scan)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete scan from ${formatDay(scan.capturedAt)}`}
+                    style={styles.scanDeleteButton}
+                  >
+                    <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <Text style={styles.scanBody}>{scanReadCopy(scan, { suppressed, hideExact: hideExactScans })}</Text>
+              {scan.deltaExplanation?.summary && !suppressed && !hideExactScans ? (
+                <Text style={styles.scanDelta}>{scan.deltaExplanation.summary}</Text>
+              ) : scan.deltaExplanation?.trendSummary && !suppressed ? (
+                <Text style={styles.scanDelta}>{scan.deltaExplanation.trendSummary}</Text>
+              ) : null}
+              <Text style={styles.scanStats}>{scanStatsCopy(scan, { suppressed, hideExact: hideExactScans })}</Text>
+              {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
+                <View style={styles.scanAssetRow}>
+                  {scan.assets.map((asset) => (
+                    <TouchableOpacity
+                      key={asset.id}
+                      onPress={readOnly ? undefined : () => openViewer(asset.photoName)}
+                      disabled={readOnly}
+                      accessibilityRole={readOnly ? 'image' : 'button'}
+                      accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${formatDay(asset.takenAt)}.`}
+                      style={styles.scanAssetThumb}
+                    >
+                      <Image source={{ uri: asset.uri }} style={styles.scanAssetImage} />
+                      <Text style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ))}
         </Card>
       ) : null}
 
@@ -721,7 +864,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <View style={styles.actionRow}>
           {canCompare && (
             <Button
-              title="Compare"
+              title="Compare photos"
               variant="tertiary"
               size="sm"
               fullWidth={false}
@@ -732,7 +875,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           )}
           {canShare && (
             <Button
-              title="Share"
+              title="Share photos"
               variant="tertiary"
               size="sm"
               fullWidth={false}
@@ -830,7 +973,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       <Modal
         visible={captureOpen}
         animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => setCaptureOpen(false)}
+        onRequestClose={() => { setCaptureOpen(false); if (scanFlow) discardScanDraft(scanFlow); }}
       >
         <ProgressGhostCapture
           referencePhoto={captureReference}
@@ -889,6 +1032,24 @@ const styles = StyleSheet.create({
   scanTitle: { ...type.h3, color: colors.textPrimary },
   scanDate: { ...type.caption, color: colors.textMuted },
   scanBody: { ...type.bodySm, color: colors.textMuted },
+  hideExactToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+  hideExactText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  scanEntry: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  scanEntryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  scanEntryTitleGroup: { flex: 1, gap: spacing.xxs },
+  scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  scanQuality: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
+  scanDelta: { ...type.bodySm, color: colors.textSecondary },
+  scanStats: { ...type.caption, color: colors.textMuted },
+  scanAssetRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
+  scanAssetThumb: { width: 58, gap: spacing.xxs },
+  scanAssetImage: { width: 58, height: 58, borderRadius: radius.sm, backgroundColor: colors.surface2 },
+  scanAssetPose: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
