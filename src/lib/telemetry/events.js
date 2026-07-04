@@ -65,6 +65,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'subscription_cancelled',          deferred: false, panel: 5 },
   { name: 'paywall_shown',                   deferred: false, panel: 5 },
   { name: 'paywall_tapped_cta',              deferred: false, panel: 5 },
+  // Full-screen Pro lock impression. Emitted when a free user lands on a Pro
+  // route and the ProLocked gate renders (the view half of the lock -> upgrade
+  // funnel, so lock-view -> ProUpgrade is computable). Payload: the feature key
+  // only (e.g. 'Food diary'); no PII, no values. Server allow-list:
+  // supabase/migrate_103_feature_locked_telemetry.sql.
+  { name: 'feature_locked_viewed',           deferred: false, panel: 5 },
   // COMP-025-A: cancellation-reason capture. enum reason + surface only, no
   // PII (free text routes to user_feedback, never here).
   //   reason  = price|not_using|missing_feature|switching|temporary_break

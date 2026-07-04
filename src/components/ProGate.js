@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles
 import useAppStore from '../store/useAppStore';
 import TodaysPlateTeaser from './food/TodaysPlateTeaser';
 import { restorePurchases } from '../lib/payments/restore';
+import { track as trackEvent } from '../lib/engineTelemetry';
 import { appAlert } from './AppAlert';
 
 // COMP-CLARITY: one benefit line per gated feature, so the lock copy matches
@@ -87,7 +88,13 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         <View style={styles.contentDim} pointerEvents="none">
           {children}
         </View>
-        <TouchableOpacity style={styles.lockOverlay} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.lockOverlay}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Upgrade to Pro"
+        >
           <View style={styles.lockChip}>
             <Ionicons name="lock-closed" size={13} color={colors.onPrimary} />
             <Text style={styles.lockChipText}>Pro</Text>
@@ -109,7 +116,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
           >
             <View style={styles.sheetHandle} />
 
-            <View style={styles.sheetIconWrap}>
+            <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
               <Ionicons name="sparkles" size={28} color={colors.primary} />
             </View>
 
@@ -118,12 +125,23 @@ export default function ProGate({ children, feature = 'This feature', style }) {
                 the user tapped, falling back to the coaching-layer pitch. */}
             <Text style={styles.sheetBody}>{benefitFor(feature)}</Text>
 
-            <TouchableOpacity style={styles.upgradeBtn} onPress={upgrade} activeOpacity={0.88}>
+            <TouchableOpacity
+              style={styles.upgradeBtn}
+              onPress={upgrade}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="Upgrade to Pro"
+            >
               <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dismissBtn} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.dismissBtn}
+              onPress={() => setModalVisible(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Maybe later"
+            >
               <Text style={styles.dismissText}>Maybe later</Text>
             </TouchableOpacity>
           </Pressable>
@@ -139,7 +157,21 @@ export default function ProGate({ children, feature = 'This feature', style }) {
  */
 export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
+  const userId = useAppStore(s => s.user?.id);
   const [restoring, setRestoring] = useState(false);
+
+  // Fire the lock impression once per feature key, not on every re-render. The
+  // ref records the feature we last emitted for, so a re-render (or userId
+  // resolving after mount) never re-sends the same view; a genuine feature
+  // change would emit once for the new key. Payload carries the feature key
+  // only, no PII.
+  const viewedFeatureRef = useRef(null);
+  useEffect(() => {
+    if (!userId) return;
+    if (viewedFeatureRef.current === feature) return;
+    viewedFeatureRef.current = feature;
+    trackEvent(userId, 'feature_locked_viewed', { feature }).catch(() => {});
+  }, [userId, feature]);
   // Show-then-sell: on the food-diary lock, free users get a read-only
   // example day above the upgrade ask (founder decision #6). It exposes no
   // Pro action, only the value. Other Pro locks keep the plain held-seat.

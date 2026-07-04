@@ -22,7 +22,7 @@
  * via the X surfaces a "Decide later" no-op (user remains in their
  * current trial state; the next gate fires the same screen again).
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView,
@@ -38,6 +38,8 @@ import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { track as trackEvent } from '../lib/engineTelemetry';
+import useAppStore from '../store/useAppStore';
 
 // 2-tier model (founder override 2026-05-25): one trial-end gate, plus the
 // payment-failure overlay. M-3 (2026-06-06): the trial is 14+7, so 'day14' is
@@ -101,6 +103,26 @@ export default function CascadeGateScreen({ navigation, route }) {
   const [period, setPeriod] = useState(route?.params?.period === 'annual' ? 'annual' : 'monthly');
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
+  const userId = useAppStore((s) => s.user?.id);
+
+  // Fire the paywall_shown impression once per mount (mirrors HomeScreen's
+  // call signature), tagging the cascade gate as the surface and its variant as
+  // the trigger. The ref guards a re-render / strict-mode double-invoke from
+  // re-sending the same view; the decision taps still emit their own cascade
+  // telemetry through the payments layer.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (shownRef.current) return;
+    shownRef.current = true;
+    if (userId) {
+      trackEvent(userId, 'paywall_shown', {
+        surface: 'cascade_gate',
+        trigger: variant,
+      }).catch(() => {});
+    }
+    // Once per mount: intentionally no deps so a re-render never re-sends it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // C-2 / PLAY-002: localised store prices. priceFor returns null until Google
   // Play responds; the chips show a short placeholder rather than a hardcoded

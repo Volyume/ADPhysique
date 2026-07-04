@@ -16,7 +16,7 @@
  * then calls cascade.payAt to write tier_history. On dismiss we just
  * close. Either decision is logged via paywall_tapped_cta telemetry.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { storeName } from '../lib/storeName';
@@ -53,6 +53,26 @@ export default function PaywallScreen({ navigation, route }) {
   const userId = user?.id;
 
   const [busy, setBusy] = useState(false);
+
+  // Fire the paywall_shown impression once per mount (mirrors HomeScreen's
+  // call signature). The ref guards a re-render / strict-mode double-invoke
+  // from flapping the same view into telemetry; only the CTA/dismiss taps emit
+  // paywall_tapped_cta below, so this is the view half that makes view -> trial
+  // computable.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (shownRef.current) return;
+    shownRef.current = true;
+    if (userId) {
+      trackEvent(userId, 'paywall_shown', {
+        surface: 'paywall_screen',
+        trigger,
+        user_pricing_window: route?.params?.pricingWindow ?? 'open_beta',
+      }).catch(() => {});
+    }
+    // Once per mount: intentionally no deps so a re-render never re-sends it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const dismiss = useCallback(() => {
     audit('paywall.dismiss.tap', { surface });
