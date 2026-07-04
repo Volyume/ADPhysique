@@ -21,6 +21,7 @@ import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
 import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
 import { MilestoneBurst } from '../components/PRCelebration';
+import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 import { getVisibleMoments, markMomentSeen } from '../lib/partners/moments';
@@ -726,6 +727,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
 
+  // Photos LOOP-3 (D4): the competence-event id the photo invitation dedupes on.
+  // COMPETENCE ONLY — a claimed session/consistency milestone (its stable rung
+  // key), else a new PB this session (keyed per workout so it fires at most once
+  // per session). Never a weigh-in, bodyweight, body-composition or appearance
+  // event. Null on the read-only history view and when no competence win fired,
+  // so ProgressPhotoPrompt renders nothing. The prompt re-gates on suppression /
+  // Pro / opt-out / frequency itself.
+  const photoPromptMilestoneId = readOnly
+    ? null
+    : milestone?.key
+      ? `milestone:${milestone.key}`
+      : detectedPRs.length > 0
+        ? `pb:${workoutId}`
+        : null;
+
   // The session's own day (when it was trained/completed), NOT the moment this
   // screen is opened. Viewing a past workout used to show today's date because
   // this read new Date(); now it reads the workout's ended/started time.
@@ -951,6 +967,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
           </RevealSection>
         )}
+
+        {/* Photos LOOP-3 (D4): the calm, opt-in "mark the moment" invitation,
+            appended inside the celebration surface on a competence win only (a
+            PB or a session-streak milestone). ProgressPhotoPrompt owns every
+            gate itself (fail-closed suppression, Pro, permanent opt-out, ≤1/day
+            + per-milestone dedupe); a null milestone id renders nothing. */}
+        {photoPromptMilestoneId ? (
+          <RevealSection delay={1400}>
+            <ProgressPhotoPrompt
+              milestoneId={photoPromptMilestoneId}
+              tier={tier}
+              onAddPhoto={() => navigation.navigate('ProgressPhotos')}
+            />
+          </RevealSection>
+        ) : null}
 
         <View style={styles.divider} />
 

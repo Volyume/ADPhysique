@@ -230,6 +230,14 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'first_workout_logged',            deferred: false, panel: 1 },
   { name: 'first_food_logged',               deferred: false, panel: 1 },
   { name: 'trial_lapse_day1_return',         deferred: false, panel: 1 },
+
+  // Photos LOOP-3 (D4): the milestone-adjacent photo-capture invitation take
+  // rate. Feature key only, no PII, no values — never a photo, a weight, a body
+  // measurement or the milestone content. shown = the invitation was surfaced on
+  // a competence win; accepted = the user tapped "Add a photo".
+  // Server allow-list: supabase/migrate_104_photo_prompt_telemetry.sql.
+  { name: 'photo_prompt_shown',              deferred: false, panel: 1 },
+  { name: 'photo_prompt_accepted',           deferred: false, panel: 1 },
 ]);
 
 /**
