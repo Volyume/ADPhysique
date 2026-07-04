@@ -22,6 +22,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
@@ -464,7 +465,7 @@ export default function MealPlanScreen({ navigation }) {
             you do not fancy. Your targets stay the coach&apos;s job, and you can switch any time.
           </Text>
 
-          <View style={styles.planOption}>
+          <Card style={styles.planOption}>
             <Text style={styles.planOptionTitle}>Plan my week</Text>
             <Text style={styles.planOptionDesc}>
               Seven days of meals plus a shopping list, so you can prep ahead. Add the
@@ -472,16 +473,16 @@ export default function MealPlanScreen({ navigation }) {
               untouched). Best for a weekly shop and meal prep.
             </Text>
             <Button title="Plan my week" onPress={handleGenerateWeek} loading={busy} fullWidth />
-          </View>
+          </Card>
 
-          <View style={styles.planOption}>
+          <Card style={styles.planOption}>
             <Text style={styles.planOptionTitle}>Plan my day</Text>
             <Text style={styles.planOptionDesc}>
               One day of meals for today. Tweak it, then add it straight to today&apos;s diary.
               Best when you just want today sorted.
             </Text>
             <Button title="Plan my day" variant="secondary" onPress={handleGenerateDay} loading={busy} fullWidth />
-          </View>
+          </Card>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -558,7 +559,7 @@ export default function MealPlanScreen({ navigation }) {
           {(day?.slots || []).map((slot) => {
             const open = expanded[slot.slot] !== false;
             return (
-              <View key={slot.slot} style={styles.mealCard}>
+              <Card key={slot.slot} padding="md" style={styles.mealCard}>
                 <TouchableOpacity
                   onPress={() => setExpanded((e) => ({ ...e, [slot.slot]: !open }))}
                   accessibilityRole="button"
@@ -626,7 +627,7 @@ export default function MealPlanScreen({ navigation }) {
                   <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
                   <Text style={styles.swapText}>Swap</Text>
                 </TouchableOpacity>
-              </View>
+              </Card>
             );
           })}
 
@@ -811,11 +812,6 @@ const styles = StyleSheet.create({
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
   planOption: {
     alignSelf: 'stretch',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
@@ -835,7 +831,7 @@ const styles = StyleSheet.create({
   dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
   cycleNote: { ...type.bodySm, color: colors.textSecondary },
   honesty: { ...type.bodySm, color: colors.textSecondary, fontStyle: 'italic' },
-  mealCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.xs },
+  mealCard: { gap: spacing.xs },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },

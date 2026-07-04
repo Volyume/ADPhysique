@@ -21,6 +21,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
+import Card from '../components/Card';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
@@ -1453,7 +1454,7 @@ function WaterRow({
   const targetL = (targetMl / 1000).toFixed(1);
   const progress = Math.max(0, Math.min(1, ml / targetMl));
   return (
-    <View style={styles.waterRow}>
+    <Card padding="md" style={styles.waterRow}>
       <View style={styles.waterHeader}>
         <View style={styles.waterLeft}>
           <Ionicons name="water-outline" size={18} color={colors.primary} />
@@ -1518,7 +1519,7 @@ function WaterRow({
           style={styles.waterHint}
         />
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -1686,9 +1687,7 @@ const styles = StyleSheet.create({
   plannedBtnPrimaryText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   plannedBtnGhost: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   waterRow: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, marginBottom: spacing.lg,
+    marginBottom: spacing.lg,
     gap: spacing.sm,
   },
   waterHeader: {

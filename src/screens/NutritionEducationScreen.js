@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 
 export default function NutritionEducationScreen() {
   return (
@@ -190,7 +191,7 @@ export default function NutritionEducationScreen() {
 
 function Section({ icon, tint, title, children }) {
   return (
-    <View style={styles.section}>
+    <Card style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
@@ -198,7 +199,7 @@ function Section({ icon, tint, title, children }) {
         <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
-    </View>
+    </Card>
   );
 }
 
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
 
   intro: { color: colors.textSecondary, fontSize: fontSize.md, lineHeight: 22 },
 
-  section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  section: { gap: spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionIconWrap: { width: 32, height: 32, borderRadius: circle(32), alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
