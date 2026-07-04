@@ -365,10 +365,10 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Workout complete', ...heroZoomTransition }} />
-      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
-      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume heatmap' }} />
-      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
-      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       {/* Cardio is launched from the Train tab's CardioCard. Registering it here
           keeps the modal in this stack so saving returns to Train, not the Diary. */}
       <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
@@ -393,12 +393,12 @@ function PlansStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan', ...heroZoomTransition }} />
-      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout', ...heroZoomTransition }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise', ...heroZoomTransition }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
-      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
@@ -419,19 +419,19 @@ function ProgressStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Workout complete', ...heroZoomTransition }} />
-      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume heatmap' }} />
-      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
-      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
-      <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
-      <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
+      <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Partner" component={GatedPartner} options={{ headerShown: false }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise', ...heroZoomTransition }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
           both here keeps them in this stack so save/back return to Progress. */}
       <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
@@ -454,35 +454,35 @@ function ProfileStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
-      <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ title: 'Account' }} />
-      <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ title: 'Profile' }} />
-      <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ title: 'Coaching' }} />
-      <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
-      <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
-      <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />
-      <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ title: 'Restore a snapshot' }} />
-      <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
-      <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
-      <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
-      <Stack.Screen name="MealNames" component={GatedMealNames} options={{ title: 'Meal names' }} />
-      <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ title: 'Per-day targets' }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ headerShown: false }} />
+      <Stack.Screen name="MealNames" component={GatedMealNames} options={{ headerShown: false }} />
+      <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
-      <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Precision Coaching™' }} />
-      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ title: 'How Precision Coaching works' }} />
-      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ headerShown: false }} />
+      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ title: 'Goal lock' }} />
-      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
-      <Stack.Screen name="Import" component={ImportScreen} options={{ title: 'Import history' }} />
-      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
-      <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
+      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Import" component={ImportScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ headerShown: false }} />
+      <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
@@ -573,8 +573,8 @@ function FirstRunStack() {
           starter plan, so the new free user lands on Home with today's
           session already answered. Skipping completes first run as before. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
-      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan', ...heroZoomTransition }} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
     </Stack.Navigator>
   );
@@ -600,8 +600,8 @@ function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
-      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan', ...heroZoomTransition }} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
       <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
       {/* Registered here too so the onboarding hand-off screen can link
@@ -609,7 +609,7 @@ function ProOnboardingStack() {
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
       {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
           so the trial is never a black box before the first check-in. */}
-      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: true, title: 'How Precision Coaching works' }} />
+      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
