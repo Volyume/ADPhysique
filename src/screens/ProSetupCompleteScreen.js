@@ -291,7 +291,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 ) : null}
               </View>
               <Text style={styles.targetsNote}>
-                Hit these most days. Logging your food in your food diary sharpens your coaching, and your weight trend carries the rest.
+                Hit these most days. Logging your meals sharpens your coaching, and your weight trend carries the rest.
               </Text>
               {/* Optional head start: a full week of meals built to these
                   targets, with a shopping list, waiting in Meal planning. */}

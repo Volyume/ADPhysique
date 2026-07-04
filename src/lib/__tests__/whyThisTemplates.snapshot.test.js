@@ -42,7 +42,7 @@ describe('whyThisTemplates: locked output snapshots', () => {
 
   test('getAutoRegMessage all actions', () => {
     expect(getAutoRegMessage('continue')).toMatchInlineSnapshot(`"Your recovery's holding. The plan stays as written."`);
-    expect(getAutoRegMessage('hold_volume')).toMatchInlineSnapshot(`"You're showing fatigue this week. Your session content stays the same. Focus on sleep and protein."`);
+    expect(getAutoRegMessage('hold_volume')).toMatchInlineSnapshot(`"Your recovery scores dipped this week, so your session content stays the same. Sleep and protein are the levers."`);
     expect(getAutoRegMessage('reduce_volume')).toMatchInlineSnapshot(`"Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher."`);
     expect(getAutoRegMessage('deload_now', 5)).toMatchInlineSnapshot(`"Good timing: you've been building for 5 weeks. Next week is lighter: shorter sessions, same exercises, half the sets."`);
     expect(getAutoRegMessage('deload_now', 2)).toMatchInlineSnapshot(`"Your recovery is dropping. Next week is lighter: shorter sessions, same exercises, half the sets."`);

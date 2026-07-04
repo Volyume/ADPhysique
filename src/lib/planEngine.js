@@ -1881,7 +1881,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // progression (always)
   const weeks = (experience === 'advanced' || experience === 'competitive') ? 6 : 5;
-  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one set per exercise per week across the first ${weeks - 1} weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
+  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one to two sets per muscle group per week across the first ${weeks - 1} weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
 
   // equipment
   result.equipment = `Exercises were selected for ${eqLabel}. Every lift in the plan is available and safe to perform with the equipment you specified, with no substitutions needed.`;

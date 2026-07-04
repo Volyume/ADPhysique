@@ -70,8 +70,21 @@ function assertNoJargon(str) {
   return str;
 }
 
+// Match the em/en-dash ban enforced in coachResponse.clean() and
+// coachRegister (the house no-dash rule). Guards this older library so a
+// dash can never ship from a "why this" string again.
+function assertNoDash(str) {
+  if (/[–—]/.test(str)) {
+    throw new Error(`Em or en dash detected in whyThis output: "${str}"`);
+  }
+  return str;
+}
+
 function clean(str) {
-  if (typeof __DEV__ !== 'undefined' && __DEV__) assertNoJargon(str);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    assertNoJargon(str);
+    assertNoDash(str);
+  }
   return str.trim();
 }
 
@@ -196,7 +209,7 @@ export function getProgressionMessage(action, currentWeight, suggestedWeight, un
 export function getAutoRegMessage(action, weeksInBlock = 1) {
   const messages = {
     continue:      `Your recovery's holding. The plan stays as written.`,
-    hold_volume:   `You're showing fatigue this week. Your session content stays the same. Focus on sleep and protein.`,
+    hold_volume:   `Your recovery scores dipped this week, so your session content stays the same. Sleep and protein are the levers.`,
     reduce_volume: `Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher.`,
     deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Your recovery is dropping.'} Next week is lighter: shorter sessions, same exercises, half the sets.`,
   };
@@ -538,8 +551,8 @@ export const ED_PATTERN_CLEARED_COPY = {
   header: 'Hold lifted',
   title: 'Your numbers are looking better',
   body:
-    "The signals that triggered the hold have settled for two weeks. We're back to the standard coach output. New calorie targets land at the next weekly run.\n\n" +
-    "Take this gently. Energy recovery beats rushing back into a deep cut.",
+    "The signals that triggered the hold have settled for two weeks. Standard coach output resumes, and new calorie targets land at the next weekly run.\n\n" +
+    "Energy recovery is more durable than a fast return to a deep cut.",
 };
 
 // Locked copy for Move #3 (upward gate compression). When weekly loss

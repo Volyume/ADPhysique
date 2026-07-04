@@ -546,7 +546,7 @@ function RapidLossAlert() {
         <Text style={styles.rapidLossTitle}>Weight dropping quickly</Text>
       </View>
       <Text style={styles.rapidLossBody}>
-        Your weight is falling more than 1.5% of your bodyweight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Consider eating a little more this week.
+        Your weight is falling more than 1.5% of your bodyweight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
       </Text>
     </View>
   );
@@ -572,7 +572,7 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
           : 'You have been in a calorie deficit for over eight weeks. '}
-        {'A short diet break, returning to maintenance calories for one to two weeks, can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
+        {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
       <Text style={styles.dietBreakFootnote}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
@@ -2192,7 +2192,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 line here; the full WhyBlock further down keeps the detail. */}
             {whyThisWeek ? (
               <Text style={styles.heroWhy}>
-                {'Because: '}
+                {'The reason: '}
                 {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
               </Text>
             ) : null}
@@ -2212,7 +2212,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               </Text>
               {whyThisWeek ? (
                 <Text style={styles.heroWhy}>
-                  {'Because: '}
+                  {'The reason: '}
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
               ) : null}
