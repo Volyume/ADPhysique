@@ -211,6 +211,20 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      # Static type check over JSDoc (this repo is JS, not TS; tsc --noEmit
+      # only checks types, it does not emit). Added so a JSDoc-type
+      # regression is caught on the PR gate instead of only in
+      # release:check, which only runs pre-release.
+      - name: Run typecheck
+        run: npm run typecheck
+
+      # Enforces the src/lib import-boundary rules (see
+      # scripts/check-imports.cjs). Added alongside typecheck so an
+      # import-boundary violation is caught on the PR gate instead of only
+      # in release:check, which only runs pre-release.
+      - name: Run import boundary check
+        run: npm run check:imports
+
   expo-doctor:
     name: Expo Doctor
     runs-on: ubuntu-latest
