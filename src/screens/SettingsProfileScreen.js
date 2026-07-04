@@ -96,8 +96,8 @@ export default function SettingsProfileScreen() {
                   key={opt.value}
                   style={[styles.dietChip, active && styles.dietChipActive]}
                   onPress={() => changeSex(opt.value)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: active }}
                   accessibilityLabel={`Biological sex ${opt.label}`}
                 >
                   <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
@@ -124,8 +124,9 @@ export default function SettingsProfileScreen() {
                   key={opt.value}
                   style={[styles.dietChip, active && styles.dietChipActive]}
                   onPress={() => { setDiet(opt.value); setDietPreference(opt.value); }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: active }}
+                  accessibilityLabel={`Diet preference ${opt.label}`}
                 >
                   <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
                 </TouchableOpacity>
@@ -171,6 +172,8 @@ const styles = StyleSheet.create({
   dietChip: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,

@@ -22,7 +22,7 @@
  * log-food candidate is Pro-gated, and a paywalled centre button violates
  * the free/pro exposure rule).
  *
- * T2 (world-class-audit-2026-07-03/05-cohesion.md #4): the You tab (where
+ * T2 (world-class-audit-2026-07-03/05-cohesion.md #4): the Coach tab (where
  * CoachOutput is registered, see RootNavigator's ProfileStack) carries a
  * small amber dot when there is an unseen weekly coach review. Sourced from
  * the store's hasUnseenCoachChange flag, which HomeScreen mirrors from its
@@ -110,7 +110,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
           const color = isFocused ? colors.primary : colors.textMuted;
           const label = options.title ?? route.name;
           // T2: CoachOutput lives in ProfileStack only (RootNavigator), so
-          // the You tab is the one that carries the unseen-review badge.
+          // the Coach tab is the one that carries the unseen-review badge.
           const showCoachBadge = route.name === 'ProfileTab' && hasUnseenCoachChange;
           const accessibilityLabel = options.tabBarAccessibilityLabel ?? label;
 

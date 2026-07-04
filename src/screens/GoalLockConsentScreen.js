@@ -13,7 +13,7 @@ import BackHeader from '../components/BackHeader';
 /**
  * GoalLockConsentScreen (Move #2).
  *
- * Reached from the You tab as a self-serve edit surface (You -> Goal
+ * Reached from the Coach tab as a self-serve edit surface (Coach -> Goal
  * lock). The onboarding interstitial that used to show this for
  * physique_competition / advanced_recomp was removed (founder,
  * 2026-05-29; see ProOnboardingScreen), so onboarding is no longer a
@@ -32,7 +32,7 @@ import BackHeader from '../components/BackHeader';
  * Routing:
  * - Used as part of ProOnboarding stack: tap Continue advances to
  *   the next step via `route.params.onContinue` if provided.
- * - Used from You tab: shows a "Save" button that pops back.
+ * - Used from Coach tab: shows a "Save" button that pops back.
  */
 export default function GoalLockConsentScreen({ navigation, route }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).

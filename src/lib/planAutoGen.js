@@ -5,7 +5,7 @@
  * Shared by:
  *   - ProOnboardingScreen.advanceFrom4 (initial creation)
  *   - HomeScreen Pro recovery CTA (if auto-gen failed during onboarding)
- *   - You tab re-plan flow (when the user changes their goal)
+ *   - Coach tab goal/phase update flow (when the user changes their goal)
  *
  * Returns { ok: boolean, programmeId?: string, error?: string }.
  * Pure orchestration, generatePlan stays pure, DB writes are idempotent
@@ -197,10 +197,10 @@ export async function generateAndSavePlan(userId, profile) {
     await activatePlanWithBlock(userId, prog.id, planName);
     // Pro auto-gen is the "single managed plan" path: rerolling on goal
     // change creates a fresh programme each time, and the previous ones
-    // pile up in My plans on the Plans tab. Archive everything except
+    // pile up in My plans on the Train tab. Archive everything except
     // the newly-activated programme so the list shows just the current
     // plan. Users can restore any archived plan from the Archived
-    // section on the Plans tab.
+    // section on the Train tab.
     await archiveOtherUserPlans(userId, prog.id);
     // E7.2 activation funnel: first-ever plan generation (durable, once).
     try {

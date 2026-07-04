@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
-const LAST_UPDATED = '22 May 2026';
+const LAST_UPDATED = '4 July 2026';
 
 export default function PrivacyPolicyScreen() {
   return (
@@ -15,9 +15,16 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="What Volyume collects">
           <Body>
-            Volyume collects information you provide directly: your name, email address, body measurements,
-            workout logs, and training preferences. This data is used solely to run the app and give you
-            personalised training and nutrition guidance.
+            Volyume collects information you provide directly: your name, email address, profile details,
+            body measurements, workout logs, food diary entries, check-ins, training preferences, and the
+            settings you choose. This data is used solely to run the app and give you personalised training
+            and nutrition guidance.
+          </Body>
+          <Body>
+            If you use Progress Photos or Physique Scan, the photo files stay on this device unless you choose
+            to share or export them. The app may store local metadata and scan outputs such as photo quality,
+            scan confidence, leanness band, visual score and progress signal. Physique Scan is a visual
+            progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
           </Body>
           <Body>
             We do not sell your data. We do not share it with third parties for advertising purposes.
@@ -26,9 +33,13 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="How your data is stored">
           <Body>
-            Your workout and body data is stored locally on your device and, if you create an account,
-            synchronised to our secure cloud database (Supabase). All data in transit is encrypted via HTTPS.
-            Auth tokens are stored in your device's secure encrypted storage.
+            Your data is stored locally on your device and, if you create an account, synchronised to our
+            secure cloud database in Supabase's EU region. All data in transit is encrypted via HTTPS. Auth
+            tokens are stored in your device's secure encrypted storage.
+          </Body>
+          <Body>
+            Progress photo and scan image files are device-local. Cloud-backed account data is protected with
+            row-level security so only you, and the team supporting your account when needed, can see it.
           </Body>
         </Section>
 
@@ -43,9 +54,9 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="Body metrics and sensitive data">
           <Body>
-            Body weight and measurements are treated as sensitive personal data. They are
-            stored only on your device and your private account. They are never shared, indexed, or visible
-            to other users.
+            Body weight, measurements, food logs, check-ins, eating-habits screening, progress photos and
+            Physique Scan outputs are treated as sensitive health data. They are never sold, never shared for
+            advertising, and never used to train a public AI model.
           </Body>
         </Section>
 
@@ -60,17 +71,25 @@ export default function PrivacyPolicyScreen() {
           <Body>
             We do not use third-party analytics or tracking tools, and we do not
             build advertising profiles. The lawful basis is legitimate interest
-            (keeping the app working and worth using). You can switch it off in
+            (keeping the app working and worth using). You can switch usage data off in
             Settings &gt; Privacy &amp; legal &gt; Share usage data, and once off,
-            nothing further is collected or sent.
+            nothing further is collected or sent. Crash and performance reports are sent through Sentry with
+            known health, nutrition and photo fields scrubbed.
           </Body>
         </Section>
 
         <Section title="Your rights">
           <Body>
-            You have the right to export all your data at any time (Settings &gt; Export workout log or Back
-            up everything). You can permanently delete your account and all associated data from Settings
-            &gt; Delete account. Deletion is immediate and irreversible.
+            You can export your workout sets as CSV from Settings &gt; Your data &gt; Export workout log.
+            You can also create a JSON backup of app database records, including workout, nutrition, body
+            metric, progress photo metadata and Physique Scan metadata. The JSON backup does not bundle
+            private photo image files.
+          </Body>
+          <Body>
+            You can permanently delete your account from Settings &gt; Account &gt; Delete account. Cloud removal
+            starts immediately and local data is wiped on this device; if final sign-in removal cannot finish
+            while offline, Volyume tells you and completes it when you reconnect. Backup copies are purged
+            within 30 days.
           </Body>
           <Body>
             If you are in the European Economic Area or United Kingdom, you have additional rights under GDPR,

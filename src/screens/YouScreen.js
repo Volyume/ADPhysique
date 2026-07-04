@@ -1,40 +1,40 @@
 /**
- * YouScreen
+ * Coach home.
  *
- * Root of the You tab. Profile + account + the personal coaching and
- * preference shortcuts. The progress/recovery dashboard content now
- * lives inline on the Progress tab and the coaching decision history
- * now sits inside Precision Coaching; this screen is the place you
- * manage yourself, your plan and your settings.
- *
- * Voice rules: CLAUDE.md + COACHING_VOICE_SYNTHESIS_LOCKED. No em dashes.
+ * Historical file/route name kept as YouScreen/You for navigation stability,
+ * but the visible tab is now Coach. This is a deterministic coaching hub, not
+ * an AI chat surface: every destination is a rules-based Volyume flow.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import * as Application from 'expo-application';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha, alpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
-import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllWorkouts, getCoachOutputHistory } from '../lib/database';
+import { getAllWorkouts, getCoachOutputHistory, getLatestCoachOutput } from '../lib/database';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 
+function formatDate(ms) {
+  if (!ms) return null;
+  try {
+    return new Date(Number(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch (_) {
+    return null;
+  }
+}
+
 function NavRow({ icon, label, sub, onPress, pro }) {
-  // `pro` marks a row whose destination is Pro-gated: free users see the row
-  // undimmed with a PRO badge (the NavTile treatment, T6) and tapping opens
-  // the gated destination, so the lock never reads as a dead end.
   return (
-    <PressableCard
+    <Card
       style={styles.navRow}
       onPress={onPress}
       accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
@@ -50,53 +50,54 @@ function NavRow({ icon, label, sub, onPress, pro }) {
         {sub ? <Text style={styles.navRowSub}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-    </PressableCard>
+    </Card>
   );
 }
 
 export default function YouScreen({ navigation }) {
   const { user, userProfile, tier } = useAppStore(useShallow(s => ({
-    user: s.user, userProfile: s.userProfile, tier: s.tier,
+    user: s.user,
+    userProfile: s.userProfile,
+    tier: s.tier,
   })));
   const [sessions, setSessions] = useState(null);
-  // E10 read-only lapse views (F2): whether this user has past coach decisions
-  // to show. Free users with history get a "Coaching history" row into the
-  // read-only CoachHeldHistory screen, so a lapsed user keeps sight of every
-  // call the coach made while they were on Pro. Defaults false (no row) and a
-  // failed read stays false, so never-Pro users see nothing new.
+  const [latestReview, setLatestReview] = useState(null);
   const [hasCoachHistory, setHasCoachHistory] = useState(false);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
-    if (user?.id) {
-      getAllWorkouts(user.id)
-        .then(ws => {
-          if (!alive) return;
-          const completed = (ws || []).filter(w => !!(w.isCompleted ?? w.is_completed));
-          setSessions(completed.length);
-        })
-        .catch(() => {});
-      if (tier !== 'pro') {
-        // Reset first so a failed read (or an account switch to a user with
-        // no history) never leaves the previous account's true standing.
-        setHasCoachHistory(false);
-        getCoachOutputHistory(user.id, 1)
-          .then(rows => { if (alive) setHasCoachHistory((rows ?? []).length > 0); })
-          .catch(() => {});
+    async function load() {
+      if (!user?.id) return;
+      try {
+        const [workouts, latest, history] = await Promise.all([
+          getAllWorkouts(user.id).catch(() => []),
+          getLatestCoachOutput(user.id).catch(() => null),
+          tier !== 'pro' ? getCoachOutputHistory(user.id, 1).catch(() => []) : Promise.resolve([]),
+        ]);
+        if (!alive) return;
+        const completed = (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed));
+        setSessions(completed.length);
+        setLatestReview(latest || null);
+        setHasCoachHistory((history || []).length > 0);
+      } catch (_) {
+        if (alive) {
+          setSessions(null);
+          setLatestReview(null);
+          setHasCoachHistory(false);
+        }
       }
     }
+    load();
     return () => { alive = false; };
   }, [user?.id, tier]));
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
-    || 'You';
-
+    || 'Athlete';
   const isPro = tier === 'pro';
+  const avatarUri = userProfile?.avatarUri || null;
+  const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
 
-  // Partners row (spec B8): live pair state for Pro, the Pro-lock affordance
-  // for free. The hook is a no-op when passed a null userId, so it does no
-  // work for free users; the null keeps the hook call unconditional.
   const partners = usePartners(isPro ? user?.id : null, tier);
   const partnersSub = isPro
     ? partnerRowLine({
@@ -106,128 +107,150 @@ export default function YouScreen({ navigation }) {
       })
     : 'Quiet accountability with someone you trust';
   const openPartners = useCallback(() => {
-    trackPartnerSurfaceView('you_row');
-    navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'you_row' });
+    trackPartnerSurfaceView('coach_row');
+    navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'coach_row' });
   }, [navigation]);
-
-  // App version for the About footer. Helps a user quote their build when they
-  // report an issue. Reads expo-application (already a dependency); hidden if
-  // the native value is unavailable (e.g. in some test/preview contexts).
-  const appVersion = Application.nativeApplicationVersion
-    ? `Version ${Application.nativeApplicationVersion}${Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : ''}`
-    : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <ScreenHeader title="You" />
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile */}
-        <Card style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(displayName?.[0] || 'Y').toUpperCase()}</Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Text style={styles.profileName}>{displayName}</Text>
-              {isPro && <ProBadge size="sm" />}
-            </View>
-            {sessions != null ? (
-              <Text style={styles.profileStat}>{sessions} session{sessions !== 1 ? 's' : ''}</Text>
-            ) : user?.id ? (
-              // Cold-start skeleton in the same slot the session count fills,
-              // so the stat fades in instead of popping the layout (Skeleton.js
-              // doctrine). Sized to the caption line it replaces.
-              <Skeleton width={88} height={12} />
-            ) : null}
-          </View>
-        </Card>
+        <ScreenHeader title="Coach" subtitle="Rules-based decisions. No chat. No guesswork." />
 
-        {/* Go Pro (free only) */}
-        {!isPro && (
-          <View style={styles.section}>
-            <NavRow
-              icon="sparkles-outline"
-              label="Go Pro"
-              sub="Precision Coaching, nutrition targets and body metrics"
-              onPress={() => navigation.navigate('ProUpgrade')}
-            />
-            {/* E10 read-only lapse views (F2): a lapsed user keeps a read-only
-                view of the coach's past decisions. Only shown when there IS
-                history, so never-Pro users see nothing extra. CoachHeldHistory
-                is registered in this stack and renders display-only. */}
-            {hasCoachHistory && (
-              <NavRow
-                icon="book-outline"
-                label="Coaching history"
-                sub="Every call the coach made while you were on Pro, what changed and why. View-only on the free plan."
-                onPress={() => navigation.navigate('CoachHeldHistory')}
-              />
+        <Card
+          style={styles.profileCard}
+          onPress={() => navigation.navigate('AthleteProfile')}
+          accessibilityLabel="Open athlete profile"
+        >
+          <View style={styles.avatar}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
             )}
           </View>
-        )}
+          <View style={styles.profileInfo}>
+            <View style={styles.profileNameRow}>
+              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              {isPro ? <ProBadge size="sm" /> : null}
+            </View>
+            {sessions != null ? (
+              <Text style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+            ) : user?.id ? (
+              <Skeleton width={110} height={12} />
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Card>
 
-        {/* Coaching (Pro) */}
-        {isPro && (
+        <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
+          <View style={styles.statusTop}>
+            <View style={styles.statusIcon}>
+              <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.statusEyebrow}>Deterministic coach</Text>
+              <Text style={styles.statusTitle}>
+                {isPro
+                  ? latestReview
+                    ? `Latest review${reviewDate ? `: ${reviewDate}` : ''}`
+                    : 'Ready for your first weekly review'
+                  : 'Precision Coaching is available on Pro'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.statusBody}>
+            {isPro
+              ? latestReview
+                ? 'Open the review to see what changed, what was held, and the exact signals behind the decision.'
+                : 'Log training, morning weight, food where relevant, and a weekly check-in. Volyume waits for enough signal before changing targets.'
+              : 'The coach is not a chatbot. It is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
+          </Text>
+        </Card>
+
+        {isPro ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Coaching</Text>
+            <Text style={styles.sectionLabel}>Coach actions</Text>
             <NavRow
-              icon="pulse-outline"
+              icon="clipboard-outline"
               label="Weekly check-in"
-              sub="Your weekly check-in. Answer four questions and the coach adjusts your plan from them."
+              sub="Answer the weekly questions that drive coaching changes."
               onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
             <NavRow
-              icon="sparkles-outline"
-              label="Precision Coaching™"
-              sub="Read what the coach changed, and why, after your check-in. Your full decision history sits here too. Built on published training science."
-              onPress={() => navigation.navigate('CoachOutput')}
+              icon="pulse-outline"
+              label="This week's review"
+              sub="What changed, what held, why it happened, and what to do next."
+              onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             />
             <NavRow
               icon="flag-outline"
-              label="Update your plan"
-              sub="Change your goal, phase, schedule, equipment or experience. Precision Coaching rebuilds the plan and your nutrition targets around the new answers."
+              label="Update goal and phase"
+              sub="Change goal, phase, schedule, equipment or experience."
               onPress={() => navigation.navigate('ProGoalSetup')}
             />
             <NavRow
               icon="nutrition-outline"
               label="Nutrition targets"
-              sub="Your calories and macros"
+              sub="Calories, macros, protein level and target rationale."
               onPress={() => navigation.navigate('NutritionTargets')}
             />
             <NavRow
-              icon="shield-checkmark-outline"
-              label="Goal lock"
-              sub="Tell Volyume whether you've run aggressive cuts before. It changes how soon the safety check steps in."
-              onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
+              icon="notifications-outline"
+              label="Coaching reminders"
+              sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
+              onPress={() => navigation.navigate('CoachingReminders')}
             />
           </View>
-        )}
-
-        {/* COMP-006: how the coaching decides. FREE USERS ONLY (founder
-            device-walk 2026-06-12): Pro users already reach this in-context on
-            the Precision Coaching screen (the why-block's learn-more and the
-            held-decisions card), so the You row was a redundant extra button
-            for them. A free user has no coach screen yet, and this static
-            trust copy is part of weighing up Pro, so their path stays. */}
-        {!isPro && (
+        ) : (
           <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Coach actions</Text>
+            <NavRow
+              icon="sparkles-outline"
+              label="Go Pro"
+              sub="Weekly coaching, nutrition targets, body metrics and progress photos."
+              onPress={() => navigation.navigate('ProUpgrade')}
+            />
+            {hasCoachHistory ? (
+              <NavRow
+                icon="book-outline"
+                label="Coaching history"
+                sub="Past Pro decisions stay readable. View-only on the free plan."
+                onPress={() => navigation.navigate('CoachHeldHistory')}
+              />
+            ) : null}
             <NavRow
               icon="book-outline"
               label="How Precision Coaching works"
-              sub="The rules behind every change, and every hold. Every change has a reason. Every non-change has a reason too."
-              onPress={() => navigation.navigate('Methodology', { source: 'you_tab' })}
+              sub="The rules behind changes, holds, safety floors and data confidence."
+              onPress={() => navigation.navigate('Methodology', { source: 'coach_tab' })}
             />
           </View>
         )}
 
-        {/* Partners (spec B8): after the coaching rows, before settings. One
-            calm entry to the shared-signal partner surface. Pro shows live
-            pair state; free shows the standard Pro-lock affordance and taps
-            through to the gated destination. */}
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Safety and context</Text>
+          {isPro ? (
+            <>
+              <NavRow
+                icon="shield-checkmark-outline"
+                label="Goal lock"
+                sub="Set how conservative the safety check should be for aggressive cuts."
+                onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
+              />
+              <NavRow
+                icon="heart-outline"
+                label="Wellbeing check"
+                sub="Update the screening answers that shape how coaching is applied."
+                onPress={() => navigation.navigate('WellbeingCheck')}
+              />
+              <NavRow
+                icon="book-outline"
+                label="How decisions work"
+                sub="Training volume, calorie, macro, cardio, deload and hold logic."
+                onPress={() => navigation.navigate('Methodology', { source: 'coach_tab' })}
+              />
+            </>
+          ) : null}
           <NavRow
             icon="people-outline"
             label="Partners"
@@ -237,30 +260,25 @@ export default function YouScreen({ navigation }) {
           />
         </View>
 
-        {/* Preferences */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Preferences</Text>
-          {isPro && (
-            <NavRow
-              icon="heart-outline"
-              label="Wellbeing check"
-              sub="Update your health screening answers. This shapes how your coaching is applied."
-              onPress={() => navigation.navigate('WellbeingCheck')}
-            />
-          )}
+          <Text style={styles.sectionLabel}>Profile and settings</Text>
+          <NavRow
+            icon="person-outline"
+            label="Athlete profile"
+            sub="Profile photo, physique snapshot, strength baselines and body data shortcuts."
+            onPress={() => navigation.navigate('AthleteProfile')}
+          />
           <NavRow
             icon="settings-outline"
             label="Settings"
-            sub="Account, units, notifications, data and privacy"
+            sub="Account, units, notifications, data, billing and privacy."
             onPress={() => navigation.navigate('Settings')}
           />
         </View>
 
-        {/* About */}
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
           <Text style={styles.aboutVersion}>Less thinking. More lifting.</Text>
-          {appVersion ? <Text style={styles.aboutBuild}>{appVersion}</Text> : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -270,42 +288,63 @@ export default function YouScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
-
   profileCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
   },
   avatar: {
-    width: 56, height: 56, borderRadius: circle(56),
-    backgroundColor: colors.primaryBg, borderWidth: 2, borderColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: circle(56),
+    backgroundColor: colors.primaryBg,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary },
-  profileInfo: { flex: 1, gap: 3 },
-  profileName: { ...type.title, color: colors.textPrimary },
+  profileInfo: { flex: 1, gap: spacing.xxs },
+  profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  profileName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
   profileStat: { ...type.num('caption'), color: colors.textSecondary },
-
-  section: { gap: spacing.md },
-  sectionLabel: {
-    ...type.label,
-    color: colors.textSecondary,
+  statusCard: { gap: spacing.md },
+  statusTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  statusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
-
+  statusEyebrow: { ...type.caption, color: colors.primary, fontWeight: fontWeight.black, textTransform: 'uppercase' },
+  statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  statusBody: { ...type.bodySm, color: colors.textSecondary },
+  section: { gap: spacing.md },
+  sectionLabel: { ...type.label, color: colors.textSecondary },
   navRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   navRowIcon: {
-    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
-    alignItems: 'center', justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navRowText: { flex: 1 },
   navRowLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   navRowLabel: { ...type.bodyStrong, color: colors.textPrimary },
   navRowSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
-
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
   aboutName: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { ...type.caption, color: colors.textMuted },
-  aboutBuild: { ...type.caption, color: colors.textDisabled, fontVariant: ['tabular-nums'] },
 });

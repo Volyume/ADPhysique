@@ -90,7 +90,7 @@
   <div class="wrap">
     <div class="head">
       <h1>Privacy policy</h1>
-      <p class="updated">Last updated: 8 June 2026</p>
+      <p class="updated">Last updated: 4 July 2026</p>
       <p class="intro">This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. We are private by design: no social feed, no community, no targeted advertising, no sale of your data.</p>
     </div>
 
@@ -104,7 +104,9 @@
         <li>Everything you log to your food diary</li>
         <li>Your weekly check-ins, including energy, recovery, and how you feel</li>
         <li>The screening questions you answer about eating habits</li>
+        <li>Progress photos you choose to take, plus Physique Scan quality, confidence, leanness band, visual score and progress signal when you use that feature</li>
       </ul>
+      <p>Physique Scan is a visual progress feature. It is not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment. Progress photo and scan image files stay on your device unless you choose to share or export them.</p>
       <p>This is special-category health data under UK GDPR Article 9. We use it only with your explicit consent, recorded on the consent screen at onboarding. Without that consent the engine cannot run.</p>
     </section>
 
@@ -116,8 +118,8 @@
 
     <section>
       <h2><span class="n">3</span> Where it is stored</h2>
-      <p>On your phone, your data sits in encrypted local storage: EncryptedSharedPreferences on Android and Keychain on iOS for tokens, and SQLite for your training history, food diary, and rollups.</p>
-      <p>Your cloud data is stored in Supabase (EU region), with row-level security so only you, and the team supporting your account, can see it. It does not leave the UK or EU.</p>
+      <p>On your phone, your data sits in encrypted local storage: EncryptedSharedPreferences on Android and Keychain on iOS for tokens, and SQLite for your training history, food diary, progress metadata and rollups.</p>
+      <p>Progress photo and scan image files are device-local. Cloud-backed account data is stored in Supabase (EU region), with row-level security so only you, and the team supporting your account when needed, can see it. It does not leave the UK or EU.</p>
     </section>
 
     <section>
@@ -128,8 +130,8 @@
 
     <section>
       <h2><span class="n">5</span> Health Connect</h2>
-      <p>If you opt in under Settings, Volyume can read your most recent body weight, so the morning-weight card picks up entries from your scale or wearable, and write completed workouts so your health app shows your training. On Android this goes through Health Connect.</p>
-      <p>We do not read heart rate, sleep, HRV, or step data without a separate opt-in. All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
+      <p>If you opt in under Settings, Volyume can read your most recent body weight and daily steps, so the morning-weight card and step count can pick up entries from your scale or wearable, and write completed workouts so your health app shows your training. On Android this goes through Health Connect.</p>
+      <p>We do not read heart rate, sleep, or HRV. All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
     </section>
 
     <section>
@@ -139,14 +141,16 @@
       <ul>
         <li>Supabase (EU region) for the database, authentication and storage</li>
         <li>Sentry for crash and error reporting, on scrubbed events with your weight, intake and body data removed</li>
-        <li>Google Play (Play Billing) for Android in-app purchases</li>
+        <li>Apple App Store and Google Play for subscription purchases</li>
+        <li>Expo push for notification delivery</li>
+        <li>Open Food Facts and USDA FoodData Central for food lookup data</li>
       </ul>
       <p>Adding a new sub-processor requires updating this policy with 30 days' notice via in-app push.</p>
     </section>
 
     <section>
       <h2><span class="n">7</span> Deleting your data</h2>
-      <p>When you confirm deletion, your account and all cloud-stored personal data are deleted immediately, and local data is wiped at once on the device that initiated it. Backup copies are purged within 30 days.</p>
+      <p>When you confirm deletion, cloud removal starts immediately and local data is wiped at once on the device that initiated it. If final sign-in removal cannot finish while offline, Volyume tells you and completes it when you reconnect. Backup copies are purged within 30 days.</p>
       <p>We keep one thing after deletion: a one-way hash of your email address, held only to stop the 14-day free trial being restarted by deleting and re-registering. It holds no readable email or other personal data, and is never used to contact you or rebuild your account.</p>
     </section>
 
@@ -157,7 +161,7 @@
         <li>Access the personal data we hold about you</li>
         <li>Rectify anything inaccurate</li>
         <li>Erase your account and data, from Settings, Account, Delete account</li>
-        <li>Port your data: Settings, Privacy, Download my data emails you a CSV bundle</li>
+        <li>Port your data: Settings, Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup includes database records, including progress photo metadata and Physique Scan metadata, but not private photo image files</li>
         <li>Restrict or object to processing</li>
         <li>Withdraw consent for the Article 9 health and nutrition processing at any time, which deletes your account because the engine cannot run without that data</li>
         <li>Lodge a complaint with the ICO</li>

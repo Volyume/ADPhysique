@@ -23,7 +23,7 @@ import { logError, logWarn } from '../lib/errorLog';
 // activated, so a brand-new free user lands on Home with today's session
 // already answered. Reached from:
 //   * FirstRunStack, straight after the name screen (fromFirstRun: true);
-//   * Home's no-plan card and the Plans tab's no-plan card.
+//   * Home's no-plan card and the Train tab's no-plan card.
 // Deterministic throughout: scoring lives in lib/onboarding/freeStarter.js.
 // The "skip, I'll choose myself" path is always visible (autonomy first).
 export default function FreeStarterScreen({ navigation, route }) {
@@ -95,7 +95,7 @@ export default function FreeStarterScreen({ navigation, route }) {
   }
 
   // Browse instead (Home/Plans contexts only): pop back, then open the
-  // library through the Plans tab, the same route HomeScreen uses.
+  // library through the Train tab, the same route HomeScreen uses.
   function handleBrowse() {
     navigation.popToTop?.();
     navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false });

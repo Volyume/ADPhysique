@@ -1880,7 +1880,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   }, [user?.id, reloadKey]);
 
   function handleClose() {
-    // The user arrived here from the You tab via WeeklyCheckIn. Closing
+    // The user arrived here from the Coach tab via WeeklyCheckIn. Closing
     // the coach output should land them back on the You root, not on the
     // WeeklyCheckIn screen they just submitted. Both screens sit in the
     // same Profile stack, so popToTop is the right primitive: You

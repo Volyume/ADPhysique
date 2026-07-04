@@ -289,7 +289,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
             <Text style={styles.nextText}>
-              Nutrition targets in the You tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
+              Nutrition targets in the Coach tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
             </Text>
           </View>
           {next.phase === 'cut' && !edFlagOpen && (

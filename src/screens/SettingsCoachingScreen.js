@@ -235,8 +235,8 @@ export default function SettingsCoachingScreen() {
                       key={key}
                       style={[styles.toneChip, sel && styles.toneChipOn]}
                       onPress={() => setTone(key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: sel }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Coaching tone ${label}`}
                     >
                       <Text style={[styles.toneChipText, sel && styles.toneChipTextOn]}>{label}</Text>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
   },
   toneChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },

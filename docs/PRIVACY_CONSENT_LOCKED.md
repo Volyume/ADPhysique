@@ -26,6 +26,10 @@ response plan can scope correctly:
 - ED-pattern detection signals and flag state
 - SCOFF screener responses at onboarding
 - Photo progress images (on-device only, never synced)
+- Physique Scan local metadata and derived outputs: photo quality, scan
+  confidence, visual leanness band/score and progress signal. This is
+  not an exact body-fat percentage, DEXA scan, diagnosis or medical
+  assessment.
 - Menstrual cycle phase if/when the user enters it (future)
 
 ## The Article 9 consent screen
@@ -47,6 +51,9 @@ be skipped. Locked copy:
 > - Your weekly check-ins, including energy, recovery, and how you
 >   feel
 > - The screening questions you answer about eating habits
+> - Progress photos you choose to take, plus Physique Scan quality,
+>   confidence, leanness band, visual score and progress signal when
+>   you use that feature
 >
 > What we never do with it:
 >
@@ -56,10 +63,14 @@ be skipped. Locked copy:
 >
 > Where it lives:
 >
-> - On your phone, in encrypted local storage
-> - On our servers in the UK, with row-level security so only you
->   and the team supporting your account can see it
-> - If you delete your account, all of it is removed within 30 days
+> - On your phone, in encrypted local storage. Progress photos and scan
+>   image files stay on this device unless you choose to share or
+>   export them
+> - In Supabase in the EU region for cloud-backed account data, with
+>   row-level security so only you and the team supporting your account
+>   can see it
+> - If you delete your account, cloud removal starts immediately, this
+>   device is wiped, and backup copies are purged within 30 days
 >
 > [ ] I agree to Volyume using my health and nutrition data to
 > coach me.
@@ -86,7 +97,8 @@ Lives at volyume.app/privacy. Required sections, in this order:
    below.
 6. **Sub-processors.** Supabase (database + auth), Sentry (crash
    reporting, scrubbed), Apple App Store / Google Play (purchase
-   processing), RevenueCat (subscription state).
+   processing), Expo push (notifications), Open Food Facts / USDA
+   FoodData Central (food lookups).
 7. **Retention.** Active accounts: indefinite. Deleted accounts:
    wiped within 30 days. Anonymised engine metrics: kept indefinitely
    (no PII).
@@ -166,11 +178,12 @@ Immediately on tap of "Delete my account":
 
 | Provider | Purpose | Data |
 | --- | --- | --- |
-| Supabase (EU region) | Database, auth, storage | Everything except photos |
+| Supabase (EU region) | Database, auth, storage | Cloud-backed account data, never progress-photo image files |
 | Sentry | Crash and error reporting | Scrubbed events (no weight, intake, BF%, photos) |
 | Apple App Store | iOS purchases | Receipt, transaction ID |
 | Google Play | Android purchases | Receipt, transaction ID |
-| RevenueCat | Subscription state aggregation | Anonymised user ID, transaction events, tier state |
+| Expo push | Push notifications | Device push token |
+| Open Food Facts / USDA FoodData Central | Food lookup data | Search terms, barcode values only |
 
 Adding a new sub-processor requires updating the privacy policy with
 30 days' notice via in-app push and email (when v1.1 ships email).
@@ -217,8 +230,7 @@ Article 6(1)(b) (necessary for the contract):
 
 - Email address for account creation.
 - Password hash for sign-in.
-- Subscription/payment metadata (Apple/Google receipts, RevenueCat
-  state).
+- Subscription/payment metadata (Apple/Google receipts and tier state).
 - Device locale and timezone (for daily rollover and notification
   timing).
 - Crash reports (scrubbed; covered by Article 6(1)(f) legitimate
@@ -248,8 +260,10 @@ A single Privacy section in You tab, with:
 - "Manage health and nutrition consent" → reopens the Article 9
   screen; tapping "Withdraw consent" queues account deletion (with
   confirmation)
-- "Download my data" → emails a CSV bundle to the address on file
-  (in scope from v1; data export is a UK GDPR Article 20 right)
+- "Your data" -> local export tools: workout-log CSV and JSON app-data
+  backup. The JSON backup contains database records, including progress
+  photo metadata and Physique Scan metadata, but not private photo image
+  files.
 - "Delete my account" → the deletion flow above
 
 ## Implementation notes (for the engineer)

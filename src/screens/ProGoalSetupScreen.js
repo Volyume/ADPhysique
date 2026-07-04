@@ -385,7 +385,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Update your plan" />
+      <BackHeader title="Update goal and phase" />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -575,7 +575,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           <View style={styles.footerNote}>
             <Ionicons name="scale-outline" size={15} color={colors.textMuted} />
             <Text style={styles.footerNoteText}>
-              Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Home.
+              Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Today.
             </Text>
           </View>
         ) : null}

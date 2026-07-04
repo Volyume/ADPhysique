@@ -3,8 +3,8 @@
  *
  * Pins the four placement invariants so the calm partner entries cannot drift
  * or regress:
- *   1. YouScreen carries a lock-aware "Partners" row that attributes its view
- *      and jumps cross-tab to the Partner route.
+ *   1. Coach home (historical file: YouScreen) carries a lock-aware "Partners"
+ *      row that attributes its view and jumps cross-tab to the Partner route.
  *   2. ConsistencyScreen carries NO Partners row (founder device-walk
  *      2026-07-03: three entry points read as duplication; the Consistency
  *      row was the most out-of-place and was removed).
@@ -17,37 +17,37 @@ import path from 'path';
 
 const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 
-const YOU = read('YouScreen.js');
+const COACH = read('YouScreen.js');
 const CONSISTENCY = read('ConsistencyScreen.js');
 const ANALYTICS = read('AnalyticsScreen.js');
 const HOME = read('HomeScreen.js');
 
-describe('YouScreen Partners row', () => {
+describe('Coach home Partners row', () => {
   test('has a Partners NavRow with the people icon', () => {
-    expect(YOU).toMatch(/icon="people-outline"/);
-    expect(YOU).toMatch(/label="Partners"/);
+    expect(COACH).toMatch(/icon="people-outline"/);
+    expect(COACH).toMatch(/label="Partners"/);
   });
 
   test('is lock-aware for free tier (pro affordance)', () => {
-    expect(YOU).toMatch(/pro=\{!isPro\}/);
+    expect(COACH).toMatch(/pro=\{!isPro\}/);
   });
 
   test('reuses the shared line derivation, not a duplicated string', () => {
-    expect(YOU).toMatch(/partnerRowLine/);
+    expect(COACH).toMatch(/partnerRowLine/);
     // The row copy must not be re-implemented inline here.
-    expect(YOU).not.toMatch(/resting this week/);
+    expect(COACH).not.toMatch(/resting this week/);
   });
 
   test('attributes the view and jumps cross-tab with a source param', () => {
-    expect(YOU).toMatch(/trackPartnerSurfaceView\('you_row'\)/);
-    expect(YOU).toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'Partner', \{ source: 'you_row' \}\)/);
+    expect(COACH).toMatch(/trackPartnerSurfaceView\('coach_row'\)/);
+    expect(COACH).toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'Partner', \{ source: 'coach_row' \}\)/);
   });
 });
 
 describe('ConsistencyScreen carries no Partners row (deduped)', () => {
   // Founder device-walk 2026-07-03: Partners was seeded in three places; the
   // Consistency row was the most out-of-place, so it was removed. Partners
-  // keeps the promoted Progress-tab tile and the You-tab row.
+  // keeps the promoted Progress-tab tile and the Coach-tab row.
   test('does not import or render the PartnerRow component', () => {
     expect(CONSISTENCY).not.toMatch(/import PartnerRow from/);
     expect(CONSISTENCY).not.toMatch(/<PartnerRow/);

@@ -598,7 +598,7 @@ const useAppStore = create((set, get) => ({
   // restoringSession + restoreSplashStage removed, the new
   // restoreSessionFromCloud uses optimistic routing and a background
   // cloud sync, so no UI gate is needed. Existing screens with empty
-  // states (HomeScreen "no active plan", Plans tab) fill in as
+  // states (HomeScreen "no active plan", Train tab) fill in as
   // pullFromCloud writes to local SQLite. Same pattern as Linear /
   // Notion / Slack.
 
@@ -883,7 +883,7 @@ const useAppStore = create((set, get) => ({
     // the optimistic path didn't fire). We do NOT flip back to false
     // if cloud disagrees with an optimistic true, that would be the
     // wizard-flash bug. An old account that was never finished is an
-    // edge case; they can complete from Settings → Update your plan.
+    // edge case; they can complete from Settings → Update goal and phase.
     if (cloudData.first_run_complete && !get().firstRunComplete) {
       try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
       set({ firstRunComplete: true, firstRunChecked: true });

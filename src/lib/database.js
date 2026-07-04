@@ -3151,7 +3151,7 @@ export async function activatePlanWithBlock(userId, planId, planName) {
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
   // (not the raw planName arg, which above labels the mesocycle) so the push can
-  // never name anything other than the plan the Plans tab shows. Best-effort and
+  // never name anything other than the plan the Train tab shows. Best-effort and
   // self-gating (the scheduler no-ops when reminders are off or permission is
   // absent); a lazy require keeps the data layer free of a static notifications
   // dependency, and every path here leaves plan activation itself unaffected.
@@ -4410,6 +4410,12 @@ export const BACKUP_TABLES = [
   // Rollups are derived but only recomputed on new writes for a day, so
   // restore them too or historic diary days would render empty totals.
   'daily_intake_rollups',
+  // Device-local physique-photo records. The backup carries the SQLite
+  // metadata and scan rows so a restore does not drop the user's own history;
+  // image files themselves remain private app documents, not JSON rows.
+  'progress_photo_meta',
+  'progress_scan_sessions',
+  'progress_scan_assets',
 ];
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.

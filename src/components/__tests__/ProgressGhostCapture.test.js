@@ -23,6 +23,14 @@ import useAppStore from '../../store/useAppStore';
 let mockPermission = { granted: true, canAskAgain: true };
 const mockRequestPermission = jest.fn(async () => mockPermission);
 const mockTakePicture = jest.fn(async () => ({ uri: 'file:///captured.jpg' }));
+let mockStoreState = { tier: 'pro', accessibility: { reduceMotion: false } };
+
+jest.mock('../../store/useAppStore', () => {
+  const store = jest.fn((selector) => (typeof selector === 'function' ? selector(mockStoreState) : mockStoreState));
+  store.getState = () => mockStoreState;
+  store.setState = (patch) => { mockStoreState = { ...mockStoreState, ...patch }; };
+  return { __esModule: true, default: store };
+});
 
 jest.mock('expo-camera', () => {
   const React = require('react');
@@ -47,20 +55,28 @@ jest.mock('expo-sensors', () => ({
 // Order tracker for the capture pipeline.
 const order = [];
 jest.mock('../../lib/progressPhotos', () => ({
+  deleteProgressPhoto: jest.fn(async () => {
+    order.push('delete-photo');
+    return true;
+  }),
   saveProgressPhoto: jest.fn(async () => {
     order.push('save');
     return { name: '1700000000000.jpg', uri: 'file:///photos/1700000000000.jpg', ts: 1700000000000 };
   }),
 }));
 jest.mock('../../lib/progressPhotoMeta', () => ({
+  deletePhotoMeta: jest.fn(async () => {
+    order.push('delete-meta');
+    return true;
+  }),
   upsertPhotoMeta: jest.fn(async () => {
     order.push('meta');
     return {};
   }),
 }));
 
-const { saveProgressPhoto } = require('../../lib/progressPhotos');
-const { upsertPhotoMeta } = require('../../lib/progressPhotoMeta');
+const { deleteProgressPhoto, saveProgressPhoto } = require('../../lib/progressPhotos');
+const { deletePhotoMeta, upsertPhotoMeta } = require('../../lib/progressPhotoMeta');
 
 const REF = { uri: 'file:///photos/ref.jpg' };
 
@@ -74,6 +90,7 @@ async function render(props = {}) {
 
 beforeEach(() => {
   mockPermission = { granted: true, canAskAgain: true };
+  mockStoreState = { tier: 'pro', accessibility: { reduceMotion: false } };
   order.length = 0;
   jest.clearAllMocks();
 });
@@ -145,6 +162,49 @@ test('capture is blocked when the live tier is no longer pro (mid-modal flip)', 
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
   expect(onCaptured).not.toHaveBeenCalled();
+});
+
+test('capture re-checks the live tier after the native camera returns', async () => {
+  act(() => { useAppStore.setState({ tier: 'pro' }); });
+  mockTakePicture.mockImplementationOnce(async () => {
+    act(() => { useAppStore.setState({ tier: 'free' }); });
+    return { uri: 'file:///captured.jpg' };
+  });
+  const onCaptured = jest.fn();
+  const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
+
+  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
+  await act(async () => {
+    await captureBtn.props.onPress();
+  });
+
+  expect(saveProgressPhoto).not.toHaveBeenCalled();
+  expect(upsertPhotoMeta).not.toHaveBeenCalled();
+  expect(deleteProgressPhoto).not.toHaveBeenCalled();
+  expect(deletePhotoMeta).not.toHaveBeenCalled();
+  expect(onCaptured).not.toHaveBeenCalled();
+});
+
+test('capture cleans up a saved file if the tier lapses before metadata is written', async () => {
+  act(() => { useAppStore.setState({ tier: 'pro' }); });
+  saveProgressPhoto.mockImplementationOnce(async () => {
+    order.push('save');
+    act(() => { useAppStore.setState({ tier: 'free' }); });
+    return { name: '1700000000000.jpg', uri: 'file:///photos/1700000000000.jpg', ts: 1700000000000 };
+  });
+  const onCaptured = jest.fn();
+  const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
+
+  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
+  await act(async () => {
+    await captureBtn.props.onPress();
+  });
+
+  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg', undefined, undefined);
+  expect(deleteProgressPhoto).toHaveBeenCalledWith(undefined, 'file:///photos/1700000000000.jpg');
+  expect(upsertPhotoMeta).not.toHaveBeenCalled();
+  expect(onCaptured).not.toHaveBeenCalled();
+  expect(order).toEqual(['save', 'delete-photo']);
 });
 
 test('a hard-denied permission shows the calm photo-library fallback, no crash', async () => {

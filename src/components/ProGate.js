@@ -20,6 +20,7 @@ import { appAlert } from './AppAlert';
 // moves the free/Pro line, which stays enforced entirely by the tier check.
 const FEATURE_BENEFIT = {
   'Food diary': 'Log meals against your own calorie and macro targets, with barcode and saved meals built in.',
+  Nutrition: 'Log meals against your own calorie and macro targets, with barcode and saved meals built in.',
   'Food search': 'Search a full food database and log straight to your day against your targets.',
   'Barcode scanning': 'Scan a barcode to log a food in seconds, with its macros filled in for you.',
   'Label scanning': 'Snap a nutrition label to capture its macros without typing them in.',
@@ -32,6 +33,7 @@ const FEATURE_BENEFIT = {
   Cardio: 'Log cardio so your sessions and the energy they burn feed into your weekly plan.',
   'Body metrics': 'Track your weight and measurements so coaching can read the trend and adjust your plan.',
   'Progress photos': 'Keep private progress photos alongside your stats, so you can see the changes the scales miss.',
+  'Progress photos and Physique Scan': 'Keep private progress photos alongside your stats, with Physique Scan trends when the photo read is strong enough.',
   'Training partner': 'Train alongside a partner who sees that you showed up, never your numbers. Private, one to one.',
   'Nutrition targets': 'Get calorie and macro targets set for your goal, division, and the week ahead.',
   'Weekly check-in': 'Run a weekly check-in so your plan and targets adjust to how the week actually went.',
@@ -175,7 +177,7 @@ export function ProLocked({ feature = 'This' }) {
   // Show-then-sell: on the food-diary lock, free users get a read-only
   // example day above the upgrade ask (founder decision #6). It exposes no
   // Pro action, only the value. Other Pro locks keep the plain held-seat.
-  const showPlateTeaser = feature === 'Food diary';
+  const showPlateTeaser = feature === 'Food diary' || feature === 'Nutrition';
 
   // Restore is a read of an existing entitlement, not a purchase: a paid user
   // on a reinstall or new device must recover Pro here without going through
@@ -216,7 +218,7 @@ export function ProLocked({ feature = 'This' }) {
             why it is Pro, instead of the same coaching pitch on every lock. */}
         <Text style={styles.lockedBody}>{benefitFor(feature)}</Text>
         {/* Show-then-sell (founder decision #6): the read-only example day,
-            below the headline so it reads in context. Food diary lock only.
+            below the headline so it reads in context. Nutrition lock only.
             The teaser LOOKS tappable (four meal cards), so the whole block is
             one tap target routing to the same ProUpgrade the CTA below opens
             (founder defect pass 2026-07-03, issue 2), the cards themselves

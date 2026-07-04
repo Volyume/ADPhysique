@@ -84,6 +84,7 @@ const SettingsAboutScreen = lazyScreen(() => require('../screens/SettingsAboutSc
 const LiftProgressScreen = lazyScreen(() => require('../screens/LiftProgressScreen').default);
 const ConsistencyScreen = lazyScreen(() => require('../screens/ConsistencyScreen').default);
 const YouScreen = lazyScreen(() => require('../screens/YouScreen').default);
+const AthleteProfileScreen = lazyScreen(() => require('../screens/AthleteProfileScreen').default);
 const PlansScreen = lazyScreen(() => require('../screens/PlansScreen').default);
 const PlanDetailScreen = lazyScreen(() => require('../screens/PlanDetailScreen').default);
 const RoutineDetailScreen = lazyScreen(() => require('../screens/RoutineDetailScreen').default);
@@ -185,7 +186,7 @@ const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/Per
 // Every other Pro route below stays hard-locked, so no mutation surface
 // (FoodSearch, ScanBarcode, MealPlan, cardio, recipes...) leaks via deep link.
 const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
-const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
+const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos and Physique Scan', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
 // path, never the live feature). The guard is the upgrade path, matching how
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
@@ -195,20 +196,20 @@ const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/
 const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Update training'));
 const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
 // Diary domain is Pro (free is Plan Library, custom training, Progress, You).
-// Gating the Diary tab root covers the food sub-screens, which are only reached
+// Gating the Nutrition tab root covers the food sub-screens, which are only reached
 // from it; cardio screens are gated directly because they are also registered in
 // the Home and Progress stacks, so they need the guard at every entry point.
-const GatedDiary            = lazyScreen(() => withReadOnlyProGuard(require('../screens/DiaryScreen').default, 'Food diary', (userId) => require('../lib/food/db').hasAnyFoodEntries(userId)));
+const GatedDiary            = lazyScreen(() => withReadOnlyProGuard(require('../screens/DiaryScreen').default, 'Nutrition', (userId) => require('../lib/food/db').hasAnyFoodEntries(userId)));
 const GatedLogCardio        = lazyScreen(() => withProGuard(require('../screens/LogCardioScreen').default, 'Cardio'));
 const GatedCardioHistory    = lazyScreen(() => withProGuard(require('../screens/CardioHistoryScreen').default, 'Cardio'));
-// Defence-in-depth (food review U-M1): the Diary tab root is gated and these
+// Defence-in-depth (food review U-M1): the Nutrition tab root is gated and these
 // sub-screens are only reached from it today, but a stray deep-link, push
 // notification route, or a second registration elsewhere would otherwise expose
 // a Pro feature with no paywall. Guard each directly too; withProGuard is a
 // no-op for Pro users, so this only ever protects, never blocks.
 const GatedMealPlan         = lazyScreen(() => withProGuard(require('../screens/MealPlanScreen').default, 'Meal plan'));
-const GatedFoodSearch       = lazyScreen(() => withProGuard(require('../screens/FoodSearchScreen').default, 'Food diary'));
-const GatedAddCustomFood    = lazyScreen(() => withProGuard(require('../screens/AddCustomFoodScreen').default, 'Food diary'));
+const GatedFoodSearch       = lazyScreen(() => withProGuard(require('../screens/FoodSearchScreen').default, 'Nutrition'));
+const GatedAddCustomFood    = lazyScreen(() => withProGuard(require('../screens/AddCustomFoodScreen').default, 'Nutrition'));
 const GatedScanBarcode      = lazyScreen(() => withProGuard(require('../screens/ScanBarcodeScreen').default, 'Barcode scanning'));
 const GatedScanLabel        = lazyScreen(() => withProGuard(require('../screens/ScanLabelScreen').default, 'Label scanning'));
 const GatedFoodInsights     = lazyScreen(() => withProGuard(require('../screens/FoodInsightsScreen').default, 'Food insights'));
@@ -369,8 +370,8 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
-      {/* Cardio is launched from the Train tab's CardioCard. Registering it here
-          keeps the modal in this stack so saving returns to Train, not the Diary. */}
+      {/* Cardio is launched from the Today tab's CardioCard. Registering it here
+          keeps the modal in this stack so saving returns to Today, not Nutrition. */}
       <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
@@ -454,6 +455,7 @@ function ProfileStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
@@ -508,7 +510,7 @@ function MainTabs() {
       // verified self-contained (own-data loads and view-scoped telemetry
       // only, 2026-07-02), and notification-tap / deep-link navigation into
       // an unmounted tab mounts it on demand. HomeTab is the initial tab,
-      // so Train still mounts immediately.
+      // so Today still mounts immediately.
       // M1 (audit 03b §3.3f, §4 step 1): a selection tick on tab CHANGE.
       // tabPress reaches only the pressed tab's listener and fires before
       // focus moves, so isFocused() here means a re-press of the already
@@ -532,21 +534,24 @@ function MainTabs() {
         headerShown: false,
         tabBarIcon: ({ focused, color }) => {
           const icons = {
-            HomeTab: focused ? 'home' : 'home-outline',
-            PlansTab: focused ? 'list' : 'list-outline',
-            DiaryTab: focused ? 'restaurant' : 'restaurant-outline',
+            HomeTab: focused ? 'today' : 'today-outline',
+            PlansTab: focused ? 'barbell' : 'barbell-outline',
+            DiaryTab: focused ? 'nutrition' : 'nutrition-outline',
             ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
-            ProfileTab: focused ? 'person' : 'person-outline',
+            ProfileTab: focused ? 'pulse' : 'pulse-outline',
           };
           return <Ionicons name={icons[route.name] || 'ellipse'} size={22} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
-      <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Plans' }} />
-      <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Diary' }} />
+      {/* Internal tab route ids are kept stable for deep links, push routing and
+          cross-tab helper calls. The visible IA is Today / Train / Nutrition /
+          Progress / Coach. */}
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Today' }} />
+      <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Train' }} />
+      <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Nutrition' }} />
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Coach' }} />
     </Tab.Navigator>
   );
 }
@@ -625,7 +630,7 @@ function ProOnboardingStack() {
 // these routes exist in the active navigator, so React Navigation can't
 // resolve the URL and simply leaves the user on whatever stack is mounted
 // (Welcome) instead of crashing. Once signed in and on MainTabs, the same
-// link resolves to the right tab + screen. Pro-gated destinations (Diary)
+// link resolves to the right tab + screen. Pro-gated destinations (Nutrition)
 // still render their withProGuard upgrade prompt for free users, exactly as
 // when reached by tab press, the link only navigates, it never bypasses a
 // gate.
@@ -641,19 +646,19 @@ const linking = {
       // stack navigator (verified against the *Stack functions above).
       HomeTab: {
         screens: {
-          // volyume://workout/start → Train tab → blank/build workout screen.
+          // volyume://workout/start → Today tab → blank/build workout screen.
           BuildWorkout: 'workout/start',
         },
       },
       DiaryTab: {
         screens: {
-          // volyume://diary → Diary tab root (Pro-gated screen).
+          // volyume://diary → Nutrition tab root (Pro-gated screen).
           Diary: 'diary',
         },
       },
       PlansTab: {
         screens: {
-          // volyume://routine/:planId → Plans tab → PlanDetail for that plan.
+          // volyume://routine/:planId → Train tab → PlanDetail for that plan.
           // The path param MUST be named planId: PlanDetailScreen reads
           // route.params.planId, so the old ':id' arrived as `id` and left
           // planId undefined, dead-ending on a permanently blank screen
@@ -750,7 +755,7 @@ export default function RootNavigator() {
             // F6b: tabs are lazy. Without initial: false, a notification
             // tapped before its tab was ever focused would mount the stack
             // with the target as its ONLY route, stranding the tab root
-            // (You/Diary/Progress) for the whole session. initial: false
+            // (Coach/Nutrition/Progress) for the whole session. initial: false
             // restores the eager-era push-over-root behaviour.
             initial: false,
             ...(target.params ? { params: target.params } : {}),

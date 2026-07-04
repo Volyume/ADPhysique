@@ -41,6 +41,12 @@ jest.setTimeout(15_000);
 // 2026-07-02). virtual is only for modules that do NOT resolve, and this
 // file mocks none of those.
 jest.mock('react-native-url-polyfill/auto', () => ({}));
+jest.mock('expo/virtual/env', () => ({ env: process.env }));
+jest.mock('expo-application');
+jest.mock('expo-constants');
+jest.mock('expo-crypto');
+jest.mock('expo-secure-store');
+jest.mock('expo-sqlite');
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
@@ -603,6 +609,7 @@ describe('Pro screens mount without error', () => {
 
 const SCREENS_TO_SWEEP = [
   'AnalyticsScreen',
+  'AthleteProfileScreen',
   'BlockReflectionScreen',
   'BodyMetricsScreen',
   'BuildWorkoutScreen',

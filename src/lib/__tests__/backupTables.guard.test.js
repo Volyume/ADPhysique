@@ -47,4 +47,10 @@ describe('E10-F1a: the free backup carries the user-owned food domain', () => {
       expect(block).toContain(`'${t}'`);
     }
   });
+
+  test('device-local progress-photo and physique-scan metadata remain portable', () => {
+    for (const t of ['progress_photo_meta', 'progress_scan_sessions', 'progress_scan_assets']) {
+      expect(block).toContain(`'${t}'`);
+    }
+  });
 });

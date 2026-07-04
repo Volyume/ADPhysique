@@ -165,7 +165,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // the day's calories (protein and carbs 4 kcal/g, fat 9), so the three bars
   // read as the real composition of the plan rather than three identical
   // blocks. The number on each bar stays the gram target. Protein keeps the
-  // single weight emphasis, matching the Diary tab.
+  // single weight emphasis, matching the Nutrition tab.
   const macroTargets = nutritionSummary ? [
     { label: 'Protein', g: nutritionSummary.proteinG, kcal: (nutritionSummary.proteinG || 0) * 4, primary: true },
     { label: 'Carbs', g: nutritionSummary.carbsG, kcal: (nutritionSummary.carbsG || 0) * 4 },
@@ -249,7 +249,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.primary} />
               </TouchableOpacity>
-              {/* The kcal ring is the Diary tab's signature, so the reveal
+              {/* The kcal ring is the Nutrition tab's signature, so the reveal
                   shows the same shape the first time these numbers appear.
                   Target framing, not progress: the ring is drawn full, since
                   the whole ring is the day's allowance and nothing is logged
@@ -260,7 +260,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Text style={styles.ringSub}>{energyUnitLabel(energyUnit)} per day</Text>
                 </View>
               </View>
-              {/* Same horizontal macro bars the Diary tab uses. */}
+              {/* Same horizontal macro bars the Nutrition tab uses. */}
               <View style={styles.macroBars}>
                 {macroTargets.map(m => (
                   <View key={m.label} style={styles.macroBar}>
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   // eslint-disable-next-line no-restricted-syntax -- setup-complete hero numeral
   ringValue: { fontSize: 34, fontWeight: fontWeight.bold, color: colors.textPrimary, lineHeight: 38, fontVariant: ['tabular-nums'] },
   ringSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
-  // Macro bars, matched to the Diary tab's MacroRings so the reveal and the
+  // Macro bars, matched to the Nutrition tab's MacroRings so the reveal and the
   // place the user tracks every day read as one component.
   macroBars: {
     gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.border,

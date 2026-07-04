@@ -9,10 +9,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
@@ -54,14 +55,14 @@ const ACTION_CARDS_DEFAULT = [
 // Pro users with an active plan see "switch your active plan" framings.
 // "Update training and rebuild" sits at the top: it rebuilds the plan via the
 // training-only PlanUpdate screen. Goal and calorie/macro changes live in the
-// You tab (Update your plan / Nutrition targets), so this Plans-side flow never
+// Coach tab (Update goal and phase / Nutrition targets), so this Train-side flow never
 // touches nutrition targets.
 const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'goals',
     icon: 'flag-outline',
     title: 'Update training and rebuild',
-    description: 'Change your weekly schedule, equipment, experience, division or weak points. Your plan rebuilds around the new answers. History and PRs are kept. To change your goal or calorie targets, use Update your plan in the You tab.',
+    description: 'Change your weekly schedule, equipment, experience, division or weak points. Your plan rebuilds around the new answers. History and PRs are kept. To change your goal or calorie targets, use Update goal and phase in the Coach tab.',
     screen: 'PlanUpdate',
   },
   {
@@ -496,7 +497,7 @@ export default function PlansScreen({ navigation }) {
   // Every Pro user gets the coached-builder card set, not only those who
   // already have an active plan. A new Pro user with no plan previously fell
   // through to the Free default set and had no way to reach the coach builder
-  // from the Plans tab (onboarding audit, C8).
+  // from the Train tab (onboarding audit, C8).
   const actionCards = tier === 'pro' ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
   // Group the non-active plans by folder. Plans whose folder_id is null (or
@@ -518,7 +519,7 @@ export default function PlansScreen({ navigation }) {
   function renderPlanCard(plan, i) {
     return (
       <AnimatedEntrance key={plan.id} index={i}>
-      <View style={styles.planCard}>
+      <Card padding="none" style={styles.planCard}>
         <PressableCard
           style={styles.planCardBody}
           onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
@@ -561,7 +562,7 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.planCardFooterPrimary}>Set as active</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Card>
       </AnimatedEntrance>
     );
   }
@@ -573,7 +574,7 @@ export default function PlansScreen({ navigation }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Plans" />
+        <ScreenHeader title="Train" />
 
         {/* First-load skeleton: mirror the active-plan hero + a couple of
             plan cards so the screen doesn't flash empty states before data
@@ -591,7 +592,7 @@ export default function PlansScreen({ navigation }) {
           <>
         {/* Block advisor card */}
         {showBlockCard && (
-          <View style={[
+          <Card style={[
             styles.blockCard,
             blockAdvice.action === 'heads_up' && styles.blockCardHeadsUp,
             blockAdvice.action === 'early_deload' && styles.blockCardWarning,
@@ -693,13 +694,13 @@ export default function PlansScreen({ navigation }) {
                 <Text style={styles.blockSnoozeText}>Got it</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </Card>
         )}
 
         {/* Active Plan */}
         {activePlan ? (
           <View style={styles.section}>
-            <View style={styles.activePlanCard}>
+            <Card style={styles.activePlanCard}>
               <View style={styles.activePlanHeader}>
                 <View style={styles.activeBadge}>
                   <Text style={styles.activeBadgeText}>ACTIVE</Text>
@@ -743,13 +744,13 @@ export default function PlansScreen({ navigation }) {
                   <Text style={styles.viewPlanBtnText}>View Plan</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Card>
           </View>
         ) : tier !== 'pro' ? (
           /* B2: the free no-plan state is a proper card, sitting where the
              active plan card would be, so a new user never scrolls past
              empty sections looking for a way in. Quiz first, library second. */
-          <View style={styles.noPlanCard}>
+          <Card style={styles.noPlanCard}>
             <View style={styles.noPlanCardHeader}>
               <View style={styles.noPlanCardIcon}>
                 <Ionicons name="compass-outline" size={20} color={colors.primary} />
@@ -773,14 +774,14 @@ export default function PlansScreen({ navigation }) {
                 accessibilityLabel="Browse the plan library"
               />
             </View>
-          </View>
+          </Card>
         ) : (
-          <View style={styles.noActivePlanRow}>
+          <Card style={styles.noActivePlanRow}>
             <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
             <Text style={styles.noActivePlanText}>
               No active plan · Build one, browse the library, or create your own from scratch.
             </Text>
-          </View>
+          </Card>
         )}
 
         {/* Folders (Hevy teardown R1). Collapsible sections atop the plans
@@ -880,7 +881,7 @@ export default function PlansScreen({ navigation }) {
               />
             </TouchableOpacity>
             {archivedExpanded && archivedPlans.map(plan => (
-              <View key={plan.id} style={[styles.planCard, styles.archivedPlanCard]}>
+              <Card key={plan.id} padding="none" style={[styles.planCard, styles.archivedPlanCard]}>
                 <PressableCard
                   style={styles.planCardBody}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
@@ -923,7 +924,7 @@ export default function PlansScreen({ navigation }) {
                     <Text style={styles.planCardFooterPrimary}>Restore</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Card>
             ))}
           </View>
         )}
@@ -934,7 +935,7 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Workout templates</Text>
             <Text style={styles.sectionSubtitle}>Saved workouts you can start directly.</Text>
             {templates.map(routine => (
-              <View key={routine.id} style={styles.templateCard}>
+              <Card key={routine.id} style={styles.templateCard}>
                 <View style={styles.templateMain}>
                   <Text style={styles.templateName} numberOfLines={2}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
@@ -961,16 +962,16 @@ export default function PlansScreen({ navigation }) {
                     <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Card>
             ))}
           </View>
         )}
 
         {/* Training Blocks */}
-        <TouchableOpacity
+        <Card
           style={styles.trainingBlocksRow}
           onPress={() => navigation.navigate('MesocycleBuilder')}
-          activeOpacity={0.75}
+          accessibilityLabel="Training blocks"
         >
           <View style={styles.trainingBlocksIcon}>
             <Ionicons name="layers-outline" size={20} color={colors.textSecondary} />
@@ -980,7 +981,7 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.trainingBlocksSub}>View completed blocks and long-term progress</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </TouchableOpacity>
+        </Card>
 
         {/* Decision Hub, visible to everyone. Section title and copy adapt:
             Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
@@ -996,7 +997,7 @@ export default function PlansScreen({ navigation }) {
           {actionCards.map(card => {
             const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
             return (
-              <PressableCard
+              <Card
                 key={card.id}
                 style={[styles.actionCard, featured && styles.actionCardFeatured]}
                 onPress={() => navigation.navigate(card.screen)}
@@ -1017,7 +1018,7 @@ export default function PlansScreen({ navigation }) {
                   <Text style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
-              </PressableCard>
+              </Card>
             );
           })}
         </View>
@@ -1148,8 +1149,6 @@ const styles = StyleSheet.create({
 
   trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
   },
   trainingBlocksIcon: {
     width: 40, height: 40, borderRadius: radius.md,
@@ -1165,35 +1164,31 @@ const styles = StyleSheet.create({
 
   noActivePlanRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
   },
   noActivePlanText: { ...type.bodySm, flex: 1, color: colors.textMuted },
 
   // B2: free no-plan card. The on-ramp sits where the active plan would be.
   noPlanCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
+    borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
   },
   noPlanCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noPlanCardIcon: {
     width: 36, height: 36, borderRadius: circle(36),
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
   },
   noPlanCardTitle: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
   noPlanCardBody: { ...type.bodySm, color: colors.textSecondary },
   noPlanCardActions: { gap: spacing.sm },
 
   activePlanCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
+    borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
   },
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -1212,8 +1207,7 @@ const styles = StyleSheet.create({
   viewPlanBtnText: { ...type.label, color: colors.textSecondary },
 
   planCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    overflow: 'hidden',
   },
   archivedPlanCard: { opacity: 0.7 },
   archivedPlanCardName: { color: colors.textSecondary },
@@ -1240,8 +1234,7 @@ const styles = StyleSheet.create({
   moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   templateCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   templateMain: { flex: 1, gap: spacing.xs },
   templateName: { ...type.bodyStrong, color: colors.textPrimary },
@@ -1255,8 +1248,6 @@ const styles = StyleSheet.create({
 
   actionCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
   },
   actionCardIcon: {
     width: 48, height: 48, borderRadius: radius.md,
@@ -1269,38 +1260,37 @@ const styles = StyleSheet.create({
   actionCardBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
   actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
   actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     backgroundColor: colors.primaryBg,
   },
   actionCardIconFeatured: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   // Block advisor card
   blockCard: {
-    borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md,
-    borderWidth: 1,
+    gap: spacing.md,
   },
   blockCardHeadsUp: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.warning, 0.314),
+    borderColor: withAlpha(colors.warning, alpha.mid),
   },
   blockCardWarning: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.warning, 0.439),
+    borderColor: withAlpha(colors.warning, alpha.strong),
   },
   blockCardRecovery: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.primary, 0.314),
+    borderColor: withAlpha(colors.primary, alpha.mid),
   },
   blockCardComplete: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.success, 0.314),
+    borderColor: withAlpha(colors.success, alpha.mid),
   },
   blockCardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -1324,11 +1314,11 @@ const styles = StyleSheet.create({
   signalChip: {
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     backgroundColor: colors.surface2, borderRadius: radius.full,
-    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.314),
+    borderWidth: 1, borderColor: withAlpha(colors.warning, alpha.mid),
   },
   signalChipHigh: {
-    borderColor: withAlpha(colors.error, 0.376),
-    backgroundColor: withAlpha(colors.error, 0.063),
+    borderColor: withAlpha(colors.error, alpha.strong),
+    backgroundColor: withAlpha(colors.error, alpha.ghost),
   },
   signalChipText: {
     fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium,

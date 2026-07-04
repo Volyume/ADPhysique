@@ -10,19 +10,20 @@
  * table).
  */
 import { activityDayKey, WIPE_DIRECT_TABLES } from '../database';
+import { localDayKey } from '../dayKey';
 
 describe('activityDayKey', () => {
   test('returns a YYYY-MM-DD string', () => {
     expect(activityDayKey(Date.parse('2026-05-30T09:15:00.000Z'))).toBe('2026-05-30');
   });
 
-  test('matches the Diary isoDate convention (toISOString slice, UTC day)', () => {
+  test('matches the Diary local-day convention', () => {
     const ms = Date.parse('2026-01-02T23:30:00.000Z');
-    expect(activityDayKey(ms)).toBe(new Date(ms).toISOString().slice(0, 10));
+    expect(activityDayKey(ms)).toBe(localDayKey(ms));
   });
 
   test('defaults to today when called with no argument', () => {
-    expect(activityDayKey()).toBe(new Date().toISOString().slice(0, 10));
+    expect(activityDayKey()).toBe(localDayKey());
   });
 });
 
