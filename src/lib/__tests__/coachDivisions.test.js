@@ -61,11 +61,18 @@ describe('Coach division contract', () => {
     expect(vol(generatePlan(cfg('bodybuilding'))).quads).toBeGreaterThanOrEqual(7);
   });
 
-  test('general keeps PPL; Men\'s Physique now uses its division-specific split (phase 2)', () => {
+  test('general uses a legs-2x split at 5 days; Men\'s Physique uses its division split (phase 2 / T-B)', () => {
     // Phase 2 routes the six specialised divisions through the decision matrix.
-    // General stays on the legacy day-count selector (PPL at 5 days). Men's
-    // Physique is no longer generic PPL: it gets its V-Taper split skeleton.
-    expect(generatePlan(cfg('general')).splitType).toBe('ppl');
+    // General stays on the legacy day-count selector but, per founder decision
+    // T-B (2026-07-04, audit §5-B), a 5-day general routine now routes to the
+    // balanced upper/lower (legs 2x/week) instead of a 5-day PPL (legs 1x/week,
+    // one ~80-min leg day). Men's Physique still gets its V-Taper split skeleton.
+    const general = generatePlan(cfg('general'));
+    expect(general.splitType).toBe('balanced_ul');
+    // Legs are trained on at least two separate days now.
+    const legRe = /squat|leg press|leg curl|leg ext|lunge|hip thrust|romanian|deadlift|calf|hack|goblet|step-up|good morning|nordic|glute|abduct|pull-through|sissy|pendulum|stiff-leg|bridge/i;
+    const legDays = general.workouts.filter(w => w.exercises.some(e => legRe.test(e.exerciseName))).length;
+    expect(legDays).toBeGreaterThanOrEqual(2);
     expect(generatePlan(cfg('mens_physique')).splitType).toBe('V-Taper');
   });
 

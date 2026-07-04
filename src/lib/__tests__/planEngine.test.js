@@ -236,9 +236,14 @@ describe('generatePlan, split selection', () => {
     expect(plan.splitType).toBe('upper_lower_wp');
   });
 
-  test('5 days, general goal → ppl split', () => {
+  test('5 days, general goal → balanced upper/lower split (legs 2x/week)', () => {
+    // Founder decision T-B (2026-07-04, audit §5-B): a 5-day general/hypertrophy/
+    // strength/cut routine no longer routes to a 5-day PPL (which trains legs
+    // only ONCE a week in a single ~80-min leg day). It routes to the balanced
+    // upper/lower (2 lower + 3 upper) so legs are trained >= 2x/week, the
+    // evidence-supported frequency (Schoenfeld/Grgic 2016/2018).
     const plan = generatePlan({ ...BASE_INPUTS, daysPerWeek: 5 });
-    expect(plan.splitType).toBe('ppl');
+    expect(plan.splitType).toBe('balanced_ul');
   });
 });
 

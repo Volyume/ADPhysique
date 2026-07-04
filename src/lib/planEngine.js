@@ -768,53 +768,163 @@ function clampDeliveredToMRV(workouts, goal, _landmarks) {
   for (const w of workouts) w.exercises = w.exercises.filter(e => e.sets > 0);
 }
 
-function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
+// Structural-volume protection (audit §5 A/C/D, founder decisions T-A/T-C/T-D
+// 2026-07-04). `structuralFloors` maps a structural muscle (STRUCTURAL_MUSCLES)
+// to the minimum weekly-sets share it must keep IN THIS SESSION: its fair
+// per-session slice of the volume that keeps it at/near its MEV (or the lower
+// maintenance target where a division de-emphasises it). The time-trim shaves
+// NON-structural work first and only then reduces a structural mover, never
+// below this floor, so a structural muscle keeps volume at/near that floor
+// instead of being shaved to the bare 3-set clock floor. This fixes: 60-min
+// upper/lower dropping back below MEV (A), a physique-division structural muscle
+// falling under its maintenance floor because its one leg day gets a lift
+// dropped (C), and a beginner full-body's push side collapsing below chest MEV
+// (D).
+//
+// Honesty guard: if structural protection has left a session EGREGIOUSLY over
+// the user's target (> sessionLength + 30, i.e. more than double the
+// durationNote threshold, e.g. a mass division's over-stuffed 3-day full body),
+// a second "desperate" pass relaxes the protection for every structural muscle
+// EXCEPT a deliberately weak-pointed one, so the trim can shave it back like
+// ordinary work. This keeps the normal mildly-over sessions at their protected
+// MEV while never shipping an absurd session in the name of volume. Only ever
+// raises/keeps trim protection; never adds sets, so MRV/delt caps are untouched.
+const STRUCTURAL_TRIM_CEILING_OVER = 30;
+function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}) {
   if (!sessionLengthMinutes || sessionLengthMinutes <= 0) return exercises;
   const budget = sessionLengthMinutes - 2;
   if (estimateSessionMinutes(exercises, equipment) <= budget) return exercises;
 
   const result = exercises.map(e => ({ ...e }));
 
-  // Phase 1: reduce sets back-to-front, min 3 sets (rebuild spec: no 2-set
-  // fragments). Below this floor we drop whole exercises in phase 2 rather than
-  // shaving an entry down to 2.
-  let safety = 120;
-  while (estimateSessionMinutes(result, equipment) > budget && safety-- > 0) {
-    let trimmed = false;
-    for (let i = result.length - 1; i >= 1; i--) {
-      if (result[i].sets > 3) {
-        result[i].sets--;
-        trimmed = true;
+  const muscleTotal = (m) => result.reduce((s, e) => s + (e._m === m ? e.sets : 0), 0);
+  // Protected per-session floor for a structural mover. `desperate` (an
+  // egregiously long session) relaxes a normal structural muscle's floor to 0
+  // so the trim can shave it like ordinary work; a weak-pointed structural
+  // muscle keeps a floor, but only the standard structural one (not its boosted
+  // one), so even several simultaneous leg weak-points on one day cannot blow
+  // past the honest ceiling while a single weak-point's boost still survives.
+  const floorFor = (m, desperate) => {
+    const f = structuralFloors[m] ?? 0;
+    if (f <= 0) return 0; // non-structural, unprotected
+    if (!desperate) return f;
+    if (_weakPointKeys.includes(m)) return Math.min(f, STRUCTURAL_SESSION_FLOOR_CAP);
+    return 0;
+  };
+
+  const runTrim = (desperate) => {
+    // Phase 1: reduce sets back-to-front, min 3 sets (rebuild spec: no 2-set
+    // fragments). Non-structural entries are shaved FIRST (tier 1); a structural
+    // mover is only reduced once no non-structural set is left to give (tier 2),
+    // and never below its protected per-session floor. Below the 3-set floor we
+    // drop whole exercises in phase 2 rather than shaving an entry down to 2.
+    let safety = 200;
+    while (estimateSessionMinutes(result, equipment) > budget && safety-- > 0) {
+      let trimmed = false;
+      // Tier 1: non-structural entries (protected structural deferred to tier 2).
+      for (let i = result.length - 1; i >= 1; i--) {
+        const ex = result[i];
+        if (floorFor(ex._m, desperate) > 0) continue;
+        if (ex.sets > 3) { ex.sets--; trimmed = true; break; }
+      }
+      // Tier 2: structural entries, never below the muscle's protected floor.
+      if (!trimmed) {
+        for (let i = result.length - 1; i >= 1; i--) {
+          const ex = result[i];
+          const floor = floorFor(ex._m, desperate);
+          if (floor <= 0) continue;
+          if (ex.sets > 3 && muscleTotal(ex._m) > floor) { ex.sets--; trimmed = true; break; }
+        }
+      }
+      if (!trimmed) break;
+    }
+
+    // Phase 2: drop whole exercises, lowest-priority first. Protections:
+    //  - never the first exercise of the session
+    //  - never an exercise that covers a required subregion (_req)
+    //  - never a muscle's only remaining exercise (keeps every targeted muscle
+    //    represented, better a few minutes over budget than a zero-volume group)
+    //  - never a structural entry whose removal would take the muscle below its
+    //    protected per-session floor (keeps a de-emphasised structural muscle at
+    //    >= 2 exercises when its floor needs them, audit C)
+    // If nothing is safely removable we stop and accept a small overage; the
+    // displayed duration is an estimate, not a hard cap.
+    let safety2 = 60;
+    while (estimateSessionMinutes(result, equipment) > budget && result.length > 3 && safety2-- > 0) {
+      let removeIdx = -1;
+      for (let i = result.length - 1; i >= 1; i--) {
+        const ex = result[i];
+        if (ex._req) continue;
+        const muscleCount = result.filter(x => x._m === ex._m).length;
+        if (muscleCount <= 1) continue; // sole exercise for its muscle, protect
+        const floor = floorFor(ex._m, desperate);
+        if (floor > 0 && muscleTotal(ex._m) - ex.sets < floor) continue; // structural floor
+        removeIdx = i;
         break;
       }
+      if (removeIdx === -1) break;
+      result.splice(removeIdx, 1);
     }
-    if (!trimmed) break;
-  }
+  };
 
-  // Phase 2: drop whole exercises, lowest-priority first. Protections:
-  //  - never the first exercise of the session
-  //  - never an exercise that covers a required subregion (_req)
-  //  - never a muscle's only remaining exercise (keeps every targeted
-  //    muscle represented, better a few minutes over budget than a
-  //    muscle group with zero direct volume)
-  // If nothing is safely removable we stop and accept a small overage;
-  // the displayed duration is an estimate, not a hard cap.
-  let safety2 = 60;
-  while (estimateSessionMinutes(result, equipment) > budget && result.length > 3 && safety2-- > 0) {
-    let removeIdx = -1;
-    for (let i = result.length - 1; i >= 1; i--) {
-      const ex = result[i];
-      if (ex._req) continue;
-      const muscleCount = result.filter(x => x._m === ex._m).length;
-      if (muscleCount <= 1) continue; // sole exercise for its muscle, protect
-      removeIdx = i;
-      break;
-    }
-    if (removeIdx === -1) break;
-    result.splice(removeIdx, 1);
+  runTrim(false);
+  if (estimateSessionMinutes(result, equipment) > sessionLengthMinutes + STRUCTURAL_TRIM_CEILING_OVER) {
+    runTrim(true);
   }
 
   return result;
+}
+
+// Per-session structural floors for the whole plan (audit §5 A/C/D). For each
+// structural muscle, its fair per-session slice of the volume it must keep to
+// hit its MEV (or its lower maintenance target where a division de-emphasises
+// it), given how many sessions train it. Passed to trimToTimeBudget so the
+// clock-trim never shaves a structural mover below the volume that keeps it
+// at/near that floor.
+//
+// Reference = min(weekly target, max(MEV, maintenance floor)): protect the
+// muscle's delivered volume up to its weekly target, but never demand more than
+// its MEV (or, when the target was floored UP to the maintenance floor for a
+// de-emphasised muscle, that maintenance floor). This one expression covers all
+// three founder cases:
+//   - balanced muscle (target == MEV): protect to MEV (T-A back 10).
+//   - de-emphasised muscle floored to maintenance (target == maint > MEV for a
+//     beginner, whose science MEV is lower): protect to the maintenance floor
+//     (T-C: Men's Physique quads/glutes reach 6).
+//   - division priority muscle (target >> MEV): protect only to MEV, so the
+//     trim can still shave the surplus and the session does not balloon.
+// Per-session slice bounded to [3, 6]: the upper bound (= the productive
+// per-entry ceiling) is an honesty guard that stops a high-target muscle
+// training on ONE day from over-inflating that session, while still
+// guaranteeing a de-emphasised muscle reaches its maintenance floor of 6.
+//
+// A deliberately weak-pointed structural muscle is protected to its full
+// (boosted) per-session share instead, capped higher (9), so raising the base
+// plan's de-emphasised muscles to their maintenance floor (T-C) never hides the
+// weak-point boost the user asked for. Only ever raises trim protection; never
+// adds sets, so MRV/delt caps are untouched.
+const STRUCTURAL_SESSION_FLOOR_CAP = 6;
+const WEAKPOINT_SESSION_FLOOR_CAP = 9;
+function computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effectiveDays) {
+  const maint = maintenanceFloor(effectiveDays);
+  const floors = {};
+  for (const m of STRUCTURAL_MUSCLES) {
+    let freq = 0;
+    for (const w of rawWorkouts) {
+      if (w.exercises.some(ex => ex._m === m)) freq++;
+    }
+    if (freq === 0) continue;
+    const target = adjustedTargets[m] ?? 0;
+    if (target <= 0) continue;
+    if (_weakPointKeys.includes(m)) {
+      floors[m] = Math.min(WEAKPOINT_SESSION_FLOOR_CAP, Math.max(3, Math.round(target / freq)));
+      continue;
+    }
+    const mev = landmarks[m]?.MEV ?? target;
+    const reference = Math.min(target, Math.max(mev, maint));
+    floors[m] = Math.min(STRUCTURAL_SESSION_FLOOR_CAP, Math.max(3, Math.round(reference / freq)));
+  }
+  return floors;
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,7 +1219,15 @@ function selectSplit(experience, effectiveDays, goal) {
     if (goal === 'weak_point_spec') return 'upper_lower_wp';
     if (lowerFocus) return 'lower_focus';
     if (legJudgedBalanced) return 'balanced_ul';
-    return 'ppl';
+    // General / hypertrophy / strength / cut at 5 days: route to the balanced
+    // upper/lower (2 lower + 3 upper) rather than a 5-day PPL. A 5-day PPL
+    // trains legs only ONCE a week (one 20-set, ~80-min leg day the engine has
+    // to self-flag as over-long), below the >=2x/week frequency the evidence
+    // supports (Schoenfeld/Grgic 2016/2018). balanced_ul gives legs two shorter
+    // sessions. Division splits (Bikini/Men's Physique/etc.) are unaffected:
+    // they route through DIVISION_MATRIX or lowerFocus/legJudgedBalanced above
+    // (audit §5-B, founder decision T-B 2026-07-04).
+    return 'balanced_ul';
   }
   if (effectiveDays === 6) return lowerFocus ? 'lower_focus' : 'ppl_ab';
   // Days outside the supported 3-6 range fall through here, log so we
@@ -1246,9 +1364,33 @@ function buildWeightedUpperLower(weeklyTargets, landmarks, equipment, goal, expe
   const lowerMuscles = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'abs'];
   const upperDays = Math.max(1, effectiveDays - lowerDays);
 
+  // A muscle is trained on every upper (or lower) day, so its per-session target
+  // is its weekly target divided by that day count. A LOW-target rider muscle
+  // (a general trainee's traps, weekly target 4 across 3 upper days) rounds to
+  // <2 sets/session and is dropped entirely by buildSession, delivering zero,
+  // the same trap volume the muscle got on the legacy 5-day PPL. Cap the divisor
+  // so a genuinely-targeted rider keeps a >=2-set session slice and is actually
+  // programmed. Only ever LOWERS the divisor, and only for a muscle whose target
+  // is below twice the day count.
+  //
+  // Applied ONLY to the general/strength route that T-B (2026-07-04) newly sends
+  // through this builder: the mass divisions (Bodybuilding, Women's Bodybuilding)
+  // that have always used it are left byte-identical (founder rule: T-B keeps
+  // division splits untouched). Without this gate the resurrection would also
+  // program those divisions' front-delt overlay (weekly target ~4, generator MEV
+  // 0, fed indirectly by all pressing), which the delt cap then pays for by
+  // trimming side delts, shifting a division's judged shoulder shape.
+  const resurrectLowTarget = (goal === 'general' || goal === 'strength_hypertrophy');
+  const sliceFreq = (m, days) => {
+    if (!resurrectLowTarget) return days;
+    const t = weeklyTargets[m] ?? 0;
+    if (t <= 0) return days;
+    return Math.max(1, Math.min(days, Math.round(t / 2)));
+  };
+
   const sessionsPerMuscle = {};
-  for (const m of upperMuscles) sessionsPerMuscle[m] = upperDays;
-  for (const m of lowerMuscles) sessionsPerMuscle[m] = lowerDays;
+  for (const m of upperMuscles) sessionsPerMuscle[m] = sliceFreq(m, upperDays);
+  for (const m of lowerMuscles) sessionsPerMuscle[m] = sliceFreq(m, lowerDays);
 
   const usedByMuscle = {};
   for (const m of [...upperMuscles, ...lowerMuscles]) usedByMuscle[m] = new Set();
@@ -2403,10 +2545,14 @@ function _generatePlanInner(inputs) {
   // last entry, so no muscle is delivered above its recoverable maximum.
   clampDeliveredToMRV(rawWorkouts, goal, landmarks);
 
+  // Structural-volume protection for the time-trim (audit §5 A/C/D). Computed
+  // from the post-clamp placements so it reflects real per-muscle frequency.
+  const structuralFloors = computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effectiveDays);
+
   // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
-    const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment);
+    const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment, structuralFloors);
     // Assign superset pairings while we still have the internal _muscle tag
     // available. Function mutates entries in place adding `supersetGroupId`.
     assignSupersets(trimmed, { goal, experience, sessionLengthMinutes });
