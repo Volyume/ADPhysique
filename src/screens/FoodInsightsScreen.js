@@ -25,6 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
+import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
@@ -278,13 +279,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Insights</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <BackHeader title="Insights" onBack={() => navigation.goBack()} />
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
           visible while the cards scroll. Segmented pill convention from PrefRow. */}
@@ -569,12 +564,6 @@ function AdherenceRow({ label, hit, total }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
 
   windowBar: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.md },

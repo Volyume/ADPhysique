@@ -10,6 +10,7 @@ import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
+import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
@@ -449,7 +450,8 @@ export default function NutritionTargetsScreen({ navigation }) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Nutrition targets" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

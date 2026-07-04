@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
-import { SettingsPage } from '../components/SettingsPrimitives';
+import BackHeader from '../components/BackHeader';
+import { settingsStyles } from '../components/SettingsPrimitives';
 import { getNutritionTargets, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { safeDayFloorKcal } from '../lib/food/calorieBank';
@@ -90,77 +92,80 @@ export default function PerDayTargetsScreen() {
   const anyOffset = hasAnyOffset(offsets);
 
   return (
-    <SettingsPage>
-      <View style={local.section}>
-        <Text style={local.intro}>
-          Plan a different calorie target for each day of the week. The diary shows that day's target shifted by your
-          offset. This is planning only. It never changes your coaching, your weekly average, or your safety floor.
-        </Text>
-        {baseKcal > 0 ? (
-          <Text style={local.baseLine}>
-            Base target: {toEnergy(baseKcal, energyUnit)} {unitLabel}. No day can go below your safe floor of {toEnergy(floorKcal, energyUnit)} {unitLabel}.
-          </Text>
-        ) : (
-          <Text style={local.baseLine}>
-            Set your calorie target in Nutrition targets first, then plan per-day offsets here.
-          </Text>
-        )}
-      </View>
-
-      <View style={local.section}>
-        {WEEKDAY_KEYS.map((key) => {
-          const offset = Number(offsets[key]) || 0;
-          const displayed = displayedKcalFor(offset);
-          const floored = baseKcal + offset < floorKcal && offset !== 0;
-          const offsetKcalShown = displayed - baseKcal; // post-clamp, for honesty
-          const sign = offsetKcalShown > 0 ? '+' : offsetKcalShown < 0 ? '−' : '';
-          const offsetMag = Math.abs(offsetKcalShown);
-          return (
-            <View key={key} style={local.row}>
-              <View style={local.rowLabel}>
-                <Text style={local.day} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
-                <Text style={local.dayTarget}>
-                  {baseKcal > 0 ? `${toEnergy(displayed, energyUnit)} ${unitLabel}` : '-'}
-                  {baseKcal > 0 && offsetMag > 0 ? (
-                    <Text style={local.dayDelta}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
-                  ) : null}
-                  {floored ? <Text style={local.floorTag}>  floor</Text> : null}
-                </Text>
-              </View>
-              <View style={local.stepper}>
-                <Pressable
-                  onPress={() => adjust(key, -1)}
-                  disabled={offset <= -MAX_PERDAY_OFFSET_KCAL}
-                  style={({ pressed }) => [local.stepBtn, offset <= -MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
-                >
-                  <Ionicons name="remove" size={20} color={colors.textPrimary} />
-                </Pressable>
-                <Pressable
-                  onPress={() => adjust(key, 1)}
-                  disabled={offset >= MAX_PERDAY_OFFSET_KCAL}
-                  style={({ pressed }) => [local.stepBtn, offset >= MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
-                >
-                  <Ionicons name="add" size={20} color={colors.textPrimary} />
-                </Pressable>
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
-      {anyOffset ? (
+    <SafeAreaView style={settingsStyles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Per-day targets" />
+      <ScrollView contentContainerStyle={settingsStyles.content}>
         <View style={local.section}>
-          <Pressable onPress={resetAll} style={({ pressed }) => [local.resetBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Reset all days to your base target">
-            <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
-            <Text style={local.resetText}>Reset all to base target</Text>
-          </Pressable>
+          <Text style={local.intro}>
+            Plan a different calorie target for each day of the week. The diary shows that day's target shifted by your
+            offset. This is planning only. It never changes your coaching, your weekly average, or your safety floor.
+          </Text>
+          {baseKcal > 0 ? (
+            <Text style={local.baseLine}>
+              Base target: {toEnergy(baseKcal, energyUnit)} {unitLabel}. No day can go below your safe floor of {toEnergy(floorKcal, energyUnit)} {unitLabel}.
+            </Text>
+          ) : (
+            <Text style={local.baseLine}>
+              Set your calorie target in Nutrition targets first, then plan per-day offsets here.
+            </Text>
+          )}
         </View>
-      ) : null}
-    </SettingsPage>
+
+        <View style={local.section}>
+          {WEEKDAY_KEYS.map((key) => {
+            const offset = Number(offsets[key]) || 0;
+            const displayed = displayedKcalFor(offset);
+            const floored = baseKcal + offset < floorKcal && offset !== 0;
+            const offsetKcalShown = displayed - baseKcal; // post-clamp, for honesty
+            const sign = offsetKcalShown > 0 ? '+' : offsetKcalShown < 0 ? '−' : '';
+            const offsetMag = Math.abs(offsetKcalShown);
+            return (
+              <View key={key} style={local.row}>
+                <View style={local.rowLabel}>
+                  <Text style={local.day} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
+                  <Text style={local.dayTarget}>
+                    {baseKcal > 0 ? `${toEnergy(displayed, energyUnit)} ${unitLabel}` : '-'}
+                    {baseKcal > 0 && offsetMag > 0 ? (
+                      <Text style={local.dayDelta}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
+                    ) : null}
+                    {floored ? <Text style={local.floorTag}>  floor</Text> : null}
+                  </Text>
+                </View>
+                <View style={local.stepper}>
+                  <Pressable
+                    onPress={() => adjust(key, -1)}
+                    disabled={offset <= -MAX_PERDAY_OFFSET_KCAL}
+                    style={({ pressed }) => [local.stepBtn, offset <= -MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
+                  >
+                    <Ionicons name="remove" size={20} color={colors.textPrimary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => adjust(key, 1)}
+                    disabled={offset >= MAX_PERDAY_OFFSET_KCAL}
+                    style={({ pressed }) => [local.stepBtn, offset >= MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
+                  >
+                    <Ionicons name="add" size={20} color={colors.textPrimary} />
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {anyOffset ? (
+          <View style={local.section}>
+            <Pressable onPress={resetAll} style={({ pressed }) => [local.resetBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Reset all days to your base target">
+              <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
+              <Text style={local.resetText}>Reset all to base target</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

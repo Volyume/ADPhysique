@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
-import { SettingsPage, settingsStyles as styles } from '../components/SettingsPrimitives';
+import BackHeader from '../components/BackHeader';
+import { settingsStyles as styles } from '../components/SettingsPrimitives';
 import {
   DEFAULT_MEALS_PER_DAY, defaultMealSlotLabel, getMealLabelOverrides, setMealLabel,
 } from '../lib/food/mealSlots';
@@ -47,31 +49,34 @@ export default function MealNamesScreen() {
   }
 
   return (
-    <SettingsPage>
-      <View style={styles.section}>
-        <Text style={local.intro}>
-          Rename your meals to whatever you call them. Leave a box blank to use the default. This changes the
-          label only. Your logged food and plan stay the same.
-        </Text>
-        {slots.map((key) => (
-          <View key={key} style={local.row}>
-            <Text style={local.default} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
-            <TextInput
-              style={local.input}
-              value={values[key] ?? ''}
-              onChangeText={(t) => onChange(key, t)}
-              onBlur={() => onCommit(key)}
-              onSubmitEditing={() => onCommit(key)}
-              placeholder={defaultMealSlotLabel(key)}
-              placeholderTextColor={colors.textMuted}
-              maxLength={24}
-              returnKeyType="done"
-              accessibilityLabel={`Custom name for ${defaultMealSlotLabel(key)}`}
-            />
-          </View>
-        ))}
-      </View>
-    </SettingsPage>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Meal names" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.section}>
+          <Text style={local.intro}>
+            Rename your meals to whatever you call them. Leave a box blank to use the default. This changes the
+            label only. Your logged food and plan stay the same.
+          </Text>
+          {slots.map((key) => (
+            <View key={key} style={local.row}>
+              <Text style={local.default} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
+              <TextInput
+                style={local.input}
+                value={values[key] ?? ''}
+                onChangeText={(t) => onChange(key, t)}
+                onBlur={() => onCommit(key)}
+                onSubmitEditing={() => onCommit(key)}
+                placeholder={defaultMealSlotLabel(key)}
+                placeholderTextColor={colors.textMuted}
+                maxLength={24}
+                returnKeyType="done"
+                accessibilityLabel={`Custom name for ${defaultMealSlotLabel(key)}`}
+              />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
