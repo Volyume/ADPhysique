@@ -1233,10 +1233,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // pair WITHOUT starting the rest timer. The rest happens after BOTH halves
       // of the pair are logged. Warmups are per-exercise so they don't trigger
       // the jump. `finally` below clears `saving`.
+      //
+      // K-1 fix (content-quality audit SF-1): jump only to a LATER partner (the
+      // first half of a round). When we have just logged the LATER half, no
+      // later partner exists, so we fall through to startRestTimer below and the
+      // ~60-120s post-pair rest finally fires before the next round begins on the
+      // first exercise. The old `i !== currentExerciseIndex` matched in BOTH
+      // directions, so B jumped straight back to A and the rest timer never ran.
       if (currentSet.setType !== 'warmup') {
         const sgi = workoutExercises[currentExerciseIndex]?.supersetGroupId;
         const pairIdx = sgi != null
-          ? workoutExercises.findIndex((e, i) => i !== currentExerciseIndex && e.supersetGroupId === sgi)
+          ? workoutExercises.findIndex((e, i) => i > currentExerciseIndex && e.supersetGroupId === sgi)
           : -1;
         if (pairIdx >= 0) {
           setCurrentExerciseIndex(pairIdx);
