@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
+import BackHeader from '../components/BackHeader';
 
 /**
  * GoalLockConsentScreen (Move #2).
@@ -79,6 +80,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <BackHeader title="Goal lock" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>A note on aggressive cuts</Text>
         {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
@@ -152,8 +154,11 @@ export default function GoalLockConsentScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
+  // Demoted from type.h2 (audit 2026-07-04 §2.3): the BackHeader now carries
+  // the page title ("Goal lock"), so this in-body heading for the specific
+  // content below reads as a section lead, not a rival second header.
   title: {
-    ...type.h2,
+    ...type.title,
     color: colors.textPrimary,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,

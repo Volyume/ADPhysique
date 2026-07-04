@@ -25,6 +25,7 @@ import { colors, spacing, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { track } from '../lib/engineTelemetry';
 import CollapsibleSection from '../components/CollapsibleSection';
+import BackHeader from '../components/BackHeader';
 
 // The always-open opener.
 const INTRO =
@@ -131,7 +132,8 @@ export default function MethodologyScreen({ route }) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="How Precision Coaching works" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>{INTRO}</Text>
 

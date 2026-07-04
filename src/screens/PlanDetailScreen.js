@@ -16,6 +16,7 @@ import {
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
+import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
@@ -76,7 +77,6 @@ export default function PlanDetailScreen({ navigation, route }) {
           setWhyThis(parsed && typeof parsed === 'object' ? parsed : null);
         } catch (_) { setWhyThis(null); }
       }
-      if (p) navigation.setOptions({ title: p.name || 'Plan' });
     } catch (e) {
       logError('PlanDetailScreen.loadData', e, { planId, userId: user?.id });
     }
@@ -211,7 +211,8 @@ export default function PlanDetailScreen({ navigation, route }) {
     // Mirror the loaded layout (header block, primary button, workout rows)
     // so the swap to real content is seamless, rather than a blank flash.
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title={plan?.name || 'Plan'} />
         <View style={styles.content}>
           <Skeleton width={'55%'} height={28} />
           <Skeleton width={'80%'} height={14} />
@@ -227,7 +228,8 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title={plan?.name || 'Plan'} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}

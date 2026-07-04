@@ -6,6 +6,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Mod
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import BackHeader from '../components/BackHeader';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
@@ -427,7 +428,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Plan library" />
 
       {/* Search */}
       <SearchBar

@@ -33,6 +33,7 @@ import {
   requestNotificationPermissions,
 } from '../lib/notifications';
 import Card from '../components/Card';
+import BackHeader from '../components/BackHeader';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -297,7 +298,8 @@ export default function CoachingRemindersScreen() {
   const bumped = lastCheckinMs > 0 && gapDays > 7;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Coaching reminders" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.intro}>
           The coach uses these reminders to keep your data current. Pick a time and a day that fit your week. Both reminders run automatically.

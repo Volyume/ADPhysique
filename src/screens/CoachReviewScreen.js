@@ -14,6 +14,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import BackHeader from '../components/BackHeader';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -419,6 +420,7 @@ export default function CoachReviewScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <BackHeader title="Weekly review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <SkeletonCard height={96} />
           <SkeletonCard height={180} />
@@ -433,10 +435,8 @@ export default function CoachReviewScreen() {
   if (loadError) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <BackHeader title="Weekly review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Weekly review</Text>
-          </View>
           <Card>
             <Text style={styles.emptyText}>
               Couldn&apos;t load your review just now. Your sessions are safe. This is a read
@@ -458,13 +458,13 @@ export default function CoachReviewScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <BackHeader title="Weekly review" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Weekly review</Text>
-          {dateLabel ? <Text style={styles.headerDate}>{dateLabel}</Text> : null}
-        </View>
+        {/* Date range subline, relocated here now the BackHeader carries the
+            page title (previously duplicated as an in-body "Weekly review"
+            heading, drawing a double header under the native bar). */}
+        {dateLabel ? <Text style={styles.headerDate}>{dateLabel}</Text> : null}
 
         {/* ── No data state ── */}
         {!hasData && (
@@ -658,20 +658,11 @@ const styles = StyleSheet.create({
     height: spacing.xxxl,
   },
 
-  // Header
-  header: {
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.heavy,
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
+  // Date range subline (BackHeader now carries the page title).
   headerDate: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
+    marginBottom: -spacing.sm,
   },
 
   // Cards

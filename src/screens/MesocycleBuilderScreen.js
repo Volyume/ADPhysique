@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
+import BackHeader from '../components/BackHeader';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
@@ -136,7 +137,8 @@ export default function MesocycleBuilderScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Training blocks" />
       <FlashList
         // The active block is already shown via ActiveMesoDashboard
         // in the header; "All blocks" is the archive of past blocks.

@@ -74,6 +74,7 @@ import {
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
+import BackHeader from '../components/BackHeader';
 // M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
@@ -1866,24 +1867,16 @@ export default function CoachOutputScreen({ navigation, route }) {
     navigation.popToTop();
   }
 
-  // Replace the navigator-provided back chevron's default goBack with
-  // the same Hub-bound handler so the back arrow and the in-screen
-  // "Got it" button behave consistently.
-  useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }} style={{ paddingHorizontal: spacing.md }} accessibilityRole="button" accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-      ),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Back affordance: BackHeader's chevron uses the same Hub-bound handler as
+  // the in-screen "Got it" button (popToTop to the You root, not a literal
+  // goBack onto the WeeklyCheckIn screen just submitted), so both read as
+  // one consistent "back" across every state of this screen.
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <BackHeader title="Precision Coaching" onBack={handleClose} />
         <LoadingView />
       </SafeAreaView>
     );
@@ -1893,6 +1886,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (loadError) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <BackHeader title="Precision Coaching" onBack={handleClose} />
         <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -1902,6 +1896,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (!output || !output.hasEnoughData) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <BackHeader title="Precision Coaching" onBack={handleClose} />
         <InsufficientDataView dataNote={output?.dataNote} receipt={holdReceipt} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -2144,6 +2139,7 @@ export default function CoachOutputScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <BackHeader title="Precision Coaching" onBack={handleClose} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
