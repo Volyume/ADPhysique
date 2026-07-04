@@ -13,11 +13,12 @@
  * touchable role+labelled, British English, no em dash, no exclamation marks,
  * no guilt or urgency or counters-as-pressure. Resting never reads as a fail.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Share, ActivityIndicator, Linking, Platform, Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, {
@@ -37,6 +38,9 @@ import usePartners from '../hooks/usePartners';
 import { getAllProgrammes } from '../lib/database';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
+import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
+import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
+import { sharedStreakLabel } from '../lib/partners/sharedStreak';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
@@ -58,6 +62,9 @@ try {
 } catch (_) { /* lands with C3; until then, no moments */ }
 
 const PRO_MAX_PAIRS = 3;
+// Persisted dismissal of the archived-streak reconnection surface, so it never
+// nags: once dismissed for a pair it stays hidden across launches (D5-B3).
+const RECONNECT_DISMISS_KEY = '@volyume_partner_reconnect_dismissed_v1';
 const NUM_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 function spellNumber(n) {
   const i = Math.round(Number(n) || 0);
@@ -138,7 +145,68 @@ function MomentCard({ line, cheerEnabled, onCheer }) {
   );
 }
 
-function PairCard({ pair, moment, onCheer, onManage, onOpenBlock }) {
+// D5-A weekly intention: each side's OWN aim, shown side by side and NEVER
+// compared. A shared line when both aims match; otherwise each own aim on its
+// own. Plus a calm control to set or change your own aim (intention, not
+// obligation). No "must", no "target", no ranking language anywhere here.
+function IntentionBlock({ pair, onSetAim }) {
+  const name = pair.partnerFirstName || 'Your partner';
+  const { shared, mine, theirs } = resolveIntention({
+    myAim: pair.myAim, partnerAim: pair.partnerAim, partnerName: name,
+  });
+  return (
+    <View style={styles.intention}>
+      {shared ? <Text style={styles.intentionShared}>{shared}</Text> : null}
+      {mine ? <Text style={styles.intentionOwn}>{mine}</Text> : null}
+      {theirs ? <Text style={styles.intentionOwn}>{theirs}</Text> : null}
+      <TouchableOpacity
+        onPress={() => onSetAim(pair)}
+        style={styles.intentionSet}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel={pair.myAim > 0 ? 'Change your aim for the week' : 'Set your aim for the week'}
+      >
+        <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.intentionSetText}>
+          {pair.myAim > 0 ? 'Change your aim' : 'Set your aim for the week'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// D5-B3 reconnection surface: shown only when the shared run has archived. One
+// tap reaches out (opens the acknowledgement picker); dismissable and never
+// nagging (the dismissal persists). Reuses the existing archived copy.
+function ReconnectCard({ onReconnect, onDismiss }) {
+  return (
+    <View style={styles.reconnect}>
+      <TouchableOpacity
+        style={styles.reconnectMain}
+        onPress={onReconnect}
+        accessibilityRole="button"
+        accessibilityLabel="Start a new run together"
+      >
+        <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.reconnectText}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDismiss}
+        style={styles.reconnectDismiss}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel="Not now"
+      >
+        <Text style={styles.reconnectDismissText}>Not now</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function PairCard({
+  pair, moment, onCheer, onManage, onOpenBlock, onSetAim, onReconnect,
+  reconnectDismissed, onDismissReconnect,
+}) {
   const name = pair.partnerFirstName || 'Your partner';
   const run = pair.sharedStreak?.run ?? 0;
   const showHero = run >= 2;
@@ -146,6 +214,7 @@ function PairCard({ pair, moment, onCheer, onManage, onOpenBlock }) {
   const partnerResting = pair.rowState === 'resting';
   const block = pair.sharedBlock;
   const hasChip = block && (block.status === 'active' || block.status === 'proposed');
+  const showReconnect = pair.sharedStreak?.status === 'archived' && !reconnectDismissed;
 
   return (
     <Card style={styles.pairCard}>
@@ -181,10 +250,18 @@ function PairCard({ pair, moment, onCheer, onManage, onOpenBlock }) {
         <Text style={styles.heroFirst}>Your first shared week is under way.</Text>
       )}
 
+      {showReconnect ? (
+        <ReconnectCard onReconnect={() => onReconnect(pair)} onDismiss={() => onDismissReconnect(pair)} />
+      ) : null}
+
       <View style={styles.people}>
         <PersonRow phrase={weekPhrase('You', pair.myWeek, myResting)} resting={myResting} />
         <PersonRow phrase={weekPhrase(name, pair.partnerWeek, partnerResting)} resting={partnerResting} />
       </View>
+
+      <IntentionBlock pair={pair} onSetAim={onSetAim} />
+
+      {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
       {moment ? (
         <MomentCard line={moment.line} cheerEnabled={pair.cheerEnabled} onCheer={() => onCheer(pair)} />
@@ -257,6 +334,14 @@ export default function PartnerScreen({ route }) {
   const [blockSheetPair, setBlockSheetPair] = useState(null);
   const [programmes, setProgrammes] = useState(null);
 
+  // D5-A weekly intention sheet (a stepper) + D5-B1 acknowledgement picker, each
+  // scoped to one pair. reconnectDismissed is the persisted set of pairs whose
+  // archived-streak reconnection surface has been dismissed (D5-B3).
+  const [aimSheetPair, setAimSheetPair] = useState(null);
+  const [aimValue, setAimValue] = useState(1);
+  const [ackSheetPair, setAckSheetPair] = useState(null);
+  const [reconnectDismissed, setReconnectDismissed] = useState([]);
+
   // Milestone moments, indexed by pair (at most one per pair per local day).
   const [momentsByPair, setMomentsByPair] = useState({});
   const momentsRef = useRef({});
@@ -270,6 +355,28 @@ export default function PartnerScreen({ route }) {
   useEffect(() => {
     trackPartnerSurfaceView(source);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load the persisted reconnection-dismissal set once (D5-B3: never nag).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(RECONNECT_DISMISS_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        if (alive && Array.isArray(list)) setReconnectDismissed(list.filter((x) => typeof x === 'string'));
+      } catch (_) { /* default: nothing dismissed */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const dismissReconnect = useCallback(async (pair) => {
+    setReconnectDismissed((prev) => {
+      if (prev.includes(pair.id)) return prev;
+      const next = [...prev, pair.id];
+      AsyncStorage.setItem(RECONNECT_DISMISS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   }, []);
 
   // Journey-step telemetry on each beat while the modal is open.
@@ -400,8 +507,16 @@ export default function PartnerScreen({ route }) {
     setCodeEntryOpen(false);
   }
 
-  // ── Cheer ──
-  async function handleCheer(pair) {
+  // ── Cheer (D5-B1: pick a fixed acknowledgement, no free text) ──
+  // The cheer affordance opens the acknowledgement picker rather than sending
+  // silently. The actual send happens once the sender picks a line.
+  function openAckSheet(pair) {
+    if (!pair?.cheerEnabled) return;
+    setAckSheetPair(pair);
+  }
+
+  async function handleSendAck(pair, kind) {
+    setAckSheetPair(null);
     if (!pair?.cheerEnabled) return;
     const reciprocal = pair.partnerWeek?.weekMet || (pair.partnerWeek?.done > 0);
     // Consuming the day's cheer also consumes the pair's moment (seen on cheer).
@@ -414,7 +529,30 @@ export default function PartnerScreen({ route }) {
       momentsRef.current = next;
       setMomentsByPair(next);
     }
-    await p.cheer(pair.id, !!reciprocal);
+    const r = await p.cheer(pair.id, kind, !!reciprocal);
+    if (!r?.ok && r?.error && r.error !== 'already_cheered') {
+      logError('PartnerScreen.handleSendAck', new Error(r.error), { userId: user?.id });
+      toast.show('Could not send that right now. Check your connection and try again.', { variant: 'error' });
+    }
+  }
+
+  // ── Weekly intention (D5-A) ──
+  function openAimSheet(pair) {
+    // Default to the member's own aim, or their existing weekly planned count,
+    // clamped to a sane 1..14. Confirming is a one-tap "aim", not an obligation.
+    const planned = Number(pair.myWeek?.plannedCount) || Number(pair.myWeek?.planned) || 0;
+    setAimValue(clampAim(pair.myAim > 0 ? pair.myAim : (planned || 3)));
+    setAimSheetPair(pair);
+  }
+
+  async function confirmAim(pair) {
+    const aim = clampAim(aimValue);
+    setAimSheetPair(null);
+    const r = await p.setIntention(pair.id, aim);
+    if (!r?.ok) {
+      logError('PartnerScreen.confirmAim', new Error(r?.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not save your aim. Check your connection and try again.', { variant: 'error' });
+    }
   }
 
   // ── End / cancel / block ──
@@ -547,9 +685,13 @@ export default function PartnerScreen({ route }) {
                 key={pair.id}
                 pair={pair}
                 moment={momentsByPair[pair.id] || null}
-                onCheer={handleCheer}
+                onCheer={openAckSheet}
                 onManage={setManagePair}
                 onOpenBlock={openBlockSheet}
+                onSetAim={openAimSheet}
+                onReconnect={openAckSheet}
+                reconnectDismissed={reconnectDismissed.includes(pair.id)}
+                onDismissReconnect={dismissReconnect}
               />
             ))}
 
@@ -690,7 +832,91 @@ export default function PartnerScreen({ route }) {
           />
         ) : null}
       </BottomSheet>
+
+      {/* ── Weekly-aim sheet (D5-A) ── */}
+      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="Your weekly aim">
+        {aimSheetPair ? (
+          <AimSheetBody
+            value={aimValue}
+            onChange={setAimValue}
+            onConfirm={() => confirmAim(aimSheetPair)}
+          />
+        ) : null}
+      </BottomSheet>
+
+      {/* ── Acknowledgement picker (D5-B1) ── */}
+      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send an acknowledgement">
+        {ackSheetPair ? (
+          <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} />
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
+  );
+}
+
+// D5-A: the weekly-aim stepper. Intention, not obligation — a calm "aim" you
+// confirm, never a target you must hit. Numerals, no guilt copy.
+function AimSheetBody({ value, onChange, onConfirm }) {
+  const v = clampAim(value);
+  return (
+    <View style={styles.sheetBody}>
+      <Text style={styles.sheetHeading}>Your aim for the week</Text>
+      <Text style={styles.blockPitch}>
+        A number of sessions to aim for this week, against your own plan. It is an aim, not a promise.
+      </Text>
+      <View style={styles.stepperRow}>
+        <TouchableOpacity
+          style={styles.stepperBtn}
+          onPress={() => onChange(clampAim(v - 1))}
+          disabled={v <= 1}
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel="Fewer"
+        >
+          <Ionicons name="remove" size={iconSize.md} color={v <= 1 ? colors.textMuted : colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.stepperValue} accessibilityLabel={`Aiming for ${v} this week`}>{v}</Text>
+        <TouchableOpacity
+          style={styles.stepperBtn}
+          onPress={() => onChange(clampAim(v + 1))}
+          disabled={v >= 14}
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel="More"
+        >
+          <Ionicons name="add" size={iconSize.md} color={v >= 14 ? colors.textMuted : colors.primary} />
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={onConfirm}
+        accessibilityRole="button"
+        accessibilityLabel="Confirm my aim"
+      >
+        <Text style={styles.primaryBtnText}>Confirm my aim</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// D5-B1: the fixed acknowledgement picker. Exactly the curated set, no free text.
+function AckSheetBody({ pair, onSend }) {
+  return (
+    <View style={styles.sheetBody}>
+      <Text style={styles.sheetHeading}>Send an acknowledgement</Text>
+      {ACKNOWLEDGEMENTS.map((ack) => (
+        <TouchableOpacity
+          key={ack.key}
+          style={styles.ackRow}
+          onPress={() => onSend(pair, ack.key)}
+          accessibilityRole="button"
+          accessibilityLabel={ack.line}
+        >
+          <Ionicons name="heart-outline" size={iconSize.sm} color={colors.primary} />
+          <Text style={styles.ackRowText}>{ack.line}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
@@ -898,6 +1124,63 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: colors.primary },
   dotResting: { backgroundColor: stateColors.watch },
   personText: { ...type.body, color: colors.textPrimary, flex: 1 },
+
+  // D5-A weekly intention
+  intention: { gap: spacing.xs },
+  intentionShared: { ...type.body, color: colors.textPrimary },
+  intentionOwn: { ...type.body, color: colors.textSecondary },
+  intentionSet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    minHeight: 44,
+  },
+  intentionSetText: { ...type.label, color: colors.primary },
+  keptLine: { ...type.body, color: colors.primary },
+
+  // D5-B3 reconnection surface
+  reconnect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: withAlpha(colors.primary, alpha.tint),
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  reconnectMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  reconnectText: { ...type.body, color: colors.primary, flexShrink: 1 },
+  reconnectDismiss: { paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
+  reconnectDismissText: { ...type.label, color: colors.textSecondary },
+
+  // D5-A aim stepper + D5-B1 acknowledgement rows
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  stepperBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValue: { ...type.display, color: colors.textPrimary, minWidth: 56, textAlign: 'center' },
+  ackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+  },
+  ackRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
 
   // Moment card
   momentCard: {

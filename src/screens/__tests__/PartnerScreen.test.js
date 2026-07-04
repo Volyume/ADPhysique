@@ -82,6 +82,7 @@ function base(overrides = {}) {
     unpair: jest.fn(async () => ({ ok: true })),
     block: jest.fn(async () => ({ ok: true })),
     proposeBlock: jest.fn(), adoptBlock: jest.fn(), leaveBlock: jest.fn(),
+    setIntention: jest.fn(async () => ({ ok: true })),
     reload: jest.fn(),
     ...overrides,
   };
@@ -169,12 +170,18 @@ describe('cheer affordance', () => {
     expect(btn.props.disabled).toBe(true);
   });
 
-  test('an available cheer sends for that pair', async () => {
+  test('an available cheer opens the acknowledgement picker and sends the chosen line', async () => {
+    // D5-B1: the cheer is no longer wordless. Tapping "Send a cheer" opens the
+    // fixed picker; picking a line sends the cheer WITH that acknowledgement kind
+    // (never free text).
     const hook = base({ pairs: [pair({ cheerEnabled: true })] });
     mockHook.value = hook;
     const tree = await mount();
     await press(tree, 'Send a cheer');
-    expect(hook.cheer).toHaveBeenCalledWith('p1', expect.any(Boolean));
+    // The four fixed acknowledgements are offered.
+    expect(allText(tree)).toContain('Here with you.');
+    await press(tree, 'Here with you.');
+    expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
   });
 });
 

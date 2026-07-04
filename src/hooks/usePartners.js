@@ -16,17 +16,21 @@ import {
   deleteLocalPairSharedData, markLocalPartnershipEnded,
   getPartnerSharedBlock, deleteLocalPartnerSharedBlock,
   upsertPartnerSharedBlockFromCloud,
+  getPartnerWeeklyIntention, setLocalPartnerWeeklyIntention,
 } from '../lib/database';
-import { todayLocalKey } from '../lib/dayKey';
+import { todayLocalKey, localWeekStartMs } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
 import { computeSharedStreak, buildSharedWeeks } from '../lib/partners/sharedStreak';
+import { weekKeptTogether } from '../lib/partners/intention';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, unpairPartner, blockPartner,
-  proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
+  proposeSharedBlock, adoptSharedBlock, leaveSharedBlock, pushWeeklyIntention,
 } from '../lib/partners/service';
 import { writeOwnWeekSignals } from '../lib/partners/weekSignalWriter';
 import { getCachedInvite, setCachedInvite, clearCachedInvite } from '../lib/partners/inviteCache';
 import { readPendingPartnerCode, clearPendingPartnerCode } from '../lib/partners/pendingInvite';
+
+const WEEK_MS = 7 * 86400000;
 
 const EMPTY = {
   loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
@@ -57,17 +61,41 @@ function pairedAtMs(p) {
 // aggregated across pairs (DESIGN-SPEC B2).
 async function enrichPair(partnership, userId) {
   const partnerId = partnership.memberA === userId ? partnership.memberB : partnership.memberA;
-  const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals, sharedBlock] = await Promise.all([
+  const thisWeek = String(localWeekStartMs(Date.now()));
+  const lastWeek = String(localWeekStartMs(Date.now()) - WEEK_MS);
+  const [
+    partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals, sharedBlock,
+    myAimRow, partnerAimRow,
+    myPrevSignal, partnerPrevSignal, myPrevAimRow, partnerPrevAimRow,
+  ] = await Promise.all([
     getPartnerWeekSignal(partnership.id, partnerId),
     getPartnerWeekSignal(partnership.id, userId),
     getLastCheerSentOn(partnership.id, userId),
     getLastCheerReceived(partnership.id, userId),
     getPairWeekSignals(partnership.id),
     getPartnerSharedBlock(partnership.id),
+    // D5-A: each side's OWN aim for THIS week (shown side by side, never compared).
+    getPartnerWeeklyIntention(partnership.id, userId, thisWeek),
+    getPartnerWeeklyIntention(partnership.id, partnerId, thisWeek),
+    // Kept-moment inputs: the just-CLOSED week's signals + aims for both sides.
+    getPartnerWeekSignal(partnership.id, userId, lastWeek),
+    getPartnerWeekSignal(partnership.id, partnerId, lastWeek),
+    getPartnerWeeklyIntention(partnership.id, userId, lastWeek),
+    getPartnerWeeklyIntention(partnership.id, partnerId, lastWeek),
   ]);
   const sharedStreak = partnership.streakEnabled
     ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(pairSignals, userId, partnerId) })
     : null;
+  // Rest-safe kept-moment for the closed week: both met their OWN aim, neither
+  // rested. A miss simply yields false (HOLD) — never a red, never attribution.
+  const weekKept = weekKeptTogether({
+    myAim: myPrevAimRow?.weeklyAim,
+    partnerAim: partnerPrevAimRow?.weeklyAim,
+    myDone: myPrevSignal?.doneCount,
+    partnerDone: partnerPrevSignal?.doneCount,
+    myResting: myPrevSignal?.state === 'resting',
+    partnerResting: partnerPrevSignal?.state === 'resting',
+  });
   return {
     id: partnership.id,
     partnership,
@@ -79,6 +107,11 @@ async function enrichPair(partnership, userId) {
     sharedStreak,
     lastReceived,
     sharedBlock,
+    // D5-A intention: my own aim, the partner's own aim, and the kept-moment.
+    weekStart: thisWeek,
+    myAim: Number(myAimRow?.weeklyAim) || 0,
+    partnerAim: Number(partnerAimRow?.weeklyAim) || 0,
+    weekKept,
     cheerEnabled: cheerAllowed({ lastSentOn, today: todayLocalKey() }),
     streakEnabled: !!partnership.streakEnabled,
     pairedAt: pairedAtMs(partnership),
@@ -195,8 +228,22 @@ export default function usePartners(userId, tier) {
     return r;
   }, [userId, tier, load]);
 
-  const cheer = useCallback(async (pairId, reciprocal) => {
-    const r = await sendCheer(userId, { pairId, reciprocal });
+  const cheer = useCallback(async (pairId, kind, reciprocal) => {
+    const r = await sendCheer(userId, { pairId, kind, reciprocal });
+    await load();
+    return r;
+  }, [userId, load]);
+
+  // D5-A: set the user's OWN weekly aim. Writes the local mirror first (so the
+  // card reflects it before the next pull) then pushes; fail-closed consistent
+  // with the other online ops (a failed push surfaces to the caller).
+  const setIntention = useCallback(async (pairId, weeklyAim) => {
+    const weekStart = String(localWeekStartMs(Date.now()));
+    const aim = Math.max(0, Math.round(Number(weeklyAim) || 0));
+    try {
+      await setLocalPartnerWeeklyIntention({ pairId, userId, weekStart, weeklyAim: aim });
+    } catch (_) { /* best-effort local; the push is the source of truth */ }
+    const r = await pushWeeklyIntention(userId, { pairId, weekStart, weeklyAim: aim });
     await load();
     return r;
   }, [userId, load]);
@@ -274,6 +321,9 @@ export default function usePartners(userId, tier) {
     return r;
   }, [userId, load]);
 
-  return { ...state, invite, redeem, cheer, unpair, block, proposeBlock, adoptBlock, leaveBlock };
+  return {
+    ...state, invite, redeem, cheer, unpair, block,
+    proposeBlock, adoptBlock, leaveBlock, setIntention,
+  };
 }
 

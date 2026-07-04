@@ -17,6 +17,7 @@
  */
 
 const CHEER_FRESH_MS = 48 * 60 * 60 * 1000; // older cheers are history, not news
+const JOIN_FRESH_MS = 48 * 60 * 60 * 1000; // a backlog-synced accept is history
 
 /** Push copy for a received cheer. `partnerName` falls back warmly. */
 export function cheerPush(partnerName) {
@@ -37,13 +38,28 @@ export function streakKeptPush(partnerName, run) {
   };
 }
 
+/**
+ * Push copy for a partner accepting the invite (D5-B2). Framed as the moment
+ * they joined, never as pressure. `partnerName` falls back warmly.
+ */
+export function joinPush(partnerName) {
+  const name = (typeof partnerName === 'string' && partnerName.trim()) ? partnerName.trim() : 'Your partner';
+  return {
+    title: `${name} joined you`,
+    body: 'You are training together now. Their week shows up here from now on.',
+  };
+}
+
 /** Normalise a stored watermark record. */
 export function normaliseBeatsState(raw) {
-  if (!raw || typeof raw !== 'object') return { v: 1, lastCheerId: null, lastStreakRun: 0 };
+  if (!raw || typeof raw !== 'object') return { v: 1, lastCheerId: null, lastStreakRun: 0, joinedPairIds: [] };
   return {
     v: 1,
     lastCheerId: typeof raw.lastCheerId === 'string' ? raw.lastCheerId : null,
     lastStreakRun: Number.isFinite(raw.lastStreakRun) ? raw.lastStreakRun : 0,
+    joinedPairIds: Array.isArray(raw.joinedPairIds)
+      ? raw.joinedPairIds.filter((id) => typeof id === 'string')
+      : [],
   };
 }
 
@@ -75,4 +91,26 @@ export function streakRunToNotify(state, sharedStreak) {
   if (run < 2) return null;
   if (run <= state.lastStreakRun) return null;
   return run;
+}
+
+/**
+ * The freshly joined pair to notify the INVITER about, or null (D5-B2). Fires
+ * once per pair (watermarked by id), only while fresh (a backlog-synced accept
+ * is history, not news), and only for the inviter — member_a, the person who was
+ * waiting. The redeemer already saw the join when they tapped accept, so they
+ * are never pushed. Closes the silent-accept dead spot.
+ *
+ * @param state  normalised watermark record
+ * @param pair   a local partnership row ({ id, status, memberA, acceptedAt })
+ * @param userId this device's user id
+ * @param now    ms
+ */
+export function joinToNotify(state, pair, userId, now = Date.now()) {
+  if (!pair || pair.status !== 'active' || !pair.id) return null;
+  if (!userId || pair.memberA !== userId) return null; // only the waiting inviter
+  const joined = Array.isArray(state.joinedPairIds) ? state.joinedPairIds : [];
+  if (joined.includes(pair.id)) return null;
+  const at = Number(pair.acceptedAt) || 0;
+  if (!at || now - at > JOIN_FRESH_MS) return null;
+  return pair.id;
 }

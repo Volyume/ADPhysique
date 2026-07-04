@@ -50,14 +50,17 @@ const SEEN_KEY = '@volyume_partner_moments_seen_v1';
 const SHOWN_KEY = '@volyume_partner_moments_shown_v1';
 const PB_LOG_KEY = '@volyume_partner_moments_pb_v1';
 
-// Priority: lower wins. streak_week_kept > completed_block > hit_pb.
-const PRIORITY = { streak_week_kept: 0, completed_block: 1, hit_pb: 2 };
+// Priority: lower wins. partner_joined (the lifecycle welcome) tops the rest,
+// then streak_week_kept > completed_block > hit_pb.
+const PRIORITY = { partner_joined: -1, streak_week_kept: 0, completed_block: 1, hit_pb: 2 };
 
-// Fixed copy (spec B6). streak carries no name; block/pb take the partner's
-// first name. Full stops, no numbers, no exercise names, no exclamation marks.
+// Fixed copy (spec B6 + D5-B2). streak carries no name; block/pb/joined take the
+// partner's first name. Full stops, no numbers, no exercise names, no
+// exclamation marks.
 const STREAK_LINE = 'Another week you both showed up.';
 const blockLine = (name) => `${name} finished their training block.`;
 const pbLine = (name) => `${name} set a new personal best.`;
+const joinedLine = (name) => `${name} joined you.`;
 
 /** Deterministic moment id: pair + kind + week key (dayKey/week convention). */
 function momentId(pairId, kind, weekKey) {
@@ -139,6 +142,23 @@ export async function getVisibleMoments(userId) {
       const partnerId = pair.memberA === userId ? pair.memberB : pair.memberA;
       const name = pair.partnerFirstName || 'Your partner';
       const candidates = [];
+
+      // partner_joined (D5-B2): the missing accept-signal, for the INVITER only
+      // (member_a). Fresh window (7-day horizon below); the redeemer saw the join
+      // when they accepted, so it is never surfaced to them. Deterministic id off
+      // the accepted-at moment so it is shown once and never returns.
+      if (pair.memberA === userId) {
+        const acceptedAt = Number(pair.acceptedAt) || 0;
+        if (acceptedAt) {
+          candidates.push({
+            id: momentId(pair.id, 'partner_joined', String(acceptedAt)),
+            pairId: pair.id,
+            kind: 'partner_joined',
+            line: joinedLine(name),
+            atMs: acceptedAt,
+          });
+        }
+      }
 
       // streak_week_kept: the shared streak advanced to >= 2 weeks this week.
       // status 'counting' means the most recent finished week was 'met' (an

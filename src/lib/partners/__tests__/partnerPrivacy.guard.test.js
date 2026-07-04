@@ -55,6 +55,12 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   // the local-mirror mapping of the OTHER side's name at pull time. FIRST names
   // only — never full names, never emails. Exactly these three keys, no wider.
   'partner_first_name', 'member_a_first_name', 'member_b_first_name',
+  // Partners D5-A (§5-reviewed): the mutual weekly intention. weekly_aim is a
+  // single small integer — the member's OWN session aim for the week, against
+  // their OWN plan. It carries no exercise, load, body or food content, and is
+  // never compared across people (partnerComparison.guard.test.js). Members
+  // write only their own row (RLS + this allowlist key).
+  'weekly_aim',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the

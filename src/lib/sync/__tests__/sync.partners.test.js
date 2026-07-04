@@ -26,6 +26,7 @@ jest.mock('../../database', () => ({
   deleteLocalPairSharedData: jest.fn(),
   upsertPartnerSharedBlockFromCloud: jest.fn(),
   deleteLocalPartnerSharedBlock: jest.fn(),
+  upsertPartnerWeeklyIntentionFromCloud: jest.fn(),
 }));
 
 const dbMock = require('../../database');
@@ -41,6 +42,7 @@ beforeEach(() => {
   dbMock.deleteLocalPairSharedData.mockResolvedValue(undefined);
   dbMock.upsertPartnerSharedBlockFromCloud.mockResolvedValue(undefined);
   dbMock.deleteLocalPartnerSharedBlock.mockResolvedValue(undefined);
+  dbMock.upsertPartnerWeeklyIntentionFromCloud.mockResolvedValue(undefined);
 });
 
 describe('pushPartners', () => {
@@ -111,7 +113,10 @@ describe('pushPartners', () => {
 });
 
 describe('pullPartners', () => {
-  function makeSb({ partnerships = [], signals = [], cheers = [], blocks = [], blocksError = null } = {}) {
+  function makeSb({
+    partnerships = [], signals = [], cheers = [], blocks = [], blocksError = null,
+    intentions = [], intentionsError = null,
+  } = {}) {
     return {
       from: jest.fn((table) => {
         if (table === 'partnerships') {
@@ -125,6 +130,9 @@ describe('pullPartners', () => {
         }
         if (table === 'partner_shared_blocks') {
           return { select: () => ({ in: () => Promise.resolve(blocksError ? { data: null, error: blocksError } : { data: blocks, error: null }) }) };
+        }
+        if (table === 'partner_weekly_intentions') {
+          return { select: () => ({ in: () => Promise.resolve(intentionsError ? { data: null, error: intentionsError } : { data: intentions, error: null }) }) };
         }
         return { select: () => ({}) };
       }),
@@ -255,6 +263,30 @@ describe('pullPartners', () => {
     // Missing table must NOT clear local rows: absence of the table is not
     // evidence the partner left the block.
     expect(dbMock.deleteLocalPartnerSharedBlock).not.toHaveBeenCalled();
+  });
+
+  // ── Weekly intention (D5-A) ──
+  test('restores both members intentions for an active pair', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      intentions: [
+        { pair_id: 'pair1', user_id: 'me', week_start: '1', weekly_aim: 4 },
+        { pair_id: 'pair1', user_id: 'sam', week_start: '1', weekly_aim: 3 },
+      ],
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    expect(dbMock.upsertPartnerWeeklyIntentionFromCloud).toHaveBeenCalledTimes(2);
+  });
+
+  test('a missing partner_weekly_intentions cloud table (migrate_105 unapplied) is benign', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      intentionsError: { code: 'PGRST205', message: 'partner_weekly_intentions not found' },
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    expect(dbMock.upsertPartnerWeeklyIntentionFromCloud).not.toHaveBeenCalled();
   });
 
   test('a missing cloud partnerships table is a benign skip', async () => {

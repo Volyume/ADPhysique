@@ -15,6 +15,7 @@ import { getSupabaseClient } from '../supabase';
 import { track } from '../engineTelemetry';
 import { buildInviteLinks, inviteShareMessage } from './link';
 import { recordPartnerSharingConsent } from './consent';
+import { isValidAckKey, DEFAULT_ACK_KEY } from './acknowledgements';
 import {
   trackInviteMinted, trackInviteRedeemed, trackCheerSent, trackUnpair,
 } from './telemetry';
@@ -100,16 +101,46 @@ export async function redeemPartnerInvite(userId, code) {
  * fans out the push unless an ED/wellbeing flag is open — in which case the
  * recipient's delivery downgrades to in-app-only, §5). Emits partner_cheer_sent
  * with the reciprocal boolean (Strava: reciprocity is the active ingredient).
+ *
+ * D5-B1: the sender picks a FIXED acknowledgement `kind` from the closed enum
+ * (never free text). It is validated here and passed to the edge function, which
+ * stores it and uses its line in the push. An unknown/absent kind collapses to
+ * the quiet default so an old caller keeps working.
  */
-export async function sendCheer(userId, { pairId, reciprocal = false } = {}) {
+export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, reciprocal = false } = {}) {
   const c = getSupabaseClient();
   if (!c || !userId || !pairId) return fail('offline');
+  const ackKind = isValidAckKey(kind) ? kind : DEFAULT_ACK_KEY;
   try {
-    const { data, error } = await c.functions.invoke('partner-cheer', { body: { pairId } });
+    const { data, error } = await c.functions.invoke('partner-cheer', { body: { pairId, kind: ackKind } });
     if (error) return fail(error);
     track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
     trackCheerSent();
     return { ok: true, data };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/**
+ * Push the user's OWN weekly intention (an integer session aim against their own
+ * plan) into a pair (D5-A). RLS-scoped direct upsert on the member's own row —
+ * derived-safe, one small integer, never raw training data. The partner reads it
+ * from their pull; the two aims are shown side by side but NEVER compared.
+ */
+export async function pushWeeklyIntention(userId, { pairId, weekStart, weeklyAim } = {}) {
+  const c = getSupabaseClient();
+  if (!c || !userId || !pairId || !weekStart) return fail('offline');
+  try {
+    const { error } = await c.from('partner_weekly_intentions').upsert({
+      pair_id: pairId,
+      user_id: userId,
+      week_start: String(weekStart),
+      weekly_aim: Math.max(0, Math.round(Number(weeklyAim) || 0)),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'pair_id,user_id,week_start' });
+    if (error) return fail(error);
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

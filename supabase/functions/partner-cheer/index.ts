@@ -48,6 +48,21 @@ function jsonResponse(body: unknown, status: number): Response {
 interface CheerBody {
   pairId?: string
   sentOn?: string
+  kind?: string
+}
+
+// D5-B1: the closed acknowledgement set (keys + lines mirror
+// src/lib/partners/acknowledgements.js and migrate_106's CHECK exactly). Never
+// free text: an unknown/absent key collapses to the quiet default 'here'.
+const ACK_LINES: Record<string, string> = {
+  proud: 'Proud of your week.',
+  good_back: 'Good to see you back.',
+  strong_both: 'Strong week, both of us.',
+  here: 'Here with you.',
+}
+const DEFAULT_ACK_KEY = 'here'
+function resolveAckKey(raw: unknown): string {
+  return (typeof raw === 'string' && raw in ACK_LINES) ? raw : DEFAULT_ACK_KEY
 }
 
 serve(async (req: Request) => {
@@ -74,6 +89,7 @@ serve(async (req: Request) => {
   const pairId = body.pairId
   if (!pairId) return jsonResponse({ ok: false, error: 'pairId is required' }, 400)
   const sentOn = body.sentOn || new Date().toISOString().slice(0, 10)
+  const ackKind = resolveAckKey(body.kind)
 
   // Caller-scoped client: RLS applies, so reads/writes prove membership.
   const userClient = createClient(supabaseUrl, anonKey, {
@@ -101,7 +117,7 @@ serve(async (req: Request) => {
   // constraint is the rate limit. A duplicate is the daily limit, not an error.
   const { error: insErr } = await userClient
     .from('partner_cheers')
-    .insert({ pair_id: pairId, sender_id: senderId, sent_on: sentOn })
+    .insert({ pair_id: pairId, sender_id: senderId, sent_on: sentOn, kind: ackKind })
   if (insErr) {
     // 23505 = unique_violation -> already cheered today.
     if ((insErr as { code?: string }).code === '23505') {
@@ -150,7 +166,8 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         user_id: recipientId,
         title: `${senderName} sent you a cheer`,
-        body: `You trained this week. ${senderName} noticed.`,
+        // The sender's chosen acknowledgement line (D5-B1), from the closed set.
+        body: ACK_LINES[ackKind],
         data: { type: 'partner_cheer', pairId },
       }),
     })

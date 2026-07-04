@@ -881,7 +881,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
                 onPress={() => {
                   const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
-                  partners.cheer(partners.partnership.id, !!reciprocal);
+                  // The post-workout beat stays a single-tap cheer; it sends the
+                  // quiet default acknowledgement (D5-B1). The picker lives on the
+                  // PartnerScreen PairCard.
+                  partners.cheer(partners.partnership.id, undefined, !!reciprocal);
                   if (partnerMoment?.id) {
                     markMomentSeen(partnerMoment.id).catch(() => {});
                     partnerMomentRef.current = null;

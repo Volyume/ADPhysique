@@ -1344,6 +1344,7 @@ export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions
 const PARTNER_BEATS_KEY = (userId) => `@volyume_partner_beats_v1_${userId}`;
 const NOTIF_ID_PARTNER_CHEER = 'volyume_partner_cheer';
 const NOTIF_ID_PARTNER_STREAK = 'volyume_partner_streak';
+const NOTIF_ID_PARTNER_JOIN = 'volyume_partner_join';
 
 /**
  * Check for newly arrived partner beats and lay their pushes. Called after
@@ -1355,7 +1356,10 @@ export async function schedulePartnerBeats(userId) {
   if (Platform.OS === 'web' || !userId) return;
   try {
     // eslint-disable-next-line global-require
-    const { cheerPush, streakKeptPush, normaliseBeatsState, cheerToNotify, streakRunToNotify } = require('./partnerBeats');
+    const {
+      cheerPush, streakKeptPush, joinPush, normaliseBeatsState,
+      cheerToNotify, streakRunToNotify, joinToNotify,
+    } = require('./partnerBeats');
     // eslint-disable-next-line global-require
     const db = require('../database');
 
@@ -1439,6 +1443,35 @@ export async function schedulePartnerBeats(userId) {
             },
           });
         }
+      }
+    }
+
+    // ── Beat 3: partner joined (D5-B2) ──
+    // The inviter was waiting; when their invite is accepted the pairing flips to
+    // active on this device's pull. Fire once per pair, only for the inviter, only
+    // while fresh. Iterates all active pairs so a Pro multi-pair inviter is covered.
+    const activePairs = (partnerships || []).filter((pp) => pp.status === 'active');
+    for (const jp of activePairs) {
+      const joinedId = joinToNotify(nextState, jp, userId);
+      if (!joinedId) continue;
+      const joinedSet = Array.isArray(nextState.joinedPairIds) ? nextState.joinedPairIds : [];
+      nextState = { ...nextState, joinedPairIds: [...joinedSet, joinedId] };
+      const { date } = shiftDateOutOfQuietHours(new Date(Date.now() + 5000), quiet);
+      const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
+      if (slot.allowed) {
+        const copy = joinPush(jp.partnerFirstName || null);
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${NOTIF_ID_PARTNER_JOIN}_${jp.id}`,
+          content: {
+            title: copy.title, body: copy.body,
+            data: { type: 'partner_joined', pairId: jp.id }, sound: false,
+          },
+          trigger: {
+            channelId: COACHING_REMINDERS_CHANNEL,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
+          },
+        });
       }
     }
 

@@ -6,9 +6,11 @@
 import {
   cheerPush,
   streakKeptPush,
+  joinPush,
   normaliseBeatsState,
   cheerToNotify,
   streakRunToNotify,
+  joinToNotify,
 } from '../partnerBeats';
 
 const HOUR = 3600000;
@@ -55,7 +57,39 @@ describe('streakRunToNotify', () => {
   });
 });
 
+describe('joinToNotify (D5-B2, the missing accept-signal)', () => {
+  const state = normaliseBeatsState(null);
+  const now = Date.now();
+  const me = 'u_me';
+  const freshPair = { id: 'p1', status: 'active', memberA: me, acceptedAt: now - HOUR };
+
+  test('a fresh accept notifies the inviter (member_a) once', () => {
+    expect(joinToNotify(state, freshPair, me, now)).toBe('p1');
+  });
+  test('the same pair never notifies twice (watermarked by id)', () => {
+    const seen = { ...state, joinedPairIds: ['p1'] };
+    expect(joinToNotify(seen, freshPair, me, now)).toBeNull();
+  });
+  test('the redeemer (member_b) is never pushed — they saw the accept', () => {
+    const asRedeemer = { ...freshPair, memberA: 'someone', memberB: me };
+    expect(joinToNotify(state, asRedeemer, me, now)).toBeNull();
+  });
+  test('a stale (backlog-synced) accept is history, not news', () => {
+    expect(joinToNotify(state, { ...freshPair, acceptedAt: now - 72 * HOUR }, me, now)).toBeNull();
+  });
+  test('a non-active pair does not notify', () => {
+    expect(joinToNotify(state, { ...freshPair, status: 'invited' }, me, now)).toBeNull();
+  });
+});
+
 describe('push copy', () => {
+  test('join copy names the partner with a warm fallback and no shame', () => {
+    expect(joinPush('Sam').title).toBe('Sam joined you');
+    expect(joinPush(null).title).toBe('Your partner joined you');
+    const all = [joinPush('Sam'), joinPush(null)].flatMap((c) => [c.title, c.body]).join(' ');
+    expect(all).not.toMatch(/miss|behind|fail|must/i);
+    expect(/[–—]/.test(all)).toBe(false);
+  });
   test('cheer copy is from the partner, named, with a warm fallback', () => {
     expect(cheerPush('Sam').title).toBe('Sam cheered you on');
     expect(cheerPush('').title).toBe('Your partner cheered you on');

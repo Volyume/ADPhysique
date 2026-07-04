@@ -199,6 +199,22 @@ export async function pullPartners(sb, { userId } = {}) {
       } else if (!isMissingTableError(bErr, 'partner_shared_blocks')) {
         errors += 1; logSyncError('sync.tables.partners.pullSharedBlocks', bErr);
       }
+
+      // 5. Weekly intentions for both members of active pairs (D5-A). Both
+      //    sides' rows are mirrored so the PairCard can show each own aim; the
+      //    numbers are never compared. Benign-skip a missing cloud table
+      //    (migrate_105 not applied yet).
+      const { data: intentions, error: iErr } = await sb.from('partner_weekly_intentions')
+        .select('*').in('pair_id', activePairIds);
+      if (!iErr) {
+        for (const row of (intentions || [])) {
+          try { await db.upsertPartnerWeeklyIntentionFromCloud(row); applied += 1; } catch (e) {
+            errors += 1; logSyncError('sync.tables.partners.upsertIntention', e);
+          }
+        }
+      } else if (!isMissingTableError(iErr, 'partner_weekly_intentions')) {
+        errors += 1; logSyncError('sync.tables.partners.pullIntentions', iErr);
+      }
     }
 
     // NEW-002 rebuild: the pull is the only moment a cheer (or the partner's

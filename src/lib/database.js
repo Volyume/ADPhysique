@@ -1526,6 +1526,30 @@ const SCHEMA_MIGRATIONS = [
       updated_at INTEGER NOT NULL
     )`,
   ],
+  // Partners D5 (A + B1): the mutual weekly intention + the cheer acknowledgement
+  // enum. Local mirrors of cloud migrate_105 / migrate_106.
+  //   partner_weekly_intentions  one row per (pair, member, week_start): the
+  //     member's integer weekly session aim against their OWN plan. Derived-safe
+  //     (a small integer, never raw training data). Both members write only their
+  //     OWN row; the pull mirrors both sides so the PairCard can show each own aim
+  //     without comparison. Purged alongside signals/cheers on every §5 path
+  //     (unpair, ended pair on pull, sign-out, wipe).
+  //   partner_cheers.kind  the sender's chosen acknowledgement key (closed enum,
+  //     never free text). Nullable + DEFAULT 'here' (the quiet line) so old rows
+  //     and the pre-106 edge function read as the neutral acknowledgement.
+  // Additive + idempotent (duplicate-column / already-exists are benign).
+  [
+    `CREATE TABLE IF NOT EXISTS partner_weekly_intentions (
+      pair_id    TEXT NOT NULL,
+      user_id    TEXT NOT NULL,
+      week_start TEXT NOT NULL,
+      weekly_aim INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (pair_id, user_id, week_start)
+    )`,
+    `ALTER TABLE partner_cheers ADD COLUMN kind TEXT DEFAULT 'here'`,
+  ],
 ];
 
 // E3 search: the FTS5 index DDL, exported as a named function so the
@@ -4178,11 +4202,12 @@ export async function wipeAllUserData(userId) {
     //    user_id-keyed). The cloud copy is intact; it re-pulls on next sign-in.
     //    partner_shared_blocks is wiped here too so this path matches
     //    clearLocalPartners exactly (A1 s8.5: the two wipe paths must clear the
-    //    SAME four tables; shared blocks were previously left behind here).
+    //    SAME partner tables; shared blocks + intentions must not be left behind).
     try {
       await d.runAsync('DELETE FROM partner_cheers');
       await d.runAsync('DELETE FROM partner_week_signals');
       await d.runAsync('DELETE FROM partner_shared_blocks');
+      await d.runAsync('DELETE FROM partner_weekly_intentions');
       await d.runAsync('DELETE FROM partnerships');
     } catch (e) {
       logError('database.wipeAllUserData.partners', e, { userId });
@@ -4934,9 +4959,60 @@ export async function upsertPartnerCheerFromCloud(row) {
   if (!row?.id || !row?.pair_id) return;
   const d = await db();
   await d.runAsync(
-    `INSERT OR REPLACE INTO partner_cheers (id, pair_id, sender_id, sent_on, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [row.id, row.pair_id, row.sender_id, row.sent_on, _toMsLocal(row.created_at) ?? Date.now()],
+    `INSERT OR REPLACE INTO partner_cheers (id, pair_id, sender_id, sent_on, kind, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, row.pair_id, row.sender_id, row.sent_on,
+      // The chosen acknowledgement key (D5-B1); legacy/pre-106 rows read as the
+      // quiet default 'here'. Never free text — the closed enum is the contract.
+      row.kind ?? 'here',
+      _toMsLocal(row.created_at) ?? Date.now(),
+    ],
+  );
+}
+
+// ── Weekly intention (Partners D5-A) ──
+// One row per (pair, member, week_start): the member's integer weekly session
+// aim against their OWN plan. Derived-safe. Both members read both rows so the
+// PairCard can show each own aim; nobody's number is ever compared.
+
+/** A single member's aim for a (pair, week), or null. */
+export async function getPartnerWeeklyIntention(pairId, userId, weekStart) {
+  if (!pairId || !userId || !weekStart) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM partner_weekly_intentions WHERE pair_id = ? AND user_id = ? AND week_start = ?',
+    [pairId, userId, String(weekStart)],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+/** Write the local user's OWN aim immediately (before the cloud push lands). */
+export async function setLocalPartnerWeeklyIntention({ pairId, userId, weekStart, weeklyAim } = {}) {
+  if (!pairId || !userId || !weekStart) return;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_weekly_intentions
+       (pair_id, user_id, week_start, weekly_aim, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [pairId, userId, String(weekStart), Math.max(0, Math.round(Number(weeklyAim) || 0)), now, now],
+  );
+}
+
+/** Cloud-restore writer used by the sync pull (both members' aims). */
+export async function upsertPartnerWeeklyIntentionFromCloud(row) {
+  if (!row?.pair_id || !row?.user_id || !row?.week_start) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_weekly_intentions
+       (pair_id, user_id, week_start, weekly_aim, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      row.pair_id, row.user_id, String(row.week_start),
+      Math.max(0, Math.round(Number(row.weekly_aim) || 0)),
+      _toMsLocal(row.created_at), _toMsLocal(row.updated_at) ?? Date.now(),
+    ],
   );
 }
 
@@ -4997,6 +5073,7 @@ export async function deleteLocalPairSharedData(pairId) {
   await d.runAsync('DELETE FROM partner_cheers WHERE pair_id = ?', [pairId]);
   await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
   await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
+  await d.runAsync('DELETE FROM partner_weekly_intentions WHERE pair_id = ?', [pairId]);
 }
 
 /**
@@ -5024,6 +5101,7 @@ export async function clearLocalPartners() {
   await d.runAsync('DELETE FROM partner_cheers');
   await d.runAsync('DELETE FROM partner_week_signals');
   await d.runAsync('DELETE FROM partner_shared_blocks');
+  await d.runAsync('DELETE FROM partner_weekly_intentions');
   await d.runAsync('DELETE FROM partnerships');
 }
 

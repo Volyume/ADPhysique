@@ -26,6 +26,13 @@
       "**/__tests__/**/*.test.js",
       "**/tests/**/*.test.js"
     ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.claude/worktrees/"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/.claude/worktrees/"
+    ],
     "transform": {
       "^.+\\.[jt]sx?$": "babel-jest"
     },

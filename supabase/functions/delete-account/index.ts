@@ -142,6 +142,9 @@ serve(async (req) => {
       if (pairIds.length > 0) {
         await adminClient.from('partner_week_signals').delete().in('pair_id', pairIds)
         await adminClient.from('partner_cheers').delete().in('pair_id', pairIds)
+        // D5-A: the pair's weekly intentions go too (belt-and-braces; the
+        // status->ended trigger in migrate_105 also covers this path).
+        await adminClient.from('partner_weekly_intentions').delete().in('pair_id', pairIds)
         await adminClient
           .from('partnerships')
           .update({ status: 'ended', ended_at: new Date().toISOString() })
