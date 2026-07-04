@@ -677,9 +677,16 @@ export default function ManualBuilderScreen({ navigation, route }) {
     if (!validate(true)) return;
     setSaving(true);
     try {
+      // A rename on this final builder page lives in editablePlanName, not
+      // the page-1 planName it started from. Use whichever the user
+      // actually finished with, so the activated plan and the success
+      // modal below both reflect the name they last saw on screen (matches
+      // handleSaveDraft/handleSaveEdit, which persist editablePlanName too).
+      const finalName = editablePlanName.trim() || planName.trim() || 'My Plan';
+      await updateProgrammeName(programmeId, finalName);
       await persistDays();
-      await activatePlanWithBlock(user.id, programmeId, planName.trim() || 'My Plan');
-      setSavedPlanName(planName.trim() || 'Your plan');
+      await activatePlanWithBlock(user.id, programmeId, finalName);
+      setSavedPlanName(finalName);
       setSuccessModal(true);
     } catch (e) {
       toast.show(e.message || "Couldn't save plan", { variant: 'error' });

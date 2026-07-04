@@ -67,7 +67,7 @@ import useAppStore from '../../store/useAppStore';
 import {
   createProgramme, createRoutine, addExerciseToRoutine, activatePlanWithBlock,
   getProgrammeById, getRoutinesForPlan, updateRoutineName,
-  removeExerciseFromRoutine, softDeleteRoutine,
+  removeExerciseFromRoutine, softDeleteRoutine, updateProgrammeName,
 } from '../../lib/database';
 import ManualBuilderScreen from '../ManualBuilderScreen';
 
@@ -120,6 +120,15 @@ beforeEach(() => {
 function setPlanName(tree, value) {
   const input = tree.root.findAll(
     n => n.props && n.props.placeholder === 'e.g. My Push Pull Legs',
+  )[0];
+  act(() => { input.props.onChangeText(value); });
+}
+
+// Page 2's editable name field (distinct from Page 1's, which carries the
+// "e.g. My Push Pull Legs" placeholder above).
+function setEditablePlanName(tree, value) {
+  const input = tree.root.findAll(
+    n => n.props && n.props.placeholder === 'Plan name',
   )[0];
   act(() => { input.props.onChangeText(value); });
 }
@@ -298,6 +307,64 @@ describe('ManualBuilderScreen — editing an existing plan (S5)', () => {
     // Nothing left to persist for the removed day.
     expect(updateRoutineName).not.toHaveBeenCalledWith('routine-existing-1', expect.anything());
     expect(updateRoutineName).toHaveBeenCalledWith('routine-existing-2', 'Pull Day');
+  });
+});
+
+describe('ManualBuilderScreen — Save & Activate uses the current name (PLAN-001)', () => {
+  test('renaming the plan on the final builder page carries into the activated plan and the success modal', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Original Name');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+
+    // Remove the empty second day so the activate gate is satisfiable
+    // (same pattern as the other Save & Activate tests above).
+    press(tree, 'Remove Day 2');
+
+    // Rename on Page 2, after the plan already has an id, the way a real
+    // user renames before pressing Save & Activate.
+    setEditablePlanName(tree, 'Renamed Plan');
+
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    // The rename is persisted and is what gets activated, not the stale
+    // Page 1 name.
+    expect(updateProgrammeName).toHaveBeenCalledWith('prog-1', 'Renamed Plan');
+    expect(activatePlanWithBlock).toHaveBeenCalledWith('user-1', 'prog-1', 'Renamed Plan');
+
+    // The success modal shows the renamed plan, never the old name.
+    expect(tree.root.findAll(
+      n => n.props && n.props.children === 'Renamed Plan',
+    ).length).toBeGreaterThan(0);
+    expect(tree.root.findAll(
+      n => n.props && n.props.children === 'Original Name',
+    ).length).toBe(0);
+  });
+
+  test('leaving the name untouched keeps prior behaviour unchanged', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Untouched Name');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Remove Day 2');
+
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    expect(updateProgrammeName).toHaveBeenCalledWith('prog-1', 'Untouched Name');
+    expect(activatePlanWithBlock).toHaveBeenCalledWith('user-1', 'prog-1', 'Untouched Name');
+    expect(tree.root.findAll(
+      n => n.props && n.props.children === 'Untouched Name',
+    ).length).toBeGreaterThan(0);
   });
 });
 
