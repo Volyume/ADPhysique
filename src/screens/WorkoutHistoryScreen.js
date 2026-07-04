@@ -12,6 +12,7 @@ import { addMonths } from 'date-fns/addMonths';
 import { subMonths } from 'date-fns/subMonths';
 import { isSameDay } from 'date-fns/isSameDay';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
@@ -639,7 +640,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Workout history" />
       <FlashList
         data={filteredWorkouts}
         keyExtractor={item => item.workout.id}

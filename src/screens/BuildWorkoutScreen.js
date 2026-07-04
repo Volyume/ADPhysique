@@ -8,6 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -193,15 +194,15 @@ export default function BuildWorkoutScreen({ navigation }) {
     return s === 0 ? `${m}m` : `${m}m ${s}s`;
   }
 
+  const skipSetupButton = (
+    <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Skip setup and start an empty session">
+      <Text style={styles.skipText}>Skip Setup</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Skip setup and start an empty session">
-          <Text style={styles.skipText}>Skip Setup</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Build Workout</Text>
-        <View style={{ width: 80 }} />
-      </View>
+      <BackHeader title="Build workout" right={skipSetupButton} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Add exercises and set your targets before you start.</Text>
@@ -443,23 +444,9 @@ export default function BuildWorkoutScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
   skipText: {
     ...type.label,
     color: colors.textSecondary,
-    width: 80,
-  },
-  headerTitle: {
-    ...type.title,
-    color: colors.textPrimary,
   },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.md },

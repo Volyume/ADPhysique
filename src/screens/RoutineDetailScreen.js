@@ -5,6 +5,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import {
@@ -116,30 +117,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routineId]);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setIsReordering(prev => !prev)}
-          style={{ marginRight: spacing.lg }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
-        >
-          <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
-            {isReordering ? 'Done' : 'Reorder'}
-          </Text>
-        </TouchableOpacity>
-      ),
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReordering]);
-
   async function loadRoutine() {
     const r = await getRoutineById(routineId);
     if (!r) return;
     setRoutine(r);
-    navigation.setOptions({ title: r.name });
 
     const withExercises = await getRoutineExercisesWithDetails(routineId);
     setExercises(withExercises);
@@ -316,8 +297,22 @@ export default function RoutineDetailScreen({ navigation, route }) {
     if (gid && !supersetGroupOrder.includes(gid)) supersetGroupOrder.push(gid);
   }
 
+  const reorderToggle = (
+    <TouchableOpacity
+      onPress={() => setIsReordering(prev => !prev)}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
+    >
+      <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+        {isReordering ? 'Done' : 'Reorder'}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Edit workout" right={reorderToggle} />
       <FlashList
         data={exercises}
         keyExtractor={item => item.routineExercise.id}

@@ -16,6 +16,7 @@ import {
 import { track } from '../lib/engineTelemetry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -221,7 +222,6 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       const ex = await getExerciseById(exerciseId);
       if (!ex) return; // exercise not found, screen will stay on null guard
       setExercise(ex);
-      navigation.setOptions({ title: ex.name });
 
       // History, group by workout, last 8 sessions
       const mySets = await getWorkoutSetsForExercise(exerciseId, user.id, 200);
@@ -343,6 +343,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     // spinner, so it reads as the screen filling in rather than stalling.
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Exercise" />
         <View style={{ padding: spacing.md, gap: spacing.md }}>
           <SkeletonCard height={120} />
           <SkeletonCard height={180} />
@@ -411,7 +412,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title={exercise.name} />
       <ScrollView contentContainerStyle={styles.content}>
         {/* Overview */}
         <AnimatedEntrance index={0}>
