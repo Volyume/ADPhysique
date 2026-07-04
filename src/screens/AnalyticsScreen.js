@@ -714,7 +714,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         {hasData && completedWorkoutCount > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Lifetime totals</Text>
-            <View style={styles.lifetimePanel}>
+            <Card radius="md" padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
                 <Text style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
                 <Text style={styles.lifetimeLabel}>
@@ -735,7 +735,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   {lifetimeReps === 1 ? 'rep' : 'reps'}
                 </Text>
               </View>
-            </View>
+            </Card>
           </View>
         )}
 
@@ -810,7 +810,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 function InsightRow({ insight, onDismiss }) {
   const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
   return (
-    <View style={[styles.insightRow, { borderLeftColor: sev.color }]}>
+    <Card padding="md" radius="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
       <Text style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
@@ -822,7 +822,7 @@ function InsightRow({ insight, onDismiss }) {
       >
         <Ionicons name="close" size={14} color={colors.textMuted} />
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 }
 
@@ -1018,7 +1018,7 @@ function SessionCard({ workout }) {
   const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
   const diff = workout.sessionDifficulty ?? null;
   return (
-    <View style={styles.sessionCard}>
+    <Card radius="md" style={styles.sessionCard}>
       <View style={styles.sessionLeft}>
         <Text style={styles.sessionName} numberOfLines={1}>{name}</Text>
         <Text style={styles.sessionMeta}>
@@ -1033,7 +1033,7 @@ function SessionCard({ workout }) {
           </Text>
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -1116,8 +1116,6 @@ const styles = StyleSheet.create({
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   insightRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     borderLeftWidth: 3,
   },
   insightCopy:    { ...type.bodySm, flex: 1, color: colors.textSecondary },
@@ -1159,8 +1157,6 @@ const styles = StyleSheet.create({
   // ── Lifetime totals panel ──
   lifetimePanel: {
     flexDirection: 'row', alignItems: 'stretch',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
     paddingVertical: spacing.lg, paddingHorizontal: spacing.md,
   },
   lifetimeCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
@@ -1174,8 +1170,6 @@ const styles = StyleSheet.create({
   // ── Recent sessions ──
   sessionCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
     gap: spacing.md,
   },
   sessionLeft:  { flex: 1 },

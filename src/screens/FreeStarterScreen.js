@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import {
   getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock,
 } from '../lib/database';
@@ -192,7 +193,7 @@ export default function FreeStarterScreen({ navigation, route }) {
               Built for people starting out. Every session tells you exactly what to do:
               the exercises, the sets, and the reps.
             </Text>
-            <View style={styles.resultCard}>
+            <Card style={styles.resultCard}>
               <View style={styles.resultBadge}>
                 <Text style={styles.resultBadgeText}>Beginner friendly</Text>
               </View>
@@ -206,7 +207,7 @@ export default function FreeStarterScreen({ navigation, route }) {
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
                 ].filter(Boolean).join(' · ')}
               </Text>
-            </View>
+            </Card>
             <Button
               title="Start with this plan"
               size="lg"
@@ -293,10 +294,12 @@ const styles = StyleSheet.create({
     ...type.bodySm, color: colors.textSecondary,
     textAlign: 'center', marginTop: -spacing.sm,
   },
+  // backgroundColor/borderRadius/padding now come from Card's defaults
+  // (surface, radius.lg, spacing.lg); borderColor stays explicit since
+  // this card's tint (0.251 alpha) doesn't match Card's tone alpha (0.33).
   resultCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-    padding: spacing.lg, gap: spacing.sm,
+    gap: spacing.sm,
   },
   resultBadge: {
     alignSelf: 'flex-start',

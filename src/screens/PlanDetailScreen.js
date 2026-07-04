@@ -21,6 +21,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+import Card from '../components/Card';
 
 // Same reading order the enrollment reveal uses: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -290,14 +291,14 @@ export default function PlanDetailScreen({ navigation, route }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Workouts</Text>
           {workouts.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <Card padding="xl" style={styles.emptyCard}>
               <Text style={styles.emptyCardText}>
                 {isLibrary ? 'No workouts in this plan.' : 'No workouts yet. Edit the plan to add workouts.'}
               </Text>
-            </View>
+            </Card>
           ) : (
             workouts.map((routine, i) => (
-              <View key={routine.id} style={styles.workoutCard}>
+              <Card key={routine.id} style={styles.workoutCard}>
                 <View style={styles.workoutIndex}>
                   <Text style={styles.workoutIndexText}>{i + 1}</Text>
                 </View>
@@ -333,7 +334,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
+              </Card>
             ))
           )}
         </View>
@@ -344,14 +345,14 @@ export default function PlanDetailScreen({ navigation, route }) {
         {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Why this plan, for you</Text>
-            <View style={styles.whyCard}>
+            <Card style={styles.whyCard}>
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
                   <View style={styles.whyBullet} />
                   <Text style={styles.whyText}>{whyThis[k]}</Text>
                 </View>
               ))}
-            </View>
+            </Card>
           </View>
         )}
 
@@ -360,7 +361,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         {!isLibrary && tier !== 'pro' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage</Text>
-            <View style={styles.manageCard}>
+            <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Edit Plan</Text>
@@ -378,7 +379,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
-            </View>
+            </Card>
           </View>
         )}
       </ScrollView>
@@ -417,14 +418,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...type.label, color: colors.textSecondary,
   },
+  // Card owns background/radius/padding/border here.
   emptyCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center',
+    alignItems: 'center',
   },
   emptyCardText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
   workoutCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   workoutIndex: {
     width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.surface2,
@@ -443,8 +443,10 @@ const styles = StyleSheet.create({
     width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.primary, borderRadius: radius.md,
   },
+  // Card owns background/radius/border here; overflow clips row dividers to
+  // the rounded corner.
   manageCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    overflow: 'hidden',
   },
   manageRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -452,9 +454,9 @@ const styles = StyleSheet.create({
   },
   manageRowLast: { borderBottomWidth: 0 },
   manageRowText: { flex: 1, ...type.body, color: colors.textPrimary },
+  // Card owns background/radius/padding/border here.
   whyCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
+    gap: spacing.sm,
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },

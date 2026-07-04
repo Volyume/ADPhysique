@@ -13,6 +13,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import ConsistencyEcho from '../components/ConsistencyEcho';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
 import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
@@ -1595,7 +1596,7 @@ export default function HomeScreen({ navigation, route }) {
             docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
             states. No weight/calorie line here (ED-safety). */}
         {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
-          <View style={styles.welcomeCard}>
+          <Card style={styles.welcomeCard}>
             <View style={styles.welcomeHead}>
               <Text style={styles.welcomeTitle}>Welcome to Volyume</Text>
               <TouchableOpacity
@@ -1621,7 +1622,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.welcomeStepBody}>Every session you log sharpens your plan. There is nothing to set up.</Text>
               </View>
             </View>
-          </View>
+          </Card>
         )}
 
         {/* ── Primary workout area ── */}
@@ -1643,7 +1644,7 @@ export default function HomeScreen({ navigation, route }) {
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
-          <View style={styles.heroCard}>
+          <Card surface="surfaceElevated" style={styles.heroCard}>
             <Text style={styles.heroEyebrow} numberOfLines={1}>
               {planProgress}
             </Text>
@@ -1748,7 +1749,7 @@ export default function HomeScreen({ navigation, route }) {
                 same resolver as the Progress strip so the number never disagrees;
                 absent under ED flag / SCOFF / calm mode. */}
             <ConsistencyEcho userId={user?.id} scoffScore={userProfile?.scoffScore} />
-          </View>
+          </Card>
         ) : (
           <View style={styles.noPlanSection}>
             {tier === 'pro' ? (
@@ -1813,7 +1814,7 @@ export default function HomeScreen({ navigation, route }) {
 
             {/* Progress at a glance, shown when there's history but no plan */}
             {lastSession != null && (
-              <View style={styles.glanceCard}>
+              <Card style={styles.glanceCard}>
                 <Text style={styles.glanceTitle}>Your progress at a glance</Text>
                 <View style={styles.glanceRow}>
                   <View style={styles.glanceStat}>
@@ -1828,7 +1829,7 @@ export default function HomeScreen({ navigation, route }) {
                     <Text style={styles.glanceStatLabel}>Last session</Text>
                   </View>
                 </View>
-              </View>
+              </Card>
             )}
 
             {/* Pro keeps the quick-start escape hatch while cloud restore
@@ -1907,9 +1908,10 @@ export default function HomeScreen({ navigation, route }) {
             compressed to a label line, a one-line name and an inline meta
             line instead of a card-sized sibling to the hero. ── */}
         {lastSession && (
-          <PressableCard
+          <Card
             style={styles.lastSessionCard}
             onPress={() => navigation.navigate('WorkoutHistory')}
+            padding="none"
             accessibilityLabel="Open workout history"
           >
             <View style={{ flex: 1, gap: spacing.xxs }}>
@@ -1950,7 +1952,7 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="refresh-outline" size={13} color={colors.primary} />
               <Text style={styles.repeatBtnText}>Repeat</Text>
             </TouchableOpacity>
-          </PressableCard>
+          </Card>
         )}
 
 
@@ -2374,11 +2376,6 @@ const styles = StyleSheet.create({
   // D3 (design audit 03): the hero is the screen's ONLY elevated object,
   // surfaceElevated ranks it above every flat surface card in the stack.
   heroCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   heroEyebrow: {
@@ -2469,11 +2466,6 @@ const styles = StyleSheet.create({
   // No plan, plan-first section
   // First-launch welcome guide
   welcomeCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.md,
   },
   welcomeHead: {
@@ -2567,11 +2559,6 @@ const styles = StyleSheet.create({
 
   // Progress at a glance (no-plan + has history)
   glanceCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.md,
   },
   glanceTitle: {
@@ -2610,12 +2597,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   lastSessionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,

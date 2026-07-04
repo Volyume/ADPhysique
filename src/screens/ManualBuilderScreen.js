@@ -136,7 +136,7 @@ function PlanBalanceCard({ days }) {
       </View>
 
       {warnings.length > 0 && (
-        <View style={balanceStyles.warningBox}>
+        <Card surface="surface2" radius="md" padding="md" style={balanceStyles.warningBox}>
           {warnings.map(({ muscle, status }) => (
             <View key={muscle} style={balanceStyles.warningRow}>
               <Ionicons
@@ -151,11 +151,11 @@ function PlanBalanceCard({ days }) {
               </Text>
             </View>
           ))}
-        </View>
+        </Card>
       )}
 
       {overloaded.length > 0 && (
-        <View style={balanceStyles.warningBox}>
+        <Card surface="surface2" radius="md" padding="md" style={balanceStyles.warningBox}>
           {overloaded.map(({ muscle }) => (
             <View key={muscle} style={balanceStyles.warningRow}>
               <Ionicons name="warning-outline" size={14} color={colors.error} />
@@ -164,7 +164,7 @@ function PlanBalanceCard({ days }) {
               </Text>
             </View>
           ))}
-        </View>
+        </Card>
       )}
     </Card>
   );
@@ -1096,7 +1096,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       {/* Success Modal */}
       <Modal visible={successModal} transparent animationType="fade" onRequestClose={() => setSuccessModal(false)}>
         <View style={styles.successOverlay}>
-          <View style={styles.successCard}>
+          <Card radius="xl" padding="xxl" style={styles.successCard}>
             <View style={styles.successIconWrap}>
               <Ionicons name="checkmark-circle" size={48} color={colors.success} />
             </View>
@@ -1122,7 +1122,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                 <Text style={styles.successPrimaryText}>Go to Train</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Card>
         </View>
       </Modal>
     </SafeAreaView>
@@ -1454,13 +1454,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
   },
+  // Card owns background/radius/padding/border here.
   successCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xxl,
     width: '100%',
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     gap: spacing.md,
   },
@@ -1559,10 +1555,8 @@ const balanceStyles = StyleSheet.create({
     minWidth: 24,
     textAlign: 'right',
   },
+  // Card owns background/radius/padding here.
   warningBox: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.md,
     gap: spacing.sm,
   },
   warningRow: {

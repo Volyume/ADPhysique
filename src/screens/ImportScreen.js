@@ -22,6 +22,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import PressableCard from '../components/PressableCard';
+import Card from '../components/Card';
 import {
   parseCSV, detectFormat, parseHevy, parseStrong,
   analyzeImport, runImport,
@@ -160,13 +161,13 @@ export default function ImportScreen({ navigation }) {
           <>
             <View style={styles.sourcesBlock}>
               {SOURCES.map(src => (
-                <View key={src.key} style={styles.sourceCard}>
+                <Card key={src.key}>
                   <View style={styles.sourceHead}>
                     <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
                     <Text style={styles.sourceName}>{src.name}</Text>
                   </View>
                   <Text style={styles.sourceText}>{src.instructions}</Text>
-                </View>
+                </Card>
               ))}
             </View>
 
@@ -188,7 +189,7 @@ export default function ImportScreen({ navigation }) {
 
         {stage === 'preview' && analysis && (
           <>
-            <View style={styles.previewCard}>
+            <Card style={styles.previewCard}>
               <Text style={styles.previewSource}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
               <View style={styles.statRow}>
                 <Stat label="Sessions" value={analysis.workoutCount} />
@@ -233,7 +234,7 @@ export default function ImportScreen({ navigation }) {
                   </Text>
                 </View>
               )}
-            </View>
+            </Card>
 
             <PressableCard onPress={handleConfirmImport} style={styles.primaryCta}>
               <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
@@ -256,7 +257,7 @@ export default function ImportScreen({ navigation }) {
 
         {stage === 'done' && result && (
           <>
-            <View style={styles.doneCard}>
+            <Card padding="xl" style={styles.doneCard}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
               <Text style={styles.doneTitle}>Welcome to Volyume</Text>
               <Text style={styles.doneBody}>
@@ -265,7 +266,7 @@ export default function ImportScreen({ navigation }) {
                   ? ` Skipped ${result.skipped} that were already imported.`
                   : ''}
               </Text>
-            </View>
+            </Card>
             <PressableCard onPress={() => navigation.goBack()} style={styles.primaryCta}>
               <Text style={styles.primaryCtaText}>Done</Text>
             </PressableCard>
@@ -312,13 +313,9 @@ const styles = StyleSheet.create({
   },
 
   sourcesBlock: { gap: spacing.md, marginBottom: spacing.xl },
-  sourceCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
+  // sourceCard was backgroundColor colors.surface, borderRadius radius.lg,
+  // borderWidth 1, borderColor colors.border, padding spacing.lg, i.e. Card's
+  // defaults exactly, so it's now the bare <Card> with no style needed.
   sourceHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,12 +379,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
+  // backgroundColor/borderRadius/border/padding now come from Card's defaults
+  // (surface, radius.lg, 1px colors.border, spacing.lg); only the spacing
+  // below the card stays local.
   previewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     marginBottom: spacing.md,
   },
   previewSource: {
@@ -450,12 +445,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
+  // backgroundColor/borderRadius/padding now come from Card (surface,
+  // radius.lg, padding="xl"); borderColor stays explicit (a solid success
+  // border, not Card's translucent tone tint).
   doneCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.success,
-    padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.sm,
   },

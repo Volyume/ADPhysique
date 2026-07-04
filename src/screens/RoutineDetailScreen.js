@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
@@ -49,7 +50,7 @@ function MuscleTagRow({ exercises }) {
   if (coverage.length === 0) return null;
 
   return (
-    <View style={tagStyles.section}>
+    <Card style={tagStyles.section}>
       <Text style={tagStyles.sectionTitle}>Muscle coverage</Text>
       <ScrollView
         horizontal
@@ -79,7 +80,7 @@ function MuscleTagRow({ exercises }) {
           );
         })}
       </ScrollView>
-    </View>
+    </Card>
   );
 }
 
@@ -601,10 +602,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
             contentContainerStyle={{ padding: spacing.lg }}
             ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
             renderItem={({ item }) => (
-              <TouchableOpacity
+              <Card
+                radius="md"
                 style={styles.swapItem}
                 onPress={() => handleConfirmSwap(item.exercise)}
-                accessibilityRole="button"
                 accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
@@ -612,7 +613,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Text style={styles.swapItemReason}>{item.reason}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
+              </Card>
             )}
             ListEmptyComponent={
               <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
@@ -814,15 +815,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
   },
+  // Card owns background/radius/padding/border here.
   swapItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   swapItemName: {
     ...type.bodyStrong,
@@ -838,13 +835,9 @@ const styles = StyleSheet.create({
 });
 
 const tagStyles = StyleSheet.create({
+  // Card owns background/radius/padding/border here.
   section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   sectionTitle: {

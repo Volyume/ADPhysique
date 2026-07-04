@@ -14,6 +14,7 @@ import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -225,9 +226,9 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
       {selectedDivision && (() => {
         const d = ALL_DIVISIONS.find(x => x.key === selectedDivision);
         return d ? (
-          <View style={styles.divisionDesc}>
+          <Card surface="surface2" radius="md" padding="md" style={styles.divisionDesc}>
             <Text style={styles.divisionDescText}>{d.desc}</Text>
-          </View>
+          </Card>
         ) : null;
       })()}
     </View>
@@ -489,11 +490,9 @@ export default function PlanLibraryScreen({ navigation, route }) {
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListHeaderComponent={
           showQuizBanner ? (
-            <TouchableOpacity
+            <Card
               style={styles.quizBanner}
               onPress={openQuiz}
-              activeOpacity={0.88}
-              accessibilityRole="button"
               accessibilityLabel="Not sure where to start? Answer 2 quick questions for a plan suggestion"
             >
               <View style={styles.quizBannerIcon}>
@@ -504,7 +503,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Text style={styles.quizBannerBody}>Answer 2 quick questions and we'll point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
+            </Card>
           ) : null
         }
         ListEmptyComponent={
@@ -545,7 +544,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
           const wc = workoutCounts[plan.id];
 
           return (
-            <View style={styles.planCard}>
+            <Card padding="none" style={styles.planCard}>
               <TouchableOpacity
                 style={styles.planCardMain}
                 onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
@@ -601,7 +600,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   <Text style={styles.addBtnText}>Add to my plans</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Card>
           );
         }}
       />
@@ -635,12 +634,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Text style={styles.quizQuestion}>{QUIZ_STEPS[quizStep].question}</Text>
                 <View style={styles.quizOptions}>
                   {QUIZ_STEPS[quizStep].options.map(opt => (
-                    <TouchableOpacity
+                    <Card
                       key={opt.key}
+                      surface="surface2"
+                      radius="md"
+                      padding="md"
                       style={styles.quizOptionBtn}
                       onPress={() => handleQuizOption(QUIZ_STEPS[quizStep].key, opt.key)}
-                      activeOpacity={0.82}
-                      accessibilityRole="button"
                       accessibilityLabel={opt.label}
                     >
                       {opt.icon && (
@@ -648,7 +648,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       )}
                       <Text style={styles.quizOptionText}>{opt.label}</Text>
                       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
+                    </Card>
                   ))}
                 </View>
                 <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz} accessibilityRole="button">
@@ -662,7 +662,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
                 </View>
                 <Text style={styles.quizResultTitle}>Here's our suggestion</Text>
-                <View style={styles.quizResultCard}>
+                <Card surface="surface2" style={styles.quizResultCard}>
                   <Text style={styles.quizResultName}>{quizResult.name}</Text>
                   {quizResult.description ? (
                     <Text style={styles.quizResultDesc} numberOfLines={3}>{quizResult.description}</Text>
@@ -673,7 +673,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       {workoutCounts[quizResult.id] ? ` · ${workoutCounts[quizResult.id]} workouts` : ''}
                     </Text>
                   )}
-                </View>
+                </Card>
                 <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizStartPlan} activeOpacity={0.88} accessibilityRole="button" accessibilityLabel={`Add ${quizResult.name}`}>
                   <Text style={styles.quizStartText}>Add this plan</Text>
                 </TouchableOpacity>
@@ -755,22 +755,19 @@ const styles = StyleSheet.create({
   divisionChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   divisionChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   divisionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  // Card owns background/radius/padding/border here.
   divisionDesc: {
-    marginTop: spacing.md, backgroundColor: colors.surface2,
-    borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
+    marginTop: spacing.md,
   },
   divisionDescText: { ...type.bodySm, color: colors.textSecondary },
 
   // Plan list
   listContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
 
-  // Quiz banner
+  // Quiz banner. Card owns background/radius/padding/border here.
   quizBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, marginBottom: spacing.lg,
+    marginBottom: spacing.lg,
   },
   quizBannerIcon: {
     width: 40, height: 40, borderRadius: radius.xl,
@@ -779,10 +776,10 @@ const styles = StyleSheet.create({
   quizBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
   quizBannerBody: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
 
-  // Plan card
+  // Plan card. Card owns background/radius/border; overflow clips the
+  // footer's top border to the rounded corner.
   planCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    overflow: 'hidden',
   },
   planCardMain: { padding: spacing.lg, gap: spacing.sm },
   planCardTopRow: {
@@ -846,11 +843,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   quizOptions: { gap: spacing.sm },
+  // Card owns background/radius/padding/border here.
   quizOptionBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, gap: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   quizOptionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.medium },
   quizSkip: { alignSelf: 'center', paddingVertical: spacing.sm },
@@ -862,10 +857,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
   },
+  // Card owns background/radius/padding/border here.
   quizResultCard: {
-    backgroundColor: colors.surface2, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.sm,
+    gap: spacing.sm,
   },
   quizResultName: { ...type.bodyStrong, color: colors.textPrimary },
   quizResultDesc: { ...type.bodySm, color: colors.textSecondary },

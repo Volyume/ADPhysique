@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { Text, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -83,14 +84,14 @@ export default function FirstRunScreen({ navigation }) {
           onPress={finish}
         />
 
-        <View style={styles.hintCard}>
+        <Card radius="md" padding="md" style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
           <Text style={styles.hintText}>
             Next, three quick questions and we'll suggest a starter plan.{' '}
             Prefer to pick your own? You can <Text style={styles.hintBold}>skip</Text>{' '}
             and browse the library instead.
           </Text>
-        </View>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,11 +109,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   inputActive: { borderColor: colors.primary },
+  // backgroundColor/borderRadius/padding/border now come from Card
+  // (surface, radius="md", padding="md", 1px colors.border).
   hintCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.md, marginTop: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
+    marginTop: spacing.lg,
   },
   hintText: { ...type.captionTight, flex: 1, color: colors.textSecondary },
   hintBold: { color: colors.textPrimary, fontWeight: fontWeight.semibold },

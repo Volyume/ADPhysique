@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
@@ -203,7 +204,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
           </Animated.View>
 
           {/* 1. Log your weight, first thing each morning */}
-          <Animated.View entering={stage(1)} style={styles.routineCard}>
+          <Animated.View entering={stage(1)}>
+          <Card style={styles.routineCardChrome}>
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
                 <Ionicons name="scale-outline" size={18} color={colors.primary} />
@@ -215,11 +217,13 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 </Text>
               </View>
             </View>
+          </Card>
           </Animated.View>
 
           {/* 2. Hit your calorie + macro targets */}
           {nutritionSummary?.targetKcal ? (
-            <Animated.View entering={stage(2)} style={styles.routineCard}>
+            <Animated.View entering={stage(2)}>
+            <Card style={styles.routineCardChrome}>
               <View style={styles.routineHeader}>
                 <View style={styles.routineIconWrap}>
                   <Ionicons name="flame-outline" size={18} color={colors.primary} />
@@ -314,6 +318,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   {!buildingMeals ? <Ionicons name="chevron-forward" size={14} color={colors.primary} /> : null}
                 </TouchableOpacity>
               )}
+            </Card>
             </Animated.View>
           ) : null}
 
@@ -383,7 +388,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
           </Animated.View>
 
           {/* 4. Check in once a week */}
-          <Animated.View entering={stage(4)} style={styles.routineCard}>
+          <Animated.View entering={stage(4)}>
+          <Card style={styles.routineCardChrome}>
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
@@ -417,6 +423,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <Text style={styles.eduLearnText}>How Precision Coaching works</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
+          </Card>
           </Animated.View>
 
         </View>
@@ -468,6 +475,19 @@ const styles = StyleSheet.create({
     ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xl,
   },
 
+  // Cards 1, 2 and 4 (plain, non-collapsible) now render via the shared
+  // Card component; this is just the residual chrome Card doesn't own
+  // (its hairline border is 1px, this reveal has always drawn 1.5px, so
+  // it stays explicit here to keep the conversion visually identical).
+  // backgroundColor/borderRadius/padding come from Card's defaults
+  // (surface, radius.lg, spacing.lg) and match what this used to set.
+  routineCardChrome: {
+    borderWidth: 1.5, borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  // Card 3 (the collapsible split card) stays a hand-rolled TouchableOpacity:
+  // it needs accessibilityState={{expanded}} which Card doesn't forward, so
+  // it keeps its own full chrome rather than going through Card.
   routineCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1.5, borderColor: colors.border,

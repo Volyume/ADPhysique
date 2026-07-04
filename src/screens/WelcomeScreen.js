@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, motion } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import Card from '../components/Card';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
@@ -80,7 +81,7 @@ export default function WelcomeScreen({ navigation }) {
 
           {/* OB-1: the one trial card. Everyone starts with the full app for
               14 days; the CTA says exactly that. */}
-          <TouchableOpacity style={styles.proCard} onPress={startTrial} activeOpacity={0.88}>
+          <Card radius="xl" padding="none" style={styles.proCard} onPress={startTrial}>
             <View style={styles.proCardHeader}>
               <View style={styles.proIconWrap}>
                 <Ionicons name="sparkles" size={20} color={colors.primary} />
@@ -118,12 +119,12 @@ export default function WelcomeScreen({ navigation }) {
               <Text style={styles.proCtaText}>Start your 14 days</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
             </View>
-          </TouchableOpacity>
+          </Card>
 
           {/* OB-1: the free tier stated honestly as what remains after the
               trial. Informational, not a competing choice (the old Free CTA
               was a dead control: it routed to the identical sign-up). */}
-          <View style={styles.freeCard}>
+          <Card radius="xl" style={styles.freeCard}>
             <View style={styles.freeCardHeader}>
               <View style={styles.freeIconWrap}>
                 <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
@@ -142,7 +143,7 @@ export default function WelcomeScreen({ navigation }) {
                 </View>
               ))}
             </View>
-          </View>
+          </Card>
         </Animated.View>
 
         {/* Trust row (COMP-012): one muted, non-interactive line that
@@ -199,10 +200,12 @@ const styles = StyleSheet.create({
 
   cards: { gap: spacing.md },
 
-  // Pro card
+  // Pro card. backgroundColor/borderRadius/padding now come from Card
+  // (surface, radius="xl", padding="none"); borderWidth/borderColor stay
+  // explicit because this card's accent border is solid primary, not
+  // Card's tone (a translucent tint), and the shadow is unique to this
+  // hero card so it isn't part of Card's own styling.
   proCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
     borderWidth: 1.5,
     borderColor: colors.primary,
     overflow: 'hidden',
@@ -249,13 +252,10 @@ const styles = StyleSheet.create({
   },
   proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
-  // Free card
+  // Free card. backgroundColor/borderWidth/borderColor/padding now come
+  // from Card's defaults (surface, 1px colors.border, spacing.lg); only
+  // the radius="xl" override and this card's own gap stay local.
   freeCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   freeCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

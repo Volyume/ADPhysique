@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Application from 'expo-application';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
@@ -124,7 +125,7 @@ export default function YouScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile */}
-        <View style={styles.profileCard}>
+        <Card style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{(displayName?.[0] || 'Y').toUpperCase()}</Text>
           </View>
@@ -142,7 +143,7 @@ export default function YouScreen({ navigation }) {
               <Skeleton width={88} height={12} />
             ) : null}
           </View>
-        </View>
+        </Card>
 
         {/* Go Pro (free only) */}
         {!isPro && (
@@ -272,8 +273,6 @@ const styles = StyleSheet.create({
 
   profileCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   avatar: {
     width: 56, height: 56, borderRadius: circle(56),

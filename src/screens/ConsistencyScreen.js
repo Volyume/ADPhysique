@@ -1,9 +1,10 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import AnimatedEntrance from '../components/AnimatedEntrance';
+import Card from '../components/Card';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
@@ -47,7 +48,7 @@ export default function ConsistencyScreen({ navigation }) {
 
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
-          <View style={styles.deloadBanner}>
+          <Card tone="warning" style={styles.deloadBanner}>
             <Ionicons name="moon-outline" size={18} color={colors.warning} />
             <View style={{ flex: 1 }}>
               <Text style={styles.deloadTitle}>Lighter week recommended</Text>
@@ -61,7 +62,7 @@ export default function ConsistencyScreen({ navigation }) {
               'This gives your body a chance to recover and absorb all the work you have been putting in.\n\n' +
               'Most people feel noticeably stronger in the first session back after a proper recovery week.'
             } size={13} />
-          </View>
+          </Card>
         )}
 
         {/* ── Training block ── */}
@@ -151,9 +152,6 @@ const styles = StyleSheet.create({
   sectionLabel: { ...type.label, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.376),
-    padding: spacing.lg,
   },
   deloadTitle: { ...type.bodyStrong, color: colors.warning, marginBottom: spacing.xxs },
   deloadSub: { ...type.bodySm, color: colors.textSecondary },

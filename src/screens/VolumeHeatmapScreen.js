@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
+import Card from '../components/Card';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan } from '../lib/database';
@@ -342,7 +343,7 @@ export default function VolumeHeatmapScreen() {
         </View>
 
         {/* Legend */}
-        <View style={styles.legendRow}>
+        <Card padding="md" radius="md" style={styles.legendRow}>
           <LegendItem color={colors.textMuted} label="Below minimum" />
           <LegendItem color={colors.success} label="Optimal" />
           <LegendItem color={colors.warning} label="Getting close" />
@@ -355,12 +356,12 @@ export default function VolumeHeatmapScreen() {
             '  End of bar: beyond this, recovery suffers\n\n' +
             'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit Volume Targets" button below.'
           } />
-        </View>
+        </Card>
 
         {/* Recovery / freshness legend. A distinct layer from the volume bands
             above: this reads "how recently was each muscle trained", not "is it
             at target". Numbers/labels first, calm, a small dot per band. */}
-        <View style={styles.legendRow}>
+        <Card padding="md" radius="md" style={styles.legendRow}>
           <LegendItem color={FRESHNESS_META.fresh.color} label="Fresh" />
           <LegendItem color={FRESHNESS_META.recovering.color} label="Recovering" />
           <LegendItem color={FRESHNESS_META.fatigued.color} label="Recently trained" />
@@ -371,7 +372,7 @@ export default function VolumeHeatmapScreen() {
             '  Recently trained: trained today\n\n' +
             'Each muscle has a sensible recovery window, so larger muscles take longer to read as fresh. The dot beside each bar shows its current state.'
           } />
-        </View>
+        </Card>
 
         {/* Muscle Rows */}
         <View
@@ -456,7 +457,7 @@ export default function VolumeHeatmapScreen() {
 
         {/* Volume trend, hidden for new users with no data */}
         {trainedMuscles.length > 0 && (
-          <View style={styles.section}>
+          <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Volume trend</Text>
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
               accessibilityPrefix="volume trend window" />
@@ -469,12 +470,12 @@ export default function VolumeHeatmapScreen() {
                 customLandmarks={effectiveLandmarks}
               />
             ))}
-          </View>
+          </Card>
         )}
 
         {/* Edit Volume Targets */}
         {editing ? (
-          <View style={styles.editSection}>
+          <Card style={styles.editSection}>
             <Text style={styles.editTitle}>Edit Volume Targets</Text>
             <Text style={styles.editSubtitle}>Weekly sets per muscle · Minimum / Target / Ceiling</Text>
             {muscles.map(muscle => (
@@ -508,7 +509,7 @@ export default function VolumeHeatmapScreen() {
                 <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Card>
         ) : (
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel="Edit volume targets">
@@ -650,11 +651,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   heatmapCard: {
     backgroundColor: colors.surface,
@@ -725,12 +721,7 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
   section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   trendTakeaway: { ...type.bodySm, color: colors.textSecondary },
   sectionTitle: {
@@ -763,12 +754,7 @@ const styles = StyleSheet.create({
   },
   resetBtnText: { ...type.label, color: colors.error },
   editSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   editTitle: { ...type.title, color: colors.textPrimary },
   editSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: -spacing.sm },

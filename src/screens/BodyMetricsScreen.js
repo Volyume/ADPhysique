@@ -24,6 +24,7 @@ function safeFormatDate(value, fmt) {
 }
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import VolyumeChart from '../components/VolyumeChart';
+import Card from '../components/Card';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
@@ -372,7 +373,7 @@ const chartStyles = StyleSheet.create({
 
 function PhysiqueOptIn({ onEnable }) {
   return (
-    <View style={styles.optInCard}>
+    <Card radius="xl" padding="xxl" style={styles.optInCard}>
       <Ionicons name="lock-closed-outline" size={36} color={colors.textMuted} />
       <Text style={styles.optInTitle}>Physique Tracking</Text>
       <Text style={styles.optInBody}>
@@ -383,7 +384,7 @@ function PhysiqueOptIn({ onEnable }) {
         <Ionicons name="body-outline" size={18} color={colors.onPrimary} />
         <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 }
 
@@ -837,7 +838,7 @@ export default function BodyMetricsScreen() {
 
         {/* Weight trend + snapshot */}
         {history.length > 0 ? (
-          <View style={styles.snapshotCard}>
+          <Card style={styles.snapshotCard}>
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
@@ -870,7 +871,7 @@ export default function BodyMetricsScreen() {
             )}
 
             {/* EWMA smoothed weight trend card */}
-            <View style={styles.ewmaCard}>
+            <Card radius="md" padding="md" style={styles.ewmaCard}>
               {ewmaData.length >= 7 ? (
                 <>
                   <View style={styles.labelTipRow}>
@@ -905,10 +906,10 @@ export default function BodyMetricsScreen() {
                   Log your weight for 7 days to see your smoothed trend.
                 </Text>
               )}
-            </View>
+            </Card>
 
             {ewmaData.length >= 7 ? (
-              <View style={styles.burnCard}>
+              <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
                   <Text style={styles.burnLabel}>Estimated daily burn</Text>
                   {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
@@ -939,7 +940,7 @@ export default function BodyMetricsScreen() {
                     </View>
                   </>
                 )}
-              </View>
+              </Card>
             ) : null}
 
             {/* Recomposition reframe (ULTIMATE-RECOMP-01): when weight has held
@@ -968,9 +969,9 @@ export default function BodyMetricsScreen() {
                 <BodyFatTrendChart entries={history} />
               </View>
             )}
-          </View>
+          </Card>
         ) : (
-          <View style={styles.emptyCard}>
+          <Card padding="xxl" style={styles.emptyCard}>
             <EmptyBodyIllustration size={140} />
             <Text style={styles.emptyTitle}>Your progress starts here</Text>
             {onboardingWeightKg && !readOnly ? (
@@ -984,7 +985,7 @@ export default function BodyMetricsScreen() {
                 Log your body weight and measurements to track your physique over time.
               </Text>
             )}
-          </View>
+          </Card>
         )}
 
         {/* Log Button. E10 read-only: logging is a write; the button and the
@@ -1129,7 +1130,7 @@ export default function BodyMetricsScreen() {
 
         {/* Measurements snapshot + trend charts */}
         {latest && MEASUREMENTS.some(m => latest[m.key]) && (
-          <View style={styles.snapshotCard}>
+          <Card style={styles.snapshotCard}>
             <Text style={styles.sectionTitle}>Measurements</Text>
             <View style={styles.measureGrid}>
               {MEASUREMENTS.map(m => latest[m.key] ? (
@@ -1187,7 +1188,7 @@ export default function BodyMetricsScreen() {
                 )}
               </>
             )}
-          </View>
+          </Card>
         )}
 
         {/* History */}
@@ -1197,7 +1198,7 @@ export default function BodyMetricsScreen() {
             {history.slice(0, 12).map(entry => {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
-                <View key={entry.id} style={styles.historyRow}>
+                <Card key={entry.id} radius="md" padding="md" style={styles.historyRow}>
                   <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
                   <View style={styles.historyValues}>
                     {entry.body_weight ? (
@@ -1209,7 +1210,7 @@ export default function BodyMetricsScreen() {
                       </Text>
                     ))}
                   </View>
-                </View>
+                </Card>
               );
             })}
           </View>
@@ -1321,8 +1322,7 @@ const styles = StyleSheet.create({
   },
 
   optInCard: {
-    backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xxl,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.lg,
+    alignItems: 'center', gap: spacing.lg,
   },
   optInTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   optInBody: {
@@ -1349,15 +1349,13 @@ const styles = StyleSheet.create({
 
 
   emptyCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
+    alignItems: 'center', gap: spacing.md,
   },
   emptyTitle: { ...type.title, color: colors.textSecondary },
   emptyText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
 
   snapshotCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.md, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md,
   },
   snapshotHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1434,8 +1432,6 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
   },
   historyDate: { fontSize: fontSize.sm, color: colors.textSecondary },
   historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -1443,8 +1439,7 @@ const styles = StyleSheet.create({
   historyMeasure: { ...type.num('caption'), color: colors.textMuted },
 
   ewmaCard: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, padding: spacing.md, gap: spacing.xs,
+    gap: spacing.xs,
   },
   labelTipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   ewmaLabel: { ...type.caption, color: colors.textSecondary },
@@ -1453,8 +1448,7 @@ const styles = StyleSheet.create({
   ewmaMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   ewmaIntake: { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xs },
   burnCard: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, padding: spacing.md, gap: spacing.xs, marginTop: spacing.md,
+    gap: spacing.xs, marginTop: spacing.md,
   },
   burnLabel: { ...type.caption, color: colors.textSecondary },
   burnRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },

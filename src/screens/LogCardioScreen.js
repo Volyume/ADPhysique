@@ -14,8 +14,9 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import SegmentedControl from '../components/SegmentedControl';
 import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
@@ -192,7 +193,7 @@ export default function LogCardioScreen({ navigation, route }) {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.chosenRow} onPress={() => setActivity(null)} accessibilityRole="button" accessibilityLabel="Change activity">
+          <Card onPress={() => setActivity(null)} surface="surface2" radius="md" padding="md" style={styles.chosenRow} accessibilityLabel="Change activity">
             <View style={{ flex: 1 }}>
               <Text style={styles.chosenName}>{activity.displayName}</Text>
               <Text style={styles.chosenMeta}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
@@ -200,10 +201,10 @@ export default function LogCardioScreen({ navigation, route }) {
             <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
               <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={colors.primary} />
             </TouchableOpacity>
-          </TouchableOpacity>
+          </Card>
 
           <Text style={styles.fieldLabel}>Duration</Text>
-          <View style={styles.stepper}>
+          <Card surface="surface2" radius="md" padding="none" style={styles.stepper}>
             <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.max(5, d - 5))} accessibilityRole="button" accessibilityLabel="Less time">
               <Text style={styles.stepBtnText}>-</Text>
             </TouchableOpacity>
@@ -211,7 +212,7 @@ export default function LogCardioScreen({ navigation, route }) {
             <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.min(300, d + 5))} accessibilityRole="button" accessibilityLabel="More time">
               <Text style={styles.stepBtnText}>+</Text>
             </TouchableOpacity>
-          </View>
+          </Card>
 
           <Text style={styles.fieldLabel}>Intensity</Text>
           <SegmentedControl options={INTENSITY_OPTS} value={intensity} onChange={setIntensity} accessibilityLabel="Intensity" />
@@ -281,15 +282,12 @@ const styles = StyleSheet.create({
   activityName: { ...type.body, color: colors.textPrimary, flex: 1 },
   chosenRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
   },
   chosenName: { ...type.title, color: colors.textPrimary },
   chosenMeta: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
   fieldLabel: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.lg, marginBottom: spacing.xs },
   stepper: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
   stepBtn: { width: 56, height: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface3 },
   stepBtnText: { fontSize: fontSize.xxl, color: colors.primary, fontWeight: fontWeight.bold },
