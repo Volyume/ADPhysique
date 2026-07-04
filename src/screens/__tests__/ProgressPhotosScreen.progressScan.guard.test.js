@@ -33,9 +33,17 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('capture and deletion lifecycle cleans up scan assets', () => {
     expect(SCREEN).toMatch(/Use this photo\?/);
+    expect(SCREEN).toMatch(/cancelable: false/);
+    expect(SCREEN).toMatch(/Front saved[\s\S]*cancelable: false/);
+    expect(SCREEN).toMatch(/Back saved[\s\S]*cancelable: false/);
     expect(SCREEN).toMatch(/Retake/);
-    expect(SCREEN).toMatch(/deleteProgressScanSession\(userId, scanId, \{ deleteFiles: true \}\)/);
+    expect(SCREEN).toMatch(/const deleted = await deleteProgressScanSession\(userId, scanId, \{ deleteFiles: true \}\)/);
+    expect(SCREEN).toMatch(/if \(!deleted\) throw new Error\('progress_scan_discard_failed'\)/);
+    expect(SCREEN).toMatch(/progress_scan_retake_photo_delete_failed/);
+    expect(SCREEN).toMatch(/progress_scan_retake_meta_delete_failed/);
     expect(SCREEN).toMatch(/deleteScanEntry/);
     expect(SCREEN).toMatch(/detachProgressScanPhoto/);
+    expect(SCREEN).toMatch(/if \(!fileDeleted\) throw new Error\('progress_photo_delete_failed'\)/);
+    expect(SCREEN).toMatch(/if \(!metaDeleted\) throw new Error\('progress_photo_meta_delete_failed'\)/);
   });
 });

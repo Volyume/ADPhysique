@@ -108,6 +108,21 @@ async function statsForAssets(userId, assets = []) {
   };
 }
 
+async function deleteScanAssetFiles(userId, assets = []) {
+  for (const asset of assets || []) {
+    if (asset?.uri) {
+      // eslint-disable-next-line no-await-in-loop
+      const fileDeleted = await deleteProgressPhoto(userId, asset.uri);
+      if (!fileDeleted) throw new Error('progress_scan_photo_delete_failed');
+    }
+    if (asset?.photoName) {
+      // eslint-disable-next-line no-await-in-loop
+      const metaDeleted = await deletePhotoMeta(userId, asset.photoName);
+      if (!metaDeleted) throw new Error('progress_scan_photo_meta_delete_failed');
+    }
+  }
+}
+
 async function scanEntry(userId, scan) {
   if (!userId || !scan?.id) return scan;
   const assets = await getProgressScanAssets(userId, scan.id);
@@ -349,16 +364,7 @@ export async function deleteProgressScanSession(userId, scanId, opts = {}) {
   try {
     const assets = await getProgressScanAssets(userId, scanId);
     if (opts.deleteFiles) {
-      for (const asset of assets) {
-        if (asset?.uri) {
-          // eslint-disable-next-line no-await-in-loop
-          await deleteProgressPhoto(userId, asset.uri);
-        }
-        if (asset?.photoName) {
-          // eslint-disable-next-line no-await-in-loop
-          await deletePhotoMeta(userId, asset.photoName);
-        }
-      }
+      await deleteScanAssetFiles(userId, assets);
     }
     const d = await db();
     await d.runAsync('DELETE FROM progress_scan_assets WHERE user_id = ? AND scan_id = ?', [userId, scanId]);
