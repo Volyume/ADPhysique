@@ -1,9 +1,40 @@
+import bfEstimatorAsset from '../../assets/ml/progress_scan_bf_estimator_v1.json';
+
 export const REQUIRED_SCAN_POSES = ['front', 'back'];
 export const OPTIONAL_SCAN_POSES = ['side'];
 export const PHOTO_SCAN_SOURCE = 'photo_scan';
 export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
-export const PROGRESS_SCAN_ESTIMATOR_VERSION = 'progress_scan_measured_outline_v1';
+export const PROGRESS_SCAN_ESTIMATOR_VERSION = bfEstimatorAsset.id;
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
+export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v1';
+
+export const PROGRESS_SCAN_LEANNESS_BANDS = [
+  { key: 'foundation', label: 'Foundation', min: 0, max: 19 },
+  { key: 'active', label: 'Active', min: 20, max: 34 },
+  { key: 'athletic', label: 'Athletic', min: 35, max: 49 },
+  { key: 'defined', label: 'Defined', min: 50, max: 64 },
+  { key: 'lean', label: 'Lean', min: 65, max: 79 },
+  { key: 'very_lean', label: 'Very Lean', min: 80, max: 89 },
+  { key: 'peak_condition', label: 'Peak Condition', min: 90, max: 100 },
+];
+
+const PROGRESS_SIGNAL_COPY = {
+  baseline: 'Baseline scan',
+  clear_positive: 'Clear positive trend',
+  slight_positive: 'Slight positive trend',
+  holding_steady: 'Holding steady',
+  slight_drift: 'Slight drift',
+  clear_drift: 'Clear drift',
+  inconclusive: 'Inconclusive',
+};
+
+const SCAN_CONFIDENCE_COPY = {
+  high: 'High',
+  moderate: 'Moderate',
+  low: 'Low',
+  not_enough: 'Not enough confidence',
+  unknown: 'Unknown',
+};
 
 const COMPETITION_GOALS = new Set([
   'mens_physique',
@@ -36,6 +67,18 @@ function clamp(n, min, max) {
 
 function rounded1(n) {
   return Math.round(n * 10) / 10;
+}
+
+function rounded2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function rounded0(n) {
+  return Math.round(n);
+}
+
+function clamp01(n) {
+  return clamp(n, 0, 1);
 }
 
 export function normalisePose(pose) {
@@ -82,9 +125,9 @@ export function qualityScoreForAsset(asset = {}) {
 export function aggregateQuality(assets = []) {
   const scores = (assets || []).map((a) => finiteNumber(a.qualityScore) ?? qualityScoreForAsset(a)).filter((v) => v != null);
   if (scores.length === 0) return { score: null, label: 'unknown' };
-  const score = rounded1(scores.reduce((sum, v) => sum + v, 0) / scores.length);
-  const label = score >= 0.82 ? 'good' : score >= 0.64 ? 'usable' : 'poor';
-  return { score, label };
+  const rawScore = scores.reduce((sum, v) => sum + v, 0) / scores.length;
+  const label = rawScore >= 0.82 ? 'good' : rawScore >= 0.64 ? 'usable' : 'poor';
+  return { score: rounded1(rawScore), label };
 }
 
 export function abstentionReasonsForAssets(assets = []) {
@@ -150,6 +193,8 @@ export function uncertaintyMarginPctPoints({ quality = {}, biasFlags = [], baseM
   if (flags.has('physique_competition_context')) margin += 0.8;
   if (flags.has('model_signal_limited')) margin += 0.8;
   if (flags.has('physique_athlete_validation_pending')) margin += 1.0;
+  if (flags.has('anthropometric_limited')) margin += 0.8;
+  if (flags.has('side_pose_missing')) margin += 0.5;
   return rounded1(clamp(margin, 3.5, 9));
 }
 
@@ -175,27 +220,45 @@ export function compareScanEstimates(current, previous) {
     return { direction: 'uncertain', magnitudePctPoints: null, explanation: 'There is not enough scan data for a trend yet.' };
   }
   const delta = rounded1(cur - prev);
-  const curMargin = Math.abs((finiteNumber(current.estimateRangeHigh) ?? cur) - cur);
-  const prevMargin = Math.abs((finiteNumber(previous.estimateRangeHigh) ?? prev) - prev);
-  const noise = Math.max(1.5, Math.min(6, (curMargin + prevMargin) / 2));
-  if (Math.abs(delta) <= noise) {
+  const curLow = finiteNumber(current.estimateRangeLow);
+  const curHigh = finiteNumber(current.estimateRangeHigh);
+  const prevLow = finiteNumber(previous.estimateRangeLow);
+  const prevHigh = finiteNumber(previous.estimateRangeHigh);
+  const hasRanges = [curLow, curHigh, prevLow, prevHigh].every((v) => v != null)
+    && curLow <= curHigh
+    && prevLow <= prevHigh;
+
+  if (hasRanges && curLow <= prevHigh && prevLow <= curHigh) {
     return {
       direction: 'steady',
       magnitudePctPoints: Math.abs(delta),
-      explanation: 'The estimate moved, but it is still inside the scan range. Treat this as steady.',
+      explanation: 'The legacy uncertainty bands overlap, so treat this as steady rather than a clear directional change.',
     };
+  }
+  if (!hasRanges) {
+    const curMargin = Math.abs((finiteNumber(current.estimateRangeHigh) ?? cur) - cur);
+    const prevMargin = Math.abs((finiteNumber(previous.estimateRangeHigh) ?? prev) - prev);
+    const noise = Math.max(1.5, Math.min(6, (curMargin + prevMargin) / 2));
+    if (Math.abs(delta) <= noise) {
+      return {
+        direction: 'steady',
+        magnitudePctPoints: Math.abs(delta),
+        explanation: 'The legacy estimate moved, but it is still inside the uncertainty band. Treat this as steady.',
+      };
+    }
   }
   return {
     direction: delta < 0 ? 'down' : 'up',
     magnitudePctPoints: Math.abs(delta),
     explanation: delta < 0
-      ? 'The scan range supports a downward body-fat trend.'
-      : 'The scan range supports an upward body-fat trend.',
+      ? 'The legacy uncertainty bands do not overlap and support a lower visual trend.'
+      : 'The legacy uncertainty bands do not overlap and support a higher visual trend.',
   };
 }
 
 function scanSignals(scan = {}) {
-  return parseMaybeJson(scan.signals ?? scan.signalsJson, null) || {};
+  const safeScan = scan || {};
+  return parseMaybeJson(safeScan.signals ?? safeScan.signalsJson, null) || {};
 }
 
 function averagedSignalRatios(signals = {}) {
@@ -231,6 +294,233 @@ function measuredInputsFromAssets(assets = []) {
     waistToHeight: roundedRatio(avg('waistToHeight')),
     bodyAreaRatio: roundedRatio(avg('bodyAreaRatio')),
   };
+}
+
+function qualityMetricForAsset(asset = {}, assetKey, signalKey = assetKey) {
+  const signals = assetSignals(asset);
+  return finiteNumber(asset?.[assetKey]) ?? finiteNumber(signals?.quality?.[signalKey]);
+}
+
+function averageQualityMetric(assets = [], assetKey, signalKey = assetKey, fallback = null) {
+  const value = averageFinite((assets || []).map((asset) => qualityMetricForAsset(asset, assetKey, signalKey)));
+  return value == null ? fallback : clamp01(value);
+}
+
+function clothingAndOcclusionScore(assets = []) {
+  const scores = (assets || []).map((asset) => {
+    const signals = assetSignals(asset);
+    const reasons = new Set((signals?.abstentionReasons || []).map(canonicalReason));
+    if (reasons.has('clothing_or_background_uncertain') || reasons.has('whole_body_not_visible')) return 0.35;
+    const separation = finiteNumber(signals?.quality?.backgroundSeparation);
+    return separation == null ? 0.75 : clamp01(separation);
+  });
+  const score = averageFinite(scores);
+  return score == null ? 0.75 : clamp01(score);
+}
+
+function viewCompletenessScore(assets = []) {
+  const poses = new Set((assets || []).map((asset) => normalisePose(asset?.pose)).filter(Boolean));
+  const hasRequired = REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
+  if (!hasRequired) return 0.25;
+  return poses.has('side') ? 1 : 0.88;
+}
+
+function biasConfidencePenalty(biasFlags = []) {
+  const flags = new Set(biasFlags || []);
+  let penalty = 0;
+  if (flags.has('female_overestimation_risk')) penalty += 0.04;
+  if (flags.has('darker_skin_overestimation_risk')) penalty += 0.06;
+  if (flags.has('skin_tone_not_collected_validation_gap')) penalty += 0.03;
+  if (flags.has('very_muscular')) penalty += 0.04;
+  if (flags.has('large_body')) penalty += 0.03;
+  if (flags.has('stage_lean_or_prep')) penalty += 0.05;
+  if (flags.has('physique_competition_context')) penalty += 0.03;
+  if (flags.has('model_signal_limited')) penalty += 0.03;
+  if (flags.has('physique_athlete_validation_pending')) penalty += 0.04;
+  if (flags.has('side_pose_missing')) penalty += 0.02;
+  return clamp(penalty, 0, 0.22);
+}
+
+function confidenceTier(score) {
+  const n = finiteNumber(score);
+  if (n == null) return 'unknown';
+  if (n >= 0.85) return 'high';
+  if (n >= 0.70) return 'moderate';
+  if (n >= 0.55) return 'low';
+  return 'not_enough';
+}
+
+export function scanConfidenceLabel(tier) {
+  return SCAN_CONFIDENCE_COPY[tier] || SCAN_CONFIDENCE_COPY.unknown;
+}
+
+export function computeScanConfidenceScore({ assets = [], quality = {}, biasFlags = [], previousScan = null } = {}) {
+  const qualityFallback = finiteNumber(quality?.score) ?? 0.7;
+  const segmentation = averageQualityMetric(assets, 'segmentationConfidence', 'segmentationConfidence', qualityFallback);
+  const pose = averageQualityMetric(assets, 'landmarkConfidence', 'poseConfidence', qualityFallback);
+  const framing = averageQualityMetric(assets, 'framingScore', 'framingScore', qualityFallback);
+  const lighting = averageQualityMetric(assets, 'lightingScore', 'lightingScore', qualityFallback);
+  const clothing = clothingAndOcclusionScore(assets);
+  const completeness = viewCompletenessScore(assets);
+  const stability = averageQualityMetric(assets, 'blurScore', 'blurScore', qualityFallback);
+  const setupConsistency = previousScan ? 0.8 : 0.75;
+
+  const base =
+    segmentation * 0.22
+    + pose * 0.18
+    + framing * 0.14
+    + lighting * 0.12
+    + clothing * 0.14
+    + completeness * 0.10
+    + stability * 0.05
+    + setupConsistency * 0.05;
+  return rounded2(clamp01(base - biasConfidencePenalty(biasFlags)));
+}
+
+function inverseRatioScore(value, leanAt, softAt) {
+  const n = finiteNumber(value);
+  if (n == null) return null;
+  return clamp01((softAt - n) / (softAt - leanAt));
+}
+
+function consistencyScoreFromSpread(value) {
+  const spread = finiteNumber(value);
+  if (spread == null) return 0.65;
+  return clamp01(1 - (Math.abs(spread) / 0.08));
+}
+
+function scoreComponent(value, leanAt, softAt, fallback = 0.5) {
+  const score = inverseRatioScore(value, leanAt, softAt);
+  return score == null ? fallback : score;
+}
+
+function physiqueInputsFromAssets(assets = []) {
+  const frontRatios = ratiosForPose(assets, 'front');
+  const backRatios = ratiosForPose(assets, 'back');
+  if (!frontRatios || !backRatios) return measuredInputsFromAssets(assets);
+  const sideRatios = ratiosForPose(assets, 'side');
+  const waistToHeight = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToHeight');
+  const waistToShoulder = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToShoulder');
+  const waistToHip = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToHip');
+  const bodyAreaRatio = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'bodyAreaRatio');
+  return {
+    waistToShoulder: roundedRatio(waistToShoulder),
+    waistToHip: roundedRatio(waistToHip),
+    waistToHeight: roundedRatio(waistToHeight),
+    bodyAreaRatio: roundedRatio(bodyAreaRatio),
+    frontBackWaistSpread: roundedRatio(Math.abs((finiteNumber(frontRatios.waistToHeight) ?? waistToHeight) - (finiteNumber(backRatios.waistToHeight) ?? waistToHeight))),
+    sideWaistToHeight: roundedRatio(sideRatios?.waistToHeight),
+  };
+}
+
+export function computeVisualLeannessScore(inputs = {}) {
+  if (!inputs || [
+    inputs.waistToShoulder,
+    inputs.waistToHip,
+    inputs.waistToHeight,
+    inputs.bodyAreaRatio,
+  ].some((value) => finiteNumber(value) == null)) return null;
+
+  const score =
+    scoreComponent(inputs.waistToShoulder, 0.45, 0.75) * 0.30
+    + scoreComponent(inputs.waistToHip, 0.68, 1.00) * 0.20
+    + scoreComponent(inputs.waistToHeight, 0.18, 0.34) * 0.15
+    + scoreComponent(inputs.bodyAreaRatio, 0.26, 0.42) * 0.15
+    + consistencyScoreFromSpread(inputs.frontBackWaistSpread) * 0.10
+    + scoreComponent(inputs.sideWaistToHeight, 0.18, 0.34, 0.55) * 0.10;
+  return rounded0(clamp(score * 100, 0, 100));
+}
+
+export function leannessBandForScore(score) {
+  const n = finiteNumber(score);
+  if (n == null) return null;
+  return PROGRESS_SCAN_LEANNESS_BANDS.find((band) => n >= band.min && n <= band.max) || null;
+}
+
+export function progressSignalLabel(signal) {
+  return PROGRESS_SIGNAL_COPY[signal] || PROGRESS_SIGNAL_COPY.inconclusive;
+}
+
+function progressSignalFromDelta(delta, confidence = 'low') {
+  const n = finiteNumber(delta);
+  if (confidence === 'not_enough' || confidence === 'unknown') {
+    return { signal: 'inconclusive', direction: 'uncertain', label: progressSignalLabel('inconclusive') };
+  }
+  if (n == null) return { signal: 'baseline', direction: 'baseline', label: progressSignalLabel('baseline') };
+  if (n >= 8) return { signal: 'clear_positive', direction: 'positive', label: progressSignalLabel('clear_positive') };
+  if (n >= 3) return { signal: 'slight_positive', direction: 'positive', label: progressSignalLabel('slight_positive') };
+  if (n <= -8) return { signal: 'clear_drift', direction: 'drift', label: progressSignalLabel('clear_drift') };
+  if (n <= -3) return { signal: 'slight_drift', direction: 'drift', label: progressSignalLabel('slight_drift') };
+  return { signal: 'holding_steady', direction: 'steady', label: progressSignalLabel('holding_steady') };
+}
+
+function previousPhysiqueAssessment(scan = null) {
+  return scanSignals(scan)?.physiqueAssessment ?? null;
+}
+
+export function buildPhysiqueAssessment({
+  assets = [],
+  quality = {},
+  biasFlags = [],
+  modelEstimate = null,
+  previousScan = null,
+} = {}) {
+  const inputs = modelEstimate?.inputs ?? physiqueInputsFromAssets(assets);
+  const scanConfidenceScore = computeScanConfidenceScore({
+    assets,
+    quality,
+    biasFlags,
+    previousScan,
+  });
+  const scanConfidenceTier = confidenceTier(scanConfidenceScore);
+  const score = scanConfidenceTier === 'not_enough' ? null : computeVisualLeannessScore(inputs);
+  const band = leannessBandForScore(score);
+  const previousAssessment = previousPhysiqueAssessment(previousScan);
+  const previousScore = finiteNumber(previousAssessment?.visualLeannessScore);
+  const delta = score != null && previousScore != null ? rounded0(score - previousScore) : null;
+  const signal = progressSignalFromDelta(delta, scanConfidenceTier);
+  const measuredSignalsUsed = ['waist_to_shoulder', 'waist_to_hip', 'waist_to_height', 'body_area'];
+  if (finiteNumber(inputs?.sideWaistToHeight) != null) measuredSignalsUsed.push('side_depth');
+
+  return {
+    source: PHOTO_SCAN_SOURCE,
+    assessmentVersion: PROGRESS_SCAN_SCORE_VERSION,
+    analysisType: 'visual_physique_score',
+    visualLeannessScore: score,
+    leannessBand: band?.key ?? null,
+    leannessBandLabel: band?.label ?? null,
+    scanConfidenceScore,
+    scanConfidenceTier,
+    scanConfidenceLabel: scanConfidenceLabel(scanConfidenceTier),
+    progressSignal: signal.signal,
+    progressSignalLabel: signal.label,
+    progressDirection: signal.direction,
+    progressDeltaScore: delta,
+    previousLeannessScore: previousScore,
+    inputs,
+    measuredSignalsUsed,
+    biasFlags,
+    calibrationStatus: 'still_calibrating_for_your_body_type',
+    limitations: [
+      'not_body_fat_estimate',
+      'not_dexa_equivalent',
+      'photo_context_only',
+      'never_authoritative_for_safety_floors',
+      'bias_confidence_penalty_applied',
+    ],
+  };
+}
+
+function progressScanAssessmentCopy(assessment = null) {
+  if (!assessment) return 'Progress Scan saved. I could not read enough from the photos for a useful scan result.';
+  if (assessment.scanConfidenceTier === 'not_enough' || assessment.visualLeannessScore == null) {
+    return 'Progress Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, full body in frame, and the same setup next time.';
+  }
+  const score = `${assessment.visualLeannessScore}/100`;
+  const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
+  const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
+  const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
+  return `Volyume Leanness Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body-fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -312,10 +602,33 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
 
   const lines = [];
   const trendVotes = [];
+  let comparedSignalCount = 0;
+  let trendMagnitudePctPoints = null;
+  let progressDeltaScore = null;
+  let progressSignal = null;
+
+  const curAssessment = scanSignals(currentScan)?.physiqueAssessment ?? null;
+  const prevAssessment = scanSignals(previousScan)?.physiqueAssessment ?? null;
+  const curScore = finiteNumber(curAssessment?.visualLeannessScore);
+  const prevScore = finiteNumber(prevAssessment?.visualLeannessScore);
+  if (curScore != null && prevScore != null) {
+    comparedSignalCount += 1;
+    const delta = rounded0(curScore - prevScore);
+    progressDeltaScore = delta;
+    progressSignal = progressSignalFromDelta(delta, curAssessment?.scanConfidenceTier || 'low');
+    trendMagnitudePctPoints = Math.abs(delta);
+    if (Math.abs(delta) < 3) {
+      lines.push('Volyume Leanness Score is broadly level against the last like-for-like scan.');
+    } else {
+      lines.push(`Volyume Leanness Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
+      trendVotes.push(delta > 0 ? 'down' : 'up');
+    }
+  }
 
   const curWeight = scanWeightKg(currentScan);
   const prevWeight = scanWeightKg(previousScan);
   if (curWeight != null && prevWeight != null) {
+    comparedSignalCount += 1;
     const delta = rounded1(curWeight - prevWeight);
     if (Math.abs(delta) >= 0.2) {
       lines.push(`Bodyweight snapshot is ${delta < 0 ? 'down' : 'up'} ${Math.abs(delta)} kg from the nearest logged weigh-in.`);
@@ -326,6 +639,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
 
   const curRatios = averagedSignalRatios(scanSignals(currentScan));
   const prevRatios = averagedSignalRatios(scanSignals(previousScan));
+  const ratioComparisonCount = ['waistToHeight', 'waistToShoulder']
+    .filter((key) => finiteNumber(curRatios?.[key]) != null && finiteNumber(prevRatios?.[key]) != null)
+    .length;
   const ratioLines = [
     ratioDeltaLine({
       current: curRatios,
@@ -347,8 +663,22 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     }),
   ].filter(Boolean);
   lines.push(...ratioLines.slice(0, 2));
+  comparedSignalCount += ratioComparisonCount;
   if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('down');
   if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('up');
+
+  if (comparedSignalCount === 0) {
+    return {
+      measuredSignalsOnly: true,
+      comparisonStatus: 'not_comparable',
+      comparableCount: 0,
+      trendDirection: 'uncertain',
+      lines: ['There are not enough measured scan signals to compare these photos yet.'],
+      summary: 'This scan is saved, but I am not comparing it yet. There are not enough measured scan signals to make a like-for-like comparison.',
+      trendSummary: 'Not enough measured scan data yet.',
+      coachSummary: 'Progress Scan is saved, but I am not using it as a comparison because the measured scan signals are incomplete.',
+    };
+  }
 
   if (lines.length === 0) {
     lines.push('Measured scan signals are broadly steady against the last comparable scan.');
@@ -357,41 +687,45 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   const upVotes = trendVotes.filter((v) => v === 'up').length;
   const trendDirection = downVotes > upVotes ? 'down' : upVotes > downVotes ? 'up' : 'steady';
   const trendSummary = trendDirection === 'down'
-    ? 'Measured scan signals point lower than the last like-for-like scan.'
+    ? 'Progress Signal is positive against the last like-for-like scan.'
     : trendDirection === 'up'
-      ? 'Measured scan signals point higher than the last like-for-like scan.'
-      : 'Measured scan signals are broadly steady against the last like-for-like scan.';
+      ? 'Progress Signal shows a slight drift against the last like-for-like scan.'
+      : 'Progress Signal is holding steady against the last like-for-like scan.';
 
   return {
     measuredSignalsOnly: true,
     comparisonStatus: 'comparable',
     comparableCount: comparability.comparableCount,
     trendDirection,
+    trendMagnitudePctPoints,
+    progressDeltaScore,
+    progressSignal: progressSignal?.signal ?? null,
+    progressSignalLabel: progressSignal?.label ?? null,
+    progressDirection: progressSignal?.direction ?? null,
     lines,
-    summary: `${lines.slice(0, 3).join(' ')} This is measured trend context, not a body-fat estimate.`,
+    summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal, not a body-fat estimate or target-setting input.`,
     trendSummary,
-    coachSummary: `${trendSummary} I am treating it as low-confidence context only.`,
+    coachSummary: `${trendSummary} I am treating it as photo context only.`,
   };
 }
 
 export function explainProgressScan(scan) {
   if (!scan) return null;
   if (scan.analysisStatus === 'abstained') {
-    return 'The scan was saved, but the estimate was withheld because the data was not reliable enough.';
+    return 'The scan was saved, but the photo read was withheld because the data was not reliable enough.';
+  }
+  const signals = scanSignals(scan);
+  if (signals.physiqueAssessment) {
+    return signals.deltaExplanation?.trendSummary
+      ? `${progressScanAssessmentCopy(signals.physiqueAssessment)} ${signals.deltaExplanation.trendSummary}`
+      : progressScanAssessmentCopy(signals.physiqueAssessment);
   }
   if (scan.analysisStatus === 'measured') {
-    const signals = scanSignals(scan);
     return signals.deltaExplanation?.trendSummary
       || scan.copySummary
       || 'The scan measured outline signals only. It is not a body-fat estimate.';
   }
-  if (scan.estimateRangeLow != null && scan.estimateRangeHigh != null) {
-    const trend = scan.trendDirection && scan.trendDirection !== 'uncertain'
-      ? ` ${scan.copySummary || ''}`.trim()
-      : 'Use this as a baseline unless you have a comparable earlier scan.';
-    return `Estimate range ${scan.estimateRangeLow}-${scan.estimateRangeHigh}%. ${trend}`;
-  }
-  return 'The scan is saved. Body-composition analysis is not available for this scan.';
+  return 'The scan is saved. Physique scan analysis is not available for this scan.';
 }
 
 function signalForAsset(asset = {}) {
@@ -404,17 +738,120 @@ function averageFinite(values = []) {
   return nums.reduce((sum, v) => sum + v, 0) / nums.length;
 }
 
+function normalisedSex(sex) {
+  return sex === 'female' || sex === 'male' ? sex : null;
+}
+
+function bmiFrom(heightCm, weightKg) {
+  const h = finiteNumber(heightCm);
+  const w = finiteNumber(weightKg);
+  if (h == null || w == null || h < 120 || h > 230 || w < 30 || w > 250) return null;
+  const metres = h / 100;
+  return w / (metres * metres);
+}
+
+function ratiosForPose(assets = [], pose) {
+  const signal = (assets || [])
+    .map((asset) => ({ asset, signal: assetSignals(asset) }))
+    .find(({ asset, signal }) => normalisePose(asset?.pose) === pose && signal?.modelBacked);
+  return signal?.signal?.silhouetteRatios ?? null;
+}
+
+function averageRatioFromRequiredPoseSignals(frontRatios = {}, backRatios = {}, key) {
+  return averageFinite([frontRatios?.[key], backRatios?.[key]]);
+}
+
+function estimatorInputsFromAssets({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
+  const frontRatios = ratiosForPose(assets, 'front');
+  const backRatios = ratiosForPose(assets, 'back');
+  if (!frontRatios || !backRatios) return null;
+  const sideRatios = ratiosForPose(assets, 'side');
+  const inputSex = normalisedSex(sex);
+  if (!inputSex) return null;
+  const bmi = bmiFrom(heightCm, weightKg);
+  if (bmi == null) return null;
+  const waistToHeight = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToHeight');
+  const waistToShoulder = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToShoulder');
+  const waistToHip = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'waistToHip');
+  const bodyAreaRatio = averageRatioFromRequiredPoseSignals(frontRatios, backRatios, 'bodyAreaRatio');
+  if ([waistToHeight, waistToShoulder, waistToHip, bodyAreaRatio].some((v) => finiteNumber(v) == null)) return null;
+
+  return {
+    sex: inputSex,
+    bmi: bmi == null ? null : rounded1(bmi),
+    waistToHeight: roundedRatio(waistToHeight),
+    waistToShoulder: roundedRatio(waistToShoulder),
+    waistToHip: roundedRatio(waistToHip),
+    bodyAreaRatio: roundedRatio(bodyAreaRatio),
+    frontBackWaistSpread: roundedRatio(Math.abs((finiteNumber(frontRatios.waistToHeight) ?? waistToHeight) - (finiteNumber(backRatios.waistToHeight) ?? waistToHeight))),
+    sideWaistToHeight: roundedRatio(sideRatios?.waistToHeight),
+  };
+}
+
+function estimatorTerm(inputs, key) {
+  const value = finiteNumber(inputs?.[key]);
+  const centre = finiteNumber(bfEstimatorAsset.centres?.[key]);
+  const coefficient = finiteNumber(bfEstimatorAsset.coefficients?.[key]);
+  if (value == null || centre == null || coefficient == null) return 0;
+  return (value - centre) * coefficient;
+}
+
 export function estimateBodyFatFromScanAssets({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
-  void assets;
-  void sex;
-  void heightCm;
-  void weightKg;
-  return null;
+  if (!requiredModelBackedPosesComplete(assets)) return null;
+  const inputs = estimatorInputsFromAssets({ assets, sex, heightCm, weightKg });
+  if (!inputs) return null;
+
+  const coefficients = bfEstimatorAsset.coefficients || {};
+  let value = finiteNumber(coefficients.intercept) ?? 18;
+  if (inputs.sex === 'female') value += finiteNumber(coefficients.sexFemale) ?? 0;
+  value += estimatorTerm(inputs, 'bmi');
+  value += estimatorTerm(inputs, 'waistToHeight');
+  value += estimatorTerm(inputs, 'waistToShoulder');
+  value += estimatorTerm(inputs, 'waistToHip');
+  value += estimatorTerm(inputs, 'bodyAreaRatio');
+  value += estimatorTerm(inputs, 'frontBackWaistSpread');
+  value += estimatorTerm(inputs, 'sideWaistToHeight');
+
+  const clampMin = finiteNumber(bfEstimatorAsset.output?.clampMin) ?? 4;
+  const clampMax = finiteNumber(bfEstimatorAsset.output?.clampMax) ?? 55;
+  const biasFlags = [];
+  if (inputs.bmi >= 30) biasFlags.push('large_body');
+  if (inputs.sideWaistToHeight == null) biasFlags.push('side_pose_missing');
+
+  return {
+    value: rounded1(clamp(value, clampMin, clampMax)),
+    confidence: 'low',
+    source: PHOTO_SCAN_SOURCE,
+    provisional: true,
+    validationStatus: bfEstimatorAsset.status,
+    assetId: bfEstimatorAsset.id,
+    estimatorVersion: bfEstimatorAsset.id,
+    modelVersion: bfEstimatorAsset.segmentationModelVersion ?? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
+    baseMarginPctPoints: finiteNumber(bfEstimatorAsset.output?.baseMarginPctPoints) ?? 4.5,
+    inputs,
+    biasFlags,
+    limitations: bfEstimatorAsset.limitations || [],
+  };
+}
+
+function estimatorUnavailableCopy({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
+  if (!requiredModelBackedPosesComplete(assets)) {
+    return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful scan score.';
+  }
+  if (!normalisedSex(sex)) {
+    return 'Scan measured and saved. The visual score can still be used as photo context; body-fat percentages are not shown from photos.';
+  }
+  if (bmiFrom(heightCm, weightKg) == null) {
+    return 'Scan measured and saved. The visual score can still be used as photo context; body-fat percentages are not shown from photos.';
+  }
+  return 'Scan measured and saved. The measured signals were not complete enough for a useful score.';
 }
 
 function modelEstimateValue(modelEstimate) {
-  if (modelEstimate && typeof modelEstimate === 'object') return finiteNumber(modelEstimate.value);
-  return finiteNumber(modelEstimate);
+  if (!modelEstimate || typeof modelEstimate !== 'object') return null;
+  if (modelEstimate.source !== PHOTO_SCAN_SOURCE) return null;
+  if (modelEstimate.estimatorVersion !== PROGRESS_SCAN_ESTIMATOR_VERSION) return null;
+  return finiteNumber(modelEstimate.value);
 }
 
 export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, extras = {}) {
@@ -423,7 +860,12 @@ export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, e
     modelBacked: (assets || []).some((a) => signalForAsset(a)?.modelBacked),
     modelVersion: estimate?.modelVersion ?? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
     estimatorVersion: estimate?.estimatorVersion ?? PROGRESS_SCAN_ESTIMATOR_VERSION,
+    physiqueScoreVersion: PROGRESS_SCAN_SCORE_VERSION,
+    estimatorAssetId: estimate?.assetId ?? null,
+    estimatorProvisional: estimate?.provisional ?? null,
+    estimatorLimitations: estimate?.limitations ?? [],
     estimatorInputs: estimate?.inputs ?? measuredInputsFromAssets(assets),
+    physiqueAssessment: extras.physiqueAssessment ?? null,
     stats: extras.stats ?? null,
     deltaExplanation: extras.deltaExplanation ?? null,
     assets: (assets || []).map((a) => {
@@ -452,13 +894,19 @@ export function analyseProgressScan({
   userBiasFlags = [],
   modelValidated = false,
 } = {}) {
-  void heightCm;
-  void weightKg;
   const quality = aggregateQuality(assets);
   const reasons = abstentionReasonsForAssets(assets);
-  const biasFlags = deriveBiasFlags({ sex, userFlags: userBiasFlags, modelValidated, quality });
   const resolvedModelEstimate = modelEstimate == null ? null : modelEstimate;
+  const estimateBiasFlags = Array.isArray(resolvedModelEstimate?.biasFlags) ? resolvedModelEstimate.biasFlags : [];
+  const biasFlags = deriveBiasFlags({ sex, userFlags: [...userBiasFlags, ...estimateBiasFlags], modelValidated, quality });
   const resolvedEstimateValue = modelEstimateValue(resolvedModelEstimate);
+  const physiqueAssessment = buildPhysiqueAssessment({
+    assets,
+    quality,
+    biasFlags,
+    modelEstimate: resolvedModelEstimate,
+    previousScan,
+  });
 
   if (reasons.length > 0) {
     const modelUnavailable = reasons.includes('model_unavailable');
@@ -468,6 +916,16 @@ export function analyseProgressScan({
       qualityLabel: quality.label,
       estimate: null,
       range: null,
+      modelEstimate: null,
+      physiqueAssessment: {
+        ...physiqueAssessment,
+        visualLeannessScore: null,
+        leannessBand: null,
+        leannessBandLabel: null,
+        progressSignal: 'inconclusive',
+        progressSignalLabel: progressSignalLabel('inconclusive'),
+        progressDirection: 'uncertain',
+      },
       trend: {
         direction: 'uncertain',
         magnitudePctPoints: null,
@@ -485,19 +943,23 @@ export function analyseProgressScan({
 
   if (resolvedEstimateValue == null) {
     if (hasModelBackedAssets(assets) && requiredModelBackedPosesComplete(assets)) {
+      const hasScore = physiqueAssessment.visualLeannessScore != null;
       return {
-        analysisStatus: 'measured',
+        analysisStatus: hasScore ? 'complete' : 'measured',
         qualityScore: quality.score,
         qualityLabel: quality.label,
         estimate: null,
         range: null,
         modelEstimate: null,
+        physiqueAssessment,
         trend: previousScan
           ? { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This scan needs a like-for-like previous scan before a trend is shown.' }
           : { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This is your baseline scan.' },
         abstentionReasons: [],
         biasFlags,
-        copySummary: 'Scan measured and saved. This is not a body-fat estimate; use it as trend context across like-for-like scans.',
+        copySummary: hasScore ? progressScanAssessmentCopy(physiqueAssessment) : estimatorUnavailableCopy({
+          assets, sex, heightCm, weightKg,
+        }),
       };
     }
     return {
@@ -506,14 +968,20 @@ export function analyseProgressScan({
       qualityLabel: quality.label,
       estimate: null,
       range: null,
+      modelEstimate: null,
+      physiqueAssessment: null,
       trend: { direction: 'uncertain', magnitudePctPoints: null, explanation: 'The scan is saved as a baseline.' },
       abstentionReasons: ['model_unavailable'],
       biasFlags,
-      copySummary: 'The guided photos are saved. Body-composition estimates are not available for this scan, so use it as visual trend context only.',
+      copySummary: 'The guided photos are saved. Physique scan analysis is not available for this scan, so use it as visual trend context only.',
     };
   }
 
-  const range = buildEstimateRange(resolvedEstimateValue, { quality, biasFlags });
+  const range = buildEstimateRange(resolvedEstimateValue, {
+    quality,
+    biasFlags,
+    baseMargin: resolvedModelEstimate?.baseMarginPctPoints,
+  });
   if (!range) {
     return {
       analysisStatus: 'abstained',
@@ -521,30 +989,39 @@ export function analyseProgressScan({
       qualityLabel: quality.label,
       estimate: null,
       range: null,
+      modelEstimate: null,
+      physiqueAssessment: null,
       trend: { direction: 'uncertain', magnitudePctPoints: null, explanation: 'The model estimate was outside a usable range.' },
       abstentionReasons: ['estimate_out_of_range'],
       biasFlags,
-      copySummary: 'The estimate was withheld because it fell outside a usable range.',
+      copySummary: 'The photo read was withheld because it fell outside a usable range.',
     };
   }
 
-  const currentForTrend = {
-    estimateBodyFatPercent: range.midpoint,
-    estimateRangeHigh: range.high,
-    estimateRangeLow: range.low,
+  const trend = {
+    direction: physiqueAssessment.progressDirection === 'positive'
+      ? 'down'
+      : physiqueAssessment.progressDirection === 'drift'
+        ? 'up'
+        : physiqueAssessment.progressDirection === 'steady'
+          ? 'steady'
+          : 'uncertain',
+    magnitudePctPoints: physiqueAssessment.progressDeltaScore == null ? null : Math.abs(physiqueAssessment.progressDeltaScore),
+    explanation: progressScanAssessmentCopy(physiqueAssessment),
   };
-  const trend = compareScanEstimates(currentForTrend, previousScan);
   return {
     analysisStatus: 'complete',
     qualityScore: quality.score,
     qualityLabel: quality.label,
-    estimate: range.midpoint,
-    range,
+    estimate: null,
+    range: null,
     modelEstimate: resolvedModelEstimate,
+    hiddenLegacyRange: range,
+    physiqueAssessment,
     trend,
     abstentionReasons: [],
     biasFlags,
-    copySummary: `${trend.explanation} The range is provisional and still calibrating for your body type.`,
+    copySummary: progressScanAssessmentCopy(physiqueAssessment),
   };
 }
 
@@ -552,20 +1029,32 @@ export function coachSummaryFromScan(scan, { suppressed = false } = {}) {
   if (suppressed || !scan || !['complete', 'measured'].includes(scan.analysisStatus)) return null;
   const signals = scanSignals(scan);
   const delta = signals.deltaExplanation ?? null;
+  const assessment = signals.physiqueAssessment ?? null;
   return {
     source: PHOTO_SCAN_SOURCE,
     capturedAt: scan.capturedAt,
-    confidence: scan.estimateConfidence || 'low',
+    confidence: assessment?.scanConfidenceTier || 'low',
+    scanConfidenceScore: assessment?.scanConfidenceScore ?? null,
     qualityLabel: scan.qualityLabel || 'unknown',
+    visualLeannessScore: assessment?.visualLeannessScore ?? null,
+    leannessBand: assessment?.leannessBand ?? null,
+    leannessBandLabel: assessment?.leannessBandLabel ?? null,
+    progressSignal: assessment?.progressSignal ?? null,
+    progressSignalLabel: assessment?.progressSignalLabel ?? null,
+    progressDirection: assessment?.progressDirection ?? null,
+    rangeLow: null,
+    rangeHigh: null,
     trendDirection: delta?.trendDirection || scan.trendDirection || 'uncertain',
     trendMagnitudePctPoints: scan.trendMagnitudePctPoints ?? null,
     comparisonStatus: delta?.comparisonStatus || 'baseline',
     comparableCount: delta?.comparableCount ?? 0,
-    supportingSignals: Array.isArray(delta?.lines) ? delta.lines.slice(0, 3) : [],
+    supportingSignals: delta?.trendSummary ? [delta.trendSummary] : [],
     limitations: [
-      'photo_scan_low_confidence',
-      'measured_outline_context_only',
+      'photo_scan_visual_context_only',
       'not_body_fat_estimate',
+      'not_dexa_equivalent',
+      'not_target_setting_input',
+      'never_authoritative_for_safety_floors',
       ...parseMaybeJson(scan.biasFlagsJson),
     ],
     copy: explainProgressScan(scan),

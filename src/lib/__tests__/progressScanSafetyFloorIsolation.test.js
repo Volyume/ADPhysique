@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { estimateBodyFatFromScanAssets } from '../progressScanAnalysis';
 import { computeFFMFloor, isAuthoritativeBodyFatSource } from '../nutritionEngine';
 import { safeDayFloorKcal } from '../food/calorieBank';
 import { runWeeklyCoach } from '../weeklyCoach';
@@ -54,6 +55,55 @@ describe('Progress Scan safety-floor isolation', () => {
     expect(photoScan.source).toBe('fallback');
     expect(photoScan.floorKcal).toBe(fallback.floorKcal);
     expect(safeDayFloorKcal({ sex: 'male', ffmFloorKcal: photoScan.floorKcal })).toBe(fallback.floorKcal);
+  });
+
+  test('the actual Progress Scan estimator output still has no FFM-floor authority', () => {
+    const estimate = estimateBodyFatFromScanAssets({
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+      assets: [
+        {
+          pose: 'front',
+          signals: {
+            modelBacked: true,
+            silhouetteRatios: {
+              waistToShoulder: 0.64,
+              waistToHip: 0.78,
+              waistToHeight: 0.19,
+              bodyAreaRatio: 0.30,
+            },
+          },
+        },
+        {
+          pose: 'back',
+          signals: {
+            modelBacked: true,
+            silhouetteRatios: {
+              waistToShoulder: 0.62,
+              waistToHip: 0.76,
+              waistToHeight: 0.18,
+              bodyAreaRatio: 0.29,
+            },
+          },
+        },
+      ],
+    });
+    expect(estimate.value).toBe(16.8);
+    expect(estimate.source).toBe('photo_scan');
+
+    const withPhotoScan = computeFFMFloor(82, {
+      bodyFatPercent: estimate.value,
+      bodyFatSource: estimate.source,
+      sex: 'male',
+    });
+    const fallback = computeFFMFloor(82, {
+      bodyFatPercent: null,
+      bodyFatSource: null,
+      sex: 'male',
+    });
+    expect(withPhotoScan.source).toBe('fallback');
+    expect(withPhotoScan.floorKcal).toBe(fallback.floorKcal);
   });
 
   test('photo_scan cannot authorise a deeper weekly-coach calorie cut', () => {

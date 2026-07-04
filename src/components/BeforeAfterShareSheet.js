@@ -127,6 +127,20 @@ export function defaultPair(photos) {
   return [sorted[0].name, sorted[sorted.length - 1].name];
 }
 
+function finiteNumber(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function formatShareScanRange(scan) {
+  const assessment = scan?.signals?.physiqueAssessment || null;
+  if (assessment?.visualLeannessScore != null) {
+    return `${assessment.leannessBandLabel || 'Scan'} ${assessment.visualLeannessScore}/100`;
+  }
+  return '';
+}
+
 /**
  * Build the drawShareCard params for the beforeAfter card. Pure: takes resolved
  * takenAt/weight values so it is trivially testable. `weight` is included only
@@ -135,19 +149,26 @@ export function defaultPair(photos) {
  */
 export function buildBeforeAfterParams({
   olderTakenAt, newerTakenAt, olderWeightKg, newerWeightKg,
-  showWeight, aspect = 'square', bodyWeightUnits = 'kg',
+  olderScan = null, newerScan = null,
+  showWeight, showScanRange = true, showScanWeight = true, aspect = 'square', bodyWeightUnits = 'kg',
 }) {
   const asp = (aspect === 'portrait' || aspect === 'story') ? aspect : 'square';
   const wt = (kg) => (showWeight && kg != null && Number.isFinite(kg)
     ? formatBodyWeight(kg, bodyWeightUnits)
     : '');
+  const before = { date: formatCardDate(olderTakenAt), weight: olderScan && !showScanWeight ? '' : wt(olderWeightKg) };
+  const after = { date: formatCardDate(newerTakenAt), weight: newerScan && !showScanWeight ? '' : wt(newerWeightKg) };
+  const olderRange = showScanRange ? formatShareScanRange(olderScan) : '';
+  const newerRange = showScanRange ? formatShareScanRange(newerScan) : '';
+  if (olderRange) before.scanRange = olderRange;
+  if (newerRange) after.scanRange = newerRange;
   return {
     cardType: 'beforeAfter',
     aspect: asp,
     isSquare: asp !== 'story',
     elapsedLabel: elapsedLabel(olderTakenAt, newerTakenAt),
-    before: { date: formatCardDate(olderTakenAt), weight: wt(olderWeightKg) },
-    after: { date: formatCardDate(newerTakenAt), weight: wt(newerWeightKg) },
+    before,
+    after,
     showWeight: !!showWeight,
   };
 }
@@ -177,7 +198,9 @@ async function decodePhoto(uri) {
  *                                  pair to earliest vs latest and lets the user
  *                                  swap either.
  */
-export default function BeforeAfterShareSheet({ visible, onClose, photos = [] }) {
+export default function BeforeAfterShareSheet({
+  visible, onClose, photos = [], hideScanRange = false,
+}) {
   const toast = useToast();
   const suppressed = usePhotoSuppression();
   const tier = useAppStore((s) => s.tier);
@@ -190,6 +213,7 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
       .sort((a, b) => a.ts - b.ts),
     [photos],
   );
+  const usingScans = sorted.some((p) => p?.scan);
 
   const [selected, setSelected] = useState([]); // photo names, resolved older→newer by ts
   const [aspect, setAspect] = useState('square');
@@ -297,16 +321,26 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
   const buildParams = useCallback(() => {
     const om = (older && metaMap[older.name]) || {};
     const nm = (newer && metaMap[newer.name]) || {};
+    const olderScan = older?.scan || null;
+    const newerScan = newer?.scan || null;
+    const olderTakenAt = finiteNumber(olderScan?.capturedAt) ?? (Number.isFinite(om.takenAt) ? om.takenAt : (older && older.ts));
+    const newerTakenAt = finiteNumber(newerScan?.capturedAt) ?? (Number.isFinite(nm.takenAt) ? nm.takenAt : (newer && newer.ts));
+    const olderWeightKg = finiteNumber(olderScan?.stats?.weightKg) ?? om.weightKg;
+    const newerWeightKg = finiteNumber(newerScan?.stats?.weightKg) ?? nm.weightKg;
     return buildBeforeAfterParams({
-      olderTakenAt: Number.isFinite(om.takenAt) ? om.takenAt : (older && older.ts),
-      newerTakenAt: Number.isFinite(nm.takenAt) ? nm.takenAt : (newer && newer.ts),
-      olderWeightKg: om.weightKg,
-      newerWeightKg: nm.weightKg,
+      olderTakenAt,
+      newerTakenAt,
+      olderWeightKg,
+      newerWeightKg,
+      olderScan,
+      newerScan,
       showWeight,
+      showScanRange: !hideScanRange,
+      showScanWeight: !hideScanRange,
       aspect,
       bodyWeightUnits,
     });
-  }, [older, newer, metaMap, showWeight, aspect, bodyWeightUnits]);
+  }, [older, newer, metaMap, showWeight, hideScanRange, aspect, bodyWeightUnits]);
 
   // ONE renderer for preview + export. Returns a base64 PNG, or null if the
   // card can't be generated (missing Skia/typefaces/images, or a surface fail).
@@ -453,17 +487,18 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
         {/* Choose two photos (default earliest and latest). Older reads on the
             left, newer on the right, whatever the tap order was. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos</Text>
+          <Text style={styles.sectionTitle}>{usingScans ? 'Scans' : 'Photos'}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
             {sorted.map((item) => {
               const on = selected.includes(item.name);
+              const range = item.scan && !hideScanRange ? formatShareScanRange(item.scan) : '';
               return (
                 <TouchableOpacity
                   key={item.name}
                   onPress={() => toggleSelect(item)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
-                  accessibilityLabel={`Photo from ${formatCardDate(item.ts)}${on ? ', chosen' : ''}`}
+                  accessibilityLabel={`${usingScans ? 'Scan' : 'Photo'} from ${formatCardDate(item.ts)}${on ? ', chosen' : ''}`}
                 >
                   <Image source={{ uri: item.uri }} style={[styles.thumb, on && styles.thumbOn]} resizeMode="cover" />
                   {on ? (
@@ -471,12 +506,15 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
                       <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                     </View>
                   ) : null}
+                  {range ? <Text style={styles.thumbRange} numberOfLines={1}>{range}</Text> : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
           <Text style={styles.hint}>
-            {pairReady ? 'Two photos chosen.' : 'Choose two photos to compare.'}
+            {pairReady
+              ? `Two ${usingScans ? 'scans' : 'photos'} chosen.`
+              : `Choose two ${usingScans ? 'scans' : 'photos'} to compare.`}
           </Text>
         </View>
 
@@ -523,7 +561,7 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
             </View>
           </View>
           <Text style={styles.privacyNote}>
-            Only the two photos, their dates, weights and elapsed time you chose are included. Your name, measurements and private notes are never included.
+            Only the two photos, their dates, optional scan score, weights when shown and elapsed time you chose are included. Your name, measurements and private notes are never included.
           </Text>
         </View>
 
@@ -605,6 +643,13 @@ const styles = StyleSheet.create({
   thumbCheck: {
     position: 'absolute', top: spacing.xxs, right: spacing.xxs,
     backgroundColor: colors.background, borderRadius: radius.full,
+  },
+  thumbRange: {
+    width: 72,
+    marginTop: spacing.xxs,
+    ...type.captionTight,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   hint: { ...type.bodySm, color: colors.textMuted },
   segmentRow: {

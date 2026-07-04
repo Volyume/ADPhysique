@@ -14,6 +14,12 @@ const RETAKE_REASONS = new Set([
   'pose_not_clear',
   'camera_tilted',
 ]);
+const UNAVAILABLE_RETAKE_REASONS = new Set([
+  'no_person_detected',
+  'native_preprocess_unavailable',
+  'native_preprocess_shape_unusable',
+  'mask_shape_unusable',
+]);
 
 let modelPromise = null;
 
@@ -93,7 +99,10 @@ function loadProgressScanModel() {
     modelPromise = (async () => {
       const { loadTensorflowModel } = require('react-native-fast-tflite');
       return loadTensorflowModel(MODEL_SOURCE(), []);
-    })();
+    })().catch((e) => {
+      modelPromise = null;
+      throw e;
+    });
   }
   return modelPromise;
 }
@@ -360,7 +369,7 @@ export function unavailableVisionResult(reason = 'model_unavailable') {
     bodyBox: null,
     silhouetteRatios: null,
     abstentionReasons: [reason],
-    needsRetake: false,
+    needsRetake: UNAVAILABLE_RETAKE_REASONS.has(reason),
     unavailableReason: reason,
   };
 }
@@ -390,7 +399,12 @@ export function assetFieldsFromVisionResult(result) {
 
 export function retakeCopyForVisionResult(result) {
   const reasons = new Set(result?.abstentionReasons || []);
-  if (!result?.modelBacked || ![...reasons].some((r) => RETAKE_REASONS.has(r))) return null;
+  const actionable = [...reasons].some((r) => RETAKE_REASONS.has(r) || UNAVAILABLE_RETAKE_REASONS.has(r));
+  if (!actionable) return null;
+  if (reasons.has('no_person_detected')) return 'I could not find one clear person in the photo. Step into the frame on your own and retake this pose.';
+  if (reasons.has('native_preprocess_unavailable') || reasons.has('native_preprocess_shape_unusable') || reasons.has('mask_shape_unusable')) {
+    return 'I could not read this image clearly enough for scan analysis. Try a new photo for this pose.';
+  }
   if (reasons.has('too_dark')) return 'The photo is too dark for a reliable scan. Move into brighter, even light and take this pose again.';
   if (reasons.has('too_blurry')) return 'The photo is too blurred for a reliable scan. Keep the phone still and use the timer before retaking.';
   if (reasons.has('whole_body_not_visible')) return 'Your full outline is not clear enough in frame. Step back until your whole body is visible, then retake.';

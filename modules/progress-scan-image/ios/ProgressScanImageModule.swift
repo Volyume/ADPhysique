@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import Foundation
+import ImageIO
 import UIKit
 
 public class ProgressScanImageModule: Module {
@@ -9,8 +10,17 @@ public class ProgressScanImageModule: Module {
     AsyncFunction("extractRgb") { (uri: String, width: Int, height: Int) -> [String: Any]? in
       guard width > 0, height > 0 else { return nil }
       guard let url = imageUrl(from: uri) else { return nil }
-      guard let image = UIImage(contentsOfFile: url.path) else { return nil }
-      guard let cgImage = image.cgImage else { return nil }
+      guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+      let originalWidth = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0
+      let originalHeight = properties?[kCGImagePropertyPixelHeight] as? Int ?? 0
+      let thumbOptions: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: max(width, height) * 2
+      ]
+      guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else { return nil }
+      let image = UIImage(cgImage: thumbnail)
 
       let rgbaCount = width * height * 4
       var rgba = [UInt8](repeating: 0, count: rgbaCount)
@@ -72,8 +82,8 @@ public class ProgressScanImageModule: Module {
       return [
         "width": width,
         "height": height,
-        "originalWidth": cgImage.width,
-        "originalHeight": cgImage.height,
+        "originalWidth": originalWidth > 0 ? originalWidth : thumbnail.width,
+        "originalHeight": originalHeight > 0 ? originalHeight : thumbnail.height,
         "orientedWidth": Int(imageWidth.rounded()),
         "orientedHeight": Int(imageHeight.rounded()),
         "contentRect": [

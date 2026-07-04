@@ -1,6 +1,8 @@
 import {
   analyseProgressScan,
   buildEstimateRange,
+  computeScanConfidenceScore,
+  computeVisualLeannessScore,
   coachSummaryFromScan,
   compareScanEstimates,
   deriveProgressScanBiasFlagsFromProfile,
@@ -43,7 +45,7 @@ const modelBackedAssets = [
 ];
 
 describe('Progress Scan uncertainty and abstention', () => {
-  test('bias and lower quality widen the body-fat range instead of hiding uncertainty', () => {
+  test('bias and lower quality widen any internal uncertainty range instead of hiding uncertainty', () => {
     const base = buildEstimateRange(20, { quality: { label: 'good' }, biasFlags: [] });
     const widened = buildEstimateRange(20, {
       quality: { label: 'usable' },
@@ -95,29 +97,79 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.range).toBeNull();
   });
 
-  test('model-backed silhouette signals produce measured context without a body-fat estimate', () => {
+  test('model-backed silhouette signals produce a Volyume physique assessment without public body-fat fields', () => {
     const estimate = estimateBodyFatFromScanAssets({
       assets: modelBackedAssets,
       sex: 'male',
       heightCm: 180,
       weightKg: 82,
     });
-    expect(estimate).toBeNull();
+    expect(estimate).toMatchObject({
+      source: 'photo_scan',
+      confidence: 'low',
+      provisional: true,
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 16.8,
+    });
+    expect(estimate.inputs).toMatchObject({
+      sex: 'male',
+      bmi: 25.3,
+      waistToHeight: 0.185,
+      waistToShoulder: 0.63,
+    });
+    expect(estimate.limitations).toContain('never_authoritative_for_safety_floors');
 
     const out = analyseProgressScan({
       assets: modelBackedAssets,
+      modelEstimate: estimate,
       sex: 'male',
       heightCm: 180,
       weightKg: 82,
     });
-    expect(out.analysisStatus).toBe('measured');
+    expect(out.analysisStatus).toBe('complete');
     expect(out.estimate).toBeNull();
     expect(out.range).toBeNull();
+    expect(out.hiddenLegacyRange).toMatchObject({ midpoint: 16.8, low: 10, high: 23.6, margin: 6.8 });
+    expect(out.physiqueAssessment).toMatchObject({
+      source: 'photo_scan',
+      analysisType: 'visual_physique_score',
+      visualLeannessScore: 67,
+      leannessBandLabel: 'Lean',
+      scanConfidenceTier: 'moderate',
+      progressSignal: 'baseline',
+      calibrationStatus: 'still_calibrating_for_your_body_type',
+    });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
-    expect(out.copySummary).toMatch(/not a body-fat estimate/i);
+    expect(out.biasFlags).toContain('side_pose_missing');
+    expect(out.copySummary).toMatch(/Volyume Leanness Score 67\/100/i);
+    expect(out.copySummary).toMatch(/not a body-fat percentage/i);
   });
 
-  test('demographic and physique validation gaps materially widen any future displayed range', () => {
+  test('known bias flags concretely lower scan confidence, not just copy', () => {
+    const base = computeScanConfidenceScore({
+      assets: modelBackedAssets,
+      quality: { score: 0.9, label: 'good' },
+      biasFlags: [],
+    });
+    const flagged = computeScanConfidenceScore({
+      assets: modelBackedAssets,
+      quality: { score: 0.9, label: 'good' },
+      biasFlags: ['female_overestimation_risk', 'darker_skin_overestimation_risk', 'stage_lean_or_prep', 'very_muscular'],
+    });
+    expect(flagged).toBeLessThan(base);
+  });
+
+  test('visual leanness score is deterministic from measured silhouette inputs', () => {
+    expect(computeVisualLeannessScore({
+      waistToShoulder: 0.63,
+      waistToHip: 0.77,
+      waistToHeight: 0.185,
+      bodyAreaRatio: 0.295,
+      frontBackWaistSpread: 0.01,
+    })).toBe(67);
+  });
+
+  test('demographic and physique validation gaps materially widen any future internal range', () => {
     const base = buildEstimateRange(20, {
       quality: { label: 'good' },
       biasFlags: ['physique_athlete_validation_pending', 'skin_tone_not_collected_validation_gap'],
@@ -161,7 +213,30 @@ describe('Progress Scan uncertainty and abstention', () => {
       { estimateBodyFatPercent: 20.0, estimateRangeHigh: 23.5, estimateRangeLow: 16.5 },
     );
     expect(trend.direction).toBe('steady');
-    expect(trend.explanation).toMatch(/inside the scan range/i);
+    expect(trend.explanation).toMatch(/uncertainty bands overlap/i);
+  });
+
+  test('overlapping wide ranges stay steady even when midpoint movement looks large', () => {
+    const trend = compareScanEstimates(
+      { estimateBodyFatPercent: 37, estimateRangeLow: 33, estimateRangeHigh: 41 },
+      { estimateBodyFatPercent: 30, estimateRangeLow: 26, estimateRangeHigh: 34 },
+    );
+    expect(trend.direction).toBe('steady');
+    expect(trend.explanation).toMatch(/uncertainty bands overlap/i);
+  });
+
+  test('untrusted numeric estimates cannot be persisted as photo_scan estimate fields', () => {
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: 20,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+    });
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.estimate).toBeNull();
+    expect(out.range).toBeNull();
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(67);
   });
 
   test('measured delta explanation never fabricates visual observations', () => {
@@ -199,14 +274,92 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
   });
 
+  test('measured delta explanation with no measured comparable signals is withheld, not invented as steady', () => {
+    const current = {
+      analysisStatus: 'measured',
+      qualityLabel: 'good',
+      signals: { assets: [{ pose: 'front' }, { pose: 'back' }] },
+    };
+    const previous = {
+      analysisStatus: 'measured',
+      qualityLabel: 'good',
+      signals: { assets: [{ pose: 'front' }, { pose: 'back' }] },
+    };
+
+    const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
+    expect(out.comparisonStatus).toBe('not_comparable');
+    expect(out.trendDirection).toBe('uncertain');
+    expect(out.summary).toMatch(/not enough measured scan signals/i);
+  });
+
+  test('legacy estimate fields do not leak into delta explanation copy', () => {
+    const current = {
+      analysisStatus: 'complete',
+      qualityLabel: 'good',
+      estimateBodyFatPercent: 16,
+      estimateRangeLow: 12,
+      estimateRangeHigh: 20,
+      stats: { weightKg: 80 },
+      signals: {
+        physiqueAssessment: {
+          visualLeannessScore: 66,
+          scanConfidenceTier: 'moderate',
+        },
+        assets: [{ pose: 'front' }, { pose: 'back' }],
+        estimatorInputs: {
+          waistToHeight: 0.18,
+          waistToShoulder: 0.61,
+        },
+      },
+    };
+    const previous = {
+      analysisStatus: 'complete',
+      qualityLabel: 'good',
+      estimateBodyFatPercent: 25,
+      estimateRangeLow: 21,
+      estimateRangeHigh: 29,
+      signals: {
+        physiqueAssessment: {
+          visualLeannessScore: 54,
+          scanConfidenceTier: 'moderate',
+        },
+        stats: { weightKg: 82 },
+        assets: [{ pose: 'front' }, { pose: 'back' }],
+        estimatorInputs: {
+          waistToHeight: 0.21,
+          waistToShoulder: 0.66,
+        },
+      },
+    };
+
+    const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
+    expect(out.measuredSignalsOnly).toBe(true);
+    expect(out.summary).toMatch(/Volyume Leanness Score is up 12 points/i);
+    expect(out.summary).toMatch(/visual physique signal/i);
+    expect(out.summary).not.toMatch(/body-fat ranges|midpoint|provisional photo-scan estimate/i);
+    expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
+  });
+
   test('coach summary is suppressed under calm or ED mode', () => {
     const scan = {
-      analysisStatus: 'measured',
+      analysisStatus: 'complete',
       capturedAt: 1,
       estimateConfidence: 'low',
+      estimateRangeLow: 10,
+      estimateRangeHigh: 23.6,
       qualityLabel: 'good',
       trendDirection: 'steady',
       signalsJson: JSON.stringify({
+        physiqueAssessment: {
+          visualLeannessScore: 66,
+          leannessBand: 'lean',
+          leannessBandLabel: 'Lean',
+          scanConfidenceTier: 'moderate',
+          scanConfidenceScore: 0.78,
+          progressSignal: 'holding_steady',
+          progressSignalLabel: 'Holding steady',
+          progressDirection: 'steady',
+        },
         deltaExplanation: {
           comparisonStatus: 'comparable',
           comparableCount: 1,
@@ -220,11 +373,15 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(coachSummaryFromScan(scan, { suppressed: true })).toBeNull();
     expect(coachSummaryFromScan(scan, { suppressed: false })).toMatchObject({
       source: 'photo_scan',
-      confidence: 'low',
+      confidence: 'moderate',
       trendDirection: 'steady',
       comparisonStatus: 'comparable',
       comparableCount: 1,
+      visualLeannessScore: 66,
+      leannessBandLabel: 'Lean',
+      rangeLow: null,
+      rangeHigh: null,
     });
-    expect(JSON.stringify(coachSummaryFromScan(scan, { suppressed: false }))).not.toMatch(/estimateBodyFatPercent|rangeLow|rangeHigh/);
+    expect(JSON.stringify(coachSummaryFromScan(scan, { suppressed: false }))).not.toMatch(/estimateBodyFatPercent|midpoint|rangeLow":\d|rangeHigh":\d/i);
   });
 });

@@ -6,6 +6,8 @@ const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
+    expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
+    expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
     expect(SCREEN).toMatch(/Scan history/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
@@ -23,6 +25,16 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/openViewer\(asset\.photoName\)/);
     expect(SCREEN).toMatch(/scanStatsCopy/);
     expect(SCREEN).toMatch(/scanReadCopy/);
+  });
+
+  test('scan entries have scan-specific comparison and share surfaces', () => {
+    expect(SCREEN).toMatch(/ProgressScanCompare/);
+    expect(SCREEN).toMatch(/Compare scans/);
+    expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
+    expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
+    expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
+    expect(SCREEN).toMatch(/hideWeight=\{hideExactScans && scanPhotoNames\.has\(viewerName\)\}/);
+    expect(SCREEN).toMatch(/Share scan/);
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
@@ -43,7 +55,24 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/progress_scan_retake_meta_delete_failed/);
     expect(SCREEN).toMatch(/deleteScanEntry/);
     expect(SCREEN).toMatch(/detachProgressScanPhoto/);
+    expect(SCREEN).toMatch(/progress_scan_asset_save_failed/);
+    expect(SCREEN).toMatch(/await deleteProgressPhoto\(userId, saved\.uri\)/);
+    expect(SCREEN).toMatch(/await deletePhotoMeta\(userId, name\)/);
     expect(SCREEN).toMatch(/if \(!fileDeleted\) throw new Error\('progress_photo_delete_failed'\)/);
     expect(SCREEN).toMatch(/if \(!metaDeleted\) throw new Error\('progress_photo_meta_delete_failed'\)/);
+  });
+
+  test('scan sessions capture camera preferences and finish uses canonical body profile fallback', () => {
+    expect(SCREEN).toMatch(/getProgressScanCapturePreferences/);
+    expect(SCREEN).toMatch(/createProgressScanSession\(userId, capturePrefs\)/);
+    expect(SCREEN).toMatch(/getUserBodyProfile\(userId\)/);
+    expect(SCREEN).toMatch(/profile\.heightCm \?\? bodyProfile\?\.heightCm/);
+    expect(SCREEN).toMatch(/profile\.trainingGoal \?\? bodyProfile\?\.primaryGoal/);
+  });
+
+  test('camera fallback keeps the active scan pose instead of discarding the draft', () => {
+    expect(SCREEN).toMatch(/pickScanPoseFromLibrary/);
+    expect(SCREEN).toMatch(/onFallback=\{\(\) => \{ setCaptureOpen\(false\); if \(scanFlow\) pickScanPoseFromLibrary\(scanFlow, capturePose\); else pickFrom\('library'\); \}\}/);
+    expect(SCREEN).not.toMatch(/discardScanDraft\(scanFlow\); pickFrom\('library'\)/);
   });
 });

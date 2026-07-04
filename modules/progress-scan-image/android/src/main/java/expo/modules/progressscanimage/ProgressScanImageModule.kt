@@ -23,6 +23,12 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class ProgressScanImageModule : Module() {
+  private data class DecodedBitmap(
+    val bitmap: Bitmap,
+    val originalWidth: Int,
+    val originalHeight: Int,
+  )
+
   override fun definition() = ModuleDefinition {
     Name("ProgressScanImage")
 
@@ -34,13 +40,16 @@ class ProgressScanImageModule : Module() {
           return@AsyncFunction
         }
 
-        val decoded = decodeBitmap(context, uri)
-        if (decoded == null) {
+        val decodedInfo = decodeBitmap(context, uri, width, height)
+        if (decodedInfo == null) {
           promise.resolve(null)
           return@AsyncFunction
         }
 
+        val decoded = decodedInfo.bitmap
         val oriented = orientBitmap(context, uri, decoded)
+        val orientedWidth = oriented.width
+        val orientedHeight = oriented.height
         val target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val scale = min(width.toFloat() / oriented.width.toFloat(), height.toFloat() / oriented.height.toFloat())
         val scaledWidth = max(1, (oriented.width * scale).roundToInt())
@@ -82,13 +91,13 @@ class ProgressScanImageModule : Module() {
         val meanLum = luminanceSum / max(1, luminanceCount)
         val lightingScore = clamp01(1.2 - (abs(meanLum - 128.0) / 96.0))
 
-        promise.resolve(mapOf(
+        val result = mapOf(
           "width" to width,
           "height" to height,
-          "originalWidth" to decoded.width,
-          "originalHeight" to decoded.height,
-          "orientedWidth" to oriented.width,
-          "orientedHeight" to oriented.height,
+          "originalWidth" to decodedInfo.originalWidth,
+          "originalHeight" to decodedInfo.originalHeight,
+          "orientedWidth" to orientedWidth,
+          "orientedHeight" to orientedHeight,
           "contentRect" to mapOf(
             "x" to contentLeft,
             "y" to contentTop,
@@ -97,15 +106,44 @@ class ProgressScanImageModule : Module() {
           ),
           "rgbBase64" to Base64.encodeToString(rgb, Base64.NO_WRAP),
           "lightingScore" to lightingScore,
-        ))
+        )
+
+        target.recycle()
+        if (oriented !== decoded) oriented.recycle()
+        decoded.recycle()
+        promise.resolve(result)
       } catch (e: Throwable) {
         promise.reject("ERR_PROGRESS_SCAN_IMAGE", e.message ?: "Could not preprocess progress scan image", e)
       }
     }
   }
 
-  private fun decodeBitmap(context: Context, uriString: String): Bitmap? {
-    return openInputStream(context, uriString)?.use { BitmapFactory.decodeStream(it) }
+  private fun decodeBitmap(context: Context, uriString: String, targetWidth: Int, targetHeight: Int): DecodedBitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    openInputStream(context, uriString)?.use {
+      BitmapFactory.decodeStream(it, null, bounds)
+    }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+    val maxTarget = max(targetWidth, targetHeight) * 2
+    val options = BitmapFactory.Options().apply {
+      inPreferredConfig = Bitmap.Config.ARGB_8888
+      inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, maxTarget, maxTarget)
+    }
+    val bitmap = openInputStream(context, uriString)?.use {
+      BitmapFactory.decodeStream(it, null, options)
+    } ?: return null
+    return DecodedBitmap(bitmap, bounds.outWidth, bounds.outHeight)
+  }
+
+  private fun sampleSizeFor(width: Int, height: Int, reqWidth: Int, reqHeight: Int): Int {
+    var sample = 1
+    var halfWidth = width / 2
+    var halfHeight = height / 2
+    while (halfWidth / sample >= reqWidth && halfHeight / sample >= reqHeight) {
+      sample *= 2
+    }
+    return max(1, sample)
   }
 
   private fun orientBitmap(context: Context, uriString: String, bitmap: Bitmap): Bitmap {
