@@ -10,7 +10,7 @@ export default function SettingsAboutScreen({ navigation }) {
   const feedback = useFeedback();
 
   return (
-    <SettingsPage>
+    <SettingsPage title="About">
       <View style={settingsStyles.section}>
         <SettingRow
           icon="chatbubble-ellipses-outline"

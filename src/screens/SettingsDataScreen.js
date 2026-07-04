@@ -217,7 +217,7 @@ export default function SettingsDataScreen({ navigation }) {
   }
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Your data">
       <View style={styles.section}>
         <SettingRow
           icon="cloud-outline"

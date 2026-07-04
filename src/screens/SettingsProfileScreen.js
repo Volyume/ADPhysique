@@ -51,7 +51,7 @@ export default function SettingsProfileScreen() {
   }
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Profile">
       <View style={settingsStyles.section}>
         <View style={styles.nameRow}>
           <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.nameIcon} />

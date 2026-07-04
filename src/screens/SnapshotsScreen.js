@@ -62,7 +62,7 @@ export default function SnapshotsScreen() {
   }
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Restore a snapshot">
       <View style={styles.section}>
         {snapshots === null ? (
           <Text style={localStyles.note}>Loading…</Text>

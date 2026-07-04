@@ -14,7 +14,7 @@ export default function SettingsAccountScreen({ navigation }) {
   const { signingOut, deletingAccount, handleSignOut, handleDeleteAccount } = useAccountActions();
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Account">
       <SectionHeader title="Plan" />
       <View style={styles.section}>
         <SettingRow

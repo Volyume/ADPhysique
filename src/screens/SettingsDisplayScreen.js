@@ -74,7 +74,7 @@ export default function SettingsDisplayScreen() {
   const currentEnergy = accessibility.energyUnit ?? 'kcal';
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Display & accessibility">
       <View style={styles.section}>
         <Text style={local.title}>Appearance</Text>
         <Text style={local.sub}>

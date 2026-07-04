@@ -207,7 +207,7 @@ export default function SettingsHealthScreen() {
   }
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Health">
       <View style={styles.section}>
         <SettingRow
           icon="scale-outline"

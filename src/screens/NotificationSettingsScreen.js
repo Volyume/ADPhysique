@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import {
   scheduleMorningWeightNotification,
   scheduleEveningWeightReminder,
@@ -579,10 +580,8 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Subtitle only, the stack header (set in RootNavigator with
-          options={{ title: 'Notifications' }}) already shows the back
-          arrow + title at the top of the screen. */}
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Notifications" />
       <View style={styles.subtitleWrap}>
         <Text style={styles.subtitle}>
           Volyume uses local notifications only. No marketing, ever.

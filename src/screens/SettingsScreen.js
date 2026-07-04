@@ -84,7 +84,7 @@ export default function SettingsScreen({ navigation }) {
   })();
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Settings">
       <View style={styles.section}>
         <SettingRow
           icon="person-circle-outline"

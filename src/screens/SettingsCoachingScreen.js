@@ -126,7 +126,7 @@ export default function SettingsCoachingScreen() {
   );
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Coaching">
       <View style={settingsStyles.section}>
         <SettingRow
           icon="heart-outline"

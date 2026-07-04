@@ -38,7 +38,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
   }
 
   return (
-    <SettingsPage>
+    <SettingsPage title="Privacy">
       <View style={styles.section}>
         <SettingRow
           icon="shield-checkmark-outline"

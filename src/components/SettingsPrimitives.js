@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import PressableCard from './PressableCard';
+import BackHeader from './BackHeader';
 
 // Shared building blocks for the Settings landing page and its sub-pages.
 // Pulled out of the old single-screen Settings so every sub-page renders
@@ -48,11 +49,15 @@ export function SectionHeader({ title }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
-// Standard page chrome for a Settings sub-page. The stack header supplies
-// the title and back button, so each page is just a scroll of rows.
-export function SettingsPage({ children }) {
+// Standard page chrome for a Settings sub-page. Pass `title` to render the
+// canonical BackHeader (chevron + centred title) in place of the old stack
+// header; the SafeAreaView then owns the top inset too, since no native bar
+// is left to claim it. Screens not yet converted omit `title` and keep
+// relying on the stack header, so this stays a no-op for them.
+export function SettingsPage({ title, children }) {
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={title ? ['top', 'bottom'] : ['bottom']}>
+      {title ? <BackHeader title={title} /> : null}
       <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
     </SafeAreaView>
   );

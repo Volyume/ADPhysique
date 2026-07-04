@@ -15,6 +15,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import BackHeader from '../components/BackHeader';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -149,9 +150,11 @@ export default function ImportScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Import history" />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.h1} accessibilityRole="header">Bring your history</Text>
+        {/* The BackHeader title already reads "Import history"; the body copy
+            below explains the flow rather than repeating a second heading. */}
         <Text style={styles.body}>
           Import a workout-history CSV from Hevy or Strong. Sessions, sets, weights and reps all
           come across; unmatched exercises are created in your library so nothing is lost.
