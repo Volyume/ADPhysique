@@ -70,7 +70,11 @@ export async function computeCurrentWeekState(userId, scoffScore = 0) {
   const [stats, deloadWeeks, edFlag, streakState] = await Promise.all([
     getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0 })),
     getDeloadWeeksInRange(userId, weekStart, weekStart + WEEK_MS).catch(() => []),
-    getOpenEdPatternFlag(userId).catch(() => null),
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel (edSuppressed = !!edFlag || ... below), so the
+    // outbound partner signal freezes to 'resting' on a read error rather than
+    // leaking a live/celebratory state (mirrors the reader in moments.js).
+    getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
     loadStreakState(userId).catch(() => ({ manualGoal: null, pauses: [] })),
   ]);
 

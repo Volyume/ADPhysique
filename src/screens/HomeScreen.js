@@ -406,7 +406,11 @@ export default function HomeScreen({ navigation, route }) {
         getLatestCoachOutput(user.id).catch(() => null),
         getAllWorkouts(user.id).catch(() => []),
         getMorningWeightsLast14Days(user.id).catch(() => []),
-        getOpenEdPatternFlag(user.id).catch(() => null),
+        // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+        // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the trial
+        // banner line + coach ledger use the neutral, no-weigh-in-count variant
+        // on a read error (matches the siblings at :470/:521/:737/:794).
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
       ]);
       if (coachOut) { setTrialBanner(null); return; }
 

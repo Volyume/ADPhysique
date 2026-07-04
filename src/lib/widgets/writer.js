@@ -69,7 +69,10 @@ export async function gatherWidgetInputs(userId) {
 
   const weekStart = localWeekStartMs(Date.now());
   const stats = await getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0 }));
-  const edFlag = await getOpenEdPatternFlag(userId).catch(() => null);
+  // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+  // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the persisted
+  // widget snapshot carries the suppressed bit on a read error.
+  const edFlag = await getOpenEdPatternFlag(userId).catch(() => 'read_failed');
   const planned = (Array.isArray(routines) && routines.length) ? routines.length : (stats?.planned ?? 0);
 
   return {

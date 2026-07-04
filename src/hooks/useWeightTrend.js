@@ -34,7 +34,10 @@ export default function useWeightTrend(userId) {
         getMorningWeights(userId, 90),
         getNutritionTargets(userId).catch(() => null),
         getRecentIntakeSummary(userId).catch(() => null),
-        getOpenEdPatternFlag(userId).catch(() => null),
+        // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+        // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the rate /
+        // maintenance / step-trend suppression holds on a read error.
+        getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
         getLatestCoachOutput(userId).catch(() => null),
       ]);
 

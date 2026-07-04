@@ -191,7 +191,10 @@ async function weighInEdFlagOpen() {
     const { getOpenEdPatternFlag } = require('../database');
     return !!(await getOpenEdPatternFlag(uid));
   } catch (_) {
-    return false;
+    // ED-safety, fail CLOSED: a transient flag read error must SUPPRESS the
+    // weigh-in schedule gate (treat it as flag-open), never lay a second daily
+    // weight prompt at a possibly-flagged user.
+    return true;
   }
 }
 
@@ -562,7 +565,10 @@ export async function scheduleTrialDay3Notification(userId, profile) {
     const [workouts, weights, edFlag] = await Promise.all([
       userId ? db.getAllWorkouts(userId).catch(() => []) : Promise.resolve([]),
       userId ? db.getMorningWeightsLast14Days(userId).catch(() => []) : Promise.resolve([]),
-      userId ? db.getOpenEdPatternFlag(userId).catch(() => null) : Promise.resolve(null),
+      // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+      // 'read_failed' sentinel so the gate below suppresses the weight-adjacent
+      // push, never lays it at a possibly-flagged user.
+      userId ? db.getOpenEdPatternFlag(userId).catch(() => 'read_failed') : Promise.resolve(null),
     ]);
 
     // Open ED flag → never schedule a weight-adjacent push; the banner falls
@@ -650,7 +656,9 @@ export async function scheduleWinbackNotification(userId) {
     // while a flag is open. Silence is the respectful behaviour.
     // eslint-disable-next-line global-require
     const db = require('../database');
-    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel so the gate suppresses (cancels) the win-back push.
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => 'read_failed') : null;
     if (edFlag) { await cancelWinbackNotification(); return; }
 
     const statedReturn = await getWinbackStatedReturn();
@@ -770,7 +778,9 @@ export async function scheduleMissedCheckinFollowups(userId) {
     // altered.
     // eslint-disable-next-line global-require
     const db = require('../database');
-    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel so the gate suppresses (retires) the follow-ups.
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => 'read_failed') : null;
     if (edFlag) {
       await cancelMissedCheckinFollowups();
       return;
@@ -887,7 +897,9 @@ export async function scheduleActivationNudge(userId) {
     // the respectful behaviour; the suppression is consumed here, never altered.
     // eslint-disable-next-line global-require
     const db = require('../database');
-    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => null);
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel so the gate suppresses (retires) the nudge.
+    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => 'read_failed');
     if (edFlag) { await cancelActivationNudge(); return; }
 
     // Completed-session start times only (never weight or calorie figures).
@@ -979,7 +991,10 @@ export async function schedulePlannedMealConfirm(userId) {
     // harm pattern, exactly as CHECKIN_MISSED / ED_PATTERN_LOCKOUT).
     // eslint-disable-next-line global-require
     const db = require('../database');
-    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => null);
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel so the gate suppresses the food push at a
+    // possibly-flagged user, never lays it.
+    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => 'read_failed');
     if (edFlag) { await cancelPlannedMealConfirm(); return; }
 
     // Self-suppress: only nudge when TODAY has unconfirmed planned meals.
@@ -1365,7 +1380,9 @@ export async function schedulePartnerBeats(userId) {
 
     // Open ED/wellbeing flag: silence (the partner surface freezes benignly;
     // pushes must not poke at it).
-    const edFlag = await db.getOpenEdPatternFlag(userId).catch(() => null);
+    // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+    // 'read_failed' sentinel so the gate silences the partner beats.
+    const edFlag = await db.getOpenEdPatternFlag(userId).catch(() => 'read_failed');
     if (edFlag) return;
 
     // Preferences toggle (default ON; the notification settings screen can

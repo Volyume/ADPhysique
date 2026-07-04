@@ -133,7 +133,11 @@ export default function DiaryScreen({ navigation }) {
       getNutritionTargets(userId),
       macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
       refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
-      getOpenEdPatternFlag(userId).catch(() => null),
+      // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+      // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
+      // carve-out stays DISABLED at a possibly-flagged user rather than opening
+      // on a read error.
+      getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
       getLatestBodyWeight(userId).catch(() => null),
       getLatestBodyComposition(userId).catch(() => null),
       getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),

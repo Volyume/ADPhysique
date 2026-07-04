@@ -1569,7 +1569,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         };
       }));
       const goalLockAdvanced = !!userProfile?.goalLockAdvanced;
-      const openFlag = await getOpenEdPatternFlag(user.id).catch(() => null);
+      // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+      // 'read_failed' sentinel so the weekly-share suppress stays true at a
+      // possibly-flagged user (matches the contest-countdown read above).
+      const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
       const edPatternOpen = !!openFlag;
 
       // Cardio (QA P2/P3/D1): the week's logged sessions vs the applied target,

@@ -132,7 +132,12 @@ async function _edFlagOpen() {
     const uid = useAppStore.getState().user?.id;
     if (!uid) return false;
     return !!(await getOpenEdPatternFlag(uid));
-  } catch (_) { return false; }
+  } catch (_) {
+    // ED-safety, fail CLOSED: a transient flag read error must SUPPRESS the
+    // weight/checkin/nudge delivery, never fall through to showing it at a
+    // possibly-flagged user. Treat a read failure as flag-open.
+    return true;
+  }
 }
 
 async function _alreadyTrainedToday() {
