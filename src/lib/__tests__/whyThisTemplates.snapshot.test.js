@@ -41,9 +41,9 @@ describe('whyThisTemplates: locked output snapshots', () => {
   });
 
   test('getAutoRegMessage all actions', () => {
-    expect(getAutoRegMessage('continue')).toMatchInlineSnapshot(`"Your recovery's holding. The plan stays as written. This is what good progress feels like."`);
+    expect(getAutoRegMessage('continue')).toMatchInlineSnapshot(`"Your recovery's holding. The plan stays as written."`);
     expect(getAutoRegMessage('hold_volume')).toMatchInlineSnapshot(`"You're showing fatigue this week. Your session content stays the same. Focus on sleep and protein."`);
-    expect(getAutoRegMessage('reduce_volume')).toMatchInlineSnapshot(`"Your recovery's dropped. Next week loses 1-2 sets per exercise. Come back stronger."`);
+    expect(getAutoRegMessage('reduce_volume')).toMatchInlineSnapshot(`"Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher."`);
     expect(getAutoRegMessage('deload_now', 5)).toMatchInlineSnapshot(`"Good timing: you've been building for 5 weeks. Next week is lighter: shorter sessions, same exercises, half the sets."`);
     expect(getAutoRegMessage('deload_now', 2)).toMatchInlineSnapshot(`"Your recovery is dropping. Next week is lighter: shorter sessions, same exercises, half the sets."`);
   });
@@ -65,9 +65,7 @@ describe('whyThisTemplates: locked output snapshots', () => {
     expect(getWeekPhaseDescription('intro', 1)).toMatchInlineSnapshot(
       `"Week 1: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week."`
     );
-    expect(getWeekPhaseDescription('build', 3)).toMatchInlineSnapshot(
-      `"Week 3: Time to push. You should finish most sets feeling like you could do 1–2 more reps but chose not to. That's the zone."`
-    );
+    expect(getWeekPhaseDescription('build', 3)).toMatchInlineSnapshot(`"Week 3: Time to push. You should finish most sets feeling like you could do 1 to 2 more reps but chose not to. That's the zone."`);
   });
 
   test('getSplitRationale unchanged (structural, no decision attributed)', () => {

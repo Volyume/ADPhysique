@@ -195,9 +195,9 @@ export function getProgressionMessage(action, currentWeight, suggestedWeight, un
  */
 export function getAutoRegMessage(action, weeksInBlock = 1) {
   const messages = {
-    continue:      `Your recovery's holding. The plan stays as written. This is what good progress feels like.`,
+    continue:      `Your recovery's holding. The plan stays as written.`,
     hold_volume:   `You're showing fatigue this week. Your session content stays the same. Focus on sleep and protein.`,
-    reduce_volume: `Your recovery's dropped. Next week loses 1-2 sets per exercise. Come back stronger.`,
+    reduce_volume: `Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher.`,
     deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Your recovery is dropping.'} Next week is lighter: shorter sessions, same exercises, half the sets.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
@@ -217,7 +217,7 @@ export function getAutoRegMessage(action, weeksInBlock = 1) {
 export function getWeekPhaseDescription(phase, week) {
   const descriptions = {
     intro:    `Week ${week}: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week.`,
-    build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1–2 more reps but chose not to. That's the zone.`,
+    build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1 to 2 more reps but chose not to. That's the zone.`,
     peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week where the most progress happens before the recovery week.`,
     recovery: `Week ${week}: Lighter week. Cut sets roughly in half, keep the same exercises and weights. Your muscles are rebuilding. Ease off and let them.`,
   };
@@ -230,7 +230,7 @@ export function getWeekPhaseDescription(phase, week) {
 
 const SPLIT_RATIONALE = {
   full_body: `Every session trains all your muscle groups. Frequent practice of each movement builds skill and strength faster, which suits your training frequency well.`,
-  upper_lower: `Alternating upper and lower sessions means every muscle gets trained twice a week with 48–72 hours of recovery between. The most proven structure for consistent progress.`,
+  upper_lower: `Alternating upper and lower sessions means every muscle gets trained twice a week with 48 to 72 hours of recovery between. The most proven structure for consistent progress.`,
   ppl: `Grouping muscles by movement (Push, Pull, Legs) means each group is fully rested before it trains again. Clean separation of recovery windows.`,
   ppl_ab: `Two Push / Pull / Legs rotations per week with different exercise choices (A and B). Each muscle group gets trained twice a week with varied exercises, which keeps progress moving.`,
   upper_lower_wp: `Upper-Lower on 4 days covers all muscle groups twice per week. The fifth session focuses entirely on your weaker areas, giving them extra attention where it matters most.`,

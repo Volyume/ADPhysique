@@ -2208,7 +2208,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               <Text style={styles.holdHeroText}>
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady. The reasons are below.'
-                  : 'Change nothing. The plan is working.'}
+                  : 'Nothing to change. The plan is working.'}
               </Text>
               {whyThisWeek ? (
                 <Text style={styles.heroWhy}>
