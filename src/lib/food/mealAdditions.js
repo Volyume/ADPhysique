@@ -313,6 +313,41 @@ const MEAL_ADDITIONS = {
     { name: 'Lemon zest', why: 'Fresh against the berries.' },
     { name: 'Cocoa powder', why: 'A chocolate twist.' },
   ],
+  curated_vg_chickpea_pancakes: [
+    { name: 'Cinnamon', why: 'Warm sweetness with no sugar.' },
+    { name: 'Vanilla extract', why: 'A classic pancake aroma.' },
+    { name: 'Sugar-free syrup', why: 'That syrup hit, no sugar.' },
+    { name: 'Cocoa powder', why: 'Chocolate pancakes.' },
+  ],
+  curated_vg_chia_pudding: [
+    { name: 'Cinnamon', why: 'Sweetens the pudding, no sugar.' },
+    { name: 'Vanilla extract', why: 'A dessert-like finish.' },
+    { name: 'Lemon zest', why: 'Fresh against the berries.' },
+    { name: 'Cocoa powder', why: 'A chocolate version.' },
+  ],
+  curated_vg_green_smoothie: [
+    { name: 'Cinnamon', why: 'Warm sweetness, no sugar.' },
+    { name: 'Vanilla extract', why: 'Rounds out the berries.' },
+    { name: 'Fresh mint', why: 'A fresh, cooling lift.' },
+    { name: 'Lemon zest', why: 'Brightens the whole blend.' },
+  ],
+  curated_vg_beans_tofu_toast: [
+    { name: 'Black pepper & chives', why: 'The beans-on-toast classic.' },
+    { name: 'Chilli flakes', why: 'Heat through the beans.' },
+    { name: 'A dash of hot sauce', why: 'A savoury kick.' },
+    { name: 'Turmeric', why: 'Gives the tofu that golden colour.' },
+  ],
+  curated_vg_tempeh_avocado_wrap: [
+    { name: 'Lime', why: 'Brightens the avocado.' },
+    { name: 'Chilli flakes', why: 'Heat to taste.' },
+    { name: 'Fresh coriander', why: 'A fresh, zingy lift.' },
+    { name: 'Black pepper & garlic', why: 'Savoury depth on the tempeh.' },
+  ],
+  curated_vg_soyyog_pb_banana: [
+    { name: 'Cinnamon', why: 'Pairs sweetly with banana.' },
+    { name: 'Vanilla extract', why: 'A dessert-like finish.' },
+    { name: 'Cocoa powder', why: 'A chocolate version.' },
+  ],
   curated_vg_tofu_stirfry: [
     { name: 'A splash of soy sauce', why: 'The savoury base of a stir-fry.' },
     { name: 'Ginger & garlic', why: 'The aromatic heart of the wok.' },
@@ -360,6 +395,18 @@ const MEAL_ADDITIONS = {
     { name: 'Garlic', why: 'Savoury depth on the tofu.' },
     { name: 'Chilli', why: 'Heat against the sweetness.' },
     { name: 'Lime', why: 'A squeeze brightens it.' },
+  ],
+  curated_vg_soya_mince_bolognese: [
+    { name: 'Garlic & oregano', why: 'The Italian ragu base.' },
+    { name: 'Fresh basil', why: 'Aromatic, stirred in at the end.' },
+    { name: 'Black pepper', why: 'Sharpens the tomato.' },
+    { name: 'Chilli flakes', why: 'For an arrabbiata kick.' },
+  ],
+  curated_vg_blackbean_sweetpot: [
+    { name: 'Smoked paprika & cumin', why: 'Earthy spices that love sweet potato.' },
+    { name: 'Fresh coriander', why: 'A fresh lift over the beans.' },
+    { name: 'Lime', why: 'Sharpens the whole bowl.' },
+    { name: 'Chilli', why: 'Heat to taste.' },
   ],
   curated_vg_sn_edamame: [
     { name: 'Sea salt flakes & chilli', why: 'The classic edamame finish.' },

@@ -100,6 +100,18 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_overnight_oats', 'Vegan protein overnight oats', 'vegan', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'soy_protein', g: 30 }, { food: 'soy_milk', g: 200 }, { food: 'berries', g: 80 }, { food: 'peanut_butter', g: 20 }]),
   m('curated_vg_protein_pancakes', 'Vegan protein pancakes', 'vegan', ['breakfast'], [{ food: 'oats', g: 50 }, { food: 'vegan_protein_blend', g: 25 }, { food: 'soy_milk', g: 150 }, { food: 'banana', g: 60 }, { food: 'peanut_butter', g: 20 }]),
   m('curated_vg_soy_yogurt_granola', 'Soya yogurt, granola & berries', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'vegan_protein_blend', g: 15 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
+  // M-3 (content-quality audit, 2026-07-04): the vegan breakfast pool was too
+  // thin (4 meals), forcing heavy repeats across a generated vegan week. The
+  // six meals below add genuinely different formats (pancake, pudding,
+  // smoothie, a savoury "beans on toast" plate, a wrap, a yogurt bowl), each
+  // anchored on a real vegan protein source, not just a reshuffle of the same
+  // oats + soya-milk + peanut-butter base.
+  m('curated_vg_chickpea_pancakes', 'Chickpea flour pancakes, banana & peanut butter', 'vegan', ['breakfast'], [{ food: 'chickpea_flour', g: 70 }, { food: 'vegan_protein_blend', g: 25 }, { food: 'soy_milk', g: 150 }, { food: 'banana', g: 80 }, { food: 'peanut_butter', g: 20 }]),
+  m('curated_vg_chia_pudding', 'Chia pudding, soya milk & berries', 'vegan', ['breakfast'], [{ food: 'chia_seeds', g: 40 }, { food: 'soy_milk', g: 250 }, { food: 'vegan_protein_blend', g: 35 }, { food: 'berries', g: 80 }]),
+  m('curated_vg_green_smoothie', 'Berry & spinach protein smoothie', 'vegan', ['breakfast'], [{ food: 'oats', g: 30 }, { food: 'vegan_protein_blend', g: 35 }, { food: 'soy_milk', g: 250 }, { food: 'berries', g: 100 }, { food: 'spinach', g: 30 }, { food: 'peanut_butter', g: 15 }]),
+  m('curated_vg_beans_tofu_toast', 'Beans on toast with scrambled tofu', 'vegan', ['breakfast'], [{ food: 'baked_beans', g: 300 }, { food: 'wholemeal_bread', g: 90 }, { food: 'tofu_firm', g: 150 }]),
+  m('curated_vg_tempeh_avocado_wrap', 'Tempeh & avocado wrap', 'vegan', ['breakfast'], [{ food: 'tortilla', g: 80 }, { food: 'tempeh', g: 130 }, { food: 'avocado', g: 40 }, { food: 'spinach', g: 30 }]),
+  m('curated_vg_soyyog_pb_banana', 'Soya yogurt, peanut butter & banana bowl', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 250 }, { food: 'peanut_butter', g: 15 }, { food: 'banana', g: 100 }, { food: 'vegan_protein_blend', g: 20 }, { food: 'mixed_seeds', g: 10 }]),
 
   m('curated_vg_tofu_stirfry', 'Tofu stir-fry & rice', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }]),
   m('curated_vg_tempeh_sweetpot', 'Tempeh & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
@@ -112,6 +124,11 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_seitan_potato_greens', 'Seitan, potatoes & greens', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'white_potato', g: 250 }, { food: 'green_beans', g: 100 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_seitan_noodles', 'Seitan & noodles', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'noodles', g: 200 }, { food: 'stirfry_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_tofu_sweetpot', 'Tofu & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
+  // M-3 (content-quality audit, 2026-07-04): two more vegan mains, using two
+  // staples the table already carried but no meal actually used (tvp_dry,
+  // black_beans), so lunch/dinner variety improves alongside breakfast.
+  m('curated_vg_soya_mince_bolognese', 'Soya mince bolognese & pasta', 'vegan', ['lunch', 'dinner'], [{ food: 'tvp_dry', g: 60 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_vg_blackbean_sweetpot', 'Black bean & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'black_beans', g: 300 }, { food: 'sweet_potato', g: 200 }, { food: 'mixed_veg', g: 100 }, { food: 'olive_oil', g: 10 }]),
 
   m('curated_vg_sn_edamame', 'Edamame', 'vegan', ['snack'], [{ food: 'edamame', g: 200 }]),
   m('curated_vg_sn_soy_yogurt_pb', 'Soya yogurt & peanut butter', 'vegan', ['snack'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'peanut_butter', g: 12 }]),

@@ -555,6 +555,37 @@ describe('assembleWeekPlan', () => {
   });
 });
 
+describe('vegan breakfast variety (M-3, content-quality audit 2026-07-04)', () => {
+  // The audit found only ~4 vegan breakfasts in the library, so a generated
+  // vegan week repeated "Vegan protein overnight oats" close to every day.
+  // The library was widened (six new breakfasts, each tuned to a genuine
+  // protein anchor and a fat/protein profile competitive with the assembler's
+  // own fit-scoring, not just added as unused entries). This pins the outcome
+  // against the REAL assembler rather than just counting library entries:
+  // across seeds 1-50 the observed floor is 4 distinct breakfasts in 7 days
+  // (most seeds land on 5-6); seed 5 below is a representative mid-range case.
+  const schedule = ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'];
+
+  test('a generated vegan week rotates at least 4 distinct breakfasts across 7 days', () => {
+    const week = assembleWeekPlan({
+      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, schedule, seed: 5,
+    });
+    const breakfastIds = week.days.map((d) => d.slots.find((s) => s.slot === 'meal_1')?.mealId);
+    expect(new Set(breakfastIds).size).toBeGreaterThanOrEqual(4);
+  });
+
+  test('every meal placed in a generated vegan week is an actually-vegan curated meal', () => {
+    const week = assembleWeekPlan({
+      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, schedule, seed: 5,
+    });
+    week.days.forEach((d) => d.slots.forEach((s) => {
+      const meal = CURATED_MEALS.find((m) => m.id === s.mealId);
+      expect(meal).toBeTruthy();
+      expect(meal.diet).toBe('vegan');
+    }));
+  });
+});
+
 // ─── SLOT-CHARACTER INVARIANT (rethink 2026-06-12: the curry-for-breakfast
 // fix). The plan keeps numbered labels; each position carries an internal
 // food character: Meal 1 places a breakfast meal, the final meal is a cooked

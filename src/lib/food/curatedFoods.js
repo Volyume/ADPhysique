@@ -37,6 +37,10 @@ export const CURATED_FOODS = Object.freeze({
   noodles:         F('Noodles (cooked)', 140, 4.5, 28, 1),
   rice_cakes:      F('Rice cakes', 387, 8, 82, 3),
   granola:         F('Granola', 450, 10, 64, 16),
+  // M-3 (content-quality audit, vegan breakfast variety): gram/besan flour,
+  // a genuine UK-available vegan pancake base. Macros per 100g (dry flour),
+  // consistent with CoFID/USDA chickpea-flour values.
+  chickpea_flour:  F('Chickpea (gram) flour', 387, 22, 58, 6.7),
   weetabix:        F('Weetabix', 362, 12, 69, 2),
   white_potato:    F('Potato (boiled)', 79, 2, 17, 0.1),
   potato_wedges:   F('Potato wedges', 130, 2.5, 24, 3),
@@ -121,6 +125,9 @@ export const CURATED_FOODS = Object.freeze({
   mixed_seeds:     F('Mixed seeds', 567, 23, 14, 47),
   avocado:         F('Avocado', 160, 2, 9, 15),
   tahini:          F('Tahini', 595, 17, 21, 54),
+  // M-3 (content-quality audit, vegan breakfast variety): chia seeds, a real
+  // vegan pudding base. Macros per 100g (dry seeds), USDA reference values.
+  chia_seeds:      F('Chia seeds', 486, 16.5, 42, 30.7),
 });
 
 const r1 = (n) => Math.round(n * 10) / 10;

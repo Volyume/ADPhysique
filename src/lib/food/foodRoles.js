@@ -50,7 +50,7 @@ const ROLE = Object.freeze({
   honey: 'carb', tomato_sauce: 'carb', weetabix: 'carb',
   lentils: 'carb', lentil_dahl: 'carb', chickpeas: 'carb',
   kidney_beans: 'carb', black_beans: 'carb', baked_beans: 'carb',
-  milk_skimmed: 'carb', soy_milk: 'carb',
+  milk_skimmed: 'carb', soy_milk: 'carb', chickpea_flour: 'carb',
 
   // Veg (low-energy, volume foods)
   mixed_veg: 'veg', stirfry_veg: 'veg', broccoli: 'veg', spinach: 'veg',
@@ -77,6 +77,7 @@ const ROLE = Object.freeze({
   olive_oil: 'fat', almonds: 'fat', peanut_butter: 'fat',
   mixed_seeds: 'fat', avocado: 'fat', tahini: 'fat',
   halloumi: 'fat', paneer: 'fat', cheddar_light: 'fat',
+  chia_seeds: 'fat',
 });
 
 // ─── Protein quality (meal-plan rethink §3.4, founder decision 2026-06-12) ──
@@ -108,6 +109,7 @@ const PROTEIN_QUALITY = Object.freeze({
   lentils: 'carb_protein', lentil_dahl: 'carb_protein', chickpeas: 'carb_protein',
   kidney_beans: 'carb_protein', black_beans: 'carb_protein',
   baked_beans: 'carb_protein', lentil_pasta: 'carb_protein',
+  chickpea_flour: 'carb_protein',
 });
 
 /** The protein-quality class of a curated food, or null (not a protein contributor). */
@@ -149,6 +151,7 @@ const STATE = Object.freeze({
   oats: 'dry', pasta: 'dry', lentil_pasta: 'dry', tvp_dry: 'dry',
   rice_cakes: 'dry', granola: 'dry', whey: 'dry', soy_protein: 'dry',
   pea_protein: 'dry', vegan_protein_blend: 'dry', mixed_seeds: 'dry',
+  chickpea_flour: 'dry', chia_seeds: 'dry',
   white_rice: 'cooked', brown_rice: 'cooked', quinoa: 'cooked',
   noodles: 'cooked', white_potato: 'cooked', lentils: 'cooked',
   chickpeas: 'cooked', kidney_beans: 'cooked', black_beans: 'cooked',

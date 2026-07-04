@@ -142,7 +142,7 @@ describe('swapFoodInMeal', () => {
         'granola', 'potato_wedges', 'banana', 'apple', 'berries', 'pineapple', 'honey',
         'lentils', 'lentil_dahl', 'chickpeas', 'kidney_beans', 'black_beans',
         'baked_beans', 'milk_skimmed', 'soy_milk', 'tomato_sauce', 'lentil_pasta',
-        'crumpets', 'weetabix', 'sourdough'],
+        'crumpets', 'weetabix', 'sourdough', 'chickpea_flour'],
     };
     expect(swapFoodInMeal({ components, foodKeyOut: 'white_rice', prefs: allCarbsGone })).toBeNull();
   });
