@@ -40,7 +40,7 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo|expo-.*|@expo|@expo/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|native-base|@shopify/.*|react-native-.*)/)"
     ],
     "moduleNameMapper": {
-      "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav)$": "<rootDir>/__mocks__/asset-stub.js",
+      "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav|tflite)$": "<rootDir>/__mocks__/asset-stub.js",
       "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/url-polyfill-stub.js",
       "^expo-file-system/legacy$": "<rootDir>/__mocks__/expo-file-system-legacy.js",
       "^expo-apple-authentication$": "<rootDir>/__mocks__/expo-apple-authentication.js",
@@ -99,10 +99,12 @@
     "expo-updates": "~29.0.18",
     "expo-web-browser": "~15.0.11",
     "live-activity": "file:./modules/live-activity",
+    "progress-scan-image": "file:./modules/progress-scan-image",
     "promise": "^8.3.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-android-widget": "^0.20.3",
+    "react-native-fast-tflite": "^3.0.1",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-iap": "^15.3.1",
     "react-native-nitro-modules": "0.35.9",
@@ -157,7 +159,8 @@
       "reactNativeDirectoryCheck": {
         "listUnknownPackages": false,
         "exclude": [
-          "@react-native-ml-kit/text-recognition"
+          "@react-native-ml-kit/text-recognition",
+          "react-native-fast-tflite"
         ]
       }
     }

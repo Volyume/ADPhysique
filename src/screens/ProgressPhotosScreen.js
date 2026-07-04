@@ -29,6 +29,11 @@ import {
   finishProgressScanSession,
   listProgressScans,
 } from '../lib/progressScanStore';
+import {
+  analyseProgressScanPhoto,
+  assetFieldsFromVisionResult,
+  retakeCopyForVisionResult,
+} from '../lib/progressScanVision';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -381,14 +386,66 @@ export default function ProgressPhotosScreen({ navigation }) {
   async function finishScan(scanId) {
     if (!userId || !scanId) return;
     try {
-      const sex = useAppStore.getState().userProfile?.sex ?? userSex;
-      await finishProgressScanSession(userId, scanId, { sex });
+      const profile = useAppStore.getState().userProfile || {};
+      const sex = profile.sex ?? userSex;
+      await finishProgressScanSession(userId, scanId, {
+        sex,
+        heightCm: profile.heightCm ?? null,
+        weightKg: profile.weightKg ?? profile.bodyweightKg ?? profile.bodyWeightKg ?? null,
+        trainingGoal: profile.trainingGoal ?? null,
+        trainingPhase: profile.trainingPhase ?? profile.goal ?? null,
+        darkerSkinOverestimationRisk: profile.darkerSkinOverestimationRisk === true,
+      });
       setScans(await listProgressScans(userId, 5));
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
       toast.show('The scan was saved, but analysis could not finish.', { variant: 'warning' });
     }
+  }
+
+  async function continueScanAfterPose(flow, pose) {
+    if (pose === 'front') {
+      setScanFlow({ scanId: flow.scanId, pose: 'back' });
+      setCapturePose('back');
+      appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
+        { text: 'Continue', onPress: () => setCaptureOpen(true) },
+      ]);
+      return;
+    }
+    if (pose === 'back') {
+      appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
+        { text: 'Finish scan', onPress: () => { setScanFlow(null); finishScan(flow.scanId); } },
+        { text: 'Take side', onPress: () => { setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
+      ]);
+      return;
+    }
+    setScanFlow(null);
+    await finishScan(flow.scanId);
+  }
+
+  async function saveScanAssetAndContinue(flow, pose, name, saved, vision) {
+    const assetFields = assetFieldsFromVisionResult(vision);
+    await addProgressScanAsset(userId, flow.scanId, {
+      pose,
+      photoName: name,
+      uri: saved.uri,
+      takenAt: saved.ts ?? Date.now(),
+      ...assetFields,
+    });
+    await continueScanAfterPose(flow, pose);
+  }
+
+  async function retakeScanPose(flow, pose, name, saved) {
+    try {
+      if (saved?.uri) await deleteProgressPhoto(saved.uri);
+      if (name) await deletePhotoMeta(userId, name);
+    } catch (e) {
+      logError('ProgressPhotos.scanRetakeDelete', e, { userId, pose });
+    }
+    setScanFlow({ scanId: flow.scanId, pose });
+    setCapturePose(pose);
+    setCaptureOpen(true);
   }
 
   async function discardScanDraft(flow = scanFlow) {
@@ -413,33 +470,31 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     try {
-      await addProgressScanAsset(userId, flow.scanId, {
-        pose,
-        photoName: name,
-        uri: saved.uri,
-        takenAt: saved.ts ?? Date.now(),
-        qualityScore: 0.86,
-      });
-      if (pose === 'front') {
-        setScanFlow({ scanId: flow.scanId, pose: 'back' });
-        setCapturePose('back');
-        appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
-          { text: 'Continue', onPress: () => setCaptureOpen(true) },
+      setBusy(true);
+      const vision = await analyseProgressScanPhoto({ uri: saved.uri, pose });
+      setBusy(false);
+      const retakeCopy = retakeCopyForVisionResult(vision);
+      if (retakeCopy) {
+        appAlert('Retake this photo?', retakeCopy, [
+          { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
+          {
+            text: 'Save without estimate',
+            onPress: () => {
+              saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
+                logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
+                toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
+              });
+            },
+          },
         ]);
         return;
       }
-      if (pose === 'back') {
-        appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
-          { text: 'Finish scan', onPress: () => { setScanFlow(null); finishScan(flow.scanId); } },
-          { text: 'Take side', onPress: () => { setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
-        ]);
-        return;
-      }
-      setScanFlow(null);
-      await finishScan(flow.scanId);
+      await saveScanAssetAndContinue(flow, pose, name, saved, vision);
     } catch (e) {
       logError('ProgressPhotos.scanCaptured', e, { userId, pose });
       toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
+    } finally {
+      setBusy(false);
     }
   }
 
