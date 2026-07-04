@@ -60,6 +60,16 @@ function hasModelBackedAssets(assets = []) {
   return (assets || []).some((asset) => assetSignals(asset)?.modelBacked);
 }
 
+export function requiredModelBackedPosesComplete(assets = []) {
+  const poses = new Set(
+    (assets || [])
+      .filter((asset) => assetSignals(asset)?.modelBacked)
+      .map((asset) => normalisePose(asset.pose))
+      .filter(Boolean),
+  );
+  return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
+}
+
 export function qualityScoreForAsset(asset = {}) {
   const values = QUALITY_KEYS
     .map((key) => finiteNumber(asset[key]))
@@ -80,6 +90,7 @@ export function aggregateQuality(assets = []) {
 export function abstentionReasonsForAssets(assets = []) {
   const reasons = new Set();
   if (!requiredPosesComplete(assets)) reasons.add('missing_required_pose');
+  else if (!requiredModelBackedPosesComplete(assets)) reasons.add('model_unavailable');
   for (const asset of assets || []) {
     const signals = assetSignals(asset);
     for (const reason of signals?.abstentionReasons || []) {
@@ -450,21 +461,30 @@ export function analyseProgressScan({
   const resolvedEstimateValue = modelEstimateValue(resolvedModelEstimate);
 
   if (reasons.length > 0) {
+    const modelUnavailable = reasons.includes('model_unavailable');
     return {
       analysisStatus: 'abstained',
       qualityScore: quality.score,
       qualityLabel: quality.label,
       estimate: null,
       range: null,
-      trend: { direction: 'uncertain', magnitudePctPoints: null, explanation: 'The scan quality was not strong enough for a useful estimate.' },
+      trend: {
+        direction: 'uncertain',
+        magnitudePctPoints: null,
+        explanation: modelUnavailable
+          ? 'On-device scan analysis was not available for the required photos.'
+          : 'The scan quality was not strong enough for a useful measured trend.',
+      },
       abstentionReasons: reasons,
       biasFlags,
-      copySummary: 'The scan was saved, but the estimate was withheld because the data was not reliable enough.',
+      copySummary: modelUnavailable
+        ? 'The scan was saved, but on-device analysis was not available for the required photos.'
+        : 'The scan was saved, but measured analysis was withheld because the data was not reliable enough.',
     };
   }
 
   if (resolvedEstimateValue == null) {
-    if (hasModelBackedAssets(assets)) {
+    if (hasModelBackedAssets(assets) && requiredModelBackedPosesComplete(assets)) {
       return {
         analysisStatus: 'measured',
         qualityScore: quality.score,

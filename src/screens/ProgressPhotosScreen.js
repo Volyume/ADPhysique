@@ -467,14 +467,14 @@ export default function ProgressPhotosScreen({ navigation }) {
       setCapturePose('back');
       appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
         { text: 'Continue', onPress: () => setCaptureOpen(true) },
-      ]);
+      ], { cancelable: false });
       return;
     }
     if (pose === 'back') {
       appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
         { text: 'Finish scan', onPress: () => { setScanFlow(null); finishScan(flow.scanId); } },
         { text: 'Take side', onPress: () => { setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
-      ]);
+      ], { cancelable: false });
       return;
     }
     setScanFlow(null);
@@ -495,27 +495,40 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function retakeScanPose(flow, pose, name, saved) {
     try {
-      if (saved?.uri) await deleteProgressPhoto(userId, saved.uri);
-      if (name) await deletePhotoMeta(userId, name);
+      if (saved?.uri) {
+        const fileDeleted = await deleteProgressPhoto(userId, saved.uri);
+        if (!fileDeleted) throw new Error('progress_scan_retake_photo_delete_failed');
+      }
+      if (name) {
+        const metaDeleted = await deletePhotoMeta(userId, name);
+        if (!metaDeleted) throw new Error('progress_scan_retake_meta_delete_failed');
+      }
+      setScanFlow({ scanId: flow.scanId, pose });
+      setCapturePose(pose);
+      setCaptureOpen(true);
     } catch (e) {
       logError('ProgressPhotos.scanRetakeDelete', e, { userId, pose });
+      toast.show('Could not remove that photo. Please try again.', { variant: 'error' });
     }
-    setScanFlow({ scanId: flow.scanId, pose });
-    setCapturePose(pose);
-    setCaptureOpen(true);
   }
 
   async function discardScanDraft(flow = scanFlow) {
     const scanId = flow?.scanId;
-    setScanFlow(null);
     setCapturePose(null);
-    if (!userId || !scanId) return;
+    if (!userId || !scanId) {
+      setScanFlow(null);
+      return;
+    }
     try {
-      await deleteProgressScanSession(userId, scanId, { deleteFiles: true });
+      const deleted = await deleteProgressScanSession(userId, scanId, { deleteFiles: true });
+      if (!deleted) throw new Error('progress_scan_discard_failed');
+      setScanFlow(null);
       setScans(await listProgressScanEntries(userId, 5));
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.discardScan', e, { userId, scanId });
+      setScanFlow(flow);
+      toast.show('Could not remove that draft scan. Please try again.', { variant: 'error' });
     }
   }
 
@@ -528,7 +541,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteProgressScanSession(userId, scan.id, { deleteFiles: true });
+            const deleted = await deleteProgressScanSession(userId, scan.id, { deleteFiles: true });
+            if (!deleted) throw new Error('progress_scan_delete_failed');
             await refresh();
           } catch (e) {
             logError('ProgressPhotos.deleteScan', e, { userId, scanId: scan.id });
@@ -564,7 +578,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               });
             },
           },
-        ]);
+        ], { cancelable: false });
         return;
       }
       appAlert('Use this photo?', 'Check the pose, framing and lighting. Use it only if it looks like a fair like-for-like scan photo.', [
@@ -578,7 +592,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             });
           },
         },
-      ]);
+      ], { cancelable: false });
     } catch (e) {
       logError('ProgressPhotos.scanCaptured', e, { userId, pose });
       toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
@@ -627,16 +641,23 @@ export default function ProgressPhotosScreen({ navigation }) {
     const uid = useAppStore.getState().user?.id ?? userId;
     const item = photos.find((p) => p.name === name);
     try {
-      if (item) await deleteProgressPhoto(uid, item.uri);
-      await deletePhotoMeta(uid, name);
-      await detachProgressScanPhoto(uid, name);
+      if (item) {
+        const fileDeleted = await deleteProgressPhoto(uid, item.uri);
+        if (!fileDeleted) throw new Error('progress_photo_delete_failed');
+      }
+      const metaDeleted = await deletePhotoMeta(uid, name);
+      if (!metaDeleted) throw new Error('progress_photo_meta_delete_failed');
+      const detached = await detachProgressScanPhoto(uid, name);
+      if (!detached) throw new Error('progress_scan_detach_photo_failed');
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
+      toast.show('Could not delete that photo. Please try again.', { variant: 'error' });
+      return;
     }
     setReferenceName((prev) => (prev === name ? null : prev));
     setViewerOpen(false);
     await refresh();
-  }, [photos, refresh, userId]);
+  }, [photos, refresh, toast, userId]);
 
   function openCompare() { setCompareOpen(true); }
   function openShare() { setShareOpen(true); }

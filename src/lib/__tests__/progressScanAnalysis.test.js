@@ -78,6 +78,23 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.biasFlags).toContain('female_overestimation_risk');
   });
 
+  test('mixed required-pose model availability abstains instead of using one analysed pose', () => {
+    const out = analyseProgressScan({
+      assets: [
+        modelBackedAssets[0],
+        {
+          ...goodAssets[1],
+          signals: { modelBacked: false, abstentionReasons: ['model_unavailable'] },
+        },
+      ],
+      modelEstimate: null,
+    });
+    expect(out.analysisStatus).toBe('abstained');
+    expect(out.abstentionReasons).toContain('model_unavailable');
+    expect(out.estimate).toBeNull();
+    expect(out.range).toBeNull();
+  });
+
   test('model-backed silhouette signals produce measured context without a body-fat estimate', () => {
     const estimate = estimateBodyFatFromScanAssets({
       assets: modelBackedAssets,
