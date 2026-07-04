@@ -30,7 +30,9 @@ import {
   finishProgressScanSession,
   listProgressScanEntries,
 } from '../lib/progressScanStore';
+import { getUserBodyProfile } from '../lib/database';
 import {
+  getProgressScanCapturePreferences,
   getProgressScanHideExactPreference,
   setProgressScanHideExactPreference,
 } from '../lib/progressScanPreferences';
@@ -42,6 +44,7 @@ import {
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
+import ProgressScanCompare from '../components/ProgressScanCompare';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
@@ -65,6 +68,7 @@ const POSES = [
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const PROGRESS_SCAN_MIN_INTERVAL_MS = 14 * 86400000;
+const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
 
 // Timeline sort. Newest-first is the unchanged default; oldest-first lets
 // someone read forwards from their first photo. Neutral temporal wording only,
@@ -92,26 +96,36 @@ function monthLabel(ts) {
 }
 
 function trendOnlyScanCopy(scan) {
+  const assessment = scan?.signals?.physiqueAssessment || null;
+  if (assessment?.progressSignalLabel) return `Progress Signal: ${assessment.progressSignalLabel}.`;
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup was not like-for-like.';
-  if (direction === 'down') return 'Trend context: measured signals point lower than the last like-for-like scan.';
-  if (direction === 'up') return 'Trend context: measured signals point higher than the last like-for-like scan.';
-  if (direction === 'steady') return 'Trend context: measured signals are broadly steady.';
+  if (direction === 'down') return 'Progress Signal: positive against the last like-for-like scan.';
+  if (direction === 'up') return 'Progress Signal: drift to watch against the last like-for-like scan.';
+  if (direction === 'steady') return 'Progress Signal: holding steady.';
   return 'Trend context: baseline scan saved.';
 }
 
 function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Scan saved privately. Detailed scan numbers are hidden right now.';
-  if (scan?.analysisStatus === 'complete' && scan.estimateRangeLow != null && scan.estimateRangeHigh != null) {
-    if (hideExact) return `${trendOnlyScanCopy(scan)} Exact scan ranges are hidden.`;
-    return `Estimated range ${scan.estimateRangeLow}-${scan.estimateRangeHigh}%. ${scan.copySummary || 'Use the trend across comparable scans.'}`;
+  if (suppressed) return 'Scan saved privately. Physique scan details are hidden right now.';
+  const assessment = scan?.signals?.physiqueAssessment || null;
+  if (assessment?.visualLeannessScore != null) {
+    const score = `Volyume Leanness Score ${assessment.visualLeannessScore}/100`;
+    const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
+    const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
+    if (hideExact) {
+      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed scan score is hidden. This is not a body-fat percentage.`;
+    }
+    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual progress score, not a body-fat percentage.']
+      .filter(Boolean)
+      .join('. ');
   }
-  if (scan?.analysisStatus === 'measured') {
+  if (scan?.analysisStatus === 'complete' || scan?.analysisStatus === 'measured') {
     return hideExact
       ? trendOnlyScanCopy(scan)
-      : (scan?.copySummary || 'Scan measured and saved. This is not a body-fat estimate; use it as trend context across like-for-like scans.');
+      : (scan?.copySummary || 'Scan measured and saved. Volyume could not produce a useful score from this photo set yet.');
   }
-  return scan?.copySummary || 'Saved as a scan. Body-composition estimates are withheld until there is a validated estimator.';
+  return scan?.copySummary || 'Saved as a scan. Analysis is withheld until the photos and profile data are reliable enough.';
 }
 
 function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
@@ -123,6 +137,23 @@ function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
     parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
   }
   return parts.length ? parts.join(' | ') : 'Stored scan photos';
+}
+
+export function scanShareItemsFromEntries(scans = []) {
+  return (Array.isArray(scans) ? scans : [])
+    .filter((scan) => scan?.status !== 'draft' && scan?.requiredPosesComplete && Array.isArray(scan.assets))
+    .map((scan) => {
+      const asset = scan.assets.find((a) => a?.pose === 'front' && a?.uri)
+        || scan.assets.find((a) => a?.uri);
+      if (!asset?.uri) return null;
+      return {
+        name: asset.photoName || `${scan.id}-${asset.pose || 'scan'}`,
+        uri: asset.uri,
+        ts: Number.isFinite(scan.capturedAt) ? scan.capturedAt : (asset.takenAt ?? Date.now()),
+        scan,
+      };
+    })
+    .filter(Boolean);
 }
 
 // Group a newest-first photo list into a flat timeline of month headers and
@@ -215,6 +246,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [viewerName, setViewerName] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [scanCompareOpen, setScanCompareOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureReference, setCaptureReference] = useState(null);
@@ -245,7 +277,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       // read failure must be treated as calm/suppressed.
       const [rows, scanRows, mode, hideExact] = await Promise.all([
         listProgressPhotos(userId),
-        userId ? listProgressScanEntries(userId, 5).catch(() => []) : Promise.resolve([]),
+        userId ? listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT).catch(() => []) : Promise.resolve([]),
         AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
         getProgressScanHideExactPreference(),
       ]);
@@ -286,8 +318,6 @@ export default function ProgressPhotosScreen({ navigation }) {
         if (!perm?.granted) { toast.show('Camera permission is needed to take a photo.', { variant: 'warning' }); return; }
         result = await ImagePicker.launchCameraAsync(opts);
       } else {
-        perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm?.granted) { toast.show('Photo library permission is needed.', { variant: 'warning' }); return; }
         result = await ImagePicker.launchImageLibraryAsync(opts);
       }
       if (result?.canceled) return;
@@ -298,6 +328,36 @@ export default function ProgressPhotosScreen({ navigation }) {
       openDetailsForNew(uri);
     } catch (_) {
       toast.show('Could not add the photo. Try again.', { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pickScanPoseFromLibrary(flow = scanFlow, pose = capturePose) {
+    if (useAppStore.getState().tier !== 'pro') return;
+    if (!flow?.scanId || !pose) {
+      pickFrom('library');
+      return;
+    }
+    if (!ImagePicker) { toast.show('Photos need a rebuild on this device.', { variant: 'warning' }); return; }
+    setBusy(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
+        quality: 0.7,
+      });
+      if (result?.canceled) return;
+      const uri = result?.assets?.[0]?.uri;
+      if (!uri) return;
+      const uid = useAppStore.getState().user?.id ?? userId;
+      const saved = await saveProgressPhoto(uri, undefined, uid);
+      if (!saved?.name || !saved?.uri) throw new Error('progress_scan_library_save_failed');
+      await upsertPhotoMeta(uid, saved.name, { pose });
+      setBusy(false);
+      await onScanCaptured(saved.name, saved);
+    } catch (e) {
+      logError('ProgressPhotos.scanLibraryPose', e, { userId, pose });
+      toast.show('Could not add that scan photo. Please try again.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -422,7 +482,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     try {
-      const session = await createProgressScanSession(userId);
+      const capturePrefs = await getProgressScanCapturePreferences();
+      const session = await createProgressScanSession(userId, capturePrefs);
       if (!session?.id) throw new Error('No scan session');
       setScanFlow({ scanId: session.id, pose: 'front' });
       setCaptureReference(null);
@@ -444,16 +505,17 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!userId || !scanId) return;
     try {
       const profile = useAppStore.getState().userProfile || {};
-      const sex = profile.sex ?? userSex;
+      const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
+      const sex = profile.sex ?? bodyProfile?.sex ?? userSex;
       await finishProgressScanSession(userId, scanId, {
         sex,
-        heightCm: profile.heightCm ?? null,
+        heightCm: profile.heightCm ?? bodyProfile?.heightCm ?? null,
         weightKg: profile.weightKg ?? profile.bodyweightKg ?? profile.bodyWeightKg ?? null,
-        trainingGoal: profile.trainingGoal ?? null,
+        trainingGoal: profile.trainingGoal ?? bodyProfile?.primaryGoal ?? null,
         trainingPhase: profile.trainingPhase ?? profile.goal ?? null,
         darkerSkinOverestimationRisk: profile.darkerSkinOverestimationRisk === true,
       });
-      setScans(await listProgressScanEntries(userId, 5));
+      setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
@@ -483,13 +545,18 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function saveScanAssetAndContinue(flow, pose, name, saved, vision) {
     const assetFields = assetFieldsFromVisionResult(vision);
-    await addProgressScanAsset(userId, flow.scanId, {
+    const inserted = await addProgressScanAsset(userId, flow.scanId, {
       pose,
       photoName: name,
       uri: saved.uri,
       takenAt: saved.ts ?? Date.now(),
       ...assetFields,
     });
+    if (!inserted) {
+      await deleteProgressPhoto(userId, saved.uri).catch(() => false);
+      await deletePhotoMeta(userId, name).catch(() => false);
+      throw new Error('progress_scan_asset_save_failed');
+    }
     await continueScanAfterPose(flow, pose);
   }
 
@@ -523,7 +590,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       const deleted = await deleteProgressScanSession(userId, scanId, { deleteFiles: true });
       if (!deleted) throw new Error('progress_scan_discard_failed');
       setScanFlow(null);
-      setScans(await listProgressScanEntries(userId, 5));
+      setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.discardScan', e, { userId, scanId });
@@ -570,7 +637,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         appAlert('Retake this photo?', retakeCopy, [
           { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
           {
-            text: 'Use photo without analysis',
+            text: 'Save without estimate',
             onPress: () => {
               saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
                 logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
@@ -619,10 +686,10 @@ export default function ProgressPhotosScreen({ navigation }) {
       'Your photos stay on this device. They are never synced or shared unless you choose to.\n\n'
       + 'A guided scan takes front and back photos. A side photo is optional.\n\n'
       + 'Use the camera flip and the 5 or 10 second timer when you need to set the phone down and step into position.\n\n'
-      + 'The scan only explains stored, measured signals. If analysis is not reliable, it will say so rather than guess.\n\n'
+      + 'When the scan has enough information, it shows a Volyume Leanness Score, a Leanness Band, Scan Confidence and a Progress Signal. It does not claim to know your body-fat percentage from photos.\n\n'
       + 'Tap a photo to view it full size, add a note, or set the date.\n\n'
       + 'Pick any two to compare them side by side, with a slider, or as an overlay.\n\n'
-      + 'When you are ready, make a before and after card to keep or share.\n\n'
+      + 'When you are ready, make a comparison card to keep or share.\n\n'
       + 'There is no schedule and no streak. Take them at your own pace, and only if they help you.',
       [{ text: 'Got it' }],
     );
@@ -660,6 +727,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, [photos, refresh, toast, userId]);
 
   function openCompare() { setCompareOpen(true); }
+  function openScanCompare() { setScanCompareOpen(true); }
   function openShare() { setShareOpen(true); }
 
   const win = Dimensions.get('window');
@@ -668,10 +736,19 @@ export default function ProgressPhotosScreen({ navigation }) {
   // NEW high-risk surfaces are withheld under the shared suppression gate
   // (fail-closed): the comparison entry and the share card. Viewing the dated
   // timeline and delete stay available. Share is additionally Pro-gated.
+  const visibleScans = useMemo(
+    () => scans.filter((s) => s?.status !== 'draft' && s?.requiredPosesComplete),
+    [scans],
+  );
+  const scanPhotoNames = useMemo(() => new Set(
+    visibleScans.flatMap((scan) => (scan.assets || []).map((asset) => asset?.photoName).filter(Boolean)),
+  ), [visibleScans]);
+  const scanShareItems = scanShareItemsFromEntries(visibleScans);
+  const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
+  const canCompareScans = !loading && visibleScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
-  const canShare = !loading && !readOnly && photos.length >= 2 && !suppressed;
-  const showActions = canCompare || canShare;
-  const visibleScans = scans.filter((s) => s?.status !== 'draft' && s?.requiredPosesComplete);
+  const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
+  const showActions = canCompareScans || canCompare || canShare;
 
   function renderTile(item) {
     const dateLabel = formatDay(item.takenAt);
@@ -720,8 +797,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       <Card padding="md" style={styles.infoCard}>
         <Text style={styles.note}>
           {suppressed
-            ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Guided photos are saved privately and detailed scan estimates are hidden right now. Use these only if they help you, and skip them if they do not.'
-            : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Progress Scan guides front and back photos, then only explains stored, measured signals.'}
+            ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Guided photos are saved privately and physique scan details are hidden right now. Use these only if they help you, and skip them if they do not.'
+            : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Progress Scan guides front and back photos, then shows a Volyume Leanness Score, Leanness Band, Scan Confidence and Progress Signal when the photo read is strong enough.'}
           {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
         </Text>
         <TouchableOpacity
@@ -755,7 +832,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               hitSlop={8}
               accessibilityRole="switch"
               accessibilityState={{ checked: hideExactScans }}
-              accessibilityLabel={hideExactScans ? 'Show exact scan ranges' : 'Hide exact scan ranges'}
+              accessibilityLabel={hideExactScans ? 'Show scan details' : 'Hide scan details'}
               style={styles.hideExactToggle}
             >
               <Ionicons
@@ -763,7 +840,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 size={iconSize.sm}
                 color={colors.primary}
               />
-              <Text style={styles.hideExactText}>{hideExactScans ? 'Trend only' : 'Show range'}</Text>
+              <Text style={styles.hideExactText}>{hideExactScans ? 'Trend only' : 'Show details'}</Text>
             </TouchableOpacity>
           </View>
           {visibleScans.map((scan) => (
@@ -883,6 +960,17 @@ export default function ProgressPhotosScreen({ navigation }) {
 
       {showActions && (
         <View style={styles.actionRow}>
+          {canCompareScans && (
+            <Button
+              title="Compare scans"
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
+              icon="git-compare-outline"
+              onPress={openScanCompare}
+              accessibilityLabel="Compare two Progress Scan entries"
+            />
+          )}
           {canCompare && (
             <Button
               title="Compare photos"
@@ -896,7 +984,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           )}
           {canShare && (
             <Button
-              title="Share photos"
+              title={scanShareItems.length >= 2 ? 'Share scan' : 'Share photos'}
               variant="tertiary"
               size="sm"
               fullWidth={false}
@@ -969,14 +1057,31 @@ export default function ProgressPhotosScreen({ navigation }) {
           Modal; only mounted while open. */}
       {viewerOpen ? (
         <ProgressPhotoViewer
-          photos={filtered}
+          photos={viewerPhotos}
           initialName={viewerName}
           onClose={() => setViewerOpen(false)}
           onDelete={onViewerDelete}
           onCompareFrom={() => { setViewerOpen(false); openCompare(); }}
           onSetReference={(name) => setReferenceName(name)}
+          hideWeight={hideExactScans && scanPhotoNames.has(viewerName)}
         />
       ) : null}
+
+      {/* Scan comparison. This is the Progress Scan specific over-time view:
+          dated entries, visual score/band context, measured deltas, and
+          pose-matched photos. It self-suppresses through usePhotoSuppression
+          too. */}
+      <Modal
+        visible={scanCompareOpen}
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={() => setScanCompareOpen(false)}
+      >
+        <ProgressScanCompare
+          scans={visibleScans}
+          hideExact={hideExactScans}
+          onClose={() => setScanCompareOpen(false)}
+        />
+      </Modal>
 
       {/* Comparison. Self-contained selection + three modes; self-suppresses
           under calm/ED. The entry above is ALSO gated, a deliberate double
@@ -1006,7 +1111,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             else { setCaptureOpen(false); openDetailsForCaptured(name, capturePose); }
           }}
           onClose={() => { setCaptureOpen(false); if (scanFlow) discardScanDraft(scanFlow); }}
-          onFallback={() => { setCaptureOpen(false); if (scanFlow) discardScanDraft(scanFlow); pickFrom('library'); }}
+          onFallback={() => { setCaptureOpen(false); if (scanFlow) pickScanPoseFromLibrary(scanFlow, capturePose); else pickFrom('library'); }}
         />
       </Modal>
 
@@ -1017,7 +1122,12 @@ export default function ProgressPhotosScreen({ navigation }) {
         animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => setShareOpen(false)}
       >
-        <BeforeAfterShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} photos={photos} />
+        <BeforeAfterShareSheet
+          visible={shareOpen}
+          onClose={() => setShareOpen(false)}
+          photos={scanShareItems.length >= 2 ? scanShareItems : photos}
+          hideScanRange={hideExactScans}
+        />
       </Modal>
 
       {/* Photo details (date + pose) shown after an image is obtained and before
@@ -1101,7 +1211,7 @@ const styles = StyleSheet.create({
   datesChipText: { ...type.label, color: colors.textMuted },
   datesChipTextActive: { color: colors.primary },
   actionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },

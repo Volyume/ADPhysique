@@ -3,6 +3,7 @@ import {
   base64ToUint8Array,
   measureMaskSignals,
   retakeCopyForVisionResult,
+  unavailableVisionResult,
 } from '../progressScanVision';
 
 function syntheticPersonMask({
@@ -53,6 +54,21 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.needsRetake).toBe(true);
     expect(result.abstentionReasons).toContain('too_dark');
     expect(retakeCopyForVisionResult(result)).toMatch(/too dark/i);
+  });
+
+  test('no-person and unreadable images ask for a new pose photo instead of silently saving as analysed', () => {
+    const noPerson = measureMaskSignals(new Float32Array(256 * 256).fill(0.02), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+    expect(noPerson.modelBacked).toBe(false);
+    expect(noPerson.needsRetake).toBe(true);
+    expect(retakeCopyForVisionResult(noPerson)).toMatch(/one clear person/i);
+
+    const unreadable = unavailableVisionResult('native_preprocess_unavailable');
+    expect(unreadable.needsRetake).toBe(true);
+    expect(retakeCopyForVisionResult(unreadable)).toMatch(/new photo/i);
   });
 
   test('letterboxed preprocessing measures ratios inside the content rect, not padding', () => {

@@ -333,7 +333,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Use these only if they help you, and skip them if they do not.');
     expect(text).toContain('nothing is shared unless you choose to');
-    expect(text).toContain('detailed scan estimates are hidden right now');
+    expect(text).toContain('physique scan details are hidden right now');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });
 

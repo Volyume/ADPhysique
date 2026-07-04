@@ -18,7 +18,7 @@ jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default:
 jest.mock('../../lib/progressPhotoMeta', () => ({ __esModule: true, getPhotoMetaMap: async () => ({}) }));
 
 import {
-  elapsedLabel, orderPair, defaultPair, buildBeforeAfterParams, formatCardDate,
+  elapsedLabel, orderPair, defaultPair, buildBeforeAfterParams, formatCardDate, formatShareScanRange,
 } from '../BeforeAfterShareSheet';
 
 const DAY = 86400000;
@@ -168,9 +168,53 @@ describe('buildBeforeAfterParams', () => {
     expect(p.before.weight).toMatch(/lbs/);
   });
 
-  // FOUNDER-RULE INVARIANT: the card carries ONLY date + weight per photo. Name,
-  // measurements and private notes must never appear on it (weight is the sole
-  // approved exception; the whole card is withheld under calm/ED upstream).
+  const scoredScan = (score, band = 'Lean') => ({
+    signals: {
+      physiqueAssessment: {
+        visualLeannessScore: score,
+        leannessBandLabel: band,
+      },
+    },
+  });
+
+  test('scan score is included only when a scan has a physique assessment', () => {
+    expect(formatShareScanRange({ estimateRangeLow: 10, estimateRangeHigh: 23.6 })).toBe('');
+    expect(formatShareScanRange(scoredScan(66))).toBe('Lean 66/100');
+    expect(formatShareScanRange({ analysisStatus: 'measured' })).toBe('');
+    const p = buildBeforeAfterParams({
+      olderTakenAt: older,
+      newerTakenAt: newer,
+      olderScan: scoredScan(54, 'Defined'),
+      newerScan: scoredScan(66, 'Lean'),
+      showWeight: false,
+    });
+    expect(p.before.scanRange).toBe('Defined 54/100');
+    expect(p.after.scanRange).toBe('Lean 66/100');
+    expect(p.before.weight).toBe('');
+    expect(p.after.weight).toBe('');
+  });
+
+  test('scan scores are removed when the hide-exact preference is active', () => {
+    const p = buildBeforeAfterParams({
+      olderTakenAt: older,
+      newerTakenAt: newer,
+      olderWeightKg: 82.4,
+      newerWeightKg: 78.1,
+      olderScan: scoredScan(54, 'Defined'),
+      newerScan: scoredScan(66, 'Lean'),
+      showWeight: true,
+      showScanRange: false,
+      showScanWeight: false,
+    });
+    expect(p.before.scanRange).toBeUndefined();
+    expect(p.after.scanRange).toBeUndefined();
+    expect(p.before.weight).toBe('');
+    expect(p.after.weight).toBe('');
+  });
+
+  // FOUNDER-RULE INVARIANT: the card carries only date, optional scan score and
+  // weight per photo. Name, measurements and private notes must never appear on
+  // it (weight and scan score are both withheld upstream under calm/ED).
   test('per-photo payload is date + weight only, never name/measurements', () => {
     const p = buildBeforeAfterParams({
       olderTakenAt: older, newerTakenAt: newer,

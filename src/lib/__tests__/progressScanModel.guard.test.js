@@ -20,6 +20,17 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(bytes.length).toBeGreaterThan(100000);
     const hash = crypto.createHash('sha256').update(bytes).digest('hex').toUpperCase();
     expect(hash).toBe('9EE168EC7C8F2A16C56FE8E1CFBC514974CBBB7E434051B455635F1BD1462F5C');
+
+    const estimatorPath = path.join(ROOT, 'assets', 'ml', 'progress_scan_bf_estimator_v1.json');
+    const estimatorBytes = fs.readFileSync(estimatorPath);
+    const estimatorHash = crypto.createHash('sha256').update(estimatorBytes).digest('hex').toUpperCase();
+    const estimator = JSON.parse(estimatorBytes.toString('utf8'));
+    expect(estimator.id).toBe('progress_scan_bf_estimator_v1');
+    expect(estimator.status).toBe('provisional_validation_pending');
+    expect(estimator.requiredInputs).toEqual(expect.arrayContaining(['sex', 'heightCm', 'weightKg']));
+    expect(estimator.optionalInputs).toEqual(['side.silhouetteRatios']);
+    expect(estimator.limitations).toContain('never_authoritative_for_safety_floors');
+    expect(estimatorHash).toBe('2E971BBE14D5969FF1F158DEEF47C4D74685A89DA8059D1BC9968A61AF1BAFB5');
   });
 
   test('Metro and JS runner load .tflite through fast-tflite, not ExecuTorch', () => {
@@ -45,12 +56,17 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(block).toMatch(/retakeCopyForVisionResult/);
   });
 
-  test('segmentation model is not promoted into a fake body-fat estimator', () => {
+  test('visible physique score layer is separate from the legacy internal estimator asset', () => {
     const analysis = read('src/lib/progressScanAnalysis.js');
-    expect(analysis).toMatch(/progress_scan_measured_outline_v1/);
+    const store = read('src/lib/progressScanStore.js');
+    expect(analysis).toMatch(/progress_scan_bf_estimator_v1\.json/);
+    expect(analysis).toMatch(/estimateBodyFatFromScanAssets/);
+    expect(store).toMatch(/estimateBodyFatFromScanAssets/);
     expect(analysis).toMatch(/export function estimateBodyFatFromScanAssets/);
-    expect(analysis).toMatch(/return null;/);
-    expect(analysis).not.toMatch(/silhouette_regressor|waistShoulderTerm|bmiTerm/);
+    expect(analysis).toMatch(/PROGRESS_SCAN_SCORE_VERSION/);
+    expect(analysis).toMatch(/buildPhysiqueAssessment/);
+    expect(analysis).toMatch(/not_body_fat_estimate/);
+    expect(analysis).not.toMatch(/return null;\s*}\s*function modelEstimateValue/);
   });
 
   test('Android release workflow verifies native 16 KB page-size compatibility', () => {

@@ -2,7 +2,6 @@ import { db } from './database';
 import { generateUUID } from './uuid';
 import { logError } from './errorLog';
 import {
-  PHOTO_SCAN_SOURCE,
   PROGRESS_SCAN_CONSENT_VERSION,
   PROGRESS_SCAN_ESTIMATOR_VERSION,
   PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
@@ -10,8 +9,10 @@ import {
   coachSummaryFromScan,
   deriveProgressScanBiasFlagsFromProfile,
   explainMeasuredScanDelta,
+  estimateBodyFatFromScanAssets,
   measuredSignalsSummaryFromAssets,
   requiredPosesComplete,
+  scanComparability,
   parseMaybeJson,
 } from './progressScanAnalysis';
 import { getPhotoMetaMap, deletePhotoMeta } from './progressPhotoMeta';
@@ -221,8 +222,8 @@ export async function listProgressScans(userId, limit = 20) {
   return (rows || []).map(rowToScan).filter(Boolean);
 }
 
-export async function getPreviousAnalysedProgressScan(userId, beforeMs) {
-  if (!userId) return null;
+export async function getPreviousAnalysedProgressScans(userId, beforeMs, limit = 10) {
+  if (!userId) return [];
   const d = await db();
   const rows = await d.getAllAsync(
     `SELECT * FROM progress_scan_sessions
@@ -232,10 +233,14 @@ export async function getPreviousAnalysedProgressScan(userId, beforeMs) {
         AND analysis_status IN ('complete', 'measured')
         AND captured_at < ?
       ORDER BY captured_at DESC
-      LIMIT 10`,
-    [userId, beforeMs ?? nowMs()],
+      LIMIT ?`,
+    [userId, beforeMs ?? nowMs(), Math.max(1, Math.min(20, Number(limit) || 10))],
   ).catch(() => []);
-  return (rows || []).map(rowToScan).find(Boolean) ?? null;
+  return (rows || []).map(rowToScan).filter(Boolean);
+}
+
+export async function getPreviousAnalysedProgressScan(userId, beforeMs) {
+  return (await getPreviousAnalysedProgressScans(userId, beforeMs, 10))[0] ?? null;
 }
 
 export async function finishProgressScanSession(userId, scanId, opts = {}) {
@@ -245,40 +250,71 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
   if (!session) return null;
   const assets = await getProgressScanAssets(userId, scanId);
   const scanStats = await statsForAssets(userId, assets);
-  const previous = await getPreviousAnalysedProgressScan(userId, session.capturedAt);
+  const previousCandidates = await getPreviousAnalysedProgressScans(userId, session.capturedAt, 10);
+  const latestPrevious = previousCandidates[0] ?? null;
   const profileBiasFlags = deriveProgressScanBiasFlagsFromProfile({
     trainingGoal: opts.trainingGoal ?? null,
     trainingPhase: opts.trainingPhase ?? opts.goalPhase ?? null,
     darkerSkinOverestimationRisk: opts.darkerSkinOverestimationRisk === true,
   });
-  const analysis = analyseProgressScan({
+  const estimatorInput = opts.modelEstimate ?? estimateBodyFatFromScanAssets({
     assets,
-    previousScan: previous,
-    modelEstimate: opts.modelEstimate ?? null,
     sex: opts.sex ?? null,
     heightCm: opts.heightCm ?? null,
-    weightKg: opts.weightKg ?? scanStats.weightKg ?? null,
+    weightKg: scanStats.weightKg ?? opts.weightKg ?? null,
+  });
+  const analysis = analyseProgressScan({
+    assets,
+    previousScan: latestPrevious,
+    modelEstimate: estimatorInput,
+    sex: opts.sex ?? null,
+    heightCm: opts.heightCm ?? null,
+    weightKg: scanStats.weightKg ?? opts.weightKg ?? null,
     userBiasFlags: [...profileBiasFlags, ...(opts.userBiasFlags ?? [])],
     modelValidated: false,
   });
-  const baseSignalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, { stats: scanStats });
+  const baseSignalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, {
+    stats: scanStats,
+    physiqueAssessment: analysis.physiqueAssessment ?? null,
+  });
   const currentForDelta = {
     analysisStatus: analysis.analysisStatus,
     qualityLabel: analysis.qualityLabel,
     assets,
-    estimateBodyFatPercent: analysis.estimate ?? null,
-    estimateRangeLow: analysis.range?.low ?? null,
-    estimateRangeHigh: analysis.range?.high ?? null,
+    estimateBodyFatPercent: null,
+    estimateRangeLow: null,
+    estimateRangeHigh: null,
     trendDirection: analysis.trend?.direction ?? 'uncertain',
     signals: baseSignalsSummary,
     stats: scanStats,
   };
+  const comparablePrevious = previousCandidates.find((candidate) => (
+    scanComparability(currentForDelta, candidate).comparable
+  )) ?? latestPrevious;
   const deltaExplanation = ['complete', 'measured'].includes(analysis.analysisStatus)
-    ? explainMeasuredScanDelta({ currentScan: currentForDelta, previousScan: previous })
+    ? explainMeasuredScanDelta({ currentScan: currentForDelta, previousScan: comparablePrevious })
+    : null;
+  const physiqueAssessment = analysis.physiqueAssessment
+    ? {
+        ...analysis.physiqueAssessment,
+        progressSignal: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.progressSignal ?? analysis.physiqueAssessment.progressSignal)
+          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'inconclusive'),
+        progressSignalLabel: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.progressSignalLabel ?? analysis.physiqueAssessment.progressSignalLabel)
+          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'Baseline scan' : 'Inconclusive'),
+        progressDirection: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.progressDirection ?? analysis.physiqueAssessment.progressDirection)
+          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'uncertain'),
+        progressDeltaScore: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.progressDeltaScore ?? analysis.physiqueAssessment.progressDeltaScore)
+          : null,
+      }
     : null;
   const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, {
     stats: scanStats,
     deltaExplanation,
+    physiqueAssessment,
   });
   const modelVersion = analysis.modelEstimate?.modelVersion
     ?? (signalsSummary.modelBacked ? PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION : opts.modelVersion ?? null);
@@ -310,13 +346,13 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       complete ? 'complete' : 'failed',
       analysis.analysisStatus,
       complete ? 1 : 0,
-      analysis.estimate ?? null,
-      analysis.range?.low ?? null,
-      analysis.range?.high ?? null,
-      analysis.estimate != null ? 'low' : null,
-      analysis.estimate != null ? PHOTO_SCAN_SOURCE : null,
+      null,
+      null,
+      null,
+      null,
+      null,
       deltaExplanation?.trendDirection ?? analysis.trend?.direction ?? 'uncertain',
-      analysis.trend?.magnitudePctPoints ?? null,
+      deltaExplanation?.trendMagnitudePctPoints ?? analysis.trend?.magnitudePctPoints ?? null,
       analysis.qualityScore ?? null,
       analysis.qualityLabel ?? null,
       modelVersion,
@@ -401,6 +437,11 @@ export async function detachProgressScanPhoto(userId, photoName) {
            estimate_source = NULL,
            trend_direction = 'uncertain',
            trend_magnitude_pct_points = NULL,
+           quality_score = NULL,
+           quality_label = NULL,
+           model_version = NULL,
+           signals_json = NULL,
+           bias_flags_json = NULL,
            abstention_reasons_json = ?,
            copy_summary = ?,
            updated_at = ?

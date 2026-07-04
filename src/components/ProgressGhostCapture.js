@@ -40,13 +40,17 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import useAppStore from '../store/useAppStore';
 import { saveProgressPhoto } from '../lib/progressPhotos';
 import { upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
+import {
+  getProgressScanCapturePreferences,
+  setProgressScanCameraFacingPreference,
+  setProgressScanTimerPreference,
+} from '../lib/progressScanPreferences';
 import { useToast } from './Toast';
 import {
   colors,
@@ -82,8 +86,6 @@ const OPACITY_MIN = 0.15;
 const OPACITY_MAX = 0.85;
 const OPACITY_DEFAULT = 0.3;
 const OPACITY_STEP = 0.05;
-const CAMERA_FACING_PREF = '@volyume_progress_scan_camera_facing';
-const TIMER_PREF = '@volyume_progress_scan_timer_seconds';
 
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;
@@ -178,14 +180,10 @@ export default function ProgressGhostCapture({
     let alive = true;
     (async () => {
       try {
-        const [savedFacing, savedTimer] = await Promise.all([
-          AsyncStorage.getItem(CAMERA_FACING_PREF),
-          AsyncStorage.getItem(TIMER_PREF),
-        ]);
+        const prefs = await getProgressScanCapturePreferences();
         if (!alive) return;
-        if (savedFacing === 'front' || savedFacing === 'back') setFacing(savedFacing);
-        const n = Number(savedTimer);
-        if ([0, 5, 10].includes(n)) setTimerSeconds(n);
+        setFacing(prefs.cameraFacing);
+        setTimerSeconds(prefs.timerSeconds);
       } catch (_) { /* keep defaults */ }
     })();
     return () => { alive = false; };
@@ -269,13 +267,13 @@ export default function ProgressGhostCapture({
   const chooseTimer = useCallback((seconds) => {
     const next = [0, 5, 10].includes(seconds) ? seconds : 0;
     setTimerSeconds(next);
-    AsyncStorage.setItem(TIMER_PREF, String(next)).catch(() => {});
+    setProgressScanTimerPreference(next);
   }, []);
 
   const flipCamera = useCallback(() => {
     setFacing((f) => {
       const next = f === 'back' ? 'front' : 'back';
-      AsyncStorage.setItem(CAMERA_FACING_PREF, next).catch(() => {});
+      setProgressScanCameraFacingPreference(next);
       return next;
     });
   }, []);

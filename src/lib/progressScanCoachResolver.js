@@ -9,12 +9,6 @@
 import { PHOTO_SCAN_SOURCE } from './progressScanAnalysis';
 import { checkJargon } from './whyThisTemplates';
 
-function finiteNumber(v) {
-  if (v == null || v === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 function clean(str) {
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     const { clean: ok, violations } = checkJargon(str);
@@ -28,35 +22,46 @@ function clean(str) {
   return String(str ?? '').trim();
 }
 
-function rangeLabel(scan) {
-  const low = finiteNumber(scan?.rangeLow ?? scan?.estimateRangeLow);
-  const high = finiteNumber(scan?.rangeHigh ?? scan?.estimateRangeHigh);
-  if (low == null || high == null || high < low) return null;
-  return `${low}-${high}%`;
-}
-
 function trendOnlyLabel(scan) {
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') return 'Your latest Progress Scan is saved, but I am not comparing it because the setup was not like-for-like.';
-  if (direction === 'down') return 'Your latest Progress Scan measured signals point lower than the last like-for-like scan.';
-  if (direction === 'up') return 'Your latest Progress Scan measured signals point higher than the last like-for-like scan.';
-  if (direction === 'steady') return 'Your latest Progress Scan measured signals are broadly steady against the last like-for-like scan.';
+  if (scan?.comparisonStatus !== 'comparable') return 'Your latest Progress Scan is saved as a baseline until there is another like-for-like scan.';
+  if (direction === 'down') return 'Your latest Progress Scan has a positive visual progress signal against the last like-for-like scan.';
+  if (direction === 'up') return 'Your latest Progress Scan shows a visual drift to watch against the last like-for-like scan.';
+  if (direction === 'steady') return 'Your latest Progress Scan is holding steady against the last like-for-like scan.';
   return 'Your latest Progress Scan is saved as a baseline until there is another like-for-like scan.';
+}
+
+function scanLabel(scan) {
+  const band = scan?.leannessBandLabel || null;
+  const confidence = scan?.confidence || null;
+  const confidenceCopy = confidence === 'moderate' ? 'moderate confidence'
+    : confidence === 'high' ? 'high confidence'
+      : confidence === 'low' ? 'low confidence'
+        : null;
+  if (!band && !confidenceCopy) return null;
+  return [band ? `${band} band` : null, confidenceCopy].filter(Boolean).join(', ');
 }
 
 function trendLine(scan, label, trendOnly = false) {
   if (trendOnly || !label) return trendOnlyLabel(scan);
   const direction = scan?.trendDirection || 'uncertain';
+  if (scan?.comparisonStatus === 'not_comparable') {
+    return `Your latest Progress Scan is ${label}, but I am not comparing it because the setup was not like-for-like.`;
+  }
+  if (scan?.comparisonStatus !== 'comparable') {
+    return `Your latest Progress Scan is ${label}. This is a baseline until there is another comparable scan.`;
+  }
   if (direction === 'down') {
-    return `Your latest Progress Scan range is ${label} and points lower than the last comparable scan.`;
+    return `Your latest Progress Scan is ${label}, with a positive visual progress signal against the last comparable scan.`;
   }
   if (direction === 'up') {
-    return `Your latest Progress Scan range is ${label} and points higher than the last comparable scan.`;
+    return `Your latest Progress Scan is ${label}, with a visual drift to watch against the last comparable scan.`;
   }
   if (direction === 'steady') {
-    return `Your latest Progress Scan range is ${label}. The movement is inside the scan range, so I am reading it as steady.`;
+    return `Your latest Progress Scan is ${label}. I am reading it as holding steady.`;
   }
-  return `Your latest Progress Scan range is ${label}. This is a baseline until there is another comparable scan.`;
+  return `Your latest Progress Scan is ${label}. This is a baseline until there is another comparable scan.`;
 }
 
 function coachLine(scan, label, trendOnly = false) {
@@ -64,11 +69,14 @@ function coachLine(scan, label, trendOnly = false) {
   if (scan?.comparisonStatus === 'not_comparable') {
     return 'Progress Scan is saved, but I am not using it as a comparison because the setup was not like-for-like.';
   }
-  const range = label && !trendOnly ? `range ${label}` : 'measured outline signals only';
-  if (direction === 'down') return `Progress Scan also points lower from ${range}. I am treating that as supporting trend context, not a reason to push the cut harder.`;
-  if (direction === 'up') return `Progress Scan points higher from ${range}. I am treating that as a check to watch consistency, not as a calorie trigger.`;
-  if (direction === 'steady') return `Progress Scan is steady from ${range}. That supports holding the read calm unless your logged trend says otherwise.`;
-  return `Progress Scan is now saved as a baseline from ${range}. I will compare future scans only when the photos are like-for-like.`;
+  if (scan?.comparisonStatus !== 'comparable') {
+    return 'Progress Scan is now saved as a baseline. I will compare future scans only when the photos are like-for-like.';
+  }
+  const context = label && !trendOnly ? label : 'visual scan signals';
+  if (direction === 'down') return `Progress Scan also has a positive signal from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
+  if (direction === 'up') return `Progress Scan shows a drift to watch from ${context}. I am treating that as a check on consistency, not as a calorie trigger.`;
+  if (direction === 'steady') return `Progress Scan is steady from ${context}. That supports holding the read calm unless your logged trend says otherwise.`;
+  return `Progress Scan is now saved as a baseline from ${context}. I will compare future scans only when the photos are like-for-like.`;
 }
 
 function decisionLine(output) {
@@ -90,13 +98,13 @@ export function resolveProgressScanCoachNote({
   trendOnly = false,
 } = {}) {
   if (suppressed || !scan || scan.source !== PHOTO_SCAN_SOURCE) return null;
-  if (scan.confidence && scan.confidence !== 'low') return null;
-  const label = rangeLabel(scan);
+  if (scan.confidence === 'not_enough') return null;
+  const label = scanLabel(scan);
 
   const body = clean([
     trendLine(scan, label, trendOnly),
-    trendOnly && label ? 'Exact scan ranges are hidden by your preference.' : null,
-    label ? 'The estimate is provisional and still calibrating for your body type.' : 'This is measured outline context only, not a body-fat estimate.',
+    trendOnly && label ? 'Detailed scan score and band are hidden by your preference.' : null,
+    'This is a visual progress score, not a body-fat estimate.',
     decisionLine(output),
   ].filter(Boolean).join(' '));
 
@@ -106,10 +114,13 @@ export function resolveProgressScanCoachNote({
     body,
     coachLine: clean(coachLine(scan, label, trendOnly)),
     trendDirection: scan.trendDirection || 'uncertain',
-    confidence: 'low',
-    rangeLow: trendOnly ? null : finiteNumber(scan.rangeLow ?? scan.estimateRangeLow),
-    rangeHigh: trendOnly ? null : finiteNumber(scan.rangeHigh ?? scan.estimateRangeHigh),
-    usedFor: 'trend_context_only',
+    confidence: scan.confidence || 'low',
+    leannessBand: trendOnly ? null : (scan.leannessBand ?? null),
+    leannessBandLabel: trendOnly ? null : (scan.leannessBandLabel ?? null),
+    progressSignal: scan.progressSignal ?? null,
+    rangeLow: null,
+    rangeHigh: null,
+    usedFor: 'visual_trend_context_only',
     affectsTargets: false,
   };
 }

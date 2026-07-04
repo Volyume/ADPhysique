@@ -11,5 +11,16 @@
 
 The app uses this only as a person-mask/silhouette model. It is not a body-fat
 model, not a medical device, not a DEXA replacement, and not an authority for
-nutrition safety floors. Progress Scan v1 converts measured silhouette signals
-into low-confidence measured trend context with abstention gates.
+nutrition safety floors. Progress Scan converts measured silhouette signals
+into a Volyume Leanness Score, Leanness Band, Scan Confidence and Progress
+Signal with abstention gates.
+
+`progress_scan_bf_estimator_v1.json` is retained as a legacy versioned
+on-device regressor contract after segmentation. Its percent output is not shown
+to users and is not persisted as a body-fat result for new Progress Scans.
+Visible Progress Scan output is the Volyume visual score/band/confidence layer
+derived from the TFLite silhouette signals. Front and back scan photos are
+required. The side pose is optional and only improves context when available.
+
+Progress Scan output is photo context only. It is never an authority for
+Katch-McArdle, FFM floors, calorie floors, or a deeper deficit.

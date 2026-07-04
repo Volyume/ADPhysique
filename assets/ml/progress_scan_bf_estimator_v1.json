@@ -1,0 +1,54 @@
+{
+  "id": "progress_scan_bf_estimator_v1",
+  "schemaVersion": 1,
+  "kind": "deterministic_silhouette_anthropometric_regressor",
+  "status": "provisional_validation_pending",
+  "source": "photo_scan",
+  "runtime": "javascript_regressor_over_on_device_tflite_segmentation",
+  "segmentationModelVersion": "mediapipe_selfie_segmentation_general_2021_05_06",
+  "output": {
+    "unit": "body_fat_percent",
+    "confidence": "low",
+    "clampMin": 4,
+    "clampMax": 55,
+    "baseMarginPctPoints": 4.5
+  },
+  "centres": {
+    "bmi": 24,
+    "waistToHeight": 0.2,
+    "waistToShoulder": 0.66,
+    "waistToHip": 0.8,
+    "bodyAreaRatio": 0.31,
+    "frontBackWaistSpread": 0,
+    "sideWaistToHeight": 0.2
+  },
+  "coefficients": {
+    "intercept": 18,
+    "sexFemale": 8,
+    "bmi": 0.65,
+    "waistToHeight": 55,
+    "waistToShoulder": 20,
+    "waistToHip": 12,
+    "bodyAreaRatio": 25,
+    "frontBackWaistSpread": 8,
+    "sideWaistToHeight": 18
+  },
+  "requiredInputs": [
+    "front.silhouetteRatios",
+    "back.silhouetteRatios",
+    "sex",
+    "heightCm",
+    "weightKg"
+  ],
+  "optionalInputs": [
+    "side.silhouetteRatios"
+  ],
+  "limitations": [
+    "low_confidence_photo_scan",
+    "trend_only_context",
+    "not_dexa_equivalent",
+    "physique_athlete_validation_pending",
+    "bias_uncertainty_widening_required",
+    "never_authoritative_for_safety_floors"
+  ]
+}

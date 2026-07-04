@@ -157,6 +157,12 @@ test('withholds the bodyweight line entirely when suppressed (fail-closed gate)'
   expect(allText(tree)).not.toContain('72.4');
 });
 
+test('withholds the bodyweight line when the parent scan context hides exact numbers', async () => {
+  usePhotoSuppression.mockReturnValue(false);
+  const tree = await mount(baseProps({ hideWeight: true }));
+  expect(allText(tree)).not.toContain('72.4');
+});
+
 test('delete calls onDelete only after the destructive confirm fires', async () => {
   const props = baseProps();
   // appAlert immediately drives the destructive button's onPress.

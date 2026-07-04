@@ -511,7 +511,7 @@ function drawPhotoCell(canvas, Skia, img, x, y, w, h, r) {
 // only the date shows. Clipped to the cell so the plate shares its rounded
 // bottom corners rather than overhanging them.
 function drawCellCaption(canvas, Skia, x, y, w, h, r, cell, s, font) {
-  const line = [cell && cell.date, cell && cell.weight].filter(Boolean).join('  ·  ');
+  const line = [cell && cell.date, cell && cell.scanRange, cell && cell.weight].filter(Boolean).join('  ·  ');
   if (!line) return;
   const plateH = Math.round(Math.min(Math.max(h * 0.16, 64 * s), h * 0.24));
   const py = y + h - plateH;

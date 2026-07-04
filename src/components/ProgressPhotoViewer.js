@@ -35,6 +35,8 @@
  *                                        called only after confirm + tier check)
  *   onCompareFrom(name)                  open the comparison seeded from here
  *   onSetReference(name)                 mark this the ghost-overlay reference
+ *   hideWeight                           withhold exact bodyweight in contexts
+ *                                        such as scan trend-only mode
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -83,6 +85,7 @@ export default function ProgressPhotoViewer({
   onDelete,
   onCompareFrom,
   onSetReference,
+  hideWeight = false,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const userId = useAppStore((s) => s.user?.id);
@@ -318,7 +321,7 @@ export default function ProgressPhotoViewer({
     ]);
   }
 
-  const showWeight = !suppressed && currentMeta?.weightKg != null;
+  const showWeight = !suppressed && !hideWeight && currentMeta?.weightKg != null;
   const weightLine = showWeight ? formatBodyWeight(currentMeta.weightKg, bodyWeightUnits) : '';
 
   return (
