@@ -271,6 +271,7 @@ Status: release decision.
 - Body Metrics now uses the shared `SectionLabel` primitive for weight, body-fat, measurements, history and recomposition headings, preserving metric logging/trend behavior while removing another local section-title grammar from a sensitive Progress surface.
 - Exercise Detail now uses shared `SectionLabel` headings for history, all-time bests, similar exercises and technique notes, preserving chart/history/substitution behavior while tightening Train detail typography.
 - Plan Detail and Plans now use shared `SectionLabel` headings for workouts, folders, plan lists, templates, plan rationale, manage actions and plan-start/switch entry points, preserving library/add/activate/edit/start behavior while removing more Train-local section-title styles.
+- Share Card and Before/After Share Sheet now use shared `SectionLabel` headings for format, background, preview, PR choice, share includes and scan/photo selection, preserving export/privacy behavior while aligning social-sharing typography with the wider app.
 
 ### Web / CI / Security
 
