@@ -2,7 +2,7 @@ import { cloneElement, isValidElement } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
 
@@ -67,10 +67,8 @@ export const settingsStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   sectionHeader: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
+    ...type.label,
     color: colors.textMuted,
-    letterSpacing: 0.5,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,

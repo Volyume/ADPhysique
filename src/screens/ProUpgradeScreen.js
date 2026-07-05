@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
+import ModalHeader from '../components/ModalHeader';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
@@ -358,19 +359,10 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // ── Pitch + action ───────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <ModalHeader title="Upgrade" onClose={() => navigation.goBack()} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-
           <View style={styles.iconWrap}>
             <Ionicons name="sparkles" size={30} color={colors.primary} />
           </View>
@@ -527,8 +519,6 @@ export default function ProUpgradeScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, padding: spacing.xl, paddingBottom: spacing.xxxl },
-
-  closeBtn: { alignSelf: 'flex-end', padding: spacing.xs, marginBottom: spacing.sm },
 
   iconWrap: {
     width: 64, height: 64, borderRadius: circle(64),

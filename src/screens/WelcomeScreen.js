@@ -168,7 +168,7 @@ export default function WelcomeScreen({ navigation }) {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeIn }}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.signInLink}
             onPress={() => navigation.navigate('Login')}
             hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}

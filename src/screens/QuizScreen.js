@@ -71,7 +71,7 @@ export default function QuizScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.h1}>A few quick questions.</Text>
         <Text style={styles.lede}>Your plan takes shape as you answer.</Text>

@@ -903,7 +903,7 @@ export default function ProOnboardingScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Back"
             >
-              <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           ) : null}
           <VolyumeIcon size={22} />
@@ -986,7 +986,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>First name</Text>
-              <TextInput
+              <TextInput accessibilityLabel="First name"
                 ref={nameRef}
                 style={styles.input}
                 value={firstName}
@@ -1015,7 +1015,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Age</Text>
               <Text style={styles.fieldHint}>Used with your weight and height to calculate your calorie targets.</Text>
-              <TextInput
+              <TextInput accessibilityLabel="Age"
                 style={styles.input}
                 value={age}
                 onChangeText={setAge}
@@ -1054,7 +1054,7 @@ export default function ProOnboardingScreen({ navigation }) {
               {localHeightUnits === 'imperial' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 1 }}>
-                    <TextInput
+                    <TextInput accessibilityLabel="Height feet"
                       style={styles.input}
                       value={heightFt}
                       onChangeText={setHeightFt}
@@ -1067,7 +1067,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <TextInput
+                    <TextInput accessibilityLabel="Height inches"
                       style={styles.input}
                       value={heightIn}
                       onChangeText={setHeightIn}
@@ -1081,7 +1081,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   </View>
                 </View>
               ) : (
-                <TextInput
+                <TextInput accessibilityLabel="Height in centimetres"
                   style={styles.input}
                   value={heightCm}
                   onChangeText={setHeightCm}
@@ -1116,7 +1116,7 @@ export default function ProOnboardingScreen({ navigation }) {
               {localBWUnits === 'st' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 2 }}>
-                    <TextInput
+                    <TextInput accessibilityLabel="Current body weight in stones"
                       style={styles.input}
                       value={bodyWeightSt}
                       onChangeText={setBodyWeightSt}
@@ -1129,7 +1129,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </View>
                   <View style={{ flex: 3 }}>
-                    <TextInput
+                    <TextInput accessibilityLabel="Current body weight remaining pounds"
                       style={styles.input}
                       value={bodyWeightStLbs}
                       onChangeText={setBodyWeightStLbs}
@@ -1143,7 +1143,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   </View>
                 </View>
               ) : (
-                <TextInput
+                <TextInput accessibilityLabel={`Current body weight in ${localBWUnits}`}
                   style={styles.input}
                   value={bodyWeight}
                   onChangeText={setBodyWeight}
@@ -1195,7 +1195,7 @@ export default function ProOnboardingScreen({ navigation }) {
               ) : null}
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom2 : undefined}
               disabled={!canContinue}
@@ -1270,7 +1270,7 @@ export default function ProOnboardingScreen({ navigation }) {
               />
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom3 : undefined}
               disabled={!canContinue}
@@ -1453,7 +1453,7 @@ export default function ProOnboardingScreen({ navigation }) {
               )}
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom4 : undefined}
               disabled={!canContinue}
@@ -1685,7 +1685,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
             onPress={canContinue && !busy ? advanceFrom5 : undefined}
             disabled={!canContinue || busy}

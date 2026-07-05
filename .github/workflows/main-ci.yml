@@ -203,11 +203,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      # Errors-only gate. `eslint .` exits non-zero only on error-level
-      # rules (no-undef, react-hooks/rules-of-hooks); the no-unused-vars
-      # and exhaustive-deps backlog is warning-level and does not fail CI.
-      # Added 2026-05-29 (audit Phase 0): the repo had no static analysis,
-      # which let two no-undef-class bugs ship to a Hermes runtime.
+      # Zero-warning gate. The July 2026 whole-app hardening pass cleared the
+      # existing React Native accessibility/unused-local warning debt, so new
+      # warnings fail CI instead of rebuilding the backlog.
       - name: Run ESLint
         run: npm run lint
 
@@ -243,3 +241,43 @@ jobs:
 
       - name: Run Expo Doctor
         run: npx expo-doctor
+
+  web:
+    name: Web lint, test, build + prod audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Run web lint
+        run: pnpm lint
+
+      - name: Run web typecheck
+        run: pnpm typecheck
+
+      - name: Run web tests
+        run: pnpm --filter @volyume/web test
+
+      - name: Build web app
+        run: pnpm --filter @volyume/web build
+
+      - name: Audit web production dependencies
+        run: pnpm audit --prod

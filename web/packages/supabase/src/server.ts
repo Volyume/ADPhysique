@@ -8,8 +8,8 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 // Actions. Reads/writes the auth cookie. Anon key + the user's JWT, RLS
 // enforced. Writing cookies from a Server Component throws (read-only render),
 // so setAll is wrapped: the middleware refreshes the session on every request.
-export function createServerSupabase() {
-  const cookieStore = cookies();
+export async function createServerSupabase() {
+  const cookieStore = await cookies();
   const { url, anonKey } = getSupabaseEnv();
 
   return createServerClient(url, anonKey, {

@@ -84,7 +84,7 @@ const baseColors = {
   // Text hierarchy
   textPrimary: '#FFFFFF',  // 19.44:1 on bg, AAA
   textSecondary: '#9E9E9E', // 7.25:1 on bg, AAA body, AA on raised surfaces
-  textMuted: '#9B9B9B',    // 6.99:1 on bg, AAA at body-text bar; ≥4.89:1 on every surface (AA)
+  textMuted: '#9C9C9C',    // 7.08:1 on bg, AAA at body-text bar; >=4.54:1 on every surface (AA)
   textDisabled: '#727272', // 4.04:1 on bg, disabled state only, no WCAG body-text requirement
 
   // Tab bar

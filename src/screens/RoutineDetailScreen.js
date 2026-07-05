@@ -501,13 +501,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
         transparent
         onRequestClose={() => setEditingExercise(null)}
       >
-        <TouchableOpacity style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
-          <TouchableOpacity style={styles.editSheet} activeOpacity={1}>
+        <TouchableOpacity accessibilityRole="button" style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
+          <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1}>
             <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <View style={styles.editField}>
                 <Text style={styles.editLabel}>Sets</Text>
-                <TextInput
+                <TextInput accessibilityLabel={`Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
                   style={styles.editInput}
                   value={editSets}
                   onChangeText={setEditSets}
@@ -518,7 +518,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.editField}>
                 <Text style={styles.editLabel}>Reps min</Text>
-                <TextInput
+                <TextInput accessibilityLabel={`Minimum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
                   style={styles.editInput}
                   value={editRepsMin}
                   onChangeText={setEditRepsMin}
@@ -529,7 +529,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.editField}>
                 <Text style={styles.editLabel}>Reps max</Text>
-                <TextInput
+                <TextInput accessibilityLabel={`Maximum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
                   style={styles.editInput}
                   value={editRepsMax}
                   onChangeText={setEditRepsMax}
@@ -542,7 +542,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <View style={styles.editRow}>
               <View style={styles.editField}>
                 <Text style={styles.editLabel}>Rest (s)</Text>
-                <TextInput
+                <TextInput accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
                   style={styles.editInput}
                   value={editRest}
                   onChangeText={setEditRest}
@@ -554,7 +554,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.editField}>
                 <Text style={styles.editLabel}>Start weight</Text>
-                <TextInput
+                <TextInput accessibilityLabel={`Starting weight for ${editingExercise?.exercise?.name || 'exercise'}`}
                   style={styles.editInput}
                   value={editStartWeight}
                   onChangeText={setEditStartWeight}

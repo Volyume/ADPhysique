@@ -14,7 +14,7 @@ function weekLabel(r: CoachReview): string {
 
 export default async function CoachingPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const history = await getCoachingHistory(supabase, user.id);
 
   if (history.length === 0) {

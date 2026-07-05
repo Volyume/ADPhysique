@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function LiftsPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const lifts = await getLifts(supabase, user.id, isoDaysAgo(180));
 
   if (lifts.length === 0) {

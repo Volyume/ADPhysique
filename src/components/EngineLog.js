@@ -83,7 +83,7 @@ export default function EngineLog({ userId }) {
 
   return (
     <View style={styles.card}>
-      <TouchableOpacity style={styles.header} onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
+      <TouchableOpacity accessibilityRole="button" style={styles.header} onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
         <View style={styles.headerLeft}>
           <View style={styles.iconWrap}>
             <Ionicons name="pulse" size={18} color={colors.primary} />

@@ -22,11 +22,11 @@ import {
   getLatestBodyComposition,
   getLatestBodyWeight,
 } from '../lib/database';
-import { buildLiftProgressRows } from '../lib/liftProgress';
-import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
-import { kgToLbs, formatBodyWeightShort } from '../lib/units';
+import { formatBodyWeightShort } from '../lib/units';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
+import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
+import { buildAthleteProfileSummary } from '../lib/athleteProfileSummary';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 
@@ -52,7 +52,8 @@ function StatTile({ label, value, sub }) {
   );
 }
 
-function Row({ icon, label, sub, onPress, pro }) {
+function Row({ icon, label, sub, onPress, pro, status = null }) {
+  const statusLabel = status === 'attention' ? 'Update' : status === 'soon' ? 'Soon' : status === 'fresh' ? 'Fresh' : null;
   return (
     <Card style={styles.row} onPress={onPress} accessibilityLabel={label}>
       <View style={styles.rowIcon}>
@@ -65,6 +66,11 @@ function Row({ icon, label, sub, onPress, pro }) {
         </View>
         {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
       </View>
+      {statusLabel ? (
+        <View style={[styles.statusPill, styles[`statusPill_${status}`]]}>
+          <Text style={[styles.statusPillText, styles[`statusPillText_${status}`]]}>{statusLabel}</Text>
+        </View>
+      ) : null}
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </Card>
   );
@@ -87,6 +93,7 @@ export default function AthleteProfileScreen({ navigation }) {
     bodyFat: null,
     bodyFatLoggedAt: null,
     latestMetric: null,
+    latestWorkoutAt: null,
     scan: null,
     strength: null,
     keyLifts: [],
@@ -114,35 +121,17 @@ export default function AthleteProfileScreen({ navigation }) {
           getProgressScanCoachSummary(user.id).catch(() => null),
         ]);
         if (!alive) return;
-        const rows = buildLiftProgressRows(sets, exercises);
-        const bwKg = latestWeight?.weightKg ?? userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
-        const bwForLiftUnits = bwKg
-          ? units === 'lbs'
-            ? Math.round(kgToLbs(bwKg) * 10) / 10
-            : Math.round(bwKg * 10) / 10
-          : null;
-        const liftEntries = [];
-        if (bwForLiftUnits) {
-          for (const row of rows) {
-            const level = getStrengthLevel(row.name, row.bestE1rm, bwForLiftUnits);
-            if (level) liftEntries.push({ row, level });
-          }
-        }
-        const strength = summariseStrengthStanding(liftEntries.map(({ row, level }) => ({
-          lift: row.name,
-          oneRm: row.bestE1rm,
-          level,
-        })));
-        setSummary({
-          sessions: (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed)).length,
-          weight: bwKg,
-          bodyFat: bodyComp?.bodyFatPercent ?? null,
-          bodyFatLoggedAt: bodyComp?.loggedAt ?? null,
-          latestMetric: metrics?.[0] ?? null,
+        setSummary(buildAthleteProfileSummary({
+          workouts,
+          sets,
+          exercises,
+          latestWeight,
+          bodyComp,
+          metrics,
           scan,
-          strength,
-          keyLifts: liftEntries.slice(0, 5),
-        });
+          userProfile,
+          units,
+        }));
       } catch (e) {
         logError('AthleteProfile.load', e, { userId: user?.id });
       } finally {
@@ -151,7 +140,7 @@ export default function AthleteProfileScreen({ navigation }) {
     }
     load();
     return () => { alive = false; };
-  }, [user?.id, userProfile?.weightKg, userProfile?.bodyWeightKg, units]));
+  }, [user?.id, userProfile, units]));
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
@@ -196,6 +185,12 @@ export default function AthleteProfileScreen({ navigation }) {
   const scanSub = summary.scan?.visualLeannessScore != null
     ? `Visual score ${Math.round(summary.scan.visualLeannessScore)} - ${summary.scan.confidence || 'low'} confidence`
     : 'Physique Scan is a visual signal, not exact body fat';
+  const freshness = buildProfileFreshness({
+    latestMetricAt: summary.latestMetric?.loggedAt ?? summary.latestMetric?.logged_at ?? summary.bodyFatLoggedAt,
+    latestScanAt: summary.scan?.capturedAt ?? summary.scan?.captured_at,
+    latestWorkoutAt: summary.latestWorkoutAt,
+    keyLiftCount: summary.keyLifts.length,
+  });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -288,22 +283,25 @@ export default function AthleteProfileScreen({ navigation }) {
           <Text style={styles.sectionLabel}>Keep profile data fresh</Text>
           <Row
             icon="scale-outline"
-            label="Body metrics"
-            sub="Log weight, body fat and measurements. Best cadence: weekly measurements, daily or frequent weight."
+            label={freshness.bodyMetrics.label}
+            sub={freshness.bodyMetrics.sub}
+            status={freshnessTone(freshness.bodyMetrics.state)}
             pro={!isPro}
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'BodyMetrics')}
           />
           <Row
             icon="camera-outline"
-            label="Progress photos and Physique Scan"
-            sub="Retake in consistent light and poses every 2 to 4 weeks for the clearest visual progress signal."
+            label={freshness.progressScan.label}
+            sub={freshness.progressScan.sub}
+            status={freshnessTone(freshness.progressScan.state)}
             pro={!isPro}
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
           />
           <Row
             icon="analytics-outline"
-            label="Lift progress"
-            sub="Exercise trends, recent bests and relative-strength baselines."
+            label={freshness.lifts.label}
+            sub={freshness.lifts.sub}
+            status={freshnessTone(freshness.lifts.state)}
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress')}
           />
         </View>
@@ -405,4 +403,17 @@ const styles = StyleSheet.create({
   rowLabelLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowLabel: { ...type.bodyStrong, color: colors.textPrimary },
   rowSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
+  statusPill: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  statusPill_fresh: { backgroundColor: colors.successBg, borderColor: withAlpha(colors.success, alpha.edge) },
+  statusPill_soon: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
+  statusPill_attention: { backgroundColor: colors.errorBg, borderColor: withAlpha(colors.error, alpha.edge) },
+  statusPillText: { ...type.caption, fontWeight: fontWeight.black },
+  statusPillText_fresh: { color: colors.success },
+  statusPillText_soon: { color: colors.warning },
+  statusPillText_attention: { color: colors.error },
 });

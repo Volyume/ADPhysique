@@ -533,7 +533,7 @@ export default function ShareCardScreen({ route }) {
 
 function SegmentBtn({ label, active, onPress, icon }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[styles.segment, active && styles.segmentActive]}
       onPress={onPress}
     >

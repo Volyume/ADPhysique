@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PlanPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const plan = await getActivePlan(supabase, user.id);
 
   if (!plan) {

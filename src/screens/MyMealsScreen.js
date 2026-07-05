@@ -210,7 +210,7 @@ export default function MyMealsScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setRenaming(null)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setRenaming(null)}>
+        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => setRenaming(null)}>
           <Pressable style={styles.card} onPress={() => {}} accessible={false}>
             <Text style={styles.cardTitle}>Rename meal</Text>
             <TextInput

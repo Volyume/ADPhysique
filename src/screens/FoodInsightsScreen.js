@@ -278,7 +278,7 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [chartBars, targets]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Insights" onBack={() => navigation.goBack()} />
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays

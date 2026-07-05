@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const p = await getAccountProfile(supabase, user.id);
 
   const profileRows: InfoRow[] = [

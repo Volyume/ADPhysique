@@ -160,7 +160,7 @@ export default function CardioHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Cardio history" />
 
       {sections.length === 0 ? (

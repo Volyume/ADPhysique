@@ -71,11 +71,6 @@ function timeToMs(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function msToDate(ms) {
-  if (!ms) return null;
-  try { return new Date(ms).toISOString().split('T')[0]; } catch { return null; }
-}
-
 function getClient() {
   return getSupabaseClient();
 }

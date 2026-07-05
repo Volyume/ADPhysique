@@ -204,7 +204,7 @@ export default function TodayStrip({
       <View style={styles.inputRow}>
         {bwu === 'st' ? (
           <View style={styles.stFields}>
-            <TextInput
+            <TextInput accessibilityLabel="Morning weight in stones"
               style={styles.weightInput}
               value={weightInputSt}
               onChangeText={setWeightInputSt}
@@ -213,7 +213,7 @@ export default function TodayStrip({
               keyboardType="number-pad"
               maxLength={3}
             />
-            <TextInput
+            <TextInput accessibilityLabel="Morning weight remaining pounds"
               style={styles.weightInput}
               value={weightInputStLbs}
               onChangeText={setWeightInputStLbs}
@@ -227,7 +227,7 @@ export default function TodayStrip({
           </View>
         ) : (
           <View style={styles.kgField}>
-            <TextInput
+            <TextInput accessibilityLabel={`Morning weight in ${bwu}`}
               style={styles.weightInput}
               value={weightInput}
               onChangeText={setWeightInput}

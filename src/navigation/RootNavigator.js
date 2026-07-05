@@ -365,7 +365,7 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Workout complete', ...heroZoomTransition }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
@@ -421,7 +421,7 @@ function ProgressStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Workout complete', ...heroZoomTransition }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />

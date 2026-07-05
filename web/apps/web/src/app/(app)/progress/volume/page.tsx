@@ -17,7 +17,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 
 export default async function VolumePage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const rows = await getMuscleVolume(supabase, user.id, isoDaysAgo(7));
   const hasData = rows.some((r) => r.sets > 0);
 

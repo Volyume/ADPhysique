@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Volyume web platform monorepo (user web, admin, coaches). Self-contained alongside the React Native app at the repo root.",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@11.7.0",
   "engines": {
     "node": ">=20"
   },
@@ -13,5 +13,11 @@
     "start": "pnpm --filter @volyume/web start",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.60.1",
+    "@typescript-eslint/parser": "^8.60.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.16"
   }
 }
