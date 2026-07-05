@@ -4,13 +4,14 @@ const path = require('path');
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
 const SCAN_COPY = fs.readFileSync(path.resolve(__dirname, '../../lib/progressScanCopy.js'), 'utf8');
 const CONTROLLER = fs.readFileSync(path.resolve(__dirname, '../../lib/progressPhotosController.js'), 'utf8');
+const SCAN_HISTORY = fs.readFileSync(path.resolve(__dirname, '../../components/ProgressScanHistoryCard.js'), 'utf8');
 
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCREEN).toMatch(/Scan history/);
+    expect(SCAN_HISTORY).toMatch(/Scan history/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -23,10 +24,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('scan entries expose stored poses/photos through the existing full-size viewer', () => {
-    expect(SCREEN).toMatch(/scan\.assets\.map/);
-    expect(SCREEN).toMatch(/openViewer\(asset\.photoName\)/);
-    expect(SCREEN).toMatch(/scanStatsCopy/);
-    expect(SCREEN).toMatch(/scanReadCopy/);
+    expect(SCREEN).toMatch(/<ProgressScanHistoryCard/);
+    expect(SCREEN).toMatch(/onOpenPhoto=\{openViewer\}/);
+    expect(SCAN_HISTORY).toMatch(/scan\.assets\.map/);
+    expect(SCAN_HISTORY).toMatch(/onOpenPhoto\?\.\(asset\.photoName\)/);
+    expect(SCAN_HISTORY).toMatch(/scanStatsCopy/);
+    expect(SCAN_HISTORY).toMatch(/scanReadCopy/);
   });
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
@@ -40,8 +43,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCREEN).toMatch(/scan\.deltaExplanation\?\.summary && !suppressed && !hideExactScans/);
-    expect(SCREEN).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact: hideExactScans \}\)/);
+    expect(SCAN_HISTORY).toMatch(/scan\.deltaExplanation\?\.summary && !suppressed && !hideExact/);
+    expect(SCAN_HISTORY).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
 

@@ -52,7 +52,6 @@ import {
   shouldGateProgressScanStart,
   visibleCompletedScans,
 } from '../lib/progressPhotosController';
-import { scanReadCopy, scanStatsCopy } from '../lib/progressScanCopy';
 import {
   PROGRESS_PHOTO_TIMELINE_COLS as COLS,
   buildTimeline,
@@ -63,6 +62,7 @@ import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
 import ProgressScanCompare from '../components/ProgressScanCompare';
+import ProgressScanHistoryCard from '../components/ProgressScanHistoryCard';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
@@ -775,73 +775,15 @@ export default function ProgressPhotosScreen({ navigation }) {
       </Card>
 
       {!loading && visibleScans.length > 0 ? (
-        <Card padding="md" style={styles.scanCard}>
-          <View style={styles.scanCardHeader}>
-            <Text style={styles.scanTitle}>Scan history</Text>
-            <TouchableOpacity
-              onPress={toggleHideExactScans}
-              hitSlop={8}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: hideExactScans }}
-              accessibilityLabel={hideExactScans ? 'Show scan details' : 'Hide scan details'}
-              style={styles.hideExactToggle}
-            >
-              <Ionicons
-                name={hideExactScans ? 'eye-off-outline' : 'eye-outline'}
-                size={iconSize.sm}
-                color={colors.primary}
-              />
-              <Text style={styles.hideExactText}>{hideExactScans ? 'Trend only' : 'Show details'}</Text>
-            </TouchableOpacity>
-          </View>
-          {visibleScans.map((scan) => (
-            <View key={scan.id} style={styles.scanEntry}>
-              <View style={styles.scanEntryHeader}>
-                <View style={styles.scanEntryTitleGroup}>
-                  <Text style={styles.scanDate}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
-                  <Text style={styles.scanQuality}>
-                    {scan.deltaExplanation?.comparisonStatus === 'comparable' ? 'like-for-like' : scan.qualityLabel || 'saved'}
-                  </Text>
-                </View>
-                {!readOnly ? (
-                  <TouchableOpacity
-                    onPress={() => deleteScanEntry(scan)}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete scan from ${formatProgressPhotoDay(scan.capturedAt)}`}
-                    style={styles.scanDeleteButton}
-                  >
-                    <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-              <Text style={styles.scanBody}>{scanReadCopy(scan, { suppressed, hideExact: hideExactScans })}</Text>
-              {scan.deltaExplanation?.summary && !suppressed && !hideExactScans ? (
-                <Text style={styles.scanDelta}>{scan.deltaExplanation.summary}</Text>
-              ) : scan.deltaExplanation?.trendSummary && !suppressed ? (
-                <Text style={styles.scanDelta}>{scan.deltaExplanation.trendSummary}</Text>
-              ) : null}
-              <Text style={styles.scanStats}>{scanStatsCopy(scan, { suppressed, hideExact: hideExactScans })}</Text>
-              {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
-                <View style={styles.scanAssetRow}>
-                  {scan.assets.map((asset) => (
-                    <TouchableOpacity
-                      key={asset.id}
-                      onPress={readOnly ? undefined : () => openViewer(asset.photoName)}
-                      disabled={readOnly}
-                      accessibilityRole={readOnly ? 'image' : 'button'}
-                      accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${formatProgressPhotoDay(asset.takenAt)}.`}
-                      style={styles.scanAssetThumb}
-                    >
-                      <Image source={{ uri: asset.uri }} style={styles.scanAssetImage} />
-                      <Text style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-          ))}
-        </Card>
+        <ProgressScanHistoryCard
+          scans={visibleScans}
+          hideExact={hideExactScans}
+          suppressed={suppressed}
+          readOnly={readOnly}
+          onToggleHideExact={toggleHideExactScans}
+          onDeleteScan={deleteScanEntry}
+          onOpenPhoto={openViewer}
+        />
       ) : null}
 
       {!loading && photos.length > 0 && (
@@ -1111,29 +1053,6 @@ const styles = StyleSheet.create({
   infoCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
   note: { ...type.bodySm, color: colors.textMuted },
   scanCta: { marginTop: spacing.xs },
-  scanCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.xs },
-  scanCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  scanTitle: { ...type.h3, color: colors.textPrimary },
-  scanDate: { ...type.caption, color: colors.textMuted },
-  scanBody: { ...type.bodySm, color: colors.textMuted },
-  hideExactToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  hideExactText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
-  scanEntry: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.sm,
-    gap: spacing.xs,
-  },
-  scanEntryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  scanEntryTitleGroup: { flex: 1, gap: spacing.xxs },
-  scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  scanQuality: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
-  scanDelta: { ...type.bodySm, color: colors.textSecondary },
-  scanStats: { ...type.caption, color: colors.textMuted },
-  scanAssetRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
-  scanAssetThumb: { width: 58, gap: spacing.xxs },
-  scanAssetImage: { width: 58, height: 58, borderRadius: radius.sm, backgroundColor: colors.surface2 },
-  scanAssetPose: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
