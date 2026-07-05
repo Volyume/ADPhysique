@@ -55,9 +55,24 @@ const ROW = {
   intensity: 'low',
   estKcal: 120,
 };
+const NEW_ROW = {
+  id: 'cardio-2',
+  entryDate: '2026-07-06',
+  activityName: 'Bike',
+  durationMin: 25,
+  intensity: 'moderate',
+  estKcal: 180,
+};
 
 async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
 }
 
 function flattenText(node) {
@@ -81,6 +96,9 @@ function findByA11y(element, label) {
 beforeEach(() => {
   jest.clearAllMocks();
   capturedListProps = null;
+  store.user = { id: 'u1' };
+  store.userProfile = { cardioTarget: { sessionsPerWeek: 2 } };
+  store.accessibility = { energyUnit: 'kcal' };
   useAppStore.mockImplementation((selector) => selector(store));
   getRecentCardioLog.mockResolvedValue([ROW]);
   getCardioLogRange.mockResolvedValue([ROW]);
@@ -118,5 +136,41 @@ describe('CardioHistoryScreen states', () => {
 
     expect(deleteCardioLog).toHaveBeenCalledWith('u1', ROW.id);
     expect(mockToastShow).toHaveBeenCalledWith("Couldn't remove that session.", expect.objectContaining({ variant: 'error' }));
+  });
+
+  test('ignores stale load results when a newer cardio goal load starts', async () => {
+    const oldRows = deferred();
+    const oldRange = deferred();
+    const newRows = deferred();
+    const newRange = deferred();
+    getRecentCardioLog
+      .mockImplementationOnce(() => oldRows.promise)
+      .mockImplementationOnce(() => newRows.promise);
+    getCardioLogRange
+      .mockImplementationOnce(() => oldRange.promise)
+      .mockImplementationOnce(() => newRange.promise);
+
+    let tree;
+    await act(async () => { tree = create(<CardioHistoryScreen />); });
+    await flush();
+    store.userProfile = { cardioTarget: { sessionsPerWeek: 3 } };
+    await act(async () => { tree.update(<CardioHistoryScreen />); });
+    await flush();
+    expect(getRecentCardioLog).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      oldRows.resolve([ROW]);
+      oldRange.resolve([ROW]);
+    });
+    await flush();
+    expect(capturedListProps?.data?.some((item) => item.id === ROW.id)).not.toBe(true);
+
+    await act(async () => {
+      newRows.resolve([NEW_ROW]);
+      newRange.resolve([NEW_ROW]);
+    });
+    await flush();
+    expect(capturedListProps.data.some((item) => item.id === NEW_ROW.id)).toBe(true);
+    expect(capturedListProps.data.some((item) => item.id === ROW.id)).toBe(false);
   });
 });

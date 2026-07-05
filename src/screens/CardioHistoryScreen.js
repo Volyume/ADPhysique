@@ -8,7 +8,7 @@
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -95,9 +95,19 @@ export default function CardioHistoryScreen() {
   const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const loadRequestRef = useRef(0);
 
   const load = useCallback(async () => {
-    if (!userId) { setLoading(false); return; }
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+    if (!userId) {
+      setSections([]);
+      setWeeks([]);
+      setLoadError(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(false);
     try {
@@ -106,6 +116,7 @@ export default function CardioHistoryScreen() {
         getRecentCardioLog(userId, 200),
         getCardioLogRange(userId, windows[windows.length - 1].fromKey, windows[0].toKey),
       ]);
+      if (!isCurrentRequest()) return;
 
       // Day-grouped list (unchanged).
       const byDay = new Map();
@@ -121,12 +132,13 @@ export default function CardioHistoryScreen() {
       const byWeek = summariseCardioByWeek(rangeRows, windows, { sessionsPerWeek: goal });
       setWeeks(trimEmptyTrendWeeks(byWeek));
     } catch (e) {
+      if (!isCurrentRequest()) return;
       logError('CardioHistory.load', e, { userId });
       setSections([]);
       setWeeks([]);
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }, [userId, goal]);
 
