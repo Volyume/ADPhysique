@@ -18,6 +18,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
@@ -25,6 +27,7 @@ import { getRecentCardioLog, deleteCardioLog, getCardioLogRange, activityDayKey 
 import { summariseCardioByWeek, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { parseLocalDay } from '../lib/dayKey';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
+import { logError } from '../lib/errorLog';
 
 const INTENSITY_LABEL = { low: 'Easy', moderate: 'Moderate', high: 'Hard' };
 
@@ -111,6 +114,7 @@ export default function CardioHistoryScreen() {
     user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
   const userId = user?.id;
+  const toast = useToast();
   const goal = userProfile?.cardioTarget?.sessionsPerWeek ?? 0;
   const [sections, setSections] = useState([]);
   const flatRows = useMemo(
@@ -118,9 +122,13 @@ export default function CardioHistoryScreen() {
     [sections],
   );
   const [weeks, setWeeks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    setLoadError(false);
     try {
       const windows = buildWeekWindows(TREND_WEEKS);
       const [rows, rangeRows] = await Promise.all([
@@ -143,7 +151,14 @@ export default function CardioHistoryScreen() {
       let lastNonEmpty = -1;
       byWeek.forEach((w, i) => { if (w.sessions > 0) lastNonEmpty = i; });
       setWeeks(byWeek.slice(0, Math.max(1, lastNonEmpty + 1)));
-    } catch (_) { /* leave last */ }
+    } catch (e) {
+      logError('CardioHistory.load', e, { userId });
+      setSections([]);
+      setWeeks([]);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, goal]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -154,7 +169,15 @@ export default function CardioHistoryScreen() {
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: async () => { await deleteCardioLog(userId, row.id); load(); },
+        onPress: async () => {
+          try {
+            await deleteCardioLog(userId, row.id);
+            await load();
+          } catch (e) {
+            logError('CardioHistory.delete', e, { hasId: !!row.id });
+            toast.show('Couldn\'t remove that session.', { variant: 'error' });
+          }
+        },
       },
     ]);
   }
@@ -163,7 +186,21 @@ export default function CardioHistoryScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Cardio history" />
 
-      {sections.length === 0 ? (
+      {loading ? (
+        <View style={styles.loadingList} accessibilityLabel="Loading cardio history">
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : loadError ? (
+        <EmptyState
+          icon="warning-outline"
+          title="Couldn't load cardio history"
+          text="Check your connection and try again."
+          actionLabel="Try again"
+          onAction={load}
+        />
+      ) : sections.length === 0 ? (
         <EmptyState
           icon="heart-outline"
           title="No cardio yet"
@@ -205,6 +242,7 @@ export default function CardioHistoryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  loadingList: { paddingHorizontal: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   dayHeader: {
     fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary,
