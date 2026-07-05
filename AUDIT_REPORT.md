@@ -259,6 +259,7 @@ Status: release decision.
 - Partner invite and aim flows now use shared `TextField` and `Button` primitives for the empty-state invite CTA, invite-code entry/join action, weekly aim confirmation and invite-journey primary CTAs, preserving privacy receipt copy, one-code minting, invite caps and partner isolation behavior.
 - Build Workout now uses shared `TextField` controls for rep-range and starting-weight targets and shared `Button` controls for travel-mode actions, preserving exercise setup, deterministic rest suggestions, Travel/Hotel Gym generation and FlashList picker behavior.
 - Exercise Detail target-weight sheet now uses shared `TextField` and `Button` primitives for target weight/date entry and save, preserving goal parsing, achievement detection and chart/helper behavior.
+- Workout Summary now uses shared `TextField` and `Button` primitives for session notes, next-time notes, save-template naming, Close/Share footer actions and template modal actions, preserving finish-flow persistence, share-card routing and read-only behavior while removing another bespoke completion-control cluster.
 
 ### Web / CI / Security
 

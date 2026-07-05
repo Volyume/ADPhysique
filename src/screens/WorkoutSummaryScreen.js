@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,6 +9,8 @@ import InfoTooltip from '../components/InfoTooltip';
 import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
 import {
@@ -1178,8 +1180,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
-                <TextInput accessibilityLabel="Session feedback notes"
-                  style={styles.notesInput}
+                <TextField accessibilityLabel="Session feedback notes"
+                  fieldStyle={styles.notesField}
+                  inputStyle={styles.notesInput}
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Anything notable from this session…"
@@ -1190,8 +1193,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             )}
             <View style={styles.coachZoneDivider} />
             <Text style={styles.coachZoneSubHeading}>Notes for next time</Text>
-            <TextInput accessibilityLabel="Notes for next time"
-              style={styles.nextTimeNoteInput}
+            <TextField accessibilityLabel="Notes for next time"
+              fieldStyle={styles.nextTimeNoteField}
+              inputStyle={styles.nextTimeNoteInput}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
               placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume…"
@@ -1206,10 +1210,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && !routineId && exerciseData.length > 0 && (
           <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate} accessibilityRole="button" accessibilityLabel="Save as workout template">
-              <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.templateBtnText}>Save as Workout Template</Text>
-            </TouchableOpacity>
+            <Button
+              title="Save as Workout Template"
+              variant="secondary"
+              icon="bookmark-outline"
+              style={styles.templateBtn}
+              textStyle={styles.templateBtnText}
+              onPress={handleSaveAsTemplate}
+              accessibilityLabel="Save as workout template"
+            />
           </View>
           </RevealSection>
         )}
@@ -1222,20 +1231,28 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
       <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
         <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[styles.doneBtn, saving && styles.btnDisabled]}
+          <Button
+            title="Close"
+            variant="secondary"
+            size="lg"
+            style={styles.doneBtn}
+            textStyle={styles.doneBtnText}
             onPress={handleDone}
             disabled={saving}
-            accessibilityRole="button"
             accessibilityLabel="Close"
             accessibilityState={{ disabled: saving }}
-          >
-            <Text style={styles.doneBtnText}>Close</Text>
-          </TouchableOpacity>
+          />
           {!readOnly && (
-            <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard} accessibilityRole="button" accessibilityLabel="Share session card">
-              <Ionicons name="share-social-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            <Button
+              title=""
+              variant="outline"
+              size="lg"
+              icon="share-social-outline"
+              fullWidth={false}
+              style={styles.shareFooterBtn}
+              onPress={handleShareCard}
+              accessibilityLabel="Share session card"
+            />
           )}
         </View>
       </View>
@@ -1253,8 +1270,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         >
           <View style={styles.templateModalCard}>
             <Text style={styles.templateModalTitle}>Save as Workout Template</Text>
-            <TextInput accessibilityLabel="Workout template name"
-              style={styles.templateModalInput}
+            <TextField accessibilityLabel="Workout template name"
+              fieldStyle={styles.templateModalField}
+              inputStyle={styles.templateModalInput}
               value={templateName}
               onChangeText={setTemplateName}
               placeholder="Template name"
@@ -1265,24 +1283,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               selectTextOnFocus
             />
             <View style={styles.templateModalBtns}>
-              <TouchableOpacity
+              <Button
+                title="Cancel"
+                variant="secondary"
+                fullWidth={false}
                 style={styles.templateModalCancel}
                 onPress={() => setTemplateModalVisible(false)}
-                accessibilityRole="button"
                 accessibilityLabel="Cancel"
-              >
-                <Text style={styles.templateModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.templateModalSave, !templateName.trim() && { opacity: 0.4 }]}
+                textStyle={styles.templateModalCancelText}
+              />
+              <Button
+                title="Save"
+                fullWidth={false}
+                style={styles.templateModalSave}
                 onPress={confirmSaveTemplate}
                 disabled={!templateName.trim()}
-                accessibilityRole="button"
                 accessibilityLabel="Save template"
                 accessibilityState={{ disabled: !templateName.trim() }}
-              >
-                <Text style={styles.templateModalSaveText}>Save</Text>
-              </TouchableOpacity>
+                textStyle={styles.templateModalSaveText}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -1601,21 +1620,19 @@ const styles = StyleSheet.create({
   ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
   ratingBtnTextActive: { color: colors.primary },
   ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  notesInput: {
-    ...type.body,
-    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.lg,
-    color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
-  },
+  notesField: { borderRadius: radius.md },
+  notesInput: { ...type.body, padding: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
+  nextTimeNoteField: { borderRadius: radius.md },
   nextTimeNoteInput: {
-    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.lg,
-    fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
-    minHeight: 72, textAlignVertical: 'top',
+    fontSize: fontSize.sm,
+    padding: spacing.lg,
+    minHeight: 72,
+    textAlignVertical: 'top',
   },
   secondaryActions: { gap: spacing.sm },
   templateBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
   },
   templateBtnText: { ...type.label, color: colors.textSecondary },
   stickyFooter: {
@@ -1643,7 +1660,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnDisabled: { opacity: 0.6 },
   doneBtnText: {
     ...type.title,
     color: colors.textPrimary,
@@ -1657,6 +1673,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   exerciseList: {
     backgroundColor: colors.surface,
@@ -1710,13 +1728,8 @@ const styles = StyleSheet.create({
   templateModalTitle: {
     fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
   },
-  templateModalInput: {
-    ...type.body,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
-    color: colors.textPrimary,
-    borderWidth: 1, borderColor: colors.border,
-  },
+  templateModalField: { borderRadius: radius.md },
+  templateModalInput: { ...type.body, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
   templateModalBtns: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
   templateModalCancel: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
