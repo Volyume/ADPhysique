@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 466 suites passed.
-  - 6,296 tests passed, 5 skipped.
+  - 6,298 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -121,11 +121,11 @@ Status: materially closed.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first bounded sweeps: Coach Review, Coach Output, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings, Log Cardio, Meal Plan grocery categories, curated meal details, calorie banking, readiness cards and Block Reflection. `SectionLabel` now forwards text accessibility props.
-- `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name, Coaching step target, Volume Heatmap target editor, Exercise Picker custom name, ReasonPicker free text, My Meals rename, FeedbackSheet optional details and RecipeBuilder form/quantity fields migrated in safe slices.
+- `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name, Coaching step target, Volume Heatmap target editor, Exercise Picker custom name, ReasonPicker free text, My Meals rename, FeedbackSheet optional details, RecipeBuilder form/quantity fields and QuickAdd calorie/macro fields migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and loading state, and has replaced the duplicated search chrome in Lift Progress, Exercise Picker, Build Workout picker flows and Food Search.
-- `Chip` now supports explicit accessibility labels and label style overrides; Settings Profile sex/diet radio groups, Settings Display appearance/energy selectors, Coaching Reminders day/hour selectors and CancelReasonSheet break-window options use it instead of bespoke chips.
+- `Chip` now supports explicit accessibility labels and label style overrides; Settings Profile sex/diet radio groups, Settings Display appearance/energy selectors, Coaching Reminders day/hour selectors, QuickAdd meal slots and CancelReasonSheet break-window options use it instead of bespoke chips.
 - `Stepper` now supports compact sizing and explicit accessibility labels, and Manual Builder / Build Workout target controls plus Settings default rest timer use it instead of local +/- implementations while preserving target/rest clamp rules.
-- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions, Volume Heatmap target editor actions, Block Reflection CTAs, EmptyDiary quick actions, ProgressPhotoPrompt CTAs, RecipeBuilder save/import actions and the inline ProGate upgrade sheet now use the shared `Button` primitive.
+- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions, Volume Heatmap target editor actions, Block Reflection CTAs, EmptyDiary quick actions, ProgressPhotoPrompt CTAs, RecipeBuilder save/import actions, QuickAdd cancel/save actions and the inline ProGate upgrade sheet now use the shared `Button` primitive.
 - The weekly run pause picker, My Meals rename dialog and inline ProGate upgrade sheet now use the shared `BottomSheet` chrome instead of their own modal/scrim implementations.
 - A guard now prevents native header drift.
 
