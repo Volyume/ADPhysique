@@ -66,7 +66,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
         // and CoachOutput's receipt. (Re-onboarding can reach this screen
         // with a flag already open.)
         try {
-          const flag = user?.id ? await getOpenEdPatternFlag(user.id) : null;
+          const flag = user?.id ? await getOpenEdPatternFlag(user.id).catch(() => 'read_failed') : null;
           if (flag) return;
         } catch (_) { return; /* unknown flag state: keep the neutral copy */ }
         let checkinDay = 0;
