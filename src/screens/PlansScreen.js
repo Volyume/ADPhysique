@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Modal, Pressable, TextInput, KeyboardAvoidingView, Platform,
+  Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -14,6 +14,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import TextField from '../components/TextField';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
@@ -1046,8 +1047,9 @@ export default function PlansScreen({ navigation }) {
               <Text style={styles.folderSheetTitle}>
                 {folderPrompt?.mode === 'rename' ? 'Rename folder' : 'New folder'}
               </Text>
-              <TextInput
-                style={styles.folderInput}
+              <TextField
+                fieldStyle={styles.folderInputField}
+                inputStyle={styles.folderInput}
                 value={folderName}
                 onChangeText={setFolderName}
                 placeholder="Folder name"
@@ -1059,28 +1061,29 @@ export default function PlansScreen({ navigation }) {
                 accessibilityLabel="Folder name"
               />
               <View style={styles.folderSheetActions}>
-                <TouchableOpacity
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.folderSheetCancelButton}
+                  textStyle={styles.folderSheetCancel}
                   onPress={() => { if (!savingFolder) setFolderPrompt(null); }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
+                  disabled={savingFolder}
                   accessibilityLabel="Cancel"
-                >
-                  <Text style={styles.folderSheetCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                />
+                <Button
+                  title={folderPrompt?.mode === 'rename' ? 'Save' : 'Create'}
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.folderSheetSaveButton}
+                  textStyle={styles.folderSheetSave}
                   onPress={handleSaveFolder}
                   disabled={!folderName.trim() || savingFolder}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
+                  loading={savingFolder}
                   accessibilityLabel={folderPrompt?.mode === 'rename' ? 'Save folder name' : 'Create folder'}
-                >
-                  <Text style={[
-                    styles.folderSheetSave,
-                    (!folderName.trim() || savingFolder) && styles.folderSheetSaveDisabled,
-                  ]}>
-                    {folderPrompt?.mode === 'rename' ? 'Save' : 'Create'}
-                  </Text>
-                </TouchableOpacity>
+                  accessibilityState={{ disabled: !folderName.trim() || savingFolder }}
+                />
               </View>
             </Pressable>
           </Pressable>
@@ -1134,18 +1137,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   folderSheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  folderInputField: { borderRadius: radius.md },
   folderInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.textPrimary, fontSize: fontSize.md,
-    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
   },
   folderSheetActions: {
-    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.lg,
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.sm,
   },
+  folderSheetCancelButton: { borderRadius: radius.md },
   folderSheetCancel: { ...type.label, color: colors.textSecondary },
-  folderSheetSave: { ...type.label, color: colors.primary },
-  folderSheetSaveDisabled: { color: colors.textMuted },
+  folderSheetSaveButton: { borderRadius: radius.md },
+  folderSheetSave: { ...type.label },
 
   trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

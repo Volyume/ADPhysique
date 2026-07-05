@@ -261,6 +261,7 @@ Status: release decision.
 - Exercise Detail target-weight sheet now uses shared `TextField` and `Button` primitives for target weight/date entry and save, preserving goal parsing, achievement detection and chart/helper behavior.
 - Workout Summary now uses shared `TextField` and `Button` primitives for session notes, next-time notes, save-template naming, Close/Share footer actions and template modal actions, preserving finish-flow persistence, share-card routing and read-only behavior while removing another bespoke completion-control cluster.
 - Pro Goal Setup now uses the shared `TextField` primitive for the optional competition show-date field, preserving the date validation, competition-only visibility and deterministic countdown/checklist wiring while removing a raw input from the paid goal rebuild flow.
+- Plans folder create/rename prompt now uses shared `TextField` and `Button` primitives for folder naming, cancel and save/create actions, preserving duplicate-name protection, saving gates, folder tombstone behavior and plan-unfile semantics while removing bespoke modal controls from the Train organisation surface.
 
 ### Web / CI / Security
 
