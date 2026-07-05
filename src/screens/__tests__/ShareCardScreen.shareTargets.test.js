@@ -32,6 +32,13 @@ const mockSharing = {
   shareAsync: jest.fn().mockResolvedValue(undefined),
 };
 jest.mock('expo-sharing', () => mockSharing); // installed module: non-virtual (see above)
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
+  NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
+}));
 
 // expo-file-system/legacy is already mapped to a stub via jest config, but the
 // screen needs writeAsStringAsync + a cacheDirectory + EncodingType, so make
