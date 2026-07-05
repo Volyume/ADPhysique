@@ -17,7 +17,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import VolyumeChart from '../components/VolyumeChart';
 import { ProBadge } from '../components/ProGate';
-import { EmptyChartIllustration } from '../components/Illustrations';
+import EmptyState from '../components/EmptyState';
 import InfoTooltip from '../components/InfoTooltip';
 import CardioPlanCard from '../components/CardioPlanCard';
 import useAppStore from '../store/useAppStore';
@@ -544,25 +544,13 @@ export default function AnalyticsScreen({ navigation, route }) {
 
         {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
         {!loading && allSets.length === 0 && (
-          <View style={styles.emptyState}>
-            <EmptyChartIllustration size={140} />
-            <Text style={styles.emptyStateHeading}>Your progress starts here</Text>
-            <Text style={styles.emptyStateBody}>
-              Log your first session and these charts begin filling in. Every workout you log adds to the picture.
-            </Text>
-            {/* A4 (first-week trust): a day-0 Progress tab was a dead end with
-                no way forward. Cross-tab nav (F4 bug class, RootNavigator.js
-                :616-633): a plain navigate() here would silently no-op since
-                BuildWorkout lives in HomeStack, not ProgressStack. */}
-            <TouchableOpacity
-              style={styles.emptyStateCta}
-              onPress={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Start a workout"
-            >
-              <Text style={styles.emptyStateCtaText}>Start a workout</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="analytics-outline"
+            title="Your progress starts here"
+            text="Log your first session and these charts begin filling in. Every workout you log adds to the picture."
+            actionLabel="Start a workout"
+            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+          />
         )}
 
         {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum ── */}
@@ -1207,26 +1195,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxxl,
     gap: spacing.md,
   },
-  emptyStateHeading: {
-    ...type.title,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
   emptyStateBody: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  emptyStateCta: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    marginTop: spacing.sm,
-  },
-  emptyStateCtaText: {
-    ...type.bodyStrong,
-    color: colors.onPrimary,
   },
 });

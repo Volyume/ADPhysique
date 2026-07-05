@@ -350,6 +350,7 @@ Status: release decision.
 - Goal Change Summary now uses the shared `ModalHeader`, preserving the existing close/pop-to-root behavior while removing another local modal header style block from the paid goal-update flow.
 - Snapshot restore now separates failed device-snapshot reads from a genuine no-snapshot state, logs the load failure and offers a visible retry action instead of telling the user no safety copies exist.
 - Body Metrics now uses the shared `EmptyState` primitive for its no-history state, preserving onboarding-weight copy and the separate read-only-safe `Log Weight` CTA while removing another local empty-card illustration/style block.
+- Analytics now uses the shared `EmptyState` primitive for its zero-data Progress CTA, preserving the existing cross-tab `Start a workout` route while removing bespoke illustration/button styling from the first-run Progress surface.
 
 ### Web / CI / Security
 
