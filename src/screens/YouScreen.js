@@ -15,6 +15,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
+import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllWorkouts, getCoachOutputHistory, getLatestCoachOutput } from '../lib/database';
@@ -169,7 +170,7 @@ export default function YouScreen({ navigation }) {
 
         {isPro ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Coach actions</Text>
+            <SectionLabel>Coach actions</SectionLabel>
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
@@ -203,7 +204,7 @@ export default function YouScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Coach actions</Text>
+            <SectionLabel>Coach actions</SectionLabel>
             <NavRow
               icon="sparkles-outline"
               label="Go Pro"
@@ -228,7 +229,7 @@ export default function YouScreen({ navigation }) {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Safety and context</Text>
+          <SectionLabel>Safety and context</SectionLabel>
           {isPro ? (
             <>
               <NavRow
@@ -261,7 +262,7 @@ export default function YouScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Profile and settings</Text>
+          <SectionLabel>Profile and settings</SectionLabel>
           <NavRow
             icon="person-outline"
             label="Athlete profile"
@@ -326,7 +327,6 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
-  sectionLabel: { ...type.label, color: colors.textSecondary },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',

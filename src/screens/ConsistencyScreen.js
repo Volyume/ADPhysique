@@ -7,6 +7,7 @@ import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import InfoTooltip from '../components/InfoTooltip';
+import SectionLabel from '../components/SectionLabel';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
 import BlockShapeCard from '../components/BlockShapeCard';
@@ -71,7 +72,7 @@ export default function ConsistencyScreen({ navigation }) {
         <AnimatedEntrance index={0}>
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <Text style={styles.sectionLabel}>Training block</Text>
+            <SectionLabel>Training block</SectionLabel>
             <InfoTooltip text={
               'Training gets harder each week across the block, then a lighter recovery week lets your body catch up.\n\n' +
               'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
@@ -114,7 +115,7 @@ export default function ConsistencyScreen({ navigation }) {
         {/* ── Session length trend ── */}
         {enoughForTrends && durationBars.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Session length trend</Text>
+            <SectionLabel>Session length trend</SectionLabel>
             <SessionDurationChart bars={durationBars} />
           </View>
         )}
@@ -123,7 +124,7 @@ export default function ConsistencyScreen({ navigation }) {
         {enoughForTrends && muscleFreq.length > 0 && (
           <View style={styles.section}>
             <View style={styles.labelRow}>
-              <Text style={styles.sectionLabel}>Training frequency</Text>
+              <SectionLabel>Training frequency</SectionLabel>
               <InfoTooltip text="How many sessions included each muscle group this week vs last." />
             </View>
             <MuscleFrequencyTable
@@ -137,7 +138,7 @@ export default function ConsistencyScreen({ navigation }) {
         {/* ── Training day calendar ── */}
         {enoughForTrends && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Training days (last 12 weeks)</Text>
+            <SectionLabel>Training days (last 12 weeks)</SectionLabel>
             <TrainingCalendar values={calValues} />
           </View>
         )}
@@ -151,7 +152,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section: { gap: spacing.md },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  sectionLabel: { ...type.label, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
   },

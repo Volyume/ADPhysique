@@ -13,6 +13,7 @@ import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
+import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import {
   getAllExercises,
@@ -252,7 +253,7 @@ export default function AthleteProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Strength baselines</Text>
+          <SectionLabel>Strength baselines</SectionLabel>
           {summary.keyLifts.length > 0 ? summary.keyLifts.map(({ row, level }) => (
             <Card
               key={row.exerciseId}
@@ -280,7 +281,7 @@ export default function AthleteProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Keep profile data fresh</Text>
+          <SectionLabel>Keep profile data fresh</SectionLabel>
           <Row
             icon="scale-outline"
             label={freshness.bodyMetrics.label}
@@ -307,7 +308,7 @@ export default function AthleteProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Profile and data</Text>
+          <SectionLabel>Profile and data</SectionLabel>
           <Row
             icon="person-outline"
             label="Edit profile details"
@@ -367,7 +368,6 @@ const styles = StyleSheet.create({
   statValue: { ...type.bodyStrong, color: colors.textPrimary },
   statSub: { ...type.captionTight, color: colors.textSecondary },
   section: { gap: spacing.md },
-  sectionLabel: { ...type.label, color: colors.textSecondary },
   liftRow: {
     flexDirection: 'row',
     alignItems: 'center',
