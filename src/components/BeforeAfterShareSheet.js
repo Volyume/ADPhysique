@@ -39,6 +39,7 @@ import {
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
 import Button from './Button';
+import SectionLabel from './SectionLabel';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
@@ -488,7 +489,7 @@ export default function BeforeAfterShareSheet({
         {/* Choose two photos (default earliest and latest). Older reads on the
             left, newer on the right, whatever the tap order was. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{usingScans ? 'Scans' : 'Photos'}</Text>
+          <SectionLabel>{usingScans ? 'Scans' : 'Photos'}</SectionLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
             {sorted.map((item) => {
               const on = selected.includes(item.name);
@@ -521,7 +522,7 @@ export default function BeforeAfterShareSheet({
 
         {/* Format presets: square 1:1 (default), portrait 4:5, story 9:16. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Format</Text>
+          <SectionLabel>Format</SectionLabel>
           <View style={styles.segmentRow}>
             <SegmentBtn label="Square" active={aspect === 'square'} onPress={() => setAspect('square')} icon="square-outline" />
             <SegmentBtn label="Portrait" active={aspect === 'portrait'} onPress={() => setAspect('portrait')} icon="crop-outline" />
@@ -531,7 +532,7 @@ export default function BeforeAfterShareSheet({
 
         {/* Preview: the exact image that gets shared, scaled down. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preview</Text>
+          <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
             {previewB64 ? (
               <Image
@@ -620,9 +621,6 @@ const styles = StyleSheet.create({
   title: { ...type.h3, color: colors.textPrimary },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
-  sectionTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
-  },
   stripRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   thumb: {
     width: 72, height: 72, borderRadius: radius.md,

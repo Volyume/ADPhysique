@@ -19,6 +19,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
@@ -357,7 +358,7 @@ export default function ShareCardScreen({ route }) {
         {/* Format: the weekly recap is square-only, so the toggle is hidden. */}
         {!isWeekly && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Format</Text>
+          <SectionLabel>Format</SectionLabel>
           <View style={styles.segmentRow}>
             <SegmentBtn
               label="Story 9:16"
@@ -380,7 +381,7 @@ export default function ShareCardScreen({ route }) {
             picker is available in the build. */}
         {ImagePicker ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Background</Text>
+          <SectionLabel>Background</SectionLabel>
           <View style={styles.segmentRow}>
             <SegmentBtn
               label={bgPhoto ? 'Retake photo' : 'Take gym photo'}
@@ -402,7 +403,7 @@ export default function ShareCardScreen({ route }) {
 
         {/* Preview: the exact image that gets shared, scaled down */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preview</Text>
+          <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
             {previewB64 ? (
               <Image
@@ -422,7 +423,7 @@ export default function ShareCardScreen({ route }) {
         <View style={styles.section}>
           {cardType === 'pr' && prs.length > 1 ? (
             <>
-              <Text style={styles.sectionTitle}>Which PR</Text>
+              <SectionLabel>Which PR</SectionLabel>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -451,7 +452,7 @@ export default function ShareCardScreen({ route }) {
               </ScrollView>
             </>
           ) : null}
-          <Text style={styles.sectionTitle}>What to include</Text>
+          <SectionLabel>What to include</SectionLabel>
           <View style={styles.togglesCard}>
             <ToggleRow label="Date" value={showDate} onChange={setShowDate} />
             {isSession && (
@@ -554,9 +555,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
-  sectionTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
-  },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs,
