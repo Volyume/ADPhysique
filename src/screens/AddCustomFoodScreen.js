@@ -10,12 +10,13 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
@@ -303,39 +304,34 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
 function Field({ label, value, onChange, placeholder, autoFocus }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        autoFocus={autoFocus}
-        accessibilityLabel={label}
-      />
-    </View>
+    <TextField
+      label={label}
+      value={value}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      accessibilityLabel={label}
+      surface={colors.inputBg}
+      containerStyle={styles.field}
+    />
   );
 }
 
 function NumField({ label, value, onChange, suffix, unsure }) {
   return (
-    <View style={[styles.field, { flex: 1 }]}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.numWrap, unsure && styles.numWrapUnsure]}>
-        <TextInput
-          style={styles.numInput}
-          value={value}
-          onChangeText={onChange}
-          placeholder="0"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="decimal-pad"
-          accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
-          accessibilityHint={unsure ? 'Not certain, check this value' : undefined}
-        />
-        <Text style={styles.numSuffix}>{suffix}</Text>
-      </View>
-    </View>
+    <TextField
+      label={label}
+      value={value}
+      onChangeText={onChange}
+      placeholder="0"
+      keyboardType="decimal-pad"
+      accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
+      accessibilityHint={unsure ? 'Not certain, check this value' : undefined}
+      surface={colors.inputBg}
+      containerStyle={[styles.field, styles.numField]}
+      fieldStyle={unsure && styles.numWrapUnsure}
+      trailing={<Text style={styles.numSuffix}>{suffix}</Text>}
+    />
   );
 }
 
@@ -366,25 +362,8 @@ const styles = StyleSheet.create({
 
   sectionLabelSpacing: { marginTop: spacing.lg, marginBottom: spacing.sm },
   field: { marginBottom: spacing.md },
-  fieldLabel: { color: colors.textSecondary, fontSize: fontSize.sm, marginBottom: spacing.xs },
-  input: {
-    backgroundColor: colors.inputBg,
-    color: colors.textPrimary,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    ...type.body, minHeight: 48,
-  },
+  numField: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.sm },
-  numWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.inputBg,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    minHeight: 48,
-  },
-  numInput: { flex: 1, color: colors.textPrimary, ...type.body, paddingVertical: spacing.md },
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
   numWrapUnsure: { borderColor: colors.primary },
   unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },

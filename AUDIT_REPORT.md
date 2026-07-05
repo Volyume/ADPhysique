@@ -121,7 +121,7 @@ Status: materially closed.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first two bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary and Coaching Reminders.
-- `TextField` now provides the first canonical labelled input primitive, with auth fields and first-run setup migrated as the initial safe slice.
+- `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup and Add Custom Food manual/numeric fields migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and has replaced the duplicated search chrome in Lift Progress, Exercise Picker and Build Workout picker flows.
 - Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions and Pro Goal Setup rebuild now use the shared `Button` primitive.
 - A guard now prevents native header drift.
@@ -281,7 +281,7 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
 ### Safe Implementation Candidates
 
 1. Continue the "one product" design sweep:
-   - migrate the remaining plain inputs to `TextField` in small screen-level slices;
+   - migrate remaining plain inputs to `TextField` in small screen-level slices, especially body metrics, weekly check-in and nutrition target forms;
    - continue `SearchBar` adoption where extra loading/trailing support is not needed, and extend the primitive before touching Food Search's spinner path;
    - remaining hand-rolled CTAs to `Button` in smaller low-risk surfaces, avoiding live workout/session flows until a dedicated pass;
    - remaining hand-rolled sheets to `BottomSheet`.
