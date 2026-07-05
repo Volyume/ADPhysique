@@ -48,7 +48,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 930 files checked, no unresolved imports or missing named exports.
+  - 931 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -309,6 +309,7 @@ Status: release decision.
 - The shared Exercise Picker modal now labels icon-only back/close controls, custom-exercise save/create actions and selectable exercise rows, protecting the workout-building and active-workout picker flows from unlabeled button regressions.
 - Radio-style shared selectors now expose `checked` state through `Chip` and `SegmentedControl`, matching the existing `ReasonPicker` radio semantics while leaving non-radio button/toggle selected states unchanged.
 - Cardio History date labels, 7-day trend windows, empty-week trimming and spoken trend labels now live in `cardio/cardioHistoryView`, leaving the screen focused on loading, deletion and rendering.
+- Plan Library now uses the shared `EmptyState` primitive for both retryable load failures and genuine no-results states, preserving copy and retry behaviour while removing local empty-card typography.
 
 ### Web / CI / Security
 
