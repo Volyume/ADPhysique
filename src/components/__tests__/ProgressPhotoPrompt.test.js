@@ -15,7 +15,7 @@
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: jest.fn(() => false) }));
-jest.mock('../../lib/haptics', () => ({ press: jest.fn() }));
+jest.mock('../../lib/haptics', () => ({ press: jest.fn(), selection: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/telemetry', () => ({ track: jest.fn(async () => {}) }));
 jest.mock('../../store/useAppStore', () => {
