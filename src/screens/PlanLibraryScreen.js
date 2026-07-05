@@ -16,6 +16,7 @@ import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
+import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -191,36 +192,32 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
       <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_MEN.map(d => (
-          <TouchableOpacity
+          <Chip
             key={d.key}
-            style={[styles.divisionChip, selectedDivision === d.key && styles.divisionChipActive]}
+            label={d.label}
+            selected={selectedDivision === d.key}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedDivision === d.key }}
+            style={styles.divisionChip}
+            labelStyle={styles.divisionChipText}
+            selectedLabelStyle={styles.divisionChipTextActive}
             accessibilityLabel={d.label}
-          >
-            <Text style={[styles.divisionChipText, selectedDivision === d.key && styles.divisionChipTextActive]}>
-              {d.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
       <Text style={[styles.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_WOMEN.map(d => (
-          <TouchableOpacity
+          <Chip
             key={d.key}
-            style={[styles.divisionChip, selectedDivision === d.key && styles.divisionChipActive]}
+            label={d.label}
+            selected={selectedDivision === d.key}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedDivision === d.key }}
+            style={styles.divisionChip}
+            labelStyle={styles.divisionChipText}
+            selectedLabelStyle={styles.divisionChipTextActive}
             accessibilityLabel={d.label}
-          >
-            <Text style={[styles.divisionChipText, selectedDivision === d.key && styles.divisionChipTextActive]}>
-              {d.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </View>
 
@@ -447,31 +444,26 @@ export default function PlanLibraryScreen({ navigation, route }) {
         showsHorizontalScrollIndicator={false}
         style={styles.chipsList}
         contentContainerStyle={styles.chipsContent}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.chip, activeCollection === item.key && styles.chipActive]}
-            onPress={() => {
-              setActiveCollection(item.key);
-              if (item.key !== 'division') setSelectedDivision(null);
-              listRef.current?.scrollToOffset({ offset: 0, animated: false });
-            }}
-            accessibilityRole="button"
-            accessibilityState={{ selected: activeCollection === item.key }}
-            accessibilityLabel={item.label}
-          >
-            {item.key === 'division' && (
-              <Ionicons
-                name="trophy-outline"
-                size={12}
-                color={activeCollection === 'division' ? colors.primary : colors.textMuted}
-                style={{ marginRight: spacing.xs }}
-              />
-            )}
-            <Text style={[styles.chipText, activeCollection === item.key && styles.chipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const active = activeCollection === item.key;
+          return (
+            <Chip
+              label={item.label}
+              icon={item.key === 'division' ? 'trophy-outline' : undefined}
+              selected={active}
+              onPress={() => {
+                setActiveCollection(item.key);
+                if (item.key !== 'division') setSelectedDivision(null);
+                listRef.current?.scrollToOffset({ offset: 0, animated: false });
+              }}
+              accessibilityRole="radio"
+              accessibilityLabel={item.label}
+              style={styles.collectionChip}
+              labelStyle={styles.collectionChipText}
+              selectedLabelStyle={styles.collectionChipTextActive}
+            />
+          );
+        }}
       />
 
       {/* Division grid, shown when Division prep is selected */}
@@ -722,15 +714,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     gap: spacing.sm, alignItems: 'center',
   },
-  chip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingVertical: 7,
-    borderRadius: radius.full, backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.502) },
-  chipText: { ...type.label, color: colors.textSecondary },
-  chipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  collectionChip: { paddingVertical: 7 },
+  collectionChipText: { ...type.label, color: colors.textSecondary },
+  collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
   // Division grid
   divisionSection: {
@@ -751,10 +737,7 @@ const styles = StyleSheet.create({
   divisionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   divisionChip: {
     paddingHorizontal: spacing.md, paddingVertical: 6,
-    borderRadius: radius.full, backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
   },
-  divisionChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   divisionChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   divisionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
   // Card owns background/radius/padding/border here.
