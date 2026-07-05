@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -87,14 +87,39 @@ export default function BlockReflectionScreen({ navigation, route }) {
   })));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const loadRequestRef = useRef(0);
 
   useEffect(() => {
-    if (!user?.id || !mesocycleId) { setLoading(false); return; }
-    getBlockReflectionData(user.id, mesocycleId)
-      .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+    loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id, mesocycleId]);
+
+  async function loadData() {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+
+    if (!user?.id || !mesocycleId) {
+      setData(null);
+      setLoadError(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const d = await getBlockReflectionData(user.id, mesocycleId);
+      if (!isCurrentRequest()) return;
+      setData(d);
+    } catch (_) {
+      if (!isCurrentRequest()) return;
+      setData(null);
+      setLoadError(true);
+    } finally {
+      if (isCurrentRequest()) setLoading(false);
+    }
+  }
 
   const narrative = data ? buildNarrative(data) : [];
 
@@ -124,7 +149,18 @@ export default function BlockReflectionScreen({ navigation, route }) {
           </View>
         )}
 
-        {!loading && !data && (
+        {!loading && loadError && (
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load block summary"
+            text="Your sessions are safe. This is a read problem, not a lost block."
+            actionLabel="Try again"
+            onAction={loadData}
+            compact
+          />
+        )}
+
+        {!loading && !loadError && !data && (
           <EmptyState
             icon="calendar-outline"
             title="No data found"
