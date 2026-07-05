@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Switch, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
-import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
+import { colors, withAlpha, spacing, radius, type } from '../styles/theme';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import Chip from '../components/Chip';
 
 // COMP-029: appearance is a FREE display setting (never Pro-gated). Default
 // Dark; Light is opt-in; Match phone follows the OS scheme.
@@ -84,9 +85,10 @@ export default function SettingsDisplayScreen() {
           {THEME_OPTIONS.map((opt) => {
             const active = currentTheme === opt.value;
             return (
-              <TouchableOpacity
+              <Chip
                 key={opt.value}
-                style={[local.segBtn, active && local.segBtnActive]}
+                label={opt.label}
+                selected={active}
                 onPress={async () => {
                   if (active) return;
                   // Await the write before prompting reload (a fast tap can tear
@@ -95,11 +97,10 @@ export default function SettingsDisplayScreen() {
                   promptRestartForA11y('Appearance');
                 }}
                 accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.label}
-              >
-                <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
+                style={local.segChip}
+                labelStyle={local.segLabel}
+              />
             );
           })}
         </View>
@@ -115,16 +116,16 @@ export default function SettingsDisplayScreen() {
           {ENERGY_OPTIONS.map((opt) => {
             const active = currentEnergy === opt.value;
             return (
-              <TouchableOpacity
+              <Chip
                 key={opt.value}
-                style={[local.segBtn, active && local.segBtnActive]}
+                label={opt.label}
+                selected={active}
                 onPress={() => { if (!active) setAccessibilityPref('energyUnit', opt.value); }}
                 accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.value === 'kj' ? 'Kilojoules' : 'Kilocalories'}
-              >
-                <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
+                style={local.segChip}
+                labelStyle={local.segLabel}
+              />
             );
           })}
         </View>
@@ -284,8 +285,11 @@ const local = StyleSheet.create({
     padding: spacing.xxs,
     gap: spacing.xxs,
   },
-  segBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  segBtnActive: { backgroundColor: colors.primaryFill },
-  segText: { ...type.label, color: colors.textSecondary },
-  segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
+  segChip: {
+    flex: 1,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  segLabel: { textAlign: 'center' },
 });
