@@ -288,6 +288,7 @@ Status: release decision.
 - Pro Upgrade now uses the shared `OAuthButtons` account-creation surface, matching Login and Pro onboarding platform rules instead of carrying a local Apple/Google button variant.
 - Log Cardio now uses the shared `Stepper` primitive for duration, preserving the 5-300 minute range and 5-minute increment while removing a local plus/minus control from the Nutrition/Cardio flow.
 - Article 9 and Nutrition Targets now share `ConsentCheckboxRow` for explicit consent controls, preserving locked consent copy, consent state and persistence while removing three bespoke checkbox presentations from legal/body-data surfaces.
+- My Recipes now uses the shared `Stepper` primitive for the recipe-serving picker, preserving half-serving increments and the 0.5-20 serving range while removing another bespoke plus/minus row from food logging.
 
 ### Web / CI / Security
 
