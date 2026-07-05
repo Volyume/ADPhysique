@@ -287,6 +287,7 @@ Status: release decision.
 - Paywall, Cascade Gate and Pro Upgrade now share `BillingPeriodSelector` for monthly/annual choice rendering, price loading placeholders, save-badge copy, selected/disabled accessibility state and localised store-price display, removing three duplicated billing-period style blocks from sensitive purchase surfaces.
 - Pro Upgrade now uses the shared `OAuthButtons` account-creation surface, matching Login and Pro onboarding platform rules instead of carrying a local Apple/Google button variant.
 - Log Cardio now uses the shared `Stepper` primitive for duration, preserving the 5-300 minute range and 5-minute increment while removing a local plus/minus control from the Nutrition/Cardio flow.
+- Article 9 and Nutrition Targets now share `ConsentCheckboxRow` for explicit consent controls, preserving locked consent copy, consent state and persistence while removing three bespoke checkbox presentations from legal/body-data surfaces.
 
 ### Web / CI / Security
 

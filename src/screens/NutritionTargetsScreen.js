@@ -13,6 +13,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Chip from '../components/Chip';
+import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -619,21 +620,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Text style={styles.consentText}>
                     Your body data is stored only on this device. It is never shared and you can delete it at any time.
                   </Text>
-                  <TouchableOpacity
-                    style={styles.consentRow}
+                  <ConsentCheckboxRow
+                    checked={consent}
                     onPress={() => setConsent(v => !v)}
-                    activeOpacity={0.7}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: consent }}
+                    label="I consent to storing this data on my device"
                     accessibilityLabel="I consent to storing this data on my device"
-                  >
-                    <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
-                      {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
-                    </View>
-                    <Text style={styles.consentCheckLabel}>
-                      I consent to storing this data on my device
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
 
@@ -886,21 +878,12 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Text style={styles.consentText}>
                 Your body data is stored only on this device. It is never shared and you can delete it at any time.
               </Text>
-              <TouchableOpacity
-                style={styles.consentRow}
+              <ConsentCheckboxRow
+                checked={consent}
                 onPress={() => setConsent(v => !v)}
-                activeOpacity={0.7}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: consent }}
+                label="I consent to storing this data on my device"
                 accessibilityLabel="I consent to storing this data on my device"
-              >
-                <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
-                  {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
-                </View>
-                <Text style={styles.consentCheckLabel}>
-                  I consent to storing this data on my device
-                </Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
 
@@ -1557,31 +1540,6 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textSecondary,
   },
-  consentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  consentCheckLabel: {
-    ...type.label,
-    flex: 1,
-    color: colors.textPrimary,
-  },
-
   // ── Calculate button ──────────────────────────────────────────────────────────────────
 
   calcBtn: {

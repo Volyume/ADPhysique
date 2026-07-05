@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
 import { getSupabaseClient } from '../lib/supabase';
@@ -211,20 +212,15 @@ export default function Article9ConsentScreen({ navigation }) {
           'If you delete your account, cloud removal starts immediately, this device is wiped, and backup copies are purged within 30 days',
         ]} />
 
-        <Pressable
+        <ConsentCheckboxRow
+          checked={agreed}
           onPress={() => setAgreed(v => !v)}
-          style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: agreed }}
+          label="I agree to Volyume using my health and nutrition data to coach me."
           accessibilityLabel="I agree to Volyume using my health and nutrition data to coach me"
-        >
-          <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-            {agreed ? <Ionicons name="checkmark" size={18} color={colors.onPrimary} /> : null}
-          </View>
-          <Text style={styles.consentText}>
-            I agree to Volyume using my health and nutrition data to coach me.
-          </Text>
-        </Pressable>
+          variant="card"
+          size="md"
+          style={styles.consentRow}
+        />
 
         {/* Art 7(3): the user must be informed of the right to withdraw BEFORE
             giving consent, and withdrawal must be as easy as giving it. */}
@@ -341,34 +337,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   consentRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
     marginTop: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  checkbox: {
-    width: 24, height: 24,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.hair,
-  },
-  checkboxChecked: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  consentText: {
-    ...type.bodySm,
-    flex: 1,
-    color: colors.textPrimary,
   },
   withdrawNote: {
     ...type.bodySm,
