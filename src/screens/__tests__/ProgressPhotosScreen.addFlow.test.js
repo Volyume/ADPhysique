@@ -115,7 +115,7 @@ test('picking an image opens the details step and does NOT save before confirm',
   await pressLabel(tree, 'Capture check-in');
   await flush();
   // Details sheet is up (its Save button exists); nothing saved yet.
-  const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the photo');
+  const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the check-in');
   expect(save.length).toBeGreaterThan(0);
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ test('confirming with the default date saves then snapshots weight for today', a
   await pressLabel(tree, 'Capture check-in');
   await flush();
 
-  await pressLabel(tree, 'Save the photo');
+  await pressLabel(tree, 'Save the check-in');
   await flush();
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
@@ -161,7 +161,7 @@ test('setting the date to the past indexes the photo under that past day (the fo
   const pastDay = new Date(wk.getFullYear(), wk.getMonth(), wk.getDate()).getTime();
   await act(async () => { dtp.props.onChange({ type: 'set' }, new Date(pastDay)); });
 
-  await pressLabel(tree, 'Save the photo');
+  await pressLabel(tree, 'Save the check-in');
   await flush();
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
@@ -178,7 +178,7 @@ test('a pro-to-free flip with the details sheet open blocks the save (live-tier 
   // Tier lapses while the sheet is open.
   useAppStore.getState = () => ({ tier: 'free', user: { id: USER_ID } });
 
-  await pressLabel(tree, 'Save the photo');
+  await pressLabel(tree, 'Save the check-in');
   await flush();
 
   expect(saveProgressPhoto).not.toHaveBeenCalled();

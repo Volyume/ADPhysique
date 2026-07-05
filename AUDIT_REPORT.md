@@ -354,6 +354,7 @@ Status: release decision.
 - Per-Day Targets now uses shared `Stepper` controls for weekday calorie offsets and the shared `Button` primitive for reset, preserving the same clamp, safe-floor honesty and optimistic rollback behavior while removing bespoke plus/minus/reset controls.
 - Build Workout's Travel / Hotel Gym equipment picker now uses the shared `BottomSheet` and `Chip` radio controls, preserving the existing travel-plan generation path while bringing the picker into the app's modal and selection grammar.
 - Progress Photos is now reframed as `Physique Studio` for the first-viewport experience: the old stacked info-card surface has been replaced with a photo-led hero, private-on-device lock treatment, last/next/scan status strip, clearer check-in CTAs, and safer repeatability/confidence copy grounded in the Physique Studio research.
+- Physique Studio guided capture now shows pose-specific studio guidance for front, side and back captures, and Photo Details now saves `Check-In` records with clearer date/pose copy while preserving the existing local photo metadata and live-tier write guards.
 
 ### Web / CI / Security
 

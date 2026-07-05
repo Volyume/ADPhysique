@@ -78,9 +78,12 @@ export default function PhotoDetailsSheet({
     >
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Photo details</Text>
+          <Text style={styles.sheetTitle}>Check-In details</Text>
+          <Text style={styles.sheetIntro}>
+            Tag the photo so your timeline can group like-for-like check-ins. Keep the setup consistent next time.
+          </Text>
 
-          <Text style={styles.helper}>When was this taken?</Text>
+          <Text style={styles.helper}>When was this check-in taken?</Text>
           <TouchableOpacity
             style={styles.dateField}
             onPress={() => setPickerOpen(true)}
@@ -92,7 +95,7 @@ export default function PhotoDetailsSheet({
             <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
 
-          <Text style={styles.sectionLabel}>Pose (optional)</Text>
+          <Text style={styles.sectionLabel}>Pose</Text>
           <View style={styles.poseSelector}>
             {POSES.map((p) => {
               const active = pose === p.key;
@@ -123,11 +126,11 @@ export default function PhotoDetailsSheet({
               accessibilityLabel="Cancel adding the photo"
             />
             <Button
-              title="Save"
+              title="Save Check-In"
               size="sm"
               fullWidth={false}
               onPress={() => onConfirm?.({ takenAt: dateMs, pose })}
-              accessibilityLabel="Save the photo"
+              accessibilityLabel="Save the check-in"
             />
           </View>
         </View>
@@ -154,6 +157,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl,
   },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
+  sheetIntro: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
   helper: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   dateField: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
