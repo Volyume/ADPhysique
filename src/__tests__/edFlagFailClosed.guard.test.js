@@ -35,6 +35,7 @@ const FILES = {
   weightTrend: read('../hooks/useWeightTrend.js'),
   coachOutput: read('../screens/CoachOutputScreen.js'),
   home: read('../screens/HomeScreen.js'),
+  proSetupComplete: read('../screens/ProSetupCompleteScreen.js'),
   weekSignalWriter: read('../lib/partners/weekSignalWriter.js'),
   widgetWriter: read('../lib/widgets/writer.js'),
 };
@@ -124,13 +125,22 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     expect(matches.length).toBeGreaterThanOrEqual(5);
   });
 
-  // 7. partners/weekSignalWriter — the outbound partner-signal freeze feed.
+  // 7. ProSetupCompleteScreen — the dated first-review line.
+  test('ProSetupCompleteScreen ED-flag read fails closed before dated weight copy', () => {
+    expect(FILES.proSetupComplete).toMatch(
+      /getOpenEdPatternFlag\(user\.id\)\.catch\(\(\)\s*=>\s*'read_failed'\)/,
+    );
+    expect(FILES.proSetupComplete).toMatch(/if \(flag\) return;/);
+    expect(FILES.proSetupComplete).not.toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\)\s*=>\s*null\)/);
+  });
+
+  // 8. partners/weekSignalWriter — the outbound partner-signal freeze feed.
   test('weekSignalWriter ED-flag read fails closed', () => {
     expect(FILES.weekSignalWriter).toMatch(FAIL_CLOSED_SENTINEL);
     expect(FILES.weekSignalWriter).toMatch(/edSuppressed = !!edFlag/);
   });
 
-  // 8. widgets/writer — the persisted widget snapshot's suppressed bit.
+  // 9. widgets/writer — the persisted widget snapshot's suppressed bit.
   test('widgets/writer ED-flag read fails closed', () => {
     expect(FILES.widgetWriter).toMatch(FAIL_CLOSED_SENTINEL);
     expect(FILES.widgetWriter).toMatch(/edFlagOpen:\s*!!edFlag/);
