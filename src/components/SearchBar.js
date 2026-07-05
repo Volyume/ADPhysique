@@ -10,7 +10,7 @@
  * onChangeText(''). Input font is >=16 so iOS doesn't zoom on focus.
  */
 
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, iconSize } from '../styles/theme';
 
@@ -23,6 +23,7 @@ export default function SearchBar({
   style,
   testID,
   accessibilityLabel,
+  loading = false,
 }) {
   const handleClear = () => (onClear ? onClear() : onChangeText?.(''));
   return (
@@ -41,7 +42,9 @@ export default function SearchBar({
         accessibilityLabel={accessibilityLabel || placeholder}
         testID={testID}
       />
-      {value ? (
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.textMuted} />
+      ) : value ? (
         <TouchableOpacity
           onPress={handleClear}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

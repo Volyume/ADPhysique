@@ -4,7 +4,7 @@
  * lock their contract before rollout.
  */
 import { create, act } from 'react-test-renderer';
-import { TextInput } from 'react-native';
+import { ActivityIndicator, TextInput } from 'react-native';
 
 import SearchBar from '../SearchBar';
 import TextField from '../TextField';
@@ -56,6 +56,13 @@ describe('SearchBar', () => {
     act(() => tree.root.findByProps({ accessibilityLabel: 'Clear search' }).props.onPress());
     expect(onClear).toHaveBeenCalled();
     expect(onChangeText).not.toHaveBeenCalled();
+  });
+
+  test('loading state shows the spinner instead of the clear button', () => {
+    let tree;
+    act(() => { tree = create(<SearchBar value="rice" onChangeText={() => {}} loading />); });
+    expect(tree.root.findAllByType(ActivityIndicator).length).toBe(1);
+    expect(tree.root.findAllByProps({ accessibilityLabel: 'Clear search' }).length).toBe(0);
   });
 
   test('input font is at least 16 (no iOS zoom)', () => {

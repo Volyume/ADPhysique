@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 466 suites passed.
-  - 6,292 tests passed, 5 skipped.
+  - 6,293 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -122,7 +122,7 @@ Status: materially closed.
 - Nutrition Targets duplicate in-content title was removed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings, Log Cardio and Meal Plan grocery categories.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name and Coaching step target migrated in safe slices.
-- `SearchBar` now supports explicit accessibility labels and has replaced the duplicated search chrome in Lift Progress, Exercise Picker and Build Workout picker flows.
+- `SearchBar` now supports explicit accessibility labels and loading state, and has replaced the duplicated search chrome in Lift Progress, Exercise Picker, Build Workout picker flows and Food Search.
 - Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions and Pro Goal Setup rebuild now use the shared `Button` primitive.
 - The weekly run pause picker now uses the shared `BottomSheet` chrome instead of its own modal/scrim implementation.
 - A guard now prevents native header drift.
@@ -283,7 +283,7 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
 
 1. Continue the "one product" design sweep:
    - migrate remaining plain inputs to `TextField` in small screen-level slices, especially body metrics, weekly check-in and nutrition target forms;
-   - continue `SearchBar` adoption where extra loading/trailing support is not needed, and extend the primitive before touching Food Search's spinner path;
+   - continue `SearchBar` adoption in remaining low-risk browse/search surfaces now that explicit labels and loading state are supported;
    - remaining hand-rolled CTAs to `Button` in smaller low-risk surfaces, avoiding live workout/session flows until a dedicated pass;
    - remaining hand-rolled sheets to `BottomSheet`, avoiding Active Workout and Progress Photos until a dedicated state-aware pass;
    - finish any remaining ad hoc section-label callers only where they are pure typography and not coupled to complex live-session/photo state.
