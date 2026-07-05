@@ -25,7 +25,13 @@ import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { getRecentCardioLog, deleteCardioLog, getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseCardioByWeek, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
-import { parseLocalDay } from '../lib/dayKey';
+import {
+  buildCardioWeekWindows,
+  cardioTrendAccessibilityLabel,
+  cardioTrendWhenLabel,
+  prettyCardioDate,
+  trimEmptyTrendWeeks,
+} from '../lib/cardio/cardioHistoryView';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { logError } from '../lib/errorLog';
 
@@ -36,41 +42,6 @@ const INTENSITY_LABEL = { low: 'Easy', moderate: 'Moderate', high: 'Hard' };
 const CARDIO_SOURCE_LABEL = { apple_health: 'Apple Health', health_connect: 'Health Connect' };
 const cardioSourceLabel = (source) => CARDIO_SOURCE_LABEL[source] || null;
 const TREND_WEEKS = 8; // recent weeks shown in the "done vs planned" trend
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function prettyDate(key) {
-  try {
-    const d = parseLocalDay(key);
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  } catch (_) {
-    return key;
-  }
-}
-
-// Newest-first list of contiguous 7-day windows ending today, mirroring the
-// "this week = last 7 days" window CardioPlanCard already uses (activityDayKey).
-function buildWeekWindows(weeks, nowMs = Date.now()) {
-  const out = [];
-  for (let i = 0; i < weeks; i++) {
-    const toKey = activityDayKey(nowMs - i * 7 * DAY_MS);
-    const fromKey = activityDayKey(nowMs - (i * 7 + 6) * DAY_MS);
-    out.push({ fromKey, toKey });
-  }
-  return out;
-}
-
-// Plain British week range, house style "to" not a dash (cf. "20 to 30 min").
-function weekRangeLabel(fromKey, toKey) {
-  try {
-    const f = parseLocalDay(fromKey);
-    const t = parseLocalDay(toKey);
-    const fM = f.toLocaleDateString('en-GB', { month: 'short' });
-    const tM = t.toLocaleDateString('en-GB', { month: 'short' });
-    return fM === tM ? `${f.getDate()} to ${t.getDate()} ${tM}` : `${f.getDate()} ${fM} to ${t.getDate()} ${tM}`;
-  } catch (_) {
-    return '';
-  }
-}
 
 function markStyle(verdict) {
   if (verdict === 'hit') return { color: colors.success };
@@ -85,14 +56,14 @@ function CardioTrend({ weeks, goal }) {
     <View style={styles.trend}>
       <Text style={styles.trendLabel}>How often you did your cardio</Text>
       {weeks.map((w, idx) => {
-        const when = idx === 0 ? 'This week' : idx === 1 ? 'Last week' : weekRangeLabel(w.fromKey, w.toKey);
+        const when = cardioTrendWhenLabel(w, idx);
         const mark = goal > 0 ? cardioVerdictLabel(w.verdict) : null;
         return (
           <View
             key={w.fromKey}
             style={styles.trendRow}
             accessible
-            accessibilityLabel={`${when}, ${w.sessions}${goal > 0 ? ` of ${goal}` : ''} sessions${mark ? `, ${mark}` : ''}`}
+            accessibilityLabel={cardioTrendAccessibilityLabel({ when, sessions: w.sessions, goal, mark })}
           >
             <Text style={styles.trendWhen}>{when}</Text>
             <Text style={styles.trendCount}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
@@ -130,7 +101,7 @@ export default function CardioHistoryScreen() {
     setLoading(true);
     setLoadError(false);
     try {
-      const windows = buildWeekWindows(TREND_WEEKS);
+      const windows = buildCardioWeekWindows(TREND_WEEKS, Date.now(), activityDayKey);
       const [rows, rangeRows] = await Promise.all([
         getRecentCardioLog(userId, 200),
         getCardioLogRange(userId, windows[windows.length - 1].fromKey, windows[0].toKey),
@@ -148,9 +119,7 @@ export default function CardioHistoryScreen() {
       // Trend: judge every week against the current target (NA-cux-9). Trim the
       // older all-empty weeks beyond the user's history, but always keep this week.
       const byWeek = summariseCardioByWeek(rangeRows, windows, { sessionsPerWeek: goal });
-      let lastNonEmpty = -1;
-      byWeek.forEach((w, i) => { if (w.sessions > 0) lastNonEmpty = i; });
-      setWeeks(byWeek.slice(0, Math.max(1, lastNonEmpty + 1)));
+      setWeeks(trimEmptyTrendWeeks(byWeek));
     } catch (e) {
       logError('CardioHistory.load', e, { userId });
       setSections([]);
@@ -216,7 +185,7 @@ export default function CardioHistoryScreen() {
           ListHeaderComponent={weeks.length > 0 ? <CardioTrend weeks={weeks} goal={goal} /> : null}
           getItemType={(item) => (item._kind === 'header' ? 'header' : 'row')}
           renderItem={({ item }) => (item._kind === 'header' ? (
-            <Text style={styles.dayHeader}>{prettyDate(item.title)}</Text>
+            <Text style={styles.dayHeader}>{prettyCardioDate(item.title)}</Text>
           ) : (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
