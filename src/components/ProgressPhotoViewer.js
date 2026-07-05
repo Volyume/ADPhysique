@@ -41,7 +41,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Modal, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, Image, Modal,
   ScrollView, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,6 +52,8 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { appAlert } from './AppAlert';
 import Button from './Button';
+import Chip from './Chip';
+import TextField from './TextField';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
@@ -383,18 +385,15 @@ export default function ProgressPhotoViewer({
                 {POSES.map((p) => {
                   const active = currentMeta.pose === p.key;
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={p.key}
+                      label={p.label}
+                      selected={active}
                       onPress={() => onSelectPose(p.key)}
-                      style={[styles.poseOption, active && styles.poseOptionActive]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
+                      style={styles.poseOption}
+                      labelStyle={styles.poseOptionText}
                       accessibilityLabel={`Set pose to ${p.label}`}
-                    >
-                      <Text style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
-                        {p.label}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   );
                 })}
               </View>
@@ -437,8 +436,10 @@ export default function ProgressPhotoViewer({
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>Note</Text>
-            <TextInput
-              style={styles.noteInput}
+            <TextField
+              containerStyle={styles.noteFieldContainer}
+              fieldStyle={styles.noteField}
+              inputStyle={styles.noteInput}
               value={draftNote}
               onChangeText={setDraftNote}
               placeholder="A short note for yourself"
@@ -497,13 +498,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: spacing.sm,
   },
   poseOption: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    flex: 1,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
   },
-  poseOptionActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  poseOptionText: { ...type.label, color: colors.textSecondary },
-  poseOptionTextActive: { color: colors.primary },
+  poseOptionText: { ...type.label, textAlign: 'center' },
   actions: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg,
   },
@@ -516,10 +517,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl,
   },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
+  noteFieldContainer: { gap: 0 },
+  noteField: {
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.md,
+    minHeight: 96,
+  },
   noteInput: {
-    ...type.body, color: colors.textPrimary, backgroundColor: colors.inputBg,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, minHeight: 96, textAlignVertical: 'top',
+    padding: spacing.md,
+    minHeight: 96,
+    textAlignVertical: 'top',
   },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.lg },
 });
