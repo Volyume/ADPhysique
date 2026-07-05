@@ -122,13 +122,19 @@ export default function usePartners(userId, tier) {
   const [state, setState] = useState(EMPTY);
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
   const pendingTriedRef = useRef(false);
+  const loadRequestRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
     setState(prev => ({ ...prev, loading: true, error: false, reload: load }));
     try {
       let partnerships = await getPartnershipsLocal(userId);
+      if (!isCurrentRequest()) return;
       let activeCount = await getActivePartnerCount(userId);
+      if (!isCurrentRequest()) return;
       let canAdd = canAddPartner({ tier, activeCount });
 
       // Re-surface a paywall-preserved invite (A1 s9.3): a user bounced at the
@@ -137,14 +143,19 @@ export default function usePartners(userId, tier) {
       // Runs before the render branches so a successful redeem lands the active
       // pairing on this same load pass.
       if (tier === 'pro' && !pendingTriedRef.current && !partnerships.some((p) => p.status === 'active')) {
-        pendingTriedRef.current = true;
         const storedCode = await readPendingPartnerCode();
+        if (!isCurrentRequest()) return;
+        pendingTriedRef.current = true;
         if (storedCode) {
           const rr = await redeemPartnerInvite(userId, storedCode);
+          if (!isCurrentRequest()) return;
           await clearPendingPartnerCode();
+          if (!isCurrentRequest()) return;
           if (rr.ok) {
             partnerships = await getPartnershipsLocal(userId).catch(() => partnerships);
+            if (!isCurrentRequest()) return;
             activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
+            if (!isCurrentRequest()) return;
             canAdd = canAddPartner({ tier, activeCount });
           }
         }
@@ -173,6 +184,7 @@ export default function usePartners(userId, tier) {
       }
 
       const pairs = await Promise.all(activeList.map((p) => enrichPair(p, userId)));
+      if (!isCurrentRequest()) return;
       const pendingInvite = partnerships.find((p) => p.status === 'invited') || null;
       const primary = pickPrimary(partnerships);
       const primaryPair = primary && primary.status === 'active'
@@ -196,6 +208,7 @@ export default function usePartners(userId, tier) {
         reload: load,
       });
     } catch (_) {
+      if (!isCurrentRequest()) return;
       setState({ ...EMPTY, loading: false, error: true, reload: load });
     }
   }, [userId, tier]);

@@ -54,6 +54,13 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 describe('usePartners load error state', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -72,5 +79,38 @@ describe('usePartners load error state', () => {
     expect(ref.error).toBe(true);
     expect(ref.rowState).toBe('empty');
     expect(typeof ref.reload).toBe('function');
+  });
+
+  test('older partnership reads cannot overwrite a newer load', async () => {
+    const older = deferred();
+    const newer = deferred();
+    db.getPartnershipsLocal
+      .mockImplementationOnce(() => older.promise)
+      .mockImplementationOnce(() => newer.promise);
+    let currentUserId = 'me-old';
+    const ref = {};
+    function Probe() {
+      Object.assign(ref, usePartners(currentUserId, 'pro'));
+      return null;
+    }
+
+    let tree;
+    await act(async () => { tree = create(<Probe />); });
+    await flush();
+    currentUserId = 'me-new';
+    await act(async () => { tree.update(<Probe />); });
+    await flush();
+    expect(db.getPartnershipsLocal).toHaveBeenCalledTimes(2);
+
+    await act(async () => { older.resolve([{ id: 'old-invite', status: 'invited' }]); });
+    await flush();
+    expect(ref.partnership?.id).not.toBe('old-invite');
+
+    await act(async () => { newer.resolve([{ id: 'new-invite', status: 'invited' }]); });
+    await flush();
+    expect(ref.loading).toBe(false);
+    expect(ref.error).toBe(false);
+    expect(ref.partnership?.id).toBe('new-invite');
+    expect(ref.rowState).toBe('pending');
   });
 });
