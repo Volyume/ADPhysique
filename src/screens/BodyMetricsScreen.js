@@ -37,6 +37,7 @@ import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
+import SectionLabel from '../components/SectionLabel';
 import {
   TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
   pickInitialWindowKey, weightTakeaway,
@@ -839,9 +840,9 @@ export default function BodyMetricsScreen() {
           <Card style={styles.snapshotCard}>
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
-              <Text style={styles.sectionTitle}>
+              <SectionLabel>
                 Weight · {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
-              </Text>
+              </SectionLabel>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
                   <Ionicons name={phase.icon} size={12} color={phase.color} />
@@ -956,7 +957,7 @@ export default function BodyMetricsScreen() {
             {latest?.body_fat != null && (
               <View style={styles.bodyFatBlock}>
                 <View style={styles.bodyFatRow}>
-                  <Text style={styles.sectionTitle}>Body fat</Text>
+                  <SectionLabel>Body fat</SectionLabel>
                   <View style={styles.bodyFatValueRow}>
                     <Text style={styles.bodyFatValue}>{latest.body_fat}%</Text>
                     {getDelta('body_fat') && (
@@ -1142,7 +1143,7 @@ export default function BodyMetricsScreen() {
         {/* Measurements snapshot + trend charts */}
         {latest && MEASUREMENTS.some(m => latest[m.key]) && (
           <Card style={styles.snapshotCard}>
-            <Text style={styles.sectionTitle}>Measurements</Text>
+            <SectionLabel>Measurements</SectionLabel>
             <View style={styles.measureGrid}>
               {MEASUREMENTS.map(m => latest[m.key] ? (
                 <TouchableOpacity
@@ -1205,7 +1206,7 @@ export default function BodyMetricsScreen() {
         {/* History */}
         {history.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>History</Text>
+            <SectionLabel>History</SectionLabel>
             {history.slice(0, 12).map(entry => {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
@@ -1268,7 +1269,7 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
     <View style={styles.recompBlock}>
       <View style={styles.recompHeaderRow}>
         <Ionicons name="sync-outline" size={14} color={colors.textMuted} />
-        <Text style={styles.sectionTitle}>Recomposition</Text>
+        <SectionLabel>Recomposition</SectionLabel>
         <InfoTooltip text={GLOSSARY.recomposition} />
       </View>
       <Text style={styles.recompRead}>{parts.join(' ')}</Text>
@@ -1328,10 +1329,6 @@ const styles = StyleSheet.create({
   readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
   readOnlyCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, alignSelf: 'flex-end' },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
-  sectionTitle: {
-    ...type.label, color: colors.textSecondary,
-  },
-
   optInCard: {
     alignItems: 'center', gap: spacing.lg,
   },
