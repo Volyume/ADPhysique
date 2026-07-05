@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import {
@@ -302,19 +303,14 @@ export default function PlanUpdateScreen({ navigation }) {
           placeholder="Select your recovery"
         />
 
-        <TouchableOpacity
-          style={[styles.saveBtn, (previewing || saving) && styles.saveBtnDisabled]}
+        <Button
+          title="Rebuild my plan"
           onPress={handleRebuildPress}
+          loading={previewing}
           disabled={previewing || saving}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: previewing || saving }}
           accessibilityLabel="Rebuild my plan"
-        >
-          <Text style={[styles.saveBtnText, (previewing || saving) && styles.saveBtnTextDisabled]}>
-            {previewing ? 'Checking…' : 'Rebuild my plan'}
-          </Text>
-        </TouchableOpacity>
+          style={styles.saveBtn}
+        />
       </ScrollView>
 
       {/* Plan diff/preview (ULTIMATE-PLANDIFF-01): the before/after of what the
@@ -369,29 +365,23 @@ export default function PlanUpdateScreen({ navigation }) {
               </>
             )}
 
-            <TouchableOpacity
-              style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            <Button
+              title="Confirm and rebuild"
               onPress={handleConfirmRebuild}
+              loading={saving}
               disabled={saving}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: saving }}
               accessibilityLabel="Confirm and rebuild"
-            >
-              <Text style={[styles.saveBtnText, saving && styles.saveBtnTextDisabled]}>
-                {saving ? 'Rebuilding…' : 'Confirm and rebuild'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+              style={styles.saveBtn}
+            />
+            <Button
+              title="Back"
+              variant="tertiary"
               style={styles.diffBackBtn}
+              textStyle={styles.diffBackText}
               onPress={() => { if (!saving) { setDiff(null); setStaged(null); } }}
               disabled={saving}
-              activeOpacity={0.85}
-              accessibilityRole="button"
               accessibilityLabel="Back"
-            >
-              <Text style={styles.diffBackText}>Back</Text>
-            </TouchableOpacity>
+            />
           </>
         ) : null}
       </BottomSheet>
@@ -436,14 +426,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.md,
   },
-  saveBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center',
-    marginTop: spacing.xxl,
-  },
-  saveBtnDisabled: { backgroundColor: colors.surface2 },
-  saveBtnText: { color: colors.onPrimary, ...type.bodyStrong },
-  saveBtnTextDisabled: { color: colors.textMuted },
+  saveBtn: { marginTop: spacing.xxl },
 
   // Plan diff/preview sheet
   diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
@@ -461,6 +444,6 @@ const styles = StyleSheet.create({
   diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
-  diffBackBtn: { paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  diffBackBtn: { marginTop: spacing.sm },
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
 });
