@@ -10,9 +10,10 @@
 // founder review at PR. The word "streak" never appears; the unit is
 // "weeks running".
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import BottomSheet from './BottomSheet';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import { addPause, setManualGoal } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
@@ -183,23 +184,24 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         <Text style={styles.pauseBtnText}>Pause</Text>
       </TouchableOpacity>
 
-      <Modal visible={pauseOpen} transparent animationType="fade" onRequestClose={() => setPauseOpen(false)}>
-        <TouchableOpacity accessibilityRole="button" style={styles.overlay} activeOpacity={1} onPress={() => setPauseOpen(false)} />
-        <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
-          {PAUSE_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.weeks}
-              style={styles.sheetOption}
-              onPress={() => doPause(opt.weeks)}
-              accessibilityRole="button"
-              accessibilityLabel={`Pause for ${opt.label}`}
-            >
-              <Text style={styles.sheetOptionText}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Modal>
+      <BottomSheet
+        visible={pauseOpen}
+        onClose={() => setPauseOpen(false)}
+        accessibilityLabel="Pause your run options"
+      >
+        <Text style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
+        {PAUSE_OPTIONS.map(opt => (
+          <TouchableOpacity
+            key={opt.weeks}
+            style={styles.sheetOption}
+            onPress={() => doPause(opt.weeks)}
+            accessibilityRole="button"
+            accessibilityLabel={`Pause for ${opt.label}`}
+          >
+            <Text style={styles.sheetOptionText}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
     </View>
   );
 }
@@ -242,12 +244,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, minHeight: 44, marginTop: spacing.xs,
   },
   pauseBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(colors.background, 0.6) },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    padding: spacing.xl, gap: spacing.sm,
-  },
   sheetTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetOption: {
     paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderRadius: radius.md,
