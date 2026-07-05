@@ -145,6 +145,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   }, []);
 
   const debounceRef = useRef(null);
+  const searchRequestRef = useRef(0);
 
   // Browse lists (Recents / Favourites / Custom) + the preference ref
   // sets that drive each row's star/exclude icon. Reloaded on focus so
@@ -301,19 +302,24 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
     if (q.length < 2) {
+      searchRequestRef.current += 1;
       setResults([]);
       setSearching(false);
       return;
     }
+    const requestId = searchRequestRef.current + 1;
+    searchRequestRef.current = requestId;
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
         const rows = await searchFoods(userId, q, { limit: 25 });
+        if (searchRequestRef.current !== requestId) return;
         setResults(rows);
       } catch (_) {
+        if (searchRequestRef.current !== requestId) return;
         setResults([]);
       } finally {
-        setSearching(false);
+        if (searchRequestRef.current === requestId) setSearching(false);
       }
     }, 250);
     return () => debounceRef.current && clearTimeout(debounceRef.current);

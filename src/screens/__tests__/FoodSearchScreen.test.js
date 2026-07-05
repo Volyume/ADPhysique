@@ -24,13 +24,35 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+jest.mock('@shopify/flash-list', () => ({
+  FlashList: ({ data = [], renderItem, ListEmptyComponent }) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    if (!data.length) {
+      const Empty = ListEmptyComponent;
+      return <View>{typeof Empty === 'function' ? <Empty /> : Empty}</View>;
+    }
+    return (
+      <View>
+        {data.map((item, index) => (
+          <React.Fragment key={item.key ?? index}>
+            {renderItem({ item, index })}
+          </React.Fragment>
+        ))}
+      </View>
+    );
+  },
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
 }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
 jest.mock('../../components/food/CuratedMealSheet', () => () => null);
-jest.mock('../../components/food/FoodRow', () => () => null);
+jest.mock('../../components/food/FoodRow', () => ({ food }) => {
+  const { Text } = require('react-native');
+  return <Text>{food?.name ?? 'Food row'}</Text>;
+});
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(() => Promise.resolve(null)),
@@ -72,6 +94,7 @@ jest.mock('../../lib/food/sources/localCache', () => ({ resolveFoodRef: jest.fn(
 
 import useAppStore from '../../store/useAppStore';
 import { logFoodEntry, deleteFoodEntry, upsertSlotRecent } from '../../lib/food/db';
+import { searchFoods } from '../../lib/food/waterfall';
 import FoodSearchScreen from '../FoodSearchScreen';
 
 const store = { user: { id: 'u1' }, userProfile: {}, accessibility: { energyUnit: 'kcal' } };
@@ -94,6 +117,13 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockSheetProps = null;
@@ -103,6 +133,14 @@ beforeEach(() => {
   deleteFoodEntry.mockResolvedValue(undefined);
   upsertSlotRecent.mockResolvedValue(undefined);
 });
+afterEach(() => { jest.useRealTimers(); });
+
+function treeHasText(tree, value) {
+  return tree.root.findAll((node) => (
+    Array.isArray(node.children)
+    && node.children.some((child) => typeof child === 'string' && child.includes(value))
+  )).length > 0;
+}
 
 describe('FoodSearchScreen confirmLog (A2)', () => {
   test('a successful "Add to diary" shows a success + Undo toast, matching DiaryScreen.onLogUsual', async () => {
@@ -162,5 +200,51 @@ describe('FoodSearchScreen confirmQuickAdd (A2)', () => {
     const [, opts] = mockToastShow.mock.calls[0];
     await act(async () => { await opts.action.onPress(); });
     expect(deleteFoodEntry).toHaveBeenCalledWith('entry-1', 'u1');
+  });
+});
+
+describe('FoodSearchScreen live search race guard', () => {
+  test('a slower older search response cannot overwrite the latest query results', async () => {
+    jest.useFakeTimers();
+    const older = deferred();
+    const newer = deferred();
+    searchFoods.mockImplementation((_userId, q) => {
+      if (q === 'ri') return older.promise;
+      if (q === 'ric') return newer.promise;
+      return Promise.resolve([]);
+    });
+
+    const nav = makeNav();
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
+    let tree;
+    await act(async () => { tree = create(<FoodSearchScreen navigation={nav} route={route} />); });
+    await flush();
+
+    const input = tree.root.findByProps({ accessibilityLabel: 'Search foods or brands' });
+    act(() => { input.props.onChangeText('ri'); });
+    act(() => { jest.advanceTimersByTime(250); });
+    await flush();
+    expect(searchFoods).toHaveBeenCalledWith('u1', 'ri', { limit: 25 });
+
+    act(() => { input.props.onChangeText('ric'); });
+    act(() => { jest.advanceTimersByTime(250); });
+    await flush();
+    expect(searchFoods).toHaveBeenCalledWith('u1', 'ric', { limit: 25 });
+
+    await act(async () => {
+      newer.resolve([{ food_ref: 'local:rice', name: 'Rice cakes', kcal_100g: 380 }]);
+      await Promise.resolve();
+    });
+    expect(treeHasText(tree, 'Rice cakes')).toBe(true);
+
+    await act(async () => {
+      older.resolve([{ food_ref: 'local:risotto', name: 'Old risotto result', kcal_100g: 220 }]);
+      await Promise.resolve();
+    });
+
+    expect(treeHasText(tree, 'Rice cakes')).toBe(true);
+    expect(treeHasText(tree, 'Old risotto result')).toBe(false);
+
+    jest.useRealTimers();
   });
 });
