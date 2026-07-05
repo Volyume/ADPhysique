@@ -125,7 +125,7 @@ Status: materially closed.
 - `SearchBar` now supports explicit accessibility labels and loading state, and has replaced the duplicated search chrome in Lift Progress, Exercise Picker, Build Workout picker flows and Food Search.
 - `Chip` now supports explicit accessibility labels and label style overrides; Settings Profile sex/diet radio groups use it instead of bespoke chips.
 - `Stepper` now supports compact sizing and explicit accessibility labels, and Manual Builder / Build Workout target controls use it instead of local +/- implementations while preserving target clamp/coherence rules.
-- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions, Volume Heatmap target editor actions, Block Reflection CTAs and the inline ProGate upgrade sheet now use the shared `Button` primitive.
+- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions, Volume Heatmap target editor actions, Block Reflection CTAs, EmptyDiary quick actions and the inline ProGate upgrade sheet now use the shared `Button` primitive.
 - The weekly run pause picker, My Meals rename dialog and inline ProGate upgrade sheet now use the shared `BottomSheet` chrome instead of their own modal/scrim implementations.
 - A guard now prevents native header drift.
 
