@@ -38,6 +38,7 @@ import {
 } from '../styles/theme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
+import Button from './Button';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
@@ -565,40 +566,28 @@ export default function BeforeAfterShareSheet({
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.primaryBtn, (busy || !pairReady) && styles.btnDisabled]}
+        <Button
+          title="Share"
+          icon="share-outline"
           onPress={onShare}
           disabled={busy || !pairReady}
-          accessibilityRole="button"
+          loading={sharing}
           accessibilityLabel="Share progress image"
-        >
-          {sharing ? (
-            <ActivityIndicator color={colors.onPrimary} size="small" />
-          ) : (
-            <>
-              <Ionicons name="share-outline" size={20} color={colors.onPrimary} />
-              <Text style={styles.primaryBtnText}>Share</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          size="lg"
+        />
 
         {MediaLibrary ? (
-          <TouchableOpacity
-            style={[styles.secondaryBtn, (busy || !pairReady) && styles.btnDisabled]}
+          <Button
+            title="Save to gallery"
+            icon="download-outline"
             onPress={onSaveToGallery}
             disabled={busy || !pairReady}
-            accessibilityRole="button"
+            loading={savingToGallery}
             accessibilityLabel="Save progress image to gallery"
-          >
-            {savingToGallery ? (
-              <ActivityIndicator color={colors.primary} size="small" />
-            ) : (
-              <>
-                <Ionicons name="download-outline" size={20} color={colors.primary} />
-                <Text style={styles.secondaryBtnText}>Save to gallery</Text>
-              </>
-            )}
-          </TouchableOpacity>
+            variant="outline"
+            size="lg"
+            style={styles.galleryBtn}
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -682,17 +671,5 @@ const styles = StyleSheet.create({
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-  },
-  primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  secondaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    borderWidth: 1.5, borderColor: colors.primary, marginTop: spacing.md,
-  },
-  secondaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
-  btnDisabled: { opacity: 0.5 },
+  galleryBtn: { marginTop: spacing.md },
 });

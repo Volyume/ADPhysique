@@ -20,6 +20,13 @@ jest.mock('../../store/useAppStore', () => {
 });
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
+  NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
+}));
 
 const OLD = { name: '1000.jpg', uri: 'file:///photos/old.jpg', ts: 1000 };
 const NEW = { name: '9000.jpg', uri: 'file:///photos/new.jpg', ts: 9000 };

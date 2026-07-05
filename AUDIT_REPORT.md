@@ -244,6 +244,7 @@ Status: release decision.
 - Added source guards for generic text-input labels, disabled font scaling, native header drift and tab-bar token drift.
 - Root lint is now zero-warning.
 - Food serving entry is now closer to the shared design system: `ServingPicker` uses `TextField`/`Chip`, and `FoodDetailSheet` uses shared chips, field styling and the secondary `Button` for cancel while preserving the existing macro/save/delete logic.
+- Progress before/after sharing now uses the shared `Button` primitive for Share and Save-to-gallery CTAs, keeping the existing safety/privacy/render gates intact while removing another bespoke primary/secondary button pair.
 
 ### Web / CI / Security
 
