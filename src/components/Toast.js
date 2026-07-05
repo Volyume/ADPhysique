@@ -25,7 +25,7 @@
 //     read).
 
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, type, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
@@ -50,6 +50,7 @@ const DEFAULTS = {
 export function ToastProvider({ children }) {
   const [queue, setQueue] = useState([]);
   const [current, setCurrent] = useState(null);
+  const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
   const opacity = useRef(new Animated.Value(0)).current;
@@ -59,6 +60,20 @@ export function ToastProvider({ children }) {
   // screen even if the out-animation's completion callback never fires (see
   // dismiss()).
   const clearFallback = useRef(null);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo?.isScreenReaderEnabled?.()
+      ?.then?.((enabled) => { if (mounted) setScreenReaderEnabled(!!enabled); })
+      ?.catch?.(() => {});
+    const subscription = AccessibilityInfo?.addEventListener?.('screenReaderChanged', (enabled) => {
+      setScreenReaderEnabled(!!enabled);
+    });
+    return () => {
+      mounted = false;
+      subscription?.remove?.();
+    };
+  }, []);
 
   const show = useCallback((message, options = {}) => {
     if (!message) return;
@@ -114,7 +129,10 @@ export function ToastProvider({ children }) {
     ]).start();
 
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
-    dismissTimer.current = setTimeout(() => dismiss(), current.duration);
+    const holdUndoForScreenReader = screenReaderEnabled && current.variant === 'undo' && current.action;
+    if (!holdUndoForScreenReader) {
+      dismissTimer.current = setTimeout(() => dismiss(), current.duration);
+    }
     // A fresh toast supersedes any pending fallback from the previous one.
     if (clearFallback.current) { clearTimeout(clearFallback.current); clearFallback.current = null; }
     return () => {
@@ -124,7 +142,7 @@ export function ToastProvider({ children }) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, reduceMotion]);
+  }, [current, reduceMotion, screenReaderEnabled]);
 
   function dismiss(opts = {}) {
     if (dismissTimer.current) {
@@ -167,6 +185,12 @@ export function ToastProvider({ children }) {
   // EVERY useToast consumer on each toast show/dismiss/animation tick. `show`
   // is stable (useCallback []), so this value never changes for the app's life.
   const contextValue = useMemo(() => ({ show }), [show]);
+  const dismissLabel = current?.variant === 'undo'
+    ? `Dismiss undo message and keep change: ${current.message}`
+    : `Dismiss notification: ${current?.message ?? ''}`;
+  const dismissHint = current?.variant === 'undo'
+    ? 'Closes this notification and keeps the pending change.'
+    : 'Closes this notification.';
 
   return (
     <ToastContext.Provider value={contextValue}>
@@ -184,6 +208,8 @@ export function ToastProvider({ children }) {
             <TouchableOpacity accessibilityRole="button"
               activeOpacity={0.85}
               onPress={dismiss}
+              accessibilityLabel={dismissLabel}
+              accessibilityHint={dismissHint}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}
             >
               <Ionicons name={current.icon} size={18} color={current.tint} />
@@ -200,6 +226,9 @@ export function ToastProvider({ children }) {
                 style={styles.actionBtn}
                 accessibilityRole="button"
                 accessibilityLabel={current.action.label}
+                accessibilityHint={current.variant === 'undo'
+                  ? 'Restores the change and closes this notification.'
+                  : 'Runs this action and closes this notification.'}
               >
                 <Text style={[styles.actionText, { color: current.tint }]}>
                   {current.action.label}
