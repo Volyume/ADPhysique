@@ -280,6 +280,7 @@ Status: release decision.
 - Partners now distinguishes failed local partnership reads from a true no-partner state: `usePartners` surfaces an explicit `error` flag and `PartnerScreen` renders a retryable inline error instead of showing the invite pitch on failed reads.
 - Progress Photos / Physique Scan orchestration now has a first controller seam in `src/lib/progressPhotosController.js`: photo enrichment, completed-scan filtering, share-item derivation, scan cadence gating, transient scan-photo cleanup, retake cleanup and viewer-delete ordering are covered by pure/unit tests while UI alert/state choreography remains in `ProgressPhotosScreen`.
 - Body Metrics database access now lives behind `src/lib/database/bodyMetrics.js`, with `database.js` preserving all existing public exports for screens and sync. The seam covers local metric logging, latest/nearest weight reads, body-composition reads, bulk sync reads, cloud restore column mapping and LWW updated-at lookup with focused repository tests.
+- Plan Update and Pro Goal Setup now use the shared `SectionLabel` primitive for plan/goal setup headings, including optional weak-point and show-date labels, with a source guard preventing those high-traffic setup screens from reverting to local heading typography.
 
 ### Web / CI / Security
 
