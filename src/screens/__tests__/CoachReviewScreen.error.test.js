@@ -35,6 +35,13 @@ import { getAllWorkouts } from '../../lib/database';
 const source = fs.readFileSync(path.join(__dirname, '..', 'CoachReviewScreen.js'), 'utf8');
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 async function mount() {
   let tree;
   await act(async () => { tree = create(<CoachReviewScreen />); });
@@ -50,6 +57,8 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
 
   test('read failure uses the shared EmptyState treatment', () => {
     expect(source).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
+    expect(source).toMatch(/const loadRequestRef = useRef\(0\);/);
+    expect(source).toMatch(/if \(!isCurrentRequest\(\)\) return;[\s\S]*setLoadError\(true\);/);
     expect(source).toMatch(
       /<EmptyState[\s\S]*icon="warning-outline"[\s\S]*title="Couldn't load your review"[\s\S]*text="Your sessions are safe\. This is a read problem, not a lost week\."[\s\S]*actionLabel="Try again"[\s\S]*onAction=\{retryLoad\}/,
     );
@@ -68,6 +77,34 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     const json = await mount();
     expect(json).toContain('No sessions logged this week');
     expect(json).not.toContain('Try again');
+    expect(json).not.toContain('not a lost week');
+  });
+
+  test('an older failed load cannot overwrite a newer successful review', async () => {
+    const older = deferred();
+    const newer = deferred();
+    getAllWorkouts.mockImplementation((userId) => (
+      userId === 'u1' ? older.promise : newer.promise
+    ));
+
+    let tree;
+    await act(async () => { tree = create(<CoachReviewScreen />); });
+    await flush();
+    await act(async () => { useAppStore.setState({ user: { id: 'u2' } }); });
+    await flush();
+    expect(getAllWorkouts).toHaveBeenCalledWith('u1');
+    expect(getAllWorkouts).toHaveBeenCalledWith('u2');
+
+    await act(async () => { newer.resolve([]); });
+    await flush();
+    let json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('No sessions logged this week');
+    expect(json).not.toContain('not a lost week');
+
+    await act(async () => { older.reject(new Error('late old failure')); });
+    await flush();
+    json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('No sessions logged this week');
     expect(json).not.toContain('not a lost week');
   });
 });
