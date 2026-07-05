@@ -152,6 +152,24 @@ describe('Chip', () => {
     expect(nodes.length).toBeGreaterThan(0);
     expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(true);
   });
+
+  test('supports explicit accessibility labels and label style overrides', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <Chip
+          label="Vegan"
+          selected
+          accessibilityLabel="Diet preference Vegan"
+          labelStyle={{ textAlign: 'center' }}
+          selectedLabelStyle={{ color: 'red' }}
+          onPress={() => {}}
+        />,
+      );
+    });
+    expect(tree.root.findByProps({ accessibilityLabel: 'Diet preference Vegan' })).toBeTruthy();
+    expect(JSON.stringify(tree.toJSON())).toContain('red');
+  });
 });
 
 describe('Stepper', () => {

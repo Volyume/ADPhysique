@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, type, fontWeight } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
 import TextField from '../components/TextField';
+import Chip from '../components/Chip';
 import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
@@ -93,16 +94,16 @@ export default function SettingsProfileScreen() {
             {SEX_OPTIONS.map(opt => {
               const active = sex === opt.value;
               return (
-                <TouchableOpacity
+                <Chip
                   key={opt.value}
-                  style={[styles.dietChip, active && styles.dietChipActive]}
+                  label={opt.label}
+                  selected={active}
                   onPress={() => changeSex(opt.value)}
                   accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
                   accessibilityLabel={`Biological sex ${opt.label}`}
-                >
-                  <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
+                  style={styles.dietChip}
+                  labelStyle={styles.dietChipText}
+                />
               );
             })}
           </View>
@@ -121,16 +122,16 @@ export default function SettingsProfileScreen() {
             {DIET_OPTIONS.map(opt => {
               const active = diet === opt.value;
               return (
-                <TouchableOpacity
+                <Chip
                   key={opt.value}
-                  style={[styles.dietChip, active && styles.dietChipActive]}
+                  label={opt.label}
+                  selected={active}
                   onPress={() => { setDiet(opt.value); setDietPreference(opt.value); }}
                   accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
                   accessibilityLabel={`Diet preference ${opt.label}`}
-                >
-                  <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
-                </TouchableOpacity>
+                  style={styles.dietChip}
+                  labelStyle={styles.dietChipText}
+                />
               );
             })}
           </View>
@@ -168,23 +169,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     minHeight: 44,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  dietChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
   },
   dietChipText: {
     ...type.label,
-    color: colors.textSecondary,
-  },
-  dietChipTextActive: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    textAlign: 'center',
   },
 });
