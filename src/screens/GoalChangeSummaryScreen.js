@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import ModalHeader from '../components/ModalHeader';
 import { useState, useEffect } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -192,13 +193,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.headerTitle}>Here's what changed</Text>
-        <TouchableOpacity onPress={handleDone} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      <ModalHeader title="Here's what changed" onClose={handleDone} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card tone="success" style={styles.heroCard}>
@@ -312,13 +307,6 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { ...type.bodyStrong, color: colors.textPrimary },
-
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
 
   heroCard: {

@@ -347,6 +347,7 @@ Status: release decision.
 - Food Insights now gives the low-data macro-adherence state an `Open diary` action, preserving window-aware analytics copy while removing a Nutrition dead end.
 - Add Custom Food now uses the shared `ModalHeader` for its modal chrome, removing a local close/header style block while preserving the manual food logging guards.
 - Barcode Scan and Label Scan now use the shared `ModalHeader` for permission, no-camera and live camera states. The header primitive now supports left-side close placement and a right accessory slot, preserving torch controls while removing duplicated scanner header chrome.
+- Goal Change Summary now uses the shared `ModalHeader`, preserving the existing close/pop-to-root behavior while removing another local modal header style block from the paid goal-update flow.
 
 ### Web / CI / Security
 
