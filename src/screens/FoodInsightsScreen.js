@@ -27,6 +27,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha }
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
 import {
@@ -309,7 +310,7 @@ export default function FoodInsightsScreen({ navigation }) {
             headline number reads first. */}
         {weeklyAvg ? (
           <>
-            <Text style={styles.sectionLabel}>THIS WEEK</Text>
+            <SectionLabel style={styles.sectionLabelSpacing}>THIS WEEK</SectionLabel>
             <Card style={styles.card}>
               <Text
                 style={styles.summaryValue}
@@ -333,7 +334,7 @@ export default function FoodInsightsScreen({ navigation }) {
           </>
         ) : null}
 
-        <Text style={styles.sectionLabel}>LAST {windowDays} DAYS · CALORIE TREND</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS · CALORIE TREND</SectionLabel>
         <Card style={styles.card}>
           {calorieLine.length >= 2 ? (
             <>
@@ -376,7 +377,7 @@ export default function FoodInsightsScreen({ navigation }) {
           )}
         </Card>
 
-        <Text style={styles.sectionLabel}>LAST {windowDays} DAYS · CALORIES</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS · CALORIES</SectionLabel>
         <Card style={styles.card}>
           {chartBars.map((b) => {
             const pct = Math.min(1, b.kcal / maxKcal);
@@ -420,7 +421,7 @@ export default function FoodInsightsScreen({ navigation }) {
             mirroring the macro block's guard. */}
         {adherence && adherence.logged > 0 ? (
           <>
-            <Text style={styles.sectionLabel}>PROTEIN</Text>
+            <SectionLabel style={styles.sectionLabelSpacing}>PROTEIN</SectionLabel>
             <Card style={styles.card}>
               <Text style={styles.proteinHeadline}>
                 You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
@@ -463,7 +464,7 @@ export default function FoodInsightsScreen({ navigation }) {
           </>
         ) : null}
 
-        <Text style={styles.sectionLabel}>MACRO ADHERENCE</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>MACRO ADHERENCE</SectionLabel>
         <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
             <>
@@ -490,7 +491,7 @@ export default function FoodInsightsScreen({ navigation }) {
             over the window. Adherence-NEUTRAL by design, value in textPrimary,
             label in textMuted, no good/bad colour, no target, no streak. Macro-
             level only (no sodium/sugar on the rollup; micronutrients gated). */}
-        <Text style={styles.sectionLabel}>NUTRIENT AVERAGES</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>NUTRIENT AVERAGES</SectionLabel>
         <Card style={styles.card}>
           {nutrientAverages.days > 0 ? (
             <>
@@ -576,10 +577,7 @@ const styles = StyleSheet.create({
   windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   windowChipTextOn: { color: colors.primary },
 
-  sectionLabel: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 1, marginBottom: spacing.sm,
-  },
+  sectionLabelSpacing: { marginBottom: spacing.sm },
   card: {
     marginBottom: spacing.lg,
   },
