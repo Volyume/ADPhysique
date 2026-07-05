@@ -126,6 +126,20 @@ beforeEach(() => {
   mockMarkMomentSeen.mockReset().mockResolvedValue();
 });
 
+describe('load error state', () => {
+  test('renders a retry surface instead of the empty invite pitch', async () => {
+    const reload = jest.fn();
+    mockHook.value = base({ error: true, reload });
+    const tree = await mount();
+    const text = allText(tree).join(' ');
+    expect(text).toContain("Couldn't load partners");
+    expect(text).toContain('Check your connection and try again.');
+    expect(text).not.toContain('Train with a partner');
+    await press(tree, 'Try again');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('connected state: isolated pair cards', () => {
   test('multiple active pairs render as separate cards in the given (paired-at) order', async () => {
     mockHook.value = base({

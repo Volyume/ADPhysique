@@ -33,7 +33,7 @@ import { readPendingPartnerCode, clearPendingPartnerCode } from '../lib/partners
 const WEEK_MS = 7 * 86400000;
 
 const EMPTY = {
-  loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
+  loading: true, error: false, partnership: null, rowState: 'empty', partnerWeek: null,
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
   sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, reload: () => {},
 };
@@ -125,6 +125,7 @@ export default function usePartners(userId, tier) {
 
   const load = useCallback(async () => {
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
+    setState(prev => ({ ...prev, loading: true, error: false, reload: load }));
     try {
       let partnerships = await getPartnershipsLocal(userId);
       let activeCount = await getActivePartnerCount(userId);
@@ -180,6 +181,7 @@ export default function usePartners(userId, tier) {
 
       setState({
         loading: false,
+        error: false,
         pairs,
         pendingInvite,
         canAdd,
@@ -194,7 +196,7 @@ export default function usePartners(userId, tier) {
         reload: load,
       });
     } catch (_) {
-      setState({ ...EMPTY, loading: false });
+      setState({ ...EMPTY, loading: false, error: true, reload: load });
     }
   }, [userId, tier]);
 
@@ -326,4 +328,3 @@ export default function usePartners(userId, tier) {
     proposeBlock, adoptBlock, leaveBlock, setIntention,
   };
 }
-
