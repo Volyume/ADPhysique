@@ -198,8 +198,9 @@ describe('ProgressPhotosScreen timeline', () => {
   test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('See your progress over time');
-    expect(text).toContain('How it works');
+    expect(text).toContain('Physique Studio');
+    expect(text).toContain('Build your visual baseline');
+    expect(text).toContain('Capture Check-In');
   });
 });
 
@@ -341,16 +342,15 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Use these only if they help you, and skip them if they do not.');
-    expect(text).toContain('nothing is shared unless you choose to');
-    expect(text).toContain('physique scan details are hidden right now');
+    expect(text).toContain('Scan details are hidden right now');
+    expect(text).toContain('Nothing is uploaded or shared unless you choose it.');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });
 
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('We never upload or sync your photos, and nothing is shared unless you choose to.');
+    expect(text).toContain('Photos stay on this device unless you choose to share or export them.');
     expect(text).not.toContain('Not synced, not shared');
   });
 });
@@ -361,7 +361,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
 describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('free tier hides the add button and says the state plainly', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Add a photo')).toBeUndefined();
+    expect(findPressable(tree, 'Capture check-in')).toBeUndefined();
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
@@ -384,7 +384,7 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
 
   test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
-    expect(findPressable(tree, 'Add a photo')).toBeDefined();
+    expect(findPressable(tree, 'Capture check-in')).toBeDefined();
     await pressTile(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });

@@ -112,7 +112,7 @@ beforeEach(() => jest.clearAllMocks());
 test('picking an image opens the details step and does NOT save before confirm', async () => {
   chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Add a photo');
+  await pressLabel(tree, 'Capture check-in');
   await flush();
   // Details sheet is up (its Save button exists); nothing saved yet.
   const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the photo');
@@ -124,7 +124,7 @@ test('picking an image opens the details step and does NOT save before confirm',
 test('confirming with the default date saves then snapshots weight for today', async () => {
   chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Add a photo');
+  await pressLabel(tree, 'Capture check-in');
   await flush();
 
   await pressLabel(tree, 'Save the photo');
@@ -144,7 +144,7 @@ test('confirming with the default date saves then snapshots weight for today', a
 test('setting the date to the past indexes the photo under that past day (the founder scenario)', async () => {
   chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Add a photo');
+  await pressLabel(tree, 'Capture check-in');
   await flush();
 
   // Open the picker in the details sheet and choose a week ago.
@@ -172,7 +172,7 @@ test('setting the date to the past indexes the photo under that past day (the fo
 test('a pro-to-free flip with the details sheet open blocks the save (live-tier re-check)', async () => {
   chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Add a photo');
+  await pressLabel(tree, 'Capture check-in');
   await flush();
 
   // Tier lapses while the sheet is open.
