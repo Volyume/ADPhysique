@@ -3,6 +3,7 @@ const path = require('path');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
 const SCAN_COPY = fs.readFileSync(path.resolve(__dirname, '../../lib/progressScanCopy.js'), 'utf8');
+const CONTROLLER = fs.readFileSync(path.resolve(__dirname, '../../lib/progressPhotosController.js'), 'utf8');
 
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
@@ -78,8 +79,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/getProgressScanCapturePreferences/);
     expect(SCREEN).toMatch(/createProgressScanSession\(userId, capturePrefs\)/);
     expect(SCREEN).toMatch(/getUserBodyProfile\(userId\)/);
-    expect(SCREEN).toMatch(/profile\.heightCm \?\? bodyProfile\?\.heightCm/);
-    expect(SCREEN).toMatch(/profile\.trainingGoal \?\? bodyProfile\?\.primaryGoal/);
+    expect(SCREEN).toMatch(/buildProgressScanFinishPayload\(profile, bodyProfile, userSex\)/);
+    expect(CONTROLLER).toMatch(/heightCm: safeProfile\.heightCm \?\? safeBodyProfile\.heightCm \?\? null/);
+    expect(CONTROLLER).toMatch(/trainingGoal: safeProfile\.trainingGoal \?\? safeBodyProfile\.primaryGoal \?\? null/);
   });
 
   test('camera fallback keeps the active scan pose instead of discarding the draft', () => {

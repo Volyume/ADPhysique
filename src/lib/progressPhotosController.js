@@ -49,6 +49,19 @@ export function shouldGateProgressScanStart(scans = [], nowMs = Date.now(), minI
   return { gated, latestCompleted };
 }
 
+export function buildProgressScanFinishPayload(profile = {}, bodyProfile = null, userSex = null) {
+  const safeProfile = profile || {};
+  const safeBodyProfile = bodyProfile || {};
+  return {
+    sex: safeProfile.sex ?? safeBodyProfile.sex ?? userSex,
+    heightCm: safeProfile.heightCm ?? safeBodyProfile.heightCm ?? null,
+    weightKg: safeProfile.weightKg ?? safeProfile.bodyweightKg ?? safeProfile.bodyWeightKg ?? null,
+    trainingGoal: safeProfile.trainingGoal ?? safeBodyProfile.primaryGoal ?? null,
+    trainingPhase: safeProfile.trainingPhase ?? safeProfile.goal ?? null,
+    darkerSkinOverestimationRisk: safeProfile.darkerSkinOverestimationRisk === true,
+  };
+}
+
 export async function deleteViewerProgressPhoto({
   userId,
   name,
