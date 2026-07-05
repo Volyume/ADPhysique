@@ -333,6 +333,7 @@ Status: release decision.
 - Snapshot restore loading now uses a focus-driven latest-request guard, removing the duplicate mount load and preventing an older device-snapshot read from overwriting a newer focused result.
 - Pro setup completion now maps ED flag read failures to the shared truthy `read_failed` sentinel before showing dated morning-weight review copy, with source and behavioural guards proving flagged/unknown states stay neutral.
 - Shared Progress/Consistency data loading now uses a latest-request guard across its user-scoped async pipeline, so a delayed signed-in read cannot repopulate progress data after sign-out or a newer load.
+- Manual Builder's plan-activated confirmation now uses the shared `BottomSheet` chrome instead of a local React Native modal, preserving the plan name and Train routing while bringing the builder success state into the app's sheet system.
 
 ### Web / CI / Security
 

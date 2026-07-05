@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import Stepper from '../components/Stepper';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
+import BottomSheet from '../components/BottomSheet';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -1119,39 +1120,40 @@ export default function ManualBuilderScreen({ navigation, route }) {
         )}
       </ScrollView>
 
-      {/* Success Modal */}
-      <Modal visible={successModal} transparent animationType="fade" onRequestClose={() => setSuccessModal(false)}>
-        <View style={styles.successOverlay}>
-          <Card radius="xl" padding="xxl" style={styles.successCard}>
-            <View style={styles.successIconWrap}>
-              <Ionicons name="checkmark-circle" size={48} color={colors.success} />
-            </View>
-            <Text style={styles.successTitle}>Plan Activated</Text>
-            <Text style={styles.successName}>{savedPlanName}</Text>
-            <Text style={styles.successSub}>Your plan is set as active and ready to use.</Text>
-            <View style={styles.successActions}>
-              <Button
-                title="Stay Here"
-                variant="secondary"
-                fullWidth={false}
-                style={styles.successSecondary}
-                textStyle={styles.successSecondaryText}
-                onPress={() => setSuccessModal(false)}
-                accessibilityLabel="Stay here"
-              />
-              <Button
-                title="Go to Train"
-                icon="home"
-                fullWidth={false}
-                style={styles.successPrimary}
-                textStyle={styles.successPrimaryText}
-                onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
-                accessibilityLabel="Go to Train"
-              />
-            </View>
-          </Card>
+      {/* Success Sheet */}
+      <BottomSheet
+        visible={successModal}
+        onClose={() => setSuccessModal(false)}
+        accessibilityLabel="Plan activated"
+        sheetStyle={styles.successSheet}
+      >
+        <View style={styles.successIconWrap}>
+          <Ionicons name="checkmark-circle" size={48} color={colors.success} />
         </View>
-      </Modal>
+        <Text style={styles.successTitle}>Plan Activated</Text>
+        <Text style={styles.successName}>{savedPlanName}</Text>
+        <Text style={styles.successSub}>Your plan is set as active and ready to use.</Text>
+        <View style={styles.successActions}>
+          <Button
+            title="Stay Here"
+            variant="secondary"
+            fullWidth={false}
+            style={styles.successSecondary}
+            textStyle={styles.successSecondaryText}
+            onPress={() => setSuccessModal(false)}
+            accessibilityLabel="Stay here"
+          />
+          <Button
+            title="Go to Train"
+            icon="home"
+            fullWidth={false}
+            style={styles.successPrimary}
+            textStyle={styles.successPrimaryText}
+            onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
+            accessibilityLabel="Go to Train"
+          />
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1433,16 +1435,7 @@ const styles = StyleSheet.create({
     ...type.bodyStrong,
     color: colors.onPrimary,
   },
-  successOverlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  // Card owns background/radius/padding/border here.
-  successCard: {
-    width: '100%',
+  successSheet: {
     alignItems: 'center',
     gap: spacing.md,
   },
