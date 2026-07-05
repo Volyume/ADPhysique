@@ -274,6 +274,7 @@ Status: release decision.
 - Share Card and Before/After Share Sheet now use shared `SectionLabel` headings for format, background, preview, PR choice, share includes and scan/photo selection, preserving export/privacy behavior while aligning social-sharing typography with the wider app.
 - Volume Heatmap and Routine Detail now use shared `SectionLabel` headings for volume trend and muscle coverage, preserving chart/routine behavior while retiring two more local uppercase label styles.
 - Food Insights now separates loading, failed reads and genuinely empty nutrition history: range/target fetches show skeleton cards while loading, a retryable inline error on failure, and existing empty copy only after a successful read.
+- My Meals now separates failed saved-meal reads from a genuinely empty saved-meal list and exposes a visible per-row more-actions control for rename/delete, preserving one-tap logging while removing long-press-only management.
 
 ### Web / CI / Security
 
