@@ -38,13 +38,13 @@ import WindowChips from '../components/WindowChips';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
+import EmptyState from '../components/EmptyState';
 import {
   TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
   pickInitialWindowKey, weightTakeaway,
 } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncAll } from '../lib/sync';
 import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { robustValues } from '../lib/robustTrend';
@@ -970,21 +970,13 @@ export default function BodyMetricsScreen() {
             )}
           </Card>
         ) : (
-          <Card padding="xxl" style={styles.emptyCard}>
-            <EmptyBodyIllustration size={140} />
-            <Text style={styles.emptyTitle}>Your progress starts here</Text>
-            {onboardingWeightKg && !readOnly ? (
-              <>
-                <Text style={styles.emptyText}>
-                  We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.emptyText}>
-                Log your body weight and measurements to track your physique over time.
-              </Text>
-            )}
-          </Card>
+          <EmptyState
+            icon="body-outline"
+            title="Your progress starts here"
+            text={onboardingWeightKg && !readOnly
+              ? `We have your onboarding bodyweight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.`
+              : 'Log your body weight and measurements to track your physique over time.'}
+          />
         )}
 
         {/* Log Button. E10 read-only: logging is a write; the button and the
@@ -1354,13 +1346,6 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
-
-
-  emptyCard: {
-    alignItems: 'center', gap: spacing.md,
-  },
-  emptyTitle: { ...type.title, color: colors.textSecondary },
-  emptyText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
 
   snapshotCard: {
     gap: spacing.md,
