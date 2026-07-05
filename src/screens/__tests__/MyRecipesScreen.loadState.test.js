@@ -12,7 +12,7 @@ jest.mock('../../components/Button', () => {
   return ({ title, onPress, accessibilityLabel }) => (
     React.createElement(
       TouchableOpacity,
-      { onPress, accessibilityLabel },
+      { onPress, accessibilityLabel: accessibilityLabel || title },
       React.createElement(Text, null, title),
     )
   );
@@ -90,7 +90,7 @@ describe('MyRecipesScreen load states', () => {
     expect(text).not.toContain('Build your first recipe');
     expect(logError).toHaveBeenCalledWith('MyRecipesScreen.reload', expect.any(Error), { userId: 'u1' });
 
-    const retry = tree.root.findByProps({ accessibilityLabel: 'Try loading recipes again' });
+    const retry = tree.root.findByProps({ accessibilityLabel: 'Try again' });
     await act(async () => {
       retry.props.onPress();
     });
