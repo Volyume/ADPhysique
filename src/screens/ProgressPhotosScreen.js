@@ -52,6 +52,11 @@ import {
   visibleCompletedScans,
 } from '../lib/progressPhotosController';
 import { scanReadCopy, scanStatsCopy } from '../lib/progressScanCopy';
+import {
+  PROGRESS_PHOTO_TIMELINE_COLS as COLS,
+  buildTimeline,
+  filterAndSort,
+} from '../lib/progressPhotoTimeline';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -66,7 +71,6 @@ import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
 
-const COLS = 3;
 const GAP = spacing.xs;
 
 // Pose filter chips. 'all' shows every photo; the others narrow to a pose so
@@ -90,7 +94,7 @@ const SORTS = [
   { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
 ];
 
-export { scanShareItemsFromEntries };
+export { buildTimeline, filterAndSort, scanShareItemsFromEntries };
 
 function formatDay(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -101,54 +105,6 @@ function formatDay(ts) {
 function formatShort(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
   catch (_) { return ''; }
-}
-
-function monthLabel(ts) {
-  try { return new Date(ts).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
-  catch (_) { return ''; }
-}
-
-// Group a newest-first photo list into a flat timeline of month headers and
-// rows of up to COLS tiles. Pure, so the screen test can drive it directly.
-export function buildTimeline(list) {
-  const out = [];
-  let curKey = null;
-  let bucket = [];
-  const flushBucket = () => {
-    for (let i = 0; i < bucket.length; i += COLS) {
-      const chunk = bucket.slice(i, i + COLS);
-      out.push({ type: 'row', key: `row-${chunk[0].name}`, photos: chunk });
-    }
-    bucket = [];
-  };
-  for (const p of list) {
-    const d = new Date(p.takenAt);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    if (key !== curKey) {
-      flushBucket();
-      curKey = key;
-      out.push({ type: 'header', key: `h-${key}`, label: monthLabel(p.takenAt) });
-    }
-    bucket.push(p);
-  }
-  flushBucket();
-  return out;
-}
-
-// Compose the pose filter, the date-range filter and the sort order into the
-// timeline source list. Pure, so the screen test can drive it directly. The
-// date bounds are inclusive epoch-ms day bounds (rangeFrom = start of a day,
-// rangeTo = end of a day); either may be null to leave that side open. This is
-// neutral navigation of the user's own photos only (spec PART 2): it never
-// nudges, ranks or forces a comparison.
-export function filterAndSort(list, {
-  poseFilter = 'all', sortOrder = 'newest', rangeFrom = null, rangeTo = null,
-} = {}) {
-  let out = poseFilter === 'all' ? list : list.filter((p) => p.pose === poseFilter);
-  if (Number.isFinite(rangeFrom)) out = out.filter((p) => p.takenAt >= rangeFrom);
-  if (Number.isFinite(rangeTo)) out = out.filter((p) => p.takenAt <= rangeTo);
-  const dir = sortOrder === 'oldest' ? 1 : -1;
-  return [...out].sort((a, b) => (a.takenAt - b.takenAt) * dir);
 }
 
 export default function ProgressPhotosScreen({ navigation }) {
