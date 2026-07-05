@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
@@ -8,6 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan } from '../lib/database';
@@ -486,41 +488,63 @@ export default function VolumeHeatmapScreen() {
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
                   {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
-                    <View key={key} style={styles.editInputGroup}>
-                      <Text style={styles.editInputLabel}>{label}</Text>
-                      <TextInput
-                        style={styles.editInput}
-                        value={String(editValues[muscle]?.[key] ?? '')}
-                        onChangeText={v => setEditValues(prev => ({
-                          ...prev,
-                          [muscle]: { ...prev[muscle], [key]: v },
-                        }))}
-                        keyboardType="number-pad"
-                        selectTextOnFocus
-                        accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
-                      />
-                    </View>
+                    <TextField
+                      key={key}
+                      label={label}
+                      value={String(editValues[muscle]?.[key] ?? '')}
+                      onChangeText={v => setEditValues(prev => ({
+                        ...prev,
+                        [muscle]: { ...prev[muscle], [key]: v },
+                      }))}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                      accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
+                      containerStyle={styles.editInputGroup}
+                      labelStyle={styles.editInputLabel}
+                      fieldStyle={styles.editInputField}
+                      inputStyle={styles.editInputText}
+                    />
                   ))}
                 </View>
               </View>
             ))}
             <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)} accessibilityRole="button" accessibilityLabel="Cancel">
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveLandmarks} accessibilityRole="button" accessibilityLabel="Save volume targets">
-                <Text style={styles.saveBtnText}>Save</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                size="sm"
+                onPress={() => setEditing(false)}
+                accessibilityLabel="Cancel"
+                style={styles.editActionButton}
+              />
+              <Button
+                title="Save"
+                size="sm"
+                onPress={saveLandmarks}
+                accessibilityLabel="Save volume targets"
+                style={styles.editActionButton}
+              />
             </View>
           </Card>
         ) : (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel="Edit volume targets">
-              <Text style={styles.editBtnText}>Edit Volume Targets</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.resetBtn} onPress={resetToDefaults} accessibilityRole="button" accessibilityLabel="Reset volume targets to defaults">
-              <Text style={styles.resetBtnText}>Reset to Defaults</Text>
-            </TouchableOpacity>
+            <Button
+              title="Edit Volume Targets"
+              variant="secondary"
+              size="sm"
+              onPress={() => setEditing(true)}
+              accessibilityLabel="Edit volume targets"
+              style={styles.actionButton}
+            />
+            <Button
+              title="Reset to Defaults"
+              variant="outline"
+              size="sm"
+              onPress={resetToDefaults}
+              accessibilityLabel="Reset volume targets to defaults"
+              style={[styles.actionButton, styles.resetButton]}
+              textStyle={styles.resetButtonText}
+            />
           </View>
         )}
       </ScrollView>
@@ -736,26 +760,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  editBtn: {
+  actionButton: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  editBtnText: { ...type.label, color: colors.textSecondary },
-  resetBtn: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  resetBtnText: { ...type.label, color: colors.error },
+  resetButton: { borderColor: colors.error },
+  resetButtonText: { color: colors.error },
   editSection: {
     gap: spacing.lg,
   },
@@ -771,32 +780,10 @@ const styles = StyleSheet.create({
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  editInput: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    textAlign: 'center',
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+  editInputField: { borderRadius: radius.sm },
+  editInputText: { textAlign: 'center', fontWeight: fontWeight.bold },
   editActions: { flexDirection: 'row', gap: spacing.md },
-  cancelBtn: {
+  editActionButton: {
     flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
   },
-  cancelBtnText: { ...type.body, color: colors.textSecondary },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });
