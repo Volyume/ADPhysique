@@ -16,7 +16,7 @@
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
@@ -99,6 +99,7 @@ export default function FoodInsightsScreen({ navigation }) {
   const [loadError, setLoadError] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [windowDays, setWindowDays] = useState(7); // ULTIMATE-NUT-05; default 7
+  const loadRequestRef = useRef(0);
   const isWeekly = windowDays > WEEKLY_THRESHOLD;
 
   // Re-keyed on windowDays so startDate/endDate and the range queries recompute.
@@ -107,7 +108,16 @@ export default function FoodInsightsScreen({ navigation }) {
   const endDate = days[days.length - 1];
 
   const load = useCallback(async () => {
-    if (!userId) { setLoading(false); return; }
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+    if (!userId) {
+      setRollups([]);
+      setTargets(null);
+      setLoadError(false);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(false);
     try {
@@ -115,15 +125,17 @@ export default function FoodInsightsScreen({ navigation }) {
         getRollupsForRange(userId, startDate, endDate),
         getNutritionTargets(userId),
       ]);
+      if (!isCurrentRequest()) return;
       setRollups(rs);
       setTargets(t);
     } catch (e) {
+      if (!isCurrentRequest()) return;
       logError('FoodInsights.load', e, { userId });
       setRollups([]);
       setTargets(null);
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }, [userId, startDate, endDate]);
 

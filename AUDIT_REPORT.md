@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 504 suites passed.
-  - 6,437 tests passed, 5 skipped.
+  - 6,438 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -324,6 +324,7 @@ Status: release decision.
 - Workout History now guards overlapping loads with a request token, so a stale mount, retry, refresh or post-delete read cannot overwrite newer loading/error/workout state or fan out set reads for old results.
 - Progress Photos refresh now uses a latest-request guard before committing photos, scan entries, suppression state, hide-exact preference, metadata, reference cleanup and loading state, preventing older focus/delete/add refreshes from restoring stale Progress Scan or photo state.
 - Coach Output steps, cardio, macro-cycle and refeed apply actions now merge into the latest store profile at tap/write time instead of the render-time `userProfile` snapshot, preventing deterministic coach applies from clobbering concurrent profile edits.
+- Food Insights window loads now use a latest-request guard, with an out-of-order regression proving an older 7-day rollup response cannot overwrite the currently selected 30-day nutrition insight window.
 
 ### Web / CI / Security
 
