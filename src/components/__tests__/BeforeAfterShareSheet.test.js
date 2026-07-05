@@ -16,6 +16,13 @@
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: () => undefined }));
 jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: () => true }));
 jest.mock('../../lib/progressPhotoMeta', () => ({ __esModule: true, getPhotoMetaMap: async () => ({}) }));
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
+  NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
+}));
 
 import {
   elapsedLabel, orderPair, defaultPair, buildBeforeAfterParams, formatCardDate, formatShareScanRange,
