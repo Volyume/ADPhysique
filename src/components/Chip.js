@@ -22,7 +22,10 @@ export default function Chip({
   // 'button' for a plain toggle; pass 'radio' for single-select groups so
   // assistive tech announces the chosen-one-of-many semantics.
   accessibilityRole = 'button',
+  accessibilityLabel,
   style,
+  labelStyle,
+  selectedLabelStyle,
   testID,
 }) {
   return (
@@ -30,7 +33,7 @@ export default function Chip({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel || label}
       accessibilityState={{ selected, disabled }}
       style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, style]}
       testID={testID}
@@ -43,7 +46,7 @@ export default function Chip({
           style={styles.icon}
         />
       ) : null}
-      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
+      <Text style={[styles.label, labelStyle, selected && styles.labelSelected, selected && selectedLabelStyle]}>{label}</Text>
     </PressableCard>
   );
 }
