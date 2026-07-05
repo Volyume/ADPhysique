@@ -1,9 +1,12 @@
 import { Text, StyleSheet } from 'react-native';
 import { colors, type } from '../styles/theme';
 
-export default function SectionLabel({ children, style, tone = 'default' }) {
+export default function SectionLabel({ children, style, tone = 'default', ...textProps }) {
   return (
-    <Text style={[styles.label, tone === 'muted' && styles.muted, tone === 'primary' && styles.primary, style]}>
+    <Text
+      {...textProps}
+      style={[styles.label, tone === 'muted' && styles.muted, tone === 'primary' && styles.primary, style]}
+    >
       {children}
     </Text>
   );
