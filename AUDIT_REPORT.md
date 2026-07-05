@@ -345,6 +345,7 @@ Status: release decision.
 - Block Reflection now gives the genuine no-data branch a `Start a new block` recovery action, matching the completed-summary path and removing another Progress dead end.
 - Coach Held History now includes the bottom safe-area edge and gives the empty history state a `Start weekly check-in` action while preserving ED/calm fail-closed suppression.
 - Food Insights now gives the low-data macro-adherence state an `Open diary` action, preserving window-aware analytics copy while removing a Nutrition dead end.
+- Add Custom Food now uses the shared `ModalHeader` for its modal chrome, removing a local close/header style block while preserving the manual food logging guards.
 
 ### Web / CI / Security
 
