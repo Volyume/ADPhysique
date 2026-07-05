@@ -314,6 +314,7 @@ Status: release decision.
 - Plan Folder SQL now lives behind a focused `planFoldersRepository`, with direct tests for creation ordering, sync scheduling, transaction-backed folder deletion/unfiling and cloud tombstone timestamp handling while keeping the public `database.js` API unchanged.
 - Year of Lifts, weekly recap, monthly recap and block recap share payloads now use a pure `buildRecapMilestoneData` helper with tests covering each variant and confirming the card stays training-only rather than leaking bodyweight, body-fat, measurements or notes.
 - Progress data now exits loading and clears user-scoped state when no signed-in user is present, and the Consistency screen uses shared skeleton/empty-state treatments instead of rendering data-heavy training cards against an empty progress dataset.
+- Undo toasts now detect screen-reader users, hold the undo window until the user chooses dismiss or Undo, and expose explicit dismiss/action hints so destructive pending changes are not silently committed by an inaccessible timer.
 
 ### Web / CI / Security
 
