@@ -24,6 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
@@ -42,6 +43,7 @@ export default function MyRecipesScreen({ navigation, route }) {
 
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [loggingId, setLoggingId] = useState(null);
   // Servings picker (food audit F-4): tapping a recipe opens this prompt so the
   // user logs the portion they actually ate, instead of always one serving.
@@ -49,13 +51,18 @@ export default function MyRecipesScreen({ navigation, route }) {
   const [servings, setServings] = useState(1);
 
   const reload = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setLoadError(false);
     try {
       const rows = await listRecipes(userId);
       setRecipes(rows);
-    } catch (_) {
-      setRecipes([]);
+    } catch (e) {
+      logError('MyRecipesScreen.reload', e, { userId });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -187,15 +194,35 @@ export default function MyRecipesScreen({ navigation, route }) {
           <SkeletonRow />
           <SkeletonRow />
         </View>
+      ) : loadError ? (
+        <View style={styles.empty}>
+          <View style={styles.errorIconWrap}>
+            <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
+          </View>
+          <Text style={styles.emptyTitle}>Couldn't load recipes</Text>
+          <Text style={styles.emptyBody}>
+            Check your connection and try again. Your saved recipes have not been changed.
+          </Text>
+          <Button
+            title="Try again"
+            variant="secondary"
+            onPress={reload}
+            accessibilityLabel="Try loading recipes again"
+            style={styles.emptyAction}
+          />
+        </View>
       ) : recipes.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Build your first recipe</Text>
           <Text style={styles.emptyBody}>
             Build a recipe once. Log it as one line in your diary every time you eat it.
           </Text>
-          <TouchableOpacity style={styles.emptyCta} onPress={onCreate} accessibilityRole="button" accessibilityLabel="Build a recipe">
-            <Text style={styles.emptyCtaText}>Build a recipe</Text>
-          </TouchableOpacity>
+          <Button
+            title="Build a recipe"
+            onPress={onCreate}
+            accessibilityLabel="Build a recipe"
+            style={styles.emptyAction}
+          />
         </View>
       ) : (
         <FlashList
@@ -280,11 +307,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
   emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', marginBottom: spacing.lg },
-  emptyCta: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    backgroundColor: colors.primary, borderRadius: radius.md,
+  errorIconWrap: {
+    width: 48, height: 48, borderRadius: circle(48),
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface2,
+    marginBottom: spacing.md,
   },
-  emptyCtaText: { ...type.bodyStrong, color: colors.onPrimary },
+  emptyAction: { alignSelf: 'stretch' },
   // Servings picker modal (food audit F-4)
   backdrop: {
     flex: 1, backgroundColor: colors.scrim,

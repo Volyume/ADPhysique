@@ -283,6 +283,7 @@ Status: release decision.
 - Plan Update and Pro Goal Setup now use the shared `SectionLabel` primitive for plan/goal setup headings, including optional weak-point and show-date labels, with a source guard preventing those high-traffic setup screens from reverting to local heading typography.
 - Exercise Detail now separates initial loading from a failed exercise read: skeletons still render while loading, but missing/failed exercise details show a retryable error card instead of an indefinite skeleton/null state.
 - Workout History now distinguishes failed history reads from a genuinely empty training log, logging the failure and showing a retryable error state instead of the new-user empty illustration.
+- My Recipes now distinguishes failed recipe reads from a genuinely empty recipe list, logs the failure, gives the user a retry action, and uses the shared `Button` primitive for both retry and the empty-state build CTA.
 
 ### Web / CI / Security
 
