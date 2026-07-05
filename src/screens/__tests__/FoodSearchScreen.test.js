@@ -11,6 +11,9 @@
  * (captured so the test can call their onSave directly, exactly as a real
  * "Add to diary" / "Save" tap would).
  */
+const fs = require('fs');
+const path = require('path');
+
 import { create, act } from 'react-test-renderer';
 
 // Declared before every jest.mock() call (not just "mock"-prefixed) so there
@@ -97,6 +100,8 @@ import { logFoodEntry, deleteFoodEntry, upsertSlotRecent } from '../../lib/food/
 import { searchFoods } from '../../lib/food/waterfall';
 import FoodSearchScreen from '../FoodSearchScreen';
 
+const SCREEN_SOURCE = fs.readFileSync(path.join(__dirname, '..', 'FoodSearchScreen.js'), 'utf8');
+
 const store = { user: { id: 'u1' }, userProfile: {}, accessibility: { energyUnit: 'kcal' } };
 
 function makeNav() {
@@ -141,6 +146,17 @@ function treeHasText(tree, value) {
     && node.children.some((child) => typeof child === 'string' && child.includes(value))
   )).length > 0;
 }
+
+describe('FoodSearchScreen selected plate sheet accessibility', () => {
+  test('uses shared BottomSheet chrome with a labelled header', () => {
+    expect(SCREEN_SOURCE).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
+    expect(SCREEN_SOURCE).toMatch(/<BottomSheet[\s\S]*visible=\{showPlate\}[\s\S]*accessibilityLabel="Selected foods"/);
+    expect(SCREEN_SOURCE).toMatch(/accessibilityRole="header"[\s\S]*Selected foods \(\{plate\.length\}\)/);
+    expect(SCREEN_SOURCE).not.toMatch(/<Modal visible=\{showPlate\}/);
+    expect(SCREEN_SOURCE).not.toMatch(/useSafeAreaInsets/);
+    expect(SCREEN_SOURCE).not.toMatch(/plateModalBackdrop/);
+  });
+});
 
 describe('FoodSearchScreen confirmLog (A2)', () => {
   test('a successful "Add to diary" shows a success + Undo toast, matching DiaryScreen.onLogUsual', async () => {

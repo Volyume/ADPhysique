@@ -20,11 +20,11 @@ import { todayLocalKey } from '../lib/dayKey';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, ScrollView, Modal,
+  ActivityIndicator, ScrollView,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -50,6 +50,7 @@ import { useToast } from '../components/Toast';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
+import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
 import HintCaption from '../components/HintCaption';
 import SearchBar from '../components/SearchBar';
@@ -88,10 +89,6 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Energy DISPLAY unit (kcal | kj): display-only, applied at the render sites
   // below. plateKcal and every macros.kcal stay kcal for the maths/log writes.
   const toast = useToast();
-  // For the bottom-anchored plate Modal, which overlays the tab band and so
-  // must absorb the system inset itself (edge-to-edge sweep, 2026-07-03).
-  const insets = useSafeAreaInsets();
-
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
@@ -1010,51 +1007,50 @@ export default function FoodSearchScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Modal visible={showPlate} transparent animationType="slide" onRequestClose={() => setShowPlate(false)}>
-        <View style={styles.plateModalBackdrop}>
-          {/* Bottom-anchored Modal: overlays the tab band, so it absorbs the
-              system inset itself (edge-to-edge sweep, 2026-07-03). */}
-          <View style={[styles.plateModalSheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
-            <View style={styles.plateModalHeader}>
-              <Text style={styles.plateModalTitle}>Selected ({plate.length})</Text>
-              <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-                <Ionicons name="close" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 360 }}>
-              {plate.map((it) => (
-                <View key={it.key} style={styles.plateItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
-                    <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
-                    <Ionicons name="close-circle" size={22} color={colors.textMuted} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.plateModalActions}>
-              <TouchableOpacity
-                style={styles.plateClearBtn}
-                onPress={() => { setPlate([]); setShowPlate(false); }}
-                accessibilityRole="button"
-                accessibilityLabel="Clear selected foods"
-              >
-                <Text style={styles.plateClearText}>Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.plateLogBtnWide}
-                onPress={logPlate}
-                accessibilityRole="button"
-                accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
-              >
-                <Text style={styles.plateLogText}>Log {plate.length} to {mealSlotLabel(mealSlot)}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+      <BottomSheet
+        visible={showPlate}
+        onClose={() => setShowPlate(false)}
+        accessibilityLabel="Selected foods"
+        sheetStyle={styles.plateModalSheet}
+      >
+        <View style={styles.plateModalHeader}>
+          <Text style={styles.plateModalTitle} accessibilityRole="header">Selected foods ({plate.length})</Text>
+          <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+            <Ionicons name="close" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <ScrollView style={{ maxHeight: 360 }}>
+          {plate.map((it) => (
+            <View key={it.key} style={styles.plateItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
+                <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
+                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+        <View style={styles.plateModalActions}>
+          <TouchableOpacity
+            style={styles.plateClearBtn}
+            onPress={() => { setPlate([]); setShowPlate(false); }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear selected foods"
+          >
+            <Text style={styles.plateClearText}>Clear</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.plateLogBtnWide}
+            onPress={logPlate}
+            accessibilityRole="button"
+            accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
+          >
+            <Text style={styles.plateLogText}>Log {plate.length} to {mealSlotLabel(mealSlot)}</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
 
       <FoodDetailSheet
         visible={!!picker}
@@ -1208,12 +1204,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   plateLogText: { ...type.bodyStrong, color: colors.onPrimary },
-  plateModalBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   plateModalSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xxl,
-    borderTopWidth: 1, borderColor: colors.border,
+    paddingTop: spacing.lg,
   },
   plateModalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

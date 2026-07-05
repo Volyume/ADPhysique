@@ -316,6 +316,7 @@ Status: release decision.
 - Progress data now exits loading and clears user-scoped state when no signed-in user is present, and the Consistency screen uses shared skeleton/empty-state treatments instead of rendering data-heavy training cards against an empty progress dataset.
 - Undo toasts now detect screen-reader users, hold the undo window until the user chooses dismiss or Undo, and expose explicit dismiss/action hints so destructive pending changes are not silently committed by an inaccessible timer.
 - Food Search live results now use a latest-request guard so slower older waterfall responses cannot overwrite a newer query, with a regression test that resolves searches out of order and asserts only the newest result remains visible.
+- Food Search selected-foods review now uses the shared `BottomSheet` chrome with modal isolation and a labelled header, replacing the hand-rolled bottom `Modal` and local safe-area/backdrop handling.
 
 ### Web / CI / Security
 
