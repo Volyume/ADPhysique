@@ -11,7 +11,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCAN_HISTORY).toMatch(/Scan history/);
+    expect(SCAN_HISTORY).toMatch(/Physique Scan results/);
+    expect(SCAN_HISTORY).toMatch(/Visual trend/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -43,7 +44,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCAN_HISTORY).toMatch(/scan\.deltaExplanation\?\.summary && !suppressed && !hideExact/);
+    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Scan detail is hidden right now/);
+    expect(SCAN_HISTORY).toMatch(/if \(hideExact && scan\?\.deltaExplanation\?\.trendSummary\)/);
+    expect(SCAN_HISTORY).toMatch(/whyLabel\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_HISTORY).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
