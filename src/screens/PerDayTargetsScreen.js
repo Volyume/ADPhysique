@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, fontSize, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import { settingsStyles } from '../components/SettingsPrimitives';
 import { getNutritionTargets, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
@@ -12,6 +11,8 @@ import { computeFFMFloor } from '../lib/nutritionEngine';
 import { safeDayFloorKcal } from '../lib/food/calorieBank';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { useToast } from '../components/Toast';
+import Button from '../components/Button';
+import Stepper from '../components/Stepper';
 import {
   WEEKDAY_KEYS, WEEKDAY_LABELS, DEFAULT_PERDAY_OFFSETS, MAX_PERDAY_OFFSET_KCAL,
   loadPerDayOffsets, savePerDayOffsets, sanitiseOffset, hasAnyOffset,
@@ -77,9 +78,9 @@ export default function PerDayTargetsScreen() {
     });
   }, [toast]);
 
-  const adjust = useCallback((key, dir) => {
+  const setOffset = useCallback((key, value) => {
     const prev = offsets;
-    const next = { ...prev, [key]: sanitiseOffset((Number(prev[key]) || 0) + dir * STEP_KCAL) };
+    const next = { ...prev, [key]: sanitiseOffset(value) };
     persist(next, prev);
   }, [offsets, persist]);
 
@@ -131,26 +132,19 @@ export default function PerDayTargetsScreen() {
                     {floored ? <Text style={local.floorTag}>  floor</Text> : null}
                   </Text>
                 </View>
-                <View style={local.stepper}>
-                  <Pressable
-                    onPress={() => adjust(key, -1)}
-                    disabled={offset <= -MAX_PERDAY_OFFSET_KCAL}
-                    style={({ pressed }) => [local.stepBtn, offset <= -MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
-                  >
-                    <Ionicons name="remove" size={20} color={colors.textPrimary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => adjust(key, 1)}
-                    disabled={offset >= MAX_PERDAY_OFFSET_KCAL}
-                    style={({ pressed }) => [local.stepBtn, offset >= MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
-                  >
-                    <Ionicons name="add" size={20} color={colors.textPrimary} />
-                  </Pressable>
-                </View>
+                <Stepper
+                  value={offset}
+                  min={-MAX_PERDAY_OFFSET_KCAL}
+                  max={MAX_PERDAY_OFFSET_KCAL}
+                  step={STEP_KCAL}
+                  size="compact"
+                  label={`${WEEKDAY_LABELS[key]} target offset`}
+                  decreaseLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
+                  increaseLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
+                  valueLabel={`${WEEKDAY_LABELS[key]} target offset ${offset}`}
+                  formatValue={() => ''}
+                  onChange={(next) => setOffset(key, next)}
+                />
               </View>
             );
           })}
@@ -158,10 +152,15 @@ export default function PerDayTargetsScreen() {
 
         {anyOffset ? (
           <View style={local.section}>
-            <Pressable onPress={resetAll} style={({ pressed }) => [local.resetBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Reset all days to your base target">
-              <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
-              <Text style={local.resetText}>Reset all to base target</Text>
-            </Pressable>
+            <Button
+              title="Reset all to base target"
+              icon="refresh-outline"
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={resetAll}
+              accessibilityLabel="Reset all days to your base target"
+            />
           </View>
         ) : null}
       </ScrollView>
@@ -183,16 +182,4 @@ const local = StyleSheet.create({
   dayTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], marginTop: 2 },
   dayDelta: { color: colors.textMuted, fontSize: fontSize.sm },
   floorTag: { color: colors.textMuted, fontSize: fontSize.xs, fontStyle: 'italic' },
-  stepper: { flexDirection: 'row', gap: spacing.sm },
-  stepBtn: {
-    width: 44, height: 44, borderRadius: radius.md,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepBtnDisabled: { opacity: 0.4 },
-  resetBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', paddingVertical: spacing.sm,
-  },
-  resetText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
 });

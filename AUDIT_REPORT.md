@@ -351,6 +351,7 @@ Status: release decision.
 - Snapshot restore now separates failed device-snapshot reads from a genuine no-snapshot state, logs the load failure and offers a visible retry action instead of telling the user no safety copies exist.
 - Body Metrics now uses the shared `EmptyState` primitive for its no-history state, preserving onboarding-weight copy and the separate read-only-safe `Log Weight` CTA while removing another local empty-card illustration/style block.
 - Analytics now uses the shared `EmptyState` primitive for its zero-data Progress CTA, preserving the existing cross-tab `Start a workout` route while removing bespoke illustration/button styling from the first-run Progress surface.
+- Per-Day Targets now uses shared `Stepper` controls for weekday calorie offsets and the shared `Button` primitive for reset, preserving the same clamp, safe-floor honesty and optimistic rollback behavior while removing bespoke plus/minus/reset controls.
 
 ### Web / CI / Security
 
