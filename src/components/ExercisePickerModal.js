@@ -119,6 +119,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.pickerHeader}>
               <TouchableOpacity accessibilityRole="button"
+                accessibilityLabel="Back to exercise search"
                 onPress={() => setShowCreate(false)}
                 style={styles.pickerClose}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -127,6 +128,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </TouchableOpacity>
               <Text style={styles.createTitle}>New Exercise</Text>
               <TouchableOpacity accessibilityRole="button"
+                accessibilityLabel="Close exercise picker"
                 onPress={onClose}
                 style={styles.pickerClose}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -171,6 +173,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 ))}
               </View>
               <TouchableOpacity accessibilityRole="button"
+                accessibilityLabel={buttonLabel}
                 style={[styles.createSaveBtn, creating && { opacity: 0.5 }]}
                 onPress={handleCreate}
                 disabled={creating}
@@ -191,6 +194,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 autoFocus
               />
               <TouchableOpacity accessibilityRole="button"
+                accessibilityLabel="Close exercise picker"
                 onPress={onClose}
                 style={styles.pickerClose}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -249,6 +253,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               contentContainerStyle={styles.pickerList}
               renderItem={({ item }) => (
                 <TouchableOpacity accessibilityRole="button"
+                  accessibilityLabel={`Select ${item.name}`}
                   style={styles.pickerRow}
                   onPress={() => { onSelect(item); onClose(); }}
                 >
@@ -266,7 +271,14 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 // Always offer "create custom", with or without a query, so the
                 // option to add your own exercise is never hidden behind an
                 // empty search result.
-                <TouchableOpacity accessibilityRole="button" style={[styles.createNewBtn, { marginTop: spacing.md }]} onPress={openCreate}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={query.trim().length > 0
+                    ? `Create ${query.trim()} as custom exercise`
+                    : 'Create a custom exercise'}
+                  style={[styles.createNewBtn, { marginTop: spacing.md }]}
+                  onPress={openCreate}
+                >
                   <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
                   <Text style={styles.createNewBtnText}>
                     {query.trim().length > 0
