@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, Pressable, TextInput,
-} from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
 // idle → loading → success morph; the commit haptic is its success beat.
 import Button from '../Button';
+import Chip from '../Chip';
+import TextField from '../TextField';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 
@@ -74,8 +74,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
           <Text style={styles.subtitle}>Log calories now, with macros if you have them.</Text>
 
           <Text style={styles.fieldLabel}>Calories</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
             value={kcal}
             onChangeText={setKcal}
             keyboardType="number-pad"
@@ -84,6 +83,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             accessibilityLabel="Calories"
             autoFocus
             returnKeyType="done"
+            inputStyle={styles.calorieInput}
           />
 
           <View style={styles.macroRow}>
@@ -92,49 +92,53 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
               { label: 'Carbs (g)', a11y: 'Carbohydrates in grams', val: carbs, set: setCarbs },
               { label: 'Fat (g)', a11y: 'Fat in grams', val: fat, set: setFat },
             ].map(({ label, a11y, val, set }) => (
-              <View key={label} style={styles.macroField}>
-                <Text style={styles.fieldLabelSmall}>{label}</Text>
-                <TextInput
-                  style={styles.inputSmall}
-                  value={val}
-                  onChangeText={set}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  accessibilityLabel={a11y}
-                  returnKeyType="done"
-                />
-              </View>
+              <TextField
+                key={label}
+                label={label}
+                value={val}
+                onChangeText={set}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel={a11y}
+                returnKeyType="done"
+                containerStyle={styles.macroField}
+                inputStyle={styles.macroInput}
+              />
             ))}
           </View>
 
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot).map(s => (
-              <Pressable
+              <Chip
                 key={s.key}
+                label={s.label}
+                selected={mealSlot === s.key}
                 onPress={() => setMealSlot(s.key)}
-                style={({ pressed }) => [styles.mealBtn, mealSlot === s.key && styles.mealBtnActive, pressed && { opacity: 0.7 }]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mealSlot === s.key }}
-              >
-                <Text style={[styles.mealBtnText, mealSlot === s.key && styles.mealBtnTextActive]}>{s.label}</Text>
-              </Pressable>
+                accessibilityRole="radio"
+                accessibilityLabel={s.label}
+                style={styles.mealChip}
+                labelStyle={styles.mealChipLabel}
+              />
             ))}
           </View>
 
           <View style={styles.actions}>
-            <Pressable onPress={handleClose} accessibilityRole="button" style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
+            <Button
+              title="Cancel"
+              variant="secondary"
+              onPress={handleClose}
+              fullWidth={false}
+              style={styles.actionButton}
+            />
             <Button
               title="Add to diary"
               onPress={handleSave}
               state={saved ? 'success' : submitting ? 'loading' : 'idle'}
               onSettled={handleClose}
               fullWidth={false}
-              style={styles.saveBtn}
-              textStyle={styles.saveText}
+              style={styles.actionButton}
             />
           </View>
     </BottomSheet>
@@ -149,42 +153,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
-  fieldLabelSmall: { fontSize: fontSize.xs, color: colors.textSecondary, marginBottom: spacing.xs },
-  input: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+  calorieInput: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
   },
   macroRow: { flexDirection: 'row', gap: spacing.sm },
   macroField: { flex: 1 },
-  inputSmall: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
-    color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+  macroInput: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
     textAlign: 'center',
   },
   mealRow: { flexDirection: 'row', gap: spacing.xs },
-  mealBtn: {
-    flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
-    borderRadius: radius.md, backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center',
-  },
-  mealBtnActive: { borderColor: colors.primary, backgroundColor: colors.surface },
-  mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
-  mealBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  mealChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', minHeight: 44 },
+  mealChipLabel: { textAlign: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  cancelBtn: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-  },
-  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  saveBtn: {
-    flex: 1, paddingVertical: spacing.md, borderRadius: radius.md,
-    backgroundColor: colors.primary, alignItems: 'center',
-  },
-  saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  actionButton: { flex: 1 },
 });
