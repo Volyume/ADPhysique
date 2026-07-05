@@ -28,7 +28,7 @@ import {
   useImperativeHandle, useRef, useState, useEffect, forwardRef, createContext, useContext,
 } from 'react';
 import {
-  View, Text, StyleSheet, Modal, Pressable, TextInput,
+  View, Text, StyleSheet, Modal, Pressable,
   Animated, Easing, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,6 +37,7 @@ import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
+import TextField from './TextField';
 
 const SENTIMENTS = [
   { key: 'love',      icon: 'heart',                  label: 'Love it'   },
@@ -304,8 +305,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
 
             <TouchableWithoutFeedback accessibilityRole="button" onPress={() => scheduleAutoDismiss()}>
               <View>
-                <TextInput
-                  style={styles.input}
+                <TextField
                   placeholder="Anything specific? (optional)"
                   placeholderTextColor={colors.textMuted}
                   multiline
@@ -314,6 +314,10 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
                   value={message}
                   onChangeText={(t) => { setMessage(t); scheduleAutoDismiss(); }}
                   accessibilityLabel="Optional details"
+                  surface="surface2"
+                  containerStyle={styles.inputContainer}
+                  fieldStyle={styles.inputField}
+                  inputStyle={styles.inputText}
                 />
               </View>
             </TouchableWithoutFeedback>
@@ -422,18 +426,20 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 
-  input: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
+  inputContainer: {
+    gap: 0,
+    marginBottom: spacing.md,
+  },
+  inputField: {
+    minHeight: 80,
     borderWidth: 1,
-    borderColor: colors.border,
+  },
+  inputText: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: fontSize.sm,
-    color: colors.textPrimary,
     minHeight: 80,
     textAlignVertical: 'top',
-    marginBottom: spacing.md,
   },
 
   actions: {
