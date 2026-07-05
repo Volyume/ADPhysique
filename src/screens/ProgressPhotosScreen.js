@@ -51,6 +51,7 @@ import {
   shouldGateProgressScanStart,
   visibleCompletedScans,
 } from '../lib/progressPhotosController';
+import { scanReadCopy, scanStatsCopy } from '../lib/progressScanCopy';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -105,50 +106,6 @@ function formatShort(ts) {
 function monthLabel(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
   catch (_) { return ''; }
-}
-
-function trendOnlyScanCopy(scan) {
-  const assessment = scan?.signals?.physiqueAssessment || null;
-  if (assessment?.progressSignalLabel) return `Progress Signal: ${assessment.progressSignalLabel}.`;
-  const direction = scan?.trendDirection || 'uncertain';
-  if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup was not like-for-like.';
-  if (direction === 'down') return 'Progress Signal: positive against the last like-for-like scan.';
-  if (direction === 'up') return 'Progress Signal: drift to watch against the last like-for-like scan.';
-  if (direction === 'steady') return 'Progress Signal: holding steady.';
-  return 'Trend context: baseline scan saved.';
-}
-
-function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Scan saved privately. Physique scan details are hidden right now.';
-  const assessment = scan?.signals?.physiqueAssessment || null;
-  if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume Leanness Score ${assessment.visualLeannessScore}/100`;
-    const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
-    const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
-    if (hideExact) {
-      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed scan score is hidden. This is not a body-fat percentage.`;
-    }
-    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual progress score, not a body-fat percentage.']
-      .filter(Boolean)
-      .join('. ');
-  }
-  if (scan?.analysisStatus === 'complete' || scan?.analysisStatus === 'measured') {
-    return hideExact
-      ? trendOnlyScanCopy(scan)
-      : (scan?.copySummary || 'Scan measured and saved. Volyume could not produce a useful score from this photo set yet.');
-  }
-  return scan?.copySummary || 'Saved as a scan. Analysis is withheld until the photos and profile data are reliable enough.';
-}
-
-function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  const stats = scan?.stats || {};
-  const parts = [];
-  if (Number.isFinite(stats.photoCount)) parts.push(`${stats.photoCount} photo${stats.photoCount === 1 ? '' : 's'}`);
-  if (!suppressed && !hideExact && Number.isFinite(stats.weightKg)) parts.push(`${stats.weightKg} kg weight snapshot`);
-  if (Array.isArray(stats.poses) && stats.poses.length) {
-    parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
-  }
-  return parts.length ? parts.join(' | ') : 'Stored scan photos';
 }
 
 // Group a newest-first photo list into a flat timeline of month headers and

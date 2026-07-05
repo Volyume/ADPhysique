@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
+const SCAN_COPY = fs.readFileSync(path.resolve(__dirname, '../../lib/progressScanCopy.js'), 'utf8');
 
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
@@ -40,7 +41,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
     expect(SCREEN).toMatch(/scan\.deltaExplanation\?\.summary && !suppressed && !hideExactScans/);
     expect(SCREEN).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact: hideExactScans \}\)/);
-    expect(SCREEN).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
+    expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
 
   test('capture and deletion lifecycle cleans up scan assets', () => {
