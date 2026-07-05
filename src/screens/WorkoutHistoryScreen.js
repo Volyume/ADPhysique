@@ -16,6 +16,7 @@ import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
+import Button from '../components/Button';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
 import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
@@ -44,6 +45,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const toast = useToast();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
@@ -60,8 +62,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }, [user?.id]);
 
   async function loadWorkouts() {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setLoadError(false);
     try {
       const allWorkouts = await getAllWorkouts(user.id);
       const mine = allWorkouts
@@ -99,6 +105,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
         };
       });
       setWorkouts(withSets);
+    } catch (e) {
+      logError('WorkoutHistoryScreen.loadWorkouts', e, { userId: user?.id });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -670,6 +679,23 @@ export default function WorkoutHistoryScreen({ navigation }) {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : loadError ? (
+            <View style={styles.empty}>
+              <View style={styles.errorIconWrap}>
+                <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
+              </View>
+              <Text style={styles.emptyTitle}>Couldn't load workout history</Text>
+              <Text style={styles.emptyText}>
+                Check your connection and try again. Your saved sessions have not been changed.
+              </Text>
+              <Button
+                title="Try again"
+                variant="secondary"
+                onPress={loadWorkouts}
+                accessibilityLabel="Try loading workout history again"
+                style={styles.emptyAction}
+              />
+            </View>
           ) : (
             <View style={styles.empty}>
               <EmptyWorkoutsIllustration size={140} />
@@ -974,6 +1000,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxxl,
     gap: spacing.md,
   },
+  errorIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+  },
   emptyTitle: {
     ...type.title,
     color: colors.textPrimary,
@@ -985,4 +1019,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  emptyAction: { alignSelf: 'stretch', marginTop: spacing.sm },
 });
