@@ -263,6 +263,7 @@ Status: release decision.
 - Pro Goal Setup now uses the shared `TextField` primitive for the optional competition show-date field, preserving the date validation, competition-only visibility and deterministic countdown/checklist wiring while removing a raw input from the paid goal rebuild flow.
 - Plans folder create/rename prompt now uses shared `TextField` and `Button` primitives for folder naming, cancel and save/create actions, preserving duplicate-name protection, saving gates, folder tombstone behavior and plan-unfile semantics while removing bespoke modal controls from the Train organisation surface.
 - Diary save-meal modal now uses shared `TextField` and `Button` primitives for meal naming and cancel/save actions, preserving saved-meal creation/audit/toast behavior while gating blank Save presses instead of dismissing the sheet with no saved meal.
+- Routine Detail exercise-target editing now uses shared `TextField` and `Button` primitives for sets, rep range, rest, starting weight and Save, preserving `updateRoutineExercise` parsing, plan-day editing and swap/add/remove behavior while removing bespoke numeric form controls from a core Train detail surface.
 
 ### Web / CI / Security
 
