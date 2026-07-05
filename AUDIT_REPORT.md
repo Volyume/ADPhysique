@@ -310,6 +310,7 @@ Status: release decision.
 - Radio-style shared selectors now expose `checked` state through `Chip` and `SegmentedControl`, matching the existing `ReasonPicker` radio semantics while leaving non-radio button/toggle selected states unchanged.
 - Cardio History date labels, 7-day trend windows, empty-week trimming and spoken trend labels now live in `cardio/cardioHistoryView`, leaving the screen focused on loading, deletion and rendering.
 - Plan Library now uses the shared `EmptyState` primitive for both retryable load failures and genuine no-results states, preserving copy and retry behaviour while removing local empty-card typography.
+- Coach Review read failures now use the shared retryable `EmptyState` treatment while preserving the deterministic coach safety copy that tells users their sessions are safe and this is not a lost week.
 
 ### Web / CI / Security
 
