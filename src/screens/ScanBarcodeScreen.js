@@ -43,6 +43,7 @@ import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { useToast } from '../components/Toast';
+import ModalHeader from '../components/ModalHeader';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -175,13 +176,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
           <Text style={styles.permissionTitle}>Camera access needed</Text>
@@ -205,13 +200,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.permissionTitle}>No camera available</Text>
@@ -224,16 +213,11 @@ export default function ScanBarcodeScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          onPress={() => navigation.goBack()}
-          hitSlop={12}
-        >
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan barcode</Text>
+      <ModalHeader
+        title="Scan barcode"
+        closePosition="left"
+        onClose={() => navigation.goBack()}
+        rightAccessory={(
         <TouchableOpacity
           onPress={() => setTorch(v => !v)}
           hitSlop={12}
@@ -247,7 +231,8 @@ export default function ScanBarcodeScreen({ navigation, route }) {
             color={torch ? colors.primary : colors.textPrimary}
           />
         </TouchableOpacity>
-      </View>
+        )}
+      />
 
       <View style={styles.cameraWrap}>
         <Camera
@@ -277,12 +262,6 @@ export default function ScanBarcodeScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { color: colors.textPrimary, ...type.title },
   cameraWrap: { flex: 1, backgroundColor: colors.background },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   reticle: {

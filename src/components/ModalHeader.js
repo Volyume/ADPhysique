@@ -2,20 +2,29 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, type, hitSlop } from '../styles/theme';
 
-export default function ModalHeader({ title, onClose }) {
+function CloseButton({ onClose, style }) {
+  return (
+    <TouchableOpacity
+      style={style}
+      onPress={onClose}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+    >
+      <Ionicons name="close" size={24} color={colors.textPrimary} />
+    </TouchableOpacity>
+  );
+}
+
+export default function ModalHeader({ title, onClose, closePosition = 'right', rightAccessory = null }) {
+  const closeButton = <CloseButton onClose={onClose} style={styles.side} />;
+  const rightSlot = rightAccessory ? <View style={styles.side}>{rightAccessory}</View> : <View style={styles.side} />;
+
   return (
     <View style={styles.header}>
-      <View style={styles.side} />
+      {closePosition === 'left' ? closeButton : <View style={styles.side} />}
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
-      <TouchableOpacity
-        style={styles.side}
-        onPress={onClose}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-      >
-        <Ionicons name="close" size={24} color={colors.textPrimary} />
-      </TouchableOpacity>
+      {closePosition === 'left' ? rightSlot : closeButton}
     </View>
   );
 }
