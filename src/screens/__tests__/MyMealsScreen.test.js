@@ -79,6 +79,24 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
 }
 
+function flattenText(node) {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join('');
+  return flattenText(node.children);
+}
+
+function findByA11y(element, label) {
+  if (!element || typeof element !== 'object') return null;
+  if (element.props?.accessibilityLabel === label) return element;
+  const children = Array.isArray(element.props?.children) ? element.props.children : [element.props?.children];
+  for (const child of children) {
+    const found = findByA11y(child, label);
+    if (found) return found;
+  }
+  return null;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   capturedListProps = null;
@@ -89,6 +107,21 @@ beforeEach(() => {
 });
 
 describe('MyMealsScreen row tap (C6)', () => {
+  test('shows a retry state when saved meals fail to load', async () => {
+    listSavedMeals.mockRejectedValueOnce(new Error('offline'));
+    const nav = makeNav();
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain("Couldn't load saved meals");
+    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain('Try again');
+    expect(text).not.toContain('Save your go-to meals');
+  });
+
   test('tapping a meal logs it immediately, no confirm dialog', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
@@ -102,6 +135,24 @@ describe('MyMealsScreen row tap (C6)', () => {
 
     expect(appAlert).not.toHaveBeenCalled();
     expect(applySavedMealToDiary).toHaveBeenCalledWith('u1', 'sm-1', { mealSlot: 'snack', entryDate: '2026-07-03' });
+  });
+
+  test('the visible more-actions button opens the rename/delete menu', async () => {
+    const nav = makeNav();
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
+    await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });
+    await flush();
+
+    const row = capturedListProps.renderItem({ item: MEAL });
+    const moreActions = findByA11y(row, 'More actions for Chicken and rice');
+    expect(moreActions).toBeTruthy();
+    await act(async () => { moreActions.props.onPress(); });
+
+    expect(appAlert).toHaveBeenCalledWith(
+      'Chicken and rice',
+      undefined,
+      expect.any(Array),
+    );
   });
 
   test('a successful log shows a success + Undo toast and returns to the diary', async () => {
@@ -151,7 +202,7 @@ describe('MyMealsScreen row tap (C6)', () => {
     expect(nav.goBack).not.toHaveBeenCalled();
   });
 
-  test('long press still opens the rename/delete menu (untouched by C6)', async () => {
+  test('long press still opens the rename/delete menu', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });

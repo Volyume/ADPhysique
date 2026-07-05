@@ -36,6 +36,7 @@ import { toEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
+import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
@@ -58,16 +59,20 @@ export default function MyMealsScreen({ navigation, route }) {
 
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [renaming, setRenaming] = useState(null); // { id, name } | null
   const [renameText, setRenameText] = useState('');
 
   const reload = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) { setLoading(false); return; }
     setLoading(true);
+    setLoadError(false);
     try {
       setMeals(await listSavedMeals(userId));
-    } catch (_) {
+    } catch (e) {
+      logError('MyMeals.listSavedMeals', e, { userId });
       setMeals([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -168,7 +173,7 @@ export default function MyMealsScreen({ navigation, route }) {
         onLongPress={() => openMenu(item)}
         accessibilityRole="button"
         accessibilityLabel={`Log ${item.name}`}
-        accessibilityHint="Long press to rename or delete"
+        accessibilityHint="Use the more actions button to rename or delete"
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -176,7 +181,17 @@ export default function MyMealsScreen({ navigation, route }) {
             {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} · {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.totals.protein}g protein
           </Text>
         </View>
-        <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+        <View style={styles.rowActions}>
+          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          <TouchableOpacity
+            onPress={() => openMenu(item)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`More actions for ${item.name}`}
+          >
+            <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   }
@@ -191,12 +206,25 @@ export default function MyMealsScreen({ navigation, route }) {
           <SkeletonRow />
           <SkeletonRow />
         </View>
+      ) : loadError ? (
+        <View style={styles.empty}>
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load saved meals"
+            text="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={reload}
+          />
+        </View>
       ) : meals.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Save your go-to meals</Text>
-          <Text style={styles.emptyBody}>
-            Select foods in your diary and tap "Save as meal".
-          </Text>
+          <EmptyState
+            icon="restaurant-outline"
+            title="Save your go-to meals"
+            text={'Select foods in your diary and tap "Save as meal".'}
+            actionLabel="Back to diary"
+            onAction={() => navigation.goBack()}
+          />
         </View>
       ) : (
         <FlashList
@@ -244,12 +272,11 @@ const styles = StyleSheet.create({
   },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: spacing.md },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  emptyTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
-  emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center' },
   sheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 });
