@@ -28,6 +28,8 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
+import EmptyState from '../components/EmptyState';
+import { SkeletonCard } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
 import {
@@ -40,6 +42,7 @@ import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
 import { summariseNutrients, NUTRIENT_ROWS } from '../lib/food/nutrientSummary';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { logError } from '../lib/errorLog';
 
 function isoDate(d) { return localDayKey(d.getTime()); } // TZ-1: local calendar day
 function shift(d, days) {
@@ -92,6 +95,8 @@ export default function FoodInsightsScreen({ navigation }) {
 
   const [rollups, setRollups] = useState([]);
   const [targets, setTargets] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [windowDays, setWindowDays] = useState(7); // ULTIMATE-NUT-05; default 7
   const isWeekly = windowDays > WEEKLY_THRESHOLD;
@@ -102,13 +107,24 @@ export default function FoodInsightsScreen({ navigation }) {
   const endDate = days[days.length - 1];
 
   const load = useCallback(async () => {
-    if (!userId) return;
-    const [rs, t] = await Promise.all([
-      getRollupsForRange(userId, startDate, endDate),
-      getNutritionTargets(userId),
-    ]);
-    setRollups(rs);
-    setTargets(t);
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [rs, t] = await Promise.all([
+        getRollupsForRange(userId, startDate, endDate),
+        getNutritionTargets(userId),
+      ]);
+      setRollups(rs);
+      setTargets(t);
+    } catch (e) {
+      logError('FoodInsights.load', e, { userId });
+      setRollups([]);
+      setTargets(null);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, startDate, endDate]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -305,6 +321,22 @@ export default function FoodInsightsScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {loading ? (
+          <View style={styles.loadingStack} accessibilityLabel="Loading nutrition insights">
+            <SkeletonCard height={120} />
+            <SkeletonCard height={180} />
+            <SkeletonCard height={140} />
+          </View>
+        ) : loadError ? (
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load nutrition insights"
+            text="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={load}
+          />
+        ) : (
+        <>
         {/* Weekly-average summary: avg kcal/day this week + a neutral, factual
             "vs last week" delta (no good/bad colour). Above the chart so the
             headline number reads first. */}
@@ -534,6 +566,8 @@ export default function FoodInsightsScreen({ navigation }) {
           accessibilityLabel={`Export the last ${windowDays} days as a PDF report to share with a coach or GP`}
           style={styles.exportSecondary}
         />
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -555,6 +589,7 @@ function AdherenceRow({ label, hit, total }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  loadingStack: { gap: spacing.lg },
 
   windowBar: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   windowChip: {

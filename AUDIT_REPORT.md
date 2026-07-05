@@ -273,6 +273,7 @@ Status: release decision.
 - Plan Detail and Plans now use shared `SectionLabel` headings for workouts, folders, plan lists, templates, plan rationale, manage actions and plan-start/switch entry points, preserving library/add/activate/edit/start behavior while removing more Train-local section-title styles.
 - Share Card and Before/After Share Sheet now use shared `SectionLabel` headings for format, background, preview, PR choice, share includes and scan/photo selection, preserving export/privacy behavior while aligning social-sharing typography with the wider app.
 - Volume Heatmap and Routine Detail now use shared `SectionLabel` headings for volume trend and muscle coverage, preserving chart/routine behavior while retiring two more local uppercase label styles.
+- Food Insights now separates loading, failed reads and genuinely empty nutrition history: range/target fetches show skeleton cards while loading, a retryable inline error on failure, and existing empty copy only after a successful read.
 
 ### Web / CI / Security
 
