@@ -257,6 +257,7 @@ Status: release decision.
 - Today strip morning-weight entry now uses shared `TextField` and `Button` primitives while preserving the compact first-screen cell layout, deep-linked weight editor, trend-door long-press behavior and meal/cardio routing.
 - Manual Builder now uses shared `TextField`, `Chip` and `Button` primitives for plan naming, goal/day selection, create/save/draft/activate actions and success-modal actions, preserving superset persistence, day duplication/reorder, edit-mode save behavior and plan activation naming.
 - Partner invite and aim flows now use shared `TextField` and `Button` primitives for the empty-state invite CTA, invite-code entry/join action, weekly aim confirmation and invite-journey primary CTAs, preserving privacy receipt copy, one-code minting, invite caps and partner isolation behavior.
+- Build Workout now uses shared `TextField` controls for rep-range and starting-weight targets and shared `Button` controls for travel-mode actions, preserving exercise setup, deterministic rest suggestions, Travel/Hotel Gym generation and FlashList picker behavior.
 
 ### Web / CI / Security
 
