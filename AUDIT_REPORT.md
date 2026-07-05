@@ -265,6 +265,7 @@ Status: release decision.
 - Diary save-meal modal now uses shared `TextField` and `Button` primitives for meal naming and cancel/save actions, preserving saved-meal creation/audit/toast behavior while gating blank Save presses instead of dismissing the sheet with no saved meal.
 - Routine Detail exercise-target editing now uses shared `TextField` and `Button` primitives for sets, rep range, rest, starting weight and Save, preserving `updateRoutineExercise` parsing, plan-day editing and swap/add/remove behavior while removing bespoke numeric form controls from a core Train detail surface.
 - Nutrition Targets now routes fast-path and full-form numeric fields through a local `NumericField` wrapper over shared `TextField`, covering age, height, weight, body-fat and custom protein inputs while preserving calculation, GDPR consent, saved-target hydration and safety-floor behavior.
+- Pro Onboarding now uses shared `TextField` controls for identity/body inputs and shared `Button` controls for wizard Continue CTAs, preserving sex/height/body-weight gates, draft restore, plan-generation sequence, consent routing and source-guarded `canContinue` disabled predicates.
 
 ### Web / CI / Security
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,8 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion 
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
@@ -986,9 +988,10 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>First name</Text>
-              <TextInput accessibilityLabel="First name"
+              <TextField accessibilityLabel="First name"
                 ref={nameRef}
-                style={styles.input}
+                fieldStyle={styles.inputField}
+                inputStyle={styles.input}
                 value={firstName}
                 onChangeText={setFirstName}
                 placeholder="Your name"
@@ -1015,8 +1018,9 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Age</Text>
               <Text style={styles.fieldHint}>Used with your weight and height to calculate your calorie targets.</Text>
-              <TextInput accessibilityLabel="Age"
-                style={styles.input}
+              <TextField accessibilityLabel="Age"
+                fieldStyle={styles.inputField}
+                inputStyle={styles.input}
                 value={age}
                 onChangeText={setAge}
                 placeholder="e.g. 28"
@@ -1054,8 +1058,9 @@ export default function ProOnboardingScreen({ navigation }) {
               {localHeightUnits === 'imperial' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 1 }}>
-                    <TextInput accessibilityLabel="Height feet"
-                      style={styles.input}
+                    <TextField accessibilityLabel="Height feet"
+                      fieldStyle={styles.inputField}
+                      inputStyle={styles.input}
                       value={heightFt}
                       onChangeText={setHeightFt}
                       placeholder="5 ft"
@@ -1067,8 +1072,9 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <TextInput accessibilityLabel="Height inches"
-                      style={styles.input}
+                    <TextField accessibilityLabel="Height inches"
+                      fieldStyle={styles.inputField}
+                      inputStyle={styles.input}
                       value={heightIn}
                       onChangeText={setHeightIn}
                       placeholder="9 in"
@@ -1081,8 +1087,9 @@ export default function ProOnboardingScreen({ navigation }) {
                   </View>
                 </View>
               ) : (
-                <TextInput accessibilityLabel="Height in centimetres"
-                  style={styles.input}
+                <TextField accessibilityLabel="Height in centimetres"
+                  fieldStyle={styles.inputField}
+                  inputStyle={styles.input}
                   value={heightCm}
                   onChangeText={setHeightCm}
                   placeholder="e.g. 178 cm"
@@ -1116,8 +1123,9 @@ export default function ProOnboardingScreen({ navigation }) {
               {localBWUnits === 'st' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 2 }}>
-                    <TextInput accessibilityLabel="Current body weight in stones"
-                      style={styles.input}
+                    <TextField accessibilityLabel="Current body weight in stones"
+                      fieldStyle={styles.inputField}
+                      inputStyle={styles.input}
                       value={bodyWeightSt}
                       onChangeText={setBodyWeightSt}
                       placeholder="e.g. 12 st"
@@ -1129,8 +1137,9 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </View>
                   <View style={{ flex: 3 }}>
-                    <TextInput accessibilityLabel="Current body weight remaining pounds"
-                      style={styles.input}
+                    <TextField accessibilityLabel="Current body weight remaining pounds"
+                      fieldStyle={styles.inputField}
+                      inputStyle={styles.input}
                       value={bodyWeightStLbs}
                       onChangeText={setBodyWeightStLbs}
                       placeholder="e.g. 0 lbs"
@@ -1143,8 +1152,9 @@ export default function ProOnboardingScreen({ navigation }) {
                   </View>
                 </View>
               ) : (
-                <TextInput accessibilityLabel={`Current body weight in ${localBWUnits}`}
-                  style={styles.input}
+                <TextField accessibilityLabel={`Current body weight in ${localBWUnits}`}
+                  fieldStyle={styles.inputField}
+                  inputStyle={styles.input}
                   value={bodyWeight}
                   onChangeText={setBodyWeight}
                   placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
@@ -1161,8 +1171,9 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.fieldHint}>
                 If you have a measured figure, it sharpens your calorie targets and keeps them matching your Nutrition Targets. Leave blank if unsure.
               </Text>
-              <TextInput
-                style={styles.input}
+              <TextField
+                fieldStyle={styles.inputField}
+                inputStyle={styles.input}
                 value={bodyFat}
                 onChangeText={setBodyFat}
                 placeholder="e.g. 15"
@@ -1195,15 +1206,15 @@ export default function ProOnboardingScreen({ navigation }) {
               ) : null}
             </View>
 
-            <TouchableOpacity accessibilityRole="button"
+            <Button
+              title="Continue"
+              trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom2 : undefined}
               disabled={!canContinue}
-              activeOpacity={canContinue ? 0.88 : 1}
-            >
-              <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-            </TouchableOpacity>
+              textStyle={styles.primaryBtnText}
+              accessibilityLabel="Continue"
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -1270,15 +1281,15 @@ export default function ProOnboardingScreen({ navigation }) {
               />
             </View>
 
-            <TouchableOpacity accessibilityRole="button"
+            <Button
+              title="Continue"
+              trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom3 : undefined}
               disabled={!canContinue}
-              activeOpacity={canContinue ? 0.88 : 1}
-            >
-              <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-            </TouchableOpacity>
+              textStyle={styles.primaryBtnText}
+              accessibilityLabel="Continue"
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -1453,15 +1464,15 @@ export default function ProOnboardingScreen({ navigation }) {
               )}
             </View>
 
-            <TouchableOpacity accessibilityRole="button"
+            <Button
+              title="Continue"
+              trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom4 : undefined}
               disabled={!canContinue}
-              activeOpacity={canContinue ? 0.88 : 1}
-            >
-              <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-            </TouchableOpacity>
+              textStyle={styles.primaryBtnText}
+              accessibilityLabel="Continue"
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -1685,21 +1696,16 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
-          <TouchableOpacity accessibilityRole="button"
+          <Button
+            title="Continue"
+            trailingIcon="arrow-forward"
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
             onPress={canContinue && !busy ? advanceFrom5 : undefined}
             disabled={!canContinue || busy}
-            activeOpacity={canContinue && !busy ? 0.88 : 1}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.onPrimary} />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-              </>
-            )}
-          </TouchableOpacity>
+            loading={busy}
+            textStyle={styles.primaryBtnText}
+            accessibilityLabel="Continue"
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1799,11 +1805,11 @@ const styles = StyleSheet.create({
   wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
   wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
   wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  inputField: { borderRadius: radius.md },
   input: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.border,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
-    fontSize: fontSize.md, color: colors.textPrimary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    fontSize: fontSize.md,
   },
   fieldWrap: {
     flexDirection: 'row', alignItems: 'center',
@@ -1910,9 +1916,9 @@ const styles = StyleSheet.create({
 
   // Buttons
   primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary,
-    borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg + 2,
+    marginBottom: spacing.md,
   },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   primaryBtnDisabled: { opacity: 0.4 },
