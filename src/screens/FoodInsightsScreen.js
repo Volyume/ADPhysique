@@ -18,14 +18,14 @@
  */
 import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import VolyumeChart from '../components/VolyumeChart';
@@ -517,34 +517,23 @@ export default function FoodInsightsScreen({ navigation }) {
           )}
         </Card>
 
-        <TouchableOpacity
-          style={styles.exportBtn}
+        <Button
+          title={`Export ${windowDays} days as CSV`}
+          icon="download-outline"
           onPress={() => onExport('csv')}
+          loading={exporting}
           disabled={exporting}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: exporting }}
           accessibilityLabel={`Export the last ${windowDays} days as a CSV file`}
-        >
-          {exporting ? (
-            <ActivityIndicator color={colors.onPrimary} />
-          ) : (
-            <>
-              <Ionicons name="download-outline" size={18} color={colors.onPrimary} />
-              <Text style={styles.exportBtnText}>Export {windowDays} days as CSV</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.exportBtnSecondary}
+        />
+        <Button
+          title="Export as PDF report"
+          icon="document-text-outline"
+          variant="outline"
           onPress={() => onExport('pdf')}
           disabled={exporting}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: exporting }}
           accessibilityLabel={`Export the last ${windowDays} days as a PDF report to share with a coach or GP`}
-        >
-          <Ionicons name="document-text-outline" size={18} color={colors.primary} />
-          <Text style={styles.exportBtnSecondaryText}>Export as PDF report</Text>
-        </TouchableOpacity>
+          style={styles.exportSecondary}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -624,24 +613,5 @@ const styles = StyleSheet.create({
   nutrientLabel: { color: colors.textMuted, fontSize: fontSize.sm },
   nutrientValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
 
-  exportBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg, paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-    minHeight: 48,
-  },
-  exportBtnText: { ...type.bodyStrong, color: colors.onPrimary },
-  exportBtnSecondary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: 'transparent',
-    borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-    minHeight: 48,
-    marginTop: spacing.sm,
-  },
-  exportBtnSecondaryText: { ...type.bodyStrong, color: colors.primary },
+  exportSecondary: { marginTop: spacing.sm },
 });
