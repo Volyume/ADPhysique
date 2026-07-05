@@ -13,6 +13,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
+import SectionLabel from '../components/SectionLabel';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries } from '../lib/liftProgress';
@@ -222,7 +223,7 @@ export default function LiftProgressScreen({ navigation }) {
             </View>
           ) : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>Relative strength</Text>
+            <SectionLabel>Relative strength</SectionLabel>
             <InfoTooltip
               size={13}
               text={'How your best estimated lifts compare to your own bodyweight.\n\n1.0× = you can lift your bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite'}
@@ -460,7 +461,6 @@ const styles = StyleSheet.create({
   },
   standingSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   standingNext: { ...type.label, color: colors.textSecondary, marginTop: spacing.sm },
-  sectionLabel: { ...type.label, color: colors.textSecondary },
   sectionSub: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   strengthRow: {
     flexDirection: 'row',

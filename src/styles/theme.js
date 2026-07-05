@@ -467,6 +467,10 @@ export const type = {
     return { fontSize: fontSize.sm, fontWeight: fontWeight.medium,
       lineHeight: Math.round(fontSize.sm * lineHeight.snug), letterSpacing: letterSpacing.label };
   },
+  get overline() {
+    return { fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: 0, textTransform: 'uppercase' };
+  },
   get caption() {
     return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
       lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };

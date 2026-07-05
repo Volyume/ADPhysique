@@ -70,6 +70,15 @@ describe('type roles', () => {
     expect(type.display.letterSpacing).toBe(letterSpacing.display);
     expect(type.display.fontWeight).toBe('900');
   });
+  test('overline is the shared section-label role and adds no tracking drift', () => {
+    expect(type.overline).toEqual({
+      fontSize: 11,
+      fontWeight: '600',
+      lineHeight: Math.round(11 * lineHeight.snug),
+      letterSpacing: 0,
+      textTransform: 'uppercase',
+    });
+  });
 
   test('roles reflect the larger-text swap (getters, not snapshots)', () => {
     const baseBody = type.body.fontSize;

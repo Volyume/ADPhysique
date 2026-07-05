@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
+import SectionLabel from './SectionLabel';
 
 // Shared building blocks for the Settings landing page and its sub-pages.
 // Pulled out of the old single-screen Settings so every sub-page renders
@@ -46,7 +47,7 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
 }
 
 export function SectionHeader({ title }) {
-  return <Text style={styles.sectionHeader}>{title}</Text>;
+  return <SectionLabel tone="muted" style={styles.sectionHeader}>{title}</SectionLabel>;
 }
 
 // Standard page chrome for a Settings sub-page. Pass `title` to render the
@@ -67,8 +68,6 @@ export const settingsStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   sectionHeader: {
-    ...type.label,
-    color: colors.textMuted,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
