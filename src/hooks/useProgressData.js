@@ -94,8 +94,35 @@ export default function useProgressData() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { load(); }, [user?.id]));
 
+  function clearUserProgressState() {
+    setActiveMeso(null);
+    setMesoTonnage([]);
+    setInsights([]);
+    setWeeklyVolume({});
+    setPrBars([]);
+    setPrWindow(30);
+    setCalValues([]);
+    setRecentSessions([]);
+    setAllSets([]);
+    setExerciseMap({});
+    setDeloadAlert(null);
+    setDurationBars([]);
+    setMuscleFreq([]);
+    setShowAllMuscles(false);
+    setWorkloadData(null);
+    setFatigueSessions([]);
+    setBlockProgress([]);
+    setEarliestWorkoutAt(null);
+    setCompletedWorkoutCount(0);
+    setCurrentMesoWeek(null);
+  }
+
   async function load() {
-    if (!user?.id) return;
+    if (!user?.id) {
+      clearUserProgressState();
+      setLoading(false);
+      return;
+    }
     try {
       const [workouts, sets, exercises] = await Promise.all([
         getAllWorkouts(user.id),

@@ -6,8 +6,10 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import InfoTooltip from '../components/InfoTooltip';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard } from '../components/Skeleton';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
 import BlockShapeCard from '../components/BlockShapeCard';
@@ -34,7 +36,7 @@ export default function ConsistencyScreen({ navigation }) {
     fatigueSessions, blockProgress, currentMesoWeek,
     deloadAlert, workloadData, durationBars, muscleFreq,
     showAllMuscles, setShowAllMuscles, calValues,
-    enoughForTrends, refreshing, handleRefresh,
+    enoughForTrends, refreshing, loading, hasData, handleRefresh,
   } = useProgressData();
 
   return (
@@ -68,7 +70,27 @@ export default function ConsistencyScreen({ navigation }) {
           </Card>
         )}
 
+        {loading ? (
+          <View style={styles.section}>
+            <SkeletonCard height={116} />
+            <SkeletonCard height={148} />
+            <SkeletonCard height={92} />
+          </View>
+        ) : null}
+
+        {!loading && !hasData ? (
+          <EmptyState
+            icon="barbell-outline"
+            title="Your consistency picture starts with your first session"
+            text="Log a workout and this screen will begin showing training rhythm, recovery signals and load trends."
+            actionLabel="Start a workout"
+            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+            compact
+          />
+        ) : null}
+
         {/* ── Training block ── */}
+        {!loading && hasData ? (
         <AnimatedEntrance index={0}>
         <View style={styles.section}>
           <View style={styles.labelRow}>
@@ -101,19 +123,20 @@ export default function ConsistencyScreen({ navigation }) {
           <BlockProgressCard blockProgress={blockProgress} currentMesoWeek={currentMesoWeek} />
         </View>
         </AnimatedEntrance>
+        ) : null}
 
         {/* ── Recovery signals ── */}
-        <ReadinessCards userId={user?.id} tier={tier} />
+        {!loading && hasData ? <ReadinessCards userId={user?.id} tier={tier} /> : null}
 
         {/* ── Training load (ACWR) ── */}
-        {workloadData && workloadData.ratio !== null && (
+        {hasData && workloadData && workloadData.ratio !== null && (
           <View style={styles.section}>
             <WorkloadCard data={workloadData} />
           </View>
         )}
 
         {/* ── Session length trend ── */}
-        {enoughForTrends && durationBars.length > 0 && (
+        {hasData && enoughForTrends && durationBars.length > 0 && (
           <View style={styles.section}>
             <SectionLabel>Session length trend</SectionLabel>
             <SessionDurationChart bars={durationBars} />
@@ -121,7 +144,7 @@ export default function ConsistencyScreen({ navigation }) {
         )}
 
         {/* ── Training frequency ── */}
-        {enoughForTrends && muscleFreq.length > 0 && (
+        {hasData && enoughForTrends && muscleFreq.length > 0 && (
           <View style={styles.section}>
             <View style={styles.labelRow}>
               <SectionLabel>Training frequency</SectionLabel>
@@ -136,7 +159,7 @@ export default function ConsistencyScreen({ navigation }) {
         )}
 
         {/* ── Training day calendar ── */}
-        {enoughForTrends && (
+        {hasData && enoughForTrends && (
           <View style={styles.section}>
             <SectionLabel>Training days (last 12 weeks)</SectionLabel>
             <TrainingCalendar values={calValues} />
