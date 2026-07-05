@@ -10,6 +10,8 @@ import {
   getBestAnchorSet,
   prefillRepsForTarget,
   isLoggableWeight,
+  parseTimeToSeconds,
+  validateSetEntryValue,
   formatLoggedSet,
   formatSeconds,
 } from '../workoutHelpers';
@@ -155,6 +157,102 @@ describe('formatSeconds', () => {
     expect(formatSeconds(NaN)).toBe('0:00');
     expect(formatSeconds(-5)).toBe('0:00');
     expect(formatSeconds('90')).toBe('1:30');
+  });
+});
+
+describe('parseTimeToSeconds', () => {
+  test('parses mm:ss and plain seconds, while preserving clearable blanks', () => {
+    expect(parseTimeToSeconds('2:05')).toBe(125);
+    expect(parseTimeToSeconds('90')).toBe(90);
+    expect(parseTimeToSeconds('')).toBe('');
+    expect(parseTimeToSeconds(null)).toBe('');
+  });
+
+  test('malformed free text returns a blank value', () => {
+    expect(parseTimeToSeconds('abc')).toBe('');
+  });
+});
+
+describe('validateSetEntryValue', () => {
+  const barbellExercise = { exerciseType: 'weight_reps', equipment: 'barbell' };
+
+  test('returns the reps message for invalid rep-based entries', () => {
+    expect(validateSetEntryValue({
+      value: { weight: 100, reps: 'abc' },
+      exercise: barbellExercise,
+      units: 'kg',
+    })).toEqual({
+      ok: false,
+      title: 'Enter reps',
+      message: 'Please enter the number of reps completed.',
+    });
+  });
+
+  test('returns the time message for invalid timed entries', () => {
+    expect(validateSetEntryValue({
+      value: { weight: 0, reps: '' },
+      exercise: { exerciseType: 'duration', equipment: 'cardio' },
+      units: 'kg',
+    })).toEqual({
+      ok: false,
+      title: 'Enter time',
+      message: 'Please enter the duration for this set.',
+    });
+  });
+
+  test('reps_only and duration skip weight while distance requires a positive value', () => {
+    expect(validateSetEntryValue({
+      value: { weight: '', reps: 12 },
+      exercise: { exerciseType: 'reps_only', equipment: 'machine' },
+    }).ok).toBe(true);
+    expect(validateSetEntryValue({
+      value: { weight: '', reps: 90 },
+      exercise: { exerciseType: 'duration', equipment: 'cardio' },
+    }).ok).toBe(true);
+    expect(validateSetEntryValue({
+      value: { weight: '', reps: 90 },
+      exercise: { exerciseType: 'distance', equipment: 'cardio' },
+      units: 'kg',
+    })).toEqual({
+      ok: false,
+      title: 'Enter weight',
+      message: 'Enter the weight used (in kg) before completing this set.',
+    });
+  });
+
+  test('bodyweight movements accept blank weight and valid entries normalize numbers', () => {
+    expect(validateSetEntryValue({
+      value: { weight: '', reps: 10 },
+      exercise: { exerciseType: 'weight_reps', equipment: 'Body Weight' },
+    })).toMatchObject({
+      ok: true,
+      actualReps: 10,
+      weight: 0,
+      exerciseType: 'weight_reps',
+      isWeightReps: true,
+    });
+
+    expect(validateSetEntryValue({
+      value: { weight: '62.5', reps: '8' },
+      exercise: barbellExercise,
+    })).toMatchObject({
+      ok: true,
+      actualReps: 8,
+      weight: 62.5,
+      isWeightReps: true,
+    });
+  });
+
+  test('actualRepsOverride is used for cluster completion validation', () => {
+    expect(validateSetEntryValue({
+      value: { weight: '50', reps: '' },
+      exercise: barbellExercise,
+      actualRepsOverride: 24,
+    })).toMatchObject({
+      ok: true,
+      actualReps: 24,
+      weight: 50,
+    });
   });
 });
 

@@ -86,9 +86,67 @@ export function isLoggableWeight(weightRaw, isBodyweight) {
   return !(weightRaw === '' || weightRaw == null || isNaN(weightNum) || weightNum <= 0);
 }
 
+// Parse a free-typed mm:ss (or plain seconds) string into total seconds.
+// "1:30" -> 90, "90" -> 90, "" -> '' (kept blank so the field can be cleared).
+export function parseTimeToSeconds(text) {
+  if (text == null || text === '') return '';
+  const t = String(text).trim();
+  if (t.includes(':')) {
+    const [m, s] = t.split(':');
+    const mm = parseInt(m, 10);
+    const ss = parseInt(s, 10);
+    if (Number.isNaN(mm) && Number.isNaN(ss)) return '';
+    return (Number.isNaN(mm) ? 0 : mm) * 60 + (Number.isNaN(ss) ? 0 : ss);
+  }
+  const n = parseInt(t, 10);
+  return Number.isNaN(n) ? '' : n;
+}
+
+export function validateSetEntryValue({
+  value,
+  exercise,
+  units = 'kg',
+  actualRepsOverride = null,
+  weightAction = 'completing this set',
+}) {
+  const exerciseType = exercise?.exerciseType || exercise?.exercise_type || 'weight_reps';
+  const isTimed = exerciseType === 'duration' || exerciseType === 'distance';
+  const isWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
+  const repsRaw = actualRepsOverride != null ? actualRepsOverride : value?.reps;
+  const actualReps = typeof repsRaw === 'number' ? repsRaw : parseInt(repsRaw, 10);
+
+  if (!Number.isFinite(actualReps) || actualReps < 1) {
+    return {
+      ok: false,
+      title: isTimed ? 'Enter time' : 'Enter reps',
+      message: isTimed
+        ? 'Please enter the duration for this set.'
+        : 'Please enter the number of reps completed.',
+    };
+  }
+
+  const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
+  const skipWeightCheck = exerciseType === 'reps_only' || exerciseType === 'duration';
+  if (!skipWeightCheck && !isLoggableWeight(value?.weight, isBodyweight)) {
+    return {
+      ok: false,
+      title: 'Enter weight',
+      message: `Enter the weight used (in ${units}) before ${weightAction}.`,
+    };
+  }
+
+  return {
+    ok: true,
+    actualReps,
+    weight: parseFloat(value?.weight) || 0,
+    exerciseType,
+    isTimed,
+    isWeightReps,
+  };
+}
+
 // Format an integer number of seconds as mm:ss for the duration / distance
-// schemas (a logged set stores its seconds in the reps column). Pure; mirrors
-// SetEntry's own formatSeconds so the live field and the logged row read alike.
+// schemas (a logged set stores its seconds in the reps column).
 export function formatSeconds(total) {
   const n = typeof total === 'number' ? total : (parseInt(total, 10) || 0);
   const safe = Number.isFinite(n) && n > 0 ? n : 0;

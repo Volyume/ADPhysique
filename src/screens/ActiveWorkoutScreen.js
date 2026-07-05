@@ -31,7 +31,14 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
-import { countProgressSets, setNumberForKind, getBestAnchorSet, prefillRepsForTarget, isLoggableWeight, formatLoggedSet } from '../lib/workoutHelpers';
+import {
+  countProgressSets,
+  setNumberForKind,
+  getBestAnchorSet,
+  prefillRepsForTarget,
+  validateSetEntryValue,
+  formatLoggedSet,
+} from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -1054,53 +1061,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Previously "Log another set" within the 1.8s window still yanked the
     // screen to the next exercise, stranding the extra set's context.
     cancelAutoAdvance();
-    // Reps required (a cluster override carries its own total). A per-side
-    // (unilateral) exercise logs one reps value, done on both sides at the
-    // same weight, so it validates and stores like any other set: one
-    // weight, one rep count, no separate left/right.
-    // Parse reps up front and validate as a real number. The old check
-    // (`currentSet.reps < 1`) was a string comparison, so a pasted or
-    // non-numeric value ("abc") gave NaN < 1 === false and slipped through,
-    // logging a NaN-rep set that then poisoned tonnage, PRs and the summary.
-    // Exercise TYPE axis (Hevy teardown 03-exercise-library.md, R3). For
-    // weight_reps (and weighted_bodyweight) the validation/storage/PR path is
-    // unchanged. duration/distance store seconds in the reps field; reps_only
-    // and duration carry no load, so the weight check is skipped for them.
-    const exType = exercise?.exerciseType || 'weight_reps';
-    const isWeightReps = exType === 'weight_reps' || exType === 'weighted_bodyweight';
-    const isTimed = exType === 'duration' || exType === 'distance';
-
-    const repsNum = overrides.actualReps != null
-      ? overrides.actualReps
-      : parseInt(currentSet.reps, 10);
-    // For timed schemas the "reps" field holds total seconds; require a
-    // positive value but allow the larger range. Otherwise require >= 1 rep.
-    if (!Number.isFinite(repsNum) || repsNum < 1) {
-      appAlert(
-        isTimed ? 'Enter time' : 'Enter reps',
-        isTimed
-          ? 'Please enter the duration for this set.'
-          : 'Please enter the number of reps completed.',
-      );
+    const validation = validateSetEntryValue({
+      value: currentSet,
+      exercise,
+      units,
+      actualRepsOverride: overrides.actualReps,
+      weightAction: 'completing this set',
+    });
+    if (!validation.ok) {
+      appAlert(validation.title, validation.message);
       return;
     }
     // Cluster sets (myo-reps / rest-pause) commit the whole cluster as one
     // row: actualReps is the summed total and notes carry the breakdown.
     // Both arrive via `overrides` from finishCluster.
-    const effectiveReps = repsNum;
+    const effectiveReps = validation.actualReps;
+    const effectiveWeight = validation.weight;
     const effectiveNotes = overrides.notes ?? (noteText || null);
-    // Weight is required unless this is a bodyweight movement. A blank or
-    // non-numeric field means the user hasn't entered a load yet, block
-    // rather than silently saving a 0 kg set. reps_only and duration carry no
-    // load at all, so the weight check is skipped for them; distance reuses the
-    // weight field for the distance value, which isLoggableWeight accepts as a
-    // positive number.
-    const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
-    const skipWeightCheck = exType === 'reps_only' || exType === 'duration';
-    if (!skipWeightCheck && !isLoggableWeight(currentSet.weight, isBodyweight)) {
-      appAlert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
-      return;
-    }
+    const isWeightReps = validation.isWeightReps;
 
     setSaving(true);
     // D2: warm-ups get the softer tick, working sets the standard beat.
@@ -1124,7 +1102,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         targetRepsMin: routineExercise?.recommendedRepsMin ?? null,
         targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
         actualReps: effectiveReps,
-        weight: parseFloat(currentSet.weight) || 0,
+        weight: effectiveWeight,
         rir: currentSet.rir != null ? parseInt(currentSet.rir, 10) : null,
         rpe: null,
         failed: false,
@@ -1141,7 +1119,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setNumber,
         setType: currentSet.setType,
         actualReps: effectiveReps,
-        weight: parseFloat(currentSet.weight) || 0,
+        weight: effectiveWeight,
         rir: currentSet.rir ?? null,
         rpe: null,
         leftReps: null,
@@ -1350,30 +1328,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function handleSaveEditedSet() {
     if (saving || !editingSet || !editValue) return;
-    // Validate exactly as the normal log path does (handleCompleteSet): reps/
-    // time >= 1, and weight required unless reps_only/duration/bodyweight.
-    const exType = exercise?.exerciseType || 'weight_reps';
-    const isTimed = exType === 'duration' || exType === 'distance';
-    const actualReps = parseInt(editValue.reps, 10);
-    if (!Number.isFinite(actualReps) || actualReps < 1) {
-      appAlert(
-        isTimed ? 'Enter time' : 'Enter reps',
-        isTimed
-          ? 'Please enter the duration for this set.'
-          : 'Please enter the number of reps completed.',
-      );
-      return;
-    }
-    const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
-    const skipWeightCheck = exType === 'reps_only' || exType === 'duration';
-    if (!skipWeightCheck && !isLoggableWeight(editValue.weight, isBodyweight)) {
-      appAlert('Enter weight', `Enter the weight used (in ${units}) before saving this set.`);
+    const validation = validateSetEntryValue({
+      value: editValue,
+      exercise,
+      units,
+      weightAction: 'saving this set',
+    });
+    if (!validation.ok) {
+      appAlert(validation.title, validation.message);
       return;
     }
     // For timed/distance the value columns are weight=distance/0 and
     // actualReps=seconds; SetEntry already stores those numbers, so parse
     // exactly as the log path does (parseFloat(weight) || 0, parseInt(reps)).
-    const weight = parseFloat(editValue.weight) || 0;
+    const { actualReps, weight } = validation;
 
     setSaving(true);
     try {
