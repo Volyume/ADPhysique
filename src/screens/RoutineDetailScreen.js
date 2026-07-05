@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle 
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import TextField from '../components/TextField';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
@@ -505,69 +506,78 @@ export default function RoutineDetailScreen({ navigation, route }) {
           <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1}>
             <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
-              <View style={styles.editField}>
-                <Text style={styles.editLabel}>Sets</Text>
-                <TextInput accessibilityLabel={`Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
-                  style={styles.editInput}
-                  value={editSets}
-                  onChangeText={setEditSets}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.editField}>
-                <Text style={styles.editLabel}>Reps min</Text>
-                <TextInput accessibilityLabel={`Minimum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
-                  style={styles.editInput}
-                  value={editRepsMin}
-                  onChangeText={setEditRepsMin}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.editField}>
-                <Text style={styles.editLabel}>Reps max</Text>
-                <TextInput accessibilityLabel={`Maximum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
-                  style={styles.editInput}
-                  value={editRepsMax}
-                  onChangeText={setEditRepsMax}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
+              <TextField
+                label="Sets"
+                containerStyle={styles.editField}
+                fieldStyle={styles.editInputField}
+                inputStyle={styles.editInput}
+                accessibilityLabel={`Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
+                value={editSets}
+                onChangeText={setEditSets}
+                keyboardType="number-pad"
+                maxLength={2}
+                placeholderTextColor={colors.textMuted}
+              />
+              <TextField
+                label="Reps min"
+                containerStyle={styles.editField}
+                fieldStyle={styles.editInputField}
+                inputStyle={styles.editInput}
+                accessibilityLabel={`Minimum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
+                value={editRepsMin}
+                onChangeText={setEditRepsMin}
+                keyboardType="number-pad"
+                maxLength={3}
+                placeholderTextColor={colors.textMuted}
+              />
+              <TextField
+                label="Reps max"
+                containerStyle={styles.editField}
+                fieldStyle={styles.editInputField}
+                inputStyle={styles.editInput}
+                accessibilityLabel={`Maximum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
+                value={editRepsMax}
+                onChangeText={setEditRepsMax}
+                keyboardType="number-pad"
+                maxLength={3}
+                placeholderTextColor={colors.textMuted}
+              />
             </View>
             <View style={styles.editRow}>
-              <View style={styles.editField}>
-                <Text style={styles.editLabel}>Rest (s)</Text>
-                <TextInput accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
-                  style={styles.editInput}
-                  value={editRest}
-                  onChangeText={setEditRest}
-                  keyboardType="number-pad"
-                  placeholder="90"
-                  maxLength={4}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.editField}>
-                <Text style={styles.editLabel}>Start weight</Text>
-                <TextInput accessibilityLabel={`Starting weight for ${editingExercise?.exercise?.name || 'exercise'}`}
-                  style={styles.editInput}
-                  value={editStartWeight}
-                  onChangeText={setEditStartWeight}
-                  keyboardType="decimal-pad"
-                  placeholder="kg"
-                  maxLength={6}
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
+              <TextField
+                label="Rest (s)"
+                containerStyle={styles.editField}
+                fieldStyle={styles.editInputField}
+                inputStyle={styles.editInput}
+                accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
+                value={editRest}
+                onChangeText={setEditRest}
+                keyboardType="number-pad"
+                placeholder="90"
+                maxLength={4}
+                placeholderTextColor={colors.textMuted}
+              />
+              <TextField
+                label="Start weight"
+                containerStyle={styles.editField}
+                fieldStyle={styles.editInputField}
+                inputStyle={styles.editInput}
+                accessibilityLabel={`Starting weight for ${editingExercise?.exercise?.name || 'exercise'}`}
+                value={editStartWeight}
+                onChangeText={setEditStartWeight}
+                keyboardType="decimal-pad"
+                placeholder="kg"
+                maxLength={6}
+                placeholderTextColor={colors.textMuted}
+              />
             </View>
-            <TouchableOpacity style={styles.editSaveBtn} onPress={saveEdit} accessibilityRole="button" accessibilityLabel="Save exercise targets">
-              <Text style={styles.editSaveBtnText}>Save</Text>
-            </TouchableOpacity>
+            <Button
+              title="Save"
+              style={styles.editSaveBtn}
+              textStyle={styles.editSaveBtnText}
+              onPress={saveEdit}
+              accessibilityLabel="Save exercise targets"
+            />
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -751,25 +761,18 @@ const styles = StyleSheet.create({
   },
   editTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   editRow: { flexDirection: 'row', gap: spacing.md },
-  editField: { flex: 1, gap: spacing.xs },
-  editLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5 },
+  editField: { flex: 1 },
+  editInputField: { borderRadius: radius.md },
   editInput: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
     textAlign: 'center',
   },
   editSaveBtn: {
-    backgroundColor: colors.primary,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
-    alignItems: 'center',
     marginTop: spacing.xs,
   },
   editSaveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
