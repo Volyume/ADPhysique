@@ -269,6 +269,7 @@ Status: release decision.
 - Active Workout field migration was explicitly trialled and deferred: the note, cluster mini-set and plate-calculator inputs remain lightweight native controls because the 100-tap live-workout stress guard exceeded its 15s budget during the shared-field attempt. Treat Active Workout and `SetEntry` as performance-critical exceptions until a dedicated lightweight logging-field primitive is designed and benchmarked.
 - Active Workout was hardened instead: hidden modal bodies now unmount while closed, `SetEntry` is memoized behind a stable current-set handler, and the 20-seed / 2,000-tap fuzz guard is split into four 5-seed tests so the same coverage stays under the suite's 15s per-test budget without increasing the timeout.
 - Body Metrics now uses the shared `SectionLabel` primitive for weight, body-fat, measurements, history and recomposition headings, preserving metric logging/trend behavior while removing another local section-title grammar from a sensitive Progress surface.
+- Exercise Detail now uses shared `SectionLabel` headings for history, all-time bests, similar exercises and technique notes, preserving chart/history/substitution behavior while tightening Train detail typography.
 
 ### Web / CI / Security
 
