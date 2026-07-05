@@ -18,6 +18,7 @@ import { create, act } from 'react-test-renderer';
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../../components/BackHeader', () => () => null);
@@ -78,7 +79,7 @@ import {
 } from '../../lib/database';
 import ManualBuilderScreen from '../ManualBuilderScreen';
 
-const store = { user: { id: 'user-1' } };
+const store = { user: { id: 'user-1' }, accessibility: { reduceMotion: true } };
 const nav = { navigate: jest.fn(), goBack: jest.fn() };
 
 // All distinct pressables carrying an accessibilityLabel + onPress.
@@ -349,9 +350,13 @@ describe('ManualBuilderScreen — Save & Activate uses the current name (PLAN-00
     expect(tree.root.findAll(
       n => n.props && n.props.children === 'Renamed Plan',
     ).length).toBeGreaterThan(0);
+    expect(tree.root.findByProps({ accessibilityLabel: 'Plan activated' })).toBeTruthy();
     expect(tree.root.findAll(
       n => n.props && n.props.children === 'Original Name',
     ).length).toBe(0);
+
+    press(tree, 'Go to Train');
+    expect(nav.navigate).toHaveBeenCalledWith('HomeTab');
   });
 
   test('leaving the name untouched keeps prior behaviour unchanged', async () => {
