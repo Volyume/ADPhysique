@@ -24,17 +24,18 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
 import Button from '../components/Button';
+import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
 import { useToast } from '../components/Toast';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { skuFor } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -130,7 +131,6 @@ export default function CascadeGateScreen({ navigation, route }) {
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
-  const PRICE_LOADING = '…';
 
   const dismiss = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
@@ -255,31 +255,14 @@ export default function CascadeGateScreen({ navigation, route }) {
             decision and the strip is dropped from this surface. */}
 
         {content.primaryTarget === 'pro' ? (
-          <View style={styles.periodRow}>
-            <TouchableOpacity
-              style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
-              onPress={() => setPeriod('monthly')}
-              disabled={busy !== null}
-              accessibilityRole="button"
-              accessibilityState={{ selected: period === 'monthly' }}
-              accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
-            >
-              <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
-              onPress={() => setPeriod('annual')}
-              disabled={busy !== null}
-              accessibilityRole="button"
-              accessibilityState={{ selected: period === 'annual' }}
-              accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
-            >
-              <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
-              <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
-            </TouchableOpacity>
-          </View>
+          <BillingPeriodSelector
+            value={period}
+            onChange={setPeriod}
+            monthlyPrice={monthlyPrice}
+            annualPrice={annualPrice}
+            disabled={busy !== null}
+            style={styles.periodSelector}
+          />
         ) : null}
 
         <View style={styles.ctaStack}>
@@ -347,22 +330,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.xl,
   },
-  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
-  periodBtn: {
-    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
-    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
-    alignItems: 'center', gap: 2,
-  },
-  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  periodTextActive: { color: colors.primary },
-  saveBadge: {
-    position: 'absolute', top: -9, alignSelf: 'center',
-    backgroundColor: colors.primary, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 1,
-  },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
+  periodSelector: { marginBottom: spacing.xl },
   ctaStack: {
     gap: spacing.md,
   },

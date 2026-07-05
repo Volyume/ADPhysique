@@ -284,6 +284,7 @@ Status: release decision.
 - Exercise Detail now separates initial loading from a failed exercise read: skeletons still render while loading, but missing/failed exercise details show a retryable error card instead of an indefinite skeleton/null state.
 - Workout History now distinguishes failed history reads from a genuinely empty training log, logging the failure and showing a retryable error state instead of the new-user empty illustration.
 - My Recipes now distinguishes failed recipe reads from a genuinely empty recipe list, logs the failure, gives the user a retry action, and uses the shared `Button` primitive for both retry and the empty-state build CTA.
+- Paywall, Cascade Gate and Pro Upgrade now share `BillingPeriodSelector` for monthly/annual choice rendering, price loading placeholders, save-badge copy, selected/disabled accessibility state and localised store-price display, removing three duplicated billing-period style blocks from sensitive purchase surfaces.
 
 ### Web / CI / Security
 

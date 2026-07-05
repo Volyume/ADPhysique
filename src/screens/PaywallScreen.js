@@ -27,10 +27,11 @@ import ModalHeader from '../components/ModalHeader';
 import { LINKS } from '../lib/links';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import Button from '../components/Button';
+import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { restorePurchases } from '../lib/payments/restore';
-import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { skuFor } from '../lib/payments/catalogue';
 import { pickPaywallExcerpt } from './paywallExcerpts';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { track as trackEvent } from '../lib/engineTelemetry';
@@ -169,7 +170,6 @@ export default function PaywallScreen({ navigation, route }) {
   const priceText = priceFor('pro', period);
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
-  const PRICE_LOADING = '…';
   const renewCadence = period === 'annual' ? 'yearly' : 'monthly';
   // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
   // 14 cardless days run inside the app BEFORE a purchase surface, then the
@@ -228,29 +228,13 @@ export default function PaywallScreen({ navigation, route }) {
         </View>
 
         {/* COMP-007: annual first (left) + preselected, monthly visible second. */}
-        <View style={styles.periodRow}>
-          <TouchableOpacity
-            style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
-            onPress={() => setPeriod('annual')}
-            accessibilityRole="button"
-            accessibilityState={{ selected: period === 'annual' }}
-            accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
-          >
-            <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
-            <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
-            onPress={() => setPeriod('monthly')}
-            accessibilityRole="button"
-            accessibilityState={{ selected: period === 'monthly' }}
-            accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
-          >
-            <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
-          </TouchableOpacity>
-        </View>
+        <BillingPeriodSelector
+          value={period}
+          onChange={setPeriod}
+          monthlyPrice={monthlyPrice}
+          annualPrice={annualPrice}
+          style={styles.periodSelector}
+        />
 
         <View style={styles.ctaStack}>
           <Button title={ctaLabel} size="lg" loading={busy} onPress={handlePay} />
@@ -321,22 +305,7 @@ const styles = StyleSheet.create({
   reviewStars: { flexDirection: 'row', gap: 2 },
   reviewQuote: { ...type.bodySm, color: colors.textPrimary, fontStyle: 'italic' },
   reviewMeta: { color: colors.textMuted, fontSize: fontSize.xs },
-  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
-  periodBtn: {
-    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
-    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
-    alignItems: 'center', gap: 2,
-  },
-  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  periodTextActive: { color: colors.primary },
-  saveBadge: {
-    position: 'absolute', top: -9, alignSelf: 'center',
-    backgroundColor: colors.primary, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 1,
-  },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
+  periodSelector: { marginBottom: spacing.xl },
   ctaStack: { gap: spacing.md },
   terms: {
     ...type.captionTight,

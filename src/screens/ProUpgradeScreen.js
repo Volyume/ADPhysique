@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
+import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
@@ -15,7 +16,7 @@ import { syncAll, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { skuFor } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 const PRO_PERKS = [
@@ -77,7 +78,6 @@ export default function ProUpgradeScreen({ navigation, route }) {
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
-  const PRICE_LOADING = '…';
 
   // OAuth only (Apple/Google). The email + password upgrade path was removed
   // (founder 2026-07-01); email confirmation was flaky. handleOAuth polls for
@@ -406,32 +406,14 @@ export default function ProUpgradeScreen({ navigation, route }) {
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (
-                <View style={styles.periodRow}>
-                  {/* COMP-007: annual first (left) + preselected; monthly visible second. */}
-                  <TouchableOpacity
-                    style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
-                    onPress={() => setPeriod('annual')}
-                    disabled={busy}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: period === 'annual' }}
-                    accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
-                  >
-                    <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
-                    <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
-                    onPress={() => setPeriod('monthly')}
-                    disabled={busy}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: period === 'monthly' }}
-                    accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
-                  >
-                    <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
-                  </TouchableOpacity>
-                </View>
+                <BillingPeriodSelector
+                  value={period}
+                  onChange={setPeriod}
+                  monthlyPrice={monthlyPrice}
+                  annualPrice={annualPrice}
+                  disabled={busy}
+                  style={styles.periodSelector}
+                />
               ) : null}
               <Button
                 title={PRO_BETA_ACTIVE
@@ -563,22 +545,7 @@ const styles = StyleSheet.create({
   accountNote: {
     ...type.bodySm, color: colors.textMuted, marginBottom: spacing.lg,
   },
-  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
-  periodBtn: {
-    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
-    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
-    alignItems: 'center', gap: 2,
-  },
-  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  periodTextActive: { color: colors.primary },
-  saveBadge: {
-    position: 'absolute', top: -9, alignSelf: 'center',
-    backgroundColor: colors.primary, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 1,
-  },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
+  periodSelector: { marginBottom: spacing.lg },
 
   section: { marginBottom: spacing.lg },
   fieldLabel: {
