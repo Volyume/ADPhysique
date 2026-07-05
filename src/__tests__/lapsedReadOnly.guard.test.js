@@ -113,8 +113,9 @@ describe('E10 read-only lapse views: gating posture', () => {
 
   test('unconfirmed planned scaffolding neither grants the view nor renders in it (E10 #4)', () => {
     expect(read('src/lib/food/db.js')).toMatch(/AND is_planned = 0 LIMIT 1/);
-    expect(read('src/screens/DiaryScreen.js'))
-      .toMatch(/readOnly \? entries\.filter\(\(e\) => !e\.is_planned\) : entries/);
+    expect(read('src/screens/DiaryScreen.js')).toMatch(/deriveDiaryDayViewModel\(entries, \{ readOnly \}\)/);
+    expect(read('src/lib/food/diaryViewModel.js'))
+      .toMatch(/readOnly \? sourceEntries\.filter\(\(e\) => !e\.is_planned\) : sourceEntries/);
   });
 
   test('BodyMetrics mount writes (auto-seed AND legacy migration) are gated off in read-only (E10 #3)', () => {

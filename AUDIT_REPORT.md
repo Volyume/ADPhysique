@@ -294,6 +294,7 @@ Status: release decision.
 - Athlete Profile now uses the shared `EmptyState` component for the strength-baseline no-data state, preserving the athlete-profile copy while removing another local empty-card style block.
 - Coach Output passive display copy now has a pure `coachOutput/viewCopy` helper and shared `CoachOutputCards` presentation module for date labels, confidence captions, stat chips, ledger, why copy and rapid-loss warning UI. Apply actions, ED/calm safety, load effects and deterministic coach policy remain in `CoachOutputScreen`.
 - Active Workout set-entry value parsing and validation now live in `workoutHelpers`, with SetEntry sharing the same duration parser/formatter and log/edit paths sharing the same reps/time/weight validation and normalized weight/reps output. Persistence, PR detection, rest timers and superset flow remain untouched.
+- Diary planned/read-only view derivation now lives in a pure `diaryViewModel` helper: read-only filters planned scaffolding, Pro mode keeps it, planned meal count is slot-based, and planned macro totals stay separate from eaten rollups. The async day loader, race guard and write handlers remain in `DiaryScreen`.
 
 ### Web / CI / Security
 
