@@ -48,7 +48,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 927 files checked, no unresolved imports or missing named exports.
+  - 928 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -306,6 +306,7 @@ Status: release decision.
 - `Card` now forwards accessibility hints/state/test IDs through both static and pressable surfaces, and Athlete Profile rows use a shared accessibility helper so freshness status, guidance copy and Pro markings are available to assistive technology without changing row labels or navigation behaviour.
 - `SectionLabel` now owns a title-scale variant, and Nutrition Targets uses it for its form-section headings so the screen keeps its intended hierarchy while heading typography is governed by the shared design primitive.
 - Live camera close controls in Barcode Scan and Label Scan now expose the same `Close` accessibility label as their fallback states, keeping the primary camera escape route screen-reader reliable.
+- The shared Exercise Picker modal now labels icon-only back/close controls, custom-exercise save/create actions and selectable exercise rows, protecting the workout-building and active-workout picker flows from unlabeled button regressions.
 
 ### Web / CI / Security
 
