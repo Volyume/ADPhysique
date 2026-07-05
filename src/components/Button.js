@@ -82,6 +82,7 @@ export default function Button({
   style,
   textStyle,
   accessibilityLabel,
+  accessibilityState,
   testID,
   children,
 }) {
@@ -91,6 +92,11 @@ export default function Button({
   // caller working unchanged.
   const phase = STATES.includes(state) ? state : (loading ? 'loading' : 'idle');
   const isDisabled = disabled || phase !== 'idle';
+  const mergedAccessibilityState = {
+    ...(accessibilityState || {}),
+    disabled: isDisabled,
+    busy: phase === 'loading',
+  };
 
   const reduceMotion = useAppStore(st => st.accessibility?.reduceMotion);
 
@@ -189,7 +195,7 @@ export default function Button({
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
-      accessibilityState={{ disabled: isDisabled, busy: phase === 'loading' }}
+      accessibilityState={mergedAccessibilityState}
       testID={testID}
       style={[
         styles.base,

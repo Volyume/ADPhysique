@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -35,6 +35,8 @@ import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSi
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import {
   TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
   pickInitialWindowKey, weightTakeaway,
@@ -987,16 +989,16 @@ export default function BodyMetricsScreen() {
         {/* Log Button. E10 read-only: logging is a write; the button and the
             form below never render in the view-only state. */}
         {!readOnly && (
-          <TouchableOpacity
+          <Button
+            title={showForm ? 'Cancel' : 'Log Weight'}
+            icon={showForm ? 'chevron-up' : 'add-circle'}
             style={styles.logBtn}
             onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
-            accessibilityRole="button"
             accessibilityState={{ expanded: showForm }}
             accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
-          >
-            <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.onPrimary} />
-            <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
-          </TouchableOpacity>
+            size="lg"
+            textStyle={styles.logBtnText}
+          />
         )}
 
         {/* Log Form */}
@@ -1005,8 +1007,10 @@ export default function BodyMetricsScreen() {
             <Text style={styles.formTitle}>New Entry</Text>
             <View style={styles.formRow}>
               <Text style={styles.formLabel}>Date</Text>
-              <TextInput
-                style={styles.formInput}
+              <TextField
+                containerStyle={styles.formFieldContainer}
+                fieldStyle={styles.formField}
+                inputStyle={styles.formInputText}
                 value={form.metric_date}
                 onChangeText={v => setForm(f => ({ ...f, metric_date: v }))}
                 placeholder="YYYY-MM-DD"
@@ -1018,8 +1022,10 @@ export default function BodyMetricsScreen() {
               <View style={styles.formRow}>
                 <Text style={styles.formLabel}>Body weight</Text>
                 <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
-                  <TextInput
-                    style={[styles.formInput, { flex: 1 }]}
+                  <TextField
+                    containerStyle={styles.formSplitFieldContainer}
+                    fieldStyle={styles.formField}
+                    inputStyle={styles.formInputText}
                     value={form.body_weight_st}
                     onChangeText={v => setForm(f => ({ ...f, body_weight_st: v }))}
                     keyboardType="number-pad"
@@ -1028,8 +1034,10 @@ export default function BodyMetricsScreen() {
                     maxLength={3}
                     accessibilityLabel="Body weight, stone"
                   />
-                  <TextInput
-                    style={[styles.formInput, { flex: 1 }]}
+                  <TextField
+                    containerStyle={styles.formSplitFieldContainer}
+                    fieldStyle={styles.formField}
+                    inputStyle={styles.formInputText}
                     value={form.body_weight_st_lbs}
                     onChangeText={v => setForm(f => ({ ...f, body_weight_st_lbs: v }))}
                     keyboardType="decimal-pad"
@@ -1043,8 +1051,10 @@ export default function BodyMetricsScreen() {
             ) : (
               <View style={styles.formRow}>
                 <Text style={styles.formLabel}>Body weight ({bwu})</Text>
-                <TextInput
-                  style={styles.formInput}
+                <TextField
+                  containerStyle={styles.formFieldContainer}
+                  fieldStyle={styles.formField}
+                  inputStyle={styles.formInputText}
                   value={form.body_weight}
                   onChangeText={v => setForm(f => ({ ...f, body_weight: v }))}
                   keyboardType="decimal-pad"
@@ -1057,8 +1067,10 @@ export default function BodyMetricsScreen() {
 
             <View style={styles.formRow}>
               <Text style={styles.formLabel}>Body fat (%)</Text>
-              <TextInput
-                style={styles.formInput}
+              <TextField
+                containerStyle={styles.formFieldContainer}
+                fieldStyle={styles.formField}
+                inputStyle={styles.formInputText}
                 value={form.body_fat}
                 onChangeText={v => setForm(f => ({ ...f, body_fat: v }))}
                 keyboardType="decimal-pad"
@@ -1090,8 +1102,10 @@ export default function BodyMetricsScreen() {
             {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
                 <Text style={styles.formLabel}>{m.label} (cm)</Text>
-                <TextInput
-                  style={styles.formInput}
+                <TextField
+                  containerStyle={styles.formFieldContainer}
+                  fieldStyle={styles.formField}
+                  inputStyle={styles.formInputText}
                   value={form[m.key]}
                   onChangeText={v => setForm(f => ({ ...f, [m.key]: v }))}
                   keyboardType="decimal-pad"
@@ -1102,8 +1116,10 @@ export default function BodyMetricsScreen() {
               </View>
             ))}
 
-            <TextInput
-              style={[styles.formInput, styles.notesInput]}
+            <TextField
+              containerStyle={styles.notesInputContainer}
+              fieldStyle={styles.notesField}
+              inputStyle={styles.notesInputText}
               value={form.notes}
               onChangeText={v => setForm(f => ({ ...f, notes: v }))}
               placeholder="Notes (optional)"
@@ -1111,16 +1127,15 @@ export default function BodyMetricsScreen() {
               multiline
               accessibilityLabel="Notes"
             />
-            <TouchableOpacity
-              style={[styles.saveBtn, saving && styles.btnDisabled]}
+            <Button
+              title="Save Entry"
               onPress={saveMetrics}
               disabled={saving}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: saving }}
+              loading={saving}
+              style={styles.saveBtn}
+              textStyle={styles.saveBtnText}
               accessibilityLabel="Save entry"
-            >
-              <Text style={styles.saveBtnText}>Save Entry</Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
 
@@ -1396,8 +1411,7 @@ const styles = StyleSheet.create({
   measureTabTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   logBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   logBtnText: { ...type.title, color: colors.onPrimary },
   formCard: {
@@ -1407,12 +1421,26 @@ const styles = StyleSheet.create({
   formTitle: { ...type.title, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   formLabel: { width: 140, fontSize: fontSize.sm, color: colors.textSecondary },
-  formInput: {
-    flex: 1, backgroundColor: colors.surface2, borderRadius: radius.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    ...type.body, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+  formFieldContainer: { flex: 1 },
+  formSplitFieldContainer: { flex: 1 },
+  formField: {
+    borderRadius: radius.sm,
+    minHeight: 44,
   },
-  notesInput: { flex: undefined, minHeight: 60 },
+  formInputText: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  notesInputContainer: { gap: 0 },
+  notesField: {
+    minHeight: 80,
+  },
+  notesInputText: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
   measureToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,
@@ -1420,10 +1448,8 @@ const styles = StyleSheet.create({
   },
   measureToggleText: { fontSize: fontSize.sm, color: colors.textMuted },
   saveBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
-    alignItems: 'center', marginTop: spacing.sm,
+    marginTop: spacing.sm,
   },
-  btnDisabled: { opacity: 0.6 },
   saveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   section: { gap: spacing.sm },
   historyRow: {
