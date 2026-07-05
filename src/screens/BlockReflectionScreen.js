@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -124,11 +125,12 @@ export default function BlockReflectionScreen({ navigation, route }) {
         )}
 
         {!loading && !data && (
-          <View style={styles.emptyCard}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No data found</Text>
-            <Text style={styles.emptyBody}>This block doesn't have any logged sessions yet.</Text>
-          </View>
+          <EmptyState
+            icon="calendar-outline"
+            title="No data found"
+            text="This block doesn't have any logged sessions yet."
+            compact
+          />
         )}
 
         {data && (
@@ -237,15 +239,6 @@ const styles = StyleSheet.create({
 
 
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
-
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-    padding: spacing.xl, alignItems: 'center', gap: spacing.md,
-  },
-  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  emptyBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-
   blockTitle: { gap: spacing.xs },
   blockName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   blockDates: { fontSize: fontSize.sm, color: colors.textMuted },

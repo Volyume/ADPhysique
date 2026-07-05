@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
+import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getCoachOutputHistory, getOpenEdPatternFlag } from '../lib/database';
@@ -178,13 +179,12 @@ export default function CoachHeldHistoryScreen() {
         )}
 
         {isEmpty && (
-          <View style={styles.emptyCard}>
-            <Ionicons name="book-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No entries yet</Text>
-            <Text style={styles.emptyBody}>
-              After your first weekly check-in, decisions and holds will appear here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="book-outline"
+            title="No entries yet"
+            text="After your first weekly check-in, decisions and holds will appear here."
+            compact
+          />
         )}
 
         {weeks.map((week, wi) => {
@@ -264,25 +264,6 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
-  },
-
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  emptyTitle: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-  },
-  emptyBody: {
-    ...type.bodySm,
-    color: colors.textSecondary,
-    textAlign: 'center',
   },
 
   weekBlock: {
