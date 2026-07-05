@@ -11,6 +11,7 @@ import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
+import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import {
   PHYSIQUE_GOALS,
@@ -213,7 +214,7 @@ export default function PlanUpdateScreen({ navigation }) {
         </Text>
 
         {/* ── Physique category (optional) ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Competing in a category? (optional)</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
         <Text style={styles.sectionSub}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
@@ -228,9 +229,9 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Weak points (only for goals that support them) ── */}
         {weakPointsApplicable && (
           <>
-            <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+            <SectionLabel style={styles.sectionLabelSpaced}>
               Weak points <Text style={styles.optionalTag}>(optional, max 3)</Text>
-            </Text>
+            </SectionLabel>
             <Text style={styles.sectionSub}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
@@ -248,7 +249,7 @@ export default function PlanUpdateScreen({ navigation }) {
         )}
 
         {/* ── Training experience ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Experience</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
         <Text style={styles.sectionSub}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
@@ -260,7 +261,7 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         {/* ── Training schedule ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training days per week</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
         <Text style={styles.sectionSub}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
@@ -271,7 +272,7 @@ export default function PlanUpdateScreen({ navigation }) {
           accessibilityLabel="Training days per week"
         />
 
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Session length</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Session length</SectionLabel>
         <SegmentedControl
           options={SESSION_LENGTH_OPTIONS}
           value={sessionLengthMinutes}
@@ -280,7 +281,7 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         {/* ── Equipment ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Equipment</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
         <Text style={styles.sectionSub}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
@@ -292,7 +293,7 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         {/* ── Recovery ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Recovery</Text>
+        <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={styles.sectionSub}>
           How well you're recovering between sessions. This sets how hard the coach pushes your progress.
         </Text>
@@ -406,11 +407,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
-  sectionLabel: {
-    ...type.label,
-    color: colors.textSecondary, marginBottom: spacing.xs,
-  },
-  sectionLabelSpaced: { marginTop: spacing.xxl },
+  sectionLabelSpaced: { marginTop: spacing.xxl, marginBottom: spacing.xs },
   sectionSub: {
     ...type.captionTight, color: colors.textMuted,
     marginBottom: spacing.md,
