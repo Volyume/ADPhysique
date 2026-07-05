@@ -7,7 +7,7 @@
 // relaunch, mirroring the existing JSON restore). Same plain destructive tone as
 // handleRestoreBackup: it replaces all current data and cannot be undone.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
@@ -25,11 +25,21 @@ function formatSize(bytes) {
 
 export default function SnapshotsScreen() {
   const [snapshots, setSnapshots] = useState(null); // null = loading
+  const loadRequestRef = useRef(0);
 
   const load = useCallback(() => {
-    listSnapshots().then(setSnapshots).catch(() => setSnapshots([]));
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+
+    listSnapshots()
+      .then((items) => {
+        if (isCurrentRequest()) setSnapshots(items);
+      })
+      .catch(() => {
+        if (isCurrentRequest()) setSnapshots([]);
+      });
   }, []);
-  useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function handleRestore(snap) {

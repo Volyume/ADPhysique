@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 505 suites passed.
-  - 6,446 tests passed, 5 skipped.
+  - 506 suites passed.
+  - 6,449 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 941 files checked, no unresolved imports or missing named exports.
+  - 942 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -330,6 +330,7 @@ Status: release decision.
 - Coach Held History now fails closed when no user is present or history loading fails, suppressing outcome scorecard/chips and clearing history state instead of merely stopping the loading indicator.
 - Partner loading now uses a latest-request guard across local partnership reads, active-count checks, preserved-invite redemption and pair enrichment, with a regression proving older reads cannot overwrite a newer partner state.
 - Coach Review now guards weekly review loads with a latest-request token, so a late failure from an older user/retry load cannot replace a newer successful deterministic review with the retry error state.
+- Snapshot restore loading now uses a focus-driven latest-request guard, removing the duplicate mount load and preventing an older device-snapshot read from overwriting a newer focused result.
 
 ### Web / CI / Security
 
