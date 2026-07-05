@@ -48,7 +48,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 931 files checked, no unresolved imports or missing named exports.
+  - 933 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -311,6 +311,7 @@ Status: release decision.
 - Cardio History date labels, 7-day trend windows, empty-week trimming and spoken trend labels now live in `cardio/cardioHistoryView`, leaving the screen focused on loading, deletion and rendering.
 - Plan Library now uses the shared `EmptyState` primitive for both retryable load failures and genuine no-results states, preserving copy and retry behaviour while removing local empty-card typography.
 - Coach Review read failures now use the shared retryable `EmptyState` treatment while preserving the deterministic coach safety copy that tells users their sessions are safe and this is not a lost week.
+- Plan Folder SQL now lives behind a focused `planFoldersRepository`, with direct tests for creation ordering, sync scheduling, transaction-backed folder deletion/unfiling and cloud tombstone timestamp handling while keeping the public `database.js` API unchanged.
 
 ### Web / CI / Security
 
