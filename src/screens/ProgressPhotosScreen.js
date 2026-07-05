@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
 } from 'react-native';
@@ -168,8 +168,12 @@ export default function ProgressPhotosScreen({ navigation }) {
   // The ghost-overlay reference the viewer's "set as reference" remembers; the
   // next guided capture seeds against it.
   const [referenceName, setReferenceName] = useState(null);
+  const refreshRequestRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = refreshRequestRef.current + 1;
+    refreshRequestRef.current = requestId;
+    const isCurrentRefresh = () => refreshRequestRef.current === requestId;
     setLoading(true);
     try {
       // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
@@ -181,23 +185,25 @@ export default function ProgressPhotosScreen({ navigation }) {
         AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
         getProgressScanHideExactPreference(),
       ]);
+      // Load the per-photo metadata (taken_at, pose) for the dated, pose-typed
+      // timeline. Missing rows resolve to filename-derived defaults, so this
+      // never requires a row to exist.
+      let map = null;
+      try {
+        map = await getPhotoMetaMap(rows.map((r) => r.name), userId);
+      } catch (e) {
+        if (isCurrentRefresh()) logError('ProgressPhotos.loadMeta', e, { count: rows.length });
+      }
+      if (!isCurrentRefresh()) return;
       setPhotos(rows);
       setScans(scanRows || []);
       setCalm(isCalm(mode) || mode === 'read_failed');
       setHideExactScans(!!hideExact);
-      // Load the per-photo metadata (taken_at, pose) for the dated, pose-typed
-      // timeline. Missing rows resolve to filename-derived defaults, so this
-      // never requires a row to exist.
-      try {
-        const map = await getPhotoMetaMap(rows.map((r) => r.name), userId);
-        setMetaMap(map);
-      } catch (e) {
-        logError('ProgressPhotos.loadMeta', e, { count: rows.length });
-      }
+      if (map) setMetaMap(map);
       // A dangling reference must never point at a photo that no longer exists.
       setReferenceName((prev) => (prev && rows.some((r) => r.name === prev) ? prev : null));
     } catch (_) { /* tolerate */ }
-    finally { setLoading(false); }
+    finally { if (isCurrentRefresh()) setLoading(false); }
   }, [userId]);
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
