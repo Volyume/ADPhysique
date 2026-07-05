@@ -34,7 +34,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
     expect(SCREEN).toMatch(/ProgressScanCompare/);
-    expect(SCREEN).toMatch(/Compare scans/);
+    expect(SCREEN).toMatch(/Compare two Physique Scan entries/);
     expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
     expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
