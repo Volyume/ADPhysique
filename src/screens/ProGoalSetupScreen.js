@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import {
   PHYSIQUE_GOALS,
@@ -442,8 +443,10 @@ export default function ProGoalSetupScreen({ navigation }) {
             <Text style={styles.sectionSub}>
               Adds a quiet weeks-out line and a prep checklist to your weekly coaching. You can clear it any time.
             </Text>
-            <TextInput
-              style={styles.showDateInput}
+            <TextField
+              fieldStyle={styles.showDateField}
+              inputStyle={styles.showDateInput}
+              surface="surface"
               value={showDateInput}
               onChangeText={setShowDateInput}
               placeholder="YYYY-MM-DD"
@@ -622,11 +625,11 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.textMuted,
   },
+  showDateField: { borderRadius: radius.md },
   showDateInput: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.border,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
-    fontSize: fontSize.md, color: colors.textPrimary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    fontSize: fontSize.md,
   },
   weakPointGrid: {
     flexDirection: 'row',
