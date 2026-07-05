@@ -20,6 +20,11 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true }),
 }));
 jest.mock('../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
+jest.mock('../../lib/haptics', () => ({
+  selection: jest.fn(),
+  commit: jest.fn(),
+  error: jest.fn(),
+}));
 jest.mock('../../lib/payments/restore', () => ({ restorePurchases: jest.fn() }));
 jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
 // ProLocked renders the example-day teaser for the 'Food diary' label; its

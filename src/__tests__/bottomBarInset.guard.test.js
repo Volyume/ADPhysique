@@ -36,16 +36,17 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
 
   // Bottom-anchored Modals overlay the tab band and touch the physical
   // screen edge, so each absorbs the inset itself. Pins the edge-to-edge
-  // sweep (2026-07-03) on the shared chrome and the hand-rolled sheets.
+  // sweep (2026-07-03): hand-rolled sheets own the inset expression directly;
+  // migrated sheets must use the shared BottomSheet chrome, which owns it.
   test('bottom-anchored modal sheets absorb the system inset', () => {
     for (const rel of [
       'components/BottomSheet.js',
       'components/FeedbackSheet.js',
       'components/PeekMenu.js',
-      'components/ProGate.js',
       'screens/FoodSearchScreen.js',
     ]) {
       expect(read(rel)).toMatch(/insets\.bottom \+ spacing\.(lg|sm)/);
     }
+    expect(read('components/ProGate.js')).toMatch(/<BottomSheet/);
   });
 });
