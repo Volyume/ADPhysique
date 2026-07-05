@@ -98,10 +98,22 @@ beforeEach(() => {
 test('renders the camera preview and the ghost overlay when a reference is given', async () => {
   const tree = await render({ referencePhoto: REF, pose: 'front' });
   const json = JSON.stringify(tree.toJSON());
-  // Neutral framing copy, no cadence.
-  expect(json).toContain('Line up your last photo');
+  // Pose-specific studio guidance, no cadence.
+  expect(json).toContain('Front relaxed');
+  expect(json).toContain('Full body visible');
+  expect(json).toContain('Match your previous setup');
   // The ghost overlay image carries the reference uri.
   expect(json).toContain('file:///photos/ref.jpg');
+});
+
+test('renders side and back pose guidance for scan captures', async () => {
+  const side = await render({ pose: 'side' });
+  expect(JSON.stringify(side.toJSON())).toContain('Side relaxed');
+  expect(JSON.stringify(side.toJSON())).toContain('Torso not blocked');
+
+  const back = await render({ pose: 'back' });
+  expect(JSON.stringify(back.toJSON())).toContain('Back relaxed');
+  expect(JSON.stringify(back.toJSON())).toContain('Shoulders level');
 });
 
 test('exposes an adjustable opacity control for the overlay', async () => {

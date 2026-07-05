@@ -87,6 +87,30 @@ const OPACITY_MAX = 0.85;
 const OPACITY_DEFAULT = 0.3;
 const OPACITY_STEP = 0.05;
 
+const POSE_GUIDANCE = {
+  front: {
+    title: 'Front relaxed',
+    line: 'Stand tall, feet planted, arms relaxed by your sides.',
+    checks: ['Full body visible', 'Even light from the front', 'No mirror selfie'],
+  },
+  side: {
+    title: 'Side relaxed',
+    line: 'Turn to your set side and keep your waistline visible.',
+    checks: ['Torso not blocked', 'Same camera height', 'Head-to-foot frame'],
+  },
+  back: {
+    title: 'Back relaxed',
+    line: 'Face away from the camera, stand tall, and keep the full frame visible.',
+    checks: ['Shoulders level', 'Feet in frame', 'Lighting unchanged'],
+  },
+};
+
+const DEFAULT_GUIDANCE = {
+  title: 'Studio setup',
+  line: 'Use the same room, lighting, distance and camera height each time.',
+  checks: ['Full body visible', 'Plain background', 'Repeatable setup'],
+};
+
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;
   return Math.min(OPACITY_MAX, Math.max(OPACITY_MIN, v));
@@ -336,6 +360,7 @@ export default function ProgressGhostCapture({
   }
 
   const hasReference = !!referencePhoto?.uri;
+  const guidance = POSE_GUIDANCE[pose] || DEFAULT_GUIDANCE;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -397,12 +422,10 @@ export default function ProgressGhostCapture({
       <View style={styles.topBar} pointerEvents="box-none">
         <View style={styles.topCopy} pointerEvents="none">
           <Text style={styles.title}>
-            {title || (hasReference ? 'Line up your last photo' : 'Take your progress photo')}
+            {title || guidance.title}
           </Text>
           <Text style={styles.subtitle}>
-            {subtitle || (hasReference
-              ? 'Match the angle and distance from last time. Your own pace.'
-              : 'Frame it however suits you. Your own pace.')}
+            {subtitle || guidance.line}
           </Text>
         </View>
         <Pressable
@@ -414,6 +437,18 @@ export default function ProgressGhostCapture({
         >
           <Ionicons name="close" size={iconSize.lg} color={colors.textPrimary} />
         </Pressable>
+      </View>
+
+      <View style={styles.guidanceCard} pointerEvents="none">
+        <Text style={styles.guidanceTitle}>
+          {hasReference ? 'Match your previous setup' : 'Capture guidance'}
+        </Text>
+        {guidance.checks.map((check) => (
+          <View key={check} style={styles.guidanceRow}>
+            <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
+            <Text style={styles.guidanceText}>{check}</Text>
+          </View>
+        ))}
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
@@ -566,6 +601,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.background, 0.5),
+  },
+  guidanceCard: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    top: 148,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: withAlpha(colors.background, 0.56),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.textPrimary, 0.18),
+    gap: spacing.xs,
+  },
+  guidanceTitle: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.82),
+    fontWeight: fontWeight.bold,
+  },
+  guidanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  guidanceText: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.9),
+    flex: 1,
   },
 
   // Bottom controls.
