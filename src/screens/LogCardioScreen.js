@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
@@ -239,7 +240,7 @@ export default function LogCardioScreen({ navigation, route }) {
 function Section({ title, children }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{title}</Text>
+      <SectionLabel style={styles.sectionLabel}>{title}</SectionLabel>
       {children}
     </View>
   );
@@ -271,8 +272,7 @@ const styles = StyleSheet.create({
   searchWrap: { marginBottom: spacing.sm },
   section: { marginTop: spacing.md },
   sectionLabel: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 1, marginBottom: spacing.xs, textTransform: 'uppercase',
+    marginBottom: spacing.xs,
   },
   activityRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

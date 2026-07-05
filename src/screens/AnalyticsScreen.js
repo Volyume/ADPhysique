@@ -10,6 +10,7 @@ import { format } from 'date-fns/format';
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 import RollingNumber from '../components/RollingNumber';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -600,7 +601,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* ── 2 · Insight Stack ─────────────────────────────── */}
         {insights.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>For you</Text>
+            <SectionLabel>For you</SectionLabel>
             {insights.map(ins => (
               <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
             ))}
@@ -656,7 +657,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         {recentSessions.length > 0 && (
           <View style={styles.section}>
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionLabel}>Recent sessions</Text>
+              <SectionLabel>Recent sessions</SectionLabel>
               <TouchableOpacity
                 onPress={() => navigation.navigate('WorkoutHistory')}
                 accessibilityRole="button"
@@ -675,7 +676,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         {hasData && (
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>This week's volume</Text>
+            <SectionLabel>This week's volume</SectionLabel>
             <InfoTooltip text={
               'Working sets per muscle this week, measured against your targets.\n\n' +
               'Tap to see every muscle on the heatmap.'
@@ -713,7 +714,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             until there is something logged. ── */}
         {hasData && completedWorkoutCount > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Lifetime totals</Text>
+            <SectionLabel>Lifetime totals</SectionLabel>
             <Card radius="md" padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
                 <Text style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
@@ -741,7 +742,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 
         {/* ── Quick nav tiles ────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Explore</Text>
+          <SectionLabel>Explore</SectionLabel>
           <View style={styles.navGrid}>
             <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
@@ -1099,10 +1100,6 @@ const styles = StyleSheet.create({
   // alongside the streak strip, matching milestoneRow's layout.
   weekStoryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs, marginTop: spacing.xs },
   weekStoryText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  sectionLabel: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeAll:      { ...type.label, color: colors.primary },
 

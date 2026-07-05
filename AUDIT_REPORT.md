@@ -120,7 +120,7 @@ Status: materially closed.
 - Native headers remain hidden for app screens.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
-- Shared section labels now use `SectionLabel` / `type.overline` across the first two bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary and Coaching Reminders.
+- Shared section labels now use `SectionLabel` / `type.overline` across the first three bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings and Log Cardio.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup and Add Custom Food manual/numeric fields migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and has replaced the duplicated search chrome in Lift Progress, Exercise Picker and Build Workout picker flows.
 - Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions and Pro Goal Setup rebuild now use the shared `Button` primitive.
@@ -285,7 +285,8 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
    - migrate remaining plain inputs to `TextField` in small screen-level slices, especially body metrics, weekly check-in and nutrition target forms;
    - continue `SearchBar` adoption where extra loading/trailing support is not needed, and extend the primitive before touching Food Search's spinner path;
    - remaining hand-rolled CTAs to `Button` in smaller low-risk surfaces, avoiding live workout/session flows until a dedicated pass;
-   - remaining hand-rolled sheets to `BottomSheet`, avoiding Active Workout and Progress Photos until a dedicated state-aware pass.
+   - remaining hand-rolled sheets to `BottomSheet`, avoiding Active Workout and Progress Photos until a dedicated state-aware pass;
+   - finish any remaining ad hoc section-label callers only where they are pure typography and not coupled to complex live-session/photo state.
 2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
 3. Finish state/dead-end surfaces: Partners error branch, Consistency/VolumeHeatmap loading-empty-error, FoodInsights loading, CardioHistory controls, and MyMeals edit/create clarity.
 4. Extract Progress Photos / Physique Scan orchestration into a controller module with tests.

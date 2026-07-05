@@ -33,6 +33,7 @@ import {
 } from '../lib/notifications/quietHours';
 import useAppStore from '../store/useAppStore';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -632,7 +633,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
 
         {/* Section 3, Training reminders (available to all tiers) */}
-        <Text style={styles.sectionLabel}>Training reminders</Text>
+        <SectionLabel style={styles.sectionLabel}>Training reminders</SectionLabel>
         <Card style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
@@ -678,7 +679,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         </Card>
 
         {/* S6: the early-activation nudge (tier-blind). Its own one-tap disable. */}
-        <Text style={styles.sectionLabel}>Getting started</Text>
+        <SectionLabel style={styles.sectionLabel}>Getting started</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleIconWrap}>
@@ -702,7 +703,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         </Card>
 
         {/* Meal-log reminders (opt-in, gap #4): convenience-only, never a streak. */}
-        <Text style={styles.sectionLabel}>Meal reminders</Text>
+        <SectionLabel style={styles.sectionLabel}>Meal reminders</SectionLabel>
         <Card style={styles.card}>
           {mealReminders.map((r, i) => (
             <View key={r.id}>
@@ -745,7 +746,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         </Card>
 
         {/* Quiet hours (E2.2): the window every reminder respects. */}
-        <Text style={styles.sectionLabel}>Quiet hours</Text>
+        <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleIconWrap}>
@@ -858,8 +859,6 @@ const styles = StyleSheet.create({
 
   // Section label
   sectionLabel: {
-    ...type.label,
-    color: colors.textSecondary,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
