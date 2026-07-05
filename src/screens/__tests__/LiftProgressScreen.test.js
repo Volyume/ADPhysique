@@ -34,6 +34,7 @@ jest.mock('../../components/Sparkline', () => () => null);
 // PeekMenu pulls in expo-haptics (native-only) and is never opened in this
 // suite (no long-press), so stub it out.
 jest.mock('../../components/PeekMenu', () => () => null);
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 // FlashList: captured, not rendered. The header (search box lives there) and
@@ -79,6 +80,16 @@ const SETS = [
   // squat: single session, trained later so it sorts first, 100kg x 5
   set({ exerciseId: 'squat', workoutId: 'w2', weight: 100, reps: 5, at: 2000 }),
 ];
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
@@ -150,6 +161,53 @@ describe('LiftProgressScreen — search (C1)', () => {
     act(() => { input.props.onChangeText(''); });
     // Unchanged sort: squat was trained later (at: 2000 vs 1000), still first.
     expect(capturedListProps.data.map(r => r.name)).toEqual(['Back Squat', 'Barbell Bench Press']);
+  });
+});
+
+describe('LiftProgressScreen load safety', () => {
+  test('shows a retryable read-error state instead of an empty lifts state', async () => {
+    getCompletedWorkoutSets.mockRejectedValueOnce(new Error('database unavailable'));
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    expect(capturedListProps.data).toEqual([]);
+    const emptyText = renderedText(capturedListProps.ListEmptyComponent);
+    expect(emptyText).toContain("Couldn't load lifts");
+    expect(emptyText).toContain('Your workout history is safe.');
+    expect(emptyText).toContain('Try again');
+  });
+
+  test('ignores a slower refresh result after a newer refresh has completed', async () => {
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const slowSets = deferred();
+    getCompletedWorkoutSets
+      .mockImplementationOnce(() => slowSets.promise)
+      .mockResolvedValueOnce([
+        set({ exerciseId: 'bench', workoutId: 'fresh', weight: 80, reps: 5, at: 4000 }),
+      ]);
+
+    let firstRefresh;
+    let secondRefresh;
+    await act(async () => {
+      firstRefresh = capturedListProps.refreshControl.props.onRefresh();
+      secondRefresh = capturedListProps.refreshControl.props.onRefresh();
+      await Promise.resolve();
+    });
+    await act(async () => { await secondRefresh; });
+    await flush();
+
+    expect(capturedListProps.data.map(r => r.name)).toEqual(['Barbell Bench Press']);
+
+    slowSets.resolve([
+      set({ exerciseId: 'squat', workoutId: 'stale', weight: 140, reps: 3, at: 5000 }),
+    ]);
+    await act(async () => { await firstRefresh; });
+    await flush();
+
+    expect(capturedListProps.data.map(r => r.name)).toEqual(['Barbell Bench Press']);
   });
 });
 

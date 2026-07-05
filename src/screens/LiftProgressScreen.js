@@ -15,6 +15,7 @@ import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
 import SectionLabel from '../components/SectionLabel';
 import SearchBar from '../components/SearchBar';
+import EmptyState from '../components/EmptyState';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries } from '../lib/liftProgress';
@@ -83,19 +84,37 @@ export default function LiftProgressScreen({ navigation }) {
   // recompute from the same loaded sets, no new data source.
   const [metric, setMetric] = useState('e1rm');
   const [metricSeries, setMetricSeries] = useState(() => new Map());
+  const [loadError, setLoadError] = useState(false);
   const peekRef = useRef(null);
+  const loadRequestRef = useRef(0);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { if (user?.id) loadData(); }, [user?.id]));
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
 
   async function loadData() {
-    if (!user?.id) { setLoading(false); return; }
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+
+    setLoading(true);
+    setLoadError(false);
+
+    if (!user?.id) {
+      setRows([]);
+      setMetricSeries(new Map());
+      setBodyWeight(null);
+      setStrengthLevels({});
+      setLoading(false);
+      return true;
+    }
+
     try {
       const [sets, exercises, bw] = await Promise.all([
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
         getLatestBodyWeight(user.id),
       ]);
+      if (!isCurrentRequest()) return false;
       const builtRows = buildLiftProgressRows(sets, exercises);
       setRows(builtRows);
       // Recompute the alternate metric series from the same sets, so the
@@ -127,18 +146,26 @@ export default function LiftProgressScreen({ navigation }) {
         setBodyWeight(null);
         setStrengthLevels({});
       }
+      setLoadError(false);
+      return true;
     } catch (e) {
-      // Loading failure leaves the list empty; the empty state covers it.
+      if (!isCurrentRequest()) return false;
       logError('LiftProgressScreen.loadData', e);
+      setRows([]);
+      setMetricSeries(new Map());
+      setBodyWeight(null);
+      setStrengthLevels({});
+      setLoadError(true);
+      return true;
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+    const completedCurrent = await loadData();
+    if (completedCurrent) setRefreshing(false);
   }
 
   function trendColor(deltaPct) {
@@ -393,7 +420,18 @@ export default function LiftProgressScreen({ navigation }) {
           );
         }}
         ListEmptyComponent={
-          !loading ? (
+          loading ? null : loadError ? (
+            <View style={styles.emptyStateWrap}>
+              <EmptyState
+                icon="cloud-offline-outline"
+                title="Couldn't load lifts"
+                text="Your workout history is safe. This is a read problem, not a lost lift."
+                actionLabel="Try again"
+                onAction={loadData}
+                compact
+              />
+            </View>
+          ) : (
             <View style={styles.empty}>
               <Ionicons name={q ? 'search-outline' : 'barbell-outline'} size={56} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>
@@ -407,7 +445,7 @@ export default function LiftProgressScreen({ navigation }) {
                     : "Log a few sessions and each lift's trend builds up here."}
               </Text>
             </View>
-          ) : null
+          )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
@@ -534,6 +572,7 @@ const styles = StyleSheet.create({
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   trendBuilding: { width: 84, textAlign: 'center', fontSize: fontSize.xs, color: colors.textMuted },
+  emptyStateWrap: { paddingTop: spacing.xxl },
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
