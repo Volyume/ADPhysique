@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 503 suites passed.
-  - 6,436 tests passed, 5 skipped.
+  - 504 suites passed.
+  - 6,437 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 939 files checked, no unresolved imports or missing named exports.
+  - 940 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -323,6 +323,7 @@ Status: release decision.
 - Web account profile age now follows the same calendar-date principle, parsing date of birth as strict `YYYY-MM-DD` and comparing London calendar parts instead of using elapsed milliseconds from `Date.parse`.
 - Workout History now guards overlapping loads with a request token, so a stale mount, retry, refresh or post-delete read cannot overwrite newer loading/error/workout state or fan out set reads for old results.
 - Progress Photos refresh now uses a latest-request guard before committing photos, scan entries, suppression state, hide-exact preference, metadata, reference cleanup and loading state, preventing older focus/delete/add refreshes from restoring stale Progress Scan or photo state.
+- Coach Output steps, cardio, macro-cycle and refeed apply actions now merge into the latest store profile at tap/write time instead of the render-time `userProfile` snapshot, preventing deterministic coach applies from clobbering concurrent profile edits.
 
 ### Web / CI / Security
 

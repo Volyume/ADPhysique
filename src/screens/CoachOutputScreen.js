@@ -803,6 +803,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
     reduceMotion: !!s.accessibility?.reduceMotion,
   })));
+  const latestProfile = () => useAppStore.getState().userProfile || userProfile || {};
 
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -1036,7 +1037,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     if (!target) return;
     setApplyingKey('steps');
     try {
-      await saveLocalProfile(user.id, { ...(userProfile || {}), stepsTarget: target });
+      await saveLocalProfile(user.id, { ...latestProfile(), stepsTarget: target });
       const updated = markApplied(output, 'steps', { target });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
@@ -1065,7 +1066,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       // store the structured target so check-in compliance can read the
       // session goal. cardio.target is present from the cardio engine.
       await saveLocalProfile(user.id, {
-        ...(userProfile || {}),
+        ...latestProfile(),
         cardioPrescription: prescription,
         ...(cardio.target ? { cardioTarget: cardio.target } : {}),
       });
@@ -1177,7 +1178,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       // F3 (EN-2): sex drives the per-day floor inside computeMacroCycle, the
       // same read the calorie Apply uses (body profile first, profile fallback).
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
-      const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
+      const sex = bodyProfile?.sex ?? latestProfile()?.sex ?? null;
       const split = computeMacroCycle(current, trainingDays, { sex });
       if (!split) {
         // NU-3: name the floor when the floor is what refused the split.
@@ -1191,7 +1192,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       await saveLocalProfile(user.id, {
-        ...(userProfile || {}),
+        ...latestProfile(),
         macroCycle: { ...split, appliedAt: Date.now() },
       });
       const updated = markApplied(output, 'macroCycle', {
@@ -1231,7 +1232,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       await saveLocalProfile(user.id, {
-        ...(userProfile || {}),
+        ...latestProfile(),
         refeed: {
           ...target,
           frequencyWeeks: output.refeed?.frequencyWeeks ?? null,
