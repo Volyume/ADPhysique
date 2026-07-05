@@ -3,34 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'r
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculate1RM } from '../lib/algorithms';
+import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
-
-// Format an integer number of seconds as mm:ss for the duration / distance-time
-// fields. Pure; never used on the weight_reps path.
-function formatSeconds(total) {
-  const n = typeof total === 'number' ? total : (parseInt(total, 10) || 0);
-  const safe = Number.isFinite(n) && n > 0 ? n : 0;
-  const mm = Math.floor(safe / 60);
-  const ss = safe % 60;
-  return `${mm}:${String(ss).padStart(2, '0')}`;
-}
-
-// Parse a free-typed mm:ss (or plain seconds) string into total seconds.
-// "1:30" -> 90, "90" -> 90, "" -> '' (kept blank so the field can be cleared).
-function parseTimeToSeconds(text) {
-  if (text == null || text === '') return '';
-  const t = String(text).trim();
-  if (t.includes(':')) {
-    const [m, s] = t.split(':');
-    const mm = parseInt(m, 10);
-    const ss = parseInt(s, 10);
-    if (Number.isNaN(mm) && Number.isNaN(ss)) return '';
-    return (Number.isNaN(mm) ? 0 : mm) * 60 + (Number.isNaN(ss) ? 0 : ss);
-  }
-  const n = parseInt(t, 10);
-  return Number.isNaN(n) ? '' : n;
-}
 
 function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
