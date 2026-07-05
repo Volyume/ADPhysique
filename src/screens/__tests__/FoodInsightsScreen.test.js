@@ -13,6 +13,13 @@ jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
 jest.mock('../../components/Card', () => ({ children }) => children);
 // VolyumeChart pulls in react-native-svg / gesture-handler (native-only), so
 // stub it to a host string like the other screen tests do (ExerciseDetail).
