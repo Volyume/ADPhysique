@@ -254,6 +254,7 @@ Status: release decision.
 - Body Metrics logging now uses shared `TextField` and `Button` controls for date, weight, body-fat, measurements and notes entry, preserving validation, read-only gating and ED/calm fail-closed behavior while removing raw input/button styling from the form.
 - Weekly Check-in now uses shared `Chip`, `TextField` and `Button` primitives for its rating choices, option choices, soreness tags, short fields, notes field, planned-meal confirmation and wizard CTA, preserving deterministic coach inputs, reminder rescheduling, lapsed read-only gating and wellbeing fail-closed behavior.
 - Progress Photo viewer note editing and pose selection now use shared `TextField` and `Chip` primitives, preserving local-only metadata writes, photo suppression, delete tier re-checks and compare/reference callbacks while removing bespoke note/pose controls from the flagship Progress surface.
+- Today strip morning-weight entry now uses shared `TextField` and `Button` primitives while preserving the compact first-screen cell layout, deep-linked weight editor, trend-door long-press behavior and meal/cardio routing.
 
 ### Web / CI / Security
 

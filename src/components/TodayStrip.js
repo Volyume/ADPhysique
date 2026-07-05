@@ -34,11 +34,13 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, AppState, PixelRatio,
+  View, Text, StyleSheet, TouchableOpacity, AppState, PixelRatio,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Button from './Button';
+import TextField from './TextField';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
@@ -204,8 +206,11 @@ export default function TodayStrip({
       <View style={styles.inputRow}>
         {bwu === 'st' ? (
           <View style={styles.stFields}>
-            <TextInput accessibilityLabel="Morning weight in stones"
-              style={styles.weightInput}
+            <TextField
+              accessibilityLabel="Morning weight in stones"
+              containerStyle={styles.weightFieldContainer}
+              fieldStyle={styles.weightField}
+              inputStyle={styles.weightInput}
               value={weightInputSt}
               onChangeText={setWeightInputSt}
               placeholder="12st"
@@ -213,8 +218,11 @@ export default function TodayStrip({
               keyboardType="number-pad"
               maxLength={3}
             />
-            <TextInput accessibilityLabel="Morning weight remaining pounds"
-              style={styles.weightInput}
+            <TextField
+              accessibilityLabel="Morning weight remaining pounds"
+              containerStyle={styles.weightFieldContainer}
+              fieldStyle={styles.weightField}
+              inputStyle={styles.weightInput}
               value={weightInputStLbs}
               onChangeText={setWeightInputStLbs}
               placeholder="7lb"
@@ -227,8 +235,11 @@ export default function TodayStrip({
           </View>
         ) : (
           <View style={styles.kgField}>
-            <TextInput accessibilityLabel={`Morning weight in ${bwu}`}
-              style={styles.weightInput}
+            <TextField
+              accessibilityLabel={`Morning weight in ${bwu}`}
+              containerStyle={styles.weightFieldContainer}
+              fieldStyle={styles.weightField}
+              inputStyle={styles.weightInput}
               value={weightInput}
               onChangeText={setWeightInput}
               placeholder={bwu}
@@ -240,16 +251,17 @@ export default function TodayStrip({
             <Text style={styles.unit}>{bwu}</Text>
           </View>
         )}
-        <TouchableOpacity
+        <Button
+          title="Log"
+          size="sm"
+          fullWidth={false}
           style={[styles.logBtn, (!hasDraft || savingWeight) && styles.logBtnDisabled]}
+          textStyle={styles.logBtnText}
           onPress={submitWeight}
           disabled={!hasDraft || savingWeight}
-          accessibilityRole="button"
           accessibilityLabel="Log morning weight"
           accessibilityState={{ disabled: !hasDraft || savingWeight }}
-        >
-          <Text style={styles.logBtnText}>Log</Text>
-        </TouchableOpacity>
+        />
       </View>
     );
   }
@@ -460,21 +472,23 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },
   kgField: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flex: 1 },
-  weightInput: {
-    backgroundColor: colors.surface2,
+  weightFieldContainer: {
+    flex: 1,
+    minWidth: 64,
+  },
+  weightField: {
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 40,
+  },
+  weightInput: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: fontSize.md,
-    color: colors.textPrimary,
     minWidth: 64,
     fontVariant: ['tabular-nums'],
   },
   unit: { fontSize: fontSize.sm, color: colors.textMuted },
   logBtn: {
-    backgroundColor: colors.primary,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
