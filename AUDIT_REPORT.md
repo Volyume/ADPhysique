@@ -278,6 +278,7 @@ Status: release decision.
 - Cardio History now separates loading, failed reads and genuinely empty cardio history, adds a retryable inline error state, and reports failed delete attempts through the standard toast/error-log path instead of silently dropping the failure.
 - Volume Heatmap now uses skeleton cards for the initial read and a retryable inline error for failed volume reads, clearing stale heatmap/trend data so failed loads do not masquerade as a valid empty training history.
 - Partners now distinguishes failed local partnership reads from a true no-partner state: `usePartners` surfaces an explicit `error` flag and `PartnerScreen` renders a retryable inline error instead of showing the invite pitch on failed reads.
+- Progress Photos / Physique Scan orchestration now has a first controller seam in `src/lib/progressPhotosController.js`: photo enrichment, completed-scan filtering, share-item derivation, scan cadence gating, transient scan-photo cleanup, retake cleanup and viewer-delete ordering are covered by pure/unit tests while UI alert/state choreography remains in `ProgressPhotosScreen`.
 
 ### Web / CI / Security
 
