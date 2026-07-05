@@ -17,6 +17,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
+import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -502,14 +503,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           loadError ? (
-            <View style={styles.empty}>
-              <Ionicons name="cloud-offline-outline" size={48} color={colors.warning} />
-              <Text style={styles.emptyTitle}>Couldn't load plans</Text>
-              <Text style={styles.emptyText}>Something went wrong loading the plan library.</Text>
-              <TouchableOpacity onPress={handleRetry} accessibilityRole="button" style={{ marginTop: 14 }}>
-                <Text style={[styles.emptyText, { color: colors.primary }]}>Try again</Text>
-              </TouchableOpacity>
-            </View>
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load plans"
+              text="Something went wrong loading the plan library."
+              actionLabel="Try again"
+              onAction={handleRetry}
+            />
           ) : !loaded ? (
             <View style={styles.skeletonWrap}>
               <SkeletonCard height={96} />
@@ -517,17 +517,15 @@ export default function PlanLibraryScreen({ navigation, route }) {
               <SkeletonCard height={96} />
             </View>
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="library-outline" size={48} color={colors.surface3} />
-              <Text style={styles.emptyTitle}>No plans found</Text>
-              <Text style={styles.emptyText}>
-                {queryLower
-                  ? 'Try a different search term.'
-                  : activeCollection === 'division' && selectedDivision
-                    ? 'No plans for this division yet.'
-                    : 'No plans match this filter yet.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="library-outline"
+              title="No plans found"
+              text={queryLower
+                ? 'Try a different search term.'
+                : activeCollection === 'division' && selectedDivision
+                  ? 'No plans for this division yet.'
+                  : 'No plans match this filter yet.'}
+            />
           )
         }
         renderItem={({ item: plan }) => {
@@ -792,14 +790,7 @@ const styles = StyleSheet.create({
   addBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
-  // Empty
   skeletonWrap: { gap: spacing.md },
-  empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
-  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  emptyText: {
-    ...type.body, color: colors.textMuted,
-    textAlign: 'center', paddingHorizontal: spacing.xl,
-  },
 
   // Quiz modal
   backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
