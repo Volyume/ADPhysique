@@ -704,7 +704,7 @@ export default function BodyMetricsScreen() {
       // optimistic entry with the real saved row. On failure, remove
       // the optimistic entry and show a toast.
       try {
-        const saved = await logBodyMetric(user.id, data);
+        await logBodyMetric(user.id, data);
         if (session?.user?.id) {
           // E12 step 1: push through the registry runner (the legacy per-save
           // syncBodyMetric dual writer is retired; the body_composition_log

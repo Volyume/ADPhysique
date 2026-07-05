@@ -6,13 +6,14 @@ import { SignInForm } from '@/components/auth/SignInForm';
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: { mode?: string };
+  searchParams: Promise<{ mode?: string }>;
 }) {
   // Already signed in: skip the form.
   const user = await getUser();
   if (user) redirect('/dashboard');
 
-  const mode = searchParams.mode === 'signup' ? 'signup' : 'signin';
+  const params = await searchParams;
+  const mode = params.mode === 'signup' ? 'signup' : 'signin';
 
   return (
     <main className="flex min-h-screen flex-col px-lg">

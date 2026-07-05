@@ -181,7 +181,7 @@ export function ToastProvider({ children }) {
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
           >
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               activeOpacity={0.85}
               onPress={dismiss}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}

@@ -1896,7 +1896,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Precision Coaching" onBack={handleClose} />
         <LoadingView />
       </SafeAreaView>
@@ -1906,7 +1906,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Load error state (retryable) ───────────────────────────────────────────
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Precision Coaching" onBack={handleClose} />
         <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
@@ -1916,7 +1916,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Insufficient data state ────────────────────────────────────────────────
   if (!output || !output.hasEnoughData) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Precision Coaching" onBack={handleClose} />
         <InsufficientDataView dataNote={output?.dataNote} receipt={holdReceipt} onClose={handleClose} />
       </SafeAreaView>
@@ -2161,7 +2161,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     reduceMotion ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Precision Coaching" onBack={handleClose} />
       <ScrollView
         contentContainerStyle={styles.content}

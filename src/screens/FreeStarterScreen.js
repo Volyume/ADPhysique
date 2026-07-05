@@ -138,7 +138,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={step > 0 ? 'Back to the previous question' : 'Back'}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View
           style={styles.progressDots}
@@ -150,7 +150,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           ))}
         </View>
         {/* Spacer balances the back chevron so the dots sit centred */}
-        <View style={{ width: 22 }} />
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>

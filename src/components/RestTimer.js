@@ -379,18 +379,22 @@ export default function RestTimer() {
           (the 0-tick branch), with beeps + haptics carrying the 3-2-1. */}
       <View
         style={[styles.row, compact && styles.rowCompact]}
-        accessible
-        accessibilityLabel={isCountdown
-          ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
-          : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
       >
-        <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
-        {isCountdown ? (
-          <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]}>{restTimerRemaining}</Text>
-        ) : (
-          <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
-        )}
-        <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
+        <View
+          style={styles.timerReadout}
+          accessible
+          accessibilityLabel={isCountdown
+            ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
+            : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
+        >
+          <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
+          {isCountdown ? (
+            <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]}>{restTimerRemaining}</Text>
+          ) : (
+            <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
+          )}
+          <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
+        </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
           return (
@@ -455,6 +459,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
     minHeight: 64,
+  },
+  timerReadout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   timeText: {
     // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral

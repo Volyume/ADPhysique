@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import { useFeedback } from '../components/FeedbackSheet';
@@ -102,8 +103,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // Both live in the same scope, JS doesn't let two consts share a
   // name in the same block.
   const feedbackSheet = useFeedback();
-  const insets = useSafeAreaInsets();
-
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
     overallPump: 2,
@@ -756,7 +755,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .join(', ');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {readOnly ? <BackHeader title="Workout summary" /> : null}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
@@ -1178,7 +1178,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
-                <TextInput
+                <TextInput accessibilityLabel="Session feedback notes"
                   style={styles.notesInput}
                   value={notes}
                   onChangeText={setNotes}
@@ -1190,7 +1190,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             )}
             <View style={styles.coachZoneDivider} />
             <Text style={styles.coachZoneSubHeading}>Notes for next time</Text>
-            <TextInput
+            <TextInput accessibilityLabel="Notes for next time"
               style={styles.nextTimeNoteInput}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
@@ -1253,7 +1253,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         >
           <View style={styles.templateModalCard}>
             <Text style={styles.templateModalTitle}>Save as Workout Template</Text>
-            <TextInput
+            <TextInput accessibilityLabel="Workout template name"
               style={styles.templateModalInput}
               value={templateName}
               onChangeText={setTemplateName}

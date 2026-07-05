@@ -461,8 +461,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' }}>
-            <Text style={styles.pageTitle}>Nutrition Targets</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
             <InfoTooltip
               size={14}
               text={
@@ -1339,7 +1338,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               })()}
 
               {/* How calculated (expandable) */}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.expandHeader}
                 onPress={() => setExpanded(v => !v)}
                 activeOpacity={0.7}
@@ -1403,7 +1402,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               )}
 
               {/* Recalculate */}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.recalcBtn}
                 onPress={handleCalculate}
                 disabled={!formComplete || calculating}
@@ -1432,12 +1431,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.lg,
     paddingBottom: spacing.xxxl,
-  },
-  pageTitle: {
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-    marginTop: spacing.sm,
   },
   // D3: neutral edge, a static education row does not spend the amber.
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.border, padding: spacing.md, marginTop: spacing.sm },

@@ -767,7 +767,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             {/* Plan name */}
             <View style={styles.section}>
               <Text style={styles.label}>Plan name</Text>
-              <TextInput
+              <TextInput accessibilityLabel="Plan name"
                 style={styles.textInput}
                 value={planName}
                 onChangeText={setPlanName}
@@ -857,7 +857,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         {/* Editable plan name */}
-        <TextInput
+        <TextInput accessibilityLabel="Plan name"
           style={styles.planNameInput}
           value={editablePlanName}
           onChangeText={setEditableName}
@@ -873,7 +873,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             {/* Day header */}
             <View style={styles.dayHeader}>
               <Text style={styles.dayNumber}>Day {dayIdx + 1}</Text>
-              <TextInput
+              <TextInput accessibilityLabel={`Name for day ${dayIdx + 1}`}
                 style={styles.dayNameInput}
                 value={day.name}
                 onChangeText={v => updateDayName(dayIdx, v)}

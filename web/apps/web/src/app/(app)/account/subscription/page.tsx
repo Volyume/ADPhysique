@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function SubscriptionPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const p = await getAccountProfile(supabase, user.id);
   const tier = p.tier ? humanise(p.tier) : 'Free';
 

@@ -1,35 +1,35 @@
 # Volyume Audit And Hardening Report
 
-Date: 2026-07-04
+Date: 2026-07-05
 Worktree: `C:\Users\Admin\app-physique-scan-hardening-20260704-2329`
 Branch: `codex/physique-scan-hardening-20260704-2329`
 Source branch: `origin/claude/progress-scan-flagship-20260704`
 
 ## Executive Summary
 
-This pass moved from audit into implementation. The app now has the source-led IA direction that came out of the audit: visible tabs are `Today / Train / Nutrition / Progress / Coach`, while internal route ids remain stable for deep links, push routing and cross-tab navigation.
+This branch has moved from audit-only into a verified hardening implementation batch. It keeps Volyume's product stance intact: deterministic coach, no AI/chat coach, Physique Scan as a visual progress signal rather than an exact body-fat estimator, and local-first progress photos.
 
-The former visible `You` tab is now a deterministic `Coach` hub. It explicitly avoids AI/chat positioning and gives users direct access to weekly check-in, latest review, goal/phase updates, nutrition targets, coaching reminders, safety settings, methodology, partners, settings and the new athlete profile.
+The biggest shipped changes are:
 
-The new athlete profile gives Volyume a proper user identity surface: profile photo/avatar, session count, latest weight, manual body-fat entry, Physique Scan state, strength baseline summary, key lifts against standards, and reminders/shortcuts for body metrics, progress photos, scan retakes and lift progress.
+- Visible IA is now `Today / Train / Nutrition / Progress / Coach`, while internal route ids stay stable for deep links, push routing and cross-tab navigation.
+- The old visible `You` surface now reads as a deterministic Coach hub, with no chatbot positioning.
+- A real Athlete Profile exists with avatar/profile photo, body metrics, manual body-fat entry, Physique Scan state, strength baselines, key lifts, and deterministic freshness prompts.
+- Mobile accessibility warning debt is cleared and locked by a zero-warning lint gate.
+- Web security/tooling is hardened: Next is on the patched 15.5 line, production audit is clean, lint is noninteractive, and web lint/typecheck/test/build/audit now run in CI.
+- Design consistency is materially improved across headers, modal chrome, safe-area edges, wizard back controls, profile rows, scan copy and repeated settings/pro surfaces.
 
-Progress Photo / Progress Scan has been hardened and renamed in user-facing copy to `Physique Scan`. The implementation now treats the feature as a visual leanness/progress signal rather than a defensible exact body-fat percentage. Live-tier write rechecks were added throughout capture, library import, guided scan progression, retake and deletion flows. Scan assets are included in local backup table coverage, and delete order now avoids orphaned scan rows when photo files or metadata cleanup partially fails.
-
-Privacy, support, app store and public policy copy were aligned with actual behavior: progress photo image files stay device-local unless the user chooses to share/export; JSON backups include database records/metadata, not private image files; Physique Scan is not a DEXA scan, diagnosis or exact body-fat estimator.
-
-The mobile app verification is strong: full Jest, typecheck, import check, Expo dependency check and ESLint all complete. Remaining risks are mainly dependency/security/tooling and broader UX debt: web Next.js advisories, 63 existing ESLint warnings, package-manager friction, no APK/AAB release artifact for Android page-size validation, and large legacy modules that still need staged refactors.
+The branch is not claiming that every item in the larger 52-item elite register is complete. The remaining work is now clearer: incoming Physique Scan estimator audit, release-artifact checks, backend telemetry migrations, device QA, and larger domain refactors.
 
 ## What Was Inspected
 
-- Mobile app navigation, root tab IA and profile/coach stack.
-- Coach surfaces, deterministic-coach wording and no-chat/no-AI trust stance.
-- Athlete profile concept and body data/lift baseline integration.
-- Progress Photos, guided capture, Physique Scan sessions/assets, scan analysis copy, scan-to-coach isolation and deletion semantics.
-- Privacy, consent, support, store listing and public web copy around photos, backups, export/delete and health data.
-- Design consistency on top-level Coach/Profile/Train/Progress surfaces.
-- Mobile tests, typecheck, import checks, lint, Expo install validation and package audit.
-- Web app install/build/typecheck/test/lint/audit state.
-- Secret/config exposure at filename level without printing candidate values.
+- Navigation, root tabs, cross-tab jumps, stack headers and guarded routes.
+- Coach hub, weekly review/check-in paths, deterministic copy, and no-AI/no-chat trust stance.
+- Athlete Profile, avatar handling, strength standards, body metrics, Physique Scan summary and freshness prompts.
+- Progress Photos / Physique Scan capture, storage, deletion, backup table coverage, privacy copy and coach isolation tests.
+- Mobile accessibility, theme contrast, token usage, modal/header consistency and touch-label cleanup.
+- Web monorepo dependency health, Next 15 migration, Supabase SSR cookies usage, lint config, build, tests and audit.
+- CI workflows for root mobile checks and web checks.
+- App-store/platform readiness items where source-level checks are possible.
 
 ## Commands Run And Results
 
@@ -37,303 +37,296 @@ The mobile app verification is strong: full Jest, typecheck, import check, Expo 
 
 - `pwd`: confirmed isolated worktree at `C:\Users\Admin\app-physique-scan-hardening-20260704-2329`.
 - `git branch --show-current`: `codex/physique-scan-hardening-20260704-2329`.
-- `git status --short`: intentional source/doc/test changes plus new files only.
-- Generated root `pnpm-lock.yaml` and `pnpm-workspace.yaml` from an earlier root pnpm probe were removed because the repo tracks `package-lock.json` at root and those pnpm files are not tracked.
+- `git status --short`: intentional branch changes only.
 
-### Mobile Root Checks
+### Mobile
 
-- `node node_modules/jest/bin/jest.js --runInBand --silent`: pass.
-  - 462 test suites passed.
-  - 6,273 tests passed, 5 skipped.
+- `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
+  - 465 suites passed.
+  - 6,284 tests passed, 5 skipped.
   - 39 snapshots passed.
-- `node node_modules/typescript/bin/tsc --noEmit`: pass.
-- `node scripts/check-imports.cjs`: pass.
-  - 872 files checked, no unresolved imports or missing named exports.
-- `node node_modules/eslint/bin/eslint.js .`: pass with warnings.
-  - 0 errors.
-  - 63 warnings, mostly existing `react-native-a11y` missing descriptor warnings plus two unused locals.
-- `expo install --check`: pass.
-  - Sentry check skipped by existing `expo.install.exclude`.
-- `node scripts/verify-android-elf-page-size.cjs`: not runnable without arguments.
-  - Script requires an APK, AAB, directory or `.so` path.
-  - No app release artifact was present in the worktree to validate.
+- `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
+- `node node_modules\typescript\bin\tsc --noEmit`: pass.
+- `node scripts\check-imports.cjs`: pass.
+  - 878 files checked, no unresolved imports or missing named exports.
+- `node node_modules\expo\bin\cli install --check`: pass.
+  - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
+- Focused guard pack passed:
+  - `theme.test.js`
+  - `accessibilityDesign.guard.test.js`
+  - `iaNavigation.guard.test.js`
+  - `themeTokens.guard.test.js`
+  - `athleteProfileSummary.test.js`
+  - `profileFreshness.test.js`
+- `git diff --check`: pass before the report rewrite; rerun again before commit.
 
-### Security And Dependency Audit
+### Web
 
-- Filename-only env scan:
-  - tracked env files are `.env.example` and `web/apps/web/.env.example`.
-  - no tracked real `.env` files found.
-- Filename-only secret-pattern scan:
-  - returned docs/tests/scripts/Supabase code paths only; values were not printed.
-  - no secret value was copied into this report.
-- Root `pnpm audit --prod`: completed as a proxy audit because `npm`/`npx` are not available in this runtime.
-  - 2 moderate advisories:
-    - `postcss <8.5.10` via Expo/Metro dependency paths.
-    - `uuid <11.1.1` via Expo config/plugin dependency paths.
-  - Caveat: root repo is npm-scripted with `package-lock.json`; native `npm audit` could not run in this runtime.
+- `pnpm lint`: pass.
+- `pnpm typecheck`: pass from a clean `.next` state.
+- `pnpm --filter @volyume/web test`: pass, 20 Vitest tests.
+- `pnpm --filter @volyume/web build`: pass on Next 15.5.20.
+- `pnpm audit --prod`: pass, no known vulnerabilities.
 
-### Web Checks
+### Blocked Or Artifact-Dependent Checks
 
-- `pnpm install --frozen-lockfile` in `web`: dependency tree populated but command exited nonzero.
-  - Blocked by pnpm build-script approval policy for `esbuild` and `unrs-resolver`.
-  - Generated placeholder `allowBuilds` lines in `web/pnpm-workspace.yaml`; removed to keep tracked metadata clean.
-- `vitest run` in `web/apps/web`: pass.
-  - 2 files, 20 tests passed.
-- `tsc --noEmit` in `web/apps/web`: pass.
-- `next build` in `web/apps/web`: pass.
-  - Existing warning: Supabase SSR middleware imports `process.version`, which Next reports as unsupported in Edge Runtime.
-- `next lint` in `web/apps/web`: did not run non-interactively.
-  - Next prompts: "How would you like to configure ESLint?"
-  - This is a tooling gap; web lint is not configured for noninteractive CI.
-- `pnpm audit --prod` in `web`: fail due vulnerabilities.
-  - 15 vulnerabilities: 5 high, 8 moderate, 2 low.
-  - Dominant source is `next` on 14.x; advisories list patched versions in Next 15.x, with several requiring at least `15.5.16`.
-  - Also includes `postcss <8.5.10`.
+- Android 16 KB ELF page-size validation still needs an actual release APK/AAB/native artifact.
+- Store-build `aps-environment`, APNs, remote-notification and binary-protection checks still need release artifacts or store configuration.
+- Root `npm audit` was not rerun locally because this shell lacks global `npm`; root CI/release scripts remain npm-based and the web production audit is clean.
 
-## Critical Issues
+## Named Item Ledger
 
-None newly introduced in this branch after verification. The mobile app builds through static/test validation and full Jest is green.
+### H1 / JH1: Web Security
 
-## High-Priority Issues
+Status: closed in this branch.
 
-### H1. Web Next.js Security Advisories
+- Next upgraded from 14.x to patched 15.5.x.
+- Supabase server client updated for async `cookies()` in Next 15.
+- Web production audit is clean.
+- Web CI now runs install, lint, typecheck, Vitest, build and production audit.
 
-`web` audit reports 15 production vulnerabilities, including 5 high-severity Next.js advisories around server components, DoS, SSRF, middleware/proxy bypass and related risks.
+### H2: Mobile Accessibility Warning Debt
 
-Recommendation:
-- Upgrade the web workspace from Next 14.2.x to a currently patched Next 15 line.
-- Re-test middleware, Supabase SSR auth, route protection and build output.
-- Add a CI gate for `pnpm audit --prod` in `web`.
+Status: closed and enforced.
 
-### H2. Accessibility Warning Debt Remains
+- Cleared the previous ESLint warning backlog.
+- Removed generic `Text input field` labels.
+- Fixed nested touchable/a11y warning in `RestTimer`.
+- Removed unused locals.
+- Added `src/__tests__/accessibilityDesign.guard.test.js`.
+- Root `lint` now runs `eslint . --max-warnings 0`, and CI uses that gate.
 
-Mobile ESLint passes, but 63 warnings remain. Most are `react-native-a11y` warnings for touchables without valid accessibility descriptors. This matters for App Store quality, user trust and design consistency.
+### H3: Package Manager / Tooling Friction
 
-Recommendation:
-- Run a dedicated a11y cleanup branch.
-- Prioritise high-frequency and touched flows: ProGate, TodayStrip, Plan/Train cards, Nutrition screens, scan/barcode screens, WorkoutSummary and modals.
-- Add guard tests where rows/cards represent controls, radios, tabs or destructive actions.
+Status: materially improved.
 
-### H3. Package Manager Friction Is Now A Release Risk
+- Root declares `packageManager: npm@10.9.4`.
+- Web declares `packageManager: pnpm@11.7.0`.
+- Web lockfile/workspace are coherent and CI pins pnpm 11.7.0.
+- Remaining caveat: this local shell does not expose global npm, so root `npm audit` remains a CI/release-environment check.
 
-The root app is npm-scripted and has `package-lock.json`, but the current local install tree is pnpm-shaped. `npm`/`npx` are not available in this runtime, and pnpm commands can fail before running scripts because build scripts are unapproved.
+### H4: Android Release Artifact Validation
 
-Recommendation:
-- Choose and document one root package manager for release.
-- If npm is canonical, make sure the developer/runtime environment has npm available and run `npm ci --legacy-peer-deps --ignore-scripts` or the intended equivalent.
-- If pnpm is canonical, commit the root pnpm lock/workspace intentionally and configure approved builds.
-- Avoid accidental lockfile churn.
+Status: artifact-dependent.
 
-### H4. Android Release Artifact Validation Was Not Completed
+- `verify:android:16kb` exists and Android workflow already runs artifact validation when APK/AAB artifacts are available.
+- No APK/AAB was present in this worktree to validate locally.
 
-The 16 KB ELF page-size script exists, but there was no APK/AAB/native artifact to validate.
+### H5: Shared BackHeader / Builder Chrome
 
-Recommendation:
-- Run the script against the actual release APK/AAB before Play submission.
-- Add a CI job that builds or downloads the release artifact and runs `verify:android:16kb` with the artifact path.
+Status: materially closed.
 
-## Medium-Priority Issues
+- Native headers remain hidden for app screens.
+- Workout Summary read-only mode now uses `BackHeader`.
+- Nutrition Targets duplicate in-content title was removed.
+- A guard now prevents native header drift.
 
-### M1. Large Legacy Modules Still Need Refactor Seams
+### H6: Setup-Complete / Reveal Consistency
 
-`database.js`, `HomeScreen`, `PlansScreen`, `ProgressPhotosScreen`, `CoachOutputScreen`, nutrition flows and sync remain large. This branch deliberately kept route ids stable and avoided broad source churn, but the app still needs staged maintainability work.
+Status: source-level acceptable, device QA still required.
 
-Recommended seam order:
-1. Extract progress photo/scan session orchestration from `ProgressPhotosScreen`.
-2. Split `database.js` by domain: profile/body metrics, progress photos, scans, workouts, food, sync helpers.
-3. Move Coach output section renderers into components with pure selectors.
-4. Convert repeated card/row/tile patterns to design-system primitives.
-5. Add per-domain contract tests before each extraction.
+- No failing source/test evidence remained in this pass.
+- Final judgement should come from Android/iOS walkthrough because it is visual motion/layout work.
 
-### M2. Physique Scan Estimator Delta Still Needs A Dedicated Audit
+### M1: Large Module Refactor Seams
 
-This branch handles trust/copy/store/delete/gating and current scan analysis semantics. The incoming AI/vision estimator from the other session still needs a focused audit after it lands.
+Status: partially closed, larger work remains.
 
-Must check:
-- no exact body-fat percentage claim from photos;
-- confidence and abstention states are real;
-- retake/quality scoring blocks weak scans;
-- Coach receives only safe, low-authority summary signals;
-- privacy, export, wipe and delete behavior include every new table/file;
-- no nutrition safety floor uses scan-derived estimates.
+- Athlete Profile summary logic was extracted to `src/lib/athleteProfileSummary.js`.
+- Freshness logic was extracted to `src/lib/profileFreshness.js`.
+- Tests were added for both.
+- Still open: `database.js`, `ProgressPhotosScreen`, `CoachOutputScreen`, sync, and large food/training screens need staged domain refactors.
 
-### M3. Web Middleware Edge Warning
+### M2: Incoming Physique Scan Estimator Audit
 
-Next build passes with a Supabase SSR Edge Runtime warning from middleware import trace.
+Status: blocked on incoming estimator branch.
 
-Recommendation:
-- Decide whether middleware should run on Node runtime or be refactored to Edge-compatible Supabase calls.
-- Add a focused auth-route smoke test after the change.
+- Current branch protects scan trust semantics, deletion, backup, coach isolation and no exact body-fat claim.
+- Once the other session lands the actual estimator, audit wiring, confidence, retake/quality scoring, abstention, privacy, wipe/export, and nutrition-floor isolation again.
 
-### M4. Web Lint Is Not CI-Ready
+### M3: Web Build Warning / Next Runtime
 
-`next lint` prompts for setup instead of running. This hides web lint quality in automation.
+Status: closed for this pass.
 
-Recommendation:
-- Add explicit ESLint config for the Next workspace or replace `next lint` with a direct configured `eslint` command.
-- Add it to CI after the config is noninteractive.
+- Next build now passes on 15.5.x without the earlier Supabase Edge/runtime warning.
+- Only webpack cache performance notices remain, not a build/runtime blocker.
 
-### M5. Avatar Is Local-Only By Design
+### M4: Web Lint Noninteractive
 
-Profile photo/avatar is intentionally stored as a device-local file URI and preserved in local profile state. It is ignored by the cloud profile whitelist and is not uploaded.
+Status: closed.
 
-Recommendation:
-- Keep this as local-only unless a real object-storage/privacy design is approved.
-- Add UX copy later if users expect profile pictures to follow them across devices.
+- Added legacy ESLint configs and `web/scripts/eslint-legacy.cjs`.
+- `pnpm lint` runs noninteractively and passes.
 
-### M6. Data-Freshness Reminders Are UI Shortcuts, Not Yet A Scheduling System
+### M5: Avatar Local-Only
 
-Athlete profile now points users toward body metrics, progress photos/Physique Scan and lift progress. It does not yet create notification cadences or adaptive task cards.
+Status: intentional design constraint.
 
-Recommendation:
-- In a later task, build a deterministic freshness engine that suggests body metric/photo/lift updates based on last logged dates, suppression state and user goal.
+- Avatar/profile photo is saved locally and removed locally.
+- No cloud avatar upload was added.
+- This should remain local-only unless a proper media storage/privacy design is explicitly approved.
 
-## Low-Priority Issues
+### M6: Profile Freshness
 
-- Some old docs still mention historical `Diary`, `Plans` or `You` terminology because they are archival audit/backlog files. Current app-facing docs/public copy was updated where relevant.
-- React 19 test output emits many `react-test-renderer is deprecated` warnings in non-silent runs. Tests pass; this is future test-harness debt.
-- CRLF-to-LF warnings appear for two docs when Git touches them.
-- The app still needs visual device QA for final mobile ergonomics, particularly tab labels, Coach hub, Athlete Profile, Progress filters and settings chips.
+Status: first implementation complete.
+
+- Athlete Profile now shows deterministic freshness states for body metrics, Physique Scan/photos, and key lifts.
+- No notification cadence was added, which is deliberate because recurring physique/photo reminders can become sensitive and need a separate safety decision.
+
+### M7: Binary Protections
+
+Status: release-artifact dependent.
+
+- Source-level checks suggest Hermes/R8 posture is not newly worsened by this branch.
+- Final binary protection confirmation needs release builds and store artifact inspection.
+
+### L1: Medical / Safety Disclaimer
+
+Status: present and guarded.
+
+- Coach and privacy surfaces keep non-medical wording.
+- Physique Scan copy states it is not medical, not DEXA and not exact body-fat analysis.
+- Privacy truth guards pass.
+
+### L2: Permission Strings
+
+Status: founder/release decision.
+
+- Camera/photo flows use privacy-first copy.
+- First-capture and permission UX should still be device-walked before store submission.
+- iOS still declares linked but currently unused Location/Microphone/Face ID strings. Existing readiness docs already frame this as "reconsider before public review" rather than a code blocker.
+- Android permission posture is cleaner: mic/media/system-alert permissions are blocked and camera audio is disabled.
+
+### L3: `aps-environment` / APNs
+
+Status: release-config dependent.
+
+- Needs confirmation on the store/TestFlight build artifact and Apple developer configuration.
+- iOS workflow currently answers "No" to push-key setup, so remote push delivery remains APNs credential-dependent.
+
+### L4: `remote-notification` Background Mode
+
+Status: release decision.
+
+- Keep if remote push is intended for v1.
+- Remove before store submission only if push is intentionally deferred.
 
 ## Implemented Changes
 
-### IA And Navigation
+### IA, Coach And Profile
 
-- Visible tabs changed to `Today / Train / Nutrition / Progress / Coach`.
-- Internal route ids remain `HomeTab`, `PlansTab`, `DiaryTab`, `ProgressTab`, `ProfileTab` to avoid deep-link and push-route regressions.
-- Icons updated to match the new IA.
-- Guard tests updated/added for navigation labels, tab labels and mount coverage.
-
-### Coach Hub
-
-- `YouScreen` is now visible as `Coach`.
-- Copy explicitly says rules-based and no chat.
-- Pro users get weekly check-in, current review, goal/phase update, nutrition targets, reminders, safety and methodology paths.
-- Free/lapsed users get Pro entry and read-only coaching history when history exists.
-
-### Athlete Profile
-
+- Visible tabs now read `Today`, `Train`, `Nutrition`, `Progress`, `Coach`.
+- Internal route ids remain stable: `HomeTab`, `PlansTab`, `DiaryTab`, `ProgressTab`, `ProfileTab`.
+- `YouScreen` is now a Coach hub with rules-based/no-chat copy.
 - Added `AthleteProfileScreen`.
-- Added local-only avatar save/delete helper.
-- Shows completed session count, body weight, body fat manual entry, Physique Scan state, strength standing and key lifts.
-- Adds shortcuts to body metrics, progress photos/Physique Scan, lift progress, settings and data export.
+- Added local avatar helper in `src/lib/profileAvatar.js`.
+- Extracted and tested `buildAthleteProfileSummary`.
+- Extracted and tested `buildProfileFreshness`.
 
-### Physique Scan / Progress Photos
+### Design And Accessibility
 
-- User-facing wording moved from Progress Scan to Physique Scan.
-- Copy says visual leanness/progress signal, not exact body-fat percentage.
-- Live Pro tier rechecks added across capture/import/save/finish/retake/delete.
-- Lapsed write attempts clean up pending scan sessions, photo metadata and local files where possible.
-- Delete flow detaches scan assets and metadata before photo file deletion.
-- Backup table guard now includes scan session/asset tables.
+- Added shared `ModalHeader`.
+- Converted upgrade/paywall/subscription modal headers to the shared component.
+- Normalised safe-area bottom edges on affected screens.
+- Removed duplicate `NutritionTargets` title.
+- Added a read-only `WorkoutSummary` header.
+- Normalised wizard chevron sizing/colour.
+- Tightened `textMuted` dark contrast and added dark-theme contrast tests.
+- Added source guards for generic text-input labels, disabled font scaling, native header drift and tab-bar token drift.
+- Root lint is now zero-warning.
 
-### Privacy And Public Copy
+### Web / CI / Security
 
-- App store listings, public privacy pages, support page, app map and in-app privacy/consent screens now align on:
-  - progress photo image files stay device-local unless user shares/exports;
-  - app-data JSON backup includes database records and metadata, not private image files;
-  - Physique Scan is not medical, diagnostic, DEXA or exact body-fat analysis.
+- Upgraded web Next and related packages to the patched 15.5 line.
+- Migrated Supabase SSR helpers and callers for Next 15 async cookies.
+- Added noninteractive web lint config.
+- Added web CI job.
+- Added `outputFileTracingRoot` to the web Next config.
+- `pnpm audit --prod` is clean.
 
-### Design Consistency
+### Conversion Telemetry
 
-- Coach/Profile rows and cards now use shared `Card`.
-- Train/Plans repeated surfaces moved toward shared `Card`.
-- Progress filter/sort/date chips have 44 px minimum touch targets.
-- Settings profile/coaching chips have better accessibility roles/states.
-- Touched top-level surfaces use theme alpha helpers instead of ad-hoc opacity strings.
+- `PaywallScreen` emits `paywall_shown` once per mount.
+- `CascadeGateScreen` emits `paywall_shown` once per mount.
+- `ProGate` full-screen lock emits `feature_locked_viewed`.
+- Client catalogue includes the event and server migration coverage exists in the repo; production usefulness still depends on applying telemetry migrations in Supabase.
 
-## Product And UX Audit Notes
+### Physique Scan / Privacy
 
-The IA direction is right: `Today / Train / Nutrition / Progress / Coach` is clearer than the old `Train / Plans / Diary / Progress / You` model because it maps to user intent rather than implementation history.
+- User-facing copy remains `Physique Scan` and avoids exact body-fat claims.
+- Existing tests verify no scan-derived estimate can become an authoritative nutrition safety-floor source.
+- Delete/wipe/backup/privacy guards for photos and scan tables pass.
+- Coach receives constrained scan context only.
 
-The critical product stance remains intact:
-- no AI coach/chat surface;
-- deterministic coach decisions;
-- Physique Scan as low-authority visual signal;
-- no unsafe contest peak-week manipulation;
-- privacy-first local photos.
+## Product And UX Notes
 
-The next UX challenge is layered simplicity. Volyume has many powerful facilities, so the first screen in each tab must answer one question:
-- Today: what should I do today?
-- Train: how do I manage training structure and sessions?
-- Nutrition: how do I eat/log/understand targets?
-- Progress: what is changing?
-- Coach: what did Volyume decide, why, and what should I update?
+The IA direction is right for a powerful app that must stay easy to use:
 
-## Recommended Implementation Roadmap
+- `Today`: what should I do today?
+- `Train`: how do I manage training and sessions?
+- `Nutrition`: how do I eat, log and understand targets?
+- `Progress`: what is changing?
+- `Coach`: what did Volyume decide, why, and what should I update?
 
-### Phase 1: Merge This Hardening Branch After Review
+The risk is no longer that Volyume lacks power. The risk is that power becomes scattered. The next UX work should keep building layered simplicity: strong tab homes, consistent section grammar, one modal language, predictable rows, and clear profile/freshness prompts without nagging.
 
-- Manual device QA on Coach, Athlete Profile, tab bar, Progress Photos/Physique Scan, settings chips and public copy.
-- Confirm branch diff with the other in-flight progress-photo AI work.
-- Re-run full mobile checks after merge/rebase.
+## Remaining High-Value Work
 
-### Phase 2: Incoming Physique Scan Estimator Audit
+### Safe Implementation Candidates
 
-- Pull the new estimator branch.
-- Audit wiring, abstention, quality scoring, confidence, coach summary, privacy, deletion and backup.
-- Add tests that fail if exact photo-derived body-fat percentage is surfaced.
+1. Continue the "one product" design sweep:
+   - shared section label/overline role;
+   - canonical input style;
+   - remaining hand-rolled CTAs to `Button`;
+   - remaining hand-rolled sheets to `BottomSheet`.
+2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
+3. Add dedicated tests for `paywall_shown` and `feature_locked_viewed` firing paths.
+4. Finish state/dead-end surfaces: Partners error branch, Consistency/VolumeHeatmap loading-empty-error, FoodInsights loading, CardioHistory controls, and MyMeals edit/create clarity.
+5. Extract Progress Photos / Physique Scan orchestration into a controller module with tests.
+6. Split `database.js` by domain behind the existing public API.
+7. Device-walk Coach, Athlete Profile, Progress Photos/Physique Scan, Nutrition, Train and settings for text wrapping, hit targets and visual consistency.
 
-### Phase 3: Accessibility Warning Cleanup
+### Needs Founder Decision
 
-- Clear all 63 ESLint warnings.
-- Add accessibility labels/roles/states for touchables, radios, modal controls, destructive actions and nested pressables.
-- Keep the lint gate at 0 errors and 0 warnings if practical.
+- Recurring physique/photo reminders.
+- Photo backup/export beyond local/device-owned behavior.
+- Event prep modes beyond safe goal/date guidance.
+- Any billing/paywall claim/proof changes.
+- Bigger partner/social loops.
 
-### Phase 4: Web Security Upgrade
+### Needs External Artifact Or Backend State
 
-- Upgrade Next and PostCSS in `web`.
-- Resolve Supabase middleware runtime warning.
-- Configure noninteractive web lint.
-- Add web audit/build/test/typecheck to CI.
+- Android APK/AAB 16 KB page-size validation.
+- iOS APNs / `aps-environment` confirmation.
+- Binary protection inspection.
+- APNs send-key / remote-push credential setup if remote push ships in v1.
+- Telemetry migrations `092-104` applied in Supabase EU-Dublin.
+- Store screenshots and final metadata.
+- Incoming Physique Scan estimator branch.
+- Native Physique Scan/TFLite path on real Android and iOS devices.
 
-### Phase 5: Architecture Reset By Domain
+## Recommended Next Implementation Plan
 
-- Extract Progress Scan flow controller.
-- Split `database.js` by domain behind a compatibility index.
-- Move large screen sections into components/selectors.
-- Add tests around each seam before moving logic.
-
-### Phase 6: Guided Event Prep Modes
-
-Treat contest prep, photoshoot prep and holiday prep as guided goal layers, not coach replacements.
-
-Safe scope:
-- date, target, current condition and available time;
-- weekly rate limits;
-- progress photo/Physique Scan trend support;
-- training/nutrition adherence checks;
-- calm fail-closed safety copy;
-- explicit "peak week needs trained human eyes" boundary for contest prep.
-
-Unsafe scope:
-- dehydration protocols;
-- diuretic/sodium/water manipulation;
-- claim of stage-readiness certainty;
-- exact photo-derived body-fat promises.
+1. Merge/push this hardening branch after review and device QA.
+2. Rebase onto the incoming Physique Scan estimator branch and run the scan-specific audit.
+3. Complete the design-system sweep in small batches: inputs, buttons, section labels, sheets, load states.
+4. Extract Progress Photos / Physique Scan controller.
+5. Extract `database.js` by domain, starting with progress photos/scans and body metrics.
+6. Build only safe guided prep layers first: holiday/photoshoot/contest date planning with rate limits, honesty, no dehydration/peak-week manipulation, and explicit trained-eye boundaries.
 
 ## Suggested Follow-Up Codex Tasks
 
-1. `Audit and harden the incoming Physique Scan estimator branch. Verify exact current source behavior, then add tests for confidence, abstention, quality scoring, Coach isolation, no exact body-fat percentage claims, backup/export/delete, and privacy copy. Do not change unrelated app surfaces.`
-
-2. `Clear all mobile ESLint warnings without broad refactors. Prioritise accessibility descriptors, nested touchables and unused locals. Keep Jest, typecheck, import check and lint green.`
-
-3. `Upgrade the web workspace from Next 14 to a patched Next 15 version, resolve Supabase middleware runtime warnings, configure noninteractive web lint, and make web build/test/typecheck/audit pass.`
-
-4. `Refactor ProgressPhotosScreen by extracting a Physique Scan flow controller and pure helper module. Preserve UI behavior and add tests before moving logic.`
-
-5. `Split src/lib/database.js into domain modules behind the existing public API. Start with progress photos/scans and body metrics. Add import/export compatibility tests.`
-
-6. `Design and implement a deterministic data-freshness engine for Athlete Profile: body metrics cadence, Physique Scan/photo cadence, strength baseline freshness, suppression behavior, and Coach-safe reminders.`
-
-7. `Build a safe guided Event Prep layer covering holiday prep, photoshoot prep and responsible contest-prep support. Include hard boundaries for dehydration/peak week and no-coach-replacement wording.`
+1. `Audit and harden the incoming Physique Scan estimator branch. Verify exact current source behavior, then add tests for confidence, abstention, quality scoring, Coach isolation, no exact body-fat percentage claims, backup/export/delete, and privacy copy.`
+2. `Continue the Volyume design consistency sweep: canonical section labels, canonical inputs, remaining Button migrations, and remaining BottomSheet migrations. Keep lint, typecheck, imports, Jest and web checks green.`
+3. `Extract ProgressPhotosScreen scan orchestration into a pure controller/helper module with tests, preserving UI behavior and all safety/privacy gates.`
+4. `Split src/lib/database.js into domain modules behind the current public API. Start with progress photos/scans and body metrics. Add compatibility tests before moving callers.`
+5. `Design a safe guided prep layer for holiday prep, photoshoot prep and responsible contest-prep support. No dehydration, diuretic, sodium/water manipulation, or coach-replacement claims.`
 
 ## Blockers And Assumptions
 
-- Assumption: Coach remains deterministic and explainable; no AI coach/chat recommendations.
+- Assumption: Volyume's coach remains deterministic and explainable; no AI coach/chat recommendations.
 - Assumption: Physique Scan outputs visual leanness, confidence and progress signal, not exact body-fat percentage.
-- Blocker: no APK/AAB release artifact was present for Android 16 KB page-size validation.
-- Blocker: root native `npm audit` could not run because npm/npx are unavailable in this runtime.
-- Blocker: pnpm build-script approval policy prevents clean web install without approved builds.
-- Blocker: web `next lint` prompts for setup and is not CI-ready.
-- Assumption: avatar/profile picture should remain local-only until there is an explicit cloud media storage/privacy design.
+- Blocker: final scan-estimator audit waits for the incoming branch from the other session.
+- Blocker: release-artifact checks need APK/AAB/TestFlight/store artifacts.
+- Blocker: telemetry migration state needs Supabase/project access.
+- Assumption: avatar/profile photo remains device-local until a media-storage privacy design is approved.

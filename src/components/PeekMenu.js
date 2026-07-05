@@ -112,7 +112,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
       statusBarTranslucent={Platform.OS === 'android'}
     >
       <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
+        <Pressable accessibilityRole="button" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
         style={[

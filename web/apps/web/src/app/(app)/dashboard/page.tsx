@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const data = await getDashboardData(supabase, user.id, {
     todayKey: ukDayKey(),
     weekStartISO: ukWeekStartISO(),

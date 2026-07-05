@@ -1,6 +1,7 @@
 {
   "name": "volyume",
   "version": "1.2.0",
+  "packageManager": "npm@10.9.4",
   "main": "index.js",
   "engines": {
     "node": ">=22.22.2"
@@ -10,7 +11,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "test": "jest",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",

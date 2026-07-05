@@ -212,7 +212,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   if (subduedMode) {
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={styles.toastWrap}
         activeOpacity={0.9}
         onPress={onDismiss}
@@ -229,7 +229,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   }
 
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={StyleSheet.absoluteFillObject}
       activeOpacity={1}
       onPress={onDismiss}

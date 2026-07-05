@@ -28,9 +28,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
 import Button from '../components/Button';
+import ModalHeader from '../components/ModalHeader';
 import { useToast } from '../components/Toast';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
@@ -244,13 +244,7 @@ export default function CascadeGateScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.headerTitle}>Subscription</Text>
-        <TouchableOpacity onPress={dismiss} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      <ModalHeader title="Subscription" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>{content.title}</Text>
@@ -336,12 +330,6 @@ export default function CascadeGateScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.tabBarBorder,
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary },
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,

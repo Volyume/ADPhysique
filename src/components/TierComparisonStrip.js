@@ -58,7 +58,7 @@ export default function TierComparisonStrip({
   );
 
   const ProColumn = (
-    <Pressable
+    <Pressable accessibilityRole="button"
       onPress={onPickPro}
       disabled={!onPickPro}
       style={({ pressed }) => [

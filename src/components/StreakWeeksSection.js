@@ -184,7 +184,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
       </TouchableOpacity>
 
       <Modal visible={pauseOpen} transparent animationType="fade" onRequestClose={() => setPauseOpen(false)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setPauseOpen(false)} />
+        <TouchableOpacity accessibilityRole="button" style={styles.overlay} activeOpacity={1} onPress={() => setPauseOpen(false)} />
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
           {PAUSE_OPTIONS.map(opt => (

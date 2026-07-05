@@ -79,7 +79,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Goal lock" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>A note on aggressive cuts</Text>

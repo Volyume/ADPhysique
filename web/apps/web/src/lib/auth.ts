@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@volyume/supabase/server';
 
 export async function getUser() {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

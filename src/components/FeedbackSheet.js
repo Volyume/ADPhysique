@@ -242,7 +242,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       statusBarTranslucent={Platform.OS === 'android'}
     >
       <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
+        <Pressable accessibilityRole="button" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
         style={[
@@ -302,7 +302,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
               ))}
             </View>
 
-            <TouchableWithoutFeedback onPress={() => scheduleAutoDismiss()}>
+            <TouchableWithoutFeedback accessibilityRole="button" onPress={() => scheduleAutoDismiss()}>
               <View>
                 <TextInput
                   style={styles.input}

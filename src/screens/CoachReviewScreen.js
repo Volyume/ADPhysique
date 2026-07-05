@@ -419,7 +419,7 @@ export default function CoachReviewScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Weekly review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <SkeletonCard height={96} />
@@ -434,7 +434,7 @@ export default function CoachReviewScreen() {
   // U-B-6: a real read failure is shown as a retryable error, never as "no sessions".
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Weekly review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <Card>
@@ -457,7 +457,7 @@ export default function CoachReviewScreen() {
   const hasData = weeklyWorkouts.length > 0;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Weekly review" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 

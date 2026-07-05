@@ -115,6 +115,47 @@ describe('surface elevation ladder', () => {
   });
 });
 
+describe('dark theme contrast', () => {
+  function relLum(hex) {
+    const h = String(hex).replace('#', '');
+    const ch = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  }
+  function ratio(a, b) {
+    const la = relLum(a);
+    const lb = relLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  afterEach(() => applyAccessibility({}));
+
+  test('text roles clear their WCAG bars on every core dark surface', () => {
+    applyAccessibility({ theme: 'dark' });
+    const surfaces = [
+      colors.background,
+      colors.surface,
+      colors.surfaceElevated,
+      colors.surface2,
+      colors.surface3,
+    ];
+
+    for (const s of surfaces) {
+      expect(ratio(colors.textPrimary, s)).toBeGreaterThanOrEqual(7);
+      expect(ratio(colors.textSecondary, s)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(colors.textMuted, s)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test('disabled text remains a disabled-only token, not muted body copy', () => {
+    expect(colors.textDisabled).not.toBe(colors.textMuted);
+    expect(ratio(colors.textDisabled, colors.background)).toBeLessThan(4.5);
+    expect(ratio(colors.textMuted, colors.surface3)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('spacing / radius additions', () => {
   test('spacing gained hair and xs2 steps, still ordered', () => {
     expect(spacing.hair).toBe(1);

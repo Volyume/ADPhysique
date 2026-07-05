@@ -5,6 +5,8 @@ const ROOT = path.resolve(__dirname, '..');
 const NAV = fs.readFileSync(path.join(ROOT, 'navigation', 'RootNavigator.js'), 'utf8');
 const COACH = fs.readFileSync(path.join(ROOT, 'screens', 'YouScreen.js'), 'utf8');
 const PROFILE = fs.readFileSync(path.join(ROOT, 'screens', 'AthleteProfileScreen.js'), 'utf8');
+const PROFILE_SUMMARY = fs.readFileSync(path.join(ROOT, 'lib', 'athleteProfileSummary.js'), 'utf8');
+const PROFILE_FRESHNESS = fs.readFileSync(path.join(ROOT, 'lib', 'profileFreshness.js'), 'utf8');
 
 describe('premium tab IA', () => {
   test('visible bottom tabs are Today, Train, Nutrition, Progress, Coach', () => {
@@ -30,9 +32,11 @@ describe('premium tab IA', () => {
 
   test('Athlete profile includes avatar, strength baselines, Physique Scan and data refresh paths', () => {
     expect(PROFILE).toContain('saveAvatarPhoto');
-    expect(PROFILE).toContain('getStrengthLevel');
+    expect(PROFILE).toContain('buildAthleteProfileSummary');
+    expect(PROFILE_SUMMARY).toContain('getStrengthLevel');
     expect(PROFILE).toContain('getProgressScanCoachSummary');
-    expect(PROFILE).toContain('Retake in consistent light and poses every 2 to 4 weeks');
+    expect(PROFILE).toContain('buildProfileFreshness');
+    expect(PROFILE_FRESHNESS).toContain('Retake when light, pose and timing are consistent');
     expect(PROFILE).toContain("navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')");
   });
 });

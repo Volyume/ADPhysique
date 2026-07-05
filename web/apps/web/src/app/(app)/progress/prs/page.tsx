@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PRsPage() {
   const user = await requireUser();
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const prs = await getPRs(supabase, user.id, isoDaysAgo(365));
 
   if (prs.length === 0) {

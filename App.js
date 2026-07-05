@@ -302,7 +302,7 @@ class ErrorBoundary extends React.Component {
                 : this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
             </Text>
           </ScrollView>
-          <TouchableOpacity style={eb.btn} onPress={() => this.setState({ error: null })}>
+          <TouchableOpacity accessibilityRole="button" style={eb.btn} onPress={() => this.setState({ error: null })}>
             <Text style={eb.btnText}>Retry</Text>
           </TouchableOpacity>
         </View>

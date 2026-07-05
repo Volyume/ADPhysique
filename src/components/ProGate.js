@@ -110,7 +110,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setModalVisible(false)}>
+        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => setModalVisible(false)}>
           <Pressable
             style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}
             onPress={() => {}}
@@ -234,7 +234,7 @@ export function ProLocked({ feature = 'This' }) {
             <TodaysPlateTeaser />
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.lockedBtn}
           onPress={() => navigation.navigate('ProUpgrade')}
           activeOpacity={0.88}
@@ -242,7 +242,7 @@ export function ProLocked({ feature = 'This' }) {
           <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
           <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.lockedBack}
           onPress={() => {
             // "Not now" must always lead somewhere. If the user deep-linked
