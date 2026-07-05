@@ -250,6 +250,7 @@ Status: release decision.
 - Workout History filters now use the shared `Chip` primitive, preserving filter/calendar-reset behavior while removing bespoke chip fill/border/text styling from another Train surface.
 - Exercise Picker browse filters now use the same shared `Chip` primitive already used by its custom-exercise create flow, preserving muscle/equipment filter behavior while removing duplicate local chip styles.
 - Feedback Sheet sentiment choices and Cancel/Send actions now use shared `Chip` and `Button` primitives, preserving feedback submission, auto-dismiss and privacy copy while removing another bespoke sheet-control cluster.
+- Reusable `WindowChips` chart-window control now delegates selected/idle styling to the shared `Chip` primitive while preserving equal-width tab targets and chart-window behavior.
 
 ### Web / CI / Security
 
