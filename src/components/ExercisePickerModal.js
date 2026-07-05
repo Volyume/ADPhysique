@@ -210,18 +210,16 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               contentContainerStyle={styles.filterRow}
             >
               {PICKER_MUSCLES.map(m => (
-                <TouchableOpacity
+                <Chip
                   key={m}
-                  style={[styles.chip, muscleFilter === m && styles.chipActive]}
+                  label={MUSCLE_DISPLAY_NAMES[m]}
+                  selected={muscleFilter === m}
                   onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: muscleFilter === m }}
                   accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
-                >
-                  <Text style={[styles.chipText, muscleFilter === m && styles.chipTextActive]}>
-                    {MUSCLE_DISPLAY_NAMES[m]}
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.filterChip}
+                  labelStyle={styles.filterChipText}
+                  selectedLabelStyle={styles.filterChipTextActive}
+                />
               ))}
             </ScrollView>
             <ScrollView
@@ -231,16 +229,16 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               contentContainerStyle={styles.filterRow}
             >
               {PICKER_EQUIPMENT.map(eq => (
-                <TouchableOpacity
+                <Chip
                   key={eq}
-                  style={[styles.chip, equipmentFilter === eq && styles.chipActive]}
+                  label={eq}
+                  selected={equipmentFilter === eq}
                   onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: equipmentFilter === eq }}
                   accessibilityLabel={`Filter by ${eq}`}
-                >
-                  <Text style={[styles.chipText, equipmentFilter === eq && styles.chipTextActive]}>{eq}</Text>
-                </TouchableOpacity>
+                  style={styles.filterChip}
+                  labelStyle={styles.filterChipText}
+                  selectedLabelStyle={styles.filterChipTextActive}
+                />
               ))}
             </ScrollView>
 
@@ -327,13 +325,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: spacing.sm, flexGrow: 0,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
   },
-  chip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipText: { ...type.label, color: colors.textSecondary },
-  chipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  filterChip: { paddingVertical: spacing.sm },
+  filterChipText: { ...type.label, color: colors.textSecondary },
+  filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
