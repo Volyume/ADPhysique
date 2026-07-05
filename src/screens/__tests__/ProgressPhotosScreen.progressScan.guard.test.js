@@ -92,4 +92,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/onFallback=\{\(\) => \{ setCaptureOpen\(false\); if \(scanFlow\) pickScanPoseFromLibrary\(scanFlow, capturePose\); else pickFrom\('library'\); \}\}/);
     expect(SCREEN).not.toMatch(/discardScanDraft\(scanFlow\); pickFrom\('library'\)/);
   });
+
+  test('refresh results are guarded before committing photo and scan state', () => {
+    expect(SCREEN).toMatch(/const refreshRequestRef = useRef\(0\);/);
+    expect(SCREEN).toMatch(/const isCurrentRefresh = \(\) => refreshRequestRef\.current === requestId;/);
+    expect(SCREEN).toMatch(/map = await getPhotoMetaMap\(rows\.map\(\(r\) => r\.name\), userId\);[\s\S]*if \(!isCurrentRefresh\(\)\) return;[\s\S]*setPhotos\(rows\);[\s\S]*setScans\(scanRows \|\| \[\]\);/);
+    expect(SCREEN).toMatch(/finally \{ if \(isCurrentRefresh\(\)\) setLoading\(false\); \}/);
+  });
 });
