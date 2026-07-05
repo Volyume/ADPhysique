@@ -165,6 +165,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
             icon="calendar-outline"
             title="No data found"
             text="This block doesn't have any logged sessions yet."
+            actionLabel="Start a new block"
+            onAction={() => navigation.navigate('MesocycleBuilder')}
             compact
           />
         )}
