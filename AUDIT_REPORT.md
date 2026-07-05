@@ -291,6 +291,7 @@ Status: release decision.
 - My Recipes now uses the shared `Stepper` primitive for the recipe-serving picker, preserving half-serving increments and the 0.5-20 serving range while removing another bespoke plus/minus row from food logging.
 - Block Reflection and Coaching History now use the shared `EmptyState` component for no-data states, preserving copy and load behavior while removing two local empty-card typography blocks from history surfaces.
 - Daily Steps and Cardio database access now lives behind `src/lib/database/activity.js`, with `database.js` preserving every existing public export for UI, sync and health imports. Focused repository tests cover local-day injection, clamping, sync scheduling, soft-delete timestamps and cloud timestamp restore.
+- Athlete Profile now uses the shared `EmptyState` component for the strength-baseline no-data state, preserving the athlete-profile copy while removing another local empty-card style block.
 
 ### Web / CI / Security
 
