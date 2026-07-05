@@ -8,7 +8,8 @@ import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifica
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
-import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import NumericStepper from '../components/Stepper';
+import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
 
 // Body-weight unit options. Gym weights stay kg-only by design (UK); this
 // only controls how a user's own body weight is shown/entered.
@@ -17,6 +18,13 @@ const BODY_WEIGHT_UNIT_OPTIONS = [
   { value: 'kg', label: 'Kg' },
   { value: 'lbs', label: 'Lbs' },
 ];
+
+function formatRestSeconds(seconds) {
+  const s = Number(seconds) || 90;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${s}s`;
+}
 
 // Settings landing. A short list of categories, each opening its own
 // focused sub-page. The old single 1,500-line screen put every toggle on
@@ -73,15 +81,7 @@ export default function SettingsScreen({ navigation }) {
     if (!workoutPrefsLoaded) loadWorkoutPrefs();
   }, [workoutPrefsLoaded, loadWorkoutPrefs]);
 
-  function adjustRest(delta) {
-    setDefaultRestSeconds((Number(defaultRestSeconds) || 90) + delta);
-  }
-  const restLabel = (() => {
-    const s = Number(defaultRestSeconds) || 90;
-    const m = Math.floor(s / 60);
-    const r = s % 60;
-    return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${s}s`;
-  })();
+  const restSeconds = Number(defaultRestSeconds) || 90;
 
   return (
     <SettingsPage title="Settings">
@@ -222,13 +222,26 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
 
-        <Stepper
+        <SettingRow
           icon="timer-outline"
           label="Default rest timer"
           sub="Used for new exercises and any set with no per-exercise rest set."
-          value={restLabel}
-          onMinus={() => adjustRest(-15)}
-          onPlus={() => adjustRest(15)}
+          showArrow={false}
+          rightElement={(
+            <NumericStepper
+              value={restSeconds}
+              onChange={setDefaultRestSeconds}
+              min={30}
+              max={600}
+              step={15}
+              size="compact"
+              label="default rest timer"
+              decreaseLabel="Decrease Default rest timer"
+              increaseLabel="Increase Default rest timer"
+              valueLabel={`Default rest timer ${formatRestSeconds(restSeconds)}`}
+              formatValue={formatRestSeconds}
+            />
+          )}
         />
 
         <SettingRow
@@ -280,43 +293,6 @@ export default function SettingsScreen({ navigation }) {
   );
 }
 
-// A label + sub row with a [- value +] stepper on the right. Mirrors the
-// SettingRow chrome so the Workout block reads as one coherent section.
-function Stepper({ icon, label, sub, value, onMinus, onPlus }) {
-  return (
-    <View style={styles.settingRow}>
-      <View style={styles.settingIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.settingLabel}>{label}</Text>
-        {sub ? <Text style={styles.settingSub}>{sub}</Text> : null}
-      </View>
-      <View style={local.stepper}>
-        <TouchableOpacity
-          style={local.stepBtn}
-          onPress={onMinus}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Decrease ${label}`}
-        >
-          <Ionicons name="remove" size={18} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={local.stepValue}>{value}</Text>
-        <TouchableOpacity
-          style={local.stepBtn}
-          onPress={onPlus}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Increase ${label}`}
-        >
-          <Ionicons name="add" size={18} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
 const local = StyleSheet.create({
   segment: {
     flexDirection: 'row',
@@ -330,20 +306,4 @@ const local = StyleSheet.create({
   segBtnActive: { backgroundColor: colors.primaryFill },
   segText: { ...type.label, color: colors.textSecondary },
   segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  stepBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepValue: {
-    ...type.body,
-    color: colors.textPrimary,
-    minWidth: 52,
-    textAlign: 'center',
-    fontSize: fontSize.sm,
-  },
 });
