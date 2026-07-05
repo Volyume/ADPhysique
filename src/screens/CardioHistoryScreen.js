@@ -13,7 +13,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
@@ -81,6 +81,7 @@ function CardioTrend({ weeks, goal }) {
 }
 
 export default function CardioHistoryScreen() {
+  const navigation = useNavigation();
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
     user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
@@ -188,6 +189,8 @@ export default function CardioHistoryScreen() {
           text={isHealthAvailable()
             ? `Sessions you log, or bring in from ${getHealthProviderLabel()}, show up here.`
             : 'Sessions you log show up here.'}
+          actionLabel="Log cardio"
+          onAction={() => navigation.navigate('LogCardio')}
         />
       ) : (
         <FlashList
