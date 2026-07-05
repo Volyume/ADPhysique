@@ -33,6 +33,11 @@ jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+jest.mock('../../lib/haptics', () => ({
+  selection: jest.fn(),
+  commit: jest.fn(),
+  error: jest.fn(),
+}));
 
 // FlashList: captured, not rendered — the test calls renderItem({ item })
 // directly to get the row element, the same object a real tap would fire

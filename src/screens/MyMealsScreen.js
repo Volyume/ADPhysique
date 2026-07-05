@@ -26,15 +26,18 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
+import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
 import { SkeletonRow } from '../components/Skeleton';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import {
   listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal, deleteFoodEntry,
@@ -204,38 +207,29 @@ export default function MyMealsScreen({ navigation, route }) {
         />
       )}
 
-      <Modal
+      <BottomSheet
         visible={!!renaming}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenaming(null)}
+        onClose={() => setRenaming(null)}
+        keyboardAvoiding
+        accessibilityLabel="Rename meal"
       >
-        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => setRenaming(null)}>
-          <Pressable style={styles.card} onPress={() => {}} accessible={false}>
-            <Text style={styles.cardTitle}>Rename meal</Text>
-            <TextInput
-              style={styles.input}
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Meal name"
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-              maxLength={60}
-              returnKeyType="done"
-              onSubmitEditing={submitRename}
-              accessibilityLabel="Meal name"
-            />
-            <View style={styles.cardActions}>
-              <TouchableOpacity onPress={() => setRenaming(null)} style={styles.cardBtn} accessibilityRole="button" accessibilityLabel="Cancel">
-                <Text style={styles.cardBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={submitRename} style={[styles.cardBtn, styles.cardBtnPrimary]} accessibilityRole="button" accessibilityLabel="Save">
-                <Text style={[styles.cardBtnText, { color: colors.onPrimary, fontWeight: fontWeight.bold }]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Text style={styles.sheetTitle}>Rename meal</Text>
+        <TextField
+          value={renameText}
+          onChangeText={setRenameText}
+          placeholder="Meal name"
+          placeholderTextColor={colors.textMuted}
+          autoFocus
+          maxLength={60}
+          returnKeyType="done"
+          onSubmitEditing={submitRename}
+          accessibilityLabel="Meal name"
+        />
+        <View style={styles.sheetActions}>
+          <Button title="Cancel" variant="secondary" onPress={() => setRenaming(null)} fullWidth={false} />
+          <Button title="Save" onPress={submitRename} fullWidth={false} />
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -256,17 +250,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
   emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center' },
-  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
-  card: { width: '100%', backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg },
-  cardTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.md },
-  input: {
-    ...type.body,
-    backgroundColor: colors.background, color: colors.textPrimary,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-  },
-  cardActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: spacing.lg, gap: spacing.sm },
-  cardBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
-  cardBtnPrimary: { backgroundColor: colors.primary },
-  cardBtnText: { ...type.body, color: colors.textPrimary },
+  sheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 });
