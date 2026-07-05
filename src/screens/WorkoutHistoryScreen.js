@@ -488,6 +488,30 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
   const calendarCells = viewMode === 'calendar' ? buildCalendarCells() : [];
   const today = new Date();
+  const hasNarrowedEmpty = !loading && !loadError && workouts.length > 0 && filteredWorkouts.length === 0;
+  const activeFilterLabel = FILTERS.find(f => f.key === filter)?.label || 'selected';
+  const narrowedEmptyTitle = (() => {
+    if (viewMode === 'calendar' && selectedDay) return `No session on ${format(selectedDay, 'd MMM')}`;
+    if (filter === 'month') return 'No sessions this month';
+    if (filter !== 'all') return `No ${activeFilterLabel.toLowerCase()} sessions found`;
+    if (viewMode === 'calendar') return `No sessions in ${format(calendarDate, 'MMMM')}`;
+    return 'No sessions match this view';
+  })();
+  const narrowedEmptyText = (() => {
+    if (viewMode === 'calendar' && selectedDay) {
+      return 'That day has no completed workout. Show all sessions to get back to your full history.';
+    }
+    if (filter !== 'all') {
+      return 'Your workouts are still saved. This filter just does not match any completed sessions yet.';
+    }
+    return 'Your workouts are still saved. This calendar month just has no completed sessions.';
+  })();
+
+  function showAllSessions() {
+    setFilter('all');
+    setSelectedDay(null);
+    setViewMode('list');
+  }
 
   function renderCalendarHeader() {
     return (
@@ -696,6 +720,21 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 variant="secondary"
                 onPress={loadWorkouts}
                 accessibilityLabel="Try loading workout history again"
+                style={styles.emptyAction}
+              />
+            </View>
+          ) : hasNarrowedEmpty ? (
+            <View style={styles.empty}>
+              <View style={styles.errorIconWrap}>
+                <Ionicons name={viewMode === 'calendar' ? 'calendar-outline' : 'filter-outline'} size={24} color={colors.textMuted} />
+              </View>
+              <Text style={styles.emptyTitle}>{narrowedEmptyTitle}</Text>
+              <Text style={styles.emptyText}>{narrowedEmptyText}</Text>
+              <Button
+                title="Show all sessions"
+                variant="secondary"
+                onPress={showAllSessions}
+                accessibilityLabel="Show all workout sessions"
                 style={styles.emptyAction}
               />
             </View>

@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 509 suites passed.
-  - 6,462 tests passed, 5 skipped.
+  - 6,463 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -337,6 +337,7 @@ Status: release decision.
 - Consistency now distinguishes a failed shared Progress data read from a genuinely empty training account, surfacing a retryable safety-worded error state instead of the first-session prompt when history cannot be read.
 - Block Reflection now separates failed block-summary reads from a genuine no-session block, with a guarded retry state and latest-request token so stale reads cannot overwrite newer route/user state.
 - Lift Progress now separates failed lift-history reads from a genuine no-lift state, clears user-scoped derived strength data when no user is present, and guards overlapping refreshes so stale lift responses cannot repaint newer results.
+- Workout History now distinguishes a genuinely empty training log from a saved history narrowed away by filters or calendar view, showing truthful filter-specific copy and a `Show all sessions` recovery action instead of the first-run empty state.
 
 ### Web / CI / Security
 
