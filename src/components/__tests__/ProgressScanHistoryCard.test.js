@@ -51,7 +51,13 @@ describe('ProgressScanHistoryCard', () => {
     const tree = await render({ onToggleHideExact, onDeleteScan, onOpenPhoto });
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Scan history');
+    expect(text).toContain('Physique Scan results');
+    expect(text).toContain('Private visual reads');
+    expect(text).toContain('Visual trend');
+    expect(text).toContain('Confidence: Moderate');
+    expect(text).toContain('Leanness band');
+    expect(text).toContain('Slight positive trend');
+    expect(text).toContain('72/100');
     expect(text).toContain('Show details');
     expect(text).toContain('Volyume Leanness Score 72/100');
     expect(text).toContain('82.5 kg weight snapshot');
@@ -70,6 +76,7 @@ describe('ProgressScanHistoryCard', () => {
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
     expect(hiddenText).toContain('Lean band');
+    expect(hiddenText).toContain('ScoreHidden');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
@@ -83,7 +90,7 @@ describe('ProgressScanHistoryCard', () => {
   test('read-only mode hides delete and disables thumbnail opening', async () => {
     const onOpenPhoto = jest.fn();
     const tree = await render({ readOnly: true, onOpenPhoto });
-    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Scan history');
+    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Physique Scan results');
     expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete scan/.test(node.props.accessibilityLabel))).toBe(false);
     const thumb = tree.root.findAllByType(TouchableOpacity).find((node) => /Front photo/.test(node.props.accessibilityLabel));
     expect(thumb.props.disabled).toBe(true);
