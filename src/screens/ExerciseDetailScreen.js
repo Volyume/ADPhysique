@@ -166,6 +166,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [exercise, setExercise] = useState(null);
+  const [loadingExercise, setLoadingExercise] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [history, setHistory] = useState([]);
   // COMP-019: all sessions (uncapped) feed the windowed chart; history stays
   // the last-8 view for the History list and all-time best below.
@@ -221,9 +223,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }, []);
 
   async function loadData() {
+    setLoadingExercise(true);
+    setLoadError(null);
     try {
       const ex = await getExerciseById(exerciseId);
-      if (!ex) return; // exercise not found, screen will stay on null guard
+      if (!ex) {
+        setExercise(null);
+        setLoadError('not_found');
+        return;
+      }
       setExercise(ex);
 
       // History, group by workout, last 8 sessions
@@ -285,6 +293,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       }
     } catch (e) {
       logError('ExerciseDetailScreen.loadData', e);
+      setExercise(null);
+      setLoadError('read_failed');
+    } finally {
+      setLoadingExercise(false);
     }
   }
 
@@ -339,6 +351,33 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     await deleteExerciseGoal(user.id, exerciseId);
     setGoal(null);
     setGoalModalVisible(false);
+  }
+
+  if (!exercise && loadError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Exercise" />
+        <View style={styles.loadErrorWrap}>
+          <View style={styles.loadErrorCard} accessibilityRole="alert" accessibilityLabel="Exercise details could not be loaded">
+            <View style={styles.loadErrorIcon}>
+              <Ionicons name="alert-circle-outline" size={22} color={colors.warning} />
+            </View>
+            <Text style={styles.loadErrorTitle}>Couldn't load exercise details</Text>
+            <Text style={styles.loadErrorText}>
+              Check your connection and try again. Your workout history has not been changed.
+            </Text>
+            <Button
+              title="Try again"
+              onPress={loadData}
+              loading={loadingExercise}
+              disabled={loadingExercise}
+              accessibilityLabel="Try loading exercise details again"
+              style={styles.loadErrorButton}
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (!exercise) {
@@ -935,6 +974,28 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
+  loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
+  loadErrorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadErrorIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: withAlpha(colors.warning, 0.12),
+    marginBottom: spacing.xs,
+  },
+  loadErrorTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
+  loadErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
+  loadErrorButton: { marginTop: spacing.md, alignSelf: 'stretch' },
   chartToggleBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
