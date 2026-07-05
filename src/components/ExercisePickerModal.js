@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, KeyboardAvoidingView,
-  Platform, TextInput, TouchableOpacity, ScrollView,
+  Platform, TouchableOpacity, ScrollView,
 } from 'react-native';
 // E8 perf: the full library is ~450 rows with no render cap; FlashList
 // recycles rows instead of mounting them all (audit/perf-baseline.md §2).
@@ -14,6 +14,7 @@ import { getAllExercises, insertExercise } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import Chip from './Chip';
 import SearchBar from './SearchBar';
+import TextField from './TextField';
 import { useToast } from './Toast';
 
 // Shared exercise picker: search the library and, when the exercise you want
@@ -134,14 +135,18 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.createContent} keyboardShouldPersistTaps="handled">
-              <TextInput accessibilityLabel="New exercise name"
-                style={styles.createNameInput}
+              <TextField
+                accessibilityLabel="New exercise name"
                 value={createName}
                 onChangeText={setCreateName}
                 placeholder="Exercise name"
                 placeholderTextColor={colors.textMuted}
                 autoFocus
                 autoCapitalize="words"
+                surface={colors.inputBg}
+                containerStyle={styles.createNameInputContainer}
+                fieldStyle={styles.createNameInputField}
+                inputStyle={styles.createNameInputText}
               />
               <Text style={styles.createLabel}>Muscle Group</Text>
               <View style={styles.chipRow}>
@@ -313,11 +318,9 @@ const styles = StyleSheet.create({
   createNewBtnText: { ...type.label, color: colors.primary, flex: 1 },
   createTitle: { ...type.title, flex: 1, color: colors.textPrimary, textAlign: 'center' },
   createContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
-  createNameInput: {
-    ...type.title, backgroundColor: colors.inputBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, color: colors.textPrimary,
-    borderWidth: 1, borderColor: colors.border,
-  },
+  createNameInputContainer: { gap: 0 },
+  createNameInputField: { borderRadius: radius.md },
+  createNameInputText: { ...type.title, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 0.3 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterRow: {
