@@ -1,0 +1,64 @@
+import { scanReadCopy, scanStatsCopy, trendOnlyScanCopy } from '../progressScanCopy';
+
+const scoredScan = {
+  analysisStatus: 'complete',
+  trendDirection: 'down',
+  signals: {
+    physiqueAssessment: {
+      visualLeannessScore: 72,
+      leannessBandLabel: 'Lean',
+      scanConfidenceLabel: 'High',
+      progressSignalLabel: 'Slight positive trend',
+    },
+  },
+  stats: {
+    photoCount: 2,
+    weightKg: 82.4,
+    poses: ['front', 'back'],
+  },
+};
+
+describe('progressScanCopy', () => {
+  test('scanReadCopy explains Volyume score without presenting body-fat percentage', () => {
+    expect(scanReadCopy(scoredScan)).toBe(
+      'Volyume Leanness Score 72/100. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual progress score, not a body-fat percentage.',
+    );
+  });
+
+  test('hide-exact keeps the trend and hides the detailed score', () => {
+    expect(scanReadCopy(scoredScan, { hideExact: true })).toBe(
+      'Lean band. Progress Signal: Slight positive trend. Detailed scan score is hidden. This is not a body-fat percentage.',
+    );
+  });
+
+  test('suppression hides physique scan details completely', () => {
+    expect(scanReadCopy(scoredScan, { suppressed: true })).toBe(
+      'Scan saved privately. Physique scan details are hidden right now.',
+    );
+  });
+
+  test('measured scans use trend-only copy when exact details are hidden', () => {
+    expect(scanReadCopy({
+      analysisStatus: 'measured',
+      trendDirection: 'steady',
+      copySummary: 'Measured and saved.',
+    }, { hideExact: true })).toBe('Progress Signal: holding steady.');
+  });
+
+  test('trendOnlyScanCopy handles not-comparable and baseline states', () => {
+    expect(trendOnlyScanCopy({ deltaExplanation: { comparisonStatus: 'not_comparable' } })).toBe(
+      'Trend context: saved, but not compared because the setup was not like-for-like.',
+    );
+    expect(trendOnlyScanCopy({})).toBe('Trend context: baseline scan saved.');
+  });
+
+  test('scanStatsCopy includes weight only when not suppressed and not hide-exact', () => {
+    expect(scanStatsCopy(scoredScan)).toBe('2 photos | 82.4 kg weight snapshot | Front, Back');
+    expect(scanStatsCopy(scoredScan, { hideExact: true })).toBe('2 photos | Front, Back');
+    expect(scanStatsCopy(scoredScan, { suppressed: true })).toBe('2 photos | Front, Back');
+  });
+
+  test('scanStatsCopy falls back when scan stats are empty', () => {
+    expect(scanStatsCopy({})).toBe('Stored scan photos');
+  });
+});

@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 466 suites passed.
-  - 6,298 tests passed, 5 skipped.
+  - 489 suites passed.
+  - 6,381 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 881 files checked, no unresolved imports or missing named exports.
+  - 915 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -144,7 +144,7 @@ Status: partially closed, larger work remains.
 - Freshness logic was extracted to `src/lib/profileFreshness.js`.
 - Weekly trailing-window math was extracted to dependency-free `src/lib/weekWindows.js`, with `database.js` preserving the public export and guarded `getWeeklyVolumeByMuscle` call shape.
 - Tests/guards cover these seams.
-- Still open: `database.js`, `ProgressPhotosScreen`, `CoachOutputScreen`, sync, and large food/training screens need staged domain refactors.
+- Still open: `database.js`, remaining `ProgressPhotosScreen` orchestration, `CoachOutputScreen` apply actions, sync, and large food/training screens need staged domain refactors.
 
 ### M2: Incoming Physique Scan Estimator Audit
 
@@ -296,6 +296,7 @@ Status: release decision.
 - Active Workout set-entry value parsing and validation now live in `workoutHelpers`, with SetEntry sharing the same duration parser/formatter and log/edit paths sharing the same reps/time/weight validation and normalized weight/reps output. Persistence, PR detection, rest timers and superset flow remain untouched.
 - Diary planned/read-only view derivation now lives in a pure `diaryViewModel` helper: read-only filters planned scaffolding, Pro mode keeps it, planned meal count is slot-based, and planned macro totals stay separate from eaten rollups. The async day loader, race guard and write handlers remain in `DiaryScreen`.
 - FoodSearch one-food logging paths now share pure `loggingPayloads` builders for entry payloads and slot-recent payloads. The slice deliberately leaves audit events, undo toasts, navigation, saved-meal fan-out, plate logging and double-tap guards in `FoodSearchScreen`.
+- Progress Scan display copy now lives in a pure `progressScanCopy` helper, with tests covering score copy, hide-exact mode, suppression, baseline/not-comparable trends, pose labels and weight-stat privacy. Capture, deletion, scan storage, Coach isolation and model analysis remain untouched.
 
 ### Web / CI / Security
 
