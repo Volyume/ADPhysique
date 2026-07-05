@@ -292,6 +292,7 @@ Status: release decision.
 - Block Reflection and Coaching History now use the shared `EmptyState` component for no-data states, preserving copy and load behavior while removing two local empty-card typography blocks from history surfaces.
 - Daily Steps and Cardio database access now lives behind `src/lib/database/activity.js`, with `database.js` preserving every existing public export for UI, sync and health imports. Focused repository tests cover local-day injection, clamping, sync scheduling, soft-delete timestamps and cloud timestamp restore.
 - Athlete Profile now uses the shared `EmptyState` component for the strength-baseline no-data state, preserving the athlete-profile copy while removing another local empty-card style block.
+- Coach Output passive display copy now has a pure `coachOutput/viewCopy` helper and shared `CoachOutputCards` presentation module for date labels, confidence captions, stat chips, ledger, why copy and rapid-loss warning UI. Apply actions, ED/calm safety, load effects and deterministic coach policy remain in `CoachOutputScreen`.
 
 ### Web / CI / Security
 

@@ -21,6 +21,7 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8');
 const COACH = read('../../screens/CoachOutputScreen.js');
 const CHECKIN = read('../../screens/WeeklyCheckInScreen.js');
 const ONBOARD = read('../../screens/ProOnboardingScreen.js');
+const COACH_COPY = read('../coachOutput/viewCopy.js');
 
 describe('NU-1: coach narration speaks the engine adherence vocabulary', () => {
   test('the mapped check-in is what goes into screen state', () => {
@@ -35,8 +36,8 @@ describe('NU-1: coach narration speaks the engine adherence vocabulary', () => {
     expect(setIdx).toBeGreaterThan(mapIdx);
   });
   test("an unmappable 'no' (off target, no food data) still narrates", () => {
-    expect(COACH).toMatch(/calsAdherence === 'no'/);
-    expect(COACH).toMatch(/You were off your calorie target\./);
+    expect(COACH_COPY).toMatch(/calsAdherence === 'no'/);
+    expect(COACH_COPY).toMatch(/You were off your calorie target\./);
   });
 });
 
@@ -47,7 +48,7 @@ describe('NU-8: weekly data confidence is rendered, not just computed', () => {
   });
   test('captions exist for every level that reaches the main card', () => {
     for (const level of ['high', 'medium', 'low']) {
-      expect(COACH).toMatch(new RegExp(`${level}: 'Confidence: ${level}`));
+      expect(COACH_COPY).toMatch(new RegExp(`${level}: 'Confidence: ${level}`));
     }
   });
 });
