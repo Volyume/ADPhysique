@@ -68,7 +68,7 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../lib/database', () => ({
-  getAllWorkouts: jest.fn(),
+  getRecentCompletedWorkouts: jest.fn(),
   getWorkoutSetsForWorkoutIds: jest.fn(),
   getAllExercises: jest.fn(),
   createWorkout: jest.fn(),
@@ -80,7 +80,7 @@ jest.mock('../../lib/syncQueue', () => ({ enqueueSyncOp: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 import WorkoutHistoryScreen from '../WorkoutHistoryScreen';
-import { getAllWorkouts } from '../../lib/database';
+import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises } from '../../lib/database';
 import { logError } from '../../lib/errorLog';
 
 function flattenText(node) {
@@ -103,7 +103,7 @@ describe('WorkoutHistoryScreen load states', () => {
   });
 
   test('shows a retryable error instead of the empty state when workout history fails to load', async () => {
-    getAllWorkouts.mockRejectedValue(new Error('offline'));
+    getRecentCompletedWorkouts.mockRejectedValue(new Error('offline'));
 
     let tree;
     await act(async () => {
@@ -128,8 +128,32 @@ describe('WorkoutHistoryScreen load states', () => {
     });
     await flush();
 
-    expect(getAllWorkouts).toHaveBeenCalledTimes(2);
+    expect(getRecentCompletedWorkouts).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load workout history");
+  });
+
+  test('fetches sets for at most the 50 visible recent sessions', async () => {
+    const workouts = Array.from({ length: 55 }, (_, index) => ({
+      id: `w${index}`,
+      userId: 'u1',
+      startedAt: Date.now() - index * 3600000,
+      endedAt: Date.now() - index * 3600000 + 1800000,
+      isCompleted: true,
+      name: `Session ${index}`,
+    }));
+    getRecentCompletedWorkouts.mockResolvedValue(workouts);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
+    getAllExercises.mockResolvedValue([]);
+
+    await act(async () => {
+      create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    expect(getRecentCompletedWorkouts).toHaveBeenCalledWith('u1', 50);
+    expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledWith(
+      workouts.slice(0, 50).map(w => w.id),
+    );
   });
 });

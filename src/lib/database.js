@@ -2024,6 +2024,26 @@ export async function getAllWorkouts(userId) {
   return rows.map(rowToCamel);
 }
 
+// Workout History renders a bounded recent page. Keep this separate from
+// getAllWorkouts because analytics, sync and coach flows still need full
+// history reads.
+export async function getRecentCompletedWorkouts(userId, limit = 50) {
+  const parsedLimit = Number(limit);
+  const safeLimit = Number.isFinite(parsedLimit) ? Math.max(0, Math.floor(parsedLimit)) : 50;
+  if (!userId || safeLimit <= 0) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT w.*, r.name AS routine_name
+     FROM workouts w
+     LEFT JOIN routines r ON r.id = w.routine_id
+     WHERE w.user_id = ? AND w.is_completed = 1
+     ORDER BY COALESCE(w.ended_at, w.started_at, w.created_at) DESC
+     LIMIT ?`,
+    [userId, safeLimit],
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function getWorkoutById(id) {
   const d = await db();
   const row = await d.getFirstAsync('SELECT * FROM workouts WHERE id = ?', [id]);

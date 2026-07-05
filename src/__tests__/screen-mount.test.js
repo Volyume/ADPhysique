@@ -1429,8 +1429,8 @@ describe('Scale stress: large data does not break render or interaction', () => 
 
   test('WorkoutHistory with 500 workouts renders without crashing', async () => {
     const database = require('../lib/database');
-    const orig = database.getAllWorkouts;
-    database.getAllWorkouts = () => Promise.resolve(
+    const orig = database.getRecentCompletedWorkouts;
+    database.getRecentCompletedWorkouts = () => Promise.resolve(
       Array.from({ length: 500 }, (_, i) => ({
         id: `w${i}`, userId: 'u1',
         startedAt: Date.now() - i * 86400000,
@@ -1453,7 +1453,7 @@ describe('Scale stress: large data does not break render or interaction', () => 
         expect(errors).toEqual([]);
       } finally { unmountTree(tree); }
     } finally {
-      database.getAllWorkouts = orig;
+      database.getRecentCompletedWorkouts = orig;
     }
   });
 

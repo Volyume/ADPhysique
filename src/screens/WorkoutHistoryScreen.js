@@ -18,7 +18,7 @@ import Card from '../components/Card';
 import Chip from '../components/Chip';
 import Button from '../components/Button';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
-import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
+import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
@@ -69,14 +69,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
     setLoading(true);
     setLoadError(false);
     try {
-      const allWorkouts = await getAllWorkouts(user.id);
-      const mine = allWorkouts
-        .filter(w => w.isCompleted)
-        .sort((a, b) => workoutDayMs(b) - workoutDayMs(a));
-
-      // LB-7: the list only renders the most recent 50, so fetch only
-      // those workouts' sets rather than every set ever logged.
-      const page = mine.slice(0, 50);
+      // LB-7: the list renders only the most recent 50 completed sessions, so
+      // the database query and set fan-out are both bounded to that page.
+      const recentCompleted = await getRecentCompletedWorkouts(user.id, 50);
+      const page = recentCompleted.slice(0, 50);
       const [pageSets, allExercises] = await Promise.all([
         getWorkoutSetsForWorkoutIds(page.map(w => w.id)),
         getAllExercises(),
