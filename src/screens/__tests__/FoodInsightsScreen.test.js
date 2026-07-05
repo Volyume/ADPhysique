@@ -128,6 +128,20 @@ async function tapWindow(tree, n) {
 describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)', () => {
   afterEach(() => jest.clearAllMocks());
 
+  test('shows a retry state when nutrition insights fail to load', async () => {
+    useAppStore.mockImplementation((sel) => sel({ user: { id: 'u1' } }));
+    getNutritionTargets.mockResolvedValue(TARGETS);
+    getRollupsForRange.mockRejectedValueOnce(new Error('offline'));
+    let tree;
+    await act(async () => { tree = create(<FoodInsightsScreen navigation={nav} />); });
+    await flush();
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain("Couldn't load nutrition insights");
+    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain('Try again');
+    expect(text).not.toContain('Log a few days to see your last 7 days.');
+  });
+
   test('reports days hit of days logged using the existing 10% band', async () => {
     const days = last7();
     // 5 logged days; protein hit on 3 of them.
