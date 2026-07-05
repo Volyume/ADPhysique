@@ -55,6 +55,24 @@ async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
+function chestSets(count) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `set-${count}-${i}`,
+    exerciseId: 'bench',
+    createdAt: Date.now(),
+    set_type: 'straight',
+    actualReps: 10,
+    weight: 100,
+  }));
+}
+
 function flattenText(node) {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -64,9 +82,11 @@ function flattenText(node) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  store.user = { id: 'u1' };
+  store.userProfile = { trainingGoal: 'hypertrophy' };
   useAppStore.mockImplementation((selector) => selector(store));
   getCompletedWorkoutSets.mockResolvedValue([]);
-  getAllExercises.mockResolvedValue([]);
+  getAllExercises.mockResolvedValue([{ id: 'bench', primary_muscle: 'chest', secondary_muscles: '[]' }]);
   getWeeklyVolumeByMuscle.mockResolvedValue([]);
   getLastTrainedByMuscle.mockResolvedValue({});
   getActivePlan.mockResolvedValue(null);
@@ -84,5 +104,38 @@ describe('VolumeHeatmapScreen states', () => {
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Below minimum');
+  });
+
+  test('starts a single initial load from the focus trigger', async () => {
+    await act(async () => { create(<VolumeHeatmapScreen />); });
+    await flush();
+    expect(getCompletedWorkoutSets).toHaveBeenCalledTimes(1);
+  });
+
+  test('ignores stale volume results when a newer profile-triggered load starts', async () => {
+    const oldSets = deferred();
+    const newSets = deferred();
+    getCompletedWorkoutSets
+      .mockImplementationOnce(() => oldSets.promise)
+      .mockImplementationOnce(() => newSets.promise);
+
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+    store.userProfile = { trainingGoal: 'strength' };
+    await act(async () => { tree.update(<VolumeHeatmapScreen />); });
+    await flush();
+    expect(getCompletedWorkoutSets).toHaveBeenCalledTimes(2);
+
+    await act(async () => { oldSets.resolve(chestSets(3)); });
+    await flush();
+    let text = flattenText(tree.toJSON());
+    expect(text).not.toContain('Chest3/22');
+
+    await act(async () => { newSets.resolve(chestSets(11)); });
+    await flush();
+    text = flattenText(tree.toJSON());
+    expect(text).toContain('Chest11/22');
+    expect(text).not.toContain('Chest3/22');
   });
 });

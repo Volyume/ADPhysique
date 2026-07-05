@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 504 suites passed.
-  - 6,439 tests passed, 5 skipped.
+  - 6,441 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -326,6 +326,7 @@ Status: release decision.
 - Coach Output steps, cardio, macro-cycle and refeed apply actions now merge into the latest store profile at tap/write time instead of the render-time `userProfile` snapshot, preventing deterministic coach applies from clobbering concurrent profile edits.
 - Food Insights window loads now use a latest-request guard, with an out-of-order regression proving an older 7-day rollup response cannot overwrite the currently selected 30-day nutrition insight window.
 - Cardio History now guards focus, retry and post-delete loads with a latest-request token, with a regression proving an older list/trend response cannot repaint over a newer cardio-goal load.
+- Volume Heatmap now has a single focus-based load trigger instead of duplicate focus/effect loads, and its volume, trend, freshness, division and landmark commits are guarded so stale profile/window reads cannot repaint the heatmap.
 
 ### Web / CI / Security
 

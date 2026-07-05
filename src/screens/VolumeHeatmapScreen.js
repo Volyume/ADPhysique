@@ -82,12 +82,10 @@ export default function VolumeHeatmapScreen() {
   // tier check is needed here (the data simply does not exist otherwise).
   const [divisionMarkers, setDivisionMarkers] = useState(null);
   const [divisionLabel, setDivisionLabel] = useState(null);
+  const loadRequestRef = useRef(0);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks, trendWindowKey, userProfile?.trainingGoal]));
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadData(); }, [windowWeeks, trendWindowKey]);
 
   // Restore the persisted trend window on mount.
   useEffect(() => {
@@ -103,7 +101,20 @@ export default function VolumeHeatmapScreen() {
   }
 
   async function loadData() {
-    if (!user?.id) { setLoading(false); return; }
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+    if (!user?.id) {
+      setWeeklyVolume({});
+      setPreviousVolume({});
+      setTrendData([]);
+      setLastTrainedMap({});
+      setDivisionMarkers(null);
+      setDivisionLabel(null);
+      setLoadError(false);
+      setLoading(false);
+      return;
+    }
     if (loading || loadError) setLoading(true);
     setLoadError(false);
     try {
@@ -113,10 +124,12 @@ export default function VolumeHeatmapScreen() {
       const prevWindowStart = now - 2 * windowMs;
 
       const allSets = await getCompletedWorkoutSets(user.id);
+      if (!isCurrentRequest()) return;
       const recentSets = allSets.filter(s => s.createdAt >= windowStart);
       const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
 
       const allExercises = await getAllExercises();
+      if (!isCurrentRequest()) return;
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
 
       const volume = calculateWeeklyVolume(recentSets, exerciseMap);
@@ -126,9 +139,11 @@ export default function VolumeHeatmapScreen() {
 
       const trendWin = windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W');
       const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks);
+      if (!isCurrentRequest()) return;
       setTrendData(trend);
 
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
+      if (!isCurrentRequest()) return;
       setLastTrainedMap(lastTrained);
 
       // A4: division fingerprint. Pure re-presentation of the volume overlay
@@ -140,6 +155,7 @@ export default function VolumeHeatmapScreen() {
       try {
         const goal = userProfile?.trainingGoal;
         const active = await getActivePlan(user.id).catch(() => null);
+        if (!isCurrentRequest()) return;
         const inputs = active && planWearsDivision(active.name, goal)
           ? buildPlanInputs(userProfile)
           : null;
@@ -152,6 +168,7 @@ export default function VolumeHeatmapScreen() {
           setDivisionLabel(null);
         }
       } catch (_) {
+        if (!isCurrentRequest()) return;
         setDivisionMarkers(null);
         setDivisionLabel(null);
       }
@@ -163,6 +180,7 @@ export default function VolumeHeatmapScreen() {
       // and resetting below also push immediately via syncUserPref so the
       // change is not stranded until the next bulk sync.
       const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
+      if (!isCurrentRequest()) return;
       let parsed = null;
       if (stored) {
         try { parsed = JSON.parse(stored); } catch (_) {}
@@ -178,6 +196,7 @@ export default function VolumeHeatmapScreen() {
         setEditValues(defaults);
       }
     } catch (e) {
+      if (!isCurrentRequest()) return;
       logError('VolumeHeatmapScreen.loadData', e, { userId: user?.id, windowWeeks });
       setWeeklyVolume({});
       setPreviousVolume({});
@@ -187,7 +206,7 @@ export default function VolumeHeatmapScreen() {
       setDivisionLabel(null);
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }
 
