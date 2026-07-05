@@ -100,7 +100,7 @@ function buildDecisionRows(week, pairs = []) {
   return rows;
 }
 
-export default function CoachHeldHistoryScreen() {
+export default function CoachHeldHistoryScreen({ navigation }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -171,7 +171,7 @@ export default function CoachHeldHistoryScreen() {
   const totalDecisions = weeks.reduce((n, w) => n + buildDecisionRows(w).length, 0);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Coaching history" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -204,6 +204,8 @@ export default function CoachHeldHistoryScreen() {
             icon="book-outline"
             title="No entries yet"
             text="After your first weekly check-in, decisions and holds will appear here."
+            actionLabel="Start weekly check-in"
+            onAction={() => navigation?.navigate('WeeklyCheckIn')}
             compact
           />
         )}

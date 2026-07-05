@@ -7,9 +7,15 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/EngineLog', () => () => null);
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
-jest.mock('../../components/EmptyState', () => ({ title, text }) => {
+jest.mock('../../components/EmptyState', () => ({ title, text, actionLabel, onAction }) => {
   const React = require('react');
-  return React.createElement('EmptyState', null, `${title}. ${text}`);
+  const { Text, TouchableOpacity, View } = require('react-native');
+  return React.createElement(
+    View,
+    null,
+    React.createElement(Text, null, `${title}. ${text}`),
+    actionLabel ? React.createElement(TouchableOpacity, { accessibilityLabel: actionLabel, onPress: onAction }, React.createElement(Text, null, actionLabel)) : null,
+  );
 });
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -56,6 +62,18 @@ describe('CoachHeldHistoryScreen fail-closed loading', () => {
     expect(getCoachOutputHistory).not.toHaveBeenCalled();
     expect(getOpenEdPatternFlag).not.toHaveBeenCalled();
     expect(flattenText(tree.toJSON())).toContain('No entries yet');
+  });
+
+  test('empty history offers a weekly check-in action', async () => {
+    const navigation = { navigate: jest.fn() };
+    let tree;
+    await act(async () => { tree = create(<CoachHeldHistoryScreen navigation={navigation} />); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).toContain('Start weekly check-in');
+    const action = tree.root.findByProps({ accessibilityLabel: 'Start weekly check-in' });
+    await act(async () => { action.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('WeeklyCheckIn');
   });
 
   test('load failure clears history and renders the empty state', async () => {
