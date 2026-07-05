@@ -19,6 +19,13 @@ jest.mock('../../components/WindowChips', () => 'WindowChips');
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: 'SkeletonCard' }));
 jest.mock('../../components/AnimatedEntrance', () => 'AnimatedEntrance');
 jest.mock('../../components/InfoTooltip', () => 'InfoTooltip');
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),

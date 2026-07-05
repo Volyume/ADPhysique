@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+  Modal, KeyboardAvoidingView, Platform, Animated,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +17,8 @@ import { track } from '../lib/engineTelemetry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -829,9 +831,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               Based on your estimated max. Progress will be shown each time you open this exercise.
             </Text>
 
-            <Text style={styles.inputLabel}>Target weight ({units})</Text>
-            <TextInput
-              style={styles.weightInput}
+            <TextField
+              label={`Target weight (${units})`}
+              fieldStyle={styles.weightField}
+              inputStyle={styles.weightInput}
               value={goalWeightInput}
               onChangeText={setGoalWeightInput}
               keyboardType="decimal-pad"
@@ -841,9 +844,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               accessibilityLabel={`Target weight in ${units}`}
             />
 
-            <Text style={styles.inputLabel}>Target date (optional)</Text>
-            <TextInput
-              style={styles.dateInput}
+            <TextField
+              label="Target date (optional)"
+              fieldStyle={styles.dateField}
+              inputStyle={styles.dateInput}
               value={goalDateInput}
               onChangeText={setGoalDateInput}
               placeholder="e.g. Dec 2025"
@@ -853,17 +857,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               accessibilityLabel="Target date, optional"
             />
 
-            <TouchableOpacity
-              style={[styles.saveGoalBtn, goalSaving && { opacity: 0.6 }]}
+            <Button
+              title="Save goal"
+              style={styles.saveGoalBtn}
+              textStyle={styles.saveGoalBtnText}
               onPress={handleSaveGoal}
               disabled={goalSaving || !goalWeightInput}
-              activeOpacity={0.8}
-              accessibilityRole="button"
+              loading={goalSaving}
               accessibilityLabel="Save goal"
               accessibilityState={{ disabled: goalSaving || !goalWeightInput }}
-            >
-              <Text style={styles.saveGoalBtnText}>Save goal</Text>
-            </TouchableOpacity>
+            />
 
             {goal && (
               <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Remove goal">
@@ -1243,38 +1246,27 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textMuted,
   },
-  inputLabel: {
-    ...type.label,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+  weightField: {
+    borderRadius: radius.md,
   },
   weightInput: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
-  dateInput: {
-    backgroundColor: colors.surface2,
+  dateField: {
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  dateInput: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fontSize.md,
-    color: colors.textPrimary,
   },
   saveGoalBtn: {
-    backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
-    alignItems: 'center',
     marginTop: spacing.sm,
   },
   saveGoalBtnText: {
