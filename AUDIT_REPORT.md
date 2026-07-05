@@ -307,6 +307,7 @@ Status: release decision.
 - `SectionLabel` now owns a title-scale variant, and Nutrition Targets uses it for its form-section headings so the screen keeps its intended hierarchy while heading typography is governed by the shared design primitive.
 - Live camera close controls in Barcode Scan and Label Scan now expose the same `Close` accessibility label as their fallback states, keeping the primary camera escape route screen-reader reliable.
 - The shared Exercise Picker modal now labels icon-only back/close controls, custom-exercise save/create actions and selectable exercise rows, protecting the workout-building and active-workout picker flows from unlabeled button regressions.
+- Radio-style shared selectors now expose `checked` state through `Chip` and `SegmentedControl`, matching the existing `ReasonPicker` radio semantics while leaving non-radio button/toggle selected states unchanged.
 
 ### Web / CI / Security
 

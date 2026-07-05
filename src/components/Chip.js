@@ -29,13 +29,17 @@ export default function Chip({
   numberOfLines,
   testID,
 }) {
+  const accessibilityState = accessibilityRole === 'radio'
+    ? { checked: selected, disabled }
+    : { selected, disabled };
+
   return (
     <PressableCard
       onPress={onPress}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel || label}
-      accessibilityState={{ selected, disabled }}
+      accessibilityState={accessibilityState}
       style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, style]}
       testID={testID}
     >

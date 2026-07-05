@@ -145,12 +145,13 @@ describe('Chip', () => {
     expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(true);
   });
 
-  test('supports a radio role for single-select groups', () => {
+  test('uses checked state for radio single-select groups', () => {
     let tree;
     act(() => { tree = create(<Chip label="Mon" accessibilityRole="radio" selected onPress={() => {}} />); });
     const nodes = tree.root.findAllByProps({ accessibilityRole: 'radio' });
     expect(nodes.length).toBeGreaterThan(0);
-    expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(true);
+    expect(nodes.some(n => n.props.accessibilityState?.checked === true)).toBe(true);
+    expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(false);
   });
 
   test('supports explicit accessibility labels and label style overrides', () => {
