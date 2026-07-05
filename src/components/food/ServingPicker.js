@@ -9,8 +9,10 @@
  * and any future surface (saved meals, recipes) share the same
  * input pattern.
  */
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { View, StyleSheet } from 'react-native';
+import TextField from '../TextField';
+import Chip from '../Chip';
+import { colors, spacing } from '../../styles/theme';
 
 const DEFAULT_UNITS = ['g', 'oz'];
 
@@ -32,8 +34,10 @@ export default function ServingPicker({
   const list = units.length > 0 ? units : DEFAULT_UNITS;
   return (
     <View style={styles.row} accessibilityLabel="Serving size">
-      <TextInput
-        style={styles.input}
+      <TextField
+        containerStyle={styles.inputContainer}
+        fieldStyle={styles.inputField}
+        inputStyle={styles.input}
         value={String(quantity ?? '')}
         onChangeText={onChangeQuantity}
         keyboardType="decimal-pad"
@@ -45,17 +49,15 @@ export default function ServingPicker({
         {list.map(u => {
           const active = u === unit;
           return (
-            <Pressable
+            <Chip
               key={u}
+              label={u}
+              selected={active}
               onPress={() => onChangeUnit(u)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
+              accessibilityRole="radio"
               accessibilityLabel={`Unit: ${u}`}
-              hitSlop={6}
-              style={({ pressed }) => [styles.unit, active && styles.unitActive, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={[styles.unitText, active && styles.unitTextActive]}>{u}</Text>
-            </Pressable>
+              style={styles.unit}
+            />
           );
         })}
       </View>
@@ -69,41 +71,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  input: {
+  inputContainer: {
     flex: 1,
+  },
+  inputField: {
     backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 44,
+  },
+  input: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
     fontVariant: ['tabular-nums'],
   },
   units: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xxs,
+    gap: spacing.xs,
   },
   unit: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radius.sm - 1,
-  },
-  unitActive: {
-    backgroundColor: colors.primary,
-  },
-  unitText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  unitTextActive: {
-    color: colors.onPrimary,
-    fontWeight: fontWeight.bold,
   },
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { appAlert } from '../AppAlert';
-import { View, Text, StyleSheet, Pressable, TextInput, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Keyboard } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
@@ -9,6 +9,8 @@ import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
 // idle → loading → success morph; the commit haptic is its success beat.
 import Button from '../Button';
+import Chip from '../Chip';
+import TextField from '../TextField';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
@@ -174,18 +176,18 @@ export default function FoodDetailSheet({
           {units.length > 1 ? (
             <View style={styles.unitRow}>
               {units.map(u => (
-                <Pressable
+                <Chip
                   key={u.key}
+                  label={u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
+                  selected={unitKey === u.key}
                   onPress={() => selectUnit(u.key)}
-                  style={({ pressed }) => [styles.unitBtn, unitKey === u.key && styles.unitBtnActive, pressed && { opacity: 0.7 }]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: unitKey === u.key }}
+                  style={styles.unitBtn}
+                  labelStyle={styles.unitBtnText}
+                  selectedLabelStyle={styles.unitBtnTextActive}
+                  accessibilityRole="radio"
                   accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
-                >
-                  <Text style={[styles.unitBtnText, unitKey === u.key && styles.unitBtnTextActive]} numberOfLines={1}>
-                    {u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
-                  </Text>
-                </Pressable>
+                  numberOfLines={1}
+                />
               ))}
             </View>
           ) : null}
@@ -199,8 +201,10 @@ export default function FoodDetailSheet({
             >
               <Ionicons name="remove" size={22} color={colors.textPrimary} />
             </Pressable>
-            <TextInput
-              style={styles.stepInput}
+            <TextField
+              containerStyle={styles.stepInputContainer}
+              fieldStyle={styles.stepInputField}
+              inputStyle={styles.stepInput}
               value={amount}
               onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))}
               keyboardType="decimal-pad"
@@ -248,22 +252,17 @@ export default function FoodDetailSheet({
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot).map(s => (
-              <Pressable
+              <Chip
                 key={s.key}
+                label={s.label}
+                selected={mealSlot === s.key}
                 onPress={() => setMealSlot(s.key)}
-                style={({ pressed }) => [
-                  styles.mealBtn,
-                  mealSlot === s.key && styles.mealBtnActive,
-                  pressed && { opacity: 0.7 },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: mealSlot === s.key }}
-              >
-                <Text style={[
-                  styles.mealBtnText,
-                  mealSlot === s.key && styles.mealBtnTextActive,
-                ]}>{s.label}</Text>
-              </Pressable>
+                style={styles.mealBtn}
+                labelStyle={styles.mealBtnText}
+                selectedLabelStyle={styles.mealBtnTextActive}
+                accessibilityRole="radio"
+                accessibilityLabel={`Meal: ${s.label}`}
+              />
             ))}
           </View>
 
@@ -273,9 +272,14 @@ export default function FoodDetailSheet({
                 <Ionicons name="trash-outline" size={18} color={colors.error} />
               </Pressable>
             ) : null}
-            <Pressable onPress={handleClose} accessibilityRole="button" style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
+            <Button
+              title="Cancel"
+              onPress={handleClose}
+              variant="secondary"
+              fullWidth={false}
+              style={styles.cancelBtn}
+              textStyle={styles.cancelText}
+            />
             <Button
               title={mode === 'edit' ? 'Save changes' : 'Add to diary'}
               onPress={handleSave}
@@ -307,25 +311,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
-  input: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
-  },
   // Unit selector (household serving vs grams) + amount stepper. The common
   // case, one named serving, needs zero keystrokes: tap +/− or just Add.
   unitRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
   unitBtn: {
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
+    alignSelf: 'stretch',
     alignItems: 'center', justifyContent: 'center', minHeight: 44,
   },
-  unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   unitBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -336,13 +330,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  stepInput: {
+  stepInputContainer: {
     flex: 1,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md,
+  },
+  stepInputField: {
+    minHeight: 54,
+  },
+  stepInput: {
     paddingVertical: spacing.md,
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   gramHint: {
@@ -370,12 +366,9 @@ const styles = StyleSheet.create({
   mealBtn: {
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
+    alignSelf: 'stretch',
     alignItems: 'center',
   },
-  mealBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   mealBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   actions: {
@@ -390,8 +383,6 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
   },
   cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   saveBtn: {

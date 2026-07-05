@@ -26,6 +26,7 @@ export default function Chip({
   style,
   labelStyle,
   selectedLabelStyle,
+  numberOfLines,
   testID,
 }) {
   return (
@@ -46,7 +47,12 @@ export default function Chip({
           style={styles.icon}
         />
       ) : null}
-      <Text style={[styles.label, labelStyle, selected && styles.labelSelected, selected && selectedLabelStyle]}>{label}</Text>
+      <Text
+        style={[styles.label, labelStyle, selected && styles.labelSelected, selected && selectedLabelStyle]}
+        numberOfLines={numberOfLines}
+      >
+        {label}
+      </Text>
     </PressableCard>
   );
 }
