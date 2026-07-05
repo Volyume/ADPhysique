@@ -5,6 +5,11 @@ import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
+import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
+
+export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
+  return buildWeekWindowsEndingAt(anchorMs, weeksBack);
+}
 
 let _db = null;
 let _initPromise = null;
@@ -2187,23 +2192,6 @@ export async function getWorkoutSetsForWorkoutIds(workoutIds) {
 // Only working sets (set_type != 'warmup') are counted. Volume is allocated via
 // allocateExerciseVolume across the exercise's PRIMARY and SECONDARY muscles
 // (primary 1.0, each secondary 0.5), not primary_muscle alone.
-// ALGO-001: pure trailing-week window builder, exported so the boundary math is
-// unit-tested directly (the SQL fetch around it runs on device). Returns
-// `weeksBack` windows ending at `anchorMs`, oldest first: window i spans
-// [anchor-(i+1)w, anchor-i*w]. Anchoring to the END of a Monday-anchored
-// check-in week (weekStartMs + 7d) makes the most-recent window exactly that
-// week, instead of a rolling 7-day window off the wall clock. A non-finite
-// anchor falls back to now.
-export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
-  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-  const anchor = Number.isFinite(anchorMs) ? anchorMs : Date.now();
-  const windows = [];
-  for (let i = weeksBack - 1; i >= 0; i--) {
-    windows.push({ weekStart: anchor - (i + 1) * WEEK_MS, weekEnd: anchor - i * WEEK_MS });
-  }
-  return windows;
-}
-
 export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = Date.now()) {
   const d = await db();
   // ALGO-001: the trailing windows anchor here. The default Date.now() keeps
