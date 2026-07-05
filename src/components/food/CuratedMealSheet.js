@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
+import SectionLabel from '../SectionLabel';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { CURATED_MEALS, mealItems } from '../../lib/food/curatedMeals';
 import { getMealAdditions, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib/food/mealAdditions';
@@ -49,7 +50,7 @@ export default function CuratedMealSheet({
           <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
             {items.length ? (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>In this meal</Text>
+                <SectionLabel>In this meal</SectionLabel>
                 {items.map((it) => (
                   <View key={it.foodRef} style={styles.itemRow}>
                     <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
@@ -64,7 +65,7 @@ export default function CuratedMealSheet({
             <View style={styles.section}>
               <View style={styles.addHead}>
                 <Ionicons name="leaf-outline" size={15} color={colors.primary} />
-                <Text style={styles.sectionLabel}>Add to taste, all free</Text>
+                <SectionLabel>Add to taste, all free</SectionLabel>
               </View>
               <Text style={styles.intro}>{ADDITIONS_INTRO}</Text>
               {additions.map((a) => (
@@ -109,10 +110,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   scroll: { maxHeight: 360 },
   section: { gap: spacing.xs, paddingTop: spacing.sm },
-  sectionLabel: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: fontWeight.semibold,
-  },
   itemRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md,
     paddingVertical: spacing.xs,
