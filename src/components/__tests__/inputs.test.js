@@ -4,10 +4,13 @@
  * lock their contract before rollout.
  */
 import { create, act } from 'react-test-renderer';
+import { TextInput } from 'react-native';
 
 import SearchBar from '../SearchBar';
+import TextField from '../TextField';
 import Chip from '../Chip';
 import Stepper from '../Stepper';
+import { colors } from '../../styles/theme';
 
 describe('SearchBar', () => {
   test('renders the placeholder as the input a11y label', () => {
@@ -46,6 +49,45 @@ describe('SearchBar', () => {
     const input = tree.root.findByProps({ accessibilityLabel: 'Search' });
     const flat = Array.isArray(input.props.style) ? Object.assign({}, ...input.props.style) : input.props.style;
     expect(flat.fontSize).toBeGreaterThanOrEqual(16);
+  });
+});
+
+describe('TextField', () => {
+  test('renders label and forwards input changes', () => {
+    const onChangeText = jest.fn();
+    let tree;
+    act(() => {
+      tree = create(<TextField label="First name" value="" onChangeText={onChangeText} />);
+    });
+    const input = tree.root.findByType(TextInput);
+    expect(input.props.accessibilityLabel).toBe('First name');
+    act(() => input.props.onChangeText('Allan'));
+    expect(onChangeText).toHaveBeenCalledWith('Allan');
+  });
+
+  test('input font is at least 16 and uses theme foreground colour', () => {
+    let tree;
+    act(() => {
+      tree = create(<TextField label="Email" value="" onChangeText={() => {}} />);
+    });
+    const input = tree.root.findByType(TextInput);
+    const flat = Array.isArray(input.props.style) ? Object.assign({}, ...input.props.style) : input.props.style;
+    expect(flat.fontSize).toBeGreaterThanOrEqual(16);
+    expect(flat.color).toBe(colors.textPrimary);
+  });
+
+  test('focus and blur callbacks are preserved', () => {
+    const onFocus = jest.fn();
+    const onBlur = jest.fn();
+    let tree;
+    act(() => {
+      tree = create(<TextField label="Notes" value="" onChangeText={() => {}} onFocus={onFocus} onBlur={onBlur} />);
+    });
+    const input = tree.root.findByType(TextInput);
+    act(() => input.props.onFocus({ nativeEvent: {} }));
+    act(() => input.props.onBlur({ nativeEvent: {} }));
+    expect(onFocus).toHaveBeenCalledTimes(1);
+    expect(onBlur).toHaveBeenCalledTimes(1);
   });
 });
 

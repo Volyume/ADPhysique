@@ -16,7 +16,7 @@ The biggest shipped changes are:
 - A real Athlete Profile exists with avatar/profile photo, body metrics, manual body-fat entry, Physique Scan state, strength baselines, key lifts, and deterministic freshness prompts.
 - Mobile accessibility warning debt is cleared and locked by a zero-warning lint gate.
 - Web security/tooling is hardened: Next is on the patched 15.5 line, production audit is clean, lint is noninteractive, and web lint/typecheck/test/build/audit now run in CI.
-- Design consistency is materially improved across headers, modal chrome, section labels, safe-area edges, wizard back controls, profile rows, scan copy and repeated settings/pro surfaces.
+- Design consistency is materially improved across headers, modal chrome, section labels, first-run/auth text fields, safe-area edges, wizard back controls, profile rows, scan copy and repeated settings/pro surfaces.
 
 The branch is not claiming that every item in the larger 52-item elite register is complete. The remaining work is now clearer: incoming Physique Scan estimator audit, release-artifact checks, backend telemetry migrations, device QA, and larger domain refactors.
 
@@ -43,12 +43,12 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 466 suites passed.
-  - 6,288 tests passed, 5 skipped.
+  - 6,291 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 880 files checked, no unresolved imports or missing named exports.
+  - 881 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -121,6 +121,7 @@ Status: materially closed.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
 - Shared section labels now use `SectionLabel` / `type.overline` in the first bounded sweep across Coach, Athlete Profile, Consistency, Lift Progress and settings primitives.
+- `TextField` now provides the first canonical labelled input primitive, with auth fields and first-run setup migrated as the initial safe slice.
 - A guard now prevents native header drift.
 
 ### H6: Setup-Complete / Reveal Consistency
@@ -278,7 +279,7 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
 ### Safe Implementation Candidates
 
 1. Continue the "one product" design sweep:
-   - canonical input style;
+   - migrate the remaining plain inputs to `TextField` in small screen-level slices;
    - remaining hand-rolled CTAs to `Button`;
    - remaining hand-rolled sheets to `BottomSheet`.
 2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
