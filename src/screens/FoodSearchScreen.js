@@ -56,6 +56,7 @@ import SearchBar from '../components/SearchBar';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 
 const EMPTY_COPY = {
   recents: 'Nothing logged here yet. Add a food to get started.',
@@ -370,20 +371,19 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (loggingQuickRef.current) return;
     loggingQuickRef.current = true;
     try {
-      const macros = scaleMacros(food, servingG); // { kcal, proteinG, carbsG, fatG, fibreG }
       audit('food.add', { source: food.source ?? 'unknown', mealSlot, fromScan: false, surface: 'relog' });
-      const entryId = await logFoodEntry(userId, {
+      const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
         entryDate,
         mealSlot,
         foodRef: food.food_ref,
         quantityG: servingG,
-        ...macros,
-      });
-      await upsertSlotRecent(userId, {
+        food,
+      }));
+      await upsertSlotRecent(userId, buildSlotRecentPayload({
         mealSlot,
         foodRef: food.food_ref,
         quantityG: servingG,
-      }).catch(() => {}); // derived memory only; never fail the log
+      })).catch(() => {}); // derived memory only; never fail the log
       // Mandatory Undo: the action deletes the exact entry just created. Matches
       // the diary's soft-delete + Undo pattern (DiaryScreen requestDelete).
       toast.show(`Added ${food.name}.`, {
@@ -546,19 +546,18 @@ export default function FoodSearchScreen({ navigation, route }) {
       fromScan: !!scannedFood,
       surface: 'sheet',
     });
-    const macros = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
-    const entryId = await logFoodEntry(userId, {
+    const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
       entryDate: chosenDate,
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
       quantityG,
-      ...macros,
-    });
-    await upsertSlotRecent(userId, {
+      food,
+    }));
+    await upsertSlotRecent(userId, buildSlotRecentPayload({
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
       quantityG,
-    }).catch(() => {}); // derived memory only; never fail the log
+    })).catch(() => {}); // derived memory only; never fail the log
     // A2 (first-week trust): the FIRST food log (and every log after) gets the
     // same success + Undo toast as a re-log or a diary "usual", previously
     // this path (the sheet's "Add to diary") showed nothing at all. Exact
@@ -608,20 +607,19 @@ export default function FoodSearchScreen({ navigation, route }) {
         fat_100g: cand.fat100,
         fibre_100g: cand.fibre100,
       };
-      const macros = scaleMacros(per100, s.quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
       audit('food.suggestFood', { source: cand.source ?? 'unknown', mealSlot, quantityG: s.quantityG });
-      await logFoodEntry(userId, {
+      await logFoodEntry(userId, buildFoodEntryPayload({
         entryDate,
         mealSlot,
         foodRef: s.foodRef,
         quantityG: s.quantityG,
-        ...macros,
-      });
-      await upsertSlotRecent(userId, {
+        food: per100,
+      }));
+      await upsertSlotRecent(userId, buildSlotRecentPayload({
         mealSlot,
         foodRef: s.foodRef,
         quantityG: s.quantityG,
-      }).catch(() => {}); // derived memory only; never fail the log
+      })).catch(() => {}); // derived memory only; never fail the log
       navigation.goBack();
     } catch (e) {
       // eslint-disable-next-line global-require
