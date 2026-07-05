@@ -81,7 +81,6 @@ import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
-import SectionLabel from '../components/SectionLabel';
 // M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
@@ -96,171 +95,22 @@ import {
   RAPID_LOSS_CORRECTED_COPY,
   getEdSupportLink,
 } from '../lib/whyThisTemplates';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-// For the five-part response's forward-pull anchor ("See you Sunday."),
-// indexed by the stored check-in day (0 = Sunday, matching HomeScreen).
-const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-function formatDay(ms) {
-  const d = new Date(ms);
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
-}
-
-function formatDayFull(ms) {
-  const d = new Date(ms);
-  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-/** "19 May to 25 May 2026" */
-function weekRangeLabel(weekStartMs) {
-  const startMs = Number(weekStartMs);
-  if (!Number.isFinite(startMs)) return 'Week dates unavailable';
-  const start = new Date(startMs);
-  const end = new Date(startMs + 6 * 24 * 60 * 60 * 1000);
-  const startStr = formatDay(start);
-  const endStr = formatDayFull(end);
-  return `${startStr} to ${endStr}`;
-}
-
-// ─── Off-items / focus builders ───────────────────────────────────────────────
-// (U-B-3 §4: the local buildHeadline duplicate was removed, the engine
-// coachResponse acknowledgement/interpretation is the single narration lead.)
-
-function buildOffItems(output, checkin) {
-  const items = [];
-  if (!output) return items;
-  const { sessionsCompleted, sessionsPlanned } = output;
-  if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned * 0.75) {
-    items.push(`You hit ${sessionsCompleted} of ${sessionsPlanned} sessions.`);
-  }
-  if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    items.push(`Your sleep averaged ${checkin.sleepHours.toFixed(1)} hours.`);
-  }
-  if (checkin?.jointPain) {
-    items.push('You flagged joint pain.');
-  }
-  if (checkin?.energyScore != null && checkin.energyScore <= 2) {
-    items.push('Energy was low this week.');
-  }
-  if (checkin?.sorenessScore != null && checkin.sorenessScore >= 4) {
-    items.push('Soreness was high.');
-  }
-  if (checkin?.calsAdherence === 'untracked') {
-    items.push('You did not log your calories.');
-  } else if (checkin?.calsAdherence === 'under') {
-    items.push('You came in under your calorie target.');
-  } else if (checkin?.calsAdherence === 'over') {
-    items.push('You went over your calorie target.');
-  } else if (checkin?.calsAdherence === 'no') {
-    // Off target but no food-diary data to say which way (mapCalsAdherence
-    // leaves a plain 'no' when it can't split under/over).
-    items.push('You were off your calorie target.');
-  }
-  return items;
-}
-
-function buildFocus(output, checkin) {
-  if (!output) return null;
-  const { sessionsCompleted, sessionsPlanned, trend } = output;
-  // Priority: thin data → log
-  if (!trend?.delta && trend?.deltaLabel === 'Log morning weight') {
-    return 'Log morning weight every day. The trend gets sharper with each log.';
-  }
-  // Sleep is the biggest single lever
-  if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    return 'Sleep is the priority this week. Aim for 7 hours or more. Nothing else moves until it does.';
-  }
-  // Sessions
-  if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
-    return `Hit all ${sessionsPlanned} sessions. Adherence beats everything else.`;
-  }
-  // Joint pain
-  if (checkin?.jointPain) {
-    return 'Reduce load on the painful joint. Substitute exercises if needed.';
-  }
-  // Adherence
-  if (checkin?.calsAdherence === 'untracked') {
-    return 'Track your calories this week. Without that, the calorie target cannot be adjusted reliably.';
-  }
-  if (checkin?.calsAdherence === 'over' || checkin?.calsAdherence === 'no') {
-    return 'Stay inside the calorie target.';
-  }
-  // On track default
-  return 'Keep doing what you did this week.';
-}
-
-// NU-8: one-line captions for the engine's data-confidence grade
-// ('data_hold' never reaches the main card; it renders InsufficientDataView).
-const CONFIDENCE_CAPTIONS = {
-  high: 'Confidence: high. A full week of data sits behind this decision.',
-  medium: 'Confidence: medium. Some data was thin this week, so changes are sized cautiously.',
-  low: 'Confidence: low. The trend is still building, so this week stays conservative.',
-};
+import {
+  DAY_NAMES_FULL,
+  CONFIDENCE_CAPTIONS,
+  buildFocus,
+  buildOffItems,
+  weekRangeLabel,
+} from '../lib/coachOutput/viewCopy';
+import {
+  LedgerCard,
+  RapidLossAlert,
+  SectionHeader,
+  StatChip,
+  WhyBlock,
+} from '../components/coachOutput/CoachOutputCards';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SectionHeader({ title }) {
-  return <SectionLabel style={styles.sectionHeader}>{title}</SectionLabel>;
-}
-
-function StatChip({ icon, iconColor, label, value, valueColor }) {
-  return (
-    <View style={styles.statChip}>
-      {icon ? (
-        <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} />
-      ) : null}
-      <Text style={[styles.statChipValue, valueColor ? { color: valueColor } : null]}>
-        {value}
-      </Text>
-      {label ? <Text style={styles.statChipLabel}>{label}</Text> : null}
-    </View>
-  );
-}
-
-// A1 (03 gap #1): the working/off ledger. One object, two groups; the exact
-// content the separate "What's working" card and "What was off" block carried.
-function LedgerCard({ working, off }) {
-  const hasWorking = working && working.length > 0;
-  const hasOff = off && off.length > 0;
-  if (!hasWorking && !hasOff) return null;
-  return (
-    <Card style={styles.card}>
-      {hasWorking ? (
-        <View>
-          <SectionHeader title="What worked" />
-          <View style={styles.bulletList}>
-            {working.map((item, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <Ionicons name="checkmark" size={15} color={colors.success} style={styles.bulletIcon} />
-                <Text style={styles.bulletText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
-      {hasOff ? (
-        <View>
-          <SectionHeader title="What was off" />
-          <View style={styles.bulletList}>
-            {off.map((item, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <Ionicons name="remove" size={15} color={colors.warning} style={styles.bulletIcon} />
-                <Text style={styles.bulletText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
-    </Card>
-  );
-}
 
 // M4 settle wrappers (audit 03b §3.3b). ApplyExit fades the Apply button
 // out when it unmounts (to the Applied chip, or to a hold line) and never
@@ -521,42 +371,6 @@ function TrainingNextWeekCard({
         </>
       )}
     </Card>
-  );
-}
-
-function WhyBlock({ text, onLearnMore }) {
-  return (
-    <View style={styles.whyBlock}>
-      <Text style={styles.whyLabel}>Why this week:</Text>
-      <Text style={styles.whyText}>{text}</Text>
-      {/* COMP-006: every why can be explained. A quiet link to the methodology
-          page; always present, not conditional on the decision type. */}
-      {onLearnMore ? (
-        <TouchableOpacity
-          style={styles.link44}
-          onPress={onLearnMore}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityRole="button"
-          accessibilityLabel="Understand how this decision was made"
-        >
-          <Text style={styles.whyLearnMore}>Understand how this decision was made</Text>
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
-}
-
-function RapidLossAlert() {
-  return (
-    <View style={styles.rapidLossCard}>
-      <View style={styles.rapidLossHeader}>
-        <Ionicons name="warning-outline" size={18} color={colors.error} />
-        <Text style={styles.rapidLossTitle}>Weight dropping quickly</Text>
-      </View>
-      <Text style={styles.rapidLossBody}>
-        Your weight is falling more than 1.5% of your bodyweight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
-      </Text>
-    </View>
   );
 }
 
@@ -2625,42 +2439,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  // Stat chips row
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  statChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  statChipValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  statChipLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
   },
 
   // Generic card: box (surface, radius, border, padding) now comes from
   // the <Card> primitive; only the non-box gap remains as a local extra.
   card: {
     gap: spacing.md,
-  },
-
-  // Section header label
-  sectionHeader: {
-    marginBottom: spacing.xs,
   },
 
   // A1 verdict (U-B-1 §3 / 03 gap #1): the hero zone is a plain wrapper; the
@@ -2758,24 +2546,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 22,
   },
-  bulletList: {
-    gap: spacing.sm,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  bulletIcon: {
-    marginTop: spacing.xxs,
-  },
-  bulletText: {
-    ...type.body,
-    flex: 1,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-
   // Next week adjustments
   adjustmentRow: {
     flexDirection: 'row',
@@ -2887,37 +2657,13 @@ const styles = StyleSheet.create({
   planNoteText: {
     ...type.caption, flex: 1, color: colors.textMuted, lineHeight: 17,
   },
-  whyBlock: {
-    flexDirection: 'column',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  whyLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-  },
-  whyText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 21,
-    fontStyle: 'italic',
-  },
   // NU-8: quiet data-confidence line under the Why block.
   confidenceCaption: {
     ...type.caption,
     color: colors.textMuted,
     paddingHorizontal: spacing.xs,
   },
-  // COMP-006 methodology links (secondary, muted, no affordance beyond text)
-  whyLearnMore: {
-    ...type.caption,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    textDecorationLine: 'underline',
-  },
-  // U-B-1 §5: ≥44px tap target shared by the quiet why/held links.
-  link44: { minHeight: 44, justifyContent: 'center' },
+  // U-B-1 §5: ≥44px tap target for the quiet held-decision link.
   heldLearnMore: { marginTop: spacing.sm, minHeight: 44, justifyContent: 'center' },
   heldLearnMoreText: {
     ...type.caption,
@@ -3041,32 +2787,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.md,
     marginTop: spacing.sm,
-  },
-
-  // Rapid weight loss safety flag
-  rapidLossCard: {
-    backgroundColor: colors.errorBg ?? colors.warningBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.error, 0.314),
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  rapidLossHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  rapidLossTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.error,
-    letterSpacing: 0.3,
-  },
-  rapidLossBody: {
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    lineHeight: 21,
   },
 
   // Held decisions transparency card (box from <Card>; gap is the local extra)
