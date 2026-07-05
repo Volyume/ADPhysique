@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SearchBar from '../components/SearchBar';
+import Stepper from '../components/Stepper';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
@@ -89,18 +90,18 @@ export default function BuildWorkoutScreen({ navigation }) {
     setExercises(prev => prev.map(e => e.key === key ? { ...e, [field]: value } : e));
   }
 
-  function adjustSets(key, delta) {
+  function setExerciseSets(key, value) {
     setExercises(prev => prev.map(e => {
       if (e.key !== key) return e;
-      const next = Math.max(1, Math.min(20, e.sets + delta));
+      const next = Math.max(1, Math.min(20, value));
       return { ...e, sets: next };
     }));
   }
 
-  function adjustRest(key, delta) {
+  function setExerciseRest(key, value) {
     setExercises(prev => prev.map(e => {
       if (e.key !== key) return e;
-      const next = Math.max(30, Math.min(600, e.restSeconds + delta));
+      const next = Math.max(30, Math.min(600, value));
       // Once the user touches the stepper it is their number, not a suggestion.
       return { ...e, restSeconds: next, restSuggested: false };
     }));
@@ -244,27 +245,18 @@ export default function BuildWorkoutScreen({ navigation }) {
               {/* Sets */}
               <View style={styles.controlGroup}>
                 <Text style={styles.controlLabel}>Sets</Text>
-                <View style={styles.stepper}>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => adjustSets(item.key, -1)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Decrease sets"
-                  >
-                    <Ionicons name="remove" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                  <Text style={styles.stepValue} accessibilityLabel={`${item.sets} sets`}>{item.sets}</Text>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => adjustSets(item.key, 1)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Increase sets"
-                  >
-                    <Ionicons name="add" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
+                <Stepper
+                  value={item.sets}
+                  min={1}
+                  max={20}
+                  onChange={(next) => setExerciseSets(item.key, next)}
+                  size="compact"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  label="sets"
+                  valueLabel={`${item.sets} sets`}
+                  decreaseLabel="Decrease sets"
+                  increaseLabel="Increase sets"
+                />
               </View>
 
               {/* Rep Range */}
@@ -294,27 +286,20 @@ export default function BuildWorkoutScreen({ navigation }) {
               {/* Rest */}
               <View style={styles.controlGroup}>
                 <Text style={styles.controlLabel}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
-                <View style={styles.stepper}>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => adjustRest(item.key, -15)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Decrease rest"
-                  >
-                    <Ionicons name="remove" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                  <Text style={styles.stepValue} accessibilityLabel={`Rest ${formatRest(item.restSeconds)}`}>{formatRest(item.restSeconds)}</Text>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => adjustRest(item.key, 15)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Increase rest"
-                  >
-                    <Ionicons name="add" size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
+                <Stepper
+                  value={item.restSeconds}
+                  min={30}
+                  max={600}
+                  step={15}
+                  onChange={(next) => setExerciseRest(item.key, next)}
+                  size="compact"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  label="rest"
+                  formatValue={formatRest}
+                  valueLabel={`Rest ${formatRest(item.restSeconds)}`}
+                  decreaseLabel="Decrease rest"
+                  increaseLabel="Increase rest"
+                />
               </View>
 
               {/* Starting Weight */}
@@ -504,28 +489,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontWeight: fontWeight.medium,
-    textAlign: 'center',
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  stepBtn: {
-    width: 30,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    minWidth: 32,
     textAlign: 'center',
   },
   repRow: {
