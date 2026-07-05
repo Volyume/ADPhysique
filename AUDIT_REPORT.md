@@ -141,7 +141,8 @@ Status: partially closed, larger work remains.
 
 - Athlete Profile summary logic was extracted to `src/lib/athleteProfileSummary.js`.
 - Freshness logic was extracted to `src/lib/profileFreshness.js`.
-- Tests were added for both.
+- Weekly trailing-window math was extracted to dependency-free `src/lib/weekWindows.js`, with `database.js` preserving the public export and guarded `getWeeklyVolumeByMuscle` call shape.
+- Tests/guards cover these seams.
 - Still open: `database.js`, `ProgressPhotosScreen`, `CoachOutputScreen`, sync, and large food/training screens need staged domain refactors.
 
 ### M2: Incoming Physique Scan Estimator Audit
