@@ -51,15 +51,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Retake/);
     expect(SCREEN).toMatch(/const deleted = await deleteProgressScanSession\(userId, scanId, \{ deleteFiles: true \}\)/);
     expect(SCREEN).toMatch(/if \(!deleted\) throw new Error\('progress_scan_discard_failed'\)/);
-    expect(SCREEN).toMatch(/progress_scan_retake_photo_delete_failed/);
-    expect(SCREEN).toMatch(/progress_scan_retake_meta_delete_failed/);
+    expect(SCREEN).toMatch(/cleanupRetakenScanPose/);
+    expect(SCREEN).toMatch(/cleanupUnattachedSavedScanPhoto/);
     expect(SCREEN).toMatch(/deleteScanEntry/);
-    expect(SCREEN).toMatch(/detachProgressScanPhoto/);
+    expect(SCREEN).toMatch(/deleteViewerProgressPhoto/);
     expect(SCREEN).toMatch(/progress_scan_asset_save_failed/);
-    expect(SCREEN).toMatch(/await deleteProgressPhoto\(userId, saved\.uri\)/);
-    expect(SCREEN).toMatch(/await deletePhotoMeta\(userId, name\)/);
-    expect(SCREEN).toMatch(/if \(!fileDeleted\) throw new Error\('progress_photo_delete_failed'\)/);
-    expect(SCREEN).toMatch(/if \(!metaDeleted\) throw new Error\('progress_photo_meta_delete_failed'\)/);
   });
 
   test('post-capture scan writes re-check the live tier and abandon drafts on lapse', () => {
@@ -71,12 +67,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('viewer delete detaches scan analysis before deleting the source photo', () => {
-    const detachIndex = SCREEN.indexOf('const detached = await detachProgressScanPhoto(uid, name);');
-    const metaIndex = SCREEN.indexOf('const metaDeleted = await deletePhotoMeta(uid, name);', detachIndex);
-    const fileIndex = SCREEN.indexOf('const fileDeleted = await deleteProgressPhoto(uid, item.uri);', metaIndex);
-    expect(detachIndex).toBeGreaterThan(-1);
-    expect(metaIndex).toBeGreaterThan(detachIndex);
-    expect(fileIndex).toBeGreaterThan(metaIndex);
+    expect(SCREEN).toMatch(/deleteViewerProgressPhoto\(\{/);
+    expect(SCREEN).toMatch(/detachProgressScanPhoto,/);
+    expect(SCREEN).toMatch(/deletePhotoMeta,/);
+    expect(SCREEN).toMatch(/deleteProgressPhoto,/);
   });
 
   test('scan sessions capture camera preferences and finish uses canonical body profile fallback', () => {

@@ -41,6 +41,16 @@ import {
   assetFieldsFromVisionResult,
   retakeCopyForVisionResult,
 } from '../lib/progressScanVision';
+import {
+  buildScanPhotoNameSet,
+  cleanupRetakenScanPose,
+  cleanupUnattachedSavedScanPhoto,
+  deleteViewerProgressPhoto,
+  enrichProgressPhotos,
+  scanShareItemsFromEntries,
+  shouldGateProgressScanStart,
+  visibleCompletedScans,
+} from '../lib/progressPhotosController';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -78,6 +88,8 @@ const SORTS = [
   { key: 'newest', label: 'Newest', a11y: 'Sort newest first' },
   { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
 ];
+
+export { scanShareItemsFromEntries };
 
 function formatDay(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -137,23 +149,6 @@ function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
     parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
   }
   return parts.length ? parts.join(' | ') : 'Stored scan photos';
-}
-
-export function scanShareItemsFromEntries(scans = []) {
-  return (Array.isArray(scans) ? scans : [])
-    .filter((scan) => scan?.status !== 'draft' && scan?.requiredPosesComplete && Array.isArray(scan.assets))
-    .map((scan) => {
-      const asset = scan.assets.find((a) => a?.pose === 'front' && a?.uri)
-        || scan.assets.find((a) => a?.uri);
-      if (!asset?.uri) return null;
-      return {
-        name: asset.photoName || `${scan.id}-${asset.pose || 'scan'}`,
-        uri: asset.uri,
-        ts: Number.isFinite(scan.capturedAt) ? scan.capturedAt : (asset.takenAt ?? Date.now()),
-        scan,
-      };
-    })
-    .filter(Boolean);
 }
 
 // Group a newest-first photo list into a flat timeline of month headers and
@@ -355,13 +350,24 @@ export default function ProgressPhotosScreen({ navigation }) {
       const saved = await saveProgressPhoto(uri, undefined, uid);
       if (!saved?.name || !saved?.uri) throw new Error('progress_scan_library_save_failed');
       if (!canWrite()) {
-        await deleteProgressPhoto(uid, saved.uri).catch(() => false);
+        await cleanupUnattachedSavedScanPhoto({
+          userId: uid,
+          name: saved.name,
+          saved,
+          deleteProgressPhoto,
+          deletePhotoMeta,
+        });
         return;
       }
       await upsertPhotoMeta(uid, saved.name, { pose });
       if (!canWrite()) {
-        await deletePhotoMeta(uid, saved.name).catch(() => false);
-        await deleteProgressPhoto(uid, saved.uri).catch(() => false);
+        await cleanupUnattachedSavedScanPhoto({
+          userId: uid,
+          name: saved.name,
+          saved,
+          deleteProgressPhoto,
+          deletePhotoMeta,
+        });
         return;
       }
       setBusy(false);
@@ -441,11 +447,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   // Enrich each photo with its effective taken_at (meta, else the filename ts)
   // and pose. A missing meta map resolves to the same values as before.
-  const enriched = useMemo(() => photos.map((p) => {
-    const m = metaMap[p.name];
-    const takenAt = m && Number.isFinite(m.takenAt) ? m.takenAt : p.ts;
-    return { name: p.name, uri: p.uri, ts: p.ts, takenAt, pose: (m && m.pose) || null };
-  }), [photos, metaMap]);
+  const enriched = useMemo(() => enrichProgressPhotos(photos, metaMap), [photos, metaMap]);
 
   // The current scope: pose filter, then date-range filter, then sort. Defaults
   // (all poses, no range, newest-first) reproduce the previous behaviour exactly.
@@ -484,8 +486,8 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function openProgressScan() {
     if (!canWrite() || !userId) return;
-    const latestCompleted = scans.find((s) => s?.status === 'complete' && s?.requiredPosesComplete);
-    if (latestCompleted?.capturedAt && Date.now() - latestCompleted.capturedAt < PROGRESS_SCAN_MIN_INTERVAL_MS) {
+    const cadence = shouldGateProgressScanStart(scans, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
+    if (cadence.gated) {
       appAlert('Give the scan time', 'Physique Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still take a normal progress photo today.', [
         { text: 'Take single photo', onPress: openGhostCapture },
         { text: 'OK', style: 'cancel' },
@@ -518,8 +520,13 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCaptureOpen(false);
     setCapturePose(null);
     setScanFlow(null);
-    if (uid && saved?.uri) await deleteProgressPhoto(uid, saved.uri).catch(() => false);
-    if (uid && name) await deletePhotoMeta(uid, name).catch(() => false);
+    await cleanupUnattachedSavedScanPhoto({
+      userId: uid,
+      name,
+      saved,
+      deleteProgressPhoto,
+      deletePhotoMeta,
+    });
     if (uid && flow?.scanId) await deleteProgressScanSession(uid, flow.scanId, { deleteFiles: true }).catch(() => false);
     await refresh();
   }
@@ -588,8 +595,13 @@ export default function ProgressPhotosScreen({ navigation }) {
       ...assetFields,
     });
     if (!inserted) {
-      await deleteProgressPhoto(userId, saved.uri).catch(() => false);
-      await deletePhotoMeta(userId, name).catch(() => false);
+      await cleanupUnattachedSavedScanPhoto({
+        userId,
+        name,
+        saved,
+        deleteProgressPhoto,
+        deletePhotoMeta,
+      });
       throw new Error('progress_scan_asset_save_failed');
     }
     await continueScanAfterPose(flow, pose);
@@ -601,14 +613,13 @@ export default function ProgressPhotosScreen({ navigation }) {
         await abandonLapsedScanFlow(flow, name, saved);
         return;
       }
-      if (saved?.uri) {
-        const fileDeleted = await deleteProgressPhoto(userId, saved.uri);
-        if (!fileDeleted) throw new Error('progress_scan_retake_photo_delete_failed');
-      }
-      if (name) {
-        const metaDeleted = await deletePhotoMeta(userId, name);
-        if (!metaDeleted) throw new Error('progress_scan_retake_meta_delete_failed');
-      }
+      await cleanupRetakenScanPose({
+        userId,
+        name,
+        saved,
+        deleteProgressPhoto,
+        deletePhotoMeta,
+      });
       setScanFlow({ scanId: flow.scanId, pose });
       setCapturePose(pose);
       setCaptureOpen(true);
@@ -753,16 +764,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   const onViewerDelete = useCallback(async (name) => {
     if (!canWrite()) return;
     const uid = useAppStore.getState().user?.id ?? userId;
-    const item = photos.find((p) => p.name === name);
     try {
-      const detached = await detachProgressScanPhoto(uid, name);
-      if (!detached) throw new Error('progress_scan_detach_photo_failed');
-      const metaDeleted = await deletePhotoMeta(uid, name);
-      if (!metaDeleted) throw new Error('progress_photo_meta_delete_failed');
-      if (item) {
-        const fileDeleted = await deleteProgressPhoto(uid, item.uri);
-        if (!fileDeleted) throw new Error('progress_photo_delete_failed');
-      }
+      await deleteViewerProgressPhoto({
+        userId: uid,
+        name,
+        photos,
+        detachProgressScanPhoto,
+        deletePhotoMeta,
+        deleteProgressPhoto,
+      });
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
       toast.show('Could not delete that photo. Please try again.', { variant: 'error' });
@@ -784,12 +794,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   // (fail-closed): the comparison entry and the share card. Viewing the dated
   // timeline and delete stay available. Share is additionally Pro-gated.
   const visibleScans = useMemo(
-    () => scans.filter((s) => s?.status !== 'draft' && s?.requiredPosesComplete),
+    () => visibleCompletedScans(scans),
     [scans],
   );
-  const scanPhotoNames = useMemo(() => new Set(
-    visibleScans.flatMap((scan) => (scan.assets || []).map((asset) => asset?.photoName).filter(Boolean)),
-  ), [visibleScans]);
+  const scanPhotoNames = useMemo(() => buildScanPhotoNameSet(visibleScans), [visibleScans]);
   const scanShareItems = scanShareItemsFromEntries(visibleScans);
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
   const canCompareScans = !loading && visibleScans.length >= 2 && !suppressed;
