@@ -21,10 +21,10 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
-import Button from '../components/Button';
+import EmptyState from '../components/EmptyState';
 import Stepper from '../components/Stepper';
 import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
@@ -190,35 +190,21 @@ export default function MyRecipesScreen({ navigation, route }) {
           <SkeletonRow />
         </View>
       ) : loadError ? (
-        <View style={styles.empty}>
-          <View style={styles.errorIconWrap}>
-            <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
-          </View>
-          <Text style={styles.emptyTitle}>Couldn't load recipes</Text>
-          <Text style={styles.emptyBody}>
-            Check your connection and try again. Your saved recipes have not been changed.
-          </Text>
-          <Button
-            title="Try again"
-            variant="secondary"
-            onPress={reload}
-            accessibilityLabel="Try loading recipes again"
-            style={styles.emptyAction}
-          />
-        </View>
+        <EmptyState
+          icon="warning-outline"
+          title="Couldn't load recipes"
+          text="Check your connection and try again. Your saved recipes have not been changed."
+          actionLabel="Try again"
+          onAction={reload}
+        />
       ) : recipes.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Build your first recipe</Text>
-          <Text style={styles.emptyBody}>
-            Build a recipe once. Log it as one line in your diary every time you eat it.
-          </Text>
-          <Button
-            title="Build a recipe"
-            onPress={onCreate}
-            accessibilityLabel="Build a recipe"
-            style={styles.emptyAction}
-          />
-        </View>
+        <EmptyState
+          icon="restaurant-outline"
+          title="Build your first recipe"
+          text="Build a recipe once. Log it as one line in your diary every time you eat it."
+          actionLabel="Build a recipe"
+          onAction={onCreate}
+        />
       ) : (
         <FlashList
           data={recipes}
@@ -285,19 +271,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginRight: spacing.xs,
   },
-  empty: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  emptyTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
-  emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', marginBottom: spacing.lg },
-  errorIconWrap: {
-    width: 48, height: 48, borderRadius: circle(48),
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2,
-    marginBottom: spacing.md,
-  },
-  emptyAction: { alignSelf: 'stretch' },
   // Servings picker modal (food audit F-4)
   backdrop: {
     flex: 1, backgroundColor: colors.scrim,

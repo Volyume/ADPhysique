@@ -340,6 +340,7 @@ Status: release decision.
 - Workout History now distinguishes a genuinely empty training log from a saved history narrowed away by filters or calendar view, showing truthful filter-specific copy and a `Show all sessions` recovery action instead of the first-run empty state.
 - Volume Heatmap now explains true first-run/no-set states and selected-window gaps with compact guidance copy, so a zeroed diagram no longer masquerades as a complete volume analysis without context.
 - Cardio History now gives the true empty state a direct `Log cardio` action wired to the existing logging route, removing another dead end while preserving Health import copy and retry/delete safeguards.
+- My Recipes now uses the shared `EmptyState` primitive for retryable load failures and the genuine first-recipe prompt, preserving build/retry behaviour while removing another local empty-card style cluster from Nutrition.
 
 ### Web / CI / Security
 
