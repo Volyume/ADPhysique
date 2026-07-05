@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 509 suites passed.
-  - 6,465 tests passed, 5 skipped.
+  - 6,466 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -339,6 +339,7 @@ Status: release decision.
 - Lift Progress now separates failed lift-history reads from a genuine no-lift state, clears user-scoped derived strength data when no user is present, and guards overlapping refreshes so stale lift responses cannot repaint newer results.
 - Workout History now distinguishes a genuinely empty training log from a saved history narrowed away by filters or calendar view, showing truthful filter-specific copy and a `Show all sessions` recovery action instead of the first-run empty state.
 - Volume Heatmap now explains true first-run/no-set states and selected-window gaps with compact guidance copy, so a zeroed diagram no longer masquerades as a complete volume analysis without context.
+- Cardio History now gives the true empty state a direct `Log cardio` action wired to the existing logging route, removing another dead end while preserving Health import copy and retry/delete safeguards.
 
 ### Web / CI / Security
 

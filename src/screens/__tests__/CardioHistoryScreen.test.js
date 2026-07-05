@@ -1,6 +1,7 @@
 import { create, act } from 'react-test-renderer';
 
 const mockToastShow = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
@@ -8,6 +9,7 @@ jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
+  useNavigation: () => ({ navigate: mockNavigate }),
 }));
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
@@ -117,6 +119,23 @@ describe('CardioHistoryScreen states', () => {
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('No cardio yet');
+  });
+
+  test('empty cardio history offers a direct log-cardio action', async () => {
+    getRecentCardioLog.mockResolvedValueOnce([]);
+    getCardioLogRange.mockResolvedValueOnce([]);
+    let tree;
+    await act(async () => { tree = create(<CardioHistoryScreen />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('No cardio yet');
+    expect(text).toContain('Log cardio');
+
+    const action = tree.root.findByProps({ accessibilityLabel: 'Log cardio' });
+    await act(async () => { action.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('LogCardio');
   });
 
   test('failed delete keeps the row and tells the user', async () => {
