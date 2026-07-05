@@ -15,6 +15,7 @@ import { useShallow } from 'zustand/react/shallow';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+import SectionLabel from '../components/SectionLabel';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -173,7 +174,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeading({ title }) {
-  return <Text style={styles.sectionHeading}>{title}</Text>;
+  return <SectionLabel>{title}</SectionLabel>;
 }
 
 function VolumeRow({ muscle, data }) {
@@ -709,10 +710,6 @@ const styles = StyleSheet.create({
   // Sections
   section: {
     gap: spacing.sm,
-  },
-  sectionHeading: {
-    ...type.label,
-    color: colors.textSecondary,
   },
   sectionSubtext: {
     ...type.captionTight,
