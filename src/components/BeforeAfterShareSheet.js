@@ -387,7 +387,10 @@ export default function BeforeAfterShareSheet({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Share progress</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Private Share Card</Text>
+          <Text style={styles.subtitle}>One composited image, created only when you choose.</Text>
+        </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -397,7 +400,7 @@ export default function BeforeAfterShareSheet({
         {/* Choose two photos (default earliest and latest). Older reads on the
             left, newer on the right, whatever the tap order was. */}
         <View style={styles.section}>
-          <SectionLabel>{usingScans ? 'Scans' : 'Photos'}</SectionLabel>
+          <SectionLabel>{usingScans ? 'Choose Scans' : 'Choose Check-Ins'}</SectionLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
             {sorted.map((item) => {
               const on = selected.includes(item.name);
@@ -423,8 +426,8 @@ export default function BeforeAfterShareSheet({
           </ScrollView>
           <Text style={styles.hint}>
             {pairReady
-              ? `Two ${usingScans ? 'scans' : 'photos'} chosen.`
-              : `Choose two ${usingScans ? 'scans' : 'photos'} to compare.`}
+              ? `Ready with two ${usingScans ? 'scans' : 'check-ins'}.`
+              : `Choose two ${usingScans ? 'scans' : 'check-ins'} for the card.`}
           </Text>
         </View>
 
@@ -471,12 +474,12 @@ export default function BeforeAfterShareSheet({
             </View>
           </View>
           <Text style={styles.privacyNote}>
-            Only the two photos, their dates, optional scan score, weights when shown and elapsed time you chose are included. Your name, measurements and private notes are never included.
+            The exported file is a single composed image. It includes only the two photos, dates, optional scan score, optional weights and elapsed time you chose. Your name, measurements and private notes are never included.
           </Text>
         </View>
 
         <Button
-          title="Share"
+          title="Share image"
           icon="share-outline"
           onPress={onShare}
           disabled={busy || !pairReady}
@@ -487,7 +490,7 @@ export default function BeforeAfterShareSheet({
 
         {MediaLibrary ? (
           <Button
-            title="Save to gallery"
+            title="Save image"
             icon="download-outline"
             onPress={onSaveToGallery}
             disabled={busy || !pairReady}
@@ -527,6 +530,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
+  headerCopy: { flex: 1, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
   stripRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },

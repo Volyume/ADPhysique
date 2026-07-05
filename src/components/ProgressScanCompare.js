@@ -101,7 +101,10 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Compare scans</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.title}>Compare scans</Text>
+            <Text style={styles.subtitle}>Pose-matched scan entries with trend-only privacy controls.</Text>
+          </View>
           <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
             <Ionicons name="close" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -117,7 +120,10 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Compare scans</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Compare scans</Text>
+          <Text style={styles.subtitle}>Pose-matched scan entries with trend-only privacy controls.</Text>
+        </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -157,6 +163,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
             {deltaText ? (
               <View style={styles.deltaBox}>
+                <Text style={styles.deltaLabel}>Why this comparison reads this way</Text>
                 <Text style={styles.deltaText}>{deltaText}</Text>
               </View>
             ) : null}
@@ -194,6 +201,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
+  headerCopy: { flex: 1, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   strip: { gap: spacing.sm, paddingRight: spacing.lg },
   scanChip: {
@@ -227,7 +236,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
     padding: spacing.md,
+    gap: spacing.xs,
   },
+  deltaLabel: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   deltaText: { ...type.bodySm, color: colors.textSecondary },
   poseBlock: { gap: spacing.sm },
   poseTitle: { ...type.label, color: colors.textMuted },
