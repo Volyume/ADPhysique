@@ -8,10 +8,16 @@ import {
   colors, spacing, radius, type, fontWeight,
 } from '../styles/theme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
-import { explainMeasuredScanDelta } from '../lib/progressScanAnalysis';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+import {
+  buildProgressScanCompareModel,
+  nextScanCompareSelection,
+  normaliseScanCompareSelection,
+  orderedScanEntries,
+} from '../lib/progressScanCompareViewModel';
 
-const POSES = ['front', 'back', 'side'];
+export { defaultScanPair, orderedScanEntries } from '../lib/progressScanCompareViewModel';
+
 const POSE_LABEL = { front: 'Front', back: 'Back', side: 'Side' };
 
 function finiteNumber(value) {
@@ -34,29 +40,6 @@ export function scanWeightLabel(scan, { hideExact = false } = {}) {
   if (hideExact) return null;
   const kg = finiteNumber(scan?.stats?.weightKg);
   return kg == null ? null : `${kg} kg`;
-}
-
-export function orderedScanEntries(scans = []) {
-  return (Array.isArray(scans) ? scans : [])
-    .filter((scan) => scan?.id && scan?.status !== 'draft' && scan?.requiredPosesComplete && Array.isArray(scan.assets))
-    .sort((a, b) => (finiteNumber(a.capturedAt) ?? 0) - (finiteNumber(b.capturedAt) ?? 0));
-}
-
-export function defaultScanPair(scans = []) {
-  const ordered = orderedScanEntries(scans);
-  if (ordered.length === 0) return [];
-  if (ordered.length === 1) return [ordered[0].id];
-  return [ordered[0].id, ordered[ordered.length - 1].id];
-}
-
-function assetForPose(scan, pose) {
-  return (scan?.assets || []).find((asset) => asset?.pose === pose && asset?.uri) || null;
-}
-
-function poseRowsForPair(earlier, later) {
-  return POSES
-    .map((pose) => ({ pose, earlier: assetForPose(earlier, pose), later: assetForPose(later, pose) }))
-    .filter((row) => row.earlier || row.later);
 }
 
 function ScanSummary({ scan, label, hideExact }) {
@@ -99,31 +82,16 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   const [selected, setSelected] = useState([]);
 
   useEffect(() => {
-    setSelected((prev) => {
-      const live = prev.filter((id) => entries.some((scan) => scan.id === id));
-      if (live.length === 2) return live;
-      return defaultScanPair(entries);
-    });
+    setSelected((prev) => normaliseScanCompareSelection(prev, entries));
   }, [entries]);
 
   function toggleSelect(id) {
-    setSelected((prev) => {
-      if (prev.includes(id)) return prev.filter((current) => current !== id);
-      if (prev.length < 2) return [...prev, id];
-      return [prev[1], id];
-    });
+    setSelected((prev) => nextScanCompareSelection(prev, id));
   }
 
-  const pair = selected
-    .map((id) => entries.find((scan) => scan.id === id))
-    .filter(Boolean)
-    .sort((a, b) => (finiteNumber(a.capturedAt) ?? 0) - (finiteNumber(b.capturedAt) ?? 0));
-  const earlier = pair[0] || null;
-  const later = pair[1] || null;
-  const rows = earlier && later ? poseRowsForPair(earlier, later) : [];
-  const delta = useMemo(
-    () => (earlier && later ? explainMeasuredScanDelta({ currentScan: later, previousScan: earlier }) : null),
-    [earlier, later],
+  const { earlier, later, rows, delta } = useMemo(
+    () => buildProgressScanCompareModel(entries, selected),
+    [entries, selected],
   );
   const deltaText = hideExact
     ? delta?.trendSummary
