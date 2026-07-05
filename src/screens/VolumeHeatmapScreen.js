@@ -10,6 +10,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
+import SectionLabel from '../components/SectionLabel';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan } from '../lib/database';
@@ -463,7 +464,7 @@ export default function VolumeHeatmapScreen() {
         {/* Volume trend, hidden for new users with no data */}
         {trainedMuscles.length > 0 && (
           <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Volume trend</Text>
+            <SectionLabel>Volume trend</SectionLabel>
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
               accessibilityPrefix="volume trend window" />
             {!!volTakeaway && <Text style={styles.trendTakeaway}>{volTakeaway}</Text>}
@@ -751,11 +752,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   trendTakeaway: { ...type.bodySm, color: colors.textSecondary },
-  sectionTitle: {
-    ...type.label,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
   actionRow: {
     flexDirection: 'row',
     gap: spacing.md,

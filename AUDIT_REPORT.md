@@ -272,6 +272,7 @@ Status: release decision.
 - Exercise Detail now uses shared `SectionLabel` headings for history, all-time bests, similar exercises and technique notes, preserving chart/history/substitution behavior while tightening Train detail typography.
 - Plan Detail and Plans now use shared `SectionLabel` headings for workouts, folders, plan lists, templates, plan rationale, manage actions and plan-start/switch entry points, preserving library/add/activate/edit/start behavior while removing more Train-local section-title styles.
 - Share Card and Before/After Share Sheet now use shared `SectionLabel` headings for format, background, preview, PR choice, share includes and scan/photo selection, preserving export/privacy behavior while aligning social-sharing typography with the wider app.
+- Volume Heatmap and Routine Detail now use shared `SectionLabel` headings for volume trend and muscle coverage, preserving chart/routine behavior while retiring two more local uppercase label styles.
 
 ### Web / CI / Security
 

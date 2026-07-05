@@ -9,6 +9,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import TextField from '../components/TextField';
+import SectionLabel from '../components/SectionLabel';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
@@ -53,7 +54,7 @@ function MuscleTagRow({ exercises }) {
 
   return (
     <Card style={tagStyles.section}>
-      <Text style={tagStyles.sectionTitle}>Muscle coverage</Text>
+      <SectionLabel tone="muted">Muscle coverage</SectionLabel>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -837,14 +838,6 @@ const tagStyles = StyleSheet.create({
   section: {
     marginBottom: spacing.md,
     gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
   },
   chipRow: {
     flexDirection: 'row',
