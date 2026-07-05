@@ -1,8 +1,10 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import Card from '../components/Card';
+import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import { useState, useEffect } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -213,7 +215,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
         {(goalChanged || phaseChanged) && (
           <>
-            <Text style={styles.sectionLabel}>Training</Text>
+            <SectionLabel style={styles.sectionLabelSpacing}>Training</SectionLabel>
             {goalChanged && (
               <ChangeCard
                 icon="trophy-outline"
@@ -237,7 +239,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
         {(kcalChanged || macrosChanged || approachChanged) && (
           <>
-            <Text style={styles.sectionLabel}>Nutrition</Text>
+            <SectionLabel style={styles.sectionLabelSpacing}>Nutrition</SectionLabel>
 
             {kcalChanged && (
               <ChangeCard
@@ -276,7 +278,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           </>
         )}
 
-        <Text style={styles.sectionLabel}>What happens next</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>What happens next</SectionLabel>
         <Card style={styles.nextCard}>
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
@@ -302,9 +304,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           )}
         </Card>
 
-        <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85} accessibilityRole="button">
-          <Text style={styles.doneBtnText}>Got it</Text>
-        </TouchableOpacity>
+        <Button title="Got it" onPress={handleDone} size="lg" style={styles.doneBtn} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -327,11 +327,7 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   heroBody: { ...type.bodySm, color: colors.textSecondary },
 
-  sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase',
-    marginTop: spacing.md, marginBottom: -spacing.xs,
-  },
+  sectionLabelSpacing: { marginTop: spacing.md, marginBottom: -spacing.xs },
 
   card: {
     gap: spacing.sm,
@@ -370,10 +366,5 @@ const styles = StyleSheet.create({
   bullet: { marginTop: 7 },
   nextText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  doneBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  doneBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0.4 },
+  doneBtn: { marginTop: spacing.md },
 });

@@ -34,6 +34,7 @@ import {
 } from '../lib/notifications';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+import SectionLabel from '../components/SectionLabel';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -315,7 +316,7 @@ export default function CoachingRemindersScreen() {
         )}
 
         {/* Morning weight */}
-        <Text style={styles.sectionLabel}>Morning weight</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>Morning weight</SectionLabel>
         <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
@@ -340,7 +341,7 @@ export default function CoachingRemindersScreen() {
         </Card>
 
         {/* Weekly check-in */}
-        <Text style={styles.sectionLabel}>Weekly check-in</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>Weekly check-in</SectionLabel>
         <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
@@ -377,7 +378,7 @@ export default function CoachingRemindersScreen() {
         </Card>
 
         {/* Missed check-in follow-up (OPP-C03). Optional, default on. */}
-        <Text style={styles.sectionLabel}>Check-in follow-up</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>Check-in follow-up</SectionLabel>
         <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
@@ -401,7 +402,7 @@ export default function CoachingRemindersScreen() {
         </Card>
 
         {/* F3: planned-meal confirm reminder. Optional, default on, Pro. */}
-        <Text style={styles.sectionLabel}>Meal-plan reminder</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>Meal-plan reminder</SectionLabel>
         <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
@@ -440,11 +441,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
   warningText: { ...type.captionTight, flex: 1, color: colors.warning },
-  sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase',
-    marginTop: spacing.md, marginBottom: -spacing.xs,
-  },
+  sectionLabelSpacing: { marginTop: spacing.md, marginBottom: -spacing.xs },
   // Intentional settings/list-style card: secondary surface (surface2),
   // vertical-only padding (children own their horizontal padding) and the
   // tighter radius.md corner. Card supplies the surface base, border and

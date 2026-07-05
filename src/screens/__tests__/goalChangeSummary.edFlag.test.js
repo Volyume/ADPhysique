@@ -14,10 +14,20 @@ jest.mock('../../lib/database', () => ({
 }));
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
-  default: { getState: () => ({ user: { id: 'u1' } }) },
+  default: Object.assign(
+    (selector) => selector({ accessibility: { reduceMotion: true } }),
+    { getState: () => ({ user: { id: 'u1' } }) },
+  ),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
+}));
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
 import GoalChangeSummaryScreen from '../GoalChangeSummaryScreen';

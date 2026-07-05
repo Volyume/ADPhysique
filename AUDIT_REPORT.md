@@ -120,8 +120,9 @@ Status: materially closed.
 - Native headers remain hidden for app screens.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
-- Shared section labels now use `SectionLabel` / `type.overline` in the first bounded sweep across Coach, Athlete Profile, Consistency, Lift Progress and settings primitives.
+- Shared section labels now use `SectionLabel` / `type.overline` across the first two bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary and Coaching Reminders.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields and first-run setup migrated as the initial safe slice.
+- Goal Change Summary now uses the shared `Button` for its final acknowledgement CTA.
 - A guard now prevents native header drift.
 
 ### H6: Setup-Complete / Reveal Consistency
@@ -280,7 +281,7 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
 
 1. Continue the "one product" design sweep:
    - migrate the remaining plain inputs to `TextField` in small screen-level slices;
-   - remaining hand-rolled CTAs to `Button`;
+   - remaining hand-rolled CTAs to `Button`, starting with Food Insights export actions and plan rebuild/confirm flows;
    - remaining hand-rolled sheets to `BottomSheet`.
 2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
 3. Finish state/dead-end surfaces: Partners error branch, Consistency/VolumeHeatmap loading-empty-error, FoodInsights loading, CardioHistory controls, and MyMeals edit/create clarity.

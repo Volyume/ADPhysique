@@ -13,8 +13,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
@@ -264,7 +265,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         <Field label="Name" value={name} onChange={setName} placeholder="Chicken breast, raw" autoFocus />
         <Field label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Tesco" />
 
-        <Text style={styles.sectionLabel}>PER 100G</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>PER 100G</SectionLabel>
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
@@ -280,7 +281,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
-        <Text style={styles.sectionLabel}>QUANTITY EATEN</Text>
+        <SectionLabel style={styles.sectionLabelSpacing}>QUANTITY EATEN</SectionLabel>
         <View style={styles.row}>
           <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
           <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
@@ -363,10 +364,7 @@ const styles = StyleSheet.create({
   },
   dupeText: { ...type.bodySm, color: colors.textSecondary },
 
-  sectionLabel: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm,
-  },
+  sectionLabelSpacing: { marginTop: spacing.lg, marginBottom: spacing.sm },
   field: { marginBottom: spacing.md },
   fieldLabel: { color: colors.textSecondary, fontSize: fontSize.sm, marginBottom: spacing.xs },
   input: {
