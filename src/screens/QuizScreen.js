@@ -15,6 +15,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
 import { PHYSIQUE_GOALS, GOAL_LABELS, TRAINING_PHASES, PHASE_LABELS } from '../lib/coachingGoals';
 import { PHASE_PRE_ACCOUNT } from '../lib/onboarding/quizFlow';
@@ -31,19 +32,6 @@ const EQUIPMENT = [
   { value: 'home_gym', label: 'Home gym' },
   { value: 'bodyweight', label: 'Bodyweight' },
 ];
-
-function Chip({ label, selected, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.chip, selected && styles.chipOn]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 export default function QuizScreen({ navigation }) {
   const { quiz, setQuizField, markQuizStep } = useAppStore((s) => ({
@@ -78,48 +66,72 @@ export default function QuizScreen({ navigation }) {
 
         <Text style={styles.section}>How do you train?</Text>
         <Text style={styles.q}>Experience</Text>
-        <View style={styles.row}>
+        <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Experience">
           {EXPERIENCE.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.experience === o.value}
-              onPress={() => setQuizField('experience', o.value)} />
+              onPress={() => setQuizField('experience', o.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={o.label}
+              style={styles.quizChip}
+            />
           ))}
         </View>
         <Text style={styles.q}>Days a week</Text>
-        <View style={styles.row}>
+        <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Days a week">
           {DAYS.map((d) => (
             <Chip key={d} label={String(d)} selected={quiz.daysPerWeek === d}
-              onPress={() => setQuizField('daysPerWeek', d)} />
+              onPress={() => setQuizField('daysPerWeek', d)}
+              accessibilityRole="radio"
+              accessibilityLabel={`${d} days a week`}
+              style={styles.quizChip}
+            />
           ))}
         </View>
         <Text style={styles.q}>Session length</Text>
-        <View style={styles.row}>
+        <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Session length">
           {LENGTHS.map((m) => (
             <Chip key={m} label={`${m} min`} selected={quiz.sessionLengthMinutes === m}
-              onPress={() => setQuizField('sessionLengthMinutes', m)} />
+              onPress={() => setQuizField('sessionLengthMinutes', m)}
+              accessibilityRole="radio"
+              accessibilityLabel={`${m} minutes`}
+              style={styles.quizChip}
+            />
           ))}
         </View>
         <Text style={styles.q}>Equipment</Text>
-        <View style={styles.row}>
+        <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Equipment">
           {EQUIPMENT.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.equipment === o.value}
-              onPress={() => setQuizField('equipment', o.value)} />
+              onPress={() => setQuizField('equipment', o.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={o.label}
+              style={styles.quizChip}
+            />
           ))}
         </View>
 
         <Text style={styles.section}>What are you training for?</Text>
-        <View style={styles.row}>
+        <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training goal">
           {PHYSIQUE_GOALS.map((g) => (
             <Chip key={g.value} label={GOAL_LABELS[g.value] || g.label} selected={quiz.trainingGoal === g.value}
-              onPress={() => setQuizField('trainingGoal', g.value)} />
+              onPress={() => setQuizField('trainingGoal', g.value)}
+              accessibilityRole="radio"
+              accessibilityLabel={GOAL_LABELS[g.value] || g.label}
+              style={styles.quizChip}
+            />
           ))}
         </View>
         {PHASE_PRE_ACCOUNT && (
           <>
             <Text style={styles.q}>Right now you want to…</Text>
-            <View style={styles.row}>
+            <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training phase">
               {TRAINING_PHASES.map((p) => (
                 <Chip key={p.value} label={PHASE_LABELS[p.value] || p.label} selected={quiz.trainingPhase === p.value}
-                  onPress={() => setQuizField('trainingPhase', p.value)} />
+                  onPress={() => setQuizField('trainingPhase', p.value)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={PHASE_LABELS[p.value] || p.label}
+                  style={styles.quizChip}
+                />
               ))}
             </View>
           </>
@@ -147,10 +159,7 @@ const styles = StyleSheet.create({
   section: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, marginTop: spacing.lg, marginBottom: spacing.sm },
   q: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.md, marginBottom: spacing.xs },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.textPrimary, fontSize: fontSize.sm },
-  chipTextOn: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  quizChip: { minHeight: 44 },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primary, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },
