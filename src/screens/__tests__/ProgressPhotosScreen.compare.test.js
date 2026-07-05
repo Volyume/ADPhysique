@@ -6,7 +6,7 @@
  * test (ProgressPhotoCompare.test.js) — the SAME regex the legacy inline modal
  * was held to. This suite pins the SCREEN's wiring and the safety invariants
  * that stay the screen's responsibility after the timeline rewrite:
- *   - the dated, pose-typed timeline (month headers, per-tile dates) built from
+ *   - the dated, pose-typed Check-In timeline (month headers, card dates) built from
  *     getPhotoMetaMap, newest-first;
  *   - a tap opens the full-size VIEWER (not delete); delete flows through the
  *     viewer's onDelete → deleteProgressPhoto + deletePhotoMeta + refresh, with
@@ -16,7 +16,7 @@
  *     component's own self-suppression;
  *   - the Share entry is Pro-gated AND withheld under suppression;
  *   - the suppression copy stays neutral and does not show analysis pressure;
- *   - the E10 read-only (free-tier) rules: no add, tiles inert (no editable
+ *   - the E10 read-only (free-tier) rules: no add, cards inert (no editable
  *     viewer, no delete), Compare still available (pure viewing).
  */
 import { create, act } from 'react-test-renderer';
@@ -148,22 +148,22 @@ function findElement(el, pred) {
   return findElement(el.props && el.props.children, pred);
 }
 
-// The tile TouchableOpacity for a photo, produced by renderItem on its row.
-function tileFor(tree, photo) {
+// The Check-In TouchableOpacity for a photo, produced by renderItem.
+function checkInFor(tree, photo) {
   const fl = flashList(tree);
-  const rowItem = (fl.props.data || []).find(
-    (it) => it.type === 'row' && it.photos.some((p) => p.name === photo.name),
+  const checkInItem = (fl.props.data || []).find(
+    (it) => it.type === 'checkin' && it.photos.some((p) => p.name === photo.name),
   );
-  if (!rowItem) return null;
-  const el = fl.props.renderItem({ item: rowItem, index: 0 });
+  if (!checkInItem) return null;
+  const el = fl.props.renderItem({ item: checkInItem, index: 0 });
   return findElement(el, (n) => typeof n.props?.accessibilityLabel === 'string'
-    && n.props.accessibilityLabel.startsWith(`Photo from ${fmt(photo.ts)}`));
+    && n.props.accessibilityLabel.startsWith(`Check-in from ${fmt(photo.ts)}`));
 }
 
-async function pressTile(tree, photo) {
-  const tile = tileFor(tree, photo);
-  if (!tile) throw new Error(`No tile for ${photo.name}`);
-  await act(async () => { tile.props.onPress(); });
+async function pressCheckIn(tree, photo) {
+  const checkIn = checkInFor(tree, photo);
+  if (!checkIn) throw new Error(`No Check-In for ${photo.name}`);
+  await act(async () => { checkIn.props.onPress(); });
 }
 
 function hostNode(tree, name) {
@@ -181,15 +181,16 @@ function surfaceOpen(tree, childName) {
 afterEach(() => jest.clearAllMocks());
 
 describe('ProgressPhotosScreen timeline', () => {
-  test('builds a newest-first dated timeline with month headers and per-tile dates', async () => {
+  test('builds a newest-first dated timeline with month headers and Check-In dates', async () => {
     const tree = await render();
     const data = flashList(tree).props.data;
-    // Three photos in three different months => three headers + three rows,
+    // Three photos in three different months => three headers + three Check-Ins,
     // newest month first.
     const headers = data.filter((d) => d.type === 'header').map((d) => d.label);
     expect(headers).toEqual(['June 2026', 'March 2026', 'January 2026']);
-    // Each tile shows its date.
-    const el = tileFor(tree, NEW);
+    expect(data.filter((d) => d.type === 'checkin')).toHaveLength(3);
+    // Each card shows its date.
+    const el = checkInFor(tree, NEW);
     expect(el).toBeTruthy();
     const dateText = findElement(el, (n) => n.props && n.props.children === fmt(NEW.ts));
     expect(dateText).toBeTruthy();
@@ -205,8 +206,8 @@ describe('ProgressPhotosScreen timeline', () => {
 });
 
 // Sort + date-range navigation (NAV-4). Neutral controls that compose with the
-// pose filter; no cadence, no streak, no comparison forcing. buildTimeline
-// groups by contiguous month, so oldest-first simply reverses the sections.
+// pose filter; no cadence, no streak, no comparison forcing. The Check-In
+// timeline groups by contiguous month, so oldest-first simply reverses sections.
 describe('ProgressPhotosScreen timeline sort toggle', () => {
   const headers = (tree) => flashList(tree).props.data
     .filter((d) => d.type === 'header').map((d) => d.label);
@@ -216,9 +217,9 @@ describe('ProgressPhotosScreen timeline sort toggle', () => {
     expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
     await press(tree, 'Sort oldest first');
     expect(headers(tree)).toEqual(['January 2026', 'March 2026', 'June 2026']);
-    // First tile of the first row is now the OLDEST photo.
-    const first = flashList(tree).props.data.find((d) => d.type === 'row');
-    expect(first.photos[0].name).toBe(OLD.name);
+    // First Check-In is now the OLDEST photo.
+    const first = flashList(tree).props.data.find((d) => d.type === 'checkin');
+    expect(first.cover.name).toBe(OLD.name);
     // Toggling back restores newest-first.
     await press(tree, 'Sort newest first');
     expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
@@ -273,14 +274,14 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
   test('a plain tap opens the full-size viewer and never the delete dialog', async () => {
     const tree = await render();
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeUndefined();
-    await pressTile(tree, NEW);
+    await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
     expect(appAlert).not.toHaveBeenCalled();
   });
 
   test('viewer onDelete removes the file AND its meta, then refreshes (live-tier checked)', async () => {
     const tree = await render();
-    await pressTile(tree, OLD);
+    await pressCheckIn(tree, OLD);
     const viewer = hostNode(tree, 'ProgressPhotoViewer');
     listProgressPhotos.mockClear();
     await act(async () => { await viewer.props.onDelete(OLD.name); });
@@ -365,12 +366,12 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
-  test('free tier: a tile is inert (no editable viewer, no delete path)', async () => {
+  test('free tier: a Check-In card is inert (no editable viewer, no delete path)', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    const tile = tileFor(tree, NEW);
-    expect(tile.props.onPress).toBeUndefined();
-    expect(tile.props.disabled).toBe(true);
-    expect(tile.props.accessibilityLabel).not.toContain('Tap to open');
+    const checkIn = checkInFor(tree, NEW);
+    expect(checkIn.props.onPress).toBeUndefined();
+    expect(checkIn.props.disabled).toBe(true);
+    expect(checkIn.props.accessibilityLabel).not.toContain('Tap to open');
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeUndefined();
     expect(appAlert).not.toHaveBeenCalled();
   });
@@ -385,7 +386,7 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
     expect(findPressable(tree, 'Capture check-in')).toBeDefined();
-    await pressTile(tree, NEW);
+    await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });
 });

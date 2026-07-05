@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -53,8 +53,7 @@ import {
   visibleCompletedScans,
 } from '../lib/progressPhotosController';
 import {
-  PROGRESS_PHOTO_TIMELINE_COLS as COLS,
-  buildTimeline,
+  buildCheckInTimeline,
   filterAndSort,
 } from '../lib/progressPhotoTimeline';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
@@ -73,8 +72,6 @@ import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
 
-const GAP = spacing.xs;
-
 // Pose filter chips. 'all' shows every photo; the others narrow to a pose so
 // like compares with like (spec §3.3). Function-neutral labels.
 const POSES = [
@@ -84,19 +81,19 @@ const POSES = [
   { key: 'back', label: 'Back' },
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+const CORE_POSES = ['front', 'side', 'back'];
 const PROGRESS_SCAN_MIN_INTERVAL_MS = 14 * 86400000;
 const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
 
 // Timeline sort. Newest-first is the unchanged default; oldest-first lets
 // someone read forwards from their first photo. Neutral temporal wording only,
-// never "before/after" or any transformation framing (spec PART 2). buildTimeline
-// groups by contiguous month, so it works with either direction unchanged.
+// never "before/after" or any transformation framing (spec PART 2).
 const SORTS = [
   { key: 'newest', label: 'Newest', a11y: 'Sort newest first' },
   { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
 ];
 
-export { buildTimeline, filterAndSort, scanShareItemsFromEntries };
+export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
 export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
@@ -368,7 +365,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     [enriched, poseFilter, sortOrder, rangeFrom, rangeTo],
   );
 
-  const timeline = useMemo(() => buildTimeline(filtered), [filtered]);
+  const timeline = useMemo(() => buildCheckInTimeline(filtered), [filtered]);
 
   const hasRange = Number.isFinite(rangeFrom) || Number.isFinite(rangeTo);
   // Plain label for the date-range pill; "to" reads calmer than a dash and
@@ -689,9 +686,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   function openScanCompare() { setScanCompareOpen(true); }
   function openShare() { setShareOpen(true); }
 
-  const win = Dimensions.get('window');
-  const size = (win.width - spacing.lg * 2 - GAP * (COLS - 1)) / COLS;
-
   // NEW high-risk surfaces are withheld under the shared suppression gate
   // (fail-closed): the comparison entry and the share card. Viewing the dated
   // timeline and delete stay available. Share is additionally Pro-gated.
@@ -735,29 +729,68 @@ export default function ProgressPhotosScreen({ navigation }) {
       ? 'Best results come from matched pose, full-body framing and repeatable lighting. Photos stay on this device unless you choose to share or export them.'
       : 'Use front, side and back photos under the same lighting. Photos stay on this device unless you choose to share or export them.';
 
-  function renderTile(item) {
-    const dateLabel = formatProgressPhotoDay(item.takenAt);
+  function renderCheckInCard(item) {
+    const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
+    const missingPoses = CORE_POSES.filter((pose) => !item.poses.includes(pose));
+    const poseSummary = missingPoses.length === 0
+      ? 'Full set'
+      : `${item.poses.length}/${CORE_POSES.length} poses`;
+    const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
+    const cover = item.cover || item.photos[0];
     return (
       <TouchableOpacity
-        key={item.name}
+        key={item.key}
         // E10 read-only: opening the editable viewer would expose writes
         // (pose/date/note), so a plain tap is inert in the view-only state;
         // Compare (pure viewing) stays available below.
-        onPress={readOnly ? undefined : () => openViewer(item.name)}
+        onPress={readOnly ? undefined : () => openViewer(cover.name)}
         disabled={readOnly}
         accessibilityRole={readOnly ? 'image' : 'button'}
         accessibilityLabel={readOnly
-          ? `Photo from ${dateLabel}.`
-          : `Photo from ${dateLabel}. Tap to open.`}
-        style={styles.tile}
+          ? `Check-in from ${dateLabel}.`
+          : `Check-in from ${dateLabel}. Tap to open.`}
+        style={styles.checkInCard}
       >
-        <Image source={{ uri: item.uri }} style={{ width: size, height: size, borderRadius: radius.md }} resizeMethod="resize" />
-        {item.pose ? (
-          <View pointerEvents="none" style={styles.poseBadge}>
-            <Text style={styles.poseBadgeText}>{POSE_LABEL[item.pose]}</Text>
+        <View style={styles.checkInCover}>
+          <Image source={{ uri: cover.uri }} style={styles.checkInCoverImage} resizeMethod="resize" />
+          <View pointerEvents="none" style={styles.checkInCoverBadge}>
+            <Ionicons name="images-outline" size={13} color={colors.onPrimary} />
+            <Text style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
           </View>
-        ) : null}
-        <Text style={styles.tileDate} numberOfLines={1}>{dateLabel}</Text>
+        </View>
+        <View style={styles.checkInBody}>
+          <View style={styles.checkInTopRow}>
+            <View style={styles.checkInTitleBlock}>
+              <Text style={styles.checkInDate} numberOfLines={1}>{dateLabel}</Text>
+              <Text style={styles.checkInMeta} numberOfLines={1}>
+                {poseSummary}{weightText ? ` - ${weightText}` : ''}
+              </Text>
+            </View>
+            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} /> : null}
+          </View>
+          <View style={styles.checkInPoseRow}>
+            {CORE_POSES.map((pose) => {
+              const complete = item.poses.includes(pose);
+              return (
+                <View key={pose} style={[styles.checkInPoseChip, complete && styles.checkInPoseChipDone]}>
+                  <Text style={[styles.checkInPoseText, complete && styles.checkInPoseTextDone]}>
+                    {POSE_LABEL[pose]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+          {item.note ? <Text style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
+          {missingPoses.length > 0 ? (
+            <Text style={styles.checkInHint} numberOfLines={2}>
+              Add {missingPoses.map((pose) => POSE_LABEL[pose].toLowerCase()).join(', ')} next time for a stronger like-for-like check-in.
+            </Text>
+          ) : (
+            <Text style={styles.checkInHint} numberOfLines={2}>
+              Matched front, side and back photos are ready for cleaner comparison.
+            </Text>
+          )}
+        </View>
       </TouchableOpacity>
     );
   }
@@ -1014,11 +1047,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             if (item.type === 'header') {
               return <Text style={styles.monthHeader}>{item.label}</Text>;
             }
-            return (
-              <View style={styles.row}>
-                {item.photos.map(renderTile)}
-              </View>
-            );
+            return renderCheckInCard(item);
           }}
         />
       )}
@@ -1263,15 +1292,64 @@ const styles = StyleSheet.create({
   },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   monthHeader: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
-  row: { flexDirection: 'row', gap: GAP, marginBottom: GAP },
-  tile: { alignItems: 'flex-start' },
-  tileDate: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  poseBadge: {
-    position: 'absolute', top: spacing.xs, left: spacing.xs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+  checkInCard: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
   },
-  poseBadgeText: { ...type.caption, color: colors.primary },
+  checkInCover: {
+    width: 104,
+    minHeight: 132,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.surface2,
+  },
+  checkInCoverImage: { width: '100%', height: '100%' },
+  checkInCoverBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    backgroundColor: colors.scrim,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+  },
+  checkInCoverBadgeText: { ...type.caption, color: colors.onPrimary },
+  checkInBody: { flex: 1, gap: spacing.sm, paddingVertical: spacing.xs },
+  checkInTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  checkInTitleBlock: { flex: 1 },
+  checkInDate: { ...type.label, color: colors.textPrimary },
+  checkInMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  checkInPoseChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    backgroundColor: colors.surface2,
+  },
+  checkInPoseChipDone: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  checkInPoseText: { ...type.caption, color: colors.textMuted },
+  checkInPoseTextDone: { color: colors.primary },
+  checkInNote: { ...type.bodySm, color: colors.textSecondary },
+  checkInHint: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },

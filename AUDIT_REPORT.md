@@ -380,6 +380,17 @@ Status: release decision.
 - Delete/wipe/backup/privacy guards for photos and scan tables pass.
 - Coach receives constrained scan context only.
 
+### Physique Studio Hardening Completed
+
+- Progress Photos is now framed as `Physique Studio` with Check-Ins as the primary saved-session model.
+- The first viewport is photo-led, private-by-default, and action-oriented: capture, scan, compare, latest/next/scan state and current signal.
+- Guided capture now gives pose-specific setup instructions for front, side and back photos.
+- Photo save/edit copy now says `Check-In`, not generic photo storage.
+- The timeline now groups same-day front/side/back photos into Check-In cards rather than a loose grid.
+- Check-In cards show a cover photo, date, photo count, pose completeness, optional note/weight context and next-time guidance.
+- Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
+- Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
+
 ## Product And UX Notes
 
 The IA direction is right for a powerful app that must stay easy to use:

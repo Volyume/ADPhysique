@@ -1,4 +1,4 @@
-import { formatProgressPhotoMonth } from './progressPhotoDates';
+import { formatProgressPhotoDay, formatProgressPhotoMonth } from './progressPhotoDates';
 
 export const PROGRESS_PHOTO_TIMELINE_COLS = 3;
 
@@ -22,6 +22,67 @@ export function buildTimeline(list = []) {
       flushBucket();
       curKey = key;
       out.push({ type: 'header', key: `h-${key}`, label: formatProgressPhotoMonth(p.takenAt) });
+    }
+    bucket.push(p);
+  }
+  flushBucket();
+  return out;
+}
+
+function localDayKey(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function poseOrder(pose) {
+  if (pose === 'front') return 0;
+  if (pose === 'side') return 1;
+  if (pose === 'back') return 2;
+  return 3;
+}
+
+export function buildCheckInTimeline(list = []) {
+  const out = [];
+  const source = Array.isArray(list) ? list : [];
+  let curMonthKey = null;
+  let curDayKey = null;
+  let bucket = [];
+
+  const flushBucket = () => {
+    if (bucket.length === 0) return;
+    const sortedPhotos = [...bucket].sort((a, b) => poseOrder(a.pose) - poseOrder(b.pose));
+    const cover = sortedPhotos.find((p) => p.pose === 'front') || sortedPhotos[0];
+    const poses = [...new Set(sortedPhotos.map((p) => p.pose).filter(Boolean))];
+    const note = sortedPhotos.find((p) => p.note)?.note || null;
+    const weightKg = sortedPhotos.find((p) => Number.isFinite(p.weightKg))?.weightKg ?? null;
+    out.push({
+      type: 'checkin',
+      key: `checkin-${curDayKey}`,
+      dayKey: curDayKey,
+      label: formatProgressPhotoDay(cover.takenAt),
+      takenAt: cover.takenAt,
+      cover,
+      photos: sortedPhotos,
+      poses,
+      note,
+      weightKg,
+    });
+    bucket = [];
+  };
+
+  for (const p of source) {
+    const d = new Date(p.takenAt);
+    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+    const dayKey = localDayKey(p.takenAt);
+    if (monthKey !== curMonthKey) {
+      flushBucket();
+      curMonthKey = monthKey;
+      curDayKey = null;
+      out.push({ type: 'header', key: `h-${monthKey}`, label: formatProgressPhotoMonth(p.takenAt) });
+    }
+    if (dayKey !== curDayKey) {
+      flushBucket();
+      curDayKey = dayKey;
     }
     bucket.push(p);
   }
