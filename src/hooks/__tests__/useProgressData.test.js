@@ -23,6 +23,7 @@ jest.mock('../../lib/database', () => ({
   getCurrentMesocycleWeek: jest.fn(),
   getPlannedMuscleVolume: jest.fn(),
 }));
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 0, 31); // fixed reference so week binning is stable
@@ -183,6 +184,21 @@ describe('useProgressData auth boundary', () => {
     expect(ref.current.exerciseMap).toEqual({});
     expect(ref.current.completedWorkoutCount).toBe(0);
     expect(database.getAcuteChronicWorkload).not.toHaveBeenCalled();
+
+    act(() => { tree.unmount(); });
+  });
+
+  test('a primary progress read failure surfaces loadError instead of empty data', async () => {
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockRejectedValueOnce(new Error('offline'));
+
+    const { ref, tree } = await renderProgressHook();
+
+    expect(ref.current.loading).toBe(false);
+    expect(ref.current.loadError).toBe(true);
+    expect(ref.current.hasData).toBe(false);
+    expect(ref.current.allSets).toEqual([]);
+    expect(ref.current.completedWorkoutCount).toBe(0);
 
     act(() => { tree.unmount(); });
   });

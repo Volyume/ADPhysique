@@ -36,7 +36,7 @@ export default function ConsistencyScreen({ navigation }) {
     fatigueSessions, blockProgress, currentMesoWeek,
     deloadAlert, workloadData, durationBars, muscleFreq,
     showAllMuscles, setShowAllMuscles, calValues,
-    enoughForTrends, refreshing, loading, hasData, handleRefresh,
+    enoughForTrends, refreshing, loading, loadError, hasData, handleRefresh,
   } = useProgressData();
 
   return (
@@ -78,7 +78,18 @@ export default function ConsistencyScreen({ navigation }) {
           </View>
         ) : null}
 
-        {!loading && !hasData ? (
+        {!loading && loadError ? (
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load consistency"
+            text="Your training history is safe. This is a read problem, not a lost block."
+            actionLabel="Try again"
+            onAction={handleRefresh}
+            compact
+          />
+        ) : null}
+
+        {!loading && !loadError && !hasData ? (
           <EmptyState
             icon="barbell-outline"
             title="Your consistency picture starts with your first session"
