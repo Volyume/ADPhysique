@@ -305,6 +305,7 @@ Status: release decision.
 - Before/After share card date, elapsed-time, pair selection, scan-range and draw-params helpers now live in `shareCard/beforeAfterParams`; `BeforeAfterShareSheet` re-exports them for existing tests while keeping native decode/render/share/save, confirmation, Pro gating and suppression behaviour untouched.
 - `Card` now forwards accessibility hints/state/test IDs through both static and pressable surfaces, and Athlete Profile rows use a shared accessibility helper so freshness status, guidance copy and Pro markings are available to assistive technology without changing row labels or navigation behaviour.
 - `SectionLabel` now owns a title-scale variant, and Nutrition Targets uses it for its form-section headings so the screen keeps its intended hierarchy while heading typography is governed by the shared design primitive.
+- Live camera close controls in Barcode Scan and Label Scan now expose the same `Close` accessibility label as their fallback states, keeping the primary camera escape route screen-reader reliable.
 
 ### Web / CI / Security
 

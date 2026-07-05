@@ -92,6 +92,16 @@ beforeEach(() => {
 });
 
 describe('ScanBarcodeScreen lookup failure (ST-2)', () => {
+  test('live camera close button is labelled', async () => {
+    const nav = makeNav();
+    const tree = await mount(nav);
+
+    const close = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && n.props.accessibilityLabel === 'Close'
+      && typeof n.props.onPress === 'function');
+    expect(close.length).toBeGreaterThan(0);
+  });
+
   test('a thrown lookup shows a "couldn\'t reach" error toast and resets the scanner while online', async () => {
     resolveBarcode.mockRejectedValue(new Error('boom'));
     const nav = makeNav();

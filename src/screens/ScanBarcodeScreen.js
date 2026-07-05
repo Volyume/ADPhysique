@@ -225,7 +225,12 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+        >
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan barcode</Text>

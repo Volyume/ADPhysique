@@ -101,6 +101,11 @@ describe('shouldOfferAddNameLink (pure)', () => {
 });
 
 describe('ScanLabelScreen skip-name persistence (C8)', () => {
+  test('live camera close button is labelled', async () => {
+    const tree = await mount();
+    expect(byLabel(tree, 'Close')).toBeTruthy();
+  });
+
   test('tapping "Skip name" persists the flag and moves to the nutrition step', async () => {
     const tree = await mount();
 
