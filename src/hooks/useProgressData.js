@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
@@ -90,6 +90,7 @@ export default function useProgressData() {
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(0);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
+  const loadRequestRef = useRef(0);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { load(); }, [user?.id]));
@@ -118,6 +119,10 @@ export default function useProgressData() {
   }
 
   async function load() {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
+
     if (!user?.id) {
       clearUserProgressState();
       setLoading(false);
@@ -129,6 +134,7 @@ export default function useProgressData() {
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
       ]);
+      if (!isCurrentRequest()) return;
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
@@ -144,29 +150,31 @@ export default function useProgressData() {
       setCompletedWorkoutCount(completed.length);
 
       const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
+      if (!isCurrentRequest()) return;
       setWorkloadData(wl);
 
       await Promise.all([
-        loadMesocycle(workouts, sets, exMap),
-        loadInsights(),
-        loadVolumeSnapshot(sets, exMap),
-        loadDeloadCheck(sets, exMap, workouts),
-        loadPRBars(sets, exMap, 30),
-        loadCalendar(workouts),
-        loadRecentSessions(workouts),
-        loadSessionDurationTrend(workouts),
-        loadMuscleFrequency(sets, exMap),
-        loadFatigueTrend(),
-        loadBlockState(),
+        loadMesocycle(workouts, sets, exMap, isCurrentRequest),
+        loadInsights(isCurrentRequest),
+        loadVolumeSnapshot(sets, exMap, isCurrentRequest),
+        loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
+        loadPRBars(sets, exMap, 30, isCurrentRequest),
+        loadCalendar(workouts, isCurrentRequest),
+        loadRecentSessions(workouts, isCurrentRequest),
+        loadSessionDurationTrend(workouts, isCurrentRequest),
+        loadMuscleFrequency(sets, exMap, isCurrentRequest),
+        loadFatigueTrend(isCurrentRequest),
+        loadBlockState(isCurrentRequest),
       ]);
     } catch (e) {
+      if (!isCurrentRequest()) return;
       logError('AnalyticsScreen.load', e, { userId: user?.id });
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }
 
-  async function loadMesocycle(workouts, sets, _exMap) {
+  async function loadMesocycle(workouts, sets, _exMap, isCurrentRequest = () => true) {
     try {
       const mesoRows = await getAllMesocycles(user.id);
       let active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? null;
@@ -174,6 +182,7 @@ export default function useProgressData() {
         const plan = await getActivePlan(user.id);
         if (plan) active = { ...plan, _isPlan: true };
       }
+      if (!isCurrentRequest()) return;
       setActiveMeso(active);
 
       // Build weekly tonnage sparkline: last 4 weeks. Current week highlighted in
@@ -199,35 +208,39 @@ export default function useProgressData() {
     } catch (_) {}
   }
 
-  async function loadFatigueTrend() {
+  async function loadFatigueTrend(isCurrentRequest = () => true) {
     try {
       const rows = await getRecentWorkoutFeedback(user.id, 6);
-      setFatigueSessions(rows);
+      if (isCurrentRequest()) setFatigueSessions(rows);
     } catch (_) {
-      setFatigueSessions([]);
+      if (isCurrentRequest()) setFatigueSessions([]);
     }
   }
 
-  async function loadBlockState() {
+  async function loadBlockState(isCurrentRequest = () => true) {
     try {
       const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
-      setCurrentMesoWeek(week);
       const progress = await getPlannedMuscleVolume(user.id).catch(() => []);
+      if (!isCurrentRequest()) return;
+      setCurrentMesoWeek(week);
       setBlockProgress(progress || []);
     } catch (_) {
-      setCurrentMesoWeek(null);
-      setBlockProgress([]);
+      if (isCurrentRequest()) {
+        setCurrentMesoWeek(null);
+        setBlockProgress([]);
+      }
     }
   }
 
-  async function loadInsights() {
+  async function loadInsights(isCurrentRequest = () => true) {
     try {
       const fresh = await runInsightsEngine(user.id);
-      setInsights(fresh);
+      if (isCurrentRequest()) setInsights(fresh);
     } catch (_) {}
   }
 
-  async function loadVolumeSnapshot(sets, exMap) {
+  async function loadVolumeSnapshot(sets, exMap, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     const now = Date.now();
     const weekAgo = now - WEEK_MS;
     const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= weekAgo);
@@ -235,7 +248,8 @@ export default function useProgressData() {
     setWeeklyVolume(vol);
   }
 
-  function loadDeloadCheck(sets, exMap, workouts) {
+  function loadDeloadCheck(sets, exMap, workouts, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     try {
       const now = Date.now();
       // Build per-week data for last 4 weeks
@@ -293,7 +307,8 @@ export default function useProgressData() {
     } catch (_) {}
   }
 
-  function loadPRBars(sets, exMap, windowDays) {
+  function loadPRBars(sets, exMap, windowDays, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     const bars = computePRsPerWeek(sets, exMap, windowDays).map((v, i) => ({
       value: v,
       frontColor: v > 0 ? colors.gold : colors.surface2,
@@ -302,7 +317,8 @@ export default function useProgressData() {
     setPrBars(bars);
   }
 
-  async function loadCalendar(workouts) {
+  async function loadCalendar(workouts, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     const now = Date.now();
     // Bucket by the user's LOCAL calendar day, not UTC. UK runs on BST
     // (UTC+1) half the year, so a UTC bucket lands a session on the day
@@ -325,7 +341,8 @@ export default function useProgressData() {
     setCalValues(vals);
   }
 
-  async function loadRecentSessions(workouts) {
+  async function loadRecentSessions(workouts, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     const completed = workouts
       .filter(w => w.isCompleted ?? w.is_completed ?? false)
       .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))
@@ -333,7 +350,8 @@ export default function useProgressData() {
     setRecentSessions(completed);
   }
 
-  function loadSessionDurationTrend(workouts) {
+  function loadSessionDurationTrend(workouts, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     try {
       const now = Date.now();
       const SIX_WEEKS_MS = 6 * WEEK_MS;
@@ -373,7 +391,8 @@ export default function useProgressData() {
     } catch (_) {}
   }
 
-  function loadMuscleFrequency(sets, exMap) {
+  function loadMuscleFrequency(sets, exMap, isCurrentRequest = () => true) {
+    if (!isCurrentRequest()) return;
     try {
       const now = Date.now();
       const thisWeekStart = now - WEEK_MS;

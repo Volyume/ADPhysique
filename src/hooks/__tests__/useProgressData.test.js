@@ -36,6 +36,13 @@ async function flush() {
   });
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 async function renderProgressHook() {
   const ref = { current: null };
   function Probe() {
@@ -141,6 +148,41 @@ describe('useProgressData auth boundary', () => {
     expect(ref.current.exerciseMap).toEqual({});
     expect(ref.current.completedWorkoutCount).toBe(0);
     expect(database.getAllWorkouts).toHaveBeenCalledTimes(1);
+
+    act(() => { tree.unmount(); });
+  });
+
+  test('a delayed signed-in load cannot repopulate progress data after sign-out', async () => {
+    const workouts = deferred();
+    const sets = deferred();
+    const exercises = deferred();
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockReturnValueOnce(workouts.promise);
+    database.getCompletedWorkoutSets.mockReturnValueOnce(sets.promise);
+    database.getAllExercises.mockReturnValueOnce(exercises.promise);
+
+    const { ref, tree } = await renderProgressHook();
+    expect(ref.current.loading).toBe(true);
+    expect(database.getAllWorkouts).toHaveBeenCalledWith('u1');
+
+    await act(async () => { useAppStore.setState({ user: null }); });
+    await flush();
+    expect(ref.current.loading).toBe(false);
+    expect(ref.current.hasData).toBe(false);
+
+    await act(async () => {
+      workouts.resolve([{ id: 'w1', isCompleted: true, startedAt: NOW }]);
+      sets.resolve([{ id: 's1', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW }]);
+      exercises.resolve([{ id: 'e1', primaryMuscle: 'chest' }]);
+    });
+    await flush();
+
+    expect(ref.current.loading).toBe(false);
+    expect(ref.current.hasData).toBe(false);
+    expect(ref.current.allSets).toEqual([]);
+    expect(ref.current.exerciseMap).toEqual({});
+    expect(ref.current.completedWorkoutCount).toBe(0);
+    expect(database.getAcuteChronicWorkload).not.toHaveBeenCalled();
 
     act(() => { tree.unmount(); });
   });
