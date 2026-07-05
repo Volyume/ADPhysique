@@ -17,10 +17,11 @@
  */
 
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
+import Chip from './Chip';
 import ReasonPicker from './ReasonPicker';
 import { captureCancelReason } from '../lib/cancelReason';
 import { setStatedReturn } from '../lib/payments/winbackState';
@@ -100,22 +101,13 @@ export default function CancelReasonSheet({
             {BREAK_WINDOWS.map((w) => {
               const selected = breakWindow === w.key;
               return (
-                <Pressable
+                <Chip
                   key={w.key}
+                  label={w.label}
+                  selected={selected}
                   onPress={() => setBreakWindow(selected ? null : w.key)}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    selected && styles.chipSelected,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
                   accessibilityLabel={w.label}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                    {w.label}
-                  </Text>
-                </Pressable>
+                />
               );
             })}
           </View>
@@ -175,27 +167,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
-  },
-  chipTextSelected: {
-    color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
   },
   pauseHint: {
     ...type.captionTight,
