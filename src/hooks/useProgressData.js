@@ -68,6 +68,7 @@ export default function useProgressData() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   // Section data
   const [activeMeso, setActiveMeso]         = useState(null);
@@ -125,6 +126,7 @@ export default function useProgressData() {
 
     if (!user?.id) {
       clearUserProgressState();
+      setLoadError(false);
       setLoading(false);
       return;
     }
@@ -135,6 +137,7 @@ export default function useProgressData() {
         getAllExercises(),
       ]);
       if (!isCurrentRequest()) return;
+      setLoadError(false);
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
@@ -169,6 +172,8 @@ export default function useProgressData() {
     } catch (e) {
       if (!isCurrentRequest()) return;
       logError('AnalyticsScreen.load', e, { userId: user?.id });
+      clearUserProgressState();
+      setLoadError(true);
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
@@ -488,7 +493,7 @@ export default function useProgressData() {
   const enoughForTrends = sessionCount >= 3;
 
   return {
-    loading, refreshing,
+    loading, refreshing, loadError,
     activeMeso, mesoTonnage, insights, weeklyVolume, prBars, prWindow,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,

@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 507 suites passed.
-  - 6,455 tests passed, 5 skipped.
+  - 508 suites passed.
+  - 6,458 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 943 files checked, no unresolved imports or missing named exports.
+  - 944 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -334,6 +334,7 @@ Status: release decision.
 - Pro setup completion now maps ED flag read failures to the shared truthy `read_failed` sentinel before showing dated morning-weight review copy, with source and behavioural guards proving flagged/unknown states stay neutral.
 - Shared Progress/Consistency data loading now uses a latest-request guard across its user-scoped async pipeline, so a delayed signed-in read cannot repopulate progress data after sign-out or a newer load.
 - Manual Builder's plan-activated confirmation now uses the shared `BottomSheet` chrome instead of a local React Native modal, preserving the plan name and Train routing while bringing the builder success state into the app's sheet system.
+- Consistency now distinguishes a failed shared Progress data read from a genuinely empty training account, surfacing a retryable safety-worded error state instead of the first-session prompt when history cannot be read.
 
 ### Web / CI / Security
 
