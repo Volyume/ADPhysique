@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch,
+  View, Text, StyleSheet, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -35,6 +35,7 @@ import {
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
 import SectionLabel from '../components/SectionLabel';
+import Chip from '../components/Chip';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -133,16 +134,15 @@ function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), acce
         const label = typeof item === 'object' ? item.label : formatter(item);
         const isSelected = value === selected;
         return (
-          <TouchableOpacity
+          <Chip
             key={value}
-            style={[styles.chip, isSelected && styles.chipSelected]}
+            label={label}
+            selected={isSelected}
             onPress={() => onSelect(value)}
             accessibilityRole="radio"
-            accessibilityState={{ selected: isSelected }}
             accessibilityLabel={`${accessibilityName} ${label}`}
-          >
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{label}</Text>
-          </TouchableOpacity>
+            style={styles.chip}
+          />
         );
       })}
     </ScrollView>
@@ -468,14 +468,9 @@ const styles = StyleSheet.create({
   },
   chipRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, flexDirection: 'row' },
   chip: {
-    height: 36, paddingHorizontal: spacing.md, borderRadius: radius.full,
-    backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: 'transparent', minWidth: 40,
+    minWidth: 40,
     marginBottom: spacing.md,
   },
-  chipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipText: { ...type.label, color: colors.textSecondary },
-  chipTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
   scheduleText: {
     ...type.label, color: colors.primary,
     paddingHorizontal: spacing.lg, marginTop: -spacing.sm, marginBottom: spacing.sm,
