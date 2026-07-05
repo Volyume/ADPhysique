@@ -282,6 +282,7 @@ Status: release decision.
 - Body Metrics database access now lives behind `src/lib/database/bodyMetrics.js`, with `database.js` preserving all existing public exports for screens and sync. The seam covers local metric logging, latest/nearest weight reads, body-composition reads, bulk sync reads, cloud restore column mapping and LWW updated-at lookup with focused repository tests.
 - Plan Update and Pro Goal Setup now use the shared `SectionLabel` primitive for plan/goal setup headings, including optional weak-point and show-date labels, with a source guard preventing those high-traffic setup screens from reverting to local heading typography.
 - Exercise Detail now separates initial loading from a failed exercise read: skeletons still render while loading, but missing/failed exercise details show a retryable error card instead of an indefinite skeleton/null state.
+- Workout History now distinguishes failed history reads from a genuinely empty training log, logging the failure and showing a retryable error state instead of the new-user empty illustration.
 
 ### Web / CI / Security
 
