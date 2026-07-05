@@ -48,6 +48,7 @@ import {
   deleteViewerProgressPhoto,
   buildProgressScanFinishPayload,
   enrichProgressPhotos,
+  progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
@@ -395,8 +396,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!canWrite() || !userId) return;
     const cadence = shouldGateProgressScanStart(scans, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated) {
-      appAlert('Give the scan time', 'Physique Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still take a normal progress photo today.', [
-        { text: 'Take single photo', onPress: openGhostCapture },
+      appAlert('Give the scan time', 'Physique Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still capture a normal Check-In today and save the photos without forcing a scan read.', [
+        { text: 'Capture Check-In', onPress: openGhostCapture },
         { text: 'OK', style: 'cancel' },
       ]);
       return;
@@ -710,9 +711,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, [visibleScans]);
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No check-in yet';
-  const nextCheckInLabel = latestPhoto
-    ? formatProgressPhotoShortDay((Number(latestPhoto.takenAt) || Date.now()) + PROGRESS_SCAN_MIN_INTERVAL_MS)
-    : 'Capture a baseline';
+  const nextCheckInLabel = progressCheckInCadenceLabel(latestPhoto?.takenAt, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.scanConfidenceLabel || latestScan?.qualityLabel || (latestScan ? 'Saved' : 'No scan yet');
