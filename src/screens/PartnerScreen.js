@@ -15,7 +15,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Share, ActivityIndicator, Linking, Platform, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,6 +32,8 @@ import {
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import RollingNumber from '../components/RollingNumber';
 import PartnerPrivacyReceipt from '../components/PartnerPrivacyReceipt';
 import usePartners from '../hooks/usePartners';
@@ -737,14 +739,13 @@ export default function PartnerScreen({ route }) {
 
             <PartnerPrivacyReceipt />
 
-            <TouchableOpacity
+            <Button
+              title="Invite someone you train with"
               style={styles.primaryBtn}
+              textStyle={styles.primaryBtnText}
               onPress={openJourney}
-              accessibilityRole="button"
               accessibilityLabel="Invite someone you train with"
-            >
-              <Text style={styles.primaryBtnText}>Invite someone you train with</Text>
-            </TouchableOpacity>
+            />
 
             <TouchableOpacity
               style={styles.textRow}
@@ -757,8 +758,10 @@ export default function PartnerScreen({ route }) {
 
             {codeEntryOpen ? (
               <View style={styles.codeRow}>
-                <TextInput
-                  style={styles.codeInput}
+                <TextField
+                  containerStyle={styles.codeFieldContainer}
+                  fieldStyle={styles.codeField}
+                  inputStyle={styles.codeInput}
                   value={code}
                   onChangeText={setCode}
                   placeholder="Invite code"
@@ -767,15 +770,18 @@ export default function PartnerScreen({ route }) {
                   autoCorrect={false}
                   accessibilityLabel="Invite code"
                 />
-                <TouchableOpacity
+                <Button
+                  title="Join"
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
                   style={styles.codeBtn}
+                  textStyle={styles.codeBtnText}
                   onPress={() => handleRedeem()}
                   disabled={busy || !code.trim()}
-                  accessibilityRole="button"
+                  loading={busy}
                   accessibilityLabel="Join with code"
-                >
-                  <Text style={styles.codeBtnText}>Join</Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
           </View>
@@ -887,14 +893,13 @@ function AimSheetBody({ value, onChange, onConfirm }) {
           <Ionicons name="add" size={iconSize.md} color={v >= 14 ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
       </View>
-      <TouchableOpacity
+      <Button
+        title="Confirm my aim"
         style={styles.primaryBtn}
+        textStyle={styles.primaryBtnText}
         onPress={onConfirm}
-        accessibilityRole="button"
         accessibilityLabel="Confirm my aim"
-      >
-        <Text style={styles.primaryBtnText}>Confirm my aim</Text>
-      </TouchableOpacity>
+      />
     </View>
   );
 }
@@ -967,14 +972,13 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={styles.beatLine}>One person you already know and trust.</Text>
               <Text style={styles.beatLine}>No feed, no followers, no comparing numbers.</Text>
               <Text style={styles.beatLine}>Just whether you each showed up for your own plan.</Text>
-              <TouchableOpacity
+              <Button
+                title="Continue"
                 style={styles.primaryBtn}
+                textStyle={styles.primaryBtnText}
                 onPress={onContinue}
-                accessibilityRole="button"
                 accessibilityLabel="Continue"
-              >
-                <Text style={styles.primaryBtnText}>Continue</Text>
-              </TouchableOpacity>
+              />
             </EntranceView>
           ) : null}
 
@@ -984,17 +988,15 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={styles.beatConsent}>
                 Pairing means you both agree to share this, and only this. Notice v{PARTNER_PRIVACY_NOTICE_VERSION}.
               </Text>
-              <TouchableOpacity
+              <Button
+                title="Agree and get my code"
                 style={[styles.primaryBtn, minting && styles.primaryBtnDisabled]}
+                textStyle={styles.primaryBtnText}
                 onPress={onAgree}
                 disabled={minting}
-                accessibilityRole="button"
+                loading={minting}
                 accessibilityLabel="Agree and get my code"
-              >
-                {minting
-                  ? <ActivityIndicator color={colors.onPrimary} />
-                  : <Text style={styles.primaryBtnText}>Agree and get my code</Text>}
-              </TouchableOpacity>
+              />
             </EntranceView>
           ) : null}
 
@@ -1275,35 +1277,28 @@ const styles = StyleSheet.create({
 
   // Code entry
   codeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  codeInput: {
+  codeFieldContainer: {
     flex: 1,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 0,
+  },
+  codeField: {
     borderRadius: radius.md,
-    color: colors.textPrimary,
+    minHeight: 44,
+  },
+  codeInput: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 44,
     ...type.body,
   },
   codeBtn: {
-    borderWidth: 1,
-    borderColor: colors.primary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
     minHeight: 44,
   },
-  codeBtnText: { ...type.label, color: colors.primary },
+  codeBtnText: { ...type.label },
 
   // Primary button
   primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
     minHeight: 50,
   },
   primaryBtnDisabled: { opacity: 0.5 },
