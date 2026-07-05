@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 507 suites passed.
-  - 6,454 tests passed, 5 skipped.
+  - 6,455 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -332,6 +332,7 @@ Status: release decision.
 - Coach Review now guards weekly review loads with a latest-request token, so a late failure from an older user/retry load cannot replace a newer successful deterministic review with the retry error state.
 - Snapshot restore loading now uses a focus-driven latest-request guard, removing the duplicate mount load and preventing an older device-snapshot read from overwriting a newer focused result.
 - Pro setup completion now maps ED flag read failures to the shared truthy `read_failed` sentinel before showing dated morning-weight review copy, with source and behavioural guards proving flagged/unknown states stay neutral.
+- Shared Progress/Consistency data loading now uses a latest-request guard across its user-scoped async pipeline, so a delayed signed-in read cannot repopulate progress data after sign-out or a newer load.
 
 ### Web / CI / Security
 
