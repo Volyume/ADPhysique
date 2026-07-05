@@ -19,6 +19,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion 
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
+import SectionLabel from '../components/SectionLabel';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -674,7 +675,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* History */}
         {history.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>History (last {history.length} sessions)</Text>
+            <SectionLabel>History (last {history.length} sessions)</SectionLabel>
             {history.map((sessionSets, i) => {
               const firstSet = sessionSets[0];
               const date = new Date(firstSet.createdAt);
@@ -713,7 +714,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* PRs */}
         {prs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>All-time bests</Text>
+            <SectionLabel>All-time bests</SectionLabel>
             {prs.slice(0, 5).map((pr) => (
               <View key={pr.id} style={styles.prRow}>
                 <Text style={styles.prIcon}>
@@ -739,7 +740,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Similar exercises, horizontal scroll of small cards */}
         {substitutes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Similar exercises</Text>
+            <SectionLabel>Similar exercises</SectionLabel>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -786,7 +787,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           const steps = splitInstructionSteps(instructionText);
           return (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>How to do it</Text>
+              <SectionLabel>How to do it</SectionLabel>
               <View style={styles.notesCard}>
                 {steps.length >= 2 ? (
                   steps.map((step, i) => (
@@ -965,10 +966,6 @@ const styles = StyleSheet.create({
     flex: 1, color: colors.textMuted,
   },
   section: { gap: spacing.md },
-  sectionTitle: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
   historyCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
