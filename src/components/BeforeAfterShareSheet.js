@@ -43,10 +43,25 @@ import SectionLabel from './SectionLabel';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
-import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
-import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+import {
+  buildBeforeAfterParams,
+  defaultPair,
+  finiteNumber,
+  formatCardDate,
+  formatShareScanRange,
+  orderPair,
+} from '../lib/shareCard/beforeAfterParams';
+
+export {
+  buildBeforeAfterParams,
+  defaultPair,
+  elapsedLabel,
+  formatCardDate,
+  formatShareScanRange,
+  orderPair,
+} from '../lib/shareCard/beforeAfterParams';
 
 // Optional native modules, guarded so the sheet still mounts (tests, or before a
 // rebuild) without them; generation just can't run until a real build provides
@@ -62,115 +77,11 @@ const WORDMARK = require('../../assets/volyume-wordmark.png');
 const FONT_FAMILY = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: 'sans-serif' });
 const PREVIEW_RENDER_W = 640; // render crisp, display scaled down
 const PREVIEW_DISPLAY_W = 300;
-const DAY_MS = 86400000;
 // One-time confirm flag: once the user has acknowledged that this makes a
 // shareable image of their photos, we don't ask again.
 const CONFIRM_KEY = 'progressShareConfirmed';
 
 // ── pure helpers (exported for unit tests) ───────────────────────────────────
-
-/** British short date, e.g. "3 Mar 2026". Empty string for a bad timestamp. */
-export function formatCardDate(ts) {
-  return formatProgressPhotoDay(ts);
-}
-
-/**
- * Neutral elapsed-time label between two timestamps, e.g. "14 weeks", "6 months".
- * Time stated plainly, never framed as a transformation. Empty for bad input.
- */
-export function elapsedLabel(fromMs, toMs) {
-  const a = Number(fromMs); const b = Number(toMs);
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return '';
-  const days = Math.max(0, Math.round(Math.abs(b - a) / DAY_MS));
-  if (days <= 0) return 'Same day';
-  if (days === 1) return '1 day';
-  if (days < 14) return `${days} days`;
-  // Weeks up to ~6 months (matches how progress is spoken: "14 weeks"), then
-  // months, then years.
-  if (days < 182) {
-    const weeks = Math.round(days / 7);
-    return weeks === 1 ? '1 week' : `${weeks} weeks`;
-  }
-  if (days < 365) {
-    const months = Math.round(days / 30.44);
-    return months === 1 ? '1 month' : `${months} months`;
-  }
-  const years = Math.floor(days / 365);
-  const remMonths = Math.round((days - years * 365) / 30.44);
-  const yStr = years === 1 ? '1 year' : `${years} years`;
-  if (remMonths <= 0) return yStr;
-  const mStr = remMonths === 1 ? '1 month' : `${remMonths} months`;
-  return `${yStr} ${mStr}`;
-}
-
-/**
- * Order two photo items (each `{ name, ts }`) as [older, newer] by timestamp,
- * so the card is always older-left / newer-right whatever the tap order was.
- */
-export function orderPair(a, b) {
-  if (!a) return [b, null];
-  if (!b) return [a, null];
-  return a.ts <= b.ts ? [a, b] : [b, a];
-}
-
-/**
- * Default pair for a photo list: earliest vs latest by timestamp. Returns up to
- * two names; fewer than two photos yields whatever exists.
- */
-export function defaultPair(photos) {
-  const sorted = (Array.isArray(photos) ? photos : [])
-    .filter((p) => p && p.name && Number.isFinite(p.ts))
-    .sort((x, y) => x.ts - y.ts);
-  if (sorted.length === 0) return [];
-  if (sorted.length === 1) return [sorted[0].name];
-  return [sorted[0].name, sorted[sorted.length - 1].name];
-}
-
-function finiteNumber(value) {
-  if (value == null || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-export function formatShareScanRange(scan) {
-  const assessment = scan?.signals?.physiqueAssessment || null;
-  if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scan'} ${assessment.visualLeannessScore}/100`;
-  }
-  return '';
-}
-
-/**
- * Build the drawShareCard params for the beforeAfter card. Pure: takes resolved
- * takenAt/weight values so it is trivially testable. `weight` is included only
- * when `showWeight` is on AND a weight exists; suppressed callers never reach
- * here (the whole card is withheld), so this is only the user toggle.
- */
-export function buildBeforeAfterParams({
-  olderTakenAt, newerTakenAt, olderWeightKg, newerWeightKg,
-  olderScan = null, newerScan = null,
-  showWeight, showScanRange = true, showScanWeight = true, aspect = 'square', bodyWeightUnits = 'kg',
-}) {
-  const asp = (aspect === 'portrait' || aspect === 'story') ? aspect : 'square';
-  const wt = (kg) => (showWeight && kg != null && Number.isFinite(kg)
-    ? formatBodyWeight(kg, bodyWeightUnits)
-    : '');
-  const before = { date: formatCardDate(olderTakenAt), weight: olderScan && !showScanWeight ? '' : wt(olderWeightKg) };
-  const after = { date: formatCardDate(newerTakenAt), weight: newerScan && !showScanWeight ? '' : wt(newerWeightKg) };
-  const olderRange = showScanRange ? formatShareScanRange(olderScan) : '';
-  const newerRange = showScanRange ? formatShareScanRange(newerScan) : '';
-  if (olderRange) before.scanRange = olderRange;
-  if (newerRange) after.scanRange = newerRange;
-  return {
-    cardType: 'beforeAfter',
-    aspect: asp,
-    isSquare: asp !== 'story',
-    elapsedLabel: elapsedLabel(olderTakenAt, newerTakenAt),
-    before,
-    after,
-    showWeight: !!showWeight,
-  };
-}
 
 // Decode one photo file into an SkImage, or null. Bounded: the decoded image is
 // only held for the render pass and drawn into the fixed 1080 design space.
