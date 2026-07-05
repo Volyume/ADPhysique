@@ -37,6 +37,8 @@ import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
+import Button from './Button';
+import Chip from './Chip';
 import TextField from './TextField';
 
 const SENTIMENTS = [
@@ -274,32 +276,22 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
 
             <View style={styles.chipRow}>
               {SENTIMENTS.map(s => (
-                <Pressable
+                <Chip
                   key={s.key}
+                  label={s.label}
+                  icon={s.icon}
+                  selected={sentiment === s.key}
                   onPress={() => {
                     setSentiment(s.key);
                     scheduleAutoDismiss();
                     haptics.selection();
                   }}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    sentiment === s.key && styles.chipSelected,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  accessibilityRole="button"
+                  accessibilityRole="radio"
                   accessibilityLabel={`${s.label} sentiment`}
-                  accessibilityState={{ selected: sentiment === s.key }}
-                >
-                  <Ionicons
-                    name={s.icon}
-                    size={20}
-                    color={sentiment === s.key ? colors.primary : colors.textSecondary}
-                  />
-                  <Text style={[
-                    styles.chipText,
-                    sentiment === s.key && styles.chipTextSelected,
-                  ]}>{s.label}</Text>
-                </Pressable>
+                  style={styles.sentimentChip}
+                  labelStyle={styles.sentimentChipText}
+                  selectedLabelStyle={styles.sentimentChipTextSelected}
+                />
               ))}
             </View>
 
@@ -323,28 +315,25 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
             </TouchableWithoutFeedback>
 
             <View style={styles.actions}>
-              <Pressable
+              <Button
+                title="Cancel"
                 onPress={() => animateOut()}
+                variant="secondary"
+                fullWidth={false}
                 style={styles.cancelBtn}
-                accessibilityRole="button"
+                textStyle={styles.cancelText}
                 accessibilityLabel="Cancel feedback"
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
+              />
+              <Button
+                title="Send"
                 onPress={handleSubmit}
                 disabled={!sentiment || submitting}
-                style={[
-                  styles.submitBtn,
-                  (!sentiment || submitting) && styles.submitBtnDisabled,
-                ]}
-                accessibilityRole="button"
+                loading={submitting}
+                fullWidth={false}
+                style={styles.submitBtn}
+                textStyle={styles.submitText}
                 accessibilityLabel="Send feedback"
-              >
-                <Text style={styles.submitText}>
-                  {submitting ? 'Sending…' : 'Send'}
-                </Text>
-              </Pressable>
+              />
             </View>
 
             <Text style={styles.privacy}>
@@ -401,27 +390,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
+  sentimentChip: {
     paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  chipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  chipText: {
+  sentimentChipText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
-  chipTextSelected: {
+  sentimentChipTextSelected: {
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
   },
@@ -449,13 +426,6 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cancelText: {
     fontSize: fontSize.md,
@@ -464,13 +434,7 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     flex: 1.5,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
   },
-  submitBtnDisabled: { opacity: 0.5 },
   submitText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
