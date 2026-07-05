@@ -8,9 +8,10 @@
  * training-day cue is carried by the summary card's day-type chip, so it is not
  * repeated here. Scan stays on the persistent FAB.
  */
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, spacing, radius, type } from '../../styles/theme';
+import Button from '../Button';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
 
@@ -20,51 +21,53 @@ export default function EmptyDiary({ onAdd, onCopyYesterday, onSuggested, onPlan
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
       <Text style={styles.body}>{EMPTY_DIARY_COPY}</Text>
       {onPlanDay ? (
-        <TouchableOpacity
-          style={[styles.btn, styles.btnPlan]}
+        <Button
+          title="Build a meal plan"
+          variant="outline"
+          size="sm"
+          icon="sparkles-outline"
           onPress={onPlanDay}
-          accessibilityRole="button"
           accessibilityLabel="Build a meal plan: a day or week of meals built to your targets"
-        >
-          <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
-          <Text style={[styles.btnText, styles.btnTextPlan]}>Build a meal plan</Text>
-        </TouchableOpacity>
+          style={styles.planButton}
+        />
       ) : null}
       <View style={styles.actions}>
         {onAdd ? (
-          <TouchableOpacity
-            style={[styles.btn, styles.btnPrimary]}
+          <Button
+            title="Add food"
+            size="sm"
+            icon="add"
             onPress={onAdd}
-            accessibilityRole="button"
             accessibilityLabel="Add food"
-          >
-            <Ionicons name="add" size={18} color={colors.onPrimary} />
-            <Text style={[styles.btnText, styles.btnTextPrimary]}>Add food</Text>
-          </TouchableOpacity>
+            fullWidth={false}
+            style={styles.actionButton}
+          />
         ) : null}
         {onCopyYesterday ? (
-          <TouchableOpacity
-            style={[styles.btn, styles.btnSecondary]}
+          <Button
+            title="Copy yesterday"
+            variant="secondary"
+            size="sm"
+            icon="copy-outline"
             onPress={onCopyYesterday}
-            accessibilityRole="button"
             accessibilityLabel="Copy yesterday's entries"
-          >
-            <Ionicons name="copy-outline" size={16} color={colors.textPrimary} />
-            <Text style={styles.btnText}>Copy yesterday</Text>
-          </TouchableOpacity>
+            fullWidth={false}
+            style={styles.actionButton}
+          />
         ) : onSuggested ? (
           // A3 (first-week trust): a day-0 diary has no yesterday to copy, so
           // "Copy yesterday" would be a dead tap. Point at a suggested meal
           // instead, the one action that works with zero history.
-          <TouchableOpacity
-            style={[styles.btn, styles.btnSecondary]}
+          <Button
+            title="Try a suggested meal"
+            variant="secondary"
+            size="sm"
+            icon="bulb-outline"
             onPress={onSuggested}
-            accessibilityRole="button"
             accessibilityLabel="Try a suggested meal"
-          >
-            <Ionicons name="bulb-outline" size={16} color={colors.textPrimary} />
-            <Text style={styles.btnText}>Try a suggested meal</Text>
-          </TouchableOpacity>
+            fullWidth={false}
+            style={styles.actionButton}
+          />
         ) : null}
       </View>
     </View>
@@ -86,16 +89,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  btn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.md, minHeight: 44,
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  btnPrimary: { backgroundColor: colors.primary },
-  btnSecondary: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  btnPlan: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.primary, alignSelf: 'stretch', justifyContent: 'center' },
-  btnTextPlan: { color: colors.primary },
-  btnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  btnTextPrimary: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  planButton: { minHeight: 44 },
+  actionButton: { minHeight: 44 },
 });

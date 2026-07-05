@@ -14,6 +14,16 @@ import { create, act as actRender } from 'react-test-renderer';
 // (appAlert), not the native Alert.alert (06-06 change, commit 7b9197d).
 jest.mock('../../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
 
+// EmptyDiary now uses Button, which reaches the haptic vocabulary. Expo's
+// native haptics module is not loadable in this bare component test env.
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(),
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
+  NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
+}));
+
 jest.mock('react-native-gesture-handler/Swipeable', () => {
   const React = require('react');
   return function MockSwipeable(props) {
