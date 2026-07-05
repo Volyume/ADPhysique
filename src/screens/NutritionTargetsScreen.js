@@ -25,6 +25,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
+import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -313,7 +314,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           setHeightIn(String(totalIn % 12));
         }
         if (profile?.dateOfBirth) {
-          const ageNum = new Date().getFullYear() - new Date(profile.dateOfBirth).getFullYear();
+          const ageNum = ageYearsFromDateOfBirth(profile.dateOfBirth);
           if (ageNum > 0 && ageNum < 100) setAge(String(ageNum));
         }
 

@@ -40,6 +40,7 @@ import {
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveDraft, loadDraft, clearDraft, DRAFT_DEBOUNCE_MS } from '../lib/proOnboardingDraft';
+import { dateOfBirthFromAgeYears } from '../lib/profileAge';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -772,7 +773,7 @@ export default function ProOnboardingScreen({ navigation }) {
         await saveUserBodyProfile(user.id, {
           sex,
           heightCm: hcm,
-          dateOfBirth: ageNum ? new Date(new Date().getFullYear() - ageNum, 6, 1).toISOString().slice(0, 10) : null,
+          dateOfBirth: dateOfBirthFromAgeYears(ageNum),
           primaryGoal: trainingGoal,
         }).catch((e) => {
           // eslint-disable-next-line global-require
