@@ -96,6 +96,43 @@ describe('Card', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  test('forwards accessibility hints and state through pressable cards', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <Card
+          onPress={() => {}}
+          accessibilityLabel="Refresh profile"
+          accessibilityHint="Status: Update. Add current body metrics."
+          accessibilityState={{ disabled: false }}
+          testID="profile-card"
+        >
+          <Text>tap</Text>
+        </Card>,
+      );
+    });
+    const pressable = tree.root.findByProps({ testID: 'profile-card' });
+    expect(pressable.props.accessibilityLabel).toBe('Refresh profile');
+    expect(pressable.props.accessibilityHint).toBe('Status: Update. Add current body metrics.');
+    expect(pressable.props.accessibilityState).toEqual({ disabled: false });
+  });
+
+  test('forwards accessibility hints and state through static cards', () => {
+    const tree = create(
+      <Card
+        accessibilityLabel="Body weight"
+        accessibilityHint="Latest logged"
+        accessibilityState={{ busy: false }}
+        testID="static-profile-card"
+      >
+        <Text>x</Text>
+      </Card>,
+    );
+    const card = tree.root.findByProps({ testID: 'static-profile-card' });
+    expect(card.props.accessibilityHint).toBe('Latest logged');
+    expect(card.props.accessibilityState).toEqual({ busy: false });
+  });
+
   test('tone applies an accent border via withAlpha (rgba, not hex concat)', () => {
     const tree = create(<Card tone="primary"><Text>x</Text></Card>).toJSON();
     // Derive the expected border from the token so this survives accent

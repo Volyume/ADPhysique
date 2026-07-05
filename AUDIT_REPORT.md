@@ -48,7 +48,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 924 files checked, no unresolved imports or missing named exports.
+  - 926 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -303,6 +303,7 @@ Status: release decision.
 - Progress Scan history rendering now lives in `ProgressScanHistoryCard`, with tests covering detailed copy, hide-exact mode, suppression, read-only deletion hiding and thumbnail callback behaviour. `ProgressPhotosScreen` keeps state, refresh, persistence and modal orchestration.
 - Progress Scan compare pair selection and view-model derivation now live in `progressScanCompareViewModel`, with tests for completed-scan ordering, default earliest/latest pair, third-selection replacement, pose row ordering and measured delta derivation. `ProgressScanCompare` keeps rendering, suppression and exact-value hiding.
 - Before/After share card date, elapsed-time, pair selection, scan-range and draw-params helpers now live in `shareCard/beforeAfterParams`; `BeforeAfterShareSheet` re-exports them for existing tests while keeping native decode/render/share/save, confirmation, Pro gating and suppression behaviour untouched.
+- `Card` now forwards accessibility hints/state/test IDs through both static and pressable surfaces, and Athlete Profile rows use a shared accessibility helper so freshness status, guidance copy and Pro markings are available to assistive technology without changing row labels or navigation behaviour.
 
 ### Web / CI / Security
 
