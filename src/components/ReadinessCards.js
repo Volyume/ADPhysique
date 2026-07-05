@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type } from '../styles/theme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
+import SectionLabel from './SectionLabel';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import {
@@ -193,7 +194,7 @@ export default function ReadinessCards({ userId, tier }) {
       {/* Recovery: the signals and muscle readiness folded into one block. */}
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Text style={styles.sectionLabel}>Recovery</Text>
+          <SectionLabel>Recovery</SectionLabel>
           <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
         <View style={styles.recoveryCard}>
@@ -281,11 +282,6 @@ function RecoveryGauge({ label, value, invertGood = false }) {
 
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
-  sectionLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, letterSpacing: 0.2,
-  },
-
   milestoneCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md,

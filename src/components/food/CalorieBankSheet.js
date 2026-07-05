@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
+import SectionLabel from '../SectionLabel';
 import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -124,7 +125,7 @@ export default function CalorieBankSheet({
         </View>
       ) : null}
 
-      <Text style={styles.sectionLabel}>Higher-calorie day</Text>
+      <SectionLabel style={styles.sectionLabel}>Higher-calorie day</SectionLabel>
       <View style={styles.dayChips}>
         {weekDates.map((d) => {
           const active = d === bigDay;
@@ -143,7 +144,7 @@ export default function CalorieBankSheet({
         })}
       </View>
 
-      <Text style={styles.sectionLabel}>How much extra</Text>
+      <SectionLabel style={styles.sectionLabel}>How much extra</SectionLabel>
       <View style={styles.stepper}>
         <TouchableOpacity
           onPress={() => step(-BUMP_STEP)}
@@ -201,8 +202,6 @@ const styles = StyleSheet.create({
   activeText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm },
   clearText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
   sectionLabel: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 0.6, textTransform: 'uppercase',
     marginTop: spacing.lg, marginBottom: spacing.sm,
   },
   dayChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
