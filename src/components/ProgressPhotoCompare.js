@@ -422,7 +422,10 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Compare</Text>
+          <View style={styles.headerCopy}>
+            <Text style={styles.title}>Compare Check-Ins</Text>
+            <Text style={styles.subtitle}>Pose-matched, device-local viewing.</Text>
+          </View>
           <TouchableOpacity
             onPress={onClose}
             hitSlop={12}
@@ -447,7 +450,10 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Compare</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Compare Check-Ins</Text>
+          <Text style={styles.subtitle}>Pose-matched, device-local viewing.</Text>
+        </View>
         <TouchableOpacity
           onPress={onClose}
           hitSlop={12}
@@ -567,6 +573,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
+  headerCopy: { flex: 1, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted },
 
   segmented: {
     flexDirection: 'row', gap: spacing.xs,
