@@ -38,6 +38,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import Button from '../components/Button';
+import ModalHeader from '../components/ModalHeader';
 import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
@@ -239,13 +240,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (permission !== 'granted') {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Snap label</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
           <Text style={styles.fallbackTitle}>Camera access needed</Text>
@@ -266,13 +261,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   if (!device) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Snap label</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.fallbackTitle}>No camera available</Text>
@@ -290,16 +279,11 @@ export default function ScanLabelScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          onPress={() => navigation.goBack()}
-          hitSlop={12}
-        >
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Snap label</Text>
+      <ModalHeader
+        title="Snap label"
+        closePosition="left"
+        onClose={() => navigation.goBack()}
+        rightAccessory={(
         <TouchableOpacity
           onPress={() => setTorch(v => !v)}
           hitSlop={12}
@@ -313,7 +297,8 @@ export default function ScanLabelScreen({ navigation, route }) {
             color={torch ? colors.primary : colors.textPrimary}
           />
         </TouchableOpacity>
-      </View>
+        )}
+      />
 
       <View style={styles.cameraWrap}>
         <Camera
@@ -411,12 +396,6 @@ export default function ScanLabelScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary },
   choiceOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
   choiceScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
   choiceCard: {

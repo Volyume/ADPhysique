@@ -346,6 +346,7 @@ Status: release decision.
 - Coach Held History now includes the bottom safe-area edge and gives the empty history state a `Start weekly check-in` action while preserving ED/calm fail-closed suppression.
 - Food Insights now gives the low-data macro-adherence state an `Open diary` action, preserving window-aware analytics copy while removing a Nutrition dead end.
 - Add Custom Food now uses the shared `ModalHeader` for its modal chrome, removing a local close/header style block while preserving the manual food logging guards.
+- Barcode Scan and Label Scan now use the shared `ModalHeader` for permission, no-camera and live camera states. The header primitive now supports left-side close placement and a right accessory slot, preserving torch controls while removing duplicated scanner header chrome.
 
 ### Web / CI / Security
 
