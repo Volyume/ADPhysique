@@ -10,10 +10,11 @@
  * handlers, so it can wire capture + button-enable state however it needs.
  */
 
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, radius, circle } from '../styles/theme';
 import { selection as hapticSelection } from '../lib/haptics';
 import { CANCEL_REASONS, FREE_TEXT_REASONS, FREE_TEXT_PROMPT } from '../lib/cancelReason';
+import TextField from './TextField';
 
 export default function ReasonPicker({ reason, text, onSelectReason, onChangeText }) {
   const showFreeText = reason != null && FREE_TEXT_REASONS.has(reason);
@@ -53,8 +54,7 @@ export default function ReasonPicker({ reason, text, onSelectReason, onChangeTex
       </View>
 
       {showFreeText ? (
-        <TextInput
-          style={styles.input}
+        <TextField
           placeholder={FREE_TEXT_PROMPT[reason]}
           placeholderTextColor={colors.textMuted}
           value={text}
@@ -62,6 +62,9 @@ export default function ReasonPicker({ reason, text, onSelectReason, onChangeTex
           maxLength={120}
           multiline
           accessibilityLabel={FREE_TEXT_PROMPT[reason]}
+          containerStyle={styles.inputContainer}
+          fieldStyle={styles.inputField}
+          inputStyle={styles.inputText}
         />
       ) : null}
     </>
@@ -116,15 +119,17 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
   },
-  input: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+  inputContainer: {
+    gap: 0,
+  },
+  inputField: {
+    minHeight: 56,
+    alignItems: 'flex-start',
+  },
+  inputText: {
+    fontSize: fontSize.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
     minHeight: 56,
     textAlignVertical: 'top',
   },
