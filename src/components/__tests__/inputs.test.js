@@ -184,4 +184,28 @@ describe('Stepper', () => {
     ).toJSON();
     expect(JSON.stringify(tree)).toContain('7:00');
   });
+
+  test('supports compact sizing and explicit accessibility labels', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <Stepper
+          value={90}
+          onChange={() => {}}
+          min={30}
+          max={600}
+          step={15}
+          size="compact"
+          formatValue={(v) => `${v}s`}
+          decreaseLabel="Decrease rest for bench press"
+          increaseLabel="Increase rest for bench press"
+          valueLabel="Rest 90s"
+        />,
+      );
+    });
+
+    expect(tree.root.findByProps({ accessibilityLabel: 'Decrease rest for bench press' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Increase rest for bench press' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Rest 90s' })).toBeTruthy();
+  });
 });
