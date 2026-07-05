@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 490 suites passed.
-  - 6,384 tests passed, 5 skipped.
+  - 491 suites passed.
+  - 6,386 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 917 files checked, no unresolved imports or missing named exports.
+  - 919 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -298,6 +298,7 @@ Status: release decision.
 - FoodSearch one-food logging paths now share pure `loggingPayloads` builders for entry payloads and slot-recent payloads. The slice deliberately leaves audit events, undo toasts, navigation, saved-meal fan-out, plate logging and double-tap guards in `FoodSearchScreen`.
 - Progress Scan display copy now lives in a pure `progressScanCopy` helper, with tests covering score copy, hide-exact mode, suppression, baseline/not-comparable trends, pose labels and weight-stat privacy. Capture, deletion, scan storage, Coach isolation and model analysis remain untouched.
 - Progress Photo timeline filtering/grouping now lives in a pure `progressPhotoTimeline` helper, with tests for fixed-width month rows, newest/oldest ordering, inclusive date bounds and pose/date composition. Capture, viewer, compare, share and scan safety behavior remain untouched.
+- Progress Photo and Progress Scan date labels now share `progressPhotoDates`, covering full day, compact day and month labels with invalid timestamps returning empty labels. Gallery, viewer, compare, date sheets, scan compare and before/after share date copy now use the same British formatting.
 
 ### Web / CI / Security
 

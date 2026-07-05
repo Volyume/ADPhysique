@@ -57,6 +57,7 @@ import {
   buildTimeline,
   filterAndSort,
 } from '../lib/progressPhotoTimeline';
+import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -95,17 +96,6 @@ const SORTS = [
 ];
 
 export { buildTimeline, filterAndSort, scanShareItemsFromEntries };
-
-function formatDay(ts) {
-  try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
-  catch (_) { return ''; }
-}
-
-// Compact date for the range pill (no year, to fit); the sheet shows full dates.
-function formatShort(ts) {
-  try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
-  catch (_) { return ''; }
-}
 
 export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
@@ -377,7 +367,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   // Plain label for the date-range pill; "to" reads calmer than a dash and
   // sidesteps the em-dash lint entirely.
   const rangeLabel = hasRange
-    ? `${Number.isFinite(rangeFrom) ? formatShort(rangeFrom) : 'Any'} to ${Number.isFinite(rangeTo) ? formatShort(rangeTo) : 'Any'}`
+    ? `${Number.isFinite(rangeFrom) ? formatProgressPhotoShortDay(rangeFrom) : 'Any'} to ${Number.isFinite(rangeTo) ? formatProgressPhotoShortDay(rangeTo) : 'Any'}`
     : 'Any dates';
 
   function openGhostCapture() {
@@ -719,7 +709,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const showActions = canCompareScans || canCompare || canShare;
 
   function renderTile(item) {
-    const dateLabel = formatDay(item.takenAt);
+    const dateLabel = formatProgressPhotoDay(item.takenAt);
     return (
       <TouchableOpacity
         key={item.name}
@@ -815,7 +805,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View key={scan.id} style={styles.scanEntry}>
               <View style={styles.scanEntryHeader}>
                 <View style={styles.scanEntryTitleGroup}>
-                  <Text style={styles.scanDate}>{formatDay(scan.capturedAt)}</Text>
+                  <Text style={styles.scanDate}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
                   <Text style={styles.scanQuality}>
                     {scan.deltaExplanation?.comparisonStatus === 'comparable' ? 'like-for-like' : scan.qualityLabel || 'saved'}
                   </Text>
@@ -825,7 +815,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                     onPress={() => deleteScanEntry(scan)}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel={`Delete scan from ${formatDay(scan.capturedAt)}`}
+                    accessibilityLabel={`Delete scan from ${formatProgressPhotoDay(scan.capturedAt)}`}
                     style={styles.scanDeleteButton}
                   >
                     <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
@@ -847,7 +837,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                       onPress={readOnly ? undefined : () => openViewer(asset.photoName)}
                       disabled={readOnly}
                       accessibilityRole={readOnly ? 'image' : 'button'}
-                      accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${formatDay(asset.takenAt)}.`}
+                      accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${formatProgressPhotoDay(asset.takenAt)}.`}
                       style={styles.scanAssetThumb}
                     >
                       <Image source={{ uri: asset.uri }} style={styles.scanAssetImage} />

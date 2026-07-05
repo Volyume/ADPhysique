@@ -61,6 +61,7 @@ import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import PhotoDatePicker from './PhotoDatePicker';
 import { colors, spacing, radius, type, motion } from '../styles/theme';
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
   { key: 'front', label: 'Front' },
@@ -73,12 +74,6 @@ const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const MAX_ZOOM = 4;
 
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
-
-function formatDay(ts) {
-  try {
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) { return ''; }
-}
 
 export default function ProgressPhotoViewer({
   photos = [],
@@ -308,7 +303,7 @@ export default function ProgressPhotoViewer({
   function onPressDelete() {
     if (!current) return;
     const name = current.name;
-    appAlert(formatDay(currentMeta.takenAt), 'Remove this photo from your device?', [
+    appAlert(formatProgressPhotoDay(currentMeta.takenAt), 'Remove this photo from your device?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -339,7 +334,7 @@ export default function ProgressPhotoViewer({
             <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerDate} numberOfLines={1}>
-            {current ? formatDay(currentMeta.takenAt) : ''}
+            {current ? formatProgressPhotoDay(currentMeta.takenAt) : ''}
           </Text>
           <Text style={styles.counter}>
             {photos.length > 1 ? `${safeIndex + 1} / ${photos.length}` : ''}
@@ -356,7 +351,7 @@ export default function ProgressPhotoViewer({
                   resizeMode="contain"
                   resizeMethod="resize"
                   accessible
-                  accessibilityLabel={`Photo from ${formatDay(currentMeta.takenAt)}`}
+                  accessibilityLabel={`Photo from ${formatProgressPhotoDay(currentMeta.takenAt)}`}
                 />
               </Animated.View>
             </GestureDetector>
@@ -374,7 +369,7 @@ export default function ProgressPhotoViewer({
                     <Text style={styles.poseTagText}>{POSE_LABEL[currentMeta.pose]}</Text>
                   </View>
                 ) : null}
-                <Text style={styles.metaDate}>{formatDay(currentMeta.takenAt)}</Text>
+                <Text style={styles.metaDate}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
               </View>
 
               {showWeight ? <Text style={styles.metaWeight}>{weightLine}</Text> : null}

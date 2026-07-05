@@ -46,6 +46,7 @@ import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 // Optional native modules, guarded so the sheet still mounts (tests, or before a
 // rebuild) without them; generation just can't run until a real build provides
@@ -70,11 +71,7 @@ const CONFIRM_KEY = 'progressShareConfirmed';
 
 /** British short date, e.g. "3 Mar 2026". Empty string for a bad timestamp. */
 export function formatCardDate(ts) {
-  const n = Number(ts);
-  if (!Number.isFinite(n)) return '';
-  try {
-    return new Date(n).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) { return ''; }
+  return formatProgressPhotoDay(ts);
 }
 
 /**

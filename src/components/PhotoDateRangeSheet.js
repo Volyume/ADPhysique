@@ -32,12 +32,7 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, radius, type, iconSize,
 } from '../styles/theme';
-
-function formatDay(ts) {
-  try {
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) { return ''; }
-}
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 function startOfDay(ms) {
   const d = new Date(ms);
@@ -109,10 +104,10 @@ export default function PhotoDateRangeSheet({
             style={styles.dateField}
             onPress={() => { setToPickerOpen(false); setFromPickerOpen(true); }}
             accessibilityRole="button"
-            accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatDay(fromDraft) : 'Any'}`}
+            accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
           >
             <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{Number.isFinite(fromDraft) ? formatDay(fromDraft) : 'Any'}</Text>
+            <Text style={styles.dateText}>{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
             <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
 
@@ -121,10 +116,10 @@ export default function PhotoDateRangeSheet({
             style={styles.dateField}
             onPress={() => { setFromPickerOpen(false); setToPickerOpen(true); }}
             accessibilityRole="button"
-            accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatDay(toDraft) : 'Any'}`}
+            accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
           >
             <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{Number.isFinite(toDraft) ? formatDay(toDraft) : 'Any'}</Text>
+            <Text style={styles.dateText}>{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
             <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
 

@@ -9,6 +9,7 @@ import {
 } from '../styles/theme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { explainMeasuredScanDelta } from '../lib/progressScanAnalysis';
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = ['front', 'back', 'side'];
 const POSE_LABEL = { front: 'Front', back: 'Back', side: 'Side' };
@@ -17,14 +18,6 @@ function finiteNumber(value) {
   if (value == null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
-}
-
-function formatDay(ts) {
-  try {
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) {
-    return '';
-  }
 }
 
 export function scanRangeLabel(scan, { hideExact = false } = {}) {
@@ -71,7 +64,7 @@ function ScanSummary({ scan, label, hideExact }) {
   return (
     <View style={styles.summaryPanel}>
       <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={styles.summaryDate}>{formatDay(scan?.capturedAt)}</Text>
+      <Text style={styles.summaryDate}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
       <Text style={styles.summaryRange}>{scanRangeLabel(scan, { hideExact })}</Text>
       <Text style={styles.summaryMeta}>
         {[scan?.qualityLabel || 'saved', weight, `${scan?.assets?.length || 0} photos`].filter(Boolean).join(' | ')}
@@ -172,10 +165,10 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 onPress={() => toggleSelect(scan.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={`Scan from ${formatDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
+                accessibilityLabel={`Scan from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
                 style={[styles.scanChip, active && styles.scanChipActive]}
               >
-                <Text style={[styles.scanChipDate, active && styles.scanChipDateActive]}>{formatDay(scan.capturedAt)}</Text>
+                <Text style={[styles.scanChipDate, active && styles.scanChipDateActive]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
                 <Text style={[styles.scanChipRange, active && styles.scanChipRangeActive]}>{scanRangeLabel(scan, { hideExact })}</Text>
               </TouchableOpacity>
             );
@@ -201,8 +194,8 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
             ) : null}
 
             {rows.map((row) => {
-              const earlierDate = formatDay(earlier.capturedAt);
-              const laterDate = formatDay(later.capturedAt);
+              const earlierDate = formatProgressPhotoDay(earlier.capturedAt);
+              const laterDate = formatProgressPhotoDay(later.capturedAt);
               return (
                 <View key={row.pose} style={styles.poseBlock}>
                   <Text style={styles.poseTitle}>{POSE_LABEL[row.pose] || row.pose}</Text>

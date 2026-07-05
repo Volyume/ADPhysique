@@ -45,17 +45,11 @@ import { logError } from '../lib/errorLog';
 import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const THUMB = 56;
 const HANDLE = 34;
-
-// Neutral date label. Dates carry no banned vocabulary, so this copy is safe.
-function formatDay(ts) {
-  try {
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) { return ''; }
-}
 
 // The pose filter chips. 'all' shows every photo; the others narrow to a pose
 // so comparisons stay like-for-like. Labels are function-neutral.
@@ -119,12 +113,12 @@ function Pane({ item, role, w, h, failed, onError }) {
           resizeMode="contain"
           resizeMethod="resize"
           accessible
-          accessibilityLabel={`${role} photo, ${formatDay(item.takenAt)}`}
+          accessibilityLabel={`${role} photo, ${formatProgressPhotoDay(item.takenAt)}`}
           onError={onError}
         />
       )}
       <Text style={styles.paneRole}>{role}</Text>
-      <Text style={styles.paneDate}>{formatDay(item.takenAt)}</Text>
+      <Text style={styles.paneDate}>{formatProgressPhotoDay(item.takenAt)}</Text>
     </View>
   );
 }
@@ -177,7 +171,7 @@ function CompareSlider({
             resizeMode="contain"
             resizeMethod="resize"
             accessible
-            accessibilityLabel={`Later photo, ${formatDay(later.takenAt)}`}
+            accessibilityLabel={`Later photo, ${formatProgressPhotoDay(later.takenAt)}`}
             onError={() => onError(later)}
           />
         )}
@@ -193,7 +187,7 @@ function CompareSlider({
               resizeMode="contain"
               resizeMethod="resize"
               accessible
-              accessibilityLabel={`Earlier photo, ${formatDay(earlier.takenAt)}`}
+              accessibilityLabel={`Earlier photo, ${formatProgressPhotoDay(earlier.takenAt)}`}
               onError={() => onError(earlier)}
             />
           )}
@@ -219,11 +213,11 @@ function CompareSlider({
       <View style={styles.ends}>
         <View style={styles.endBlock}>
           <Text style={styles.paneRole}>Earlier</Text>
-          <Text style={styles.paneDate}>{formatDay(earlier.takenAt)}</Text>
+          <Text style={styles.paneDate}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
           <Text style={styles.paneRole}>Later</Text>
-          <Text style={styles.paneDate}>{formatDay(later.takenAt)}</Text>
+          <Text style={styles.paneDate}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
     </View>
@@ -296,11 +290,11 @@ function CompareOverlay({
       <View style={styles.ends}>
         <View style={styles.endBlock}>
           <Text style={styles.paneRole}>Earlier</Text>
-          <Text style={styles.paneDate}>{formatDay(earlier.takenAt)}</Text>
+          <Text style={styles.paneDate}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
           <Text style={styles.paneRole}>Later</Text>
-          <Text style={styles.paneDate}>{formatDay(later.takenAt)}</Text>
+          <Text style={styles.paneDate}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
       {/* The overlay has no auto-crossfade at all (a flicker would read as a
@@ -550,7 +544,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
               onPress={() => toggleSelect(item.name)}
               accessibilityRole="button"
               accessibilityState={{ selected: isChosen }}
-              accessibilityLabel={`Photo from ${formatDay(item.takenAt)}`}
+              accessibilityLabel={`Photo from ${formatProgressPhotoDay(item.takenAt)}`}
             >
               <Image
                 source={{ uri: item.uri }}
