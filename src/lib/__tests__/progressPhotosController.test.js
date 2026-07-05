@@ -1,5 +1,6 @@
 import {
   buildScanPhotoNameSet,
+  buildProgressScanFinishPayload,
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
@@ -61,6 +62,59 @@ describe('progressPhotosController transforms', () => {
     });
     expect(shouldGateProgressScanStart([recent], 10_000 + min, min).gated).toBe(false);
     expect(shouldGateProgressScanStart([draft], 11_000, min)).toEqual({ gated: false, latestCompleted: null });
+  });
+
+  test('buildProgressScanFinishPayload preserves profile-first scan profile precedence', () => {
+    expect(buildProgressScanFinishPayload({
+      sex: 'female',
+      heightCm: 170,
+      weightKg: 68,
+      bodyweightKg: 69,
+      bodyWeightKg: 70,
+      trainingGoal: 'figure',
+      trainingPhase: 'cut',
+      goal: 'bulk',
+      darkerSkinOverestimationRisk: true,
+    }, {
+      sex: 'male',
+      heightCm: 180,
+      primaryGoal: 'mens_physique',
+    }, 'male')).toEqual({
+      sex: 'female',
+      heightCm: 170,
+      weightKg: 68,
+      trainingGoal: 'figure',
+      trainingPhase: 'cut',
+      darkerSkinOverestimationRisk: true,
+    });
+  });
+
+  test('buildProgressScanFinishPayload falls back to body profile and user sex only where the screen did before', () => {
+    expect(buildProgressScanFinishPayload({
+      bodyweightKg: 82,
+      goal: 'prep',
+      darkerSkinOverestimationRisk: false,
+    }, {
+      sex: 'male',
+      heightCm: 181,
+      primaryGoal: 'classic_physique',
+    }, 'female')).toEqual({
+      sex: 'male',
+      heightCm: 181,
+      weightKg: 82,
+      trainingGoal: 'classic_physique',
+      trainingPhase: 'prep',
+      darkerSkinOverestimationRisk: false,
+    });
+
+    expect(buildProgressScanFinishPayload(null, null, 'female')).toEqual({
+      sex: 'female',
+      heightCm: null,
+      weightKg: null,
+      trainingGoal: null,
+      trainingPhase: null,
+      darkerSkinOverestimationRisk: false,
+    });
   });
 });
 

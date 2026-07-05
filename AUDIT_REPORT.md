@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 491 suites passed.
-  - 6,386 tests passed, 5 skipped.
+  - 6,388 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -299,6 +299,7 @@ Status: release decision.
 - Progress Scan display copy now lives in a pure `progressScanCopy` helper, with tests covering score copy, hide-exact mode, suppression, baseline/not-comparable trends, pose labels and weight-stat privacy. Capture, deletion, scan storage, Coach isolation and model analysis remain untouched.
 - Progress Photo timeline filtering/grouping now lives in a pure `progressPhotoTimeline` helper, with tests for fixed-width month rows, newest/oldest ordering, inclusive date bounds and pose/date composition. Capture, viewer, compare, share and scan safety behavior remain untouched.
 - Progress Photo and Progress Scan date labels now share `progressPhotoDates`, covering full day, compact day and month labels with invalid timestamps returning empty labels. Gallery, viewer, compare, date sheets, scan compare and before/after share date copy now use the same British formatting.
+- Progress Scan finish payload shaping now lives in `progressPhotosController`, with tests pinning profile-first precedence, body-profile fallbacks, weight field precedence, training-goal fallback and the exact `darkerSkinOverestimationRisk === true` rule. Live-tier rechecks, database reads and `finishProgressScanSession` remain in `ProgressPhotosScreen`.
 
 ### Web / CI / Security
 

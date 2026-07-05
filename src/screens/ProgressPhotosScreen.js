@@ -46,6 +46,7 @@ import {
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
+  buildProgressScanFinishPayload,
   enrichProgressPhotos,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
@@ -447,15 +448,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         await abandonLapsedScanFlow({ scanId });
         return;
       }
-      const sex = profile.sex ?? bodyProfile?.sex ?? userSex;
-      await finishProgressScanSession(userId, scanId, {
-        sex,
-        heightCm: profile.heightCm ?? bodyProfile?.heightCm ?? null,
-        weightKg: profile.weightKg ?? profile.bodyweightKg ?? profile.bodyWeightKg ?? null,
-        trainingGoal: profile.trainingGoal ?? bodyProfile?.primaryGoal ?? null,
-        trainingPhase: profile.trainingPhase ?? profile.goal ?? null,
-        darkerSkinOverestimationRisk: profile.darkerSkinOverestimationRisk === true,
-      });
+      await finishProgressScanSession(userId, scanId, buildProgressScanFinishPayload(profile, bodyProfile, userSex));
       setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
       await refresh();
     } catch (e) {
