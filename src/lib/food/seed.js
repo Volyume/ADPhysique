@@ -68,7 +68,7 @@ const CHUNK_SIZE = 200;
 // users whose stored flag differs from it (fresh installs re-import
 // correctly either way).
 // Exported for the fast-path regression test (seed.versionSkip.test.js).
-export const OFF_SNAPSHOT_VERSION = '2026-05-25T07:06:03.496Z';
+export const OFF_SNAPSHOT_VERSION = "2026-07-05T07:42:27.991Z";
 export const COFID_SNAPSHOT_VERSION = '2026-05-25T06:02:02.491Z';
 
 const _inFlight = new Map();
