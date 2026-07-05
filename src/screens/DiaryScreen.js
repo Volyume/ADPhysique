@@ -62,6 +62,7 @@ import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/wri
 import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 
 export default function DiaryScreen({ navigation }) {
@@ -212,37 +213,17 @@ export default function DiaryScreen({ navigation }) {
   // confirm banner so it counts towards adherence only once the user says they
   // ate it. "Ate as planned" flips the day's planned meals to actuals; "Clear"
   // discards them. Future days only offer Clear (you can't have eaten yet).
-  // Count distinct planned MEALS (meal slots), not individual food items. A
-  // day plan is ~6 meals of several foods each, so counting entries made the
-  // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
   // Hostile review (E10 #4): in read-only, unconfirmed meal-plan scaffolding
   // (is_planned = 1) must not read as food the user ate, it can never be
   // confirmed or cleared from a view-only diary. Filter it from everything
   // the read-only state displays; the Pro diary is untouched.
-  const viewEntries = useMemo(
-    () => (readOnly ? entries.filter((e) => !e.is_planned) : entries),
-    [readOnly, entries],
+  // Count distinct planned MEALS (meal slots), not individual food items. A
+  // day plan is ~6 meals of several foods each, so counting entries made the
+  // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
+  const { viewEntries, plannedCount, plannedTotals } = useMemo(
+    () => deriveDiaryDayViewModel(entries, { readOnly }),
+    [entries, readOnly],
   );
-  const plannedCount = useMemo(() => {
-    const slots = new Set();
-    for (const e of viewEntries) if (e.is_planned) slots.add(e.meal_slot);
-    return slots.size;
-  }, [viewEntries]);
-  // Planned-but-unconfirmed totals for the ring/macro overlay (shown distinctly,
-  // never folded into the eaten rollup the coach uses). Null when nothing planned.
-  const plannedTotals = useMemo(() => {
-    let kcal = 0, protein = 0, carbs = 0, fat = 0;
-    for (const e of viewEntries) {
-      if (!e.is_planned) continue;
-      kcal += Number(e.kcal) || 0;
-      protein += Number(e.protein_g) || 0;
-      carbs += Number(e.carbs_g) || 0;
-      fat += Number(e.fat_g) || 0;
-    }
-    return (kcal || protein || carbs || fat)
-      ? { kcal, protein_g: protein, carbs_g: carbs, fat_g: fat }
-      : null;
-  }, [viewEntries]);
   const isFutureDay = selectedDate > isoDate(new Date());
 
   const handleConfirmPlanned = useCallback(async () => {
