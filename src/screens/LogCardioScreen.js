@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import SearchBar from '../components/SearchBar';
@@ -152,13 +153,7 @@ export default function LogCardioScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{activity ? 'Log cardio' : 'Pick activity'}</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ModalHeader title={activity ? 'Log cardio' : 'Pick activity'} onClose={() => navigation.goBack()} />
 
       {!activity ? (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -204,7 +199,7 @@ export default function LogCardioScreen({ navigation, route }) {
             </TouchableOpacity>
           </Card>
 
-          <Text style={styles.fieldLabel}>Duration</Text>
+          <SectionLabel style={styles.fieldLabel}>Duration</SectionLabel>
           <Card surface="surface2" radius="md" padding="none" style={styles.stepper}>
             <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.max(5, d - 5))} accessibilityRole="button" accessibilityLabel="Less time">
               <Text style={styles.stepBtnText}>-</Text>
@@ -215,7 +210,7 @@ export default function LogCardioScreen({ navigation, route }) {
             </TouchableOpacity>
           </Card>
 
-          <Text style={styles.fieldLabel}>Intensity</Text>
+          <SectionLabel style={styles.fieldLabel}>Intensity</SectionLabel>
           <SegmentedControl options={INTENSITY_OPTS} value={intensity} onChange={setIntensity} accessibilityLabel="Intensity" />
 
           {estKcal != null && (
@@ -262,12 +257,6 @@ function ActivityList({ items, onPick }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.sm },
   searchWrap: { marginBottom: spacing.sm },
   section: { marginTop: spacing.md },
@@ -285,7 +274,7 @@ const styles = StyleSheet.create({
   },
   chosenName: { ...type.title, color: colors.textPrimary },
   chosenMeta: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
-  fieldLabel: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.lg, marginBottom: spacing.xs },
+  fieldLabel: { marginTop: spacing.lg, marginBottom: spacing.xs },
   stepper: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
