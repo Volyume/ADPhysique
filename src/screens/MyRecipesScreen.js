@@ -25,6 +25,7 @@ import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import Stepper from '../components/Stepper';
 import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
@@ -86,12 +87,6 @@ export default function MyRecipesScreen({ navigation, route }) {
     setServePrompt(recipe);
   }
 
-  const stepServings = (delta) => {
-    setServings((s) => {
-      const next = Math.round((s + delta) * 2) / 2; // 0.5 steps, no float drift
-      return Math.min(20, Math.max(0.5, next));
-    });
-  };
   const fmtServings = (s) => (Number.isInteger(s) ? String(s) : s.toFixed(1));
 
   // Commit the log with the chosen servings. applyRecipeToDiary returns null
@@ -243,31 +238,20 @@ export default function MyRecipesScreen({ navigation, route }) {
           <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
             <Text style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
             <Text style={styles.sheetSub}>How many servings?</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                onPress={() => stepServings(-0.5)}
-                disabled={servings <= 0.5}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Fewer servings"
-                style={[styles.stepBtn, servings <= 0.5 && styles.stepBtnDisabled]}
-              >
-                <Ionicons name="remove" size={24} color={servings <= 0.5 ? colors.textMuted : colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.stepValue} accessibilityLabel={`${fmtServings(servings)} servings`}>
-                {fmtServings(servings)}
-              </Text>
-              <TouchableOpacity
-                onPress={() => stepServings(0.5)}
-                disabled={servings >= 20}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="More servings"
-                style={[styles.stepBtn, servings >= 20 && styles.stepBtnDisabled]}
-              >
-                <Ionicons name="add" size={24} color={servings >= 20 ? colors.textMuted : colors.primary} />
-              </TouchableOpacity>
-            </View>
+            <Stepper
+              value={servings}
+              onChange={setServings}
+              min={0.5}
+              max={20}
+              step={0.5}
+              label="servings"
+              formatValue={fmtServings}
+              valueLabel={`${fmtServings(servings)} servings`}
+              decreaseLabel="Fewer servings"
+              increaseLabel="More servings"
+              hitSlop={8}
+              style={styles.servingsStepper}
+            />
             <TouchableOpacity
               style={styles.logBtn}
               onPress={confirmLog}
@@ -326,17 +310,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
-  stepBtn: {
-    width: 48, height: 48, borderRadius: circle(48),
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepBtnDisabled: { opacity: 0.5 },
-  stepValue: {
-    ...type.title, color: colors.textPrimary, minWidth: 56, textAlign: 'center',
-    fontVariant: ['tabular-nums'],
-  },
+  servingsStepper: { justifyContent: 'center' },
   logBtn: {
     alignSelf: 'stretch', alignItems: 'center',
     paddingVertical: spacing.md, borderRadius: radius.md,
