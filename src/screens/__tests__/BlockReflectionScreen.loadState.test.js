@@ -38,16 +38,17 @@ function flattenText(node) {
 
 async function render() {
   let tree;
+  const navigation = { navigate: jest.fn() };
   await act(async () => {
     tree = create(
       <BlockReflectionScreen
-        navigation={{ navigate: jest.fn() }}
+        navigation={navigation}
         route={{ params: { mesocycleId: 'm1' } }}
       />,
     );
   });
   await flush();
-  return tree;
+  return { tree, navigation };
 }
 
 describe('BlockReflectionScreen load states', () => {
@@ -59,7 +60,7 @@ describe('BlockReflectionScreen load states', () => {
   test('shows a retryable read-error state instead of no-data copy', async () => {
     getBlockReflectionData.mockRejectedValueOnce(new Error('offline'));
 
-    const tree = await render();
+    const { tree } = await render();
     let text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load block summary");
     expect(text).toContain('Your sessions are safe.');
@@ -76,10 +77,14 @@ describe('BlockReflectionScreen load states', () => {
   });
 
   test('keeps the genuine no-data state after a successful empty read', async () => {
-    const tree = await render();
+    const { tree, navigation } = await render();
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('No data found');
+    expect(text).toContain('Start a new block');
+    const start = tree.root.findByProps({ accessibilityLabel: 'Start a new block' });
+    await act(async () => { start.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('MesocycleBuilder');
     expect(text).not.toContain("Couldn't load block summary");
   });
 });
