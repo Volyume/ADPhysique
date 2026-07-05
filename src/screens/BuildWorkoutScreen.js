@@ -13,6 +13,8 @@ import Button from '../components/Button';
 import SearchBar from '../components/SearchBar';
 import Stepper from '../components/Stepper';
 import TextField from '../components/TextField';
+import BottomSheet from '../components/BottomSheet';
+import Chip from '../components/Chip';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
@@ -348,51 +350,46 @@ export default function BuildWorkoutScreen({ navigation }) {
       </View>
 
       {/* Travel Mode equipment picker */}
-      <Modal visible={showTravelModal} transparent animationType="fade" onRequestClose={() => setShowTravelModal(false)}>
-        <View style={styles.travelOverlay}>
-          <View style={styles.travelCard}>
-            <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
-            <Text style={styles.travelSub}>Choose what equipment you have. The session is full-body, to hold your muscle while you're away from the gym.</Text>
-            <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
-              {[
-                { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
-                { id: 'dumbbells',  label: 'Dumbbells',       icon: 'barbell-outline' },
-                { id: 'hotel_gym',  label: 'Hotel gym',        icon: 'fitness-outline' },
-              ].map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[styles.travelOpt, travelEquipment === opt.id && styles.travelOptActive]}
-                  onPress={() => setTravelEquipment(opt.id)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: travelEquipment === opt.id }}
-                  accessibilityLabel={opt.label}
-                >
-                  <Ionicons name={opt.icon} size={20} color={travelEquipment === opt.id ? colors.primary : colors.textSecondary} />
-                  <Text style={[styles.travelOptText, travelEquipment === opt.id && { color: colors.primary }]}>{opt.label}</Text>
-                  {travelEquipment === opt.id && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.travelBtns}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                style={styles.travelCancel}
-                textStyle={styles.travelCancelText}
-                onPress={() => setShowTravelModal(false)}
-                accessibilityLabel="Cancel"
-              />
-              <Button
-                title="Build Session"
-                style={styles.travelConfirm}
-                textStyle={styles.travelConfirmText}
-                onPress={applyTravelMode}
-                accessibilityLabel="Build session"
-              />
-            </View>
-          </View>
+      <BottomSheet
+        visible={showTravelModal}
+        onClose={() => setShowTravelModal(false)}
+        accessibilityLabel="Travel or hotel gym equipment picker"
+      >
+        <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
+        <Text style={styles.travelSub}>Choose what equipment you have. The session is full-body, to hold your muscle while you're away from the gym.</Text>
+        <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
+          {[
+            { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
+            { id: 'dumbbells',  label: 'Dumbbells',       icon: 'barbell-outline' },
+            { id: 'hotel_gym',  label: 'Hotel gym',        icon: 'fitness-outline' },
+          ].map(opt => (
+            <Chip
+              key={opt.id}
+              label={opt.label}
+              icon={opt.icon}
+              selected={travelEquipment === opt.id}
+              accessibilityRole="radio"
+              onPress={() => setTravelEquipment(opt.id)}
+              style={styles.travelOptionChip}
+            />
+          ))}
         </View>
-      </Modal>
+        <View style={styles.travelBtns}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            style={styles.travelAction}
+            onPress={() => setShowTravelModal(false)}
+            accessibilityLabel="Cancel"
+          />
+          <Button
+            title="Build Session"
+            style={styles.travelAction}
+            onPress={applyTravelMode}
+            accessibilityLabel="Build session"
+          />
+        </View>
+      </BottomSheet>
 
       <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
         {/* Nested provider: a core RN <Modal> presents in its own window on iOS
@@ -604,36 +601,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, alignSelf: 'flex-start',
   },
   travelChipText: { ...type.label, color: colors.primary, flex: 1 },
-  travelOverlay: {
-    flex: 1, backgroundColor: colors.scrim,
-    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
-  },
-  travelCard: {
-    backgroundColor: colors.surface, borderRadius: radius.xl,
-    padding: spacing.xl, width: '100%', gap: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
-  },
   travelTitle: { ...type.title, color: colors.textPrimary },
   travelSub: { ...type.bodySm, color: colors.textSecondary },
   travelOptions: { gap: spacing.sm },
-  travelOpt: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.md, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  travelOptActive: { borderColor: colors.primary, backgroundColor: colors.surface2 },
-  travelOptText: { ...type.label, flex: 1, color: colors.textSecondary },
+  travelOptionChip: { alignSelf: 'stretch', borderRadius: radius.md },
   travelBtns: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
-  travelCancel: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  travelCancelText: { fontSize: fontSize.sm },
-  travelConfirm: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  travelConfirmText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  travelAction: { flex: 1 },
 });
