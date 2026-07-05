@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getBlockReflectionData } from '../lib/database';
@@ -169,7 +171,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="trophy-outline" size={16} color={colors.primary} />
-                  <Text style={styles.sectionTitle} accessibilityRole="header">Records set this block</Text>
+                  <SectionLabel accessibilityRole="header">Records set this block</SectionLabel>
                 </View>
                 {data.prs.map((pr, i) => (
                   <View key={i} style={styles.prRow}>
@@ -203,26 +205,28 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <Text style={styles.nextBody}>
                 Take a few days of lighter activity to recover, then start your next block. That recovery is when your progress takes hold.
               </Text>
-              <TouchableOpacity
-                style={styles.newBlockBtn}
+              <Button
+                title="Start a new block"
+                variant="tertiary"
+                icon="add-circle-outline"
+                fullWidth={false}
                 onPress={() => {
                   navigation.goBack();
                   setTimeout(() => navigation.navigate('MesocycleBuilder'), 300);
                 }}
-                activeOpacity={0.8}
-                accessibilityRole="button"
                 accessibilityLabel="Start a new block"
-              >
-                <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-                <Text style={styles.newBlockBtnText}>Start a new block</Text>
-              </TouchableOpacity>
+              />
             </View>
           </>
         )}
 
-        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Done">
-          <Text style={styles.doneBtnText}>Done</Text>
-        </TouchableOpacity>
+        <Button
+          title="Done"
+          variant="secondary"
+          size="lg"
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Done"
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -272,7 +276,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.sm,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  sectionTitle: { ...type.label, color: colors.textPrimary },
 
   prRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -306,19 +309,4 @@ const styles = StyleSheet.create({
   },
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
   nextBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
-  newBlockBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  newBlockBtnText: { ...type.label, color: colors.primary },
-
-  doneBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.lg, alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  doneBtnText: { ...type.title, color: colors.textPrimary },
 });

@@ -18,6 +18,7 @@ jest.mock('expo-haptics', () => ({
 import Button from '../Button';
 import Card from '../Card';
 import GradientCard from '../GradientCard';
+import SectionLabel from '../SectionLabel';
 import { colors, withAlpha } from '../../styles/theme';
 
 describe('Button', () => {
@@ -123,5 +124,12 @@ describe('GradientCard shim', () => {
   });
   test('the dead intensity prop is accepted without throwing', () => {
     expect(() => create(<GradientCard intensity={0.28}><Text>x</Text></GradientCard>)).not.toThrow();
+  });
+});
+
+describe('SectionLabel', () => {
+  test('forwards accessibility props to the underlying text', () => {
+    const tree = create(<SectionLabel accessibilityRole="header">Records</SectionLabel>);
+    expect(tree.root.findByProps({ accessibilityRole: 'header' })).toBeTruthy();
   });
 });
