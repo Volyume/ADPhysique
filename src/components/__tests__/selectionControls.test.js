@@ -37,9 +37,10 @@ describe('SegmentedControl', () => {
     const tree = create(<SegmentedControl options={options} value={60} onChange={() => {}} />);
     const selected = tree.root
       .findAllByType(TouchableOpacity)
-      .filter(n => n.props.accessibilityState?.selected === true);
+      .filter(n => n.props.accessibilityState?.checked === true);
     expect(selected).toHaveLength(1);
     expect(selected[0].props.accessibilityLabel).toBe('60 min');
+    expect(selected[0].props.accessibilityState.selected).toBeUndefined();
   });
 });
 

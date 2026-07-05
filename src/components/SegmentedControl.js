@@ -18,7 +18,7 @@ export default function SegmentedControl({ options, value, onChange, accessibili
             onPress={() => onChange(opt.value)}
             activeOpacity={0.85}
             accessibilityRole="radio"
-            accessibilityState={{ selected: active }}
+            accessibilityState={{ checked: active }}
             accessibilityLabel={opt.label}
           >
             <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
