@@ -33,10 +33,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from './Card';
+import Button from './Button';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, fontSize, fontWeight, radius, withAlpha, circle } from '../styles/theme';
-import * as haptics from '../lib/haptics';
+import { colors, spacing, fontSize, fontWeight, withAlpha, circle } from '../styles/theme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
 import { logError } from '../lib/errorLog';
@@ -141,8 +141,6 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
   }, [eligible, milestoneId]);
 
   function handleAdd() {
-    // Calm-gated press haptic (haptics.js no-ops under reduce-motion).
-    haptics.press();
     const uid = useAppStore.getState().user?.id;
     track(uid, 'photo_prompt_accepted').catch(() => {});
     setVisible(false);
@@ -181,24 +179,21 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
         </View>
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.primaryBtn}
+        <Button
+          title="Add a photo"
           onPress={handleAdd}
-          activeOpacity={0.85}
-          accessibilityRole="button"
           accessibilityLabel="Add a photo"
-        >
-          <Text style={styles.primaryBtnText}>Add a photo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryBtn}
+          fullWidth={false}
+          style={styles.actionButton}
+        />
+        <Button
+          title="Not now"
+          variant="secondary"
           onPress={handleNotNow}
-          activeOpacity={0.85}
-          accessibilityRole="button"
           accessibilityLabel="Not now"
-        >
-          <Text style={styles.secondaryBtnText}>Not now</Text>
-        </TouchableOpacity>
+          fullWidth={false}
+          style={styles.actionButton}
+        />
       </View>
       <TouchableOpacity
         style={styles.optOutBtn}
@@ -251,29 +246,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.lg,
   },
-  primaryBtn: {
+  actionButton: {
     flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.onPrimary,
-  },
-  secondaryBtn: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
   },
   optOutBtn: {
     alignSelf: 'center',
