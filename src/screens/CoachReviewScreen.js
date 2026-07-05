@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -236,14 +236,25 @@ export default function CoachReviewScreen() {
   const [weekRange, setWeekRange] = useState({ start: null, end: null });
   const [laggingMuscles, setLaggingMuscles] = useState([]);
   const [loadError, setLoadError] = useState(false);
+  const loadRequestRef = useRef(0);
 
   useEffect(() => {
     loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
 
   async function loadData() {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!user?.id) {
+      setWeeklyWorkouts([]);
+      setVolumeByMuscle({});
+      setProgressionWins([]);
+      setDeloadResult(null);
+      setCheckins([]);
+      setLaggingMuscles([]);
+      setLoadError(false);
       setLoading(false);
       return;
     }
@@ -264,6 +275,7 @@ export default function CoachReviewScreen() {
         getAllExercises(),
         getRecentCheckins(user.id, 4),
       ]);
+      if (!isCurrentRequest()) return;
 
       // This week's completed workouts
       const thisWeekWorkouts = allWorkouts.filter(w =>
@@ -374,9 +386,10 @@ export default function CoachReviewScreen() {
       // U-B-6: distinguish a genuine read failure from an empty week. Show a
       // retryable error state instead of the false "no sessions" card (parity
       // with the Pro CoachOutput screen). Data is not lost, this is a read fault.
+      if (!isCurrentRequest()) return;
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }
 

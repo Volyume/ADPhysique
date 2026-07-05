@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 505 suites passed.
-  - 6,445 tests passed, 5 skipped.
+  - 6,446 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -329,6 +329,7 @@ Status: release decision.
 - Volume Heatmap now has a single focus-based load trigger instead of duplicate focus/effect loads, and its volume, trend, freshness, division and landmark commits are guarded so stale profile/window reads cannot repaint the heatmap.
 - Coach Held History now fails closed when no user is present or history loading fails, suppressing outcome scorecard/chips and clearing history state instead of merely stopping the loading indicator.
 - Partner loading now uses a latest-request guard across local partnership reads, active-count checks, preserved-invite redemption and pair enrichment, with a regression proving older reads cannot overwrite a newer partner state.
+- Coach Review now guards weekly review loads with a latest-request token, so a late failure from an older user/retry load cannot replace a newer successful deterministic review with the retry error state.
 
 ### Web / CI / Security
 
