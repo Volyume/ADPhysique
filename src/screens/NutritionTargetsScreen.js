@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Chip from '../components/Chip';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
@@ -92,6 +93,18 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
         );
       })}
     </View>
+  );
+}
+
+function NumericField({ fieldStyle, inputStyle, ...props }) {
+  return (
+    <TextField
+      surface={colors.inputBg}
+      fieldStyle={[styles.numInputField, fieldStyle]}
+      inputStyle={[styles.numInput, inputStyle]}
+      placeholderTextColor={colors.textMuted}
+      {...props}
+    />
   );
 }
 
@@ -550,12 +563,10 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.fieldLabel}>Age</Text>
-                <TextInput
-                  style={styles.numInput}
+                <NumericField
                   value={age}
                   onChangeText={setAge}
                   placeholder="e.g. 28"
-                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={3}
                   accessibilityLabel="Age"
@@ -565,12 +576,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Text style={styles.fieldLabel}>Height</Text>
                 <View style={styles.heightRow}>
                   <View style={styles.heightUnit}>
-                    <TextInput
-                      style={styles.numInput}
+                    <NumericField
                       value={heightFt}
                       onChangeText={setHeightFt}
                       placeholder="5"
-                      placeholderTextColor={colors.textMuted}
                       keyboardType="number-pad"
                       maxLength={1}
                       accessibilityLabel="Height, feet"
@@ -578,12 +587,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <Text style={styles.unitLabel}>ft</Text>
                   </View>
                   <View style={styles.heightUnit}>
-                    <TextInput
-                      style={styles.numInput}
+                    <NumericField
                       value={heightIn}
                       onChangeText={setHeightIn}
                       placeholder="10"
-                      placeholderTextColor={colors.textMuted}
                       keyboardType="decimal-pad"
                       maxLength={4}
                       accessibilityLabel="Height, inches"
@@ -594,12 +601,10 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.fieldLabel}>Current weight (kg)</Text>
-                <TextInput
-                  style={styles.numInput}
+                <NumericField
                   value={weight}
                   onChangeText={setWeight}
                   placeholder="e.g. 82"
-                  placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   maxLength={5}
                   accessibilityLabel="Current weight in kilograms"
@@ -682,12 +687,10 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Age */}
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Age</Text>
-            <TextInput
-              style={styles.numInput}
+            <NumericField
               value={age}
               onChangeText={setAge}
               placeholder="e.g. 28"
-              placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={3}
               accessibilityLabel="Age"
@@ -699,12 +702,10 @@ export default function NutritionTargetsScreen({ navigation }) {
             <Text style={styles.fieldLabel}>Height</Text>
             <View style={styles.heightRow}>
               <View style={styles.heightUnit}>
-                <TextInput
-                  style={styles.numInput}
+                <NumericField
                   value={heightFt}
                   onChangeText={setHeightFt}
                   placeholder="5"
-                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={1}
                   accessibilityLabel="Height, feet"
@@ -712,12 +713,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Text style={styles.unitLabel}>ft</Text>
               </View>
               <View style={styles.heightUnit}>
-                <TextInput
-                  style={styles.numInput}
+                <NumericField
                   value={heightIn}
                   onChangeText={setHeightIn}
                   placeholder="10"
-                  placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   maxLength={4}
                   accessibilityLabel="Height, inches"
@@ -730,12 +729,10 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Weight */}
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Current weight (kg)</Text>
-            <TextInput
-              style={styles.numInput}
+            <NumericField
               value={weight}
               onChangeText={setWeight}
               placeholder="e.g. 82"
-              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={5}
               accessibilityLabel="Current weight in kilograms"
@@ -745,12 +742,10 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Body fat */}
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Body fat % <Text style={styles.optional}>(optional)</Text></Text>
-            <TextInput
-              style={styles.numInput}
+            <NumericField
               value={bodyFat}
               onChangeText={setBodyFat}
               placeholder="e.g. 15"
-              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={4}
               accessibilityLabel="Body fat percentage"
@@ -866,12 +861,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                 {active && key === 'custom' && (
                   <View style={styles.customProteinRow}>
                     <Text style={styles.customProteinLabel}>Protein target</Text>
-                    <TextInput
-                      style={styles.customProteinInput}
+                    <NumericField
+                      fieldStyle={styles.customProteinInputField}
+                      inputStyle={styles.customProteinInput}
                       value={customProteinGPerKg}
                       onChangeText={setCustomProteinGPerKg}
                       placeholder="e.g. 2.0"
-                      placeholderTextColor={colors.textMuted}
                       keyboardType="decimal-pad"
                       maxLength={4}
                       accessibilityLabel="Protein target, grams per kilogram"
@@ -1472,17 +1467,15 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
-  numInput: {
-    ...type.body,
-    backgroundColor: colors.inputBg,
+  numInputField: {
     borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignSelf: 'flex-start',
     minWidth: 120,
+  },
+  numInput: {
+    ...type.body,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   heightRow: {
     flexDirection: 'row',
@@ -2117,16 +2110,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
+  customProteinInputField: {
+    width: 90,
+    minWidth: 90,
+    borderRadius: radius.md,
+  },
   customProteinInput: {
     ...type.body,
-    backgroundColor: colors.inputBg,
-    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    width: 90,
     textAlign: 'center',
   },
   customProteinUnit: {
