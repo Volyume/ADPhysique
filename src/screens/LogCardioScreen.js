@@ -14,13 +14,14 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import SearchBar from '../components/SearchBar';
+import Stepper from '../components/Stepper';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -200,15 +201,19 @@ export default function LogCardioScreen({ navigation, route }) {
           </Card>
 
           <SectionLabel style={styles.fieldLabel}>Duration</SectionLabel>
-          <Card surface="surface2" radius="md" padding="none" style={styles.stepper}>
-            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.max(5, d - 5))} accessibilityRole="button" accessibilityLabel="Less time">
-              <Text style={styles.stepBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.stepValue}>{duration} min</Text>
-            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.min(300, d + 5))} accessibilityRole="button" accessibilityLabel="More time">
-              <Text style={styles.stepBtnText}>+</Text>
-            </TouchableOpacity>
-          </Card>
+          <Stepper
+            value={duration}
+            onChange={setDuration}
+            min={5}
+            max={300}
+            step={5}
+            unit="min"
+            label="cardio duration"
+            decreaseLabel="Decrease cardio duration"
+            increaseLabel="Increase cardio duration"
+            valueLabel={`Cardio duration ${duration} minutes`}
+            style={styles.durationStepper}
+          />
 
           <SectionLabel style={styles.fieldLabel}>Intensity</SectionLabel>
           <SegmentedControl options={INTENSITY_OPTS} value={intensity} onChange={setIntensity} accessibilityLabel="Intensity" />
@@ -275,12 +280,7 @@ const styles = StyleSheet.create({
   chosenName: { ...type.title, color: colors.textPrimary },
   chosenMeta: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2 },
   fieldLabel: { marginTop: spacing.lg, marginBottom: spacing.xs },
-  stepper: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  stepBtn: { width: 56, height: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface3 },
-  stepBtnText: { fontSize: fontSize.xxl, color: colors.primary, fontWeight: fontWeight.bold },
-  stepValue: { flex: 1, textAlign: 'center', ...type.title, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  durationStepper: { justifyContent: 'center', paddingVertical: spacing.xs },
   kcalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
   kcalText: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   footnote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
