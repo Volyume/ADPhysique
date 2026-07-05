@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +10,7 @@ import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
 import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
+import TextField from '../components/TextField';
 
 // Coaching: the levers that shape what the coach asks for and adjusts.
 // Step target and cardio are Pro-only; cycle tracking shows for users
@@ -179,8 +180,9 @@ export default function SettingsCoachingScreen() {
             {stepsEnabled && (
               <View style={styles.stepTargetRow}>
                 <Text style={styles.stepTargetLabel}>Steps a day</Text>
-                <TextInput
-                  style={styles.stepTargetInput}
+                <TextField
+                  containerStyle={styles.stepTargetInput}
+                  inputStyle={styles.stepTargetInputText}
                   value={stepTargetInput}
                   onChangeText={setStepTargetInput}
                   onBlur={saveStepTarget}
@@ -322,16 +324,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   stepTargetLabel: { ...type.body, color: colors.textSecondary },
-  stepTargetInput: {
-    minWidth: 88,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    ...type.body,
-    textAlign: 'center',
-  },
+  stepTargetInput: { minWidth: 88 },
+  stepTargetInputText: { textAlign: 'center' },
 });
