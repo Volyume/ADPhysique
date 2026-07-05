@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -54,6 +54,8 @@ import MealSection from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
@@ -1415,8 +1417,9 @@ export default function DiaryScreen({ navigation }) {
             <Text style={styles.saveMealHint}>
               {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
             </Text>
-            <TextInput
-              style={styles.saveMealInput}
+            <TextField
+              fieldStyle={styles.saveMealInputField}
+              inputStyle={styles.saveMealInput}
               value={saveMealName}
               onChangeText={setSaveMealName}
               placeholder="e.g. My breakfast"
@@ -1428,12 +1431,27 @@ export default function DiaryScreen({ navigation }) {
               onSubmitEditing={submitSaveMeal}
             />
             <View style={styles.saveMealActions}>
-              <TouchableOpacity onPress={() => setSaveMealItems(null)} accessibilityRole="button" style={styles.saveMealBtn}>
-                <Text style={styles.saveMealBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={submitSaveMeal} accessibilityRole="button" style={[styles.saveMealBtn, styles.saveMealBtnPrimary]}>
-                <Text style={[styles.saveMealBtnText, { color: colors.onPrimary, fontWeight: fontWeight.bold }]}>Save</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={styles.saveMealBtn}
+                textStyle={styles.saveMealBtnText}
+                onPress={() => setSaveMealItems(null)}
+                accessibilityLabel="Cancel"
+              />
+              <Button
+                title="Save"
+                size="sm"
+                fullWidth={false}
+                style={styles.saveMealBtn}
+                textStyle={styles.saveMealBtnTextPrimary}
+                onPress={submitSaveMeal}
+                disabled={!saveMealName.trim()}
+                accessibilityLabel="Save meal"
+                accessibilityState={{ disabled: !saveMealName.trim() }}
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -1634,19 +1652,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted, fontSize: fontSize.sm,
     paddingHorizontal: spacing.sm, paddingBottom: spacing.md,
   },
+  saveMealInputField: { borderRadius: radius.md, marginHorizontal: spacing.sm },
   saveMealInput: {
-    backgroundColor: colors.background, color: colors.textPrimary,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    fontSize: fontSize.md, marginHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.md,
   },
   saveMealActions: {
     flexDirection: 'row', justifyContent: 'flex-end',
     marginTop: spacing.md, gap: spacing.sm,
   },
   saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
-  saveMealBtnPrimary: { backgroundColor: colors.primary },
   saveMealBtnText: { ...type.body, color: colors.textPrimary },
+  saveMealBtnTextPrimary: { ...type.label, color: colors.onPrimary },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,
