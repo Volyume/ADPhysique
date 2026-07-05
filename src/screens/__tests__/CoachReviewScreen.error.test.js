@@ -10,6 +10,9 @@ const path = require('path');
 
 import { create, act } from 'react-test-renderer';
 
+const mockNavigation = { getParent: jest.fn(), navigate: jest.fn() };
+const mockNavigateCrossTab = jest.fn();
+
 jest.mock('../../lib/database', () => ({
   getAllWorkouts: jest.fn(),
   getCompletedWorkoutSets: jest.fn(() => Promise.resolve([])),
@@ -26,6 +29,12 @@ jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(() => Promise.resolve()),
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => mockNavigation,
+}));
+jest.mock('../../navigation/navigateCrossTab', () => ({
+  navigateCrossTab: (...args) => mockNavigateCrossTab(...args),
 }));
 
 import CoachReviewScreen from '../CoachReviewScreen';
@@ -74,8 +83,15 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
 
   test('a genuinely-empty week shows the no-data card, not the error state', async () => {
     getAllWorkouts.mockImplementation(() => Promise.resolve([]));
-    const json = await mount();
+    let tree;
+    await act(async () => { tree = create(<CoachReviewScreen />); });
+    await flush();
+    const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('No sessions logged this week');
+    expect(json).toContain('Start a workout');
+    const start = tree.root.findByProps({ accessibilityLabel: 'Start a workout' });
+    await act(async () => { start.props.onPress(); });
+    expect(mockNavigateCrossTab).toHaveBeenCalledWith(mockNavigation, 'HomeTab', 'BuildWorkout');
     expect(json).not.toContain('Try again');
     expect(json).not.toContain('not a lost week');
   });
