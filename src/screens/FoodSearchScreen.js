@@ -19,7 +19,7 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, ScrollView, Modal,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -52,6 +52,7 @@ import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
 import FoodRow from '../components/food/FoodRow';
 import HintCaption from '../components/HintCaption';
+import SearchBar from '../components/SearchBar';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
@@ -933,21 +934,14 @@ export default function FoodSearchScreen({ navigation, route }) {
           bar over browse lists; Suggested was the one tab that hid it. A live
           2+ char query is a database search from any tab (selectTabRows), so
           typing here shows results and clearing returns to the suggestions. */}
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search foods or brands"
-          placeholderTextColor={colors.textMuted}
-          accessibilityLabel="Search foods or brands"
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-        />
-        {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
-      </View>
+      <SearchBar
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search foods or brands"
+        accessibilityLabel="Search foods or brands"
+        loading={searching}
+        style={styles.searchBar}
+      />
 
       {activeTab === 'suggested' && query.trim().length < 2 ? renderSuggested() : (
       <>
@@ -1134,18 +1128,8 @@ const styles = StyleSheet.create({
   },
   tabUnderlineActive: { backgroundColor: colors.primary },
 
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center',
+  searchBar: {
     margin: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.inputBg,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    minHeight: 48,
-  },
-  searchInput: {
-    flex: 1, color: colors.textPrimary, fontSize: fontSize.md,
-    paddingVertical: spacing.md,
   },
   provenanceNote: {
     ...type.captionTight, color: colors.textMuted,
