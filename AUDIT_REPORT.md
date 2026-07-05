@@ -285,6 +285,7 @@ Status: release decision.
 - Workout History now distinguishes failed history reads from a genuinely empty training log, logging the failure and showing a retryable error state instead of the new-user empty illustration.
 - My Recipes now distinguishes failed recipe reads from a genuinely empty recipe list, logs the failure, gives the user a retry action, and uses the shared `Button` primitive for both retry and the empty-state build CTA.
 - Paywall, Cascade Gate and Pro Upgrade now share `BillingPeriodSelector` for monthly/annual choice rendering, price loading placeholders, save-badge copy, selected/disabled accessibility state and localised store-price display, removing three duplicated billing-period style blocks from sensitive purchase surfaces.
+- Pro Upgrade now uses the shared `OAuthButtons` account-creation surface, matching Login and Pro onboarding platform rules instead of carrying a local Apple/Google button variant.
 
 ### Web / CI / Security
 
