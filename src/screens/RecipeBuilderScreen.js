@@ -21,7 +21,7 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -36,6 +36,8 @@ import { importRecipeFromUrl } from '../lib/food/recipeImport';
 import { searchFoods } from '../lib/food/waterfall';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import Button from '../components/Button';
+import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -271,11 +273,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{recipeId ? 'Edit recipe' : 'New recipe'}</Text>
-        <TouchableOpacity onPress={onSave} disabled={!canSave} hitSlop={12} accessibilityRole="button" accessibilityState={{ disabled: !canSave }} accessibilityLabel="Save recipe">
-          <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
-            {saving ? 'Saving…' : 'Save'}
-          </Text>
-        </TouchableOpacity>
+        <Button
+          title="Save"
+          variant="tertiary"
+          size="sm"
+          onPress={onSave}
+          loading={saving}
+          disabled={!canSave}
+          fullWidth={false}
+          accessibilityLabel="Save recipe"
+        />
       </View>
 
       {loading ? (
@@ -287,34 +294,30 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       ) : (
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.section}>
-          <Text style={styles.label}>Import from web</Text>
           <View style={styles.importRow}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
+            <TextField
+              label="Import from web"
               value={importUrl}
               onChangeText={setImportUrl}
               placeholder="Paste a recipe link"
               placeholderTextColor={colors.textMuted}
+              surface="surface"
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
               editable={!importing}
               accessibilityLabel="Recipe web address"
+              containerStyle={styles.importField}
             />
-            <TouchableOpacity
+            <Button
+              title="Import"
               onPress={onImportFromWeb}
+              loading={importing}
               disabled={importing || importUrl.trim().length === 0}
-              hitSlop={8}
-              style={[
-                styles.importBtn,
-                (importing || importUrl.trim().length === 0) && styles.importBtnDisabled,
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: importing || importUrl.trim().length === 0 }}
+              fullWidth={false}
               accessibilityLabel="Import from web"
-            >
-              <Text style={styles.importBtnText}>{importing ? 'Importing…' : 'Import'}</Text>
-            </TouchableOpacity>
+              style={styles.importButton}
+            />
           </View>
           <Text style={styles.importHint}>
             We match each ingredient to a food and add a rough amount. Check the amounts after importing.
@@ -322,13 +325,13 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
+          <TextField
+            label="Name"
             value={name}
             onChangeText={setName}
             placeholder="e.g. Sunday chilli"
             placeholderTextColor={colors.textMuted}
+            surface="surface"
             maxLength={80}
             autoFocus={!recipeId}
             accessibilityLabel="Name"
@@ -337,13 +340,13 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
         <View style={styles.row2}>
           <View style={[styles.section, { flex: 1, marginRight: spacing.md }]}>
-            <Text style={styles.label}>Total servings</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Total servings"
               value={totalServings}
               onChangeText={setTotalServings}
               placeholder="4"
               placeholderTextColor={colors.textMuted}
+              surface="surface"
               keyboardType="decimal-pad"
               maxLength={5}
               accessibilityLabel="Total servings"
@@ -352,14 +355,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Notes</Text>
-          <TextInput
-            style={[styles.input, { minHeight: 60 }]}
+          <TextField
+            label="Notes"
             value={notes}
             onChangeText={setNotes}
             placeholder="Optional"
             placeholderTextColor={colors.textMuted}
+            surface="surface"
             multiline
+            fieldStyle={styles.notesField}
+            inputStyle={styles.notesInput}
             accessibilityLabel="Notes"
           />
         </View>
@@ -384,13 +389,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                   <Text style={styles.ingBrand} numberOfLines={1}>{ing.food.brand}</Text>
                 ) : null}
               </View>
-              <TextInput
-                style={styles.qtyInput}
+              <TextField
                 value={String(ing.quantity_g ?? 0)}
                 onChangeText={(v) => onChangeQty(i, v)}
+                surface="surface"
                 keyboardType="decimal-pad"
                 maxLength={5}
                 accessibilityLabel={`${ing.food?.name ?? ing.food_ref} quantity in grams`}
+                containerStyle={styles.qtyFieldContainer}
+                fieldStyle={styles.qtyField}
+                inputStyle={styles.qtyInput}
               />
               <Text style={styles.qtyUnit}>g</Text>
               <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
@@ -435,26 +443,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { color: colors.textPrimary, ...type.title },
-  saveText: { color: colors.primary, ...type.bodyStrong },
-  saveTextDisabled: { color: colors.textMuted },
 
   section: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   row2: { flexDirection: 'row', paddingHorizontal: spacing.lg },
   label: { color: colors.textSecondary, fontSize: fontSize.sm, marginBottom: spacing.xs },
-  input: {
-    color: colors.textPrimary, fontSize: fontSize.md,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-  },
 
-  importRow: { flexDirection: 'row', alignItems: 'center' },
-  importBtn: {
-    marginLeft: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    backgroundColor: colors.primary, borderRadius: radius.md,
-  },
-  importBtnDisabled: { opacity: 0.5 },
-  importBtnText: { color: colors.background, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  importRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  importField: { flex: 1 },
+  importButton: { marginLeft: spacing.sm, minHeight: 50 },
   importHint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xs },
+  notesField: { minHeight: 72 },
+  notesInput: { minHeight: 72 },
 
   ingHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -468,11 +467,14 @@ const styles = StyleSheet.create({
   },
   ingName: { color: colors.textPrimary, ...type.body },
   ingBrand: { color: colors.textMuted, ...type.caption, marginTop: spacing.xxs },
+  qtyFieldContainer: { width: 72, gap: 0 },
+  qtyField: { minHeight: 40, borderRadius: radius.sm, borderWidth: 1 },
   qtyInput: {
-    width: 64, textAlign: 'right',
-    color: colors.textPrimary, fontSize: fontSize.md,
-    backgroundColor: colors.surface, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
+    textAlign: 'right',
+    fontSize: fontSize.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    minHeight: 40,
   },
   qtyUnit: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 

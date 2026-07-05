@@ -26,6 +26,10 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
+jest.mock('../../lib/haptics', () => ({
+  selection: jest.fn(),
+  commit: jest.fn(),
+}));
 
 jest.mock('../../lib/food/db', () => ({
   createRecipe: jest.fn(() => Promise.resolve('recipe-1')),
