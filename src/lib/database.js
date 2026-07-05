@@ -6,6 +6,7 @@ import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
 import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
+import { createBodyMetricsRepository } from './database/bodyMetrics';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -71,6 +72,13 @@ function rowToCamel(row) {
   }
   return result;
 }
+
+const bodyMetricsRepository = createBodyMetricsRepository({
+  db,
+  uid,
+  rowToCamel,
+  scheduleSync: _scheduleSync,
+});
 
 // COMP-009: close the SQLite handle and reset init state so the file can be
 // safely overwritten (snapshot restore) and reopened on the next db() call /
@@ -3758,68 +3766,17 @@ export async function getNutritionTargets(userId) {
 // ─── Body Metrics ─────────────────────────────────────────────
 
 export async function logBodyMetric(userId, data) {
-  const d = await db();
-  const id = uid();
-  const now = Date.now();
-  await d.runAsync(
-    `INSERT INTO body_metric_log
-      (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
-       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm,
-       shoulders_cm, forearm_cm, ham_cm, calf_cm, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, userId, data.loggedAt ?? now,
-      data.weightKg ?? null, data.bodyFatPercent ?? null, data.bodyFatSource ?? null,
-      data.waistCm ?? null, data.chestCm ?? null, data.hipsCm ?? null,
-      data.thighCm ?? null, data.armCm ?? null,
-      data.shouldersCm ?? null, data.forearmCm ?? null, data.hamCm ?? null,
-      data.calfCm ?? null, data.notes ?? null, now,
-    ],
-  );
-  _scheduleSync();
-  return { id, userId, createdAt: now, ...data };
+  return bodyMetricsRepository.logBodyMetric(userId, data);
 }
 
 export async function getBodyMetricLog(userId, limitRows = 90) {
-  const d = await db();
-  const rows = await d.getAllAsync(
-    'SELECT * FROM body_metric_log WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
-    [userId, limitRows],
-  );
-  return rows.map(rowToCamel);
+  return bodyMetricsRepository.getBodyMetricLog(userId, limitRows);
 }
 
 export async function getLatestBodyWeight(userId) {
-  const d = await db();
-  const [bodyRow, morningRow] = await Promise.all([
-    d.getFirstAsync(
-      `SELECT weight_kg, logged_at FROM body_metric_log
-       WHERE user_id = ? AND weight_kg IS NOT NULL
-       ORDER BY logged_at DESC LIMIT 1`,
-      [userId],
-    ),
-    d.getFirstAsync(
-      `SELECT weight_kg, logged_at FROM morning_weights
-       WHERE user_id = ? AND weight_kg IS NOT NULL
-       ORDER BY logged_at DESC LIMIT 1`,
-      [userId],
-    ),
-  ]);
-  const bodyTs   = bodyRow?.logged_at ?? 0;
-  const morningTs = morningRow?.logged_at ?? 0;
-  const winner = bodyTs >= morningTs ? bodyRow : morningRow;
-  if (winner && winner.weight_kg != null) {
-    return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
-  }
-  // No logged weigh-in. The onboarding bodyweight is NOT in the database — it
-  // lives in userProfile.weightKg (AsyncStorage, via saveLocalProfile) — so it
-  // cannot be read here; callers needing an onboarding-only baseline read
-  // userProfile.weightKg directly. A prior version queried
-  // `user_body_profile.weight_kg`, a column that does not exist, and swallowed
-  // the error with .catch — so that "fallback" never actually ran (audit
-  // 2026-06-21). If a DB-level fallback is wanted, onboarding must first persist
-  // the weight to a real table (e.g. morning_weights) or this fn must receive it.
-  return null;
+  // No onboarding fallback: onboarding bodyweight lives in AsyncStorage
+  // userProfile.weightKg, not a body-weight table.
+  return bodyMetricsRepository.getLatestBodyWeight(userId);
 }
 
 // Nearest logged bodyweight to an arbitrary instant `t` (epoch ms), across BOTH
@@ -3831,31 +3788,7 @@ export async function getLatestBodyWeight(userId) {
 // fall back to the nearest one overall (the earliest recorded). Returns
 // { weightKg, loggedAt } or null when the user has no logged weigh-in.
 export async function getBodyWeightNearestTo(userId, t) {
-  if (!userId || !Number.isFinite(t)) return null;
-  const d = await db();
-  const union = `
-    SELECT weight_kg, logged_at FROM body_metric_log
-      WHERE user_id = ? AND weight_kg IS NOT NULL
-    UNION ALL
-    SELECT weight_kg, logged_at FROM morning_weights
-      WHERE user_id = ? AND weight_kg IS NOT NULL`;
-  // Preferred: the most recent weigh-in at or before `t`.
-  const onOrBefore = await d.getFirstAsync(
-    `SELECT weight_kg, logged_at FROM (${union})
-       WHERE logged_at <= ?
-       ORDER BY logged_at DESC LIMIT 1`,
-    [userId, userId, t],
-  );
-  const pick = onOrBefore ?? await d.getFirstAsync(
-    // Fallback: nothing on-or-before, so take the weigh-in nearest to `t` overall.
-    `SELECT weight_kg, logged_at FROM (${union})
-       ORDER BY ABS(logged_at - ?) ASC LIMIT 1`,
-    [userId, userId, t],
-  );
-  if (pick && pick.weight_kg != null) {
-    return { weightKg: pick.weight_kg, loggedAt: pick.logged_at };
-  }
-  return null;
+  return bodyMetricsRepository.getBodyWeightNearestTo(userId, t);
 }
 
 // Most recent logged body composition that actually carries a body-fat figure.
@@ -3865,20 +3798,7 @@ export async function getBodyWeightNearestTo(userId, t) {
 // onboarding, Update Your Plan and the manual recalc. Read-only, returns null
 // when the user has never logged a body-fat reading.
 export async function getLatestBodyComposition(userId) {
-  const d = await db();
-  const row = await d.getFirstAsync(
-    `SELECT body_fat_percent, body_fat_source, logged_at
-       FROM body_metric_log
-      WHERE user_id = ? AND body_fat_percent IS NOT NULL
-      ORDER BY logged_at DESC LIMIT 1`,
-    [userId],
-  ).catch(() => null);
-  if (!row || row.body_fat_percent == null) return null;
-  return {
-    bodyFatPercent: row.body_fat_percent,
-    bodyFatSource: row.body_fat_source ?? null,
-    loggedAt: row.logged_at ?? 0,
-  };
+  return bodyMetricsRepository.getLatestBodyComposition(userId);
 }
 
 // ─── CSV / JSON export ────────────────────────────────────────────
@@ -6030,9 +5950,7 @@ export async function getAllCoachOutputsForUser(userId) {
 }
 
 export async function getAllBodyMetricsForUser(userId) {
-  const d = await db();
-  const rows = await d.getAllAsync('SELECT * FROM body_metric_log WHERE user_id = ?', [userId]);
-  return rows.map(rowToCamel);
+  return bodyMetricsRepository.getAllBodyMetricsForUser(userId);
 }
 
 export async function getAllExerciseUserNotesForUser(userId) {
@@ -6293,44 +6211,7 @@ export async function insertMorningWeightFromCloud(userId, w) {
 // expects when the cloud row beats local. Without the REPLACE the
 // pull would never actually update an existing row.
 export async function insertBodyMetricFromCloud(userId, m) {
-  const d = await db();
-  const dateToMs = (s) => {
-    if (s == null) return null;
-    if (typeof s === 'number') return s;
-    // Cloud metric_date is a YYYY-MM-DD DATE. Parse at midnight UTC so
-    // the local representation is the same instant regardless of
-    // device time zone, then app code shows local-day dates from it.
-    const ms = new Date(`${s}T00:00:00Z`).getTime();
-    return Number.isFinite(ms) ? ms : null;
-  };
-  const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
-  await d.runAsync(
-    `INSERT OR REPLACE INTO body_metric_log
-      (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
-       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm, shoulders_cm,
-       forearm_cm, ham_cm, calf_cm, notes, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      m.id, userId,
-      dateToMs(m.metric_date) ?? tsToMs(m.logged_at),
-      m.body_weight ?? null,
-      m.body_fat_percent ?? null,
-      m.body_fat_source ?? null,
-      m.waist ?? null,
-      m.chest ?? null,
-      m.hips ?? null,
-      m.quads ?? null,
-      m.arms ?? null,
-      m.shoulders ?? null,
-      m.forearms ?? null,
-      m.hamstrings ?? null,
-      m.calves ?? null,
-      m.notes ?? null,
-      tsToMs(m.created_at) ?? Date.now(),
-      tsToMs(m.updated_at) ?? Date.now(),
-      m.deleted_at ? tsToMs(m.deleted_at) : null,
-    ],
-  );
+  return bodyMetricsRepository.insertBodyMetricFromCloud(userId, m);
 }
 
 // INSERT OR REPLACE, the per-table sync handler at
@@ -6950,13 +6831,7 @@ export async function getRecipeIngredientUpdatedAt(userId, id) {
  * default).
  */
 export async function getBodyMetricUpdatedAt(userId, id) {
-  if (!id) return null;
-  const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT updated_at FROM body_metric_log WHERE id = ? AND user_id = ?',
-    [id, userId],
-  );
-  return row?.updated_at ?? null;
+  return bodyMetricsRepository.getBodyMetricUpdatedAt(userId, id);
 }
 
 /**
