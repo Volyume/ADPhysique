@@ -12,9 +12,9 @@ import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NA
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import Button from '../components/Button';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -416,6 +416,12 @@ export default function CoachReviewScreen() {
       ? `${format(weekRange.start, 'd MMM')} – ${format(weekRange.end, 'd MMM yyyy')}`
       : '';
 
+  function retryLoad() {
+    setLoadError(false);
+    setLoading(true);
+    loadData();
+  }
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -438,18 +444,13 @@ export default function CoachReviewScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Weekly review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-          <Card>
-            <Text style={styles.emptyText}>
-              Couldn&apos;t load your review just now. Your sessions are safe. This is a read
-              problem, not a lost week.
-            </Text>
-            <Button
-              title="Try again"
-              fullWidth={false}
-              style={{ marginTop: spacing.md }}
-              onPress={() => { setLoadError(false); setLoading(true); loadData(); }}
-            />
-          </Card>
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load your review"
+            text="Your sessions are safe. This is a read problem, not a lost week."
+            actionLabel="Try again"
+            onAction={retryLoad}
+          />
         </ScrollView>
       </SafeAreaView>
     );

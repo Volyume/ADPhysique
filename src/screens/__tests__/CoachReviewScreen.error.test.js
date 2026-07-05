@@ -5,6 +5,9 @@
  * this behaviour but left no test — recorded follow-up "add an error-state
  * regression test", _AUDIT-STATUS-AND-RESUME.md.)
  */
+const fs = require('fs');
+const path = require('path');
+
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../lib/database', () => ({
@@ -29,6 +32,7 @@ import CoachReviewScreen from '../CoachReviewScreen';
 import useAppStore from '../../store/useAppStore';
 import { getAllWorkouts } from '../../lib/database';
 
+const source = fs.readFileSync(path.join(__dirname, '..', 'CoachReviewScreen.js'), 'utf8');
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
 async function mount() {
@@ -42,6 +46,13 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
   beforeEach(() => {
     useAppStore.setState({ user: { id: 'u1' } });
     jest.clearAllMocks();
+  });
+
+  test('read failure uses the shared EmptyState treatment', () => {
+    expect(source).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
+    expect(source).toMatch(
+      /<EmptyState[\s\S]*icon="warning-outline"[\s\S]*title="Couldn't load your review"[\s\S]*text="Your sessions are safe\. This is a read problem, not a lost week\."[\s\S]*actionLabel="Try again"[\s\S]*onAction=\{retryLoad\}/,
+    );
   });
 
   test('a read failure shows the retryable error state, not a false "no sessions"', async () => {
