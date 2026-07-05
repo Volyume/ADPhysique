@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import Button from './Button';
 import { getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 
@@ -46,10 +47,14 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
         ) : null}
       </View>
       <Text style={styles.cardioSub}>{sub}</Text>
-      <TouchableOpacity style={styles.cardioBtn} onPress={onPress} accessibilityRole="button" accessibilityLabel="Log cardio">
-        <Ionicons name="add" size={16} color={colors.primary} />
-        <Text style={styles.cardioBtnText}>Log cardio</Text>
-      </TouchableOpacity>
+      <Button
+        title="Log cardio"
+        variant="outline"
+        size="sm"
+        icon="add"
+        fullWidth={false}
+        onPress={onPress}
+      />
       {/* COMP-011: only when there's logged cardio to misread; the empty
           state has nothing to double-count and stays clean. */}
       {done > 0 ? (
@@ -70,11 +75,5 @@ const styles = StyleSheet.create({
   cardioTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   cardioHistoryLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   cardioSub: { ...type.bodySm, color: colors.textSecondary },
-  cardioBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
-    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
-  },
-  cardioBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   cardioFootnote: { ...type.captionTight, color: colors.textMuted },
 });

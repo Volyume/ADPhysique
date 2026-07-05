@@ -123,7 +123,7 @@ Status: materially closed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings, Log Cardio, Meal Plan grocery categories, curated meal details, calorie banking and readiness cards.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name, Coaching step target and My Meals rename migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and loading state, and has replaced the duplicated search chrome in Lift Progress, Exercise Picker, Build Workout picker flows and Food Search.
-- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild and My Meals rename actions now use the shared `Button` primitive.
+- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions and Cardio Plan log actions now use the shared `Button` primitive.
 - The weekly run pause picker and My Meals rename dialog now use the shared `BottomSheet` chrome instead of their own modal/scrim implementations.
 - A guard now prevents native header drift.
 
@@ -232,7 +232,7 @@ Status: release decision.
 ### Design And Accessibility
 
 - Added shared `ModalHeader`.
-- Converted upgrade/paywall/subscription modal headers to the shared component.
+- Converted upgrade/paywall/subscription and Log Cardio modal headers to the shared component.
 - Normalised safe-area bottom edges on affected screens.
 - Removed duplicate `NutritionTargets` title.
 - Added a read-only `WorkoutSummary` header.
