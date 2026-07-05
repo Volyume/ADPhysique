@@ -6,6 +6,7 @@ import { startOfWeek } from 'date-fns/startOfWeek';
 import { endOfWeek } from 'date-fns/endOfWeek';
 import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
@@ -16,6 +17,7 @@ import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -222,6 +224,7 @@ function RecommendationRow({ index, text }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachReviewScreen() {
+  const navigation = useNavigation();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -483,11 +486,14 @@ export default function CoachReviewScreen() {
 
         {/* ── No data state ── */}
         {!hasData && (
-          <Card>
-            <Text style={styles.emptyText}>
-              No sessions logged this week yet. Start one from the home screen whenever it suits you.
-            </Text>
-          </Card>
+          <EmptyState
+            icon="barbell-outline"
+            title="No sessions logged this week"
+            text="Start a workout when you are ready. This review updates from completed sessions only."
+            actionLabel="Start a workout"
+            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+            compact
+          />
         )}
 
         {hasData && (
@@ -826,13 +832,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Empty states
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 21,
-    textAlign: 'center',
-  },
   emptySubText: {
     ...type.bodySm,
     color: colors.textMuted,

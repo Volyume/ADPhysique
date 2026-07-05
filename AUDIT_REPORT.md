@@ -341,6 +341,7 @@ Status: release decision.
 - Volume Heatmap now explains true first-run/no-set states and selected-window gaps with compact guidance copy, so a zeroed diagram no longer masquerades as a complete volume analysis without context.
 - Cardio History now gives the true empty state a direct `Log cardio` action wired to the existing logging route, removing another dead end while preserving Health import copy and retry/delete safeguards.
 - My Recipes now uses the shared `EmptyState` primitive for retryable load failures and the genuine first-recipe prompt, preserving build/retry behaviour while removing another local empty-card style cluster from Nutrition.
+- Coach Review now uses an actionable shared empty-week state with a deterministic `Start a workout` route, so the weekly review no-data branch is no longer an instructional dead end.
 
 ### Web / CI / Security
 
