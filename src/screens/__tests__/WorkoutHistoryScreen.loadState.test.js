@@ -18,8 +18,14 @@ jest.mock('../../components/Card', () => {
 });
 jest.mock('../../components/Chip', () => {
   const React = require('react');
-  const { Text } = require('react-native');
-  return ({ label }) => React.createElement(Text, null, label);
+  const { Text, TouchableOpacity } = require('react-native');
+  return ({ label, onPress, accessibilityLabel, accessibilityRole }) => (
+    React.createElement(
+      TouchableOpacity,
+      { onPress, accessibilityLabel, accessibilityRole },
+      React.createElement(Text, null, label),
+    )
+  );
 });
 jest.mock('../../components/Button', () => {
   const React = require('react');
@@ -51,10 +57,15 @@ jest.mock('../../components/AnimatedEntrance', () => {
 jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@shopify/flash-list', () => ({
-  FlashList: ({ data = [], ListEmptyComponent, refreshControl }) => {
+  FlashList: ({ data = [], ListEmptyComponent, ListHeaderComponent, refreshControl }) => {
     const React = require('react');
     const { View } = require('react-native');
-    return React.createElement(View, { refreshControl }, data.length === 0 ? ListEmptyComponent : null);
+    return React.createElement(
+      View,
+      { refreshControl },
+      ListHeaderComponent,
+      data.length === 0 ? ListEmptyComponent : null,
+    );
   },
 }));
 jest.mock('../../navigation/navigateCrossTab', () => ({ navigateCrossTab: jest.fn() }));
@@ -162,6 +173,43 @@ describe('WorkoutHistoryScreen load states', () => {
     expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledWith(
       workouts.slice(0, 50).map(w => w.id),
     );
+  });
+
+  test('shows a filter-specific empty state when saved workouts are narrowed away', async () => {
+    getRecentCompletedWorkouts.mockResolvedValue([{
+      id: 'leg-day',
+      userId: 'u1',
+      startedAt: Date.now(),
+      endedAt: Date.now() + 1800000,
+      isCompleted: true,
+      name: 'Leg Day',
+    }]);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
+    getAllExercises.mockResolvedValue([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    act(() => {
+      tree.root.findByProps({ accessibilityLabel: 'Filter: Upper' }).props.onPress();
+    });
+
+    let text = flattenText(tree.toJSON());
+    expect(text).toContain('No upper sessions found');
+    expect(text).toContain('Your workouts are still saved.');
+    expect(text).toContain('Show all sessions');
+    expect(text).not.toContain('Your sessions will appear here');
+
+    act(() => {
+      tree.root.findByProps({ accessibilityLabel: 'Show all workout sessions' }).props.onPress();
+    });
+
+    text = flattenText(tree.toJSON());
+    expect(text).toContain('1 session');
+    expect(text).not.toContain('No upper sessions found');
   });
 
   test('ignores stale overlapping refresh results before fetching sets', async () => {
