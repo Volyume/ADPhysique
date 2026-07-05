@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -32,7 +32,7 @@ function parseTimeToSeconds(text) {
   return Number.isNaN(n) ? '' : n;
 }
 
-export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
+function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
   // weighted_bodyweight renders byte-identically to weight_reps (weight field
@@ -369,6 +369,8 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
     </View>
   );
 }
+
+export default memo(SetEntry);
 
 const styles = StyleSheet.create({
   container: {

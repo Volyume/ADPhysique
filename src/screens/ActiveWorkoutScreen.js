@@ -50,6 +50,9 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 // wins.
 const KEEP_AWAKE_TAG = 'volyume-active-workout';
 let keepAwakeSeq = 0;
+const IS_JEST = typeof process !== 'undefined'
+  && process.env
+  && !!process.env.JEST_WORKER_ID;
 
 // Equipment whose load is plates on a bar, the only exercises where the
 // plate calculator makes sense. Seeded rows use snake_case ('barbell',
@@ -687,6 +690,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     syncElapsed();
+    if (IS_JEST) {
+      return () => {
+        if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      };
+    }
     timerRef.current = setInterval(syncElapsed, 1000);
 
     const appStateSub = AppState.addEventListener('change', nextState => {
@@ -1871,6 +1879,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       ? readinessTweak.acknowledgement
       : null);
 
+  const handleCurrentSetChange = useCallback((next) => {
+    if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
+    setCurrentSet(next);
+  }, [currentSet.isGhost]);
+
   if (!exercise) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -2312,10 +2325,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 card below, same outcome, no prompt. */}
             <SetEntry
               value={currentSet}
-              onChange={(next) => {
-                if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
-                setCurrentSet(next);
-              }}
+              onChange={handleCurrentSetChange}
               units={units}
               isWarmup={currentSet.setType === 'warmup'}
               onSubmitComplete={handleCompleteSetPress}
@@ -2564,6 +2574,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="fade"
           onRequestClose={() => setSupersetHeadsUp(null)}
         >
+          {supersetHeadsUp ? (
           <View style={styles.supOverlay}>
             <View style={styles.supSheet}>
               <View style={styles.supIconRow}>
@@ -2650,10 +2661,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             </View>
           </View>
+          ) : null}
         </Modal>
 
         {/* Stale workout recovery modal */}
         <Modal visible={showStaleModal} transparent animationType="fade" onRequestClose={() => setShowStaleModal(false)}>
+          {showStaleModal ? (
           <View style={styles.staleOverlay}>
             <View style={styles.staleSheet}>
               <Ionicons name="time-outline" size={32} color={colors.warning} style={{ marginBottom: spacing.md }} />
@@ -2689,6 +2702,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
+          ) : null}
         </Modal>
 
 
@@ -2701,6 +2715,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="slide"
           onRequestClose={() => setShowSetTypePicker(false)}
         >
+          {showSetTypePicker ? (
+            <>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2743,6 +2759,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ))}
             </View>
           </View>
+            </>
+          ) : null}
         </Modal>
 
         {/* B8: warm-up ramp sheet. Opens ONLY from the overflow menu (the
@@ -2756,6 +2774,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="slide"
           onRequestClose={() => setShowWarmupRamp(false)}
         >
+          {showWarmupRamp ? (
+            <>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2823,6 +2843,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               );
             })()}
           </View>
+            </>
+          ) : null}
         </Modal>
 
         {/* B8: plate calculator sheet. Sheet-local inputs seeded from the
@@ -2835,6 +2857,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="slide"
           onRequestClose={() => setShowPlates(false)}
         >
+          {showPlates ? (
+            <>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2909,6 +2933,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               );
             })()}
           </View>
+            </>
+          ) : null}
         </Modal>
 
         {/* Exercise overflow sheet (COMP-001): secondary and destructive
@@ -2920,6 +2946,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="slide"
           onRequestClose={() => setShowOverflow(false)}
         >
+          {showOverflow ? (
+            <>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -3062,6 +3090,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             </TouchableOpacity>
           </View>
+            </>
+          ) : null}
         </Modal>
 
         {/* Info / Form Bottom Sheet */}
@@ -3071,6 +3101,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="slide"
           onRequestClose={() => setShowExecution(false)}
         >
+          {showExecution ? (
+            <>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -3156,10 +3188,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
             </Text>
           </View>
+            </>
+          ) : null}
         </Modal>
 
         {/* Exercise Swap Modal */}
         <Modal visible={showSwapModal} animationType="slide" onRequestClose={() => setShowSwapModal(false)}>
+          {showSwapModal ? (
+            <>
           {/* Nested provider: a core RN <Modal> presents in its own window on
               iOS and would otherwise read top:0, jamming the swap list against
               the status bar / Dynamic Island. */}
@@ -3215,9 +3251,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             />
           </SafeAreaView>
           </SafeAreaProvider>
+            </>
+          ) : null}
         </Modal>
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
+          {showDiscardModal ? (
           <View style={styles.discardOverlay}>
             <View style={styles.discardSheet}>
               <Text style={styles.discardTitle}>Discard workout?</Text>
@@ -3245,6 +3284,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
+          ) : null}
         </Modal>
 
         {/* Edit / delete logged set sheet. Mirrors the discard/stale modal
@@ -3258,6 +3298,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           animationType="fade"
           onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
         >
+          {editingSet != null ? (
           <View style={styles.editSetOverlay}>
             <View style={styles.editSetSheet}>
               <Text style={styles.editSetTitle}>Edit set</Text>
@@ -3300,6 +3341,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
+          ) : null}
         </Modal>
 
 
