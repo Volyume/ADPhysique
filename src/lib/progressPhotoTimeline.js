@@ -1,9 +1,6 @@
-export const PROGRESS_PHOTO_TIMELINE_COLS = 3;
+import { formatProgressPhotoMonth } from './progressPhotoDates';
 
-function monthLabel(ts) {
-  try { return new Date(ts).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
-  catch (_) { return ''; }
-}
+export const PROGRESS_PHOTO_TIMELINE_COLS = 3;
 
 // Group a sorted photo list into month headers and fixed-width rows. The
 // caller owns the sort direction, so this stays neutral and transformation-free.
@@ -24,7 +21,7 @@ export function buildTimeline(list = []) {
     if (key !== curKey) {
       flushBucket();
       curKey = key;
-      out.push({ type: 'header', key: `h-${key}`, label: monthLabel(p.takenAt) });
+      out.push({ type: 'header', key: `h-${key}`, label: formatProgressPhotoMonth(p.takenAt) });
     }
     bucket.push(p);
   }

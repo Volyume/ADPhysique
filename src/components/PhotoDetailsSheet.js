@@ -30,18 +30,13 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, radius, type, iconSize,
 } from '../styles/theme';
+import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
   { key: 'front', label: 'Front' },
   { key: 'side', label: 'Side' },
   { key: 'back', label: 'Back' },
 ];
-
-function formatDay(ts) {
-  try {
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch (_) { return ''; }
-}
 
 /**
  * @param {boolean}  props.visible        whether the sheet is shown
@@ -90,10 +85,10 @@ export default function PhotoDetailsSheet({
             style={styles.dateField}
             onPress={() => setPickerOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel={`Change the date, currently ${formatDay(dateMs)}`}
+            accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
           >
             <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{formatDay(dateMs)}</Text>
+            <Text style={styles.dateText}>{formatProgressPhotoDay(dateMs)}</Text>
             <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
 
