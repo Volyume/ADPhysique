@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 465 suites passed.
-  - 6,284 tests passed, 5 skipped.
+  - 466 suites passed.
+  - 6,287 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 878 files checked, no unresolved imports or missing named exports.
+  - 879 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -56,6 +56,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
   - `accessibilityDesign.guard.test.js`
   - `iaNavigation.guard.test.js`
   - `themeTokens.guard.test.js`
+  - `paywallTelemetry.test.js`
   - `athleteProfileSummary.test.js`
   - `profileFreshness.test.js`
 - `git diff --check`: pass before the report rewrite; rerun again before commit.
@@ -249,6 +250,7 @@ Status: release decision.
 - `PaywallScreen` emits `paywall_shown` once per mount.
 - `CascadeGateScreen` emits `paywall_shown` once per mount.
 - `ProGate` full-screen lock emits `feature_locked_viewed`.
+- Added `src/__tests__/paywallTelemetry.test.js` to verify all three behavior paths.
 - Client catalogue includes the event and server migration coverage exists in the repo; production usefulness still depends on applying telemetry migrations in Supabase.
 
 ### Physique Scan / Privacy
@@ -280,11 +282,10 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
    - remaining hand-rolled CTAs to `Button`;
    - remaining hand-rolled sheets to `BottomSheet`.
 2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
-3. Add dedicated tests for `paywall_shown` and `feature_locked_viewed` firing paths.
-4. Finish state/dead-end surfaces: Partners error branch, Consistency/VolumeHeatmap loading-empty-error, FoodInsights loading, CardioHistory controls, and MyMeals edit/create clarity.
-5. Extract Progress Photos / Physique Scan orchestration into a controller module with tests.
-6. Split `database.js` by domain behind the existing public API.
-7. Device-walk Coach, Athlete Profile, Progress Photos/Physique Scan, Nutrition, Train and settings for text wrapping, hit targets and visual consistency.
+3. Finish state/dead-end surfaces: Partners error branch, Consistency/VolumeHeatmap loading-empty-error, FoodInsights loading, CardioHistory controls, and MyMeals edit/create clarity.
+4. Extract Progress Photos / Physique Scan orchestration into a controller module with tests.
+5. Split `database.js` by domain behind the existing public API.
+6. Device-walk Coach, Athlete Profile, Progress Photos/Physique Scan, Nutrition, Train and settings for text wrapping, hit targets and visual consistency.
 
 ### Needs Founder Decision
 
