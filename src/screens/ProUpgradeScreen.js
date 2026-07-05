@@ -6,6 +6,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle 
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
+import OAuthButtons from '../components/auth/OAuthButtons';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
@@ -431,35 +432,14 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
               </Text>
 
-              {/* OAuth buttons, Google on both platforms, Apple on iOS only
-                  (App Store policy: if any other social provider is offered,
-                  Sign in with Apple must be too). Mirrors the LoginScreen and
-                  ProOnboardingScreen patterns so the upgrade flow doesn't
-                  feel like a downgrade. */}
-              <View style={styles.oauthBlock}>
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity
-                    style={[styles.oauthBtnApple, busy && styles.btnDisabled]}
-                    onPress={() => handleOAuth('apple')}
-                    disabled={busy}
-                    accessibilityRole="button"
-                    accessibilityLabel="Continue with Apple"
-                  >
-                    <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
-                    <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[styles.oauthBtn, busy && styles.btnDisabled]}
-                  onPress={() => handleOAuth('google')}
-                  disabled={busy}
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue with Google"
-                >
-                  <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                  <Text style={styles.oauthBtnText}>Continue with Google</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Keep account creation in lockstep with Login and Pro onboarding.
+                  OAuthButtons owns the platform policy, including hiding Google
+                  on iOS until an iOS Google OAuth client is configured. */}
+              <OAuthButtons
+                onApple={() => handleOAuth('apple')}
+                onGoogle={() => handleOAuth('google')}
+                disabled={busy}
+              />
             </>
           )}
 
@@ -568,25 +548,6 @@ const styles = StyleSheet.create({
     position: 'absolute', right: spacing.md,
     top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
-
-  btnDisabled: { opacity: 0.55 },
-
-  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
-  oauthBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
-  },
-  oauthBtnText: { color: colors.textPrimary, ...type.bodyStrong },
-  oauthBtnApple: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
-    backgroundColor: colors.appleBtnBg,
-  },
-  oauthBtnAppleText: { color: colors.appleBtnText, ...type.bodyStrong },
-  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
 
   switchBtn: { alignItems: 'center', paddingVertical: spacing.md },
   switchText: { fontSize: fontSize.sm, color: colors.textMuted },
