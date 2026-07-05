@@ -318,6 +318,7 @@ Status: release decision.
 - Food Search live results now use a latest-request guard so slower older waterfall responses cannot overwrite a newer query, with a regression test that resolves searches out of order and asserts only the newest result remains visible.
 - Food Search selected-foods review now uses the shared `BottomSheet` chrome with modal isolation and a labelled header, replacing the hand-rolled bottom `Modal` and local safe-area/backdrop handling.
 - Import history now uses the shared `Button` primitive for its CSV pick, confirm, done and secondary actions, removing another bespoke CTA cluster while leaving the Hevy/Strong parser and import flow untouched.
+- Workout History now loads its visible page through a bounded `getRecentCompletedWorkouts` query, so large histories do not over-read every workout before applying the 50-session UI ceiling, and set fan-out remains capped to the visible page.
 
 ### Web / CI / Security
 
