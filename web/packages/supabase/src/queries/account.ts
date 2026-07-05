@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Client = SupabaseClient;
+const PROFILE_TZ = 'Europe/London';
 
 export interface AccountProfile {
   firstName: string | null;
@@ -17,12 +18,48 @@ export interface AccountProfile {
   tier: string | null;
 }
 
-function ageFromDob(dob: string | null): number | null {
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function parseDateOfBirthKey(dob: string | null): { year: number; month: number; day: number } | null {
   if (!dob) return null;
-  const t = Date.parse(dob);
-  if (!Number.isFinite(t)) return null;
-  const years = (Date.now() - t) / (365.25 * 86_400_000);
-  return years > 0 && years < 130 ? Math.floor(years) : null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > daysInMonth(year, month)) return null;
+  return { year, month, day };
+}
+
+function londonDateParts(now: Date): { year: number; month: number; day: number } | null {
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) return null;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: PROFILE_TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now).map((part) => [part.type, part.value]),
+  );
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+  };
+}
+
+export function ageYearsFromDateOfBirth(dob: string | null, now: Date = new Date()): number | null {
+  const birth = parseDateOfBirthKey(dob);
+  const today = londonDateParts(now);
+  if (!birth || !today) return null;
+  let age = today.year - birth.year;
+  const birthdayPassed = today.month > birth.month || (today.month === birth.month && today.day >= birth.day);
+  if (!birthdayPassed) age -= 1;
+  return age > 0 && age < 130 ? age : null;
 }
 
 // Profile + body profile + the server-managed subscription tier. Read only:
@@ -53,7 +90,7 @@ export async function getAccountProfile(supabase: Client, userId: string): Promi
     barWeight: (p.bar_weight as number) ?? null,
     tier: (p.tier as string) ?? null,
     sex: (b.sex as string) ?? null,
-    age: ageFromDob((b.date_of_birth as string) ?? null),
+    age: ageYearsFromDateOfBirth((b.date_of_birth as string) ?? null),
     heightCm: (b.height_cm as number) ?? null,
     experienceLevel: (b.experience_level as string) ?? null,
     primaryGoal: (b.primary_goal as string) ?? null,
