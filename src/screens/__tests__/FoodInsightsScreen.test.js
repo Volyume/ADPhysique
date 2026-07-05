@@ -57,11 +57,11 @@ function last7() {
 }
 
 // A logged day; protein either on-target (hit) or far off (miss).
-function rollup(date, proteinHit) {
+function rollup(date, proteinHit, kcal = TARGETS.targetKcal) {
   return {
     entry_date: date,
     entries_count: 1,
-    kcal_total: TARGETS.targetKcal,
+    kcal_total: kcal,
     protein_g: proteinHit ? TARGETS.proteinG : 100, // 100/180 = 44% off → miss
     carbs_g: TARGETS.carbsG,
     fat_g: TARGETS.fatG,
@@ -89,6 +89,13 @@ function lastN(n) {
 
 async function flush() {
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
 }
 
 // Mount and return the renderer. The rollup mock ignores its range args, so the
@@ -224,5 +231,33 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     const text = flattenText(tree.toJSON());
     expect(text).toContain('2100');       // honest mean of the two LOGGED days
     expect(text).not.toContain('1400');   // NOT the calendar mean (incl. 5 zero days)
+  });
+
+  test('ignores stale rollup responses when the selected window changes quickly', async () => {
+    const oldLoad = deferred();
+    const newLoad = deferred();
+    useAppStore.mockImplementation((sel) => sel({ user: { id: 'u1' } }));
+    getNutritionTargets.mockResolvedValue(TARGETS);
+    getRollupsForRange
+      .mockImplementationOnce(() => oldLoad.promise)
+      .mockImplementationOnce(() => newLoad.promise);
+
+    let tree;
+    await act(async () => { tree = create(<FoodInsightsScreen navigation={nav} />); });
+    await flush();
+    await tapWindow(tree, 30);
+    expect(getRollupsForRange).toHaveBeenCalledTimes(2);
+
+    await act(async () => { oldLoad.resolve(lastN(7).map((d) => rollup(d, true, 1111))); });
+    await flush();
+    let text = flattenText(tree.toJSON());
+    expect(text).not.toContain('1111');
+
+    await act(async () => { newLoad.resolve(lastN(30).map((d) => rollup(d, true, 2222))); });
+    await flush();
+    text = flattenText(tree.toJSON());
+    expect(text).toContain('LAST 30 DAYS');
+    expect(text).toContain('2222');
+    expect(text).not.toContain('1111');
   });
 });
