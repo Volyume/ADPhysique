@@ -25,6 +25,7 @@ function formatSize(bytes) {
 
 export default function SnapshotsScreen() {
   const [snapshots, setSnapshots] = useState(null); // null = loading
+  const [loadError, setLoadError] = useState(false);
   const loadRequestRef = useRef(0);
 
   const load = useCallback(() => {
@@ -32,12 +33,21 @@ export default function SnapshotsScreen() {
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
 
+    setLoadError(false);
+    setSnapshots(null);
     listSnapshots()
       .then((items) => {
-        if (isCurrentRequest()) setSnapshots(items);
+        if (isCurrentRequest()) {
+          setLoadError(false);
+          setSnapshots(items);
+        }
       })
-      .catch(() => {
-        if (isCurrentRequest()) setSnapshots([]);
+      .catch((e) => {
+        logError('SnapshotsScreen.load', e);
+        if (isCurrentRequest()) {
+          setLoadError(true);
+          setSnapshots([]);
+        }
       });
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -76,6 +86,18 @@ export default function SnapshotsScreen() {
       <View style={styles.section}>
         {snapshots === null ? (
           <Text style={localStyles.note}>Loading…</Text>
+        ) : loadError ? (
+          <>
+            <Text style={localStyles.note}>
+              Could not load snapshots from this device. Try again before restoring a backup.
+            </Text>
+            <SettingRow
+              icon="refresh-outline"
+              label="Try again"
+              sub="Reload device snapshots"
+              onPress={load}
+            />
+          </>
         ) : snapshots.length === 0 ? (
           <Text style={localStyles.note}>
             No snapshots yet. Volyume saves an automatic safety copy before each
