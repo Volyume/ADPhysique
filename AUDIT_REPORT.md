@@ -252,6 +252,7 @@ Status: release decision.
 - Feedback Sheet sentiment choices and Cancel/Send actions now use shared `Chip` and `Button` primitives, preserving feedback submission, auto-dismiss and privacy copy while removing another bespoke sheet-control cluster.
 - Reusable `WindowChips` chart-window control now delegates selected/idle styling to the shared `Chip` primitive while preserving equal-width tab targets and chart-window behavior.
 - Body Metrics logging now uses shared `TextField` and `Button` controls for date, weight, body-fat, measurements and notes entry, preserving validation, read-only gating and ED/calm fail-closed behavior while removing raw input/button styling from the form.
+- Weekly Check-in now uses shared `Chip`, `TextField` and `Button` primitives for its rating choices, option choices, soreness tags, short fields, notes field, planned-meal confirmation and wizard CTA, preserving deterministic coach inputs, reminder rescheduling, lapsed read-only gating and wellbeing fail-closed behavior.
 
 ### Web / CI / Security
 

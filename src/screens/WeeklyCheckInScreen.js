@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -33,6 +33,8 @@ import { summariseWeekSteps } from '../lib/stepsSummary';
 // M4: the submit haptic now rides the Button primitive's success beat
 // (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
 import Button from '../components/Button';
+import Chip from '../components/Chip';
+import TextField from '../components/TextField';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
@@ -83,22 +85,16 @@ function ChipRow({ options, selected, onSelect }) {
       {options.map((opt) => {
         const isSelected = selected === opt.value;
         return (
-          <TouchableOpacity
+          <Chip
             key={opt.value}
-            style={[styles.chip, isSelected && styles.chipSelected]}
+            label={`${opt.value}\n${opt.label}`}
+            selected={isSelected}
             onPress={() => onSelect(isSelected ? null : opt.value)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isSelected }}
             accessibilityLabel={`${opt.value} ${opt.label}`}
-          >
-            <Text style={[styles.chipValue, isSelected && styles.chipValueSelected]}>
-              {opt.value}
-            </Text>
-            <Text style={[styles.chipLabel, isSelected && styles.chipLabelSelected]}>
-              {opt.label}
-            </Text>
-          </TouchableOpacity>
+            style={styles.ratingChip}
+            labelStyle={styles.ratingChipLabel}
+            numberOfLines={3}
+          />
         );
       })}
     </View>
@@ -111,19 +107,16 @@ function OptionRow({ options, selected, onSelect }) {
       {options.map((opt) => {
         const isSelected = selected === opt.value;
         return (
-          <TouchableOpacity
+          <Chip
             key={opt.value}
-            style={[styles.optionBtn, isSelected && styles.optionBtnSelected]}
+            label={opt.label}
+            selected={isSelected}
             onPress={() => onSelect(isSelected ? null : opt.value)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isSelected }}
             accessibilityLabel={opt.label}
-          >
-            <Text style={[styles.optionBtnText, isSelected && styles.optionBtnTextSelected]}>
-              {opt.label}
-            </Text>
-          </TouchableOpacity>
+            style={styles.optionChip}
+            labelStyle={styles.optionChipLabel}
+            numberOfLines={2}
+          />
         );
       })}
     </View>
@@ -735,8 +728,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionLabel hint="Optional">Average sleep hours</SectionLabel>
-          <TextInput
-            style={styles.shortInput}
+          <TextField
+            containerStyle={styles.shortFieldContainer}
+            fieldStyle={styles.shortField}
+            inputStyle={styles.shortFieldInput}
             value={sleepHours}
             onChangeText={setSleepHours}
             accessibilityLabel="Average sleep hours"
@@ -834,15 +829,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   week but didn&apos;t confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
                   above. If you stuck to your plan, confirm so it counts.
                 </Text>
-                <TouchableOpacity
+                <Button
+                  title={confirmingPlanned ? 'Confirming' : 'I ate as planned'}
+                  size="sm"
                   style={styles.plannedBackstopBtn}
+                  textStyle={styles.plannedBackstopBtnText}
                   onPress={handleConfirmPlannedWeek}
                   disabled={confirmingPlanned}
-                  accessibilityRole="button"
+                  loading={confirmingPlanned}
                   accessibilityLabel="Confirm I ate as planned on those days"
-                >
-                  <Text style={styles.plannedBackstopBtnText}>{confirmingPlanned ? 'Confirming' : 'I ate as planned'}</Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
             <OptionRow
@@ -908,8 +904,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   : 'We could not read your steps automatically this week'}>
                   Average steps a day
                 </SectionLabel>
-                <TextInput
-                  style={styles.shortInput}
+                <TextField
+                  containerStyle={styles.shortFieldContainer}
+                  fieldStyle={styles.shortField}
+                  inputStyle={styles.shortFieldInput}
                   value={stepsManual}
                   onChangeText={t => setStepsManual(t.replace(/[^0-9]/g, ''))}
                   accessibilityLabel="Average steps a day"
@@ -991,23 +989,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
               ].map(muscle => {
                 const sel = soreMuscles.includes(muscle);
                 return (
-                  <TouchableOpacity
+                  <Chip
                     key={muscle}
-                    style={[styles.muscleChip, sel && styles.muscleChipSelected]}
+                    label={muscle}
+                    selected={sel}
                     onPress={() =>
                       setSoreMuscles(prev =>
                         prev.includes(muscle) ? prev.filter(m => m !== muscle) : [...prev, muscle],
                       )
                     }
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: sel }}
                     accessibilityLabel={muscle}
-                  >
-                    <Text style={[styles.muscleChipText, sel && styles.muscleChipTextSelected]}>
-                      {muscle}
-                    </Text>
-                  </TouchableOpacity>
+                    style={styles.muscleChip}
+                  />
                 );
               })}
             </View>
@@ -1028,8 +1021,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionLabel hint="Illness, travel, big life stress, anything unusual (optional)">Anything else to flag?</SectionLabel>
-          <TextInput
-            style={styles.notesInput}
+          <TextField
+            containerStyle={styles.notesFieldContainer}
+            fieldStyle={styles.notesField}
+            inputStyle={styles.notesFieldInput}
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -1493,24 +1488,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 textStyle={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}
               />
             ) : step < TOTAL_STEPS - 1 ? (
-              <TouchableOpacity
+              <Button
+                title="Next"
+                trailingIcon="arrow-forward"
                 style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
                 onPress={() => setStep(s => s + 1)}
                 disabled={!stepCanAdvance(step)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
                 accessibilityState={{ disabled: !stepCanAdvance(step) }}
                 accessibilityLabel="Next"
-              >
-                <Text style={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}>
-                  Next
-                </Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={18}
-                  color={!stepCanAdvance(step) ? colors.textMuted : colors.background}
-                />
-              </TouchableOpacity>
+                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}
+              />
             ) : (
               <Button
                 title="See this week's coaching"
@@ -1683,30 +1670,27 @@ const styles = StyleSheet.create({
   },
 
   chipRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  chip: {
-    flex: 1, minWidth: 52, minHeight: 52,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, gap: spacing.xxs,
+  ratingChip: {
+    flex: 1,
+    minWidth: 52,
+    minHeight: 58,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xs,
   },
-  chipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  chipValueSelected: { color: colors.primary },
-  chipLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textMuted, textAlign: 'center' },
-  chipLabelSelected: { color: colors.primary },
+  ratingChipLabel: { textAlign: 'center', lineHeight: 16 },
 
   optionRow: { flexDirection: 'row', gap: spacing.sm },
-  optionBtn: {
-    flex: 1, minHeight: 48,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
+  optionChip: {
+    flex: 1,
+    minHeight: 48,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xs,
   },
-  optionBtnSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  optionBtnText: { ...type.label, color: colors.textSecondary, textAlign: 'center' },
-  optionBtnTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
+  optionChipLabel: { ...type.label, textAlign: 'center' },
 
   weightSummaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1744,20 +1728,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   plannedBackstopText: { ...type.caption, color: colors.textPrimary },
-  plannedBackstopBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary, borderRadius: radius.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  plannedBackstopBtnText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBackstopBtn: { alignSelf: 'flex-start', borderRadius: radius.md },
+  plannedBackstopBtnText: { fontSize: fontSize.sm },
 
-  shortInput: {
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: fontSize.lg, color: colors.textPrimary,
-    fontWeight: fontWeight.medium, width: 120,
+  shortFieldContainer: { width: 120 },
+  shortField: {
+    borderRadius: radius.md,
+    minHeight: 52,
+  },
+  shortFieldInput: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.medium,
   },
   stepsAutoRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1767,12 +1750,17 @@ const styles = StyleSheet.create({
   },
   stepsAutoText: { ...type.num('body'), color: colors.textPrimary },
 
-  notesInput: {
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md,
-    fontSize: fontSize.md, color: colors.textPrimary,
-    minHeight: 88, lineHeight: 22,
+  notesFieldContainer: { gap: 0 },
+  notesField: {
+    borderRadius: radius.md,
+    minHeight: 96,
+  },
+  notesFieldInput: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    minHeight: 96,
+    lineHeight: 22,
   },
   charCount: { ...type.num('caption'), color: colors.textMuted, textAlign: 'right', marginTop: spacing.xs },
 
@@ -1839,24 +1827,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   muscleChip: {
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radius.full ?? 99,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2 ?? colors.surface,
-  },
-  muscleChipSelected: {
-    borderColor: colors.warning,
-    backgroundColor: colors.warningBg,
-  },
-  muscleChipText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  muscleChipTextSelected: {
-    color: colors.warning,
-    fontWeight: fontWeight.semibold,
   },
 
   ritualIntroTitle: {
