@@ -217,6 +217,10 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Export 90 days as CSV');
     expect(text).toContain('Log a few days to see your last 90 days.');
+    expect(text).toContain('Open diary');
+    const openDiary = tree.root.findByProps({ accessibilityLabel: 'Open diary' });
+    await act(async () => { openDiary.props.onPress(); });
+    expect(nav.goBack).toHaveBeenCalled();
   });
 
   test('a weekly bar averages only the logged days, never calendar zeros', async () => {
