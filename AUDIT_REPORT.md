@@ -290,6 +290,7 @@ Status: release decision.
 - Article 9 and Nutrition Targets now share `ConsentCheckboxRow` for explicit consent controls, preserving locked consent copy, consent state and persistence while removing three bespoke checkbox presentations from legal/body-data surfaces.
 - My Recipes now uses the shared `Stepper` primitive for the recipe-serving picker, preserving half-serving increments and the 0.5-20 serving range while removing another bespoke plus/minus row from food logging.
 - Block Reflection and Coaching History now use the shared `EmptyState` component for no-data states, preserving copy and load behavior while removing two local empty-card typography blocks from history surfaces.
+- Daily Steps and Cardio database access now lives behind `src/lib/database/activity.js`, with `database.js` preserving every existing public export for UI, sync and health imports. Focused repository tests cover local-day injection, clamping, sync scheduling, soft-delete timestamps and cloud timestamp restore.
 
 ### Web / CI / Security
 

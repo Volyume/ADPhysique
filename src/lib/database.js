@@ -6,6 +6,7 @@ import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
 import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
+import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
@@ -78,6 +79,14 @@ const bodyMetricsRepository = createBodyMetricsRepository({
   uid,
   rowToCamel,
   scheduleSync: _scheduleSync,
+});
+
+const activityRepository = createActivityRepository({
+  db,
+  uid,
+  rowToCamel,
+  scheduleSync: _scheduleSync,
+  dayKey: localDayKey,
 });
 
 // COMP-009: close the SQLite handle and reset init state so the file can be
@@ -4564,57 +4573,27 @@ export async function getMorningWeightToday(userId) {
 // now the LOCAL calendar day (localDayKey), the same bucket weight + workouts
 // use, so everything agrees about "today" for users not at UTC+0.
 export function activityDayKey(ms = Date.now()) {
-  return localDayKey(ms);
+  return activityRepository.activityDayKey(ms);
 }
 
 // Write (or overwrite) the step total for a day. steps is clamped to a
 // sane non-negative integer. updated_at drives last-write-wins on sync.
 export async function setDailySteps(userId, { entryDate, steps, source = 'manual' } = {}) {
-  if (!userId) return null;
-  const d = await db();
-  const day = entryDate || activityDayKey();
-  const now = Date.now();
-  const value = Math.max(0, Math.min(200000, Math.round(Number(steps) || 0)));
-  await d.runAsync(
-    `INSERT INTO daily_steps (user_id, entry_date, steps, source, updated_at)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, entry_date) DO UPDATE SET
-       steps = excluded.steps,
-       source = excluded.source,
-       updated_at = excluded.updated_at`,
-    [userId, day, value, source, now],
-  );
-  _scheduleSync();
-  return { entryDate: day, steps: value, source, updatedAt: now };
+  return activityRepository.setDailySteps(userId, { entryDate, steps, source });
 }
 
 export async function getDailySteps(userId, entryDate) {
-  if (!userId) return null;
-  const d = await db();
-  const day = entryDate || activityDayKey();
-  const row = await d.getFirstAsync(
-    'SELECT * FROM daily_steps WHERE user_id = ? AND entry_date = ?',
-    [userId, day],
-  );
-  return row ? rowToCamel(row) : null;
+  return activityRepository.getDailySteps(userId, entryDate);
 }
 
 export async function getDailyStepsToday(userId) {
-  return getDailySteps(userId, activityDayKey());
+  return activityRepository.getDailyStepsToday(userId);
 }
 
 // Inclusive range read, oldest first. Backs the baseline average (a week
 // of normal days) and the compliance view (target hit rate over time).
 export async function getDailyStepsRange(userId, fromDate, toDate) {
-  if (!userId) return [];
-  const d = await db();
-  const rows = await d.getAllAsync(
-    `SELECT * FROM daily_steps
-     WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
-     ORDER BY entry_date ASC`,
-    [userId, fromDate, toDate],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getDailyStepsRange(userId, fromDate, toDate);
 }
 
 // ─── Cardio log (audit volyume-cardio-integration-2026-06-03) ──────────────
@@ -4627,242 +4606,77 @@ export async function getDailyStepsRange(userId, fromDate, toDate) {
 // has already resolved the activity + computed met/est_kcal (cardioMath), so
 // this layer just persists what it is given, clamped.
 export async function insertCardioLog(userId, session = {}) {
-  if (!userId) return null;
-  const d = await db();
-  const id = session.id || uid();
-  const now = Date.now();
-  const day = session.entryDate || activityDayKey();
-  const durationMin = Math.max(0, Math.min(1440, Math.round(Number(session.durationMin) || 0)));
-  const row = {
-    user_id: userId,
-    id,
-    entry_date: day,
-    activity_id: session.activityId ?? null,
-    activity_name: String(session.activityName || 'Cardio'),
-    category: session.category ?? null,
-    duration_min: durationMin,
-    intensity: session.intensity || 'moderate',
-    met: session.met != null ? Number(session.met) : null,
-    est_kcal: session.estKcal != null ? Math.max(0, Math.round(Number(session.estKcal))) : null,
-    recovery_impact: session.recoveryImpact ?? null,
-    impact_type: session.impactType ?? null,
-    distance: session.distance != null ? Number(session.distance) : null,
-    avg_hr: session.avgHr != null ? Math.round(Number(session.avgHr)) : null,
-    source: session.source || 'manual',
-    notes: session.notes ?? null,
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-    // Platform sample id for imported sessions (ULTIMATE-CUX-PCI); NULL for
-    // manual logs. The partial unique index (user_id, ext_id) backstops dupes.
-    ext_id: session.extId ?? null,
-  };
-  await d.runAsync(
-    `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
-       category, duration_min, intensity, met, est_kcal, recovery_impact,
-       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at, ext_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [row.user_id, row.id, row.entry_date, row.activity_id, row.activity_name,
-      row.category, row.duration_min, row.intensity, row.met, row.est_kcal,
-      row.recovery_impact, row.impact_type, row.distance, row.avg_hr, row.source,
-      row.notes, row.created_at, row.updated_at, row.deleted_at, row.ext_id],
-  );
-  _scheduleSync();
-  return rowToCamel(row);
+  return activityRepository.insertCardioLog(userId, session);
 }
 
 // True if an imported cardio session with this platform sample id already
 // exists for the user (ULTIMATE-CUX-PCI de-dup; NA-cux-4). Manual rows have a
 // NULL ext_id and are never matched here.
 export async function cardioExtIdExists(userId, extId) {
-  if (!userId || !extId) return false;
-  const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT 1 AS hit FROM cardio_log WHERE user_id = ? AND ext_id = ? LIMIT 1',
-    [userId, extId],
-  );
-  return !!row;
+  return activityRepository.cardioExtIdExists(userId, extId);
 }
 
 // Patch an existing session (duration/intensity/notes etc.). Recompute of
 // est_kcal is the caller's job (pass the new value). Bumps updated_at.
 export async function updateCardioLog(userId, id, fields = {}) {
-  if (!userId || !id) return null;
-  const d = await db();
-  const now = Date.now();
-  const allowed = {
-    entry_date: fields.entryDate, activity_id: fields.activityId,
-    activity_name: fields.activityName, category: fields.category,
-    duration_min: fields.durationMin != null ? Math.max(0, Math.round(Number(fields.durationMin))) : undefined,
-    intensity: fields.intensity, met: fields.met,
-    est_kcal: fields.estKcal != null ? Math.max(0, Math.round(Number(fields.estKcal))) : undefined,
-    recovery_impact: fields.recoveryImpact, impact_type: fields.impactType,
-    distance: fields.distance, avg_hr: fields.avgHr, source: fields.source, notes: fields.notes,
-  };
-  const sets = [];
-  const args = [];
-  for (const [col, val] of Object.entries(allowed)) {
-    if (val !== undefined) { sets.push(`${col} = ?`); args.push(val); }
-  }
-  if (!sets.length) return null;
-  sets.push('updated_at = ?'); args.push(now);
-  args.push(userId, id);
-  await d.runAsync(`UPDATE cardio_log SET ${sets.join(', ')} WHERE user_id = ? AND id = ?`, args);
-  _scheduleSync();
-  return getCardioLogById(userId, id);
+  return activityRepository.updateCardioLog(userId, id, fields);
 }
 
 // Soft delete: mark deleted_at + bump updated_at so the deletion syncs.
 export async function deleteCardioLog(userId, id) {
-  if (!userId || !id) return false;
-  const d = await db();
-  const now = Date.now();
-  await d.runAsync(
-    'UPDATE cardio_log SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ?',
-    [now, now, userId, id],
-  );
-  _scheduleSync();
-  return true;
+  return activityRepository.deleteCardioLog(userId, id);
 }
 
 export async function getCardioLogById(userId, id) {
-  if (!userId || !id) return null;
-  const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT * FROM cardio_log WHERE user_id = ? AND id = ?',
-    [userId, id],
-  );
-  return row ? rowToCamel(row) : null;
+  return activityRepository.getCardioLogById(userId, id);
 }
 
 // Live sessions for a day (deleted rows excluded), newest first.
 export async function getCardioLogForDate(userId, entryDate) {
-  if (!userId) return [];
-  const d = await db();
-  const day = entryDate || activityDayKey();
-  const rows = await d.getAllAsync(
-    'SELECT * FROM cardio_log WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL ORDER BY created_at DESC',
-    [userId, day],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getCardioLogForDate(userId, entryDate);
 }
 
 // Inclusive date-range read (deleted excluded), newest first. Backs the Plans
 // weekly card, the check-in compliance prefill, and the coach week summary.
 export async function getCardioLogRange(userId, fromDate, toDate) {
-  if (!userId) return [];
-  const d = await db();
-  const rows = await d.getAllAsync(
-    `SELECT * FROM cardio_log
-     WHERE user_id = ? AND entry_date >= ? AND entry_date <= ? AND deleted_at IS NULL
-     ORDER BY entry_date DESC, created_at DESC`,
-    [userId, fromDate, toDate],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getCardioLogRange(userId, fromDate, toDate);
 }
 
 // Recent history for the Progress surface (deleted excluded), newest first.
 export async function getRecentCardioLog(userId, limit = 50) {
-  if (!userId) return [];
-  const d = await db();
-  const rows = await d.getAllAsync(
-    'SELECT * FROM cardio_log WHERE user_id = ? AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC LIMIT ?',
-    [userId, Math.max(1, Math.min(500, limit | 0))],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getRecentCardioLog(userId, limit);
 }
 
 // Rows for the sync push window (anything inserted/edited/deleted in the last
 // N days, by updated_at). Includes soft-deleted rows so a delete propagates.
 // Used by the cardio_log per-table push handler.
 export async function getCardioLogForPush(userId, days = 400) {
-  if (!userId) return [];
-  const d = await db();
-  const cutoff = Date.now() - days * 86400000;
-  const rows = await d.getAllAsync(
-    'SELECT * FROM cardio_log WHERE user_id = ? AND updated_at >= ? ORDER BY updated_at ASC',
-    [userId, cutoff],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getCardioLogForPush(userId, days);
 }
 
 // Local updated_at (ms) for one row id, or null. The pull handler's LWW gate.
 export async function getCardioLogUpdatedAt(userId, id) {
-  if (!userId || !id) return null;
-  const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT updated_at FROM cardio_log WHERE user_id = ? AND id = ?',
-    [userId, id],
-  );
-  return row?.updated_at ?? null;
+  return activityRepository.getCardioLogUpdatedAt(userId, id);
 }
 
 // Apply a cloud row (snake_case) into the local mirror, including soft-delete
 // state. Upsert on (user_id, id); the caller has already won the LWW check.
 export async function insertCardioLogFromCloud(userId, row) {
-  if (!userId || !row?.id) return null;
-  const d = await db();
-  const toMs = (t) => (t == null ? null : (typeof t === 'number' ? t : Date.parse(t) || null));
-  await d.runAsync(
-    `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
-       category, duration_min, intensity, met, est_kcal, recovery_impact,
-       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at, ext_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(user_id, id) DO UPDATE SET
-       entry_date = excluded.entry_date,
-       activity_id = excluded.activity_id,
-       activity_name = excluded.activity_name,
-       category = excluded.category,
-       duration_min = excluded.duration_min,
-       intensity = excluded.intensity,
-       met = excluded.met,
-       est_kcal = excluded.est_kcal,
-       recovery_impact = excluded.recovery_impact,
-       impact_type = excluded.impact_type,
-       distance = excluded.distance,
-       avg_hr = excluded.avg_hr,
-       source = excluded.source,
-       notes = excluded.notes,
-       updated_at = excluded.updated_at,
-       deleted_at = excluded.deleted_at,
-       ext_id = excluded.ext_id`,
-    [userId, row.id, row.entry_date, row.activity_id ?? null, row.activity_name ?? 'Cardio',
-      row.category ?? null, Math.round(Number(row.duration_min) || 0), row.intensity ?? 'moderate',
-      row.met != null ? Number(row.met) : null, row.est_kcal != null ? Math.round(Number(row.est_kcal)) : null,
-      row.recovery_impact ?? null, row.impact_type ?? null,
-      row.distance != null ? Number(row.distance) : null, row.avg_hr != null ? Math.round(Number(row.avg_hr)) : null,
-      row.source ?? 'manual', row.notes ?? null,
-      toMs(row.created_at) ?? Date.now(), toMs(row.updated_at) ?? Date.now(), toMs(row.deleted_at),
-      row.ext_id ?? null],
-  );
-  return true;
+  return activityRepository.insertCardioLogFromCloud(userId, row);
 }
 
 // Rows for the sync push window (most recent N days). Step history is one
 // small row per day, so a generous window is cheap. Used by the
 // daily_steps per-table push handler.
 export async function getDailyStepsForPush(userId, days = 400) {
-  if (!userId) return [];
-  const d = await db();
-  const cutoff = activityDayKey(Date.now() - days * 86400000);
-  const rows = await d.getAllAsync(
-    'SELECT * FROM daily_steps WHERE user_id = ? AND entry_date >= ? ORDER BY entry_date ASC',
-    [userId, cutoff],
-  );
-  return rows.map(rowToCamel);
+  return activityRepository.getDailyStepsForPush(userId, days);
 }
 
 // Local updated_at (ms) for one day, or null if no local row. The pull
 // handler uses this as the last-write-wins gate so a stale cloud row never
 // clobbers a fresher local edit.
 export async function getDailyStepsUpdatedAt(userId, entryDate) {
-  if (!userId || !entryDate) return null;
-  const d = await db();
-  const row = await d.getFirstAsync(
-    'SELECT updated_at FROM daily_steps WHERE user_id = ? AND entry_date = ?',
-    [userId, entryDate],
-  );
-  return row?.updated_at ?? null;
+  return activityRepository.getDailyStepsUpdatedAt(userId, entryDate);
 }
 
 // Restore one cloud daily_steps row into local SQLite. INSERT OR REPLACE so
@@ -4870,20 +4684,7 @@ export async function getDailyStepsUpdatedAt(userId, entryDate) {
 // row wins. Cloud updated_at is an ISO string; store it as ms to match the
 // local convention.
 export async function insertDailyStepsFromCloud(userId, row) {
-  if (!userId || !row?.entry_date) return;
-  const d = await db();
-  const toMs = (v) => v == null ? Date.now() : (typeof v === 'string' ? new Date(v).getTime() : v);
-  await d.runAsync(
-    `INSERT OR REPLACE INTO daily_steps (user_id, entry_date, steps, source, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      userId,
-      row.entry_date,
-      Math.max(0, Math.round(Number(row.steps) || 0)),
-      row.source ?? 'manual',
-      toMs(row.updated_at),
-    ],
-  );
+  return activityRepository.insertDailyStepsFromCloud(userId, row);
 }
 
 // ─── NEW-002: training partners (local mirror) ───────────────────────────────
