@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
@@ -488,43 +489,33 @@ export default function ShareCardScreen({ route }) {
             screen rather than a direct-composer intent, so no extra dependency or
             Facebook App ID is needed). The user picks Instagram or Facebook from
             the sheet; both let you post the image to a Story. */}
-        <TouchableOpacity
-          style={[styles.secondaryBtn, sharingToStories && styles.btnDisabled]}
+        <Button
+          title="Share to Story"
+          icon="logo-instagram"
+          trailingIcon="logo-facebook"
           onPress={handleShareToStories}
           disabled={sharingToStories}
-          accessibilityRole="button"
+          loading={sharingToStories}
           accessibilityLabel="Share to Instagram or Facebook Story"
-        >
-          {sharingToStories ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <>
-              <Ionicons name="logo-instagram" size={20} color={colors.primary} />
-              <Ionicons name="logo-facebook" size={20} color={colors.primary} />
-              <Text style={styles.secondaryBtnText}>Share to Story</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          variant="outline"
+          size="lg"
+          style={styles.secondaryAction}
+        />
 
         {/* Save to gallery: writes the rendered card straight to the device
             gallery. Only shown when the media-library package is in the build. */}
         {MediaLibrary ? (
-        <TouchableOpacity
-          style={[styles.secondaryBtn, savingToGallery && styles.btnDisabled]}
+        <Button
+          title="Save to gallery"
+          icon="download-outline"
           onPress={handleSaveToGallery}
           disabled={savingToGallery}
-          accessibilityRole="button"
+          loading={savingToGallery}
           accessibilityLabel="Save to gallery"
-        >
-          {savingToGallery ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <>
-              <Ionicons name="download-outline" size={20} color={colors.primary} />
-              <Text style={styles.secondaryBtnText}>Save to gallery</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          variant="outline"
+          size="lg"
+          style={styles.secondaryAction}
+        />
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -608,23 +599,5 @@ const styles = StyleSheet.create({
   prChipTextActive: { color: colors.primary },
   prChipSub: { fontSize: fontSize.xs, color: colors.textMuted },
   prChipSubActive: { color: colors.primary },
-  shareBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-  },
-  btnDisabled: { opacity: 0.5 },
-  shareBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  pdfBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    borderWidth: 1.5, borderColor: colors.primary, marginTop: spacing.md,
-  },
-  pdfBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
-  secondaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    borderWidth: 1.5, borderColor: colors.primary, marginTop: spacing.md,
-  },
-  secondaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+  secondaryAction: { marginTop: spacing.md },
 });
