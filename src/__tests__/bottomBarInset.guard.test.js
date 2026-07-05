@@ -43,10 +43,11 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
       'components/BottomSheet.js',
       'components/FeedbackSheet.js',
       'components/PeekMenu.js',
-      'screens/FoodSearchScreen.js',
     ]) {
       expect(read(rel)).toMatch(/insets\.bottom \+ spacing\.(lg|sm)/);
     }
+    expect(read('screens/FoodSearchScreen.js')).toMatch(/<BottomSheet[\s\S]*visible=\{showPlate\}/);
+    expect(read('screens/FoodSearchScreen.js')).not.toMatch(/useSafeAreaInsets/);
     expect(read('components/ProGate.js')).toMatch(/<BottomSheet/);
   });
 });
