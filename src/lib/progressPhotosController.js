@@ -49,6 +49,17 @@ export function shouldGateProgressScanStart(scans = [], nowMs = Date.now(), minI
   return { gated, latestCompleted };
 }
 
+export function progressCheckInCadenceLabel(latestTakenAt, nowMs = Date.now(), minIntervalMs = 0) {
+  if (latestTakenAt == null || latestTakenAt === '') return 'Capture baseline';
+  const latest = Number(latestTakenAt);
+  if (!Number.isFinite(latest)) return 'Capture baseline';
+  const remainingMs = latest + minIntervalMs - nowMs;
+  if (remainingMs <= 0) return 'Ready now';
+  const days = Math.max(1, Math.ceil(remainingMs / 86400000));
+  if (days === 1) return 'Tomorrow';
+  return `In ${days} days`;
+}
+
 export function buildProgressScanFinishPayload(profile = {}, bodyProfile = null, userSex = null) {
   const safeProfile = profile || {};
   const safeBodyProfile = bodyProfile || {};

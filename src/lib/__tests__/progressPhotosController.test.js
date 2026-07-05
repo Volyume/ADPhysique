@@ -5,6 +5,7 @@ import {
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
   enrichProgressPhotos,
+  progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
@@ -62,6 +63,16 @@ describe('progressPhotosController transforms', () => {
     });
     expect(shouldGateProgressScanStart([recent], 10_000 + min, min).gated).toBe(false);
     expect(shouldGateProgressScanStart([draft], 11_000, min)).toEqual({ gated: false, latestCompleted: null });
+  });
+
+  test('progressCheckInCadenceLabel keeps cadence calm and non-pressuring', () => {
+    const min = 14 * 86400000;
+    const latest = Date.UTC(2026, 6, 1, 12);
+
+    expect(progressCheckInCadenceLabel(null, latest, min)).toBe('Capture baseline');
+    expect(progressCheckInCadenceLabel(latest, latest + min, min)).toBe('Ready now');
+    expect(progressCheckInCadenceLabel(latest, latest + min - 86400000, min)).toBe('Tomorrow');
+    expect(progressCheckInCadenceLabel(latest, latest + min - 3 * 86400000, min)).toBe('In 3 days');
   });
 
   test('buildProgressScanFinishPayload preserves profile-first scan profile precedence', () => {

@@ -390,6 +390,7 @@ Status: release decision.
 - Check-In cards show a cover photo, date, photo count, pose completeness, optional note/weight context and next-time guidance.
 - Physique Scan history is now presented as structured results: visual trend, confidence, leanness band, signal, score visibility, why-this-read context and pose thumbnails.
 - Compare/share surfaces now use clearer premium framing: `Compare Check-Ins`, pose-matched scan comparison, and `Private Share Card` copy with explicit one-image/privacy boundaries.
+- Check-In cadence now reads calmly as `Capture baseline`, `Ready now`, `Tomorrow`, or `In N days`; the scan cadence gate now redirects to a normal Check-In without forcing a scan read.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
 
