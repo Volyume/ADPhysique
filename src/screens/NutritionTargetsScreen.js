@@ -13,6 +13,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Chip from '../components/Chip';
+import SectionLabel from '../components/SectionLabel';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
@@ -75,7 +76,7 @@ const CONFIDENCE_COLORS = { high: colors.success, medium: colors.warning, low: c
 // ─── Small helpers ──────────────────────────────────────────────────────────────
 
 function SectionHeading({ title }) {
-  return <Text style={styles.sectionHeading}>{title}</Text>;
+  return <SectionLabel variant="title" style={styles.sectionHeading}>{title}</SectionLabel>;
 }
 
 function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }) {
@@ -1429,11 +1430,9 @@ const styles = StyleSheet.create({
 
   // ── Section heading ───────────────────────────────────────────────────────────────────
 
-  // D3: real section headers (design audit 03 rule 3), the D0 `title`
-  // role, not a body-sized label.
+  // D3: real section headers (design audit 03 rule 3), using the shared
+  // SectionLabel title variant so heading scale stays centralized.
   sectionHeading: {
-    ...type.title,
-    color: colors.textPrimary,
     marginTop: spacing.sm,
   },
 
