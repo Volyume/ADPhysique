@@ -13,6 +13,7 @@ import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import {
@@ -273,10 +274,12 @@ export default function AthleteProfileScreen({ navigation }) {
               </View>
             </Card>
           )) : (
-            <Card surface="surface2" style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Strength standards unlock with data</Text>
-              <Text style={styles.emptyText}>Log body weight and your core compound lifts to compare estimated strength against baseline tiers.</Text>
-            </Card>
+            <EmptyState
+              icon="barbell-outline"
+              title="Strength standards unlock with data"
+              text="Log body weight and your core compound lifts to compare estimated strength against baseline tiers."
+              compact
+            />
           )}
         </View>
 
@@ -384,9 +387,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   levelPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.black },
-  emptyCard: { gap: spacing.xs },
-  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  emptyText: { ...type.bodySm, color: colors.textSecondary },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
