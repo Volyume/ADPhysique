@@ -81,6 +81,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+import SectionLabel from '../components/SectionLabel';
 // M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
@@ -206,7 +207,7 @@ const CONFIDENCE_CAPTIONS = {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title }) {
-  return <Text style={styles.sectionHeader}>{title}</Text>;
+  return <SectionLabel style={styles.sectionHeader}>{title}</SectionLabel>;
 }
 
 function StatChip({ icon, iconColor, label, value, valueColor }) {
@@ -2659,10 +2660,6 @@ const styles = StyleSheet.create({
 
   // Section header label
   sectionHeader: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    letterSpacing: 0.2,
     marginBottom: spacing.xs,
   },
 
