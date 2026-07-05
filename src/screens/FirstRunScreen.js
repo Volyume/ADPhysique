@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { Text, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontWeight, spacing, type } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -60,14 +61,15 @@ export default function FirstRunScreen({ navigation }) {
           Just your name, then a few quick questions to get you set up.
         </Text>
 
-        <Text style={styles.fieldLabel}>What should we call you?</Text>
-        <TextInput
+        <TextField
           ref={nameRef}
-          style={[styles.input, hasName && styles.inputActive]}
+          label="What should we call you?"
+          containerStyle={styles.nameField}
+          fieldStyle={hasName && styles.inputActive}
+          size="lg"
           value={firstName}
           onChangeText={setFirstName}
           placeholder="First name"
-          placeholderTextColor={colors.textMuted}
           accessibilityLabel="First name"
           autoCapitalize="words"
           autoCorrect={false}
@@ -102,12 +104,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { ...type.bodySm, color: colors.textSecondary },
-  fieldLabel: { ...type.label, color: colors.textSecondary, marginTop: spacing.md },
-  input: {
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: fontSize.lg, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
-  },
+  nameField: { marginTop: spacing.md },
   inputActive: { borderColor: colors.primary },
   // backgroundColor/borderRadius/padding/border now come from Card
   // (surface, radius="md", padding="md", 1px colors.border).
