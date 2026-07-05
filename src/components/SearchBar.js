@@ -22,6 +22,7 @@ export default function SearchBar({
   autoFocus = false,
   style,
   testID,
+  accessibilityLabel,
 }) {
   const handleClear = () => (onClear ? onClear() : onChangeText?.(''));
   return (
@@ -37,7 +38,7 @@ export default function SearchBar({
         autoCorrect={false}
         autoFocus={autoFocus}
         returnKeyType="search"
-        accessibilityLabel={placeholder}
+        accessibilityLabel={accessibilityLabel || placeholder}
         testID={testID}
       />
       {value ? (

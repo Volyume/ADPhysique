@@ -20,6 +20,21 @@ describe('SearchBar', () => {
     expect(input).toBeTruthy();
   });
 
+  test('supports an explicit accessibility label', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <SearchBar
+          value=""
+          onChangeText={() => {}}
+          placeholder="Search exercises"
+          accessibilityLabel="Search lifts"
+        />,
+      );
+    });
+    expect(tree.root.findByProps({ accessibilityLabel: 'Search lifts' })).toBeTruthy();
+  });
+
   test('clear button only shows when there is a value, and clears', () => {
     const onChangeText = jest.fn();
     let empty;

@@ -13,6 +13,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import Chip from './Chip';
+import SearchBar from './SearchBar';
 import { useToast } from './Toast';
 
 // Shared exercise picker: search the library and, when the exercise you want
@@ -177,15 +178,12 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
         ) : (
           <>
             <View style={styles.pickerHeader}>
-              <TextInput accessibilityLabel="Search exercises"
-                style={styles.pickerSearch}
+              <SearchBar
+                style={styles.pickerSearchBar}
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search exercises…"
-                placeholderTextColor={colors.textMuted}
+                placeholder="Search exercises..."
                 autoFocus
-                returnKeyType="search"
-                clearButtonMode="while-editing"
               />
               <TouchableOpacity accessibilityRole="button"
                 onPress={onClose}
@@ -296,11 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  pickerSearch: {
-    ...type.body, flex: 1, backgroundColor: colors.inputBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.textPrimary,
-    borderWidth: 1, borderColor: colors.border,
-  },
+  pickerSearchBar: { flex: 1 },
   pickerClose: { padding: spacing.xs },
   pickerList: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },

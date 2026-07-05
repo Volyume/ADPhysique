@@ -43,7 +43,7 @@ The branch is not claiming that every item in the larger 52-item elite register 
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
   - 466 suites passed.
-  - 6,291 tests passed, 5 skipped.
+  - 6,292 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
@@ -122,6 +122,7 @@ Status: materially closed.
 - Nutrition Targets duplicate in-content title was removed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first two bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary and Coaching Reminders.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields and first-run setup migrated as the initial safe slice.
+- `SearchBar` now supports explicit accessibility labels and has replaced the duplicated search chrome in Lift Progress, Exercise Picker and Build Workout picker flows.
 - Goal Change Summary now uses the shared `Button` for its final acknowledgement CTA.
 - A guard now prevents native header drift.
 
@@ -281,6 +282,7 @@ The risk is no longer that Volyume lacks power. The risk is that power becomes s
 
 1. Continue the "one product" design sweep:
    - migrate the remaining plain inputs to `TextField` in small screen-level slices;
+   - continue `SearchBar` adoption where extra loading/trailing support is not needed, and extend the primitive before touching Food Search's spinner path;
    - remaining hand-rolled CTAs to `Button`, starting with Food Insights export actions and plan rebuild/confirm flows;
    - remaining hand-rolled sheets to `BottomSheet`.
 2. Add shared loading/error/empty states so failed reads do not look like empty accounts.
