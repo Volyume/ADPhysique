@@ -525,9 +525,19 @@ export default function FoodInsightsScreen({ navigation }) {
               </Text>
             </>
           ) : (
-            <Text style={styles.emptyText}>
-              Log a few days to see your last {windowDays} days.
-            </Text>
+            <View style={styles.emptyActionStack}>
+              <Text style={styles.emptyText}>
+                Log a few days to see your last {windowDays} days.
+              </Text>
+              <Button
+                title="Open diary"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                onPress={() => navigation.goBack()}
+                accessibilityLabel="Open diary"
+              />
+            </View>
           )}
         </Card>
 
@@ -620,6 +630,7 @@ const styles = StyleSheet.create({
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
   proteinHeadline: { ...type.title, color: colors.textPrimary },
   proteinChartWrap: { marginTop: spacing.md },
+  emptyActionStack: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
 
   // Weekly-average summary: headline numeral always textPrimary, delta neutral
