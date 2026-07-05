@@ -59,7 +59,12 @@ export default function Card({
   onLongPress,
   style,
   accessibilityLabel,
+  accessibilityHint,
   accessibilityRole,
+  accessibilityState,
+  disabled = false,
+  testID,
+  hitSlop,
 }) {
   const accent = tone ? (TONES[tone] || TONES.primary) : null;
   const backgroundColor = surface
@@ -82,8 +87,13 @@ export default function Card({
         onPress={onPress}
         onLongPress={onLongPress}
         style={cardStyle}
+        disabled={disabled}
+        hitSlop={hitSlop}
+        testID={testID}
         accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
         accessibilityRole={accessibilityRole || 'button'}
+        accessibilityState={accessibilityState}
       >
         {children}
       </PressableCard>
@@ -91,7 +101,14 @@ export default function Card({
   }
 
   return (
-    <View style={cardStyle} accessibilityLabel={accessibilityLabel} accessibilityRole={accessibilityRole}>
+    <View
+      style={cardStyle}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityState}
+    >
       {children}
     </View>
   );

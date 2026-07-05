@@ -29,6 +29,7 @@ import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
 import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
 import { buildAthleteProfileSummary } from '../lib/athleteProfileSummary';
+import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athleteProfileAccessibility';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 
@@ -55,9 +56,15 @@ function StatTile({ label, value, sub }) {
 }
 
 function Row({ icon, label, sub, onPress, pro, status = null }) {
-  const statusLabel = status === 'attention' ? 'Update' : status === 'soon' ? 'Soon' : status === 'fresh' ? 'Fresh' : null;
+  const statusLabel = profileRowStatusLabel(status);
+  const accessibility = buildProfileRowAccessibility({ label, sub, status, pro });
   return (
-    <Card style={styles.row} onPress={onPress} accessibilityLabel={label}>
+    <Card
+      style={styles.row}
+      onPress={onPress}
+      accessibilityLabel={accessibility.accessibilityLabel}
+      accessibilityHint={accessibility.accessibilityHint}
+    >
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
