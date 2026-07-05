@@ -276,6 +276,7 @@ Status: release decision.
 - Food Insights now separates loading, failed reads and genuinely empty nutrition history: range/target fetches show skeleton cards while loading, a retryable inline error on failure, and existing empty copy only after a successful read.
 - My Meals now separates failed saved-meal reads from a genuinely empty saved-meal list and exposes a visible per-row more-actions control for rename/delete, preserving one-tap logging while removing long-press-only management.
 - Cardio History now separates loading, failed reads and genuinely empty cardio history, adds a retryable inline error state, and reports failed delete attempts through the standard toast/error-log path instead of silently dropping the failure.
+- Volume Heatmap now uses skeleton cards for the initial read and a retryable inline error for failed volume reads, clearing stale heatmap/trend data so failed loads do not masquerade as a valid empty training history.
 
 ### Web / CI / Security
 

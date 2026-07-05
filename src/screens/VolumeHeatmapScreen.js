@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
@@ -11,6 +11,8 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
+import EmptyState from '../components/EmptyState';
+import { SkeletonCard } from '../components/Skeleton';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan } from '../lib/database';
@@ -59,10 +61,11 @@ export default function VolumeHeatmapScreen() {
   })));
   const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
-  // NAV-8: first paint showed an empty diagram while sets loaded; a quiet
-  // spinner covers the read instead. Only the FIRST load gates the render;
+  // NAV-8: first paint showed an empty diagram while sets loaded; skeleton
+  // cards cover the read instead. Only the FIRST load gates the render;
   // window switches update in place.
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [previousVolume, setPreviousVolume] = useState({});
   const [windowWeeks, setWindowWeeks] = useState(1);
   const [customLandmarks, setCustomLandmarks] = useState(null);
@@ -101,6 +104,8 @@ export default function VolumeHeatmapScreen() {
 
   async function loadData() {
     if (!user?.id) { setLoading(false); return; }
+    if (loading || loadError) setLoading(true);
+    setLoadError(false);
     try {
       const windowMs = windowWeeks * 7 * 24 * 60 * 60 * 1000;
       const now = Date.now();
@@ -174,6 +179,13 @@ export default function VolumeHeatmapScreen() {
       }
     } catch (e) {
       logError('VolumeHeatmapScreen.loadData', e, { userId: user?.id, windowWeeks });
+      setWeeklyVolume({});
+      setPreviousVolume({});
+      setTrendData([]);
+      setLastTrainedMap({});
+      setDivisionMarkers(null);
+      setDivisionLabel(null);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -293,7 +305,28 @@ export default function VolumeHeatmapScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Volume heatmap" />
-        <ActivityIndicator style={{ marginTop: spacing.xxxl }} color={colors.primary} />
+        <View style={styles.loadingStack} accessibilityLabel="Loading volume heatmap">
+          <SkeletonCard height={220} />
+          <SkeletonCard height={92} />
+          <SkeletonCard height={160} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Volume heatmap" />
+        <View style={styles.content}>
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load volume heatmap"
+            text="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={loadData}
+          />
+        </View>
       </SafeAreaView>
     );
   }
@@ -649,6 +682,7 @@ const trendStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  loadingStack: { padding: spacing.lg, gap: spacing.lg },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   windowSelector: {
     flexDirection: 'row',
