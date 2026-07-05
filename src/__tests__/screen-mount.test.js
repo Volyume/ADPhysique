@@ -1931,7 +1931,7 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     }
   });
 
-  test('handles 100-tap chains × 20 seeds in a 5-exercise workout', async () => {
+  async function runHundredTapFuzzSeeds(seedStart, seedEnd) {
     const mkExercise = (i, sets) => ({
       exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },
       routineExercise: { id: `re${i}`, recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
@@ -1962,7 +1962,7 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       const result = await mountScreen(Screen);
       tree = result.tree;
       const allFailures = [];
-      for (let seed = 1; seed <= 20; seed++) {
+      for (let seed = seedStart; seed <= seedEnd; seed++) {
         const rand = seedRand(seed * 7919);
         const failures = await fuzzTapChain(tree, 100, rand);
         for (const f of failures) {
@@ -1971,10 +1971,16 @@ describe('ActiveWorkoutScreen with active workout state', () => {
           }
         }
       }
-      if (allFailures.length) console.log('[100×20 fuzz] failures:', JSON.stringify(allFailures.slice(0, 10), null, 2));
+      if (allFailures.length) console.log(`[100-tap fuzz ${seedStart}-${seedEnd}] failures:`, JSON.stringify(allFailures.slice(0, 10), null, 2));
       expect(allFailures).toEqual([]);
     } finally { unmountTree(tree); }
-  });
+  }
+
+  for (const [seedStart, seedEnd] of [[1, 5], [6, 10], [11, 15], [16, 20]]) {
+    test(`handles 100-tap chains, seeds ${seedStart}-${seedEnd}, in a 5-exercise workout`, async () => {
+      await runHundredTapFuzzSeeds(seedStart, seedEnd);
+    });
+  }
 
   test('handles a 50-tap random chain mid-workout', async () => {
     useAppStore.setState({
