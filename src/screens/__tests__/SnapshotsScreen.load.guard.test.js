@@ -74,8 +74,10 @@ describe('SnapshotsScreen load guard', () => {
   test('uses focus-driven loading with a latest-request guard', () => {
     expect(source).toMatch(/const loadRequestRef = useRef\(0\);/);
     expect(source).toMatch(/loadRequestRef\.current = requestId;/);
-    expect(source).toMatch(/if \(isCurrentRequest\(\)\) setSnapshots\(items\);/);
-    expect(source).toMatch(/if \(isCurrentRequest\(\)\) setSnapshots\(\[\]\);/);
+    expect(source).toMatch(/if \(isCurrentRequest\(\)\) \{/);
+    expect(source).toMatch(/setSnapshots\(items\);/);
+    expect(source).toMatch(/logError\('SnapshotsScreen\.load', e\);/);
+    expect(source).toMatch(/setLoadError\(true\);/);
     expect(source).not.toMatch(/useEffect\(\(\) => \{ load\(\); \}, \[load\]\);/);
   });
 
@@ -112,14 +114,16 @@ describe('SnapshotsScreen load guard', () => {
     expect(text).not.toContain('Old snapshot');
   });
 
-  test('a failed current snapshot load falls back to the empty state', async () => {
+  test('a failed current snapshot load shows a retry state instead of the empty state', async () => {
     listSnapshots.mockRejectedValueOnce(new Error('offline'));
     let tree;
     await act(async () => { tree = create(<SnapshotsScreen />); });
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('No snapshots yet');
+    expect(text).toContain('Could not load snapshots');
+    expect(text).toContain('Try again');
+    expect(text).not.toContain('No snapshots yet');
     expect(text).not.toContain('Loading');
   });
 });

@@ -348,6 +348,7 @@ Status: release decision.
 - Add Custom Food now uses the shared `ModalHeader` for its modal chrome, removing a local close/header style block while preserving the manual food logging guards.
 - Barcode Scan and Label Scan now use the shared `ModalHeader` for permission, no-camera and live camera states. The header primitive now supports left-side close placement and a right accessory slot, preserving torch controls while removing duplicated scanner header chrome.
 - Goal Change Summary now uses the shared `ModalHeader`, preserving the existing close/pop-to-root behavior while removing another local modal header style block from the paid goal-update flow.
+- Snapshot restore now separates failed device-snapshot reads from a genuine no-snapshot state, logs the load failure and offers a visible retry action instead of telling the user no safety copies exist.
 
 ### Web / CI / Security
 
