@@ -343,6 +343,7 @@ Status: release decision.
 - My Recipes now uses the shared `EmptyState` primitive for retryable load failures and the genuine first-recipe prompt, preserving build/retry behaviour while removing another local empty-card style cluster from Nutrition.
 - Coach Review now uses an actionable shared empty-week state with a deterministic `Start a workout` route, so the weekly review no-data branch is no longer an instructional dead end.
 - Block Reflection now gives the genuine no-data branch a `Start a new block` recovery action, matching the completed-summary path and removing another Progress dead end.
+- Coach Held History now includes the bottom safe-area edge and gives the empty history state a `Start weekly check-in` action while preserving ED/calm fail-closed suppression.
 
 ### Web / CI / Security
 
