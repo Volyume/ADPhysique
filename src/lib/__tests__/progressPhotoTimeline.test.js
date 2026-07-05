@@ -1,5 +1,6 @@
 import {
   PROGRESS_PHOTO_TIMELINE_COLS,
+  buildCheckInTimeline,
   buildTimeline,
   filterAndSort,
 } from '../progressPhotoTimeline';
@@ -23,6 +24,44 @@ describe('progressPhotoTimeline', () => {
       { type: 'row', key: 'row-jun-1', photos: photos.slice(3, 4) },
       { type: 'header', key: 'h-2026-4', label: 'May 2026' },
       { type: 'row', key: 'row-may-1', photos: photos.slice(4) },
+    ]);
+  });
+
+  test('buildCheckInTimeline groups same-day photos into pose-ordered check-ins', () => {
+    const photos = [
+      { name: 'jun-side', takenAt: day(2026, 6, 4), pose: 'side', note: '', weightKg: null },
+      { name: 'jun-front', takenAt: day(2026, 6, 4), pose: 'front', note: 'Same setup', weightKg: 82.4 },
+      { name: 'jun-back', takenAt: day(2026, 6, 4), pose: 'back', note: '', weightKg: null },
+      { name: 'may-front', takenAt: day(2026, 5, 31), pose: 'front', note: '', weightKg: null },
+    ];
+
+    expect(buildCheckInTimeline(photos)).toEqual([
+      { type: 'header', key: 'h-2026-5', label: 'June 2026' },
+      {
+        type: 'checkin',
+        key: 'checkin-2026-5-4',
+        dayKey: '2026-5-4',
+        label: '4 Jun 2026',
+        takenAt: photos[1].takenAt,
+        cover: photos[1],
+        photos: [photos[1], photos[0], photos[2]],
+        poses: ['front', 'side', 'back'],
+        note: 'Same setup',
+        weightKg: 82.4,
+      },
+      { type: 'header', key: 'h-2026-4', label: 'May 2026' },
+      {
+        type: 'checkin',
+        key: 'checkin-2026-4-31',
+        dayKey: '2026-4-31',
+        label: '31 May 2026',
+        takenAt: photos[3].takenAt,
+        cover: photos[3],
+        photos: [photos[3]],
+        poses: ['front'],
+        note: null,
+        weightKg: null,
+      },
     ]);
   });
 
