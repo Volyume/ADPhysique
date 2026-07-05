@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import {
@@ -592,17 +593,12 @@ export default function ProGoalSetupScreen({ navigation }) {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
+        <Button
+          title="Rebuild my plan"
           onPress={handleSave}
           disabled={!canSave}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canSave }}
           accessibilityLabel="Rebuild my plan"
-        >
-          <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>Rebuild my plan</Text>
-        </TouchableOpacity>
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -673,13 +669,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
   suggestedBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
-
-  saveBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center',
-  },
-  saveBtnDisabled: { backgroundColor: colors.surface2 },
-  saveBtnText: { color: colors.onPrimary, ...type.bodyStrong },
-  saveBtnTextDisabled: { color: colors.textMuted },
 
 });
