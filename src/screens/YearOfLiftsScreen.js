@@ -33,6 +33,7 @@ import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatt
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
+import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
 
@@ -593,62 +594,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     if (!data) return;
     // COMP-005: same milestone canvas, eyebrow/title/hero/stats vary by variant.
     // Factual training stats only: never bodyweight, measurements or notes.
-    let milestoneData;
-    if (variant === 'month') {
-      const stats = [];
-      if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-      if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
-      if (data.topPRs?.length > 0) stats.push({ value: data.topPRs.length.toLocaleString('en-GB'), label: data.topPRs.length === 1 ? 'PR' : 'PRs' });
-      milestoneData = {
-        eyebrow: 'MONTHLY RECAP',
-        title: monthLabel || 'Monthly recap',
-        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
-        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
-        caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
-        stats,
-      };
-    } else if (variant === 'week') {
-      // S4: same milestone canvas as the monthly recap share, same fields:
-      // reflective training stats only, never bodyweight/measurements/notes.
-      const stats = [];
-      if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-      if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
-      if (data.topPRs?.length > 0) stats.push({ value: data.topPRs.length.toLocaleString('en-GB'), label: data.topPRs.length === 1 ? 'PR' : 'PRs' });
-      milestoneData = {
-        eyebrow: 'WEEKLY RECAP',
-        title: weekLabel || 'Your week',
-        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
-        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
-        caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
-        stats,
-      };
-    } else if (variant === 'block') {
-      const stats = [];
-      if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-      if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
-      if (data.meso?.plannedWeeks) stats.push({ value: String(data.meso.plannedWeeks), label: data.meso.plannedWeeks === 1 ? 'week' : 'weeks' });
-      milestoneData = {
-        eyebrow: 'BLOCK COMPLETE',
-        title: data.meso?.name || blockName || 'Training block',
-        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
-        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
-        caption: '',
-        stats,
-      };
-    } else {
-      const stats = [];
-      if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-      if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
-      if (data.uniqueExercises > 0) stats.push({ value: data.uniqueExercises.toLocaleString('en-GB'), label: 'exercises' });
-      milestoneData = {
-        title: 'My year of lifts',
-        eyebrow: '',
-        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
-        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
-        caption: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
-        stats,
-      };
-    }
+    const milestoneData = buildRecapMilestoneData(data, { variant, monthLabel, weekLabel, blockName });
     navigation.navigate('ShareCard', { milestoneData });
   }
 
