@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type, fontWeight } from '../styles/theme';
 import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
+import TextField from '../components/TextField';
 import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
@@ -54,9 +55,9 @@ export default function SettingsProfileScreen() {
     <SettingsPage title="Profile">
       <View style={settingsStyles.section}>
         <View style={styles.nameRow}>
-          <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.nameIcon} />
-          <TextInput
-            style={styles.nameInput}
+          <TextField
+            containerStyle={styles.nameField}
+            leading={<Ionicons name="person-outline" size={18} color={colors.primary} />}
             value={editName}
             onChangeText={setEditName}
             placeholder="Your first name"
@@ -147,13 +148,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.md,
   },
-  nameIcon: { marginTop: spacing.hair },
-  nameInput: {
-    ...type.body,
-    flex: 1,
-    color: colors.textPrimary,
-    paddingVertical: spacing.sm,
-  },
+  nameField: { flex: 1 },
   dietBlock: {
     padding: spacing.lg,
     borderBottomWidth: 1,

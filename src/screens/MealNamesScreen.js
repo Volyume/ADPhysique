@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import TextField from '../components/TextField';
 import { settingsStyles as styles } from '../components/SettingsPrimitives';
 import {
   DEFAULT_MEALS_PER_DAY, defaultMealSlotLabel, getMealLabelOverrides, setMealLabel,
@@ -60,8 +61,8 @@ export default function MealNamesScreen() {
           {slots.map((key) => (
             <View key={key} style={local.row}>
               <Text style={local.default} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
-              <TextInput
-                style={local.input}
+              <TextField
+                containerStyle={local.input}
                 value={values[key] ?? ''}
                 onChangeText={(t) => onChange(key, t)}
                 onBlur={() => onCommit(key)}
@@ -87,12 +88,5 @@ const local = StyleSheet.create({
     gap: spacing.md, paddingVertical: spacing.xs,
   },
   default: { ...type.body, color: colors.textSecondary, width: 110 },
-  input: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium,
-  },
+  input: { flex: 1 },
 });

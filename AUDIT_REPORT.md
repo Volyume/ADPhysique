@@ -120,8 +120,8 @@ Status: materially closed.
 - Native headers remain hidden for app screens.
 - Workout Summary read-only mode now uses `BackHeader`.
 - Nutrition Targets duplicate in-content title was removed.
-- Shared section labels now use `SectionLabel` / `type.overline` across the first three bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings and Log Cardio.
-- `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup and Add Custom Food manual/numeric fields migrated in safe slices.
+- Shared section labels now use `SectionLabel` / `type.overline` across the first bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings, Log Cardio and Meal Plan grocery categories.
+- `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name and Coaching step target migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and has replaced the duplicated search chrome in Lift Progress, Exercise Picker and Build Workout picker flows.
 - Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions and Pro Goal Setup rebuild now use the shared `Button` primitive.
 - The weekly run pause picker now uses the shared `BottomSheet` chrome instead of its own modal/scrim implementation.

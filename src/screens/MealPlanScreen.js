@@ -23,6 +23,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
@@ -781,7 +782,7 @@ export default function MealPlanScreen({ navigation }) {
                 >
                   {grocerySheet.sections.map((section) => (
                     <View key={section.label} style={styles.grocerySection}>
-                      <Text style={styles.grocerySectionLabel}>{section.label}</Text>
+                      <SectionLabel style={styles.grocerySectionLabel}>{section.label}</SectionLabel>
                       {section.items.map((item, i) => (
                         <View key={`${section.label}-${item.name}-${i}`} style={styles.groceryRow}>
                           <Text style={styles.groceryName}>
@@ -883,8 +884,7 @@ const styles = StyleSheet.create({
   swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
   grocerySection: { marginTop: spacing.sm },
   grocerySectionLabel: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xxs,
+    marginBottom: spacing.xxs,
   },
   groceryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
