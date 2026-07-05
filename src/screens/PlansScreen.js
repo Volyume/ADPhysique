@@ -15,6 +15,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import TextField from '../components/TextField';
+import SectionLabel from '../components/SectionLabel';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
@@ -795,7 +796,7 @@ export default function PlansScreen({ navigation }) {
         {(myPlans.length > 0 || folders.length > 0 || !!activePlan) && (
           <View style={styles.section}>
             <View style={styles.foldersHeaderRow}>
-              <Text style={styles.sectionTitle}>Folders</Text>
+              <SectionLabel>Folders</SectionLabel>
               <TouchableOpacity
                 onPress={openCreateFolder}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -856,7 +857,7 @@ export default function PlansScreen({ navigation }) {
             deleted, always live here so a plan is never hidden. */}
         {unfiledPlans.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>My plans</Text>
+            <SectionLabel>My plans</SectionLabel>
             {unfiledPlans.map((plan, i) => renderPlanCard(plan, i))}
           </View>
         )}
@@ -933,7 +934,7 @@ export default function PlansScreen({ navigation }) {
         {/* Workout Templates */}
         {templates.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Workout templates</Text>
+            <SectionLabel>Workout templates</SectionLabel>
             <Text style={styles.sectionSubtitle}>Saved workouts you can start directly.</Text>
             {templates.map(routine => (
               <Card key={routine.id} style={styles.templateCard}>
@@ -987,9 +988,9 @@ export default function PlansScreen({ navigation }) {
         {/* Decision Hub, visible to everyone. Section title and copy adapt:
             Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <SectionLabel>
             {isProWithPlan ? 'Switch your plan' : 'Start or build a plan'}
-          </Text>
+          </SectionLabel>
           {isProWithPlan && (
             <Text style={styles.sectionSubtitle}>
               Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
@@ -1098,7 +1099,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   skeletonWrap: { gap: spacing.lg },
   section: { gap: spacing.md },
-  sectionTitle: { ...type.label, color: colors.textSecondary },
   sectionSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -spacing.sm },
 
   // Folders (Hevy teardown R1)

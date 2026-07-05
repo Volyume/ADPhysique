@@ -23,6 +23,7 @@ import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 
 // Same reading order the enrollment reveal uses: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -291,7 +292,7 @@ export default function PlanDetailScreen({ navigation, route }) {
 
         {/* Workouts list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Workouts</Text>
+          <SectionLabel>Workouts</SectionLabel>
           {workouts.length === 0 ? (
             <Card padding="xl" style={styles.emptyCard}>
               <Text style={styles.emptyCardText}>
@@ -346,7 +347,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             time, not just right after setup. */}
         {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Why this plan, for you</Text>
+            <SectionLabel>Why this plan, for you</SectionLabel>
             <Card style={styles.whyCard}>
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
@@ -362,7 +363,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             through the goal-change wizard in Athlete Hub. */}
         {!isLibrary && tier !== 'pro' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Manage</Text>
+            <SectionLabel>Manage</SectionLabel>
             <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={colors.primary} />
@@ -417,9 +418,6 @@ const styles = StyleSheet.create({
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planStatLabel: { ...type.caption, color: colors.textMuted },
   section: { gap: spacing.md },
-  sectionTitle: {
-    ...type.label, color: colors.textSecondary,
-  },
   // Card owns background/radius/padding/border here.
   emptyCard: {
     alignItems: 'center',
