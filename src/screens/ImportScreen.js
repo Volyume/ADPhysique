@@ -19,10 +19,10 @@ import BackHeader from '../components/BackHeader';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
-import PressableCard from '../components/PressableCard';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import {
   parseCSV, detectFormat, parseHevy, parseStrong,
@@ -174,10 +174,12 @@ export default function ImportScreen({ navigation }) {
               ))}
             </View>
 
-            <PressableCard onPress={handlePickFile} style={styles.primaryCta}>
-              <Ionicons name="document-attach-outline" size={20} color={colors.onPrimary} />
-              <Text style={styles.primaryCtaText}>Pick CSV file</Text>
-            </PressableCard>
+            <Button
+              title="Pick CSV file"
+              icon="document-attach-outline"
+              onPress={handlePickFile}
+              style={styles.primaryButton}
+            />
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </>
@@ -239,14 +241,19 @@ export default function ImportScreen({ navigation }) {
               )}
             </Card>
 
-            <PressableCard onPress={handleConfirmImport} style={styles.primaryCta}>
-              <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
-              <Text style={styles.primaryCtaText}>Import {analysis.workoutCount} sessions</Text>
-            </PressableCard>
+            <Button
+              title={`Import ${analysis.workoutCount} sessions`}
+              icon="checkmark"
+              onPress={handleConfirmImport}
+              style={styles.primaryButton}
+            />
 
-            <PressableCard onPress={reset} style={styles.secondaryCta}>
-              <Text style={styles.secondaryCtaText}>Pick a different file</Text>
-            </PressableCard>
+            <Button
+              title="Pick a different file"
+              variant="secondary"
+              onPress={reset}
+              style={styles.secondaryButton}
+            />
           </>
         )}
 
@@ -270,12 +277,17 @@ export default function ImportScreen({ navigation }) {
                   : ''}
               </Text>
             </Card>
-            <PressableCard onPress={() => navigation.goBack()} style={styles.primaryCta}>
-              <Text style={styles.primaryCtaText}>Done</Text>
-            </PressableCard>
-            <PressableCard onPress={reset} style={styles.secondaryCta}>
-              <Text style={styles.secondaryCtaText}>Import another file</Text>
-            </PressableCard>
+            <Button
+              title="Done"
+              onPress={() => navigation.goBack()}
+              style={styles.primaryButton}
+            />
+            <Button
+              title="Import another file"
+              variant="secondary"
+              onPress={reset}
+              style={styles.secondaryButton}
+            />
           </>
         )}
       </ScrollView>
@@ -334,33 +346,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  primaryCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    marginTop: spacing.lg,
-  },
-  primaryCtaText: {
-    ...type.bodyStrong,
-    color: colors.onPrimary,
-  },
-  secondaryCta: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    marginTop: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryCtaText: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
+  primaryButton: { marginTop: spacing.lg },
+  secondaryButton: { marginTop: spacing.sm },
 
   errorText: {
     ...type.bodySm,
