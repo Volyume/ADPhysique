@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput,
+  Modal,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SearchBar from '../components/SearchBar';
 import Stepper from '../components/Stepper';
+import TextField from '../components/TextField';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
@@ -263,8 +264,10 @@ export default function BuildWorkoutScreen({ navigation }) {
               <View style={styles.controlGroup}>
                 <Text style={styles.controlLabel}>Reps</Text>
                 <View style={styles.repRow}>
-                  <TextInput
-                    style={styles.repInput}
+                  <TextField
+                    containerStyle={styles.repFieldContainer}
+                    fieldStyle={styles.repField}
+                    inputStyle={styles.repInput}
                     value={String(item.repsMin)}
                     onChangeText={v => updateField(item.key, 'repsMin', parseInt(v) || item.repsMin)}
                     keyboardType="number-pad"
@@ -272,8 +275,10 @@ export default function BuildWorkoutScreen({ navigation }) {
                     accessibilityLabel="Minimum reps"
                   />
                   <Text style={styles.repSep}>–</Text>
-                  <TextInput
-                    style={styles.repInput}
+                  <TextField
+                    containerStyle={styles.repFieldContainer}
+                    fieldStyle={styles.repField}
+                    inputStyle={styles.repInput}
                     value={String(item.repsMax)}
                     onChangeText={v => updateField(item.key, 'repsMax', parseInt(v) || item.repsMax)}
                     keyboardType="number-pad"
@@ -305,8 +310,10 @@ export default function BuildWorkoutScreen({ navigation }) {
               {/* Starting Weight */}
               <View style={styles.controlGroup}>
                 <Text style={styles.controlLabel}>Start ({units})</Text>
-                <TextInput
-                  style={styles.weightInput}
+                <TextField
+                  containerStyle={styles.weightFieldContainer}
+                  fieldStyle={styles.weightField}
+                  inputStyle={styles.weightInput}
                   value={item.startingWeight > 0 ? String(item.startingWeight) : ''}
                   onChangeText={v => updateField(item.key, 'startingWeight', parseFloat(v) || 0)}
                   placeholder="0"
@@ -367,12 +374,21 @@ export default function BuildWorkoutScreen({ navigation }) {
               ))}
             </View>
             <View style={styles.travelBtns}>
-              <TouchableOpacity style={styles.travelCancel} onPress={() => setShowTravelModal(false)} accessibilityRole="button" accessibilityLabel="Cancel">
-                <Text style={styles.travelCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.travelConfirm} onPress={applyTravelMode} accessibilityRole="button" accessibilityLabel="Build session">
-                <Text style={styles.travelConfirmText}>Build Session</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                style={styles.travelCancel}
+                textStyle={styles.travelCancelText}
+                onPress={() => setShowTravelModal(false)}
+                accessibilityLabel="Cancel"
+              />
+              <Button
+                title="Build Session"
+                style={styles.travelConfirm}
+                textStyle={styles.travelConfirmText}
+                onPress={applyTravelMode}
+                accessibilityLabel="Build session"
+              />
             </View>
           </View>
         </View>
@@ -496,32 +512,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  repInput: {
+  repFieldContainer: {
     width: 40,
-    height: 34,
-    backgroundColor: colors.surface2,
+    gap: 0,
+  },
+  repField: {
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 34,
+  },
+  repInput: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 0,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   repSep: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
   },
-  weightInput: {
+  weightFieldContainer: {
     width: 64,
-    height: 34,
-    backgroundColor: colors.surface2,
+    gap: 0,
+  },
+  weightField: {
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 34,
+  },
+  weightInput: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 0,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
     textAlign: 'center',
   },
   addBtn: {
@@ -603,13 +625,15 @@ const styles = StyleSheet.create({
   travelOptText: { ...type.label, flex: 1, color: colors.textSecondary },
   travelBtns: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   travelCancel: {
-    flex: 1, paddingVertical: spacing.md, alignItems: 'center',
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
   },
-  travelCancelText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  travelCancelText: { fontSize: fontSize.sm },
   travelConfirm: {
-    flex: 1, paddingVertical: spacing.md, alignItems: 'center',
-    borderRadius: radius.md, backgroundColor: colors.primary,
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
   },
   travelConfirmText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });
