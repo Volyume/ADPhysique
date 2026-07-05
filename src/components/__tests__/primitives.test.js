@@ -169,4 +169,9 @@ describe('SectionLabel', () => {
     const tree = create(<SectionLabel accessibilityRole="header">Records</SectionLabel>);
     expect(tree.root.findByProps({ accessibilityRole: 'header' })).toBeTruthy();
   });
+
+  test('supports title-scale section headings from the shared primitive', () => {
+    const tree = create(<SectionLabel variant="title">About you</SectionLabel>).toJSON();
+    expect(JSON.stringify(tree)).toContain(colors.textPrimary);
+  });
 });
