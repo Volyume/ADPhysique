@@ -24,4 +24,11 @@ describe('history empty states', () => {
     );
     expect(coachHistory).not.toMatch(/styles\.empty(?:Card|Title|Body)/);
   });
+
+  test('CoachHeldHistoryScreen fails closed on missing user or load failure', () => {
+    expect(coachHistory).toMatch(/if \(!user\?\.id\) \{\s*failClosed\(\);\s*return;\s*\}/);
+    expect(coachHistory).toMatch(/const failClosed = \(error\) => \{[\s\S]*setSuppress\(true\);[\s\S]*setHistoryFull\(\[\]\);[\s\S]*setWeeks\(\[\]\);[\s\S]*setLoading\(false\);[\s\S]*\};/);
+    expect(coachHistory).toMatch(/catch \(e\) \{\s*failClosed\(e\);\s*\}/);
+    expect(coachHistory).not.toMatch(/load\(\)\.catch\(\(\) => setLoading\(false\)\)/);
+  });
 });

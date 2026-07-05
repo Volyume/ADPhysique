@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { pairAppliedWithOutcome, buildScorecard } from '../lib/coachOutcome';
 import { SkeletonCard } from '../components/Skeleton';
+import { logError } from '../lib/errorLog';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -113,34 +114,54 @@ export default function CoachHeldHistoryScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const failClosed = (error) => {
+      if (cancelled) return;
+      if (error) logError('CoachHeldHistory.load', error, { hasUser: !!user?.id });
+      setSuppress(true);
+      setHistoryFull([]);
+      setWeeks([]);
+      setLoading(false);
+    };
+
     async function load() {
+      if (!user?.id) {
+        failClosed();
+        return;
+      }
       // ED-safety, fail CLOSED: the outcome loop + scorecard are trend-adjacent,
       // so a FAILED flag/wellbeing read suppresses them (never shows over a
       // possibly-open flag). A sentinel 'read_failed' reads as suppress.
-      const [history, edFlag, wellbeing] = await Promise.all([
-        getCoachOutputHistory(user.id),
-        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        // Fail closed: read wellbeing raw so a genuine failure is
-        // distinguishable from 'unspecified'. getWellbeingMode swallows
-        // failures to 'unspecified', which would fail OPEN here.
-        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
-      ]);
-      setSuppress(!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing));
-      setHistoryFull(history);
-      const withData = history.filter(w => {
-        const hasHeld = Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0;
-        const hasChanged = w.adjustments?.calories?.change ||
-          (w.adjustments?.training?.signal && w.adjustments.training.signal !== 'hold') ||
-          w.adjustments?.steps?.change ||
-          w.deloadSuggested;
-        return hasHeld || hasChanged;
-      });
-      setWeeks(withData);
-      setLoading(false);
+      try {
+        const [history, edFlag, wellbeing] = await Promise.all([
+          getCoachOutputHistory(user.id),
+          getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+          // Fail closed: read wellbeing raw so a genuine failure is
+          // distinguishable from 'unspecified'. getWellbeingMode swallows
+          // failures to 'unspecified', which would fail OPEN here.
+          AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+        ]);
+        if (cancelled) return;
+        setSuppress(!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing));
+        setHistoryFull(history);
+        const withData = history.filter(w => {
+          const hasHeld = Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0;
+          const hasChanged = w.adjustments?.calories?.change ||
+            (w.adjustments?.training?.signal && w.adjustments.training.signal !== 'hold') ||
+            w.adjustments?.steps?.change ||
+            w.deloadSuggested;
+          return hasHeld || hasChanged;
+        });
+        setWeeks(withData);
+        setLoading(false);
+      } catch (e) {
+        failClosed(e);
+      }
     }
-    load().catch(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    load();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // Suppressed -> [] / null, so the outcome chips + scorecard render nothing.
   const pairs = suppress ? [] : pairAppliedWithOutcome(historyFull);

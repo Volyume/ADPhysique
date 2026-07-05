@@ -42,13 +42,13 @@ The branch is not claiming that every item in the larger 52-item elite register 
 ### Mobile
 
 - `node node_modules\jest\bin\jest.js --runInBand --silent`: pass.
-  - 504 suites passed.
-  - 6,441 tests passed, 5 skipped.
+  - 505 suites passed.
+  - 6,444 tests passed, 5 skipped.
   - 39 snapshots passed.
 - `node node_modules\eslint\bin\eslint.js . --max-warnings 0`: pass.
 - `node node_modules\typescript\bin\tsc --noEmit`: pass.
 - `node scripts\check-imports.cjs`: pass.
-  - 940 files checked, no unresolved imports or missing named exports.
+  - 941 files checked, no unresolved imports or missing named exports.
 - `node node_modules\expo\bin\cli install --check`: pass.
   - Sentry dependency check skipped by the repo's existing `expo.install.exclude`.
 - Focused guard pack passed:
@@ -327,6 +327,7 @@ Status: release decision.
 - Food Insights window loads now use a latest-request guard, with an out-of-order regression proving an older 7-day rollup response cannot overwrite the currently selected 30-day nutrition insight window.
 - Cardio History now guards focus, retry and post-delete loads with a latest-request token, with a regression proving an older list/trend response cannot repaint over a newer cardio-goal load.
 - Volume Heatmap now has a single focus-based load trigger instead of duplicate focus/effect loads, and its volume, trend, freshness, division and landmark commits are guarded so stale profile/window reads cannot repaint the heatmap.
+- Coach Held History now fails closed when no user is present or history loading fails, suppressing outcome scorecard/chips and clearing history state instead of merely stopping the loading indicator.
 
 ### Web / CI / Security
 
