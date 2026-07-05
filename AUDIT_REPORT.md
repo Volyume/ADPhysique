@@ -321,6 +321,7 @@ Status: release decision.
 - Workout History now loads its visible page through a bounded `getRecentCompletedWorkouts` query, so large histories do not over-read every workout before applying the 50-session UI ceiling, and set fan-out remains capped to the visible page.
 - Profile age handling now uses shared local-date helpers: Nutrition Targets computes age from the saved date of birth with birthday awareness, and Pro Onboarding stores an age-preserving synthetic local DOB instead of a fixed July 1 placeholder when only age is known.
 - Web account profile age now follows the same calendar-date principle, parsing date of birth as strict `YYYY-MM-DD` and comparing London calendar parts instead of using elapsed milliseconds from `Date.parse`.
+- Workout History now guards overlapping loads with a request token, so a stale mount, retry, refresh or post-delete read cannot overwrite newer loading/error/workout state or fan out set reads for old results.
 
 ### Web / CI / Security
 

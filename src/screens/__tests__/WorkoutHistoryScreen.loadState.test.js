@@ -51,10 +51,10 @@ jest.mock('../../components/AnimatedEntrance', () => {
 jest.mock('@expo/vector-icons/Ionicons', () => 'Ionicons');
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@shopify/flash-list', () => ({
-  FlashList: ({ data = [], ListEmptyComponent }) => {
+  FlashList: ({ data = [], ListEmptyComponent, refreshControl }) => {
     const React = require('react');
     const { View } = require('react-native');
-    return React.createElement(View, null, data.length === 0 ? ListEmptyComponent : null);
+    return React.createElement(View, { refreshControl }, data.length === 0 ? ListEmptyComponent : null);
   },
 }));
 jest.mock('../../navigation/navigateCrossTab', () => ({ navigateCrossTab: jest.fn() }));
@@ -95,6 +95,13 @@ async function flush() {
     await Promise.resolve();
     await Promise.resolve();
   });
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
 }
 
 describe('WorkoutHistoryScreen load states', () => {
@@ -155,5 +162,47 @@ describe('WorkoutHistoryScreen load states', () => {
     expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledWith(
       workouts.slice(0, 50).map(w => w.id),
     );
+  });
+
+  test('ignores stale overlapping refresh results before fetching sets', async () => {
+    const older = deferred();
+    const newer = deferred();
+    getRecentCompletedWorkouts
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
+    getAllExercises.mockResolvedValue([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    const list = tree.root.find((node) => node.props.refreshControl);
+    let refreshPromise;
+    await act(async () => {
+      refreshPromise = list.props.refreshControl.props.onRefresh();
+      await Promise.resolve();
+    });
+    expect(getRecentCompletedWorkouts).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      older.resolve([{ id: 'old', userId: 'u1', startedAt: 1, endedAt: 2, isCompleted: true }]);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(getWorkoutSetsForWorkoutIds).not.toHaveBeenCalled();
+    expect(flattenText(tree.toJSON())).toContain('loading row');
+
+    await act(async () => {
+      newer.resolve([{ id: 'new', userId: 'u1', startedAt: 3, endedAt: 4, isCompleted: true }]);
+      await refreshPromise;
+    });
+    await flush();
+
+    expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledTimes(1);
+    expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledWith(['new']);
   });
 });
