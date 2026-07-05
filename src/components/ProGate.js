@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
+import BottomSheet from './BottomSheet';
+import Button from './Button';
 import useAppStore from '../store/useAppStore';
 import TodaysPlateTeaser from './food/TodaysPlateTeaser';
 import { restorePurchases } from '../lib/payments/restore';
@@ -70,10 +72,6 @@ export default function ProGate({ children, feature = 'This feature', style }) {
   const tier = useAppStore(s => s.tier);
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
-  // Bottom-anchored Modal below: it overlays the tab band, so the sheet
-  // absorbs the system inset itself (edge-to-edge sweep, 2026-07-03).
-  // Called before the early return, hooks order.
-  const insets = useSafeAreaInsets();
 
   // Pro users see the content. Free users must sign up and go through the
   // upgrade flow, going Pro is never a silent one-tap switch.
@@ -104,51 +102,38 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         </TouchableOpacity>
       </View>
 
-      <Modal
+      <BottomSheet
         visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onClose={() => setModalVisible(false)}
+        accessibilityLabel={`${feature} Pro upgrade`}
       >
-        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => setModalVisible(false)}>
-          <Pressable
-            style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}
-            onPress={() => {}}
-            accessible={false}
-          >
-            <View style={styles.sheetHandle} />
+        <View style={styles.sheetContent}>
+          <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
+            <Ionicons name="sparkles" size={28} color={colors.primary} />
+          </View>
 
-            <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
-              <Ionicons name="sparkles" size={28} color={colors.primary} />
-            </View>
+          <Text style={styles.sheetTitle}>{feature}</Text>
+          {/* COMP-CLARITY: per-feature line so the inline sheet matches what
+              the user tapped, falling back to the coaching-layer pitch. */}
+          <Text style={styles.sheetBody}>{benefitFor(feature)}</Text>
 
-            <Text style={styles.sheetTitle}>{feature}</Text>
-            {/* COMP-CLARITY: per-feature line so the inline sheet matches what
-                the user tapped, falling back to the coaching-layer pitch. */}
-            <Text style={styles.sheetBody}>{benefitFor(feature)}</Text>
+          <Button
+            title="Upgrade to Pro"
+            icon="sparkles"
+            onPress={upgrade}
+            accessibilityLabel="Upgrade to Pro"
+            style={styles.upgradeBtn}
+          />
 
-            <TouchableOpacity
-              style={styles.upgradeBtn}
-              onPress={upgrade}
-              activeOpacity={0.88}
-              accessibilityRole="button"
-              accessibilityLabel="Upgrade to Pro"
-            >
-              <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
-              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dismissBtn}
-              onPress={() => setModalVisible(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Maybe later"
-            >
-              <Text style={styles.dismissText}>Maybe later</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          <Button
+            title="Maybe later"
+            variant="tertiary"
+            fullWidth={false}
+            onPress={() => setModalVisible(false)}
+            accessibilityLabel="Maybe later"
+          />
+        </View>
+      </BottomSheet>
     </>
   );
 }
@@ -371,17 +356,7 @@ const styles = StyleSheet.create({
   },
   lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
-  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    padding: spacing.xl, paddingBottom: spacing.xxl,
-    alignItems: 'center', gap: spacing.md,
-  },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: radius.hair,
-    backgroundColor: colors.border, marginBottom: spacing.sm,
-  },
+  sheetContent: { alignItems: 'center', gap: spacing.md },
   sheetIconWrap: {
     width: 60, height: 60, borderRadius: circle(60),
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
@@ -393,15 +368,7 @@ const styles = StyleSheet.create({
   sheetBody: {
     fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 21,
   },
-  upgradeBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.md, alignSelf: 'stretch',
-    marginTop: spacing.sm,
-  },
-  upgradeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  dismissBtn: { paddingVertical: spacing.sm },
-  dismissText: { fontSize: fontSize.sm, color: colors.textMuted },
+  upgradeBtn: { marginTop: spacing.sm },
 
   lockedSafe: { flex: 1, backgroundColor: colors.background },
   lockedScroll: {

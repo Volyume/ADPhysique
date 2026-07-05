@@ -123,8 +123,8 @@ Status: materially closed.
 - Shared section labels now use `SectionLabel` / `type.overline` across the first bounded sweeps: Coach, Athlete Profile, Consistency, Lift Progress, settings primitives, Add Custom Food, Food Insights, Goal Change Summary, Coaching Reminders, Analytics, Notification Settings, Log Cardio, Meal Plan grocery categories, curated meal details, calorie banking, readiness cards and Block Reflection. `SectionLabel` now forwards text accessibility props.
 - `TextField` now provides the first canonical labelled input primitive, with auth fields, first-run setup, Add Custom Food manual/numeric fields, Meal Names, Profile first name, Coaching step target and My Meals rename migrated in safe slices.
 - `SearchBar` now supports explicit accessibility labels and loading state, and has replaced the duplicated search chrome in Lift Progress, Exercise Picker, Build Workout picker flows and Food Search.
-- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions and Block Reflection CTAs now use the shared `Button` primitive.
-- The weekly run pause picker and My Meals rename dialog now use the shared `BottomSheet` chrome instead of their own modal/scrim implementations.
+- Goal Change Summary, Food Insights export actions, Plan Update rebuild/confirm actions, Pro Goal Setup rebuild, My Meals rename actions, Cardio Plan log actions, Block Reflection CTAs and the inline ProGate upgrade sheet now use the shared `Button` primitive.
+- The weekly run pause picker, My Meals rename dialog and inline ProGate upgrade sheet now use the shared `BottomSheet` chrome instead of their own modal/scrim implementations.
 - A guard now prevents native header drift.
 
 ### H6: Setup-Complete / Reveal Consistency
