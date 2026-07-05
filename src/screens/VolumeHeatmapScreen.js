@@ -73,6 +73,7 @@ export default function VolumeHeatmapScreen() {
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
+  const [hasAnyCompletedSets, setHasAnyCompletedSets] = useState(false);
   // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
   // at 4W by default to preserve the section's current shape; chips widen it.
   const [trendWindowKey, setTrendWindowKey] = useState('4W');
@@ -109,6 +110,7 @@ export default function VolumeHeatmapScreen() {
       setPreviousVolume({});
       setTrendData([]);
       setLastTrainedMap({});
+      setHasAnyCompletedSets(false);
       setDivisionMarkers(null);
       setDivisionLabel(null);
       setLoadError(false);
@@ -125,6 +127,7 @@ export default function VolumeHeatmapScreen() {
 
       const allSets = await getCompletedWorkoutSets(user.id);
       if (!isCurrentRequest()) return;
+      setHasAnyCompletedSets(allSets.length > 0);
       const recentSets = allSets.filter(s => s.createdAt >= windowStart);
       const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
 
@@ -202,6 +205,7 @@ export default function VolumeHeatmapScreen() {
       setPreviousVolume({});
       setTrendData([]);
       setLastTrainedMap({});
+      setHasAnyCompletedSets(false);
       setDivisionMarkers(null);
       setDivisionLabel(null);
       setLoadError(true);
@@ -299,6 +303,15 @@ export default function VolumeHeatmapScreen() {
   const volTakeaway = volumeTakeaway({
     windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
   });
+  const hasWindowVolume = useMemo(() => Object.values(weeklyVolume)
+    .some(v => Math.round(v?.workingSets || 0) > 0), [weeklyVolume]);
+  const showNoVolumeGuidance = !hasWindowVolume;
+  const noVolumeTitle = hasAnyCompletedSets
+    ? `No sets in this ${windowWeeks === 1 ? '1-week' : `${windowWeeks}-week`} view`
+    : 'Volume appears after your first workout';
+  const noVolumeText = hasAnyCompletedSets
+    ? 'Your training history is still saved. Switch to a wider window if you want to see older volume.'
+    : 'Finish a workout and this screen will show weekly set volume, recovery freshness and target ranges by muscle.';
 
   const handleMuscleTap = useCallback((muscleKey) => {
     const offset = rowOffsets.current[muscleKey];
@@ -399,6 +412,15 @@ export default function VolumeHeatmapScreen() {
           <Ionicons name="time-outline" size={14} color={colors.textMuted} />
           <Text style={styles.windowNoteText}>{windowNoteText}</Text>
         </View>
+
+        {showNoVolumeGuidance && (
+          <EmptyState
+            icon={hasAnyCompletedSets ? 'time-outline' : 'barbell-outline'}
+            title={noVolumeTitle}
+            text={noVolumeText}
+            compact
+          />
+        )}
 
         {/* Legend */}
         <Card padding="md" radius="md" style={styles.legendRow}>

@@ -106,6 +106,37 @@ describe('VolumeHeatmapScreen states', () => {
     expect(text).not.toContain('Below minimum');
   });
 
+  test('shows first-workout guidance instead of an unexplained zero heatmap', async () => {
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Volume appears after your first workout');
+    expect(text).toContain('Finish a workout and this screen will show weekly set volume');
+    expect(text).toContain('Below minimum');
+  });
+
+  test('explains when saved training exists outside the selected volume window', async () => {
+    getCompletedWorkoutSets.mockResolvedValueOnce([{
+      id: 'old-set',
+      exerciseId: 'bench',
+      createdAt: Date.now() - 20 * 24 * 60 * 60 * 1000,
+      set_type: 'straight',
+      actualReps: 10,
+      weight: 100,
+    }]);
+
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('No sets in this 1-week view');
+    expect(text).toContain('Your training history is still saved.');
+    expect(text).toContain('Switch to a wider window');
+  });
+
   test('starts a single initial load from the focus trigger', async () => {
     await act(async () => { create(<VolumeHeatmapScreen />); });
     await flush();
