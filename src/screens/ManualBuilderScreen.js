@@ -9,6 +9,7 @@ import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
+import Stepper from '../components/Stepper';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -171,36 +172,38 @@ function PlanBalanceCard({ days }) {
 }
 
 // ─── Target stepper ───────────────────────────────────────────────────────────
-// S5: the +/- numeric control BuildWorkoutScreen already uses for its
-// per-exercise sets/rest targets, ported here verbatim (same stepper/stepBtn/
-// stepValue look) and reused for sets, reps min, reps max and rest so none of
-// a plan's targets are read-only text any more.
-
-function TargetStepper({ label, displayValue, valueLabel, decreaseLabel, increaseLabel, onDecrease, onIncrease }) {
+// S5: compact wrapper around the shared +/- Stepper so sets, rep ranges and
+// rest use the app's one numeric-control primitive while the screen keeps the
+// training-specific clamp/coherence rules.
+function TargetStepper({
+  label,
+  value,
+  displayValue,
+  valueLabel,
+  decreaseLabel,
+  increaseLabel,
+  onChange,
+  min,
+  max,
+  step = 1,
+}) {
   return (
     <View style={styles.controlGroup}>
       <Text style={styles.controlLabel}>{label}</Text>
-      <View style={styles.stepper}>
-        <TouchableOpacity
-          style={styles.stepBtn}
-          onPress={onDecrease}
-          hitSlop={STEPPER_HIT_SLOP}
-          accessibilityRole="button"
-          accessibilityLabel={decreaseLabel}
-        >
-          <Ionicons name="remove" size={16} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.stepValue} accessibilityLabel={valueLabel}>{displayValue}</Text>
-        <TouchableOpacity
-          style={styles.stepBtn}
-          onPress={onIncrease}
-          hitSlop={STEPPER_HIT_SLOP}
-          accessibilityRole="button"
-          accessibilityLabel={increaseLabel}
-        >
-          <Ionicons name="add" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <Stepper
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={onChange}
+        size="compact"
+        hitSlop={STEPPER_HIT_SLOP}
+        label={label.toLowerCase()}
+        formatValue={() => `${displayValue}`}
+        valueLabel={valueLabel}
+        decreaseLabel={decreaseLabel}
+        increaseLabel={increaseLabel}
+      />
     </View>
   );
 }
@@ -537,17 +540,17 @@ export default function ManualBuilderScreen({ navigation, route }) {
   }
 
   // ── Target steppers ───────────────────────────────────────────────────────
-  // Single clamp-and-set helper behind every +/- press (sets, reps min/max,
-  // rest), the same Math.max/Math.min clamp BuildWorkoutScreen's
-  // adjustSets/adjustRest use.
-  function adjustExerciseNumber(dayIndex, exLocalId, field, delta, min, max) {
+  // Single clamp-and-set helper behind every target change (sets, reps min/max,
+  // rest), the same Math.max/Math.min clamp BuildWorkoutScreen's target editors
+  // use.
+  function setExerciseNumber(dayIndex, exLocalId, field, value, min, max) {
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
       return {
         ...d,
         exercises: d.exercises.map(ex => {
           if (ex.localId !== exLocalId) return ex;
-          let next = Math.max(min, Math.min(max, (ex[field] ?? 0) + delta));
+          let next = Math.max(min, Math.min(max, value));
           // Keep the rep range coherent: min can never climb above max, nor max
           // drop below min, so a saved target can never read "13-12 reps".
           if (field === 'repsMin') next = Math.min(next, ex.repsMax ?? max);
@@ -948,39 +951,48 @@ export default function ManualBuilderScreen({ navigation, route }) {
                           <View style={styles.controls}>
                             <TargetStepper
                               label="Sets"
+                              value={ex.sets}
                               displayValue={ex.sets}
                               valueLabel={`${ex.sets} sets`}
                               decreaseLabel={`Decrease sets for ${ex.name}`}
                               increaseLabel={`Increase sets for ${ex.name}`}
-                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'sets', -1, 1, 20)}
-                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'sets', 1, 1, 20)}
+                              min={1}
+                              max={20}
+                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'sets', next, 1, 20)}
                             />
                             <TargetStepper
                               label="Reps min"
+                              value={ex.repsMin}
                               displayValue={ex.repsMin}
                               valueLabel={`${ex.repsMin} minimum reps`}
                               decreaseLabel={`Decrease minimum reps for ${ex.name}`}
                               increaseLabel={`Increase minimum reps for ${ex.name}`}
-                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMin', -1, 1, 50)}
-                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMin', 1, 1, 50)}
+                              min={1}
+                              max={50}
+                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'repsMin', next, 1, 50)}
                             />
                             <TargetStepper
                               label="Reps max"
+                              value={ex.repsMax}
                               displayValue={ex.repsMax}
                               valueLabel={`${ex.repsMax} maximum reps`}
                               decreaseLabel={`Decrease maximum reps for ${ex.name}`}
                               increaseLabel={`Increase maximum reps for ${ex.name}`}
-                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMax', -1, 1, 50)}
-                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMax', 1, 1, 50)}
+                              min={1}
+                              max={50}
+                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'repsMax', next, 1, 50)}
                             />
                             <TargetStepper
                               label="Rest"
+                              value={ex.restSeconds ?? DEFAULT_REST}
                               displayValue={formatRest(ex.restSeconds ?? DEFAULT_REST)}
                               valueLabel={`Rest ${formatRest(ex.restSeconds ?? DEFAULT_REST)}`}
                               decreaseLabel={`Decrease rest for ${ex.name}`}
                               increaseLabel={`Increase rest for ${ex.name}`}
-                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'restSeconds', -15, 30, 600)}
-                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'restSeconds', 15, 30, 600)}
+                              min={30}
+                              max={600}
+                              step={15}
+                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'restSeconds', next, 30, 600)}
                             />
                           </View>
                         </View>
@@ -1352,10 +1364,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
-  // Target steppers (S5): ported verbatim from BuildWorkoutScreen's
-  // controls/controlGroup/controlLabel/stepper/stepBtn/stepValue, the
-  // per-exercise sets/rest stepper look, reused here for sets, reps min,
-  // reps max and rest.
+  // Target steppers (S5): compact layout around the shared Stepper primitive.
   controls: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1370,28 +1379,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontWeight: fontWeight.medium,
-    textAlign: 'center',
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  stepBtn: {
-    width: 30,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    minWidth: 32,
     textAlign: 'center',
   },
   addExBtn: {
