@@ -10,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import SearchBar from '../components/SearchBar';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
@@ -399,12 +400,11 @@ export default function BuildWorkoutScreen({ navigation }) {
         <SafeAreaProvider>
         <SafeAreaView style={styles.pickerSafe} edges={['top', 'bottom']}>
           <View style={styles.pickerHeader}>
-            <TextInput
-              style={styles.pickerSearch}
+            <SearchBar
+              style={styles.pickerSearchBar}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search exercises…"
-              placeholderTextColor={colors.textMuted}
+              placeholder="Search exercises..."
               accessibilityLabel="Search exercises"
               autoFocus
             />
@@ -591,17 +591,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  pickerSearch: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...type.body,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+  pickerSearchBar: { flex: 1 },
   pickerClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   pickerItem: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, RefreshControl, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
 import SectionLabel from '../components/SectionLabel';
+import SearchBar from '../components/SearchBar';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries } from '../lib/liftProgress';
@@ -194,14 +195,11 @@ export default function LiftProgressScreen({ navigation }) {
   const header = (
     <View>
       {rows.length > 0 && (
-        <TextInput
-          style={styles.searchInput}
+        <SearchBar
+          style={styles.searchBar}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search exercises…"
-          placeholderTextColor={colors.textMuted}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
+          placeholder="Search exercises..."
           accessibilityLabel="Search lifts"
         />
       )}
@@ -422,18 +420,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
 
-  // ── Search (C1), same input styling as ExercisePickerModal's pickerSearch ──
-  searchInput: {
-    ...type.body,
-    backgroundColor: colors.inputBg,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
+  searchBar: { marginBottom: spacing.md },
 
   // ── Strength standing header ──
   standingCard: {
