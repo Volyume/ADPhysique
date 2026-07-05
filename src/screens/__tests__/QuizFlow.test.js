@@ -41,10 +41,10 @@ describe('QuizScreen', () => {
   test('selecting a chip writes to the in-memory slice', () => {
     let tree;
     act(() => { tree = create(<QuizScreen navigation={nav} />); });
-    // NAV-8 added a Back control above the chips; skip it.
-    const chip = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
-      && typeof n.props.onPress === 'function'
-      && n.props.accessibilityLabel !== 'Back')[0];
+    const groups = tree.root.findAll((n) => n.props.accessibilityRole === 'radiogroup');
+    expect(groups.length).toBeGreaterThan(0);
+    const chip = tree.root.findAll((n) => n.props.accessibilityRole === 'radio'
+      && typeof n.props.onPress === 'function')[0];
     act(() => chip.props.onPress());
     expect(store.setQuizField).toHaveBeenCalled();
   });
