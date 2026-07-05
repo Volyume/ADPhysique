@@ -25,6 +25,13 @@ jest.mock('../../components/ExercisePickerModal', () => () => null);
 jest.mock('../../components/Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
 jest.mock('../../lib/database', () => {
   let uidCounter = 0;
   return {
@@ -83,6 +90,7 @@ function pressables(tree, label) {
   for (const n of tree.root.findAll(
     x => x.props && x.props.accessibilityLabel === label && typeof x.props.onPress === 'function',
   )) {
+    if (typeof n.type === 'function' && n.type.name === 'Button') continue;
     if (seen.has(n.props.onPress)) continue;
     seen.add(n.props.onPress);
     out.push(n);
