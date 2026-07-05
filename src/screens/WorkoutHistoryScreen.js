@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -49,6 +49,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
+  const loadRequestRef = useRef(0);
 
   // Filter + view state
   const [filter, setFilter] = useState('all');
@@ -62,6 +63,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }, [user?.id]);
 
   async function loadWorkouts() {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+    const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!user?.id) {
       setLoading(false);
       return;
@@ -72,11 +76,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
       // LB-7: the list renders only the most recent 50 completed sessions, so
       // the database query and set fan-out are both bounded to that page.
       const recentCompleted = await getRecentCompletedWorkouts(user.id, 50);
+      if (!isCurrentRequest()) return;
       const page = recentCompleted.slice(0, 50);
       const [pageSets, allExercises] = await Promise.all([
         getWorkoutSetsForWorkoutIds(page.map(w => w.id)),
         getAllExercises(),
       ]);
+      if (!isCurrentRequest()) return;
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       const setsByWorkout = new Map();
       for (const s of pageSets) {
@@ -102,10 +108,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
       });
       setWorkouts(withSets);
     } catch (e) {
+      if (!isCurrentRequest()) return;
       logError('WorkoutHistoryScreen.loadWorkouts', e, { userId: user?.id });
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }
 
