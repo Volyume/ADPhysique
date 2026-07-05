@@ -247,6 +247,7 @@ Status: release decision.
 - Progress before/after sharing now uses the shared `Button` primitive for Share and Save-to-gallery CTAs, keeping the existing safety/privacy/render gates intact while removing another bespoke primary/secondary button pair.
 - Workout/PR/weekly Share Card CTAs now use shared outline `Button` controls for Story sharing and Save-to-gallery, preserving the existing export/share handlers and direct share-target tests.
 - Plan Library collection filters and division-prep filters now use the shared `Chip` primitive, preserving filtering behavior while removing another local chip grammar from a core Train browse surface.
+- Workout History filters now use the shared `Chip` primitive, preserving filter/calendar-reset behavior while removing bespoke chip fill/border/text styling from another Train surface.
 
 ### Web / CI / Security
 

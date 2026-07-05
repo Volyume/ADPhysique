@@ -15,6 +15,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../
 import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
+import Chip from '../components/Chip';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
 import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
@@ -597,21 +598,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
         {FILTERS.map(f => {
           const active = filter === f.key;
           return (
-            <TouchableOpacity
+            <Chip
               key={f.key}
-              style={[styles.chip, active && styles.chipActive]}
+              label={f.label}
+              selected={active}
               onPress={() => {
                 setFilter(f.key);
                 setSelectedDay(null);
               }}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
+              accessibilityRole="radio"
               accessibilityLabel={`Filter: ${f.label}`}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
+              style={styles.filterChip}
+              labelStyle={styles.filterChipText}
+              selectedLabelStyle={styles.filterChipTextActive}
+            />
           );
         })}
       </View>
@@ -719,23 +719,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  chip: {
-    paddingHorizontal: spacing.md,
+  filterChip: {
     paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
-  chipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
-  },
-  chipText: {
+  filterChipText: {
     ...type.label,
     color: colors.textSecondary,
   },
-  chipTextActive: {
+  filterChipTextActive: {
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
