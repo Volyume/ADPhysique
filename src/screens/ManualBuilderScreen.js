@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,9 @@ import Card from '../components/Card';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import Stepper from '../components/Stepper';
+import Button from '../components/Button';
+import Chip from '../components/Chip';
+import TextField from '../components/TextField';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -769,9 +772,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
             {/* Plan name */}
             <View style={styles.section}>
-              <Text style={styles.label}>Plan name</Text>
-              <TextInput accessibilityLabel="Plan name"
-                style={styles.textInput}
+              <TextField
+                label="Plan name"
+                accessibilityLabel="Plan name"
+                fieldStyle={styles.textField}
+                inputStyle={styles.textInput}
                 value={planName}
                 onChangeText={setPlanName}
                 placeholder="e.g. My Push Pull Legs"
@@ -786,18 +791,15 @@ export default function ManualBuilderScreen({ navigation, route }) {
               <Text style={styles.label}>Goal</Text>
               <View style={styles.pillWrap}>
                 {GOALS.map(g => (
-                  <TouchableOpacity
+                  <Chip
                     key={g.key}
-                    style={[styles.pill, selectedGoal === g.key && styles.pillActive]}
+                    label={g.label}
+                    selected={selectedGoal === g.key}
                     onPress={() => setGoal(g.key)}
-                    accessibilityRole="button"
                     accessibilityLabel={g.label}
-                    accessibilityState={{ selected: selectedGoal === g.key }}
-                  >
-                    <Text style={[styles.pillText, selectedGoal === g.key && styles.pillTextActive]}>
-                      {g.label}
-                    </Text>
-                  </TouchableOpacity>
+                    style={styles.pill}
+                    labelStyle={styles.pillText}
+                  />
                 ))}
               </View>
             </View>
@@ -807,18 +809,15 @@ export default function ManualBuilderScreen({ navigation, route }) {
               <Text style={styles.label}>Training days per week</Text>
               <View style={styles.pillWrap}>
                 {DAY_COUNT_OPTIONS.map(n => (
-                  <TouchableOpacity
+                  <Chip
                     key={n}
-                    style={[styles.dayCountPill, daysPerWeek === n && styles.pillActive]}
+                    label={String(n)}
+                    selected={daysPerWeek === n}
                     onPress={() => setDaysPerWeek(n)}
-                    accessibilityRole="button"
                     accessibilityLabel={`${n} training days per week`}
-                    accessibilityState={{ selected: daysPerWeek === n }}
-                  >
-                    <Text style={[styles.pillText, daysPerWeek === n && styles.pillTextActive]}>
-                      {n}
-                    </Text>
-                  </TouchableOpacity>
+                    style={styles.dayCountPill}
+                    labelStyle={styles.pillText}
+                  />
                 ))}
               </View>
               <Text style={styles.hintText}>
@@ -826,17 +825,18 @@ export default function ManualBuilderScreen({ navigation, route }) {
               </Text>
             </View>
 
-            <TouchableOpacity
+            <Button
+              title="Create Plan & Add Workouts"
+              icon="add-circle"
+              size="lg"
               style={[styles.primaryBtn, creating && styles.btnDisabled]}
+              textStyle={styles.primaryBtnText}
               onPress={handleCreatePlan}
               disabled={creating}
-              accessibilityRole="button"
+              loading={creating}
               accessibilityLabel="Create plan and add workouts"
               accessibilityState={{ disabled: creating }}
-            >
-              <Ionicons name="add-circle" size={20} color={colors.onPrimary} />
-              <Text style={styles.primaryBtnText}>Create Plan & Add Workouts</Text>
-            </TouchableOpacity>
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -860,8 +860,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         {/* Editable plan name */}
-        <TextInput accessibilityLabel="Plan name"
-          style={styles.planNameInput}
+        <TextField
+          accessibilityLabel="Plan name"
+          containerStyle={styles.planNameFieldContainer}
+          fieldStyle={styles.planNameField}
+          inputStyle={styles.planNameInput}
           value={editablePlanName}
           onChangeText={setEditableName}
           placeholder="Plan name"
@@ -876,8 +879,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
             {/* Day header */}
             <View style={styles.dayHeader}>
               <Text style={styles.dayNumber}>Day {dayIdx + 1}</Text>
-              <TextInput accessibilityLabel={`Name for day ${dayIdx + 1}`}
-                style={styles.dayNameInput}
+              <TextField
+                accessibilityLabel={`Name for day ${dayIdx + 1}`}
+                containerStyle={styles.dayNameFieldContainer}
+                fieldStyle={styles.dayNameField}
+                inputStyle={styles.dayNameInput}
                 value={day.name}
                 onChangeText={v => updateDayName(dayIdx, v)}
                 placeholder="Day name"
@@ -1073,41 +1079,42 @@ export default function ManualBuilderScreen({ navigation, route }) {
             a new training block as a side effect (see handleSaveEdit). */}
         {isEditMode ? (
           <View style={styles.actionRow}>
-            <TouchableOpacity
+            <Button
+              title="Save Changes"
+              icon="checkmark-circle"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
+              textStyle={styles.activateBtnText}
               onPress={handleSaveEdit}
               disabled={saving}
-              accessibilityRole="button"
+              loading={saving}
               accessibilityLabel="Save changes"
               accessibilityState={{ disabled: saving }}
-            >
-              <Ionicons name="checkmark-circle" size={18} color={colors.onPrimary} />
-              <Text style={styles.activateBtnText}>Save Changes</Text>
-            </TouchableOpacity>
+            />
           </View>
         ) : (
           <View style={styles.actionRow}>
-            <TouchableOpacity
+            <Button
+              title="Save Draft"
+              variant="secondary"
               style={[styles.draftBtn, saving && styles.btnDisabled]}
+              textStyle={styles.draftBtnText}
               onPress={handleSaveDraft}
               disabled={saving}
-              accessibilityRole="button"
+              loading={saving}
               accessibilityLabel="Save draft"
               accessibilityState={{ disabled: saving }}
-            >
-              <Text style={styles.draftBtnText}>Save Draft</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <Button
+              title="Save & Activate"
+              icon="flash"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
+              textStyle={styles.activateBtnText}
               onPress={handleSaveAndActivate}
               disabled={saving}
-              accessibilityRole="button"
+              loading={saving}
               accessibilityLabel="Save and activate"
               accessibilityState={{ disabled: saving }}
-            >
-              <Ionicons name="flash" size={18} color={colors.onPrimary} />
-              <Text style={styles.activateBtnText}>Save & Activate</Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </ScrollView>
@@ -1123,23 +1130,24 @@ export default function ManualBuilderScreen({ navigation, route }) {
             <Text style={styles.successName}>{savedPlanName}</Text>
             <Text style={styles.successSub}>Your plan is set as active and ready to use.</Text>
             <View style={styles.successActions}>
-              <TouchableOpacity
+              <Button
+                title="Stay Here"
+                variant="secondary"
+                fullWidth={false}
                 style={styles.successSecondary}
+                textStyle={styles.successSecondaryText}
                 onPress={() => setSuccessModal(false)}
-                accessibilityRole="button"
                 accessibilityLabel="Stay here"
-              >
-                <Text style={styles.successSecondaryText}>Stay Here</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              />
+              <Button
+                title="Go to Train"
+                icon="home"
+                fullWidth={false}
                 style={styles.successPrimary}
+                textStyle={styles.successPrimaryText}
                 onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
-                accessibilityRole="button"
                 accessibilityLabel="Go to Train"
-              >
-                <Ionicons name="home" size={16} color={colors.onPrimary} />
-                <Text style={styles.successPrimaryText}>Go to Train</Text>
-              </TouchableOpacity>
+              />
             </View>
           </Card>
         </View>
@@ -1175,15 +1183,14 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textSecondary,
   },
-  textInput: {
-    ...type.body,
+  textField: {
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
+  },
+  textInput: {
+    ...type.body,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   pillWrap: {
     flexDirection: 'row',
@@ -1194,44 +1201,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pillActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
   },
   pillText: {
     ...type.label,
-    color: colors.textSecondary,
-  },
-  pillTextActive: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
   dayCountPill: {
     minWidth: 48,
-    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   hintText: {
     ...type.captionTight,
     color: colors.textMuted,
   },
   primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
     marginTop: spacing.sm,
   },
   primaryBtnText: {
@@ -1249,13 +1234,23 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: spacing.xxxl,
   },
-  planNameInput: {
-    ...type.h2,
-    color: colors.textPrimary,
+  planNameFieldContainer: {
+    gap: 0,
+    marginBottom: spacing.xs,
+  },
+  planNameField: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    borderRadius: 0,
+    minHeight: 48,
+  },
+  planNameInput: {
+    ...type.h2,
     paddingBottom: spacing.sm,
-    marginBottom: spacing.xs,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   dayCard: {
     padding: 0,
@@ -1278,11 +1273,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     minWidth: 44,
   },
+  dayNameFieldContainer: {
+    flex: 1,
+    gap: 0,
+  },
+  dayNameField: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    minHeight: 32,
+  },
   dayNameInput: {
     ...type.bodyStrong,
-    flex: 1,
-    color: colors.textPrimary,
     paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   exList: {
     paddingHorizontal: spacing.lg,
@@ -1416,12 +1419,7 @@ const styles = StyleSheet.create({
   },
   draftBtn: {
     flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.lg,
     paddingVertical: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   draftBtnText: {
     ...type.bodyStrong,
@@ -1429,12 +1427,6 @@ const styles = StyleSheet.create({
   },
   activateBtn: {
     flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
     paddingVertical: spacing.lg,
   },
   activateBtnText: {
@@ -1481,10 +1473,6 @@ const styles = StyleSheet.create({
   successSecondary: {
     flex: 1,
     paddingVertical: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
   },
   successSecondaryText: {
     ...type.bodyStrong,
@@ -1492,13 +1480,7 @@ const styles = StyleSheet.create({
   },
   successPrimary: {
     flex: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
     paddingVertical: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   successPrimaryText: {
     ...type.bodyStrong,
