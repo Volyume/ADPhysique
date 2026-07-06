@@ -27,6 +27,7 @@ import {
 import { formatBodyWeightShort } from '../lib/units';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
+import { AVATAR_PRESETS, avatarPresetFor } from '../lib/profileAvatarPresets';
 import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
 import { buildAthleteProfileSummary } from '../lib/athleteProfileSummary';
 import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athleteProfileAccessibility';
@@ -36,17 +37,6 @@ import { logError } from '../lib/errorLog';
 
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
-
-const AVATAR_PRESETS = Object.freeze([
-  Object.freeze({ key: 'volyume_lift', label: 'Strength avatar', icon: 'barbell-outline' }),
-  Object.freeze({ key: 'volyume_physique', label: 'Physique avatar', icon: 'body-outline' }),
-  Object.freeze({ key: 'volyume_consistency', label: 'Consistency avatar', icon: 'calendar-outline' }),
-  Object.freeze({ key: 'volyume_progress', label: 'Progress avatar', icon: 'trending-up-outline' }),
-]);
-
-function avatarPresetFor(key) {
-  return AVATAR_PRESETS.find((preset) => preset.key === key) || AVATAR_PRESETS[0];
-}
 
 function formatDate(ms) {
   if (!ms) return 'Not logged';
@@ -245,7 +235,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
-      toast.show('Profile photos need a rebuild on this device.', { variant: 'warning' });
+      toast.show('Profile pictures need a rebuild on this device.', { variant: 'warning' });
       return;
     }
     try {
@@ -258,10 +248,10 @@ export default function AthleteProfileScreen({ navigation }) {
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const uri = await saveAvatarPhoto(user.id, result.assets[0].uri, avatarUri);
       await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: uri, avatarPreset: null });
-      toast.show('Profile photo updated', { variant: 'success' });
+      toast.show('Profile picture updated', { variant: 'success' });
     } catch (e) {
       logError('AthleteProfile.pickAvatar', e, { userId: user?.id });
-      toast.show("Couldn't update profile photo", { variant: 'error' });
+      toast.show("Couldn't update profile picture", { variant: 'error' });
     }
   }
 
@@ -270,7 +260,7 @@ export default function AthleteProfileScreen({ navigation }) {
     try {
       if (avatarUri) await deleteAvatarPhoto(avatarUri);
       await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: avatarPresetFor(presetKey).key });
-      toast.show('Profile avatar updated', { variant: 'success' });
+      toast.show('Profile badge updated', { variant: 'success' });
     } catch (e) {
       logError('AthleteProfile.applyAvatarPreset', e, { userId: user?.id });
       toast.show("Couldn't update avatar", { variant: 'error' });
@@ -279,7 +269,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   function removeAvatar() {
     if ((!avatarUri && !avatarPreset) || !user?.id) return;
-    appAlert('Remove profile photo?', 'This only removes the local profile photo on this device.', [
+    appAlert('Remove profile picture?', 'This clears the photo or Volyume badge from your profile.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -298,12 +288,12 @@ export default function AthleteProfileScreen({ navigation }) {
       ...AVATAR_PRESETS.map((preset) => ({ text: preset.label, onPress: () => applyAvatarPreset(preset.key) })),
     ];
     if (avatarUri || avatarPreset) {
-      actions.push({ text: 'Remove profile photo', style: 'destructive', onPress: removeAvatar });
+      actions.push({ text: 'Remove profile picture', style: 'destructive', onPress: removeAvatar });
     }
     actions.push(
       { text: 'Cancel', style: 'cancel' },
     );
-    appAlert('Profile photo', 'Choose a photo or use a simple Volyume avatar.', actions);
+    appAlert('Profile picture', 'Choose a photo or pick a Volyume training badge.', actions);
   }
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
@@ -319,11 +309,13 @@ export default function AthleteProfileScreen({ navigation }) {
       summary.scan?.leannessBandLabel || null,
       `${Math.round(summary.scan.visualLeannessScore)}/100`,
     ].filter(Boolean).join(' - '),
-    sub: `${scanConfidenceLabel(summary.scan?.confidence)} - not body fat`,
+    sub: `Private photo score - ${scanConfidenceLabel(summary.scan?.confidence).toLowerCase()} - not body fat`,
   } : {
     label: 'Body fat',
     value: bodyFatText,
-    sub: summary.bodyFatLoggedAt ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry` : 'Manual entry only',
+    sub: summary.bodyFatLoggedAt
+      ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry`
+      : 'Manual entry. Photos can replace this with a score.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;
@@ -345,10 +337,10 @@ export default function AthleteProfileScreen({ navigation }) {
             onPress={onAvatarPress}
             accessibilityRole="button"
             accessibilityLabel={avatarUri
-              ? 'Profile photo. Tap to change or remove.'
+              ? 'Profile picture. Tap to change or remove.'
               : avatarPresetConfig
                 ? `${avatarPresetConfig.label}. Tap to change or remove.`
-                : 'Add profile photo or avatar'}
+                : 'Add profile picture or Volyume badge'}
           >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
@@ -413,14 +405,14 @@ export default function AthleteProfileScreen({ navigation }) {
             <EmptyState
               icon="barbell-outline"
               title="Strength standards unlock with data"
-              text="Log body weight and your core compound lifts to compare estimated strength against baseline tiers."
+              text="Log body weight and your core compound lifts to compare your strength against baseline standards."
               compact
             />
           )}
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>Keep profile data fresh</SectionLabel>
+          <SectionLabel>Keep profile current</SectionLabel>
           <Row
             icon="scale-outline"
             label={freshness.bodyMetrics.label}
@@ -447,7 +439,7 @@ export default function AthleteProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>Profile and data</SectionLabel>
+          <SectionLabel>Details and data</SectionLabel>
           <Row
             icon="person-outline"
             label="Edit profile details"
@@ -515,7 +507,9 @@ const styles = StyleSheet.create({
   heroFocus: { ...type.captionTight, color: colors.textMuted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statTile: {
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: '48%',
+    minWidth: 150,
     minHeight: 112,
     gap: spacing.xs,
   },

@@ -47,17 +47,17 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
     progressScan: {
       state: stateForAge(scanDays, 28, 21),
       days: scanDays,
-      label: 'Progress photos and Physique Scan',
+      label: 'Progress photos',
       sub: copyForAge(
         scanDays,
         {
-          today: 'Scanned today. Retake only when light, pose and body weight are comparable.',
-          yesterday: 'Scanned yesterday. Keep the next scan 2 to 4 weeks away unless you are correcting quality.',
-          days: (days, soon, due) => days >= 28 ? due(days) : days >= 21 ? soon(days) : `Last scan ${days} days ago. Keep the next one comparable.`,
+          today: 'Scored today. Retake only if you are correcting photo quality.',
+          yesterday: 'Scored yesterday. Keep the next photo set 2 to 4 weeks away unless you are correcting quality.',
+          days: (days, soon, due) => days >= 28 ? due(days) : days >= 21 ? soon(days) : `Last scored ${days} days ago. Keep the next photos comparable.`,
         },
-        (days) => `Last scan ${days} days ago. Plan your next comparable photos soon.`,
-        (days) => `Last scan ${days} days ago. Retake when light, pose and timing are consistent.`,
-        'No scan yet. Start with consistent front, side and back photos.',
+        (days) => `Last scored ${days} days ago. Plan your next comparable photos soon.`,
+        (days) => `Last scored ${days} days ago. Retake when light, pose and timing are consistent.`,
+        'No score yet. Start with consistent front, side and back photos.',
       ),
     },
     lifts: {
