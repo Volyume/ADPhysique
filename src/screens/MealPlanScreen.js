@@ -23,6 +23,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -46,6 +47,7 @@ import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/fo
 import { buildGroceryList } from '../lib/food/groceryList';
 import { getMealAdditions, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
+import { logError } from '../lib/errorLog';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -118,6 +120,7 @@ export default function MealPlanScreen({ navigation }) {
   const swapListMaxHeight = Math.min(360, Math.round(windowHeight * 0.6));
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [record, setRecord] = useState(null); // { id, plan }
   // The schedule is an abstract Day 1..7 (not calendar-anchored), so start
@@ -136,8 +139,12 @@ export default function MealPlanScreen({ navigation }) {
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setLoadError(false);
     try {
       setRecord(await loadActiveMealPlan(user.id));
+    } catch (e) {
+      logError('MealPlanScreen.load', e, { userId: user.id });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -457,6 +464,16 @@ export default function MealPlanScreen({ navigation }) {
       <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Plan my day' : 'Plan my week'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
+      ) : loadError ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="warning-outline"
+            title="Couldn't load meal planning"
+            text="Check your connection and try again. Your diary has not been changed."
+            actionLabel="Try again"
+            onAction={load}
+          />
+        </View>
       ) : !plan ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
