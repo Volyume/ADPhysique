@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -1439,112 +1439,98 @@ export default function DiaryScreen({ navigation }) {
         </View>
       ) : null}
 
-      <Modal
+      <BottomSheet
         visible={movePickerVisible && !readOnly}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMovePickerVisible(false)}
+        onClose={() => setMovePickerVisible(false)}
+        accessibilityLabel="Move selected foods"
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setMovePickerVisible(false)} accessibilityRole="button" accessibilityLabel="Close">
-          <View style={styles.moveCard}>
-            <Text style={styles.moveTitle}>Move to</Text>
-            {mealSlots.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                style={styles.moveOption}
-                onPress={() => doMoveSelected(s.key)}
-                accessibilityRole="button"
-                accessibilityLabel={`Move to ${s.label}`}
-              >
-                <Text style={styles.moveOptionText}>{s.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+        <Text style={styles.moveTitle}>Move to</Text>
+        {mealSlots.map((s) => (
+          <TouchableOpacity
+            key={s.key}
+            style={styles.moveOption}
+            onPress={() => doMoveSelected(s.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`Move to ${s.label}`}
+          >
+            <Text style={styles.moveOptionText}>{s.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
 
-      <Modal
+      <BottomSheet
         visible={!!saveMealItems && !readOnly}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSaveMealItems(null)}
+        onClose={() => setSaveMealItems(null)}
+        keyboardAvoiding
+        accessibilityLabel="Save as meal"
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setSaveMealItems(null)} accessibilityRole="button" accessibilityLabel="Close">
-          <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
-            <Text style={styles.moveTitle}>Save as meal</Text>
-            <Text style={styles.saveMealHint}>
-              {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
-            </Text>
-            <TextField
-              fieldStyle={styles.saveMealInputField}
-              inputStyle={styles.saveMealInput}
-              value={saveMealName}
-              onChangeText={setSaveMealName}
-              placeholder="e.g. My breakfast"
-              placeholderTextColor={colors.textMuted}
-              accessibilityLabel="Meal name"
-              autoFocus
-              maxLength={60}
-              returnKeyType="done"
-              onSubmitEditing={submitSaveMeal}
-            />
-            <View style={styles.saveMealActions}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={styles.saveMealBtn}
-                textStyle={styles.saveMealBtnText}
-                onPress={() => setSaveMealItems(null)}
-                accessibilityLabel="Cancel"
-              />
-              <Button
-                title="Save"
-                size="sm"
-                fullWidth={false}
-                style={styles.saveMealBtn}
-                textStyle={styles.saveMealBtnTextPrimary}
-                onPress={submitSaveMeal}
-                disabled={!saveMealName.trim()}
-                accessibilityLabel="Save meal"
-                accessibilityState={{ disabled: !saveMealName.trim() }}
-              />
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Text style={styles.moveTitle}>Save as meal</Text>
+        <Text style={styles.saveMealHint}>
+          {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
+        </Text>
+        <TextField
+          fieldStyle={styles.saveMealInputField}
+          inputStyle={styles.saveMealInput}
+          value={saveMealName}
+          onChangeText={setSaveMealName}
+          placeholder="e.g. My breakfast"
+          placeholderTextColor={colors.textMuted}
+          accessibilityLabel="Meal name"
+          autoFocus
+          maxLength={60}
+          returnKeyType="done"
+          onSubmitEditing={submitSaveMeal}
+        />
+        <View style={styles.saveMealActions}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            style={styles.saveMealBtn}
+            textStyle={styles.saveMealBtnText}
+            onPress={() => setSaveMealItems(null)}
+            accessibilityLabel="Cancel"
+          />
+          <Button
+            title="Save"
+            size="sm"
+            fullWidth={false}
+            style={styles.saveMealBtn}
+            textStyle={styles.saveMealBtnTextPrimary}
+            onPress={submitSaveMeal}
+            disabled={!saveMealName.trim()}
+            accessibilityLabel="Save meal"
+            accessibilityState={{ disabled: !saveMealName.trim() }}
+          />
+        </View>
+      </BottomSheet>
 
-      <Modal
+      <BottomSheet
         visible={copyDays != null && !readOnly}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCopyDays(null)}
+        onClose={() => setCopyDays(null)}
+        accessibilityLabel="Copy previous day"
       >
-        <Pressable style={styles.moveBackdrop} onPress={() => setCopyDays(null)} accessibilityRole="button" accessibilityLabel="Close">
-          <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
-            <Text style={styles.moveTitle}>Copy a previous day</Text>
-            {copyDays && copyDays.length === 0 ? (
-              <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
-            ) : (
-              (copyDays || []).map((d) => (
-                <TouchableOpacity
-                  key={d.entry_date}
-                  style={styles.moveOption}
-                  onPress={() => { setCopyDays(null); copyFromDate(d.entry_date); }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
-                >
-                  <Text style={styles.moveOptionText}>{friendlyDate(d.entry_date)}</Text>
-                  <Text style={styles.copyRowMeta}>
-                    {d.count} {d.count === 1 ? 'item' : 'items'} · {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Text style={styles.moveTitle}>Copy a previous day</Text>
+        {copyDays && copyDays.length === 0 ? (
+          <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
+        ) : (
+          (copyDays || []).map((d) => (
+            <TouchableOpacity
+              key={d.entry_date}
+              style={styles.moveOption}
+              onPress={() => { setCopyDays(null); copyFromDate(d.entry_date); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
+            >
+              <Text style={styles.moveOptionText}>{friendlyDate(d.entry_date)}</Text>
+              <Text style={styles.copyRowMeta}>
+                {d.count} {d.count === 1 ? 'item' : 'items'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
+      </BottomSheet>
       <CalorieBankSheet
         visible={bankSheetVisible && !readOnly}
         onClose={() => setBankSheetVisible(false)}
@@ -1684,17 +1670,6 @@ const styles = StyleSheet.create({
   selActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  moveBackdrop: {
-    flex: 1, backgroundColor: colors.scrim,
-    alignItems: 'center', justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  moveCard: {
-    width: '100%', maxWidth: 320,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md,
-  },
   moveTitle: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
     letterSpacing: 1, textTransform: 'uppercase',
