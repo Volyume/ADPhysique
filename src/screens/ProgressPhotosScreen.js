@@ -873,7 +873,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add a front and back photo set, or import one you already have. Volyume saves the date, bodyweight snapshot and Physique Score together when the set is usable.');
+        : 'Add or import a front and back photo set. When the set is clear enough, Volyume saves the date, bodyweight snapshot and Physique Score together.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -893,6 +893,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     }),
     [allCheckIns, visibleScans, suppressed, readOnly],
   );
+  const photoSetAction = nextAction?.kind === 'complete_pose' ? nextAction : null;
 
   function onNextActionPress(action = nextAction) {
     if (!action) return;
@@ -1035,7 +1036,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.heroEyebrow}>Progress Photos</Text>
                 <Text style={styles.heroTitle}>Your progress photos</Text>
                 <Text style={styles.heroSubtitle}>
-                  Take a front and back photo set or import one you already have. Volyume stores the date, bodyweight snapshot and Physique Score when the set is clear enough.
+                  Build a private, dated photo record. Add new photos or import older ones; Volyume scores the set only when it is clear enough to be useful.
                 </Text>
               </View>
             </View>
@@ -1044,7 +1045,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
               <Text style={styles.heroTextTitle}>Your progress photos</Text>
               <Text style={styles.heroTextSubtitle}>
-                Take a front and back photo set or import one you already have. Volyume stores the date, bodyweight snapshot and Physique Score when the set is clear enough.
+                Build a private, dated photo record. Add new photos or import older ones; Volyume scores the set only when it is clear enough to be useful.
               </Text>
             </View>
           )}
@@ -1055,7 +1056,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               </View>
               <Text style={styles.privacyNoticeText}>
-                Private on this device. Your photos and Physique Scores stay on your phone and are not visible to partners, Volyume staff or anyone else unless you choose to share or export them.
+                Private on this phone. Photos and scores are not shown to partners or staff, and nothing leaves the device unless you share or export it.
               </Text>
             </View>
 
@@ -1071,24 +1072,24 @@ export default function ProgressPhotosScreen({ navigation }) {
               ))}
             </View>
 
-            <View style={styles.setupStandardCard}>
-              <View style={styles.setupStandardHead}>
+            <View style={styles.scoreGuideCard}>
+              <View style={styles.scoreGuideHead}>
                 <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.setupStandardTitle}>How the Physique Score works</Text>
+                <Text style={styles.scoreGuideTitle}>What Volyume measures</Text>
               </View>
-              <Text style={styles.setupStandardIntro}>
-                Volyume does not claim an exact body-fat percentage from photos. It reads a front and back set for a leanness band, confidence, setup quality and visible change over time.
+              <Text style={styles.scoreGuideIntro}>
+                Volyume Physique Score is our own visual progress measure. It is designed to show whether your physique record is moving, not to guess an exact body-fat percentage.
               </Text>
-            </View>
-
-            <View style={styles.setupStandardCard}>
-              <View style={styles.setupStandardHead}>
-                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.setupStandardTitle}>How to get useful photos</Text>
+              <View style={styles.scoreGuideRows}>
+                <View style={styles.scoreGuideRow}>
+                  <Text style={styles.scoreGuideRowTitle}>A useful set</Text>
+                  <Text style={styles.scoreGuideRowBody}>Front and back relaxed photos are required. Side is optional and helps comparisons.</Text>
+                </View>
+                <View style={styles.scoreGuideRow}>
+                  <Text style={styles.scoreGuideRowTitle}>A fair read</Text>
+                  <Text style={styles.scoreGuideRowBody}>You get a score, leanness band, confidence and progress signal only when the photos are reliable enough.</Text>
+                </View>
               </View>
-              <Text style={styles.setupStandardIntro}>
-                Lighting, distance and camera angle can change how your physique looks. These steps make later comparisons clearer.
-              </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
                   <View key={step.key} style={styles.setupStandardStep}>
@@ -1151,21 +1152,21 @@ export default function ProgressPhotosScreen({ navigation }) {
           />
         ) : null}
 
-        {!loading && nextAction ? (
+        {!loading && photoSetAction ? (
           <Card style={styles.nextActionCard}>
             <View style={styles.nextActionCopy}>
-              <Text style={styles.nextActionEyebrow}>Suggested next step</Text>
-              <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
-              <Text style={styles.nextActionBody}>{nextAction.body}</Text>
-              {nextAction.reason ? (
+              <Text style={styles.nextActionEyebrow}>Finish this photo set</Text>
+              <Text style={styles.nextActionTitle}>{photoSetAction.title}</Text>
+              <Text style={styles.nextActionBody}>{photoSetAction.body}</Text>
+              {photoSetAction.reason ? (
                 <View style={styles.nextActionReason}>
                   <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.nextActionReasonText}>{nextAction.reason}</Text>
+                  <Text style={styles.nextActionReasonText}>{photoSetAction.reason}</Text>
                 </View>
               ) : null}
-              {nextAction.detailItems?.length ? (
+              {photoSetAction.detailItems?.length ? (
                 <View style={styles.nextActionDetails}>
-                  {nextAction.detailItems.map((detail) => (
+                  {photoSetAction.detailItems.map((detail) => (
                     <View key={detail} style={styles.nextActionDetailRow}>
                       <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
                       <Text style={styles.nextActionDetailText}>{detail}</Text>
@@ -1175,12 +1176,12 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
             </View>
             <Button
-              title={nextAction.cta}
-              icon={nextAction.kind === 'capture' || nextAction.kind === 'complete_pose' ? 'camera-outline' : 'git-compare-outline'}
-              variant={nextAction.kind === 'capture' ? 'primary' : 'secondary'}
+              title={photoSetAction.cta}
+              icon="camera-outline"
+              variant="secondary"
               fullWidth={false}
-              onPress={() => onNextActionPress(nextAction)}
-              accessibilityLabel={`Suggested next step: ${nextAction.cta}`}
+              onPress={() => onNextActionPress(photoSetAction)}
+              accessibilityLabel={`Finish this photo set: ${photoSetAction.cta}`}
             />
           </Card>
         ) : null}
@@ -1691,7 +1692,7 @@ const styles = StyleSheet.create({
   },
   studioMetricLabel: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   studioMetricValue: { ...type.label, color: colors.textPrimary, lineHeight: 20 },
-  setupStandardCard: {
+  scoreGuideCard: {
     borderWidth: 1,
     borderColor: colors.primaryBg,
     borderRadius: radius.md,
@@ -1699,13 +1700,29 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  setupStandardHead: {
+  scoreGuideHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  setupStandardTitle: { ...type.label, color: colors.textPrimary },
-  setupStandardIntro: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  scoreGuideTitle: { ...type.label, color: colors.textPrimary },
+  scoreGuideIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  scoreGuideRows: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  scoreGuideRow: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    minWidth: 148,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    padding: spacing.sm,
+    gap: spacing.xxs,
+  },
+  scoreGuideRowTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  scoreGuideRowBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   setupStandardGrid: { gap: spacing.sm },
   setupStandardStep: {
     flexDirection: 'row',
