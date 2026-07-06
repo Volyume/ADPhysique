@@ -337,7 +337,30 @@ export default function ProgressGhostCapture({
   if (!granted) {
     return (
       <View style={styles.loading} accessibilityRole="summary">
-        <Text style={styles.loadingText}>Preparing the camera…</Text>
+        <Ionicons name="camera-outline" size={iconSize.xl} color={colors.textSecondary} />
+        <Text style={styles.fallbackTitle}>Waiting for camera permission</Text>
+        <Text style={styles.fallbackBody}>
+          If the permission prompt does not appear, you can still add a photo from your library.
+        </Text>
+        {onFallback ? (
+          <Pressable
+            style={styles.fallbackBtn}
+            onPress={() => onFallback()}
+            accessibilityRole="button"
+            accessibilityLabel="Add a photo from your library"
+          >
+            <Text style={styles.fallbackBtnLabel}>Use your photo library</Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          style={styles.fallbackClose}
+          onPress={() => onClose?.()}
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <Text style={styles.fallbackCloseLabel}>Not now</Text>
+        </Pressable>
       </View>
     );
   }
@@ -835,10 +858,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
     backgroundColor: colors.background,
-  },
-  loadingText: {
-    ...type.body,
-    color: colors.textSecondary,
   },
 });

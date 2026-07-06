@@ -224,6 +224,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Physique Studio');
     expect(text).toContain('Build your visual baseline');
+    expect(text).toContain('Start with one full-body front photo');
     expect(text).toContain('Capture Check-In');
   });
 });
