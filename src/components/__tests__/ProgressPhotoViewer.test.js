@@ -182,6 +182,26 @@ test('delete calls onDelete only after the destructive confirm fires', async () 
   expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
 });
 
+test('scan-set delete copy explains that the whole photo set is removed', async () => {
+  const props = baseProps({ deleteModeForPhoto: jest.fn(() => 'scan-set') });
+  mockAppAlert.mockImplementation((title, message, buttons) => {
+    const del = buttons.find((b) => b.style === 'destructive');
+    del?.onPress?.();
+  });
+  const tree = await mount(props);
+
+  expect(allText(tree)).toContain('Delete set');
+  const [delBtn] = findByLabel(tree, 'Remove this photo set');
+  await act(async () => { delBtn.props.onPress(); });
+
+  const [, message, buttons] = mockAppAlert.mock.calls[0];
+  expect(message).toContain('Delete this photo set from your device');
+  expect(message).toContain('all photos in the set');
+  expect(message).toContain('saved Physique Score');
+  expect(buttons.find((b) => b.style === 'destructive').text).toBe('Delete set');
+  expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
+});
+
 test('delete is blocked when the live tier is no longer pro', async () => {
   const props = baseProps();
   mockAppAlert.mockImplementation((title, message, buttons) => {

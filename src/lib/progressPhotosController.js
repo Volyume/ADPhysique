@@ -41,6 +41,14 @@ export function buildScanPhotoNameSet(scans = []) {
   );
 }
 
+export function findScanForPhotoName(scans = [], photoName) {
+  if (!photoName) return null;
+  return (Array.isArray(scans) ? scans : []).find((scan) => (
+    Array.isArray(scan?.assets)
+    && scan.assets.some((asset) => asset?.photoName === photoName)
+  )) || null;
+}
+
 export function shouldGateProgressScanStart(scans = [], nowMs = Date.now(), minIntervalMs = 0) {
   const latestCompleted = (Array.isArray(scans) ? scans : [])
     .find((scan) => scan?.status === 'complete' && scan?.requiredPosesComplete) || null;
