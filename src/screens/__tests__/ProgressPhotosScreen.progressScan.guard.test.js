@@ -94,6 +94,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(CONTROLLER).toMatch(/trainingGoal: safeProfile\.trainingGoal \?\? safeBodyProfile\.primaryGoal \?\? null/);
   });
 
+  test('empty photo hero is plain text, not a fake body placeholder', () => {
+    expect(SCREEN).toMatch(/heroTextHeader/);
+    expect(SCREEN).not.toMatch(/heroPlaceholder/);
+    expect(SCREEN).not.toMatch(/name="body-outline"/);
+  });
+
   test('camera fallback keeps the active scan pose instead of discarding the draft', () => {
     expect(SCREEN).toMatch(/pickScanPoseFromLibrary/);
     expect(SCREEN).toMatch(/onFallback=\{\(\) => \{ setCaptureOpen\(false\); if \(scanFlow\) pickScanPoseFromLibrary\(scanFlow, capturePose\); else pickFrom\('library'\); \}\}/);

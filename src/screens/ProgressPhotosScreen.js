@@ -1009,23 +1009,27 @@ export default function ProgressPhotosScreen({ navigation }) {
     return (
       <>
         <Card padding="none" style={styles.studioHero}>
-          <View style={styles.heroImageFrame}>
-            {latestPhoto ? (
+          {latestPhoto ? (
+            <View style={styles.heroImageFrame}>
               <Image source={{ uri: latestPhoto.uri }} style={styles.heroImage} resizeMode="cover" />
-            ) : (
-              <View style={styles.heroPlaceholder}>
-                <Ionicons name="body-outline" size={38} color={colors.textMuted} />
+              <View style={styles.heroScrim} />
+              <View style={styles.heroCopy}>
+                <Text style={styles.heroEyebrow}>Progress Photos</Text>
+                <Text style={styles.heroTitle}>Your progress photos</Text>
+                <Text style={styles.heroSubtitle}>
+                  Take a front and back photo set or import one you already have. Volyume stores the date, bodyweight snapshot and Physique Score when the set is clear enough.
+                </Text>
               </View>
-            )}
-            <View style={styles.heroScrim} />
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroEyebrow}>Progress Photos</Text>
-              <Text style={styles.heroTitle}>Your progress photos</Text>
-              <Text style={styles.heroSubtitle}>
+            </View>
+          ) : (
+            <View style={styles.heroTextHeader}>
+              <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
+              <Text style={styles.heroTextTitle}>Your progress photos</Text>
+              <Text style={styles.heroTextSubtitle}>
                 Take a front and back photo set or import one you already have. Volyume stores the date, bodyweight snapshot and Physique Score when the set is clear enough.
               </Text>
             </View>
-          </View>
+          )}
 
           <View style={styles.studioPanel}>
             <View style={styles.studioMetricsGrid}>
@@ -1581,19 +1585,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   heroImageFrame: {
-    minHeight: 260,
+    minHeight: 220,
     backgroundColor: colors.surface2,
   },
   heroImage: {
     width: '100%',
-    height: 260,
-    backgroundColor: colors.surface2,
-  },
-  heroPlaceholder: {
-    height: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    height: 220,
     backgroundColor: colors.surface2,
   },
   heroScrim: {
@@ -1611,6 +1608,16 @@ const styles = StyleSheet.create({
   heroEyebrow: { ...type.caption, color: colors.appleBtnText, opacity: 0.82 },
   heroTitle: { ...type.h2, color: colors.appleBtnText },
   heroSubtitle: { ...type.bodySm, color: colors.appleBtnText, opacity: 0.88 },
+  heroTextHeader: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  heroTextEyebrow: { ...type.caption, color: colors.primary },
+  heroTextTitle: { ...type.h3, color: colors.textPrimary },
+  heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   studioPanel: { padding: spacing.lg, gap: spacing.lg },
   studioMetricsGrid: {
     flexDirection: 'row',
