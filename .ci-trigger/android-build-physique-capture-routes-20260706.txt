@@ -1,0 +1,4 @@
+Trigger Android build for Physique Studio capture routes.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Commit: 0256f9b8 Improve Physique Studio capture routes
