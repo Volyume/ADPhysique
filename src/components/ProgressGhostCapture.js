@@ -51,7 +51,7 @@ import {
   setProgressScanCameraFacingPreference,
   setProgressScanTimerPreference,
 } from '../lib/progressScanPreferences';
-import { QUALITY_FIRST_CAPTURE_NOTE, getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
+import { getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
 import { useToast } from './Toast';
 import {
   colors,
@@ -367,10 +367,14 @@ export default function ProgressGhostCapture({
 
   const hasReference = !!referencePhoto?.uri;
   const guidance = getPoseCaptureGuidance(pose);
-  const modeLabel = `${title ? 'Scan capture' : 'Progress photo capture'}: ${guidance.title}`;
+  const modeLabel = title ? 'Physique Scan' : 'Progress photo';
   const referenceLine = hasReference
     ? `Reference: ${referencePhoto.poseLabel || 'previous photo'}${referencePhoto.label ? ` from ${referencePhoto.label}` : ''}.`
     : null;
+  const liveChecks = [
+    hasReference ? 'Line up with the faint previous photo' : null,
+    ...guidance.checks,
+  ].filter(Boolean).slice(0, 3);
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -452,24 +456,15 @@ export default function ProgressGhostCapture({
 
       <View style={styles.guidanceCard} pointerEvents="none">
         <Text style={styles.guidanceTitle}>
-          {hasReference ? 'Match your previous setup' : 'Capture guidance'}
+          Before you take it
         </Text>
         {referenceLine ? <Text style={styles.referenceLine} numberOfLines={1}>{referenceLine}</Text> : null}
-        {guidance.checks.map((check) => (
+        {liveChecks.map((check) => (
           <View key={check} style={styles.guidanceRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
             <Text style={styles.guidanceText}>{check}</Text>
           </View>
         ))}
-        <View style={styles.qualityFirstRow}>
-          <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-          <Text style={styles.qualityFirstText} numberOfLines={2}>{QUALITY_FIRST_CAPTURE_NOTE}</Text>
-        </View>
-        {guidance.avoid?.length ? (
-          <Text style={styles.guidanceAvoid} numberOfLines={2}>
-            Avoid {guidance.avoid.join(', ')}.
-          </Text>
-        ) : null}
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
@@ -662,8 +657,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    top: 148,
-    padding: spacing.md,
+    top: 152,
+    padding: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: withAlpha(colors.background, 0.56),
     borderWidth: 1,
@@ -689,23 +684,6 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: withAlpha(colors.textPrimary, 0.9),
     flex: 1,
-  },
-  qualityFirstRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-    paddingTop: spacing.xxs,
-  },
-  qualityFirstText: {
-    ...type.caption,
-    color: withAlpha(colors.textPrimary, 0.88),
-    lineHeight: 18,
-    flex: 1,
-  },
-  guidanceAvoid: {
-    ...type.caption,
-    color: withAlpha(colors.textPrimary, 0.76),
-    marginTop: spacing.xxs,
   },
 
   // Bottom controls.
