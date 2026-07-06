@@ -19,21 +19,21 @@ const scoredScan = {
 };
 
 describe('progressScanCopy', () => {
-  test('scanReadCopy explains Volyume score without presenting body-fat percentage', () => {
+  test('scanReadCopy explains Volyume score without presenting body fat percentage', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Physique Score 72/100. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual progress score, not a body-fat percentage.',
+      'Volyume Physique Score 72/100. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual progress score, not a body fat percentage.',
     );
   });
 
   test('hide-exact keeps the trend and hides the detailed score', () => {
     expect(scanReadCopy(scoredScan, { hideExact: true })).toBe(
-      'Lean band. Progress Signal: Slight positive trend. Detailed scan score is hidden. This is not a body-fat percentage.',
+      'Lean band. Progress Signal: Slight positive trend. Detailed score is hidden. This is not a body fat percentage.',
     );
   });
 
-  test('suppression hides physique scan details completely', () => {
+  test('suppression hides score details completely', () => {
     expect(scanReadCopy(scoredScan, { suppressed: true })).toBe(
-      'Scan saved privately. Physique scan details are hidden right now.',
+      'Photo set saved privately. Score details are hidden right now.',
     );
   });
 
@@ -49,7 +49,7 @@ describe('progressScanCopy', () => {
     expect(trendOnlyScanCopy({ deltaExplanation: { comparisonStatus: 'not_comparable' } })).toBe(
       'Trend context: saved, but not compared because the setup was not like-for-like.',
     );
-    expect(trendOnlyScanCopy({})).toBe('Trend context: baseline scan saved.');
+    expect(trendOnlyScanCopy({})).toBe('Trend context: baseline photo set saved.');
   });
 
   test('scanStatsCopy includes weight only when not suppressed and not hide-exact', () => {
@@ -59,6 +59,6 @@ describe('progressScanCopy', () => {
   });
 
   test('scanStatsCopy falls back when scan stats are empty', () => {
-    expect(scanStatsCopy({})).toBe('Stored scan photos');
+    expect(scanStatsCopy({})).toBe('Stored photo set');
   });
 });

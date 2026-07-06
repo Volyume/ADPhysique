@@ -53,7 +53,7 @@ describe('ProgressScanHistoryCard', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Physique Score results');
     expect(text).toContain("Volyume's private photo score");
-    expect(text).toContain('not body-fat percentage');
+    expect(text).toContain('not body fat percentage');
     expect(text).toContain('Photo score');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
@@ -66,7 +66,7 @@ describe('ProgressScanHistoryCard', () => {
 
     const buttons = tree.root.findAllByType(TouchableOpacity);
     act(() => buttons.find((node) => node.props.accessibilityRole === 'switch').props.onPress());
-    act(() => buttons.find((node) => /Delete scan/.test(node.props.accessibilityLabel)).props.onPress());
+    act(() => buttons.find((node) => /Delete photo set/.test(node.props.accessibilityLabel)).props.onPress());
     act(() => buttons.find((node) => /Front photo/.test(node.props.accessibilityLabel)).props.onPress());
     expect(onToggleHideExact).toHaveBeenCalled();
     expect(onDeleteScan).toHaveBeenCalledWith(scan);
@@ -84,7 +84,7 @@ describe('ProgressScanHistoryCard', () => {
 
     const suppressed = await render({ suppressed: true });
     const suppressedText = flattenText(suppressed.toJSON());
-    expect(suppressedText).toContain('Scan saved privately');
+    expect(suppressedText).toContain('Photo set saved privately');
     expect(suppressedText).not.toContain('82.5 kg weight snapshot');
     expect(suppressedText).not.toContain('Volyume Physique Score is down');
   });
@@ -93,7 +93,7 @@ describe('ProgressScanHistoryCard', () => {
     const onOpenPhoto = jest.fn();
     const tree = await render({ readOnly: true, onOpenPhoto });
     expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Physique Score results');
-    expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete scan/.test(node.props.accessibilityLabel))).toBe(false);
+    expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete photo set/.test(node.props.accessibilityLabel))).toBe(false);
     const thumb = tree.root.findAllByType(TouchableOpacity).find((node) => /Front photo/.test(node.props.accessibilityLabel));
     expect(thumb.props.disabled).toBe(true);
     act(() => thumb.props.onPress?.());

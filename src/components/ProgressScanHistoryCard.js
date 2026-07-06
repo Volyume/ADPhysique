@@ -39,7 +39,7 @@ function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
   const score = assessmentFor(scan)?.visualLeannessScore;
   if (suppressed) return 'Hidden';
   if (hideExact) return 'Hidden';
-  return score != null ? `${score}/100` : 'Withheld';
+  return score != null ? `${Math.round(Number(score))}/100` : 'Withheld';
 }
 
 function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
@@ -49,7 +49,7 @@ function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
 }
 
 function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Scan detail is hidden right now. Your photos remain private.';
+  if (suppressed) return 'Score detail is hidden right now. Your photos remain private.';
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
   if (scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
@@ -73,7 +73,7 @@ export default function ProgressScanHistoryCard({
         <View style={styles.scanHeadingGroup}>
           <Text style={styles.scanTitle}>Physique Score results</Text>
           <Text style={styles.scanSubtitle}>
-            Volyume's private photo score. It shows a leanness band, confidence and trend, not body-fat percentage.
+            Volyume's private photo score. It shows a leanness band, confidence and trend, not body fat percentage.
           </Text>
         </View>
         <TouchableOpacity
@@ -81,7 +81,7 @@ export default function ProgressScanHistoryCard({
           hitSlop={8}
           accessibilityRole="switch"
           accessibilityState={{ checked: hideExact }}
-          accessibilityLabel={hideExact ? 'Show scan details' : 'Hide scan details'}
+          accessibilityLabel={hideExact ? 'Show score details' : 'Hide score details'}
           style={styles.hideExactToggle}
         >
           <Ionicons
@@ -112,7 +112,7 @@ export default function ProgressScanHistoryCard({
                     onPress={() => onDeleteScan?.(scan)}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel={`Delete scan from ${dateLabel}`}
+                    accessibilityLabel={`Delete photo set from ${dateLabel}`}
                     style={styles.scanDeleteButton}
                   >
                     <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />

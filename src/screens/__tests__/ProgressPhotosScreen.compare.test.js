@@ -490,7 +490,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Scan details are hidden for now');
+    expect(text).toContain('Score details are hidden for now');
     expect(text).toContain('Nothing is uploaded or shared unless you choose it.');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });

@@ -48,7 +48,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Scan detail is hidden right now/);
+    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Score detail is hidden right now/);
     expect(SCAN_HISTORY).toMatch(/if \(hideExact && scan\?\.deltaExplanation\?\.trendSummary\)/);
     expect(SCAN_HISTORY).toMatch(/whyLabel\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_HISTORY).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact \}\)/);
