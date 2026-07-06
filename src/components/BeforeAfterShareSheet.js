@@ -389,7 +389,7 @@ export default function BeforeAfterShareSheet({
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Private Share Card</Text>
-          <Text style={styles.subtitle}>One composited image, created only when you choose.</Text>
+          <Text style={styles.subtitle}>One composed image. No raw photo files. You choose share or save.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -397,6 +397,21 @@ export default function BeforeAfterShareSheet({
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.privacyReceipt}>
+          <View style={styles.receiptRow}>
+            <Ionicons name="image-outline" size={16} color={colors.primary} />
+            <Text style={styles.receiptText}>Exports one composed PNG, not your raw photos.</Text>
+          </View>
+          <View style={styles.receiptRow}>
+            <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
+            <Text style={styles.receiptText}>Nothing leaves the device until you tap Share or Save.</Text>
+          </View>
+          <View style={styles.receiptRow}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+            <Text style={styles.receiptText}>Names, notes, measurements and your photo library never appear.</Text>
+          </View>
+        </View>
+
         {/* Choose two photos (default earliest and latest). Older reads on the
             left, newer on the right, whatever the tap order was. */}
         <View style={styles.section}>
@@ -530,9 +545,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
-  headerCopy: { flex: 1, gap: spacing.xxs },
-  subtitle: { ...type.caption, color: colors.textMuted },
+  headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  privacyReceipt: {
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  receiptText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   section: { gap: spacing.md },
   stripRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   thumb: {

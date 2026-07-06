@@ -45,6 +45,13 @@ jest.mock('../../lib/progressPhotoMeta', () => ({
 
 import BeforeAfterShareSheet from '../BeforeAfterShareSheet';
 
+function flattenText(node) {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join('');
+  return flattenText(node.children);
+}
+
 async function mount() {
   let tree;
   await act(async () => {
@@ -67,4 +74,13 @@ test('never backfills a photo that already has a weight snapshot', async () => {
   await mount();
   const newCalls = mockUpsertPhotoMeta.mock.calls.filter((c) => c[1] === NEW.name);
   expect(newCalls.length).toBe(0);
+});
+
+test('renders the private share-card receipt', async () => {
+  const tree = await mount();
+  const text = flattenText(tree.toJSON());
+  expect(text).toContain('One composed image. No raw photo files. You choose share or save.');
+  expect(text).toContain('Exports one composed PNG, not your raw photos.');
+  expect(text).toContain('Nothing leaves the device until you tap Share or Save.');
+  expect(text).toContain('Names, notes, measurements and your photo library never appear.');
 });
