@@ -54,6 +54,7 @@ import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
 import HintCaption from '../components/HintCaption';
 import SearchBar from '../components/SearchBar';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
@@ -809,6 +810,15 @@ export default function FoodSearchScreen({ navigation, route }) {
       return (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyText}>Set your daily targets to get meal ideas.</Text>
+          <TouchableOpacity
+            style={styles.emptyAction}
+            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
+            accessibilityRole="button"
+            accessibilityLabel="Set nutrition targets"
+          >
+            <Text style={styles.emptyActionText}>Set targets</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       );
     }
@@ -1155,6 +1165,19 @@ const styles = StyleSheet.create({
 
   emptyWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, alignItems: 'center' },
   emptyText: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
+  emptyAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyActionText: { ...type.label, color: colors.primary },
 
   suggestHint: {
     ...type.caption, color: colors.textMuted,
