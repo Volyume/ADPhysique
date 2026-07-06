@@ -420,7 +420,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.progressSignal).toBeUndefined();
   });
 
-  test('comparison progress signal is capped by the weaker scan confidence', () => {
+  test('comparison progress signal is withheld when the weaker scan confidence is low', () => {
     const previous = comparableScan({ id: 'old', score: 60, confidence: 'low' });
     const current = comparableScan({ id: 'new', score: 72, confidence: 'high' });
 
@@ -428,8 +428,12 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.comparisonStatus).toBe('comparable');
     expect(out.pairConfidenceTier).toBe('low');
     expect(out.progressDeltaScore).toBe(12);
-    expect(out.progressSignal).toBe('slight_positive');
-    expect(out.visualTrendDirection).toBe('leaner');
+    expect(out.progressSignal).toBe('inconclusive');
+    expect(out.visualTrendDirection).toBe('uncertain');
+    expect(out.trendDirection).toBe('uncertain');
+    expect(out.trendMagnitudePctPoints).toBeNull();
+    expect(out.summary).toMatch(/not calling a progress trend/i);
+    expect(out.trendSummary).toMatch(/not calling progress/i);
     expect(out.previousLeannessScore).toBe(60);
   });
 
