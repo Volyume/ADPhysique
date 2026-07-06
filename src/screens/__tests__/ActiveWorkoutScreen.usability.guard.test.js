@@ -23,7 +23,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain('return \'Enter weight and reps, then tap Log set when done.\';');
-    expect(ACTIVE_WORKOUT).toContain('Open the menu above for how to do this exercise correctly.');
+    expect(ACTIVE_WORKOUT).toContain('Use the three-dot menu for form tips, warm-ups, swaps and session options.');
+  });
+
+  test('previous performance cues visibly explain they can be reused', () => {
+    expect(ACTIVE_WORKOUT.match(/Tap to use/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(ACTIVE_WORKOUT).toContain('beatLineHint');
   });
 
   test('logged set edit rows include the set content in the spoken label', () => {
@@ -47,6 +52,13 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: 44,\s*height: 44,/);
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
-    expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to retry/);
+    expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);
+  });
+
+  test('long workout utility sheets are scroll-safe on phone screens', () => {
+    expect(ACTIVE_WORKOUT).toContain('function WorkoutSheetScroll');
+    expect(ACTIVE_WORKOUT.match(/<WorkoutSheetScroll>/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(ACTIVE_WORKOUT).toMatch(/sheet: \{[^}]*maxHeight: '92%'/);
+    expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
   });
 });

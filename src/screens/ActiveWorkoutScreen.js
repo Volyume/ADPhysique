@@ -99,6 +99,19 @@ const SET_TYPE_OPTIONS = [
   { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts towards volume and progress.' },
 ];
 
+function WorkoutSheetScroll({ children }) {
+  return (
+    <ScrollView
+      style={styles.sheetScroll}
+      contentContainerStyle={styles.sheetScrollBody}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
 // Returns the set to use as the rep-progression anchor.
 // If the same-indexed set was lighter than the session best, anchor to the best set
 // so the pre-fill targets beating the overall high-water mark, not just that slot's history.
@@ -143,7 +156,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
           <Text style={styles.setNumText} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
         </View>
       )}
-      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
+      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]} numberOfLines={2}>
         {fmt.text}
         {perSide ? ` · ${perSide}` : ''}
         {isWarmup ? ' · Warm-up' : ''}
@@ -1307,7 +1320,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           : 'Log set';
       appAlert(
         'Couldn\'t save set',
-        `Your set wasn't saved. Tap ${retryAction} to retry. Tell me if this keeps happening: ${e?.message ?? 'unknown error'}`,
+        `Your set wasn't saved. Tap ${retryAction} to try again. If it keeps happening, please contact support.`,
       );
     } finally {
       setSaving(false);
@@ -1859,9 +1872,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
   const firstSetPrompt = (() => {
     if (activeExerciseType === 'duration') return 'Enter the time, then tap Log set when done.';
-    if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
-    if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
-    return 'Enter weight and reps, then tap Log set when done.';
+            if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
+            if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
+            return 'Enter weight and reps, then tap Log set when done.';
   })();
 
   const handleCurrentSetChange = useCallback((next) => {
@@ -2170,7 +2183,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {routineExercise && (
               <View style={styles.targetRow}>
                 <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.targetText}>
+                <Text style={styles.targetText} numberOfLines={2}>
                   Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 </Text>
               </View>
@@ -2205,8 +2218,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Recovery week: ${target.weight} ${units} times ${target.repsMin}. Tap to apply.`}
                   >
-                    <Text style={styles.beatLineLabel}>
+                    <Text style={styles.beatLineLabel} numberOfLines={2}>
                       Recovery week  ·  <Text style={styles.beatLineValue}>{target.weight}{units} × {target.repsMin}</Text>
+                      <Text style={styles.beatLineHint}>  Tap to use</Text>
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2235,11 +2249,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Last session: ${prev.weight} ${units} times ${prev.actualReps} reps.${range ? ` Target ${range}.` : ''} Tap to apply.`}
                   >
-                    <Text style={styles.beatLineLabel}>
+                    <Text style={styles.beatLineLabel} numberOfLines={2}>
                       Last: <Text style={styles.beatLineValue}>{prev.weight}{units} × {prev.actualReps}</Text>
                       {range ? '  ·  Target ' : ''}
                       {range ? <Text style={styles.beatLineValue}>{range}</Text> : null}
                       {glyph ? <Text style={styles.beatLineGlyph}> {glyph}</Text> : null}
+                      <Text style={styles.beatLineHint}>  Tap to use</Text>
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2251,7 +2266,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessible
                   accessibilityLabel={`First time on this exercise. Target ${range} reps.`}
                 >
-                  <Text style={styles.beatLineLabel}>
+                  <Text style={styles.beatLineLabel} numberOfLines={2}>
                     First time  ·  Target <Text style={styles.beatLineValue}>{range}</Text>
                   </Text>
                 </View>
@@ -2297,8 +2312,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  {firstSetPrompt}
-                  Open the menu above for how to do this exercise correctly.
+                  {firstSetPrompt} Use the three-dot menu for form tips, warm-ups, swaps and session options.
                 </Text>
               </View>
             )}
@@ -2711,38 +2725,40 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Set type</Text>
-            <Text style={styles.sheetExplainer}>
-              Pick how this set was done. Working and the intensity techniques all count towards your weekly totals; warm-ups don't. The label tells the coach how you trained.
-            </Text>
-            {/* P9: the radios group so TalkBack announces position context
-                ("2 of 5") while each row keeps its own label and state. */}
-            <View accessibilityRole="radiogroup">
-            {SET_TYPE_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.value}
-                style={styles.sheetOption}
-                onPress={() => {
-                  hapticsVocab.selection();
-                  setCurrentSet(s => ({ ...s, setType: opt.value }));
-                  setShowSetTypePicker(false);
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: currentSet.setType === opt.value }}
-                accessibilityLabel={`${opt.label}. ${opt.description}`}
-              >
-                <View style={styles.sheetOptionText}>
-                  <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
-                    {opt.label}
-                  </Text>
-                  <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
-                </View>
-                {currentSet.setType === opt.value && (
-                  <Ionicons name="checkmark" size={18} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-            </View>
+            <WorkoutSheetScroll>
+              <Text style={styles.sheetTitle}>Set type</Text>
+              <Text style={styles.sheetExplainer}>
+                Pick how this set was done. Working sets and intensity techniques count towards your training; warm-ups do not. This helps Volyume read the session correctly.
+              </Text>
+              {/* P9: the radios group so TalkBack announces position context
+                  ("2 of 5") while each row keeps its own label and state. */}
+              <View accessibilityRole="radiogroup">
+              {SET_TYPE_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={styles.sheetOption}
+                  onPress={() => {
+                    hapticsVocab.selection();
+                    setCurrentSet(s => ({ ...s, setType: opt.value }));
+                    setShowSetTypePicker(false);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: currentSet.setType === opt.value }}
+                  accessibilityLabel={`${opt.label}. ${opt.description}`}
+                >
+                  <View style={styles.sheetOptionText}>
+                    <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
+                  </View>
+                  {currentSet.setType === opt.value && (
+                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+              </View>
+            </WorkoutSheetScroll>
           </View>
             </>
           ) : null}
@@ -2770,63 +2786,65 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Warm-up ramp</Text>
-            {(() => {
-              // Working weight: the entry while it holds a working set;
-              // the anchor while the entry holds a ramp row (so reopening
-              // mid-ramp shows the SAME ramp, not one computed from the
-              // warm-up weight).
-              const entryWeight = parseFloat(currentSet.weight);
-              const entryIsWorking = (currentSet.setType ?? 'straight') !== 'warmup';
-              const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
-                ? entryWeight
-                : rampAnchorRef.current;
-              if (!Number.isFinite(working) || working <= 0) {
+            <WorkoutSheetScroll>
+              <Text style={styles.sheetTitle}>Warm-up ramp</Text>
+              {(() => {
+                // Working weight: the entry while it holds a working set;
+                // the anchor while the entry holds a ramp row (so reopening
+                // mid-ramp shows the SAME ramp, not one computed from the
+                // warm-up weight).
+                const entryWeight = parseFloat(currentSet.weight);
+                const entryIsWorking = (currentSet.setType ?? 'straight') !== 'warmup';
+                const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
+                  ? entryWeight
+                  : rampAnchorRef.current;
+                if (!Number.isFinite(working) || working <= 0) {
+                  return (
+                    <Text style={styles.sheetExplainer}>
+                      Enter your working weight first, then come back for warm-up sets.
+                    </Text>
+                  );
+                }
+                const rows = warmupRamp(working, {
+                  isBarbell: BARBELL_EQUIPMENT.test(exercise?.equipment || ''),
+                  barKg: barWeight || DEFAULT_BAR_KG,
+                });
+                if (rows.length === 0) {
+                  return (
+                    <Text style={styles.sheetExplainer}>
+                      {`This is light enough to start at ${working} ${units}. No ramp is needed today.`}
+                    </Text>
+                  );
+                }
                 return (
-                  <Text style={styles.sheetExplainer}>
-                    Enter a working weight in the set entry first, then come back for the ramp.
-                  </Text>
+                  <>
+                    <Text style={styles.sheetExplainer}>
+                      {`Working up to ${working} ${units}. Tap a row to load it as a warm-up, then log it. Warm-ups are saved but not counted in your working-set target.`}
+                    </Text>
+                    {rows.map((row) => (
+                      <TouchableOpacity
+                        key={`${row.weight}-${row.reps}`}
+                        style={styles.sheetOption}
+                        onPress={() => {
+                          hapticsVocab.selection();
+                          setGhostSet(null);
+                          setCurrentSet(s => ({ ...s, weight: row.weight, reps: row.reps, setType: 'warmup', isGhost: false }));
+                          setShowWarmupRamp(false);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load into the set entry as a warm-up.`}
+                      >
+                        <View style={styles.overflowOptionRow}>
+                          <Ionicons name="flame-outline" size={16} color={colors.warning} />
+                          <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} × ${row.reps}`}</Text>
+                        </View>
+                        {row.isBar ? <Text style={styles.rampBarTag}>Empty bar</Text> : null}
+                      </TouchableOpacity>
+                    ))}
+                  </>
                 );
-              }
-              const rows = warmupRamp(working, {
-                isBarbell: BARBELL_EQUIPMENT.test(exercise?.equipment || ''),
-                barKg: barWeight || DEFAULT_BAR_KG,
-              });
-              if (rows.length === 0) {
-                return (
-                  <Text style={styles.sheetExplainer}>
-                    {`Light enough to start straight in at ${working} ${units}. No ramp needed today.`}
-                  </Text>
-                );
-              }
-              return (
-                <>
-                  <Text style={styles.sheetExplainer}>
-                    {`Working up to ${working} ${units}. Tap a row to load it into the set entry as a warm-up, then log it as usual. Warm-ups aren't counted in your totals.`}
-                  </Text>
-                  {rows.map((row) => (
-                    <TouchableOpacity
-                      key={`${row.weight}-${row.reps}`}
-                      style={styles.sheetOption}
-                      onPress={() => {
-                        hapticsVocab.selection();
-                        setGhostSet(null);
-                        setCurrentSet(s => ({ ...s, weight: row.weight, reps: row.reps, setType: 'warmup', isGhost: false }));
-                        setShowWarmupRamp(false);
-                      }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load into the set entry as a warm-up.`}
-                    >
-                      <View style={styles.overflowOptionRow}>
-                        <Ionicons name="flame-outline" size={16} color={colors.warning} />
-                        <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} × ${row.reps}`}</Text>
-                      </View>
-                      {row.isBar ? <Text style={styles.rampBarTag}>Empty bar</Text> : null}
-                    </TouchableOpacity>
-                  ))}
-                </>
-              );
-            })()}
+              })()}
+            </WorkoutSheetScroll>
           </View>
             </>
           ) : null}
@@ -2853,70 +2871,72 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Plate calculator</Text>
-            <View style={styles.plateInputsRow}>
-              <View style={styles.plateInputGroup}>
-                <Text style={styles.plateInputLabel}>{`Target (${units})`}</Text>
-                <TextInput
-                  style={styles.plateInput}
-                  value={plateTarget}
-                  onChangeText={setPlateTarget}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  accessibilityLabel={`Target weight in ${units}`}
-                />
+            <WorkoutSheetScroll>
+              <Text style={styles.sheetTitle}>Plate calculator</Text>
+              <View style={styles.plateInputsRow}>
+                <View style={styles.plateInputGroup}>
+                  <Text style={styles.plateInputLabel}>{`Target (${units})`}</Text>
+                  <TextInput
+                    style={styles.plateInput}
+                    value={plateTarget}
+                    onChangeText={setPlateTarget}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    placeholder="0"
+                    placeholderTextColor={colors.textMuted}
+                    accessibilityLabel={`Target weight in ${units}`}
+                  />
+                </View>
+                <View style={styles.plateInputGroup}>
+                  <Text style={styles.plateInputLabel}>{`Bar (${units})`}</Text>
+                  <TextInput
+                    style={styles.plateInput}
+                    value={plateBar}
+                    onChangeText={setPlateBar}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    placeholder={String(DEFAULT_BAR_KG)}
+                    placeholderTextColor={colors.textMuted}
+                    accessibilityLabel={`Bar weight in ${units}`}
+                  />
+                </View>
               </View>
-              <View style={styles.plateInputGroup}>
-                <Text style={styles.plateInputLabel}>{`Bar (${units})`}</Text>
-                <TextInput
-                  style={styles.plateInput}
-                  value={plateBar}
-                  onChangeText={setPlateBar}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                  placeholder={String(DEFAULT_BAR_KG)}
-                  placeholderTextColor={colors.textMuted}
-                  accessibilityLabel={`Bar weight in ${units}`}
-                />
-              </View>
-            </View>
-            {(() => {
-              const calc = calculatePlates(parseFloat(plateTarget), parseFloat(plateBar));
-              if (!calc.ok) {
-                return <Text style={styles.sheetExplainer}>Enter the weight you want on the bar.</Text>;
-              }
-              if (calc.belowBar) {
+              {(() => {
+                const calc = calculatePlates(parseFloat(plateTarget), parseFloat(plateBar));
+                if (!calc.ok) {
+                  return <Text style={styles.sheetExplainer}>Enter the weight you want on the bar.</Text>;
+                }
+                if (calc.belowBar) {
+                  return (
+                    <Text style={styles.sheetExplainer}>
+                      {`That is below the bar itself. The empty bar is ${parseFloat(plateBar)} ${units}.`}
+                    </Text>
+                  );
+                }
                 return (
-                  <Text style={styles.sheetExplainer}>
-                    {`That's below the bar itself. The empty bar is ${parseFloat(plateBar)} ${units}.`}
-                  </Text>
+                  <>
+                    {calc.perSide.length === 0 ? (
+                      <Text style={styles.sheetExplainer}>Just the empty bar. Nothing to load.</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.plateSectionLabel}>Each side, heaviest first</Text>
+                        {calc.perSide.map(({ plate, count }) => (
+                          <View key={plate} style={styles.plateRow} accessible accessibilityLabel={`${count} of ${plate} ${units} each side`}>
+                            <View style={[styles.plateDot, { backgroundColor: PLATE_COLOURS[plate] || colors.textMuted }]} />
+                            <Text style={styles.plateRowText}>{`${count} × ${plate} ${units}`}</Text>
+                          </View>
+                        ))}
+                      </>
+                    )}
+                    <Text style={styles.plateTotalLine}>
+                      {calc.remainderKg === 0
+                        ? `Loads exactly ${calc.loadedKg} ${units}.`
+                        : `Closest bar load is ${calc.loadedKg} ${units}, ${calc.remainderKg} ${units} short of the target.`}
+                    </Text>
+                  </>
                 );
-              }
-              return (
-                <>
-                  {calc.perSide.length === 0 ? (
-                    <Text style={styles.sheetExplainer}>Just the empty bar. Nothing to load.</Text>
-                  ) : (
-                    <>
-                      <Text style={styles.plateSectionLabel}>Each side, heaviest first</Text>
-                      {calc.perSide.map(({ plate, count }) => (
-                        <View key={plate} style={styles.plateRow} accessible accessibilityLabel={`${count} of ${plate} ${units} each side`}>
-                          <View style={[styles.plateDot, { backgroundColor: PLATE_COLOURS[plate] || colors.textMuted }]} />
-                          <Text style={styles.plateRowText}>{`${count} × ${plate} ${units}`}</Text>
-                        </View>
-                      ))}
-                    </>
-                  )}
-                  <Text style={styles.plateTotalLine}>
-                    {calc.remainderKg === 0
-                      ? `Loads exactly ${calc.loadedKg} ${units}.`
-                      : `Closest bar load is ${calc.loadedKg} ${units}, ${calc.remainderKg} ${units} short of the target.`}
-                  </Text>
-                </>
-              );
-            })()}
+              })()}
+            </WorkoutSheetScroll>
           </View>
             </>
           ) : null}
@@ -2942,38 +2962,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>{exercise?.name}</Text>
-            <TouchableOpacity
-              style={styles.sheetOption}
-              onPress={() => { setShowOverflow(false); handleOpenSwap(); }}
-              accessibilityRole="button"
-              accessibilityLabel="Swap exercise"
-            >
-              <View style={styles.overflowOptionRow}>
-                <Ionicons name="swap-horizontal" size={18} color={colors.textSecondary} />
-                <Text style={styles.sheetOptionLabel}>Swap exercise</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.sheetOption}
-              onPress={() => { setShowOverflow(false); setShowExecution(true); }}
-              accessibilityRole="button"
-              accessibilityLabel="Exercise info"
-            >
-              <View style={styles.overflowOptionRow}>
-                <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-                <Text style={styles.sheetOptionLabel}>Exercise info</Text>
-              </View>
-            </TouchableOpacity>
-            {/* B8 gym basics. Both live here in the overflow, secondary
-                utilities off the permanent surface (COMP-001), and strictly
-                pull: the warm-up ramp NEVER auto-appears (recorded decision
-                at the set-entry card). */}
-            {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
-                weight AND set type, and finishCluster commits from the
-                live entry, the one-tap path would mislog the whole
-                cluster as a light warm-up. */}
-            {!cluster && (!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
+            <WorkoutSheetScroll>
+              <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleOpenSwap(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Swap exercise"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="swap-horizontal" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>Swap exercise</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); setShowExecution(true); }}
+                accessibilityRole="button"
+                accessibilityLabel="Exercise info"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>Exercise info</Text>
+                </View>
+              </TouchableOpacity>
+              {/* B8 gym basics. Both live here in the overflow, secondary
+                  utilities off the permanent surface (COMP-001), and strictly
+                  pull: the warm-up ramp NEVER auto-appears (recorded decision
+                  at the set-entry card). */}
+              {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
+                  weight AND set type, and finishCluster commits from the
+                  live entry, the one-tap path would mislog the whole
+                  cluster as a light warm-up. */}
+              {!cluster && (!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => {
@@ -2995,8 +3016,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                 </View>
               </TouchableOpacity>
-            )}
-            {PLATE_LOADED_EQUIPMENT.test(exercise?.equipment || '') && (
+              )}
+              {PLATE_LOADED_EQUIPMENT.test(exercise?.equipment || '') && (
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => {
@@ -3017,8 +3038,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                 </View>
               </TouchableOpacity>
-            )}
-            {!isLastExercise && (
+              )}
+              {!isLastExercise && (
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); handleTogglePair(); }}
@@ -3030,8 +3051,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={styles.sheetOptionLabel}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
                 </View>
               </TouchableOpacity>
-            )}
-            {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
+              )}
+              {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); handleTimeCrunch(); }}
@@ -3046,8 +3067,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                 </View>
               </TouchableOpacity>
-            )}
-            {timeCrunchActive && (
+              )}
+              {timeCrunchActive && (
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); handleRevertTimeCrunch(); }}
@@ -3062,18 +3083,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                 </View>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.sheetOption}
-              onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
-              accessibilityRole="button"
-              accessibilityLabel="Remove exercise from workout"
-            >
-              <View style={styles.overflowOptionRow}>
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
-                <Text style={[styles.sheetOptionLabel, { color: colors.error }]}>Remove exercise</Text>
-              </View>
-            </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Remove exercise from workout"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  <Text style={[styles.sheetOptionLabel, { color: colors.error }]}>Remove exercise</Text>
+                </View>
+              </TouchableOpacity>
+            </WorkoutSheetScroll>
           </View>
             </>
           ) : null}
@@ -3097,81 +3119,83 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>{exercise?.name}</Text>
-            {exercise?.primaryMuscle ? (
-              <Text style={styles.infoMuscle}>
-                {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
-                {exercise.equipment ? ` · ${exercise.equipment}` : ''}
-              </Text>
-            ) : null}
-            {routineExercise?.recommendedSets ? (
-              <View style={styles.infoTargetRow}>
-                <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
-                <Text style={styles.infoTarget}>
-                  {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+            <WorkoutSheetScroll>
+              <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+              {exercise?.primaryMuscle ? (
+                <Text style={styles.infoMuscle}>
+                  {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
+                  {exercise.equipment ? ` · ${exercise.equipment}` : ''}
                 </Text>
-              </View>
-            ) : null}
-
-            {/* COMP-015: Adjusted today, the reason, the plain-words signals,
-                and the one-tap revert. Shown for any visible adjustment; the
-                revert button only when there's a real set change to undo. */}
-            {sessionAdjustment?.show ? (
-              <View style={styles.adjustedSection}>
-                <View style={styles.adjustedHeader}>
-                  <Ionicons name="sparkles" size={14} color={colors.primary} />
-                  <Text style={styles.adjustedTitle}>Adjusted today</Text>
-                </View>
-                <Text style={styles.adjustedReason}>{sessionAdjustment.reasonText}</Text>
-                {sessionAdjustment.signals?.lastTrainedAt ? (
-                  <Text style={styles.adjustedSignal}>
-                    Last trained {new Date(sessionAdjustment.signals.lastTrainedAt).toLocaleDateString(undefined, { weekday: 'long' })}.
+              ) : null}
+              {routineExercise?.recommendedSets ? (
+                <View style={styles.infoTargetRow}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
+                  <Text style={styles.infoTarget}>
+                    {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                   </Text>
-                ) : null}
-                {sessionAdjustment.setDelta !== 0 ? (
+                </View>
+              ) : null}
+
+              {/* COMP-015: Adjusted today, the reason, the plain-words signals,
+                  and the one-tap revert. Shown for any visible adjustment; the
+                  revert button only when there's a real set change to undo. */}
+              {sessionAdjustment?.show ? (
+                <View style={styles.adjustedSection}>
+                  <View style={styles.adjustedHeader}>
+                    <Ionicons name="sparkles" size={14} color={colors.primary} />
+                    <Text style={styles.adjustedTitle}>Adjusted today</Text>
+                  </View>
+                  <Text style={styles.adjustedReason}>{sessionAdjustment.reasonText}</Text>
+                  {sessionAdjustment.signals?.lastTrainedAt ? (
+                    <Text style={styles.adjustedSignal}>
+                      Last trained {new Date(sessionAdjustment.signals.lastTrainedAt).toLocaleDateString(undefined, { weekday: 'long' })}.
+                    </Text>
+                  ) : null}
+                  {sessionAdjustment.setDelta !== 0 ? (
+                    <TouchableOpacity
+                      style={styles.adjustedRevertBtn}
+                      onPress={() => { revertSessionAdjustment(exercise.id); setShowExecution(false); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
+                    >
+                      <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
+                      <Text style={styles.adjustedRevertText}>Use planned sets instead</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {/* B2: Eased for today, the intent-sheet answer's downward-only
+                  tweak, both written whys, and a one-tap session-wide dismiss.
+                  Suggestions on the targets display only; the plan and logged
+                  sets are never changed. */}
+              {readinessReduces ? (
+                <View style={styles.adjustedSection}>
+                  <View style={styles.adjustedHeader}>
+                    <Ionicons name="sparkles" size={14} color={colors.primary} />
+                    <Text style={styles.adjustedTitle}>Eased for today</Text>
+                  </View>
+                  <Text style={styles.adjustedReason}>{readinessTweak.whySets}</Text>
+                  {readinessTweak.whyLoad ? (
+                    <Text style={styles.adjustedSignal}>{readinessTweak.whyLoad}</Text>
+                  ) : null}
                   <TouchableOpacity
                     style={styles.adjustedRevertBtn}
-                    onPress={() => { revertSessionAdjustment(exercise.id); setShowExecution(false); }}
+                    onPress={() => { dismissReadinessTweak(); setShowExecution(false); }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
+                    accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
                   >
                     <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
-                    <Text style={styles.adjustedRevertText}>Use planned sets instead</Text>
+                    <Text style={styles.adjustedRevertText}>{readinessRestoreLabel}</Text>
                   </TouchableOpacity>
-                ) : null}
-              </View>
-            ) : null}
-
-            {/* B2: Eased for today, the intent-sheet answer's downward-only
-                tweak, both written whys, and a one-tap session-wide dismiss.
-                Suggestions on the targets display only; the plan and logged
-                sets are never changed. */}
-            {readinessReduces ? (
-              <View style={styles.adjustedSection}>
-                <View style={styles.adjustedHeader}>
-                  <Ionicons name="sparkles" size={14} color={colors.primary} />
-                  <Text style={styles.adjustedTitle}>Eased for today</Text>
                 </View>
-                <Text style={styles.adjustedReason}>{readinessTweak.whySets}</Text>
-                {readinessTweak.whyLoad ? (
-                  <Text style={styles.adjustedSignal}>{readinessTweak.whyLoad}</Text>
-                ) : null}
-                <TouchableOpacity
-                  style={styles.adjustedRevertBtn}
-                  onPress={() => { dismissReadinessTweak(); setShowExecution(false); }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
-                >
-                  <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
-                  <Text style={styles.adjustedRevertText}>{readinessRestoreLabel}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
+              ) : null}
 
-            <Text style={styles.infoNotesLabel}>How to do it</Text>
-            <Text style={styles.infoNotes}>
-              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
-            </Text>
+              <Text style={styles.infoNotesLabel}>How to do it</Text>
+              <Text style={styles.infoNotes}>
+                {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
+              </Text>
+            </WorkoutSheetScroll>
           </View>
             </>
           ) : null}
@@ -3432,8 +3456,8 @@ const styles = StyleSheet.create({
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  targetText: { fontSize: fontSize.sm, color: colors.textMuted },
+  targetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
+  targetText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
@@ -3450,10 +3474,11 @@ const styles = StyleSheet.create({
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
   orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  beatLine: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
-  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  beatLine: { alignSelf: 'stretch', minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs },
+  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
+  beatLineHint: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   coachLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
   coachLineText: { ...type.bodySm, flex: 1, color: colors.primary },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
@@ -3538,7 +3563,7 @@ const styles = StyleSheet.create({
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  loggedSetText: { ...type.bodyStrong, flex: 1, color: colors.textPrimary },
+  loggedSetText: { ...type.bodyStrong, flex: 1, color: colors.textPrimary, minWidth: 0 },
   loggedEst1RM: { ...type.caption, color: colors.textMuted },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl * 2, gap: spacing.lg, paddingHorizontal: spacing.xxl },
@@ -3547,11 +3572,13 @@ const styles = StyleSheet.create({
   addFirstBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg, marginTop: spacing.lg },
   addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   sheetOverlay: { flex: 1, backgroundColor: colors.scrim },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md, maxHeight: '92%' },
   sheetHandle: { width: 36, height: 4, borderRadius: radius.hair, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
   sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetExplainer: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
-  sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  sheetScroll: { flexShrink: 1, minHeight: 0 },
+  sheetScrollBody: { paddingBottom: spacing.xs },
+  sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 56, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   // B8 gym-basics sheets
   rampBarTag: { ...type.caption, color: colors.textMuted },
   plateInputsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
