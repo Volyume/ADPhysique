@@ -143,18 +143,20 @@ describe('DiaryScreen diary tools', () => {
   test('copy and insights live in a clear tools sheet, not a generic alert', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
     expect(SRC).toMatch(/accessibilityLabel="Diary tools"/);
+    expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Food tools<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy a logged day<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Insights and export<\/Text>/);
+    expect(SRC).toMatch(/Daily logging stays on the main screen\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
 
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
-    expect(SRC).toMatch(/accessibilityLabel="Plan meals: create meals for today or the week, review and swap them, then add them to your diary"/);
+    expect(SRC).toMatch(/accessibilityLabel="Meal planner: build meals for today or the week, review and swap them, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
-    expect(SRC).toMatch(/Create today or a week ahead\. Review and swap first; nothing is added automatically\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal planner<\/Text>/);
+    expect(SRC).toMatch(/Build today or a week ahead\. Review swaps first; nothing is added automatically\./);
   });
 });
 
