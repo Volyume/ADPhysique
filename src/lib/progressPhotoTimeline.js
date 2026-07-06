@@ -53,7 +53,7 @@ function setupQualityForPoses(poses = []) {
     return {
       key: 'usable',
       label: 'Usable setup',
-      helper: 'Add the missing pose to make this Check-In stronger.',
+      helper: 'Add the missing pose to make this photo set stronger.',
     };
   }
   return {
