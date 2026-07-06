@@ -43,7 +43,7 @@ export function LedgerCard({ working, off }) {
       ) : null}
       {hasOff ? (
         <View>
-          <SectionHeader title="What was off" />
+          <SectionHeader title="Needs attention" />
           <View style={styles.bulletList}>
             {off.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
@@ -86,7 +86,7 @@ export function RapidLossAlert() {
         <Text style={styles.rapidLossTitle}>Weight dropping quickly</Text>
       </View>
       <Text style={styles.rapidLossBody}>
-        Your weight is falling more than 1.5% of your bodyweight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
+        Your weight is falling more than 1.5% of your body weight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
       </Text>
     </View>
   );

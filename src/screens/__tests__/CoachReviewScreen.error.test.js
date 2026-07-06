@@ -88,8 +88,8 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     await flush();
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('No sessions logged this week');
-    expect(json).toContain('Start a workout');
-    const start = tree.root.findByProps({ accessibilityLabel: 'Start a workout' });
+    expect(json).toContain('Go to Train');
+    const start = tree.root.findByProps({ accessibilityLabel: 'Go to Train' });
     await act(async () => { start.props.onPress(); });
     expect(mockNavigateCrossTab).toHaveBeenCalledWith(mockNavigation, 'HomeTab', 'BuildWorkout');
     expect(json).not.toContain('Try again');

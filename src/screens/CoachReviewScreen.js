@@ -489,8 +489,8 @@ export default function CoachReviewScreen() {
           <EmptyState
             icon="barbell-outline"
             title="No sessions logged this week"
-            text="Start a workout when you are ready. This review updates from completed sessions only."
-            actionLabel="Start a workout"
+            text="Complete a session from Train and this review will turn your logged workouts into useful patterns."
+            actionLabel="Go to Train"
             onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
             compact
           />

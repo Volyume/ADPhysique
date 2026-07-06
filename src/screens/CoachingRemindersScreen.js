@@ -303,7 +303,7 @@ export default function CoachingRemindersScreen() {
       <BackHeader title="Coaching reminders" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.intro}>
-          The coach uses these reminders to keep your data current. Pick a time and a day that fit your week. Both reminders run automatically.
+          These reminders keep the weekly coaching loop accurate. Pick times that fit your normal routine.
         </Text>
 
         {permissionStatus === 'denied' && (
@@ -335,7 +335,7 @@ export default function CoachingRemindersScreen() {
           <Text style={styles.scheduleText}>Notification at {formatHour(morningHour)}</Text>
           <View style={styles.helperBlock}>
             <Text style={styles.helperText}>
-              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week opens up the weekly check-in.
+              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day at minimum gives Volyume enough readings to see the trend. Three or more readings per week opens up the weekly check-in.
             </Text>
           </View>
         </Card>
@@ -372,7 +372,7 @@ export default function CoachingRemindersScreen() {
           )}
           <View style={styles.helperBlock}>
             <Text style={styles.helperText}>
-              You can change the day any time. The next reminder will be at least 7 days after your last check-in so the trend math has enough data to mean something.
+              You can change the day any time. The next reminder will be at least 7 days after your last check-in so the trend has enough data to be useful.
             </Text>
           </View>
         </Card>

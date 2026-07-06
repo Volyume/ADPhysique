@@ -2433,7 +2433,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
   },
   weekRange: {
     fontSize: fontSize.sm,
