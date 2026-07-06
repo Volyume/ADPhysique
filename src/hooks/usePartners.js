@@ -79,6 +79,15 @@ function pairedAtMs(p) {
   return Number(p?.acceptedAt) || Number(p?.createdAt) || 0;
 }
 
+async function optionalPartnerRead(read, fallback) {
+  try {
+    const value = await read();
+    return value == null ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 // Enrich one active partnership with its OWN derived view: both sides' week
 // signals, the shared streak, the cheer allowance, the last cheer received and
 // the shared block. Each pair is a private world — nothing here is compared or
@@ -93,21 +102,21 @@ async function enrichPair(partnership, userId) {
     myPrevSignal, partnerPrevSignal, myPrevAimRow, partnerPrevAimRow,
     winCards,
   ] = await Promise.all([
-    getPartnerWeekSignal(partnership.id, partnerId),
-    getPartnerWeekSignal(partnership.id, userId),
-    getLastCheerSentOn(partnership.id, userId),
-    getLastCheerReceived(partnership.id, userId),
-    getPairWeekSignals(partnership.id),
-    getPartnerSharedBlock(partnership.id),
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, partnerId), null),
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, userId), null),
+    optionalPartnerRead(() => getLastCheerSentOn(partnership.id, userId), null),
+    optionalPartnerRead(() => getLastCheerReceived(partnership.id, userId), null),
+    optionalPartnerRead(() => getPairWeekSignals(partnership.id), []),
+    optionalPartnerRead(() => getPartnerSharedBlock(partnership.id), null),
     // D5-A: each side's OWN aim for THIS week (shown side by side, never compared).
-    getPartnerWeeklyIntention(partnership.id, userId, thisWeek),
-    getPartnerWeeklyIntention(partnership.id, partnerId, thisWeek),
+    optionalPartnerRead(() => getPartnerWeeklyIntention(partnership.id, userId, thisWeek), null),
+    optionalPartnerRead(() => getPartnerWeeklyIntention(partnership.id, partnerId, thisWeek), null),
     // Kept-moment inputs: the just-CLOSED week's signals + aims for both sides.
-    getPartnerWeekSignal(partnership.id, userId, lastWeek),
-    getPartnerWeekSignal(partnership.id, partnerId, lastWeek),
-    getPartnerWeeklyIntention(partnership.id, userId, lastWeek),
-    getPartnerWeeklyIntention(partnership.id, partnerId, lastWeek),
-    getPartnerWinCards(partnership.id, { limit: 5 }),
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, userId, lastWeek), null),
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, partnerId, lastWeek), null),
+    optionalPartnerRead(() => getPartnerWeeklyIntention(partnership.id, userId, lastWeek), null),
+    optionalPartnerRead(() => getPartnerWeeklyIntention(partnership.id, partnerId, lastWeek), null),
+    optionalPartnerRead(() => getPartnerWinCards(partnership.id, { limit: 5 }), []),
   ]);
   const sharedStreak = partnership.streakEnabled
     ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(pairSignals, userId, partnerId) })

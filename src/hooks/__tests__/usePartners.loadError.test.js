@@ -42,6 +42,11 @@ jest.mock('../../lib/partners/weekSignalWriter', () => ({
   writeOwnWeekSignals: jest.fn(async () => {}),
 }));
 
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: jest.fn(() => ({ userProfile: {} })) },
+}));
+
 jest.mock('../../lib/partners/inviteCache', () => ({
   getCachedInvite: jest.fn(() => null),
   setCachedInvite: jest.fn(),
@@ -85,6 +90,48 @@ describe('usePartners load error state', () => {
     expect(ref.error).toBe(true);
     expect(ref.rowState).toBe('empty');
     expect(typeof ref.reload).toBe('function');
+  });
+
+  test('optional pair detail read failures do not blank an active partnership', async () => {
+    db.getPartnershipsLocal.mockResolvedValueOnce([{
+      id: 'pair1',
+      status: 'active',
+      memberA: 'me',
+      memberB: 'sam',
+      partnerFirstName: 'Sam',
+      streakEnabled: true,
+      acceptedAt: 1,
+    }]);
+    db.getActivePartnerCount.mockResolvedValueOnce(1);
+    db.getPartnerWeekSignal.mockRejectedValue(new Error('week table unavailable'));
+    db.getPairWeekSignals.mockRejectedValueOnce(new Error('signals unavailable'));
+    db.getLastCheerSentOn.mockRejectedValueOnce(new Error('cheer unavailable'));
+    db.getLastCheerReceived.mockRejectedValueOnce(new Error('cheer unavailable'));
+    db.getPartnerSharedBlock.mockRejectedValueOnce(new Error('block unavailable'));
+    db.getPartnerWeeklyIntention.mockRejectedValue(new Error('intention unavailable'));
+    db.getPartnerWinCards.mockRejectedValueOnce(new Error('wins unavailable'));
+    const ref = {};
+    function Probe() {
+      Object.assign(ref, usePartners('me', 'pro'));
+      return null;
+    }
+
+    await act(async () => { create(<Probe />); });
+    await flush();
+
+    expect(ref.loading).toBe(false);
+    expect(ref.error).toBe(false);
+    expect(ref.rowState).toBe('active');
+    expect(ref.pairs).toHaveLength(1);
+    expect(ref.pairs[0]).toEqual(expect.objectContaining({
+      id: 'pair1',
+      partnerId: 'sam',
+      partnerFirstName: 'Sam',
+      winCards: [],
+      sharedBlock: null,
+      myAim: 0,
+      partnerAim: 0,
+    }));
   });
 
   test('older partnership reads cannot overwrite a newer load', async () => {
