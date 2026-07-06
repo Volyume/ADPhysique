@@ -1068,8 +1068,22 @@ export default function NutritionTargetsScreen({ navigation }) {
 
                     <Text style={styles.mealCountRecCaption}>
                       <Text style={styles.mealCountRecCaptionDot}>●</Text>
-                      {' '}Recommended for your protein target
+                      {` Recommended: ${recommended} feedings for this protein target`}
                     </Text>
+
+                    {mealsPerDay !== null && mealsPerDay !== recommended && (
+                      <TouchableOpacity
+                        style={styles.mealCountRecButton}
+                        onPress={() => changeMealsPerDay(recommended)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Use Volyume's recommended ${recommended} feedings`}
+                      >
+                        <Ionicons name="sparkles-outline" size={13} color={colors.primary} />
+                        <Text style={styles.mealCountRecButtonText}>
+                          Use recommended
+                        </Text>
+                      </TouchableOpacity>
+                    )}
 
                     {windowHint && (
                       <View style={styles.perMealHint}>
@@ -1753,6 +1767,23 @@ const styles = StyleSheet.create({
   mealCountRecCaptionDot: {
     color: colors.primary,
     fontSize: fontSize.micro,
+  },
+  mealCountRecButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.314),
+    backgroundColor: colors.surface2,
+  },
+  mealCountRecButtonText: {
+    ...type.caption,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   perMealHint: {
     flexDirection: 'row',
