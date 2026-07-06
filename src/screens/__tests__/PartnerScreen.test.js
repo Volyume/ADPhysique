@@ -204,6 +204,7 @@ describe('connected state: isolated pair cards', () => {
 
     await press(tree, 'Review shareable wins');
     text = allText(tree).join(' ');
+    expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Shareable wins');
     expect(text).toContain('Partner wins are off by default.');
     expect(text).toContain('Pick a card, check exactly what Sam will see, then send it.');
@@ -340,6 +341,24 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Only this chosen record is shared. Wider lift history stays private.');
     expect(text).not.toContain('40');
     expect(text).not.toContain('10');
+  });
+
+  test('incoming share route with no partner explains that nothing was sent', async () => {
+    mockHook.value = base({ pairs: [], pendingInvite: null });
+    const tree = await mount({
+      shareWinType: 'workout_summary',
+      shareWinPayload: {
+        workoutName: 'Upper body strength',
+        completedAt: '6 Jul 2026',
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Add a partner to share this');
+    expect(text).toContain('Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.');
+    expect(text).toContain('Your card stays private');
+    expect(text).toContain('Invite your partner first. Once they accept, you can choose exactly which card to send.');
+    expect(text).toContain('Invite someone you train with');
+    expect(text).not.toContain('Shareable wins');
   });
 
   test('pro under the cap offers "Invite another partner"', async () => {

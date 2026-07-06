@@ -593,6 +593,7 @@ export default function PartnerScreen({ route }) {
   const incomingShareWinType = route?.params?.shareWinType;
   const incomingShareWinPayload = route?.params?.shareWinPayload;
   const incomingProgressCardPayload = route?.params?.progressCardSharePayload;
+  const hasIncomingShareIntent = !!(incomingShareWinType || incomingProgressCardPayload);
   const incomingCode = route?.params?.code ? parseInviteCode(route.params.code) : null;
   const handledCodeRef = useRef(null);
   const shareWinsRouteHandledRef = useRef(null);
@@ -1047,11 +1048,24 @@ export default function PartnerScreen({ route }) {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="people-outline" size={iconSize.xl} color={colors.primary} />
             </View>
-            <Text style={styles.emptyTitle}>Train with a partner</Text>
+            <Text style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this' : 'Train with a partner'}</Text>
             <Text style={styles.emptyBody}>
-              Pair up with one person you already train with. It is quiet accountability: someone you
-              trust who knows whether you showed up.
+              {hasIncomingShareIntent
+                ? 'Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.'
+                : 'Pair up with one person you already train with. It is quiet accountability: someone you trust who knows whether you showed up.'}
             </Text>
+
+            {hasIncomingShareIntent ? (
+              <Card style={styles.incomingShareNotice}>
+                <View style={styles.incomingShareNoticeHead}>
+                  <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
+                  <Text style={styles.incomingShareNoticeTitle}>Your card stays private</Text>
+                </View>
+                <Text style={styles.incomingShareNoticeText}>
+                  Invite your partner first. Once they accept, you can choose exactly which card to send.
+                </Text>
+              </Card>
+            ) : null}
 
             <Card style={styles.howItWorks}>
               <Text style={styles.howHeader}>HOW IT WORKS</Text>
@@ -1981,6 +1995,10 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
+  incomingShareNotice: { gap: spacing.sm },
+  incomingShareNoticeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  incomingShareNoticeTitle: { ...type.label, color: colors.textPrimary },
+  incomingShareNoticeText: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   // Plain-English "how it works", left-aligned so the three lines read as a
   // short explainer rather than a centred paragraph. Sits between the pitch and
   // the privacy receipt; the empty container's own xl gap spaces it.
