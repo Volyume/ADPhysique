@@ -16,6 +16,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const FILES = [
   'screens/PartnerScreen.js',
   'lib/partners/intention.js',
+  'lib/partners/supportPlan.js',
   'lib/partners/moments.js',
   'lib/partners/sharedStreak.js',
   'lib/partners/acknowledgements.js',

@@ -44,6 +44,7 @@ import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
 import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
+import { buildPartnerSupportPlan } from '../lib/partners/supportPlan';
 import {
   SHARE_WIN_CARD_RULES,
   SHARE_WIN_POLICY,
@@ -207,8 +208,48 @@ function PartnerSupportSnapshot({ pair, name }) {
         </View>
       </View>
       <Text style={styles.supportFoot}>
-        Current week: You {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}.
+        Current week: you against your own plan: {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} against their own plan: {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No score table.
       </Text>
+    </View>
+  );
+}
+
+function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) {
+  const plan = buildPartnerSupportPlan(pair, name);
+  const onPrimary = () => {
+    if (plan.primaryAction.key === 'set_aim') onSetAim(pair);
+    else if (plan.primaryAction.key === 'cheer') onCheer(pair);
+    else onOpenShareWins(pair);
+  };
+  return (
+    <View style={styles.supportPlan}>
+      <View style={styles.supportPlanHead}>
+        <Ionicons name="compass-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.supportPlanTitle}>{plan.title}</Text>
+      </View>
+      <Text style={styles.supportPlanHeadline}>{plan.headline}</Text>
+      <View style={styles.supportPlanGrid}>
+        {plan.steps.map((step) => (
+          <View key={step.key} style={styles.supportPlanStep}>
+            <View style={styles.supportPlanStepTop}>
+              <Text style={styles.supportPlanStepLabel}>{step.label}</Text>
+              <Text style={styles.supportPlanStepState}>{step.state}</Text>
+            </View>
+            <Text style={styles.supportPlanStepCopy}>{step.copy}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.supportPlanPrivacy}>{plan.privacyLine}</Text>
+      <TouchableOpacity
+        onPress={onPrimary}
+        style={styles.supportPlanButton}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel={plan.primaryAction.accessibilityLabel}
+      >
+        <Text style={styles.supportPlanButtonText}>{plan.primaryAction.label}</Text>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -323,6 +364,14 @@ function PairCard({
       </View>
 
       <IntentionBlock pair={pair} onSetAim={onSetAim} />
+
+      <PartnerSupportPlan
+        pair={pair}
+        name={name}
+        onSetAim={onSetAim}
+        onCheer={onCheer}
+        onOpenShareWins={onOpenShareWins}
+      />
 
       <PartnerSupportSnapshot pair={pair} name={name} />
 
@@ -1268,6 +1317,41 @@ const styles = StyleSheet.create({
   },
   intentionSetText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
+
+  supportPlan: {
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  supportPlanHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  supportPlanTitle: { ...type.label, color: colors.textPrimary },
+  supportPlanHeadline: { ...type.body, color: colors.textPrimary, lineHeight: 22 },
+  supportPlanGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  supportPlanStep: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 132,
+    gap: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    padding: spacing.sm,
+  },
+  supportPlanStepTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary, flexShrink: 1 },
+  supportPlanStepState: { ...type.caption, color: colors.primary, flexShrink: 0 },
+  supportPlanStepCopy: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
+  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  supportPlanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
+  supportPlanButtonText: { ...type.label, color: colors.primary },
 
   // Active-pair trust snapshot
   supportSnapshot: {
