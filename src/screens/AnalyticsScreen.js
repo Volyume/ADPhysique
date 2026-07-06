@@ -8,7 +8,6 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import RollingNumber from '../components/RollingNumber';
@@ -546,10 +545,8 @@ export default function AnalyticsScreen({ navigation, route }) {
         {!loading && allSets.length === 0 && (
           <EmptyState
             icon="analytics-outline"
-            title="Your progress starts here"
-            text="Log your first session and these charts begin filling in. Every workout you log adds to the picture."
-            actionLabel="Start a workout"
-            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+            title="No progress data yet"
+            text="Your charts will appear here once you have logged training, body metrics, photos or scans."
           />
         )}
 

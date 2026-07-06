@@ -92,10 +92,8 @@ export default function ConsistencyScreen({ navigation }) {
         {!loading && !loadError && !hasData ? (
           <EmptyState
             icon="barbell-outline"
-            title="Your consistency picture starts with your first session"
-            text="Log a workout and this screen will begin showing training rhythm, recovery signals and load trends."
-            actionLabel="Start a workout"
-            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+            title="No consistency data yet"
+            text="This page fills in after completed sessions, then shows rhythm, recovery signals and load trends."
             compact
           />
         ) : null}
