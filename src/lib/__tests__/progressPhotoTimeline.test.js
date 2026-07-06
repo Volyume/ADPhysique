@@ -48,6 +48,11 @@ describe('progressPhotoTimeline', () => {
         poses: ['front', 'side', 'back'],
         note: 'Same setup',
         weightKg: 82.4,
+        setupQuality: {
+          key: 'complete',
+          label: 'Strong setup',
+          helper: 'Front, side and back are saved for like-for-like comparison.',
+        },
       },
       { type: 'header', key: 'h-2026-4', label: 'May 2026' },
       {
@@ -61,6 +66,11 @@ describe('progressPhotoTimeline', () => {
         poses: ['front'],
         note: null,
         weightKg: null,
+        setupQuality: {
+          key: 'partial',
+          label: 'Partial setup',
+          helper: 'Add the other poses before relying on comparisons.',
+        },
       },
     ]);
   });

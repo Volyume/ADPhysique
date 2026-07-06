@@ -658,6 +658,14 @@ export default function ProgressPhotosScreen({ navigation }) {
     setViewerOpen(true);
   }
 
+  function openCheckInPoseCapture(item, pose) {
+    if (!canWrite() || !item?.cover?.uri || !pose) return;
+    setScanFlow(null);
+    setCaptureReference({ uri: item.cover.uri });
+    setCapturePose(pose);
+    setCaptureOpen(true);
+  }
+
   // Real delete wiring: remove the file AND its metadata row, then refresh.
   // Re-checks the live tier (a pro-to-free flip with the confirm open must not
   // delete); the viewer also re-checks before calling this.
@@ -731,6 +739,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
     const missingPoses = CORE_POSES.filter((pose) => !item.poses.includes(pose));
+    const nextMissingPose = missingPoses[0] || null;
     const poseSummary = missingPoses.length === 0
       ? 'Full set'
       : `${item.poses.length}/${CORE_POSES.length} poses`;
@@ -767,6 +776,23 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
             {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} /> : null}
           </View>
+          <View style={styles.setupQualityRow}>
+            <View style={[styles.setupQualityPill, item.setupQuality?.key === 'complete' && styles.setupQualityPillStrong]}>
+              <Ionicons
+                name={item.setupQuality?.key === 'complete' ? 'checkmark-circle-outline' : 'scan-outline'}
+                size={13}
+                color={item.setupQuality?.key === 'complete' ? colors.primary : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.setupQualityText,
+                  item.setupQuality?.key === 'complete' && styles.setupQualityTextStrong,
+                ]}
+              >
+                {item.setupQuality?.label || 'Setup saved'}
+              </Text>
+            </View>
+          </View>
           <View style={styles.checkInPoseRow}>
             {CORE_POSES.map((pose) => {
               const complete = item.poses.includes(pose);
@@ -789,6 +815,19 @@ export default function ProgressPhotosScreen({ navigation }) {
               Matched front, side and back photos are ready for cleaner comparison.
             </Text>
           )}
+          {!readOnly && nextMissingPose ? (
+            <TouchableOpacity
+              onPress={() => openCheckInPoseCapture(item, nextMissingPose)}
+              style={styles.completeCheckInButton}
+              accessibilityRole="button"
+              accessibilityLabel={`Complete this Check-In with a ${POSE_LABEL[nextMissingPose]} photo`}
+            >
+              <Ionicons name="camera-outline" size={iconSize.sm} color={colors.primary} />
+              <Text style={styles.completeCheckInText}>
+                Complete with {POSE_LABEL[nextMissingPose]}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -1332,6 +1371,19 @@ const styles = StyleSheet.create({
   checkInTitleBlock: { flex: 1 },
   checkInDate: { ...type.label, color: colors.textPrimary },
   checkInMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  setupQualityRow: { flexDirection: 'row', alignItems: 'center' },
+  setupQualityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  setupQualityPillStrong: { backgroundColor: colors.primaryBg },
+  setupQualityText: { ...type.caption, color: colors.textMuted },
+  setupQualityTextStrong: { color: colors.primary },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
     borderWidth: 1,
@@ -1349,6 +1401,15 @@ const styles = StyleSheet.create({
   checkInPoseTextDone: { color: colors.primary },
   checkInNote: { ...type.bodySm, color: colors.textSecondary },
   checkInHint: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  completeCheckInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingVertical: spacing.xs,
+  },
+  completeCheckInText: { ...type.label, color: colors.primary },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
