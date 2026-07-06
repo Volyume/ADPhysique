@@ -178,6 +178,35 @@ function IntentionBlock({ pair, onSetAim }) {
   );
 }
 
+function PartnerSupportSnapshot({ pair, name }) {
+  const hasBlock = pair.sharedBlock && (pair.sharedBlock.status === 'active' || pair.sharedBlock.status === 'proposed');
+  return (
+    <View style={styles.supportSnapshot}>
+      <View style={styles.supportHead}>
+        <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.supportTitle}>Support snapshot</Text>
+      </View>
+      <View style={styles.supportGrid}>
+        <View style={styles.supportCell}>
+          <Text style={styles.supportLabel}>Shared</Text>
+          <Text style={styles.supportText}>
+            Weekly training against your own plans, your chosen aim, cheers{hasBlock ? ' and shared block name' : ''}.
+          </Text>
+        </View>
+        <View style={styles.supportCell}>
+          <Text style={styles.supportLabel}>Private</Text>
+          <Text style={styles.supportText}>
+            Weights, sets, reps, food, coach notes, body metrics and photos.
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.supportFoot}>
+        Current week: You {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}.
+      </Text>
+    </View>
+  );
+}
+
 // D5-B3 reconnection surface: shown only when the shared run has archived. One
 // tap reaches out (opens the acknowledgement picker); dismissable and never
 // nagging (the dismissal persists). Reuses the existing archived copy.
@@ -263,6 +292,8 @@ function PairCard({
       </View>
 
       <IntentionBlock pair={pair} onSetAim={onSetAim} />
+
+      <PartnerSupportSnapshot pair={pair} name={name} />
 
       {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
@@ -1160,6 +1191,21 @@ const styles = StyleSheet.create({
   },
   intentionSetText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
+
+  // Active-pair trust snapshot
+  supportSnapshot: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  supportHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  supportTitle: { ...type.label, color: colors.textPrimary },
+  supportGrid: { flexDirection: 'row', gap: spacing.sm },
+  supportCell: { flex: 1, gap: spacing.xxs },
+  supportLabel: { ...type.caption, color: colors.textSecondary },
+  supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
+  supportFoot: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
 
   // D5-B3 reconnection surface
   reconnect: {
