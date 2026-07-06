@@ -17,6 +17,11 @@ jest.mock('../../components/Button', () => {
     )
   );
 });
+jest.mock('../../components/BottomSheet', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return ({ visible, children }) => (visible ? React.createElement(View, null, children) : null);
+});
 jest.mock('../../components/Skeleton', () => {
   const React = require('react');
   const { Text } = require('react-native');
