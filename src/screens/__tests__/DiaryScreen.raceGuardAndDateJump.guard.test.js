@@ -136,3 +136,15 @@ describe('DiaryScreen macro detail entry points', () => {
     expect(SRC).not.toMatch(/Today at a glance/);
   });
 });
+
+describe('DiaryScreen saved food entry points', () => {
+  test('the meal-card Saved action opens one chooser for saved meals and recipes', () => {
+    expect(SRC).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
+    expect(SRC).toMatch(/const \[savedPickerSlot, setSavedPickerSlot\] = useState\(null\);/);
+    expect(SRC).toMatch(/function addSavedMeal\(slot\) \{\s*setSavedPickerSlot\(slot\);\s*\}/);
+    expect(SRC).toMatch(/accessibilityLabel="Saved food"/);
+    expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
+    expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);
+    expect(SRC).toMatch(/openSavedFoodRoute\('MyRecipes'\)/);
+  });
+});
