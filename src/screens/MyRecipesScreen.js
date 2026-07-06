@@ -175,8 +175,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             accessibilityLabel={`Edit ${item.name}`}
             style={styles.actionBtn}
           >
-            <Ionicons name="create-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.actionText}>Edit</Text>
+            <Ionicons name="create-outline" size={18} color={colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onDelete(item)}
@@ -186,8 +185,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             accessibilityLabel={`Delete ${item.name}`}
             style={styles.actionBtn}
           >
-            <Ionicons name="trash-outline" size={16} color={colors.error} />
-            <Text style={[styles.actionText, styles.actionDanger]}>Delete</Text>
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -303,15 +301,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   actionBtn: {
-    minHeight: 40,
-    flexDirection: 'row',
+    width: 40,
+    height: 40,
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  actionText: { ...type.label, color: colors.textSecondary },
-  actionDanger: {
-    color: colors.error,
+    justifyContent: 'center',
+    borderRadius: 20,
   },
   // Servings picker bottom sheet (food audit F-4)
   servingsSheet: { alignItems: 'center' },

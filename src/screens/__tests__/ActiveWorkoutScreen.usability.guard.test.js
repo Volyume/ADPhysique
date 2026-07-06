@@ -11,6 +11,19 @@ const SET_ENTRY = fs.readFileSync(
 );
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
+  test('terminal workout completion has one primary finish control', () => {
+    expect(ACTIVE_WORKOUT).toContain('targetComplete && !extraSetArmed && isLastExercise');
+    expect(ACTIVE_WORKOUT).toContain('testID="volyume-btn-finish-primary"');
+    expect(ACTIVE_WORKOUT).toContain('<View style={styles.headerTapTarget} />');
+  });
+
+  test('stored workout name uses the same full-title rule as summary sharing', () => {
+    expect(ACTIVE_WORKOUT).toContain("import { shareSessionName } from '../lib/sessionShareData';");
+    expect(ACTIVE_WORKOUT).toContain('const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);');
+    expect(ACTIVE_WORKOUT).toContain('const sessionName = shareSessionName(null, exerciseNames);');
+    expect(ACTIVE_WORKOUT).not.toContain("split(' ')[0]");
+  });
+
   test('primary set CTA speaks the same action the user sees', () => {
     const spokenLabel = ACTIVE_WORKOUT.match(/accessibilityLabel=\{\s*currentSet\.setType === 'warmup'[\s\S]{0,420}\}/)?.[0] ?? '';
 

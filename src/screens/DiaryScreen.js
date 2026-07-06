@@ -1107,7 +1107,7 @@ export default function DiaryScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log food again"
             >
-              <Text style={styles.readOnlyCta}>Log food again with Pro</Text>
+              <Text style={styles.readOnlyCta}>Upgrade to keep logging</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -1130,7 +1130,7 @@ export default function DiaryScreen({ navigation }) {
               accessibilityLabel="Stop the training/rest-day split"
             >
               <Ionicons name="swap-horizontal-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.targetModeText}>Training/rest-day split on. Stop the split</Text>
+              <Text style={styles.targetModeText}>Training and rest targets active. Tap to use one target.</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly && refeed ? (
@@ -1142,7 +1142,7 @@ export default function DiaryScreen({ navigation }) {
             >
               <Ionicons name="restaurant-outline" size={13} color={colors.textMuted} />
               <Text style={styles.targetModeText}>
-                {isRefeedDay ? 'Refeed day today. Clear refeed' : 'Refeed scheduled. Clear refeed'}
+                {isRefeedDay ? 'Refeed day today. Tap to remove it.' : 'Refeed scheduled. Tap to remove it.'}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -1151,7 +1151,7 @@ export default function DiaryScreen({ navigation }) {
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
-              You fixed a barcode. Want fixes like this shared with Open Food Facts so the next person gets a hit? Off by default.
+              Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
             <View style={styles.offCardRow}>
               <TouchableOpacity onPress={onDismissOffCard} hitSlop={8} accessibilityRole="button" accessibilityLabel="Not now">
@@ -1278,14 +1278,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals: build a day or week, review it, then add it to your diary"
+                  accessibilityLabel="Plan meals: choose today or the week, review the meals, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Build a day or week from your targets, then add it when ready.</Text>
+                    <Text style={styles.buildPlanSub}>Choose today or the week. Nothing is added until you confirm.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>

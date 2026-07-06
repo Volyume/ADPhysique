@@ -557,7 +557,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   protein approach and body fat % keep their defaults behind
                   "Fine-tune these numbers". */}
               <View style={styles.formGroup}>
-                <Text style={styles.fieldLabel}>Biological sex</Text>
+                <Text style={styles.fieldLabel}>Sex for the formula</Text>
                 <PillGroup
                   options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
                   selected={sex}
@@ -670,7 +670,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Biological sex */}
           <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Biological sex</Text>
+            <Text style={styles.fieldLabel}>Sex for the formula</Text>
             <PillGroup
               options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
               selected={sex}

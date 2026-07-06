@@ -153,10 +153,10 @@ describe('DiaryScreen diary tools', () => {
 
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
-    expect(SRC).toMatch(/accessibilityLabel="Plan meals: build a day or week, review it, then add it to your diary"/);
+    expect(SRC).toMatch(/accessibilityLabel="Plan meals: choose today or the week, review the meals, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
-    expect(SRC).toMatch(/Build a day or week from your targets, then add it when ready\./);
+    expect(SRC).toMatch(/Choose today or the week\. Nothing is added until you confirm\./);
   });
 });
 
