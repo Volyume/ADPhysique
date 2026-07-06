@@ -169,6 +169,9 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Private');
     expect(text).toContain('Weights, sets, reps, food, coach notes, body metrics and photos.');
     expect(text).toContain('Current week: you against your own plan: 2 of 4. Sam against their own plan: 3 of 4. No score table.');
+    expect(text).toContain('Training the same block');
+    expect(text).toContain('Upper Lower is shared by name only. Workouts, loading and notes stay private.');
+    expect(text).toContain('Manage block');
   });
 
   test('active pairs show a compact support plan with the next safe action', async () => {
@@ -254,6 +257,23 @@ describe('cheer affordance', () => {
     expect(allText(tree)).toContain('Here with you.');
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+  });
+
+  test('a failed acknowledgement does not consume the visible moment', async () => {
+    mockGetVisibleMoments.mockResolvedValue([
+      { id: 'm1', pairId: 'p1', kind: 'streak_week_kept', line: 'Another week you both showed up.', atMs: Date.now() },
+    ]);
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false, error: 'offline' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+    expect(mockMarkMomentSeen).not.toHaveBeenCalled();
+    expect(allText(tree)).toContain('Another week you both showed up.');
   });
 });
 
@@ -341,7 +361,20 @@ describe('pending state', () => {
     mockHook.value = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
     const tree = await mount();
     expect(allText(tree)).toContain('Invitation sent. Waiting for your partner.');
+    expect(allText(tree)).toContain('Share the same invite again if they missed it. It still only pairs one person.');
+    expect(findPress(tree, 'Share invite again').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Cancel invitation').length).toBeGreaterThan(0);
+  });
+
+  test('can share the same pending invite again without minting a second path', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const hook = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Share invite again');
+    expect(hook.invite).toHaveBeenCalledTimes(1);
+    expect(Share.share).toHaveBeenCalledWith({ message: 'join me' });
+    Share.share.mockRestore();
   });
 });
 
@@ -380,6 +413,17 @@ describe('invite journey', () => {
     expect(allText(tree)).toContain(
       `Pairing means you both agree to share this, and only this. Notice v${PARTNER_PRIVACY_NOTICE_VERSION}.`,
     );
+  });
+
+  test('manual code entry accepts a pasted Volyume invite link', async () => {
+    const hook = base({ pairs: [], pendingInvite: null });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'I have a code');
+    const field = tree.root.findAll((n) => n.props.accessibilityLabel === 'Invite code')[0];
+    await act(async () => { field.props.onChangeText('https://volyume.app/partner/abcd1234?ref=sms'); });
+    await press(tree, 'Join with code');
+    expect(hook.redeem).toHaveBeenCalledWith('ABCD1234');
   });
 });
 

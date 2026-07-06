@@ -155,6 +155,30 @@ function MomentCard({ line, cheerEnabled, onCheer }) {
   );
 }
 
+function blockStatusCopy(block, partnerName, userId) {
+  const name = partnerName || 'Your partner';
+  if (!block) return null;
+  if (block.status === 'active') {
+    return {
+      title: 'Training the same block',
+      copy: `${block.blockName} is shared by name only. Workouts, loading and notes stay private.`,
+    };
+  }
+  if (block.status === 'proposed' && block.proposedBy === userId) {
+    return {
+      title: 'Block suggested',
+      copy: `Waiting for ${name}. Only the block name is visible.`,
+    };
+  }
+  if (block.status === 'proposed') {
+    return {
+      title: 'Block suggestion',
+      copy: `${name} suggested ${block.blockName}. Review it before anything changes.`,
+    };
+  }
+  return null;
+}
+
 // D5-A weekly intention: each side's OWN aim, shown side by side and NEVER
 // compared. A shared line when both aims match; otherwise each own aim on its
 // own. Plus a calm control to set or change your own aim (intention, not
@@ -307,9 +331,33 @@ function ReconnectCard({ onReconnect, onDismiss }) {
   );
 }
 
+function BlockStatusCard({ block, partnerName, userId, onOpen }) {
+  const status = blockStatusCopy(block, partnerName, userId);
+  if (!status) return null;
+  return (
+    <TouchableOpacity
+      style={styles.blockStatusCard}
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`Shared block, ${status.title}`}
+    >
+      <View style={styles.blockStatusHead}>
+        <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.blockStatusTitle}>{status.title}</Text>
+      </View>
+      <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
+      <Text style={styles.blockStatusCopy}>{status.copy}</Text>
+      <View style={styles.blockStatusAction}>
+        <Text style={styles.blockStatusActionText}>Manage block</Text>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function PairCard({
   pair, moment, onCheer, onManage, onOpenBlock, onSetAim, onReconnect,
-  reconnectDismissed, onDismissReconnect, onOpenShareWins,
+  reconnectDismissed, onDismissReconnect, onOpenShareWins, userId,
 }) {
   const name = pair.partnerFirstName || 'Your partner';
   const run = pair.sharedStreak?.run ?? 0;
@@ -379,20 +427,17 @@ function PairCard({
 
       {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
-      {moment ? (
-        <MomentCard line={moment.line} cheerEnabled={pair.cheerEnabled} onCheer={() => onCheer(pair)} />
+      {hasChip ? (
+        <BlockStatusCard
+          block={block}
+          partnerName={name}
+          userId={userId}
+          onOpen={() => onOpenBlock(pair)}
+        />
       ) : null}
 
-      {hasChip ? (
-        <TouchableOpacity
-          style={styles.blockChip}
-          onPress={() => onOpenBlock(pair)}
-          accessibilityRole="button"
-          accessibilityLabel={`Shared block, ${block.blockName}`}
-        >
-          <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
-          <Text style={styles.blockChipText} numberOfLines={1}>{block.blockName}</Text>
-        </TouchableOpacity>
+      {moment ? (
+        <MomentCard line={moment.line} cheerEnabled={pair.cheerEnabled} onCheer={() => onCheer(pair)} />
       ) : null}
 
       {/* The moment IS that day's cheer surface (it carries its own pill), so
@@ -603,10 +648,26 @@ export default function PartnerScreen({ route }) {
     p.reload();
   }
 
+  async function sharePendingInvite() {
+    const r = await p.invite();
+    if (!r.ok || !r.data?.shareMessage) {
+      logError('PartnerScreen.sharePendingInvite', new Error(r.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not share the invite. Check your connection and try again.', { variant: 'error' });
+      return;
+    }
+    try { await Share.share({ message: r.data.shareMessage }); } catch (_) { /* user dismissed */ }
+    p.reload();
+  }
+
   // ── Redeem ──
   async function handleRedeem(incoming) {
-    const toRedeem = (typeof incoming === 'string' ? incoming : code).trim();
-    if (!toRedeem) return;
+    const raw = typeof incoming === 'string' ? incoming : code;
+    const toRedeem = parseInviteCode(raw);
+    if (!toRedeem) {
+      toast.show('Enter a valid Volyume invite code or link.', { variant: 'error' });
+      return;
+    }
+    setCode(toRedeem);
     setBusy(true);
     const r = await p.redeem(toRedeem);
     setBusy(false);
@@ -632,11 +693,7 @@ export default function PartnerScreen({ route }) {
     setAckSheetPair(pair);
   }
 
-  async function handleSendAck(pair, kind) {
-    setAckSheetPair(null);
-    if (!pair?.cheerEnabled) return;
-    const reciprocal = pair.partnerWeek?.weekMet || (pair.partnerWeek?.done > 0);
-    // Consuming the day's cheer also consumes the pair's moment (seen on cheer).
+  function consumeMoment(pair) {
     const mo = momentsRef.current[pair.id];
     if (mo && !seenRef.current.has(mo.id)) {
       seenRef.current.add(mo.id);
@@ -646,7 +703,16 @@ export default function PartnerScreen({ route }) {
       momentsRef.current = next;
       setMomentsByPair(next);
     }
+  }
+
+  async function handleSendAck(pair, kind) {
+    setAckSheetPair(null);
+    if (!pair?.cheerEnabled) return;
+    const reciprocal = pair.partnerWeek?.weekMet || (pair.partnerWeek?.done > 0);
     const r = await p.cheer(pair.id, kind, !!reciprocal);
+    // Consuming the day's cheer also consumes the pair's moment, but only once
+    // the send actually succeeds or the server says today's cheer exists.
+    if (r?.ok || r?.error === 'already_cheered') consumeMoment(pair);
     if (!r?.ok && r?.error && r.error !== 'already_cheered') {
       logError('PartnerScreen.handleSendAck', new Error(r.error), { userId: user?.id });
       toast.show('Could not send that right now. Check your connection and try again.', { variant: 'error' });
@@ -737,14 +803,12 @@ export default function PartnerScreen({ route }) {
   // ── Shared training block sheet ──
   async function openBlockSheet(pair) {
     setBlockSheetPair(pair);
-    if (programmes === null) {
-      try {
-        const all = await getAllProgrammes(user?.id);
-        setProgrammes(all || []);
-      } catch (e) {
-        logError('PartnerScreen.loadProgrammes', e, { userId: user?.id });
-        setProgrammes([]);
-      }
+    try {
+      const all = await getAllProgrammes(user?.id);
+      setProgrammes(all || []);
+    } catch (e) {
+      logError('PartnerScreen.loadProgrammes', e, { userId: user?.id });
+      setProgrammes([]);
     }
   }
   function closeBlockSheet() { setBlockSheetPair(null); }
@@ -827,6 +891,7 @@ export default function PartnerScreen({ route }) {
                 reconnectDismissed={reconnectDismissed.includes(pair.id)}
                 onDismissReconnect={dismissReconnect}
                 onOpenShareWins={setShareWinsPair}
+                userId={user?.id}
               />
             ))}
 
@@ -843,11 +908,11 @@ export default function PartnerScreen({ route }) {
             ) : null}
 
             {pending ? (
-              <PendingCard pending={pending} onCancel={confirmCancelInvite} />
+              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onCancel={confirmCancelInvite} />
             ) : null}
           </>
         ) : pending ? (
-          <PendingCard pending={pending} onCancel={confirmCancelInvite} />
+          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onCancel={confirmCancelInvite} />
         ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIconCircle}>
@@ -1100,7 +1165,7 @@ function ShareWinsSheetBody() {
   );
 }
 
-function PendingCard({ pending, onCancel }) {
+function PendingCard({ pending, onShareAgain, onCancel }) {
   return (
     <View style={styles.pendingCard}>
       <View style={styles.pendingRow}>
@@ -1108,6 +1173,17 @@ function PendingCard({ pending, onCancel }) {
         <Text style={styles.pendingText}>Invitation sent. Waiting for your partner.</Text>
       </View>
       <Text style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
+      <Text style={styles.pendingHint}>Share the same invite again if they missed it. It still only pairs one person.</Text>
+      <TouchableOpacity
+        onPress={onShareAgain}
+        style={styles.pendingPrimary}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel="Share invite again"
+      >
+        <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.pendingPrimaryText}>Share invite again</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
         style={styles.textRow}
@@ -1467,19 +1543,25 @@ const styles = StyleSheet.create({
   },
   momentLine: { ...type.body, color: colors.textPrimary, flex: 1 },
 
-  // Shared-block chip
-  blockChip: {
+  // Shared-block status
+  blockStatusCard: {
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  blockStatusHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  blockStatusTitle: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
+  blockStatusName: { ...type.bodySm, color: colors.primary },
+  blockStatusCopy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  blockStatusAction: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    maxWidth: '100%',
+    minHeight: 36,
   },
-  blockChipText: { ...type.caption, color: colors.primary, flexShrink: 1 },
+  blockStatusActionText: { ...type.label, color: colors.primary },
 
   // Cheer pill
   cheerWrap: { alignSelf: 'flex-start' },
@@ -1521,6 +1603,15 @@ const styles = StyleSheet.create({
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pendingText: { ...type.body, color: colors.textPrimary, flex: 1 },
   pendingExpiry: { ...type.caption, color: colors.textSecondary },
+  pendingHint: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  pendingPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
+  pendingPrimaryText: { ...type.label, color: colors.primary },
   cancelText: { ...type.label, color: colors.primary },
 
   // ── Empty state ──
