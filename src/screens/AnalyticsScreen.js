@@ -570,7 +570,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           >
             <Ionicons name="sparkles" size={18} color={colors.primary} />
             <Text style={styles.recapCardText}>
-              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready · 45 seconds
+              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
             <TouchableOpacity
               onPress={dismissRecapCard}
@@ -929,7 +929,7 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         />
         <Text style={styles.heroUnit}>{unit}</Text>
       </View>
-      <Text style={styles.heroSub}>{weekLabel} · weight lifted</Text>
+      <Text style={styles.heroSub}>{weekLabel} - weight lifted</Text>
       <View
         style={styles.heroChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -1009,7 +1009,7 @@ function SessionCard({ workout }) {
         <Text style={styles.sessionName} numberOfLines={1}>{name}</Text>
         <Text style={styles.sessionMeta}>
           {at ? format(new Date(at), 'EEE d MMM') : ''}
-          {workout.durationMinutes ? ` · ${workout.durationMinutes}m` : ''}
+          {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>
       {diff != null && (

@@ -239,7 +239,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
               const trend = smoothed[i];
               return {
                 title: `${e.body_weight} ${unit}`,
-                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` · trend ${trend.toFixed(1)} ${unit}` : ''}`,
+                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` - trend ${trend.toFixed(1)} ${unit}` : ''}`,
               };
             }}
           />
@@ -841,7 +841,7 @@ export default function BodyMetricsScreen() {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <SectionLabel>
-                Weight · {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
+                Weight - {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
               </SectionLabel>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
@@ -974,7 +974,7 @@ export default function BodyMetricsScreen() {
             icon="body-outline"
             title="No body metrics yet"
             text={onboardingWeightKg && !readOnly
-              ? `We have your onboarding bodyweight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Log a fresh weight to start the trend.`
+              ? `We have your onboarding body weight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Log a fresh weight to start the trend.`
               : 'Log body weight or measurements when you want this trend to start.'}
           />
         )}
@@ -983,12 +983,12 @@ export default function BodyMetricsScreen() {
             form below never render in the view-only state. */}
         {!readOnly && (
           <Button
-            title={showForm ? 'Cancel' : 'Log Weight'}
+            title={showForm ? 'Cancel' : 'Log weight'}
             icon={showForm ? 'chevron-up' : 'add-circle'}
             style={styles.logBtn}
             onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
             accessibilityState={{ expanded: showForm }}
-            accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
+            accessibilityLabel={showForm ? 'Cancel' : 'Log weight'}
             size="lg"
             textStyle={styles.logBtnText}
           />
@@ -997,7 +997,7 @@ export default function BodyMetricsScreen() {
         {/* Log Form */}
         {!readOnly && showForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>New Entry</Text>
+            <Text style={styles.formTitle}>New entry</Text>
             <View style={styles.formRow}>
               <Text style={styles.formLabel}>Date</Text>
               <TextField
@@ -1121,7 +1121,7 @@ export default function BodyMetricsScreen() {
               accessibilityLabel="Notes"
             />
             <Button
-              title="Save Entry"
+              title="Save entry"
               onPress={saveMetrics}
               disabled={saving}
               loading={saving}

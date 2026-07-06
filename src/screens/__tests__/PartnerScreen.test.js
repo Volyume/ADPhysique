@@ -193,7 +193,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Workout weights, sets and reps');
     expect(text).toContain('Food diary, coach notes and check-ins');
     expect(text).toContain('Body metrics and progress photos');
-    expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. No ranking or comparison.');
+    expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. Each side is shown on its own.');
     expect(text).toContain('Block name only');
     expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
     expect(text).toContain('Manage name');
@@ -529,7 +529,7 @@ describe('empty state', () => {
     // old pitch never said what the feature was or what a "signal" meant).
     expect(text).toContain('HOW IT WORKS');
     expect(text).toContain('Once a week, you each see whether the other trained, and nothing else.');
-    expect(text).toContain('No feed, no followers, no numbers to compare.');
+    expect(text).toContain('No feed, no followers, no public numbers.');
     // The word "signal" is gone from the pitch.
     expect(text).not.toContain('signal');
     expect(text).toContain('Invite someone you train with');

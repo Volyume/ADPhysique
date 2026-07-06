@@ -280,7 +280,7 @@ function PartnerSupportSnapshot({ pair, name }) {
         </View>
       </View>
       <Text style={styles.supportFoot}>
-        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No ranking or comparison.
+        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. Each side is shown on its own.
       </Text>
     </View>
   );
@@ -1148,7 +1148,7 @@ export default function PartnerScreen({ route }) {
               <Text style={styles.howLine}>
                 You build a streak of weeks you both showed up. A rest week never breaks it.
               </Text>
-              <Text style={styles.howLine}>No feed, no followers, no numbers to compare.</Text>
+              <Text style={styles.howLine}>No feed, no followers, no public numbers.</Text>
             </Card>
 
             <PartnerPrivacyReceipt />
@@ -1486,7 +1486,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
             <EntranceView key="beat1" duration={motion.enter} style={styles.beat}>
               <Text style={styles.beatTitle}>A partner, not an audience</Text>
               <Text style={styles.beatLine}>One person you already know and trust.</Text>
-              <Text style={styles.beatLine}>No feed, no followers, no comparing numbers.</Text>
+              <Text style={styles.beatLine}>No feed, no followers, no public numbers.</Text>
               <Text style={styles.beatLine}>Just whether you each trained against your own plan.</Text>
               <Button
                 title="Continue"
