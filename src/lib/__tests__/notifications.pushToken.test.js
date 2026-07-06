@@ -141,6 +141,18 @@ describe('getExpoPushToken', () => {
     expect(await getExpoPushToken()).toBeNull();
     expect(logWarn).toHaveBeenCalledWith('notifications.pushToken.fetchFailed', 'offline');
   });
+
+  test('remote push native setup errors no-op without warning noise', async () => {
+    Notifications.getExpoPushTokenAsync.mockRejectedValue(new Error(
+      'Make sure to complete the guide at https://docs.expo.dev/push-notifications/fcm-credentials/ : Default FirebaseApp is not initialized in this process app.volyume. Make sure to call FirebaseApp.initializeApp(Context) first.',
+    ));
+    const { getExpoPushToken } = loadModule();
+    expect(await getExpoPushToken()).toBeNull();
+    expect(logWarn).not.toHaveBeenCalledWith(
+      'notifications.pushToken.fetchFailed',
+      expect.any(String),
+    );
+  });
 });
 
 describe('registerPushToken', () => {

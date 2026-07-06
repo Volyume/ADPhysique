@@ -103,6 +103,13 @@ function logPgErr(scope, err) {
   });
 }
 
+function missingSchemaColumn(err, table, columns = []) {
+  if (!err || err.code !== 'PGRST204') return false;
+  const text = `${err.message || ''} ${err.details || ''} ${err.hint || ''}`.toLowerCase();
+  if (table && !text.includes(String(table).toLowerCase())) return false;
+  return columns.some((column) => text.includes(String(column).toLowerCase()));
+}
+
 // Catch-path logger for the legacy bulk-push helpers. Same signature as
 // logWarn, but also counts the failure during the bulk-push window. PostgREST
 // {error} results go through logPgErr (counted); a helper that THROWS while
@@ -334,7 +341,7 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
   // wrote them, so on cross-device restore the session card showed
   // a generic "Workout" without the user's chosen name and the
   // analytics paths missed the cached tonnage.
-  const { error } = await sb.from('workouts').upsert({
+  const payload = {
     id: w.id,
     user_id: supabaseUserId,
     routine_id: w.routineId ?? null,
@@ -363,7 +370,22 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     // on every bulk cycle re-widened every other device's delta pull and let
     // a stale full-push overwrite newer edits under last-write-wins.
     updated_at: new Date(w.updatedAt ?? Date.now()).toISOString(),
-  }, { onConflict: 'user_id,id' });
+  };
+  let { error } = await sb.from('workouts').upsert(payload, { onConflict: 'user_id,id' });
+  if (missingSchemaColumn(error, 'workouts', ['energy_score', 'sleep_quality'])) {
+    const retryPayload = { ...payload };
+    delete retryPayload.energy_score;
+    delete retryPayload.sleep_quality;
+    const retry = await sb.from('workouts').upsert(retryPayload, { onConflict: 'user_id,id' });
+    if (!retry.error) {
+      logInfo('sync._upsertWorkout', 'workouts readiness columns missing in cloud schema; pushed workout without optional readiness fields', {
+        workoutId: w.id,
+        code: error.code,
+      });
+      return;
+    }
+    error = retry.error;
+  }
   if (error) {
     logPgErr('sync._upsertWorkout', error);
     throw error;

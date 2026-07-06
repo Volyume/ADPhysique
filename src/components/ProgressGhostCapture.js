@@ -182,6 +182,8 @@ export default function ProgressGhostCapture({
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [countdown, setCountdown] = useState(null);
   const [capturing, setCapturing] = useState(false);
+  const [pendingCaptureUri, setPendingCaptureUri] = useState(null);
+  const [savingCapture, setSavingCapture] = useState(false);
   const [tilt, setTilt] = useState(null); // degrees; null => no level sensor
 
   const cameraAvailable = !!CameraView;
@@ -244,26 +246,51 @@ export default function ProgressGhostCapture({
       const pic = await cam.takePictureAsync({ quality: 0.7 });
       if (!pic?.uri) return;
       if (useAppStore.getState().tier !== 'pro') return;
-      const saved = await saveProgressPhoto(pic.uri, undefined, userId);
+      setPendingCaptureUri(pic.uri);
+    } catch (e) {
+      logError('ProgressGhostCapture.capture', e, { pose });
+      toast.show('Could not take that photo. Please try again.', { variant: 'error' });
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing, pose, toast]);
+
+  const confirmCapturedPhoto = useCallback(async () => {
+    if (!pendingCaptureUri || savingCapture) return;
+    if (useAppStore.getState().tier !== 'pro') {
+      setPendingCaptureUri(null);
+      return;
+    }
+    setSavingCapture(true);
+    try {
+      const saved = await saveProgressPhoto(pendingCaptureUri, undefined, userId);
       if (!saved?.name) return;
       if (useAppStore.getState().tier !== 'pro') {
         await deleteProgressPhoto(userId, saved.uri).catch(() => false);
+        setPendingCaptureUri(null);
         return;
       }
       await upsertPhotoMeta(userId, saved.name, { pose });
       if (useAppStore.getState().tier !== 'pro') {
         await deletePhotoMeta(userId, saved.name).catch(() => false);
         await deleteProgressPhoto(userId, saved.uri).catch(() => false);
+        setPendingCaptureUri(null);
         return;
       }
-      onCaptured?.(saved.name, saved);
+      setPendingCaptureUri(null);
+      onCaptured?.(saved.name, { ...saved, previewApproved: true });
     } catch (e) {
-      logError('ProgressGhostCapture.capture', e, { pose });
+      logError('ProgressGhostCapture.confirmCapture', e, { pose });
       toast.show('Could not save that photo. Please try again.', { variant: 'error' });
     } finally {
-      setCapturing(false);
+      setSavingCapture(false);
     }
-  }, [capturing, userId, pose, onCaptured, toast]);
+  }, [pendingCaptureUri, savingCapture, userId, pose, onCaptured, toast]);
+
+  const retakeCapturedPhoto = useCallback(() => {
+    if (savingCapture) return;
+    setPendingCaptureUri(null);
+  }, [savingCapture]);
 
   const startCapture = useCallback(() => {
     if (capturing || countdown != null) return;
@@ -385,6 +412,51 @@ export default function ProgressGhostCapture({
   // nothing rotates on screen.
   const level = tilt != null && Math.abs(tilt) <= 1.5;
   const levelTransform = reduceMotion || tilt == null ? [] : [{ rotate: `${-tilt}deg` }];
+
+  if (pendingCaptureUri) {
+    return (
+      <View style={styles.root}>
+        <Image
+          source={{ uri: pendingCaptureUri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+          accessibilityLabel="Photo preview"
+        />
+        <View style={[styles.previewTopBar, { paddingTop: Math.max(spacing.lg, (Number(insets?.top) || 0) + spacing.sm) }]}>
+          <View style={styles.previewCopy}>
+            <Text style={styles.modeChip}>Photo preview</Text>
+            <Text style={styles.title}>Check this photo</Text>
+            <Text style={styles.subtitle}>
+              Use it if your whole body is visible, the photo is sharp, and the camera looks upright.
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.previewActions, { paddingBottom: Math.max(spacing.xl, (Number(insets?.bottom) || 0) + spacing.md) }]}>
+          <Pressable
+            style={[styles.previewButton, styles.previewSecondary]}
+            onPress={retakeCapturedPhoto}
+            disabled={savingCapture}
+            accessibilityRole="button"
+            accessibilityLabel="Retake photo"
+            accessibilityState={{ disabled: savingCapture }}
+          >
+            <Text style={styles.previewSecondaryText}>Retake</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.previewButton, styles.previewPrimary]}
+            onPress={confirmCapturedPhoto}
+            disabled={savingCapture}
+            accessibilityRole="button"
+            accessibilityLabel="Use photo"
+            accessibilityState={{ disabled: savingCapture }}
+          >
+            <Text style={styles.previewPrimaryText}>{savingCapture ? 'Saving' : 'Use photo'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -812,6 +884,58 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: radius.full,
     backgroundColor: colors.textPrimary,
+  },
+  previewTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: withAlpha(colors.camera, 0.36),
+  },
+  previewCopy: {
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: withAlpha(colors.background, 0.72),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.textPrimary, 0.16),
+  },
+  previewActions: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.lg,
+    backgroundColor: withAlpha(colors.camera, 0.48),
+  },
+  previewButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  previewPrimary: {
+    backgroundColor: colors.primaryFill,
+  },
+  previewSecondary: {
+    backgroundColor: withAlpha(colors.background, 0.72),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.textPrimary, 0.16),
+  },
+  previewPrimaryText: {
+    ...type.bodyStrong,
+    color: colors.onPrimary,
+  },
+  previewSecondaryText: {
+    ...type.bodyStrong,
+    color: colors.textPrimary,
   },
 
   // Fallback + loading surfaces.

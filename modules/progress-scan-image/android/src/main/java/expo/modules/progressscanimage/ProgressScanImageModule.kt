@@ -11,12 +11,18 @@ import android.graphics.RectF
 import android.net.Uri
 import android.util.Base64
 import androidx.exifinterface.media.ExifInterface
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.segmentation.Segmentation
+import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -29,8 +35,54 @@ class ProgressScanImageModule : Module() {
     val originalHeight: Int,
   )
 
+  private data class PreparedBitmap(
+    val bitmap: Bitmap,
+    val originalWidth: Int,
+    val originalHeight: Int,
+    val contentLeft: Int,
+    val contentTop: Int,
+    val contentRight: Int,
+    val contentBottom: Int,
+  )
+
+  private val selfieSegmenter by lazy {
+    val options = SelfieSegmenterOptions.Builder()
+      .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
+      .enableRawSizeMask()
+      .build()
+    Segmentation.getClient(options)
+  }
+
   override fun definition() = ModuleDefinition {
     Name("ProgressScanImage")
+
+    AsyncFunction("resolveBundledModel") { fileName: String, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+        val safeName = File(fileName).name
+        if (safeName.isBlank()) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+        val targetDir = File(context.cacheDir, "progress_scan_models")
+        if (!targetDir.exists()) targetDir.mkdirs()
+        val target = File(targetDir, safeName)
+        if (!target.exists() || target.length() <= 0L) {
+          context.assets.open(safeName).use { input ->
+            FileOutputStream(target).use { output ->
+              input.copyTo(output)
+            }
+          }
+        }
+        promise.resolve(Uri.fromFile(target).toString())
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
 
     AsyncFunction("extractRgb") { uri: String, width: Int, height: Int, promise: Promise ->
       try {
@@ -116,6 +168,104 @@ class ProgressScanImageModule : Module() {
         promise.reject("ERR_PROGRESS_SCAN_IMAGE", e.message ?: "Could not preprocess progress scan image", e)
       }
     }
+
+    AsyncFunction("segmentPersonMask") { uri: String, width: Int, height: Int, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null || width <= 0 || height <= 0) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+
+        val prepared = prepareBitmap(context, uri, width, height)
+        if (prepared == null) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+
+        val image = InputImage.fromBitmap(prepared.bitmap, 0)
+        selfieSegmenter.process(image)
+          .addOnSuccessListener { segmentationMask ->
+            try {
+              val maskBuffer = segmentationMask.buffer
+              maskBuffer.rewind()
+              val maskWidth = segmentationMask.width
+              val maskHeight = segmentationMask.height
+              val maskCount = max(0, maskWidth * maskHeight)
+              val scaleX = maskWidth.toFloat() / max(1, prepared.bitmap.width).toFloat()
+              val scaleY = maskHeight.toFloat() / max(1, prepared.bitmap.height).toFloat()
+              val contentLeft = max(0, (prepared.contentLeft * scaleX).roundToInt())
+              val contentTop = max(0, (prepared.contentTop * scaleY).roundToInt())
+              val contentRight = min(maskWidth, (prepared.contentRight * scaleX).roundToInt())
+              val contentBottom = min(maskHeight, (prepared.contentBottom * scaleY).roundToInt())
+              val out = ByteBuffer.allocate(maskCount * 4).order(ByteOrder.LITTLE_ENDIAN)
+              for (i in 0 until maskCount) {
+                if (maskBuffer.remaining() < 4) break
+                val p = maskBuffer.getFloat().coerceIn(0.0f, 1.0f)
+                out.putFloat(p)
+              }
+              promise.resolve(
+                mapOf(
+                  "width" to maskWidth,
+                  "height" to maskHeight,
+                  "originalWidth" to prepared.originalWidth,
+                  "originalHeight" to prepared.originalHeight,
+                  "contentRect" to mapOf(
+                    "x" to contentLeft,
+                    "y" to contentTop,
+                    "width" to max(1, contentRight - contentLeft),
+                    "height" to max(1, contentBottom - contentTop),
+                  ),
+                  "maskBase64" to Base64.encodeToString(out.array(), Base64.NO_WRAP),
+                  "engine" to "mlkit_selfie_segmentation",
+                ),
+              )
+            } catch (_: Throwable) {
+              promise.resolve(null)
+            } finally {
+              prepared.bitmap.recycle()
+            }
+          }
+          .addOnFailureListener {
+            prepared.bitmap.recycle()
+            promise.resolve(null)
+          }
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
+  }
+
+  private fun prepareBitmap(context: Context, uriString: String, width: Int, height: Int): PreparedBitmap? {
+    val decodedInfo = decodeBitmap(context, uriString, width, height) ?: return null
+    val decoded = decodedInfo.bitmap
+    val oriented = orientBitmap(context, uriString, decoded)
+    val target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val scale = min(width.toFloat() / oriented.width.toFloat(), height.toFloat() / oriented.height.toFloat())
+    val scaledWidth = max(1, (oriented.width * scale).roundToInt())
+    val scaledHeight = max(1, (oriented.height * scale).roundToInt())
+    val left = ((width - scaledWidth) / 2.0f)
+    val top = ((height - scaledHeight) / 2.0f)
+    val contentRect = RectF(left, top, left + scaledWidth, top + scaledHeight)
+    val canvas = Canvas(target)
+    canvas.drawColor(Color.BLACK)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    canvas.drawBitmap(oriented, null, contentRect, paint)
+    if (oriented !== decoded) oriented.recycle()
+    decoded.recycle()
+    val contentLeft = max(0, left.roundToInt())
+    val contentTop = max(0, top.roundToInt())
+    val contentRight = min(width, (left + scaledWidth).roundToInt())
+    val contentBottom = min(height, (top + scaledHeight).roundToInt())
+    return PreparedBitmap(
+      bitmap = target,
+      originalWidth = decodedInfo.originalWidth,
+      originalHeight = decodedInfo.originalHeight,
+      contentLeft = contentLeft,
+      contentTop = contentTop,
+      contentRight = contentRight,
+      contentBottom = contentBottom,
+    )
   }
 
   private fun decodeBitmap(context: Context, uriString: String, targetWidth: Int, targetHeight: Int): DecodedBitmap? {

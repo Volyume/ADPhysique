@@ -762,6 +762,10 @@ export default function ProgressPhotosScreen({ navigation }) {
         ], { cancelable: false });
         return;
       }
+      if (saved?.previewApproved) {
+        await saveScanAssetAndContinue(flow, pose, name, saved, vision);
+        return;
+      }
       appAlert('Use this photo?', 'Check the angle, framing and lighting. Use it only if it looks fair to compare with future scans.', [
         { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
         {
