@@ -24,6 +24,7 @@ function scan(id, day, score = 66, poses = ['front', 'back']) {
       physiqueAssessment: {
         visualLeannessScore: score,
         leannessBandLabel: score >= 65 ? 'Lean' : 'Defined',
+        scanConfidenceTier: 'moderate',
         scanConfidenceLabel: 'Moderate',
         progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline scan',
       },

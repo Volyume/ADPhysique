@@ -457,10 +457,13 @@ export function progressSignalLabel(signal) {
 
 function progressSignalFromDelta(delta, confidence = 'low') {
   const n = finiteNumber(delta);
+  if (n == null) return { signal: 'baseline', direction: 'baseline', label: progressSignalLabel('baseline') };
   if (confidence === 'not_enough' || confidence === 'unknown') {
     return { signal: 'inconclusive', direction: 'uncertain', label: progressSignalLabel('inconclusive') };
   }
-  if (n == null) return { signal: 'baseline', direction: 'baseline', label: progressSignalLabel('baseline') };
+  if (confidence === 'low') {
+    return { signal: 'inconclusive', direction: 'uncertain', label: progressSignalLabel('inconclusive') };
+  }
   const slightThreshold = confidence === 'high' ? 4 : confidence === 'moderate' ? 5 : 7;
   const clearThreshold = confidence === 'high' ? 9 : confidence === 'moderate' ? 11 : Infinity;
   if (n >= clearThreshold) return { signal: 'clear_positive', direction: 'positive', label: progressSignalLabel('clear_positive') };
@@ -781,6 +784,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   let progressDeltaScore = null;
   let progressSignal = null;
   const pairConfidenceTier = comparability.scanConfidenceTier || 'low';
+  const canCallPairTrend = SCAN_CONFIDENCE_RANK[pairConfidenceTier] >= SCAN_CONFIDENCE_RANK.moderate;
 
   const curAssessment = scanSignals(currentScan)?.physiqueAssessment ?? null;
   const prevAssessment = scanSignals(previousScan)?.physiqueAssessment ?? null;
@@ -791,9 +795,11 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     const delta = rounded0(curScore - prevScore);
     progressDeltaScore = delta;
     progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
-    trendMagnitudePctPoints = Math.abs(delta);
+    trendMagnitudePctPoints = progressSignal.signal === 'inconclusive' ? null : Math.abs(delta);
     if (progressSignal.signal === 'holding_steady') {
       lines.push('Volyume Physique Score is broadly level against the last like-for-like scan.');
+    } else if (progressSignal.signal === 'inconclusive') {
+      lines.push(`Volyume Physique Score changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
     } else {
       lines.push(`Volyume Physique Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
       trendVotes.push(delta > 0 ? 'leaner' : 'softer');
@@ -839,8 +845,10 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   ].filter(Boolean);
   lines.push(...ratioLines.slice(0, 2));
   comparedSignalCount += ratioComparisonCount;
-  if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('leaner');
-  if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('softer');
+  if (canCallPairTrend) {
+    if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('leaner');
+    if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('softer');
+  }
 
   if (comparedSignalCount === 0) {
     return {
@@ -860,13 +868,23 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   }
   const leanerVotes = trendVotes.filter((v) => v === 'leaner').length;
   const softerVotes = trendVotes.filter((v) => v === 'softer').length;
-  const visualTrendDirection = leanerVotes > softerVotes ? 'leaner' : softerVotes > leanerVotes ? 'softer' : 'steady';
-  const trendDirection = visualTrendDirection === 'leaner' ? 'down' : visualTrendDirection === 'softer' ? 'up' : 'steady';
-  const trendSummary = visualTrendDirection === 'leaner'
-    ? 'Visual progress signal is positive against the last like-for-like scan.'
+  const visualTrendDirection = canCallPairTrend
+    ? (leanerVotes > softerVotes ? 'leaner' : softerVotes > leanerVotes ? 'softer' : 'steady')
+    : 'uncertain';
+  const trendDirection = visualTrendDirection === 'leaner'
+    ? 'down'
     : visualTrendDirection === 'softer'
-      ? 'Visual progress signal shows a drift to watch against the last like-for-like scan.'
-      : 'Visual progress signal is holding steady against the last like-for-like scan.';
+      ? 'up'
+      : visualTrendDirection === 'uncertain'
+        ? 'uncertain'
+        : 'steady';
+  const trendSummary = !canCallPairTrend
+    ? 'Like-for-like scan saved. Scan confidence is low, so Volyume is not calling progress from this pair yet.'
+    : visualTrendDirection === 'leaner'
+      ? 'Visual progress signal is positive against the last like-for-like scan.'
+      : visualTrendDirection === 'softer'
+        ? 'Visual progress signal shows a drift to watch against the last like-for-like scan.'
+        : 'Visual progress signal is holding steady against the last like-for-like scan.';
 
   return {
     measuredSignalsOnly: true,
