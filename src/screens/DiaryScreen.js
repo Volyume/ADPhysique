@@ -673,6 +673,14 @@ export default function DiaryScreen({ navigation }) {
     navigation.navigate('FoodSearch', { mealSlot: slot, entryDate: selectedDate });
   }
 
+  function addSavedMeal(slot) {
+    navigation.navigate('MyMeals', { mealSlot: slot, entryDate: selectedDate });
+  }
+
+  function scanForMeal(slot) {
+    navigation.navigate('ScanBarcode', { mealSlot: slot, entryDate: selectedDate });
+  }
+
   const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
 
   // Quick add straight from a meal card (COMP-003): the escape hatch for
@@ -1234,6 +1242,8 @@ export default function DiaryScreen({ navigation }) {
                     usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
                     onLogUsual={(food) => onLogUsual(food, slot.key)}
                     onAdd={() => addFood(slot.key)}
+                    onSavedMeals={() => addSavedMeal(slot.key)}
+                    onScan={() => scanForMeal(slot.key)}
                     onQuickAdd={() => setQuickAddSlot(slot.key)}
                     onEdit={openEditSheet}
                     onDelete={requestDelete}
