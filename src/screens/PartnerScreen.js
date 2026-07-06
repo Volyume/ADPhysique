@@ -175,20 +175,20 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Shared training block name',
-      copy: `${block.blockName} is visible by name only. Workouts, loading, notes and coach changes stay private.`,
+      title: 'Block name only',
+      copy: `${block.blockName} is visible by name only. Workouts, exercises, loading, notes and coach changes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
     return {
-      title: 'Training block name sent',
-      copy: `Waiting for ${name}. Only the name is visible.`,
+      title: 'Block name sent',
+      copy: `Waiting for ${name}. Only the name would be visible. Nothing changes in either plan.`,
     };
   }
   if (block.status === 'proposed') {
     return {
-      title: 'Training block name suggested',
-      copy: `${name} suggested ${block.blockName}. Accepting shares the name only; it will not change your plan.`,
+      title: 'Block name suggested',
+      copy: `${name} suggested ${block.blockName}. Accepting shares the name only; it will not change either plan.`,
     };
   }
   return null;
@@ -274,6 +274,7 @@ function PartnerSupportSnapshot({ pair, name }) {
 
 function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) {
   const plan = buildPartnerSupportPlan(pair, name);
+  if (plan.primaryAction.key === 'share_wins') return null;
   const onPrimary = () => {
     if (plan.primaryAction.key === 'set_aim') onSetAim(pair);
     else if (plan.primaryAction.key === 'cheer') onCheer(pair);
@@ -310,15 +311,15 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       activeOpacity={0.85}
       hitSlop={hitSlop}
       accessibilityRole="button"
-      accessibilityLabel="Review win sharing"
+      accessibilityLabel="Choose a win to share"
     >
       <View style={styles.shareWinsIcon}>
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text style={styles.shareWinsTitle}>Share a win</Text>
+        <Text style={styles.shareWinsTitle}>Choose a win to share</Text>
         <Text style={styles.shareWinsText}>
-          Choose one workout, PR or progress card for {name}. You review it before it leaves.
+          Pick one workout, PR or progress card for {name}. You check the exact preview before anything leaves.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -405,7 +406,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       style={styles.blockStatusCard}
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`Training block name, ${status.title}`}
+      accessibilityLabel={`Block name sharing, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
@@ -1152,7 +1153,7 @@ export default function PartnerScreen({ route }) {
           <View style={styles.sheetBody}>
             <SheetRow
               icon="barbell-outline"
-              label="Share training block name"
+              label="Share block name only"
               onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
             />
             <SheetRow
@@ -1171,7 +1172,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Shared-block sheet ── */}
-      <BottomSheet visible={!!blockSheetPair} onClose={closeBlockSheet} accessibilityLabel="Shared training block" scroll>
+      <BottomSheet visible={!!blockSheetPair} onClose={closeBlockSheet} accessibilityLabel="Block name sharing" scroll>
         {blockSheetPair ? (
           <BlockSheetBody
             pair={blockSheetPair}
@@ -1202,7 +1203,7 @@ export default function PartnerScreen({ route }) {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins" scroll>
+      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Choose a win to share" scroll>
         {shareWinsPair ? (
           <ShareWinsSheetBody
             pair={shareWinsPair}
@@ -1305,12 +1306,12 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   }
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Shareable wins</Text>
+      <Text style={styles.sheetHeading}>Choose a win to share</Text>
       <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Pick a card, check exactly what {partnerName} will see, then send it.
+          Choose one card, check exactly what {partnerName} will see, then send it. No feed is created.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1363,7 +1364,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
         </View>
       ) : null}
       <View style={styles.shareWinRules}>
-        <Text style={styles.shareWinSectionTitle}>What never happens</Text>
+        <Text style={styles.shareWinSectionTitle}>What stays off limits</Text>
         {SHARE_WIN_CARD_RULES.slice(0, 3).map((rule) => (
           <View key={rule} style={styles.shareWinRuleRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
@@ -1532,7 +1533,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Shared training block name</Text>
+        <Text style={styles.sheetHeading}>Block name only</Text>
         <Text style={styles.blockPitch}>Only the name is shared. Workouts, exercises, loading, notes and coach changes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing name" onPress={() => onLeave(pair)} />
       </View>
@@ -1542,8 +1543,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Training block name sent</Text>
-        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. No workouts or coach plan changes are shared.</Text>
+        <Text style={styles.sheetHeading}>Block name sent</Text>
+        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. Workouts, exercises, loading and coach changes stay private.</Text>
         <SheetRow icon="close-circle-outline" label="Withdraw name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1552,8 +1553,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Training block name</Text>
-        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares the name only. It will not sync workouts or change your plan.</Text>
+        <Text style={styles.sheetHeading}>Block name suggested</Text>
+        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares the name only. It will not sync workouts or change either plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Share this name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
@@ -1563,9 +1564,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a training block name</Text>
+      <Text style={styles.sheetHeading}>Share a block name only</Text>
       <Text style={styles.blockPitch}>
-        Optional. Use this only if you and {name} want the same block name visible in Partners. It does not sync workouts or alter either plan.
+        Optional. This is only a label in Partners. It does not sync workouts, assign a plan, or change anything the Coach has set.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />

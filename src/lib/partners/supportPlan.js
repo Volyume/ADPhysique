@@ -1,7 +1,7 @@
 import { ticksLabel } from './signals';
 
 export const PARTNER_SUPPORT_PRIVACY_LINE =
-  'Only this card and anything you deliberately send is shared. Food, coach notes, body metrics and photos stay private.';
+  'Your partner only sees the items listed below and cards you choose to send. Food, coach notes, body metrics and photos stay private.';
 
 function hasAim(value) {
   return Math.round(Number(value) || 0) > 0;
@@ -16,32 +16,32 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const myAimSet = hasAim(pair.myAim);
   const partnerAimSet = hasAim(pair.partnerAim);
   const cheerAvailable = pair.cheerEnabled !== false;
-  let headline = `Share one chosen win with ${name} after checking exactly what they will see.`;
-  let primaryAction = { key: 'share_wins', label: 'Share a win', accessibilityLabel: 'Review win sharing' };
+  let headline = `Share one win with ${name} only when you want to. You preview the exact card before anything is sent.`;
+  let primaryAction = { key: 'share_wins', label: 'Choose a win', accessibilityLabel: 'Choose a win to share' };
 
   if (!myAimSet) {
-    headline = `Set your planned sessions for the week. ${name} sees the number only, not your workout details.`;
-    primaryAction = { key: 'set_aim', label: 'Set planned sessions', accessibilityLabel: 'Set planned sessions' };
+    headline = `Choose how many sessions you plan this week. ${name} sees the number only, not your workout plan.`;
+    primaryAction = { key: 'set_aim', label: 'Set this week\'s sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `Send ${name} one fixed cheer today. It is a quick acknowledgement, not a chat or feed.`;
-    primaryAction = { key: 'cheer', label: 'Send today\'s cheer', accessibilityLabel: 'Send today\'s cheer' };
+    headline = `Send ${name} one fixed cheer for today. It is a quick acknowledgement, not a chat or feed.`;
+    primaryAction = { key: 'cheer', label: 'Choose a cheer', accessibilityLabel: 'Choose a cheer for today' };
   } else if (pair.weekKept) {
-    headline = `Last week is marked as kept. ${name} still only sees the support details shown here.`;
+    headline = `Last week is marked as kept. ${name} still only sees the items listed below and cards you send.`;
   }
 
   return Object.freeze({
-    title: 'Support this week',
+    title: 'Next step',
     headline,
     primaryAction,
     privacyLine: PARTNER_SUPPORT_PRIVACY_LINE,
     steps: Object.freeze([
       Object.freeze({
         key: 'aim',
-        label: 'Planned sessions',
+        label: 'Your sessions',
         state: myAimSet ? 'Set' : 'Not set',
         copy: myAimSet
           ? `${name} sees ${Math.round(Number(pair.myAim) || 0)} planned sessions.`
-          : `Choose a realistic number. ${name} sees only that number.`,
+          : `Choose the number you plan to train. ${name} sees only that number.`,
       }),
       Object.freeze({
         key: 'partner_aim',
