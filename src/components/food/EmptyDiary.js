@@ -15,7 +15,14 @@ import Button from '../Button';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
 
-export default function EmptyDiary({ onAdd, onCopyYesterday, onSuggested, onPlanDay }) {
+export default function EmptyDiary({
+  onAdd,
+  onCopyYesterday,
+  onSuggested,
+  onPlanDay,
+  addLabel = 'Add food',
+  addAccessibilityLabel = 'Add food',
+}) {
   return (
     <View style={styles.card} accessibilityRole="summary">
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
@@ -34,11 +41,11 @@ export default function EmptyDiary({ onAdd, onCopyYesterday, onSuggested, onPlan
       <View style={styles.actions}>
         {onAdd ? (
           <Button
-            title="Add food"
+            title={addLabel}
             size="sm"
             icon="add"
             onPress={onAdd}
-            accessibilityLabel="Add food"
+            accessibilityLabel={addAccessibilityLabel}
             fullWidth={false}
             style={styles.actionButton}
           />
