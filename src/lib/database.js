@@ -4807,6 +4807,25 @@ export async function upsertPartnerCheerFromCloud(row) {
 // aim against their OWN plan. Derived-safe. Both members read both rows so the
 // PairCard can show each own aim; nobody's number is ever compared.
 
+/** Local mirror write after the edge function accepts today's cheer. */
+export async function setLocalPartnerCheerSent({ pairId, senderId, sentOn, kind } = {}) {
+  if (!pairId || !senderId || !sentOn) return;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_cheers (id, pair_id, sender_id, sent_on, kind, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      `local:${pairId}:${senderId}:${sentOn}`,
+      pairId,
+      senderId,
+      sentOn,
+      kind || 'here',
+      now,
+    ],
+  );
+}
+
 /** A single member's aim for a (pair, week), or null. */
 export async function getPartnerWeeklyIntention(pairId, userId, weekStart) {
   if (!pairId || !userId || !weekStart) return null;

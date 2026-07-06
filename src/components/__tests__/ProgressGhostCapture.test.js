@@ -101,15 +101,14 @@ test('renders the camera preview and the ghost overlay when a reference is given
     pose: 'front',
   });
   const json = JSON.stringify(tree.toJSON());
-  // Pose-specific studio guidance, no cadence.
+  // Pose-specific studio guidance, kept short in the camera overlay.
   expect(json).toContain('Front relaxed');
-  expect(json).toContain('Progress photo capture: Front relaxed');
-  expect(json).toContain('Full body visible');
-  expect(json).toContain('Camera at mid-torso height');
-  expect(json).toContain('arms across the body');
-  expect(json).toContain('Match your previous setup');
-  expect(json).toContain('Reference: Front from 6 Jul 2026.');
-  expect(json).toContain('If the photo is not clear enough, save it as a progress photo instead of using it for a scan result.');
+  expect(json).toContain('Progress photo');
+  expect(json).toContain('Match the faint previous photo.');
+  expect(json).toContain('Stand tall, feet planted, arms relaxed by your sides, with your waistline visible.');
+  expect(json).not.toContain('Full body visible');
+  expect(json).not.toContain('Camera at mid-torso height');
+  expect(json).not.toContain('arms across the body');
   // The ghost overlay image carries the reference uri.
   expect(json).toContain('file:///photos/ref.jpg');
 });
@@ -117,11 +116,11 @@ test('renders the camera preview and the ghost overlay when a reference is given
 test('renders side and back pose guidance for scan captures', async () => {
   const side = await render({ pose: 'side' });
   expect(JSON.stringify(side.toJSON())).toContain('Side relaxed');
-  expect(JSON.stringify(side.toJSON())).toContain('Torso not blocked');
+  expect(JSON.stringify(side.toJSON())).toContain('keep your torso and waistline visible');
 
   const back = await render({ pose: 'back' });
   expect(JSON.stringify(back.toJSON())).toContain('Back relaxed');
-  expect(JSON.stringify(back.toJSON())).toContain('Shoulders level');
+  expect(JSON.stringify(back.toJSON())).toContain('keep shoulders, waist and feet in frame');
 });
 
 test('exposes an adjustable opacity control for the overlay', async () => {

@@ -120,7 +120,7 @@ describe('progressPhotosController transforms', () => {
     });
   });
 
-  test('buildPhysiqueStudioNextAction prioritises scan compare, matched check-in compare, then capture', () => {
+  test('buildPhysiqueStudioNextAction prioritises missing poses, scan compare, then matched photo compare', () => {
     const completeA = { type: 'checkin', takenAt: 100, poses: ['front', 'side', 'back'] };
     const completeB = { type: 'checkin', takenAt: 200, poses: ['front', 'side', 'back'] };
     const scans = [
@@ -131,8 +131,8 @@ describe('progressPhotosController transforms', () => {
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).kind).toBe('compare_scans');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).reason)
       .toBe('2 completed scans are ready.');
-    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }).kind)
-      .toBe('capture');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }))
+      .toBeNull();
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)
       .toBe('compare_checkins');
     expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [] })).toBeNull();

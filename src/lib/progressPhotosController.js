@@ -146,20 +146,6 @@ export function buildPhysiqueStudioNextAction({
     };
   }
 
-  if (!readOnly && latest) {
-    return {
-      kind: 'capture',
-      title: 'Add your next progress photos',
-      body: 'Use the same room, lighting and camera height so the photo reflects you, not the camera.',
-      reason: 'Progress is easier to judge when the photo conditions are similar.',
-      detailItems: [
-        'Use the timer and place the phone at mid-torso height.',
-        'Photos stay on your phone unless you export or share.',
-      ],
-      cta: 'Add progress photos',
-    };
-  }
-
   return null;
 }
 

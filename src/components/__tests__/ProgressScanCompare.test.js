@@ -104,7 +104,7 @@ describe('ProgressScanCompare component', () => {
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)], { hideExact: true });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Slight positive trend');
-    expect(text).toContain('Progress Signal is positive against the last like-for-like scan.');
+    expect(text).toContain('Visual progress signal is positive against the last like-for-like scan.');
     expect(text).not.toContain('Stored trend should not render');
     expect(text).not.toContain('54/100');
     expect(text).not.toContain('66/100');
