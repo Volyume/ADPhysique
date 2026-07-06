@@ -1,0 +1,4 @@
+Trigger Android build for partner share-win previews.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Commit: 7248a2a1 Add partner share-win previews
