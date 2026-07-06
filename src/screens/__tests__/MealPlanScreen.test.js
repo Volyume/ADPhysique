@@ -182,10 +182,12 @@ describe('MealPlanScreen review-before-add flow', () => {
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('Plan meals for your diary');
-    expect(source).toContain('You review the meals, swap anything you want, then add them to your diary.');
-    expect(source).toContain('Review first');
-    expect(source).toContain('Add when ready');
+    expect(source).toContain('Build meals to your targets. They are not logged until you review them and tap add.');
+    expect(source).toContain('Build');
+    expect(source).toContain('Add to diary');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source).toContain("isDayPlan ? 'Add this day when ready' : 'Add this week when ready'");
     expect(source).toContain('Nothing has been added yet. Review the meals above, swap anything you want, then add them to today.');
+    expect(source).toContain("isDayPlan ? 'Switch to week' : 'Switch to day'");
   });
 });

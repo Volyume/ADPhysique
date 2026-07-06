@@ -33,14 +33,14 @@ export default function EmptyDiary({
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="Plan meals: create meals for today or the week, review them, then add them to your diary"
+          accessibilityLabel="Plan meals: build meals for today or the week, review them, then add them to your diary"
         >
           <View style={styles.planIcon}>
             <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.planCopy}>
             <Text style={styles.planTitle}>Plan meals</Text>
-            <Text style={styles.planText}>Create today or the week, swap anything, then add it to your diary.</Text>
+            <Text style={styles.planText}>Build to your targets, review, swap, then add to the diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
