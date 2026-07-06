@@ -38,6 +38,13 @@ export const SHARE_WIN_CARD_RULES = Object.freeze([
   'Future delivery must support revoke and delete.',
 ]);
 
+export const SHARE_WIN_DELIVERY_GUARDRAILS = Object.freeze([
+  'Preview the exact card before sending.',
+  'Confirm the one partner who will receive it.',
+  'Send one card only. No background feed is created.',
+  'Keep revoke and delete controls attached to the card.',
+]);
+
 export const SHARE_WIN_FORBIDDEN_FIELDS = Object.freeze([
   'sets',
   'reps',
@@ -57,6 +64,23 @@ export const SHARE_WIN_FORBIDDEN_FIELDS = Object.freeze([
 
 const TYPE_KEYS = new Set(SHARE_WIN_TYPES.map((type) => type.key));
 const FORBIDDEN_FIELD_SET = new Set(SHARE_WIN_FORBIDDEN_FIELDS);
+const EXAMPLE_PAYLOADS = Object.freeze({
+  workout_summary: Object.freeze({
+    workoutName: 'Upper body session',
+    completedAt: 'chosen date',
+  }),
+  personal_record: Object.freeze({
+    liftName: 'Bench press',
+    recordLabel: 'New rep best',
+  }),
+  block_milestone: Object.freeze({
+    blockName: 'Strength block',
+    milestone: 'Block complete',
+  }),
+  progress_card: Object.freeze({
+    label: 'Private progress card',
+  }),
+});
 
 export function isValidShareWinType(key) {
   return TYPE_KEYS.has(key);
@@ -152,22 +176,29 @@ export function validateShareWinDraft(draft) {
   return draft.defaultConsent === SHARE_WIN_POLICY.defaultState;
 }
 
+export function buildShareWinPreview(typeKey, payload = {}) {
+  const type = shareWinTypeByKey(typeKey);
+  const draft = buildShareWinDraft(typeKey, payload);
+  if (!type || !validateShareWinDraft(draft)) return null;
+  return Object.freeze({
+    type: type.key,
+    status: 'Preview only',
+    draft,
+    shared: type.shared,
+    private: type.private,
+    confirmation: 'Not sent until you choose one partner and approve this exact card.',
+    guardrails: SHARE_WIN_DELIVERY_GUARDRAILS,
+  });
+}
+
 export function buildShareWinExampleDrafts() {
-  return Object.freeze([
-    buildShareWinDraft('workout_summary', {
-      workoutName: 'Upper body session',
-      completedAt: 'chosen date',
-    }),
-    buildShareWinDraft('personal_record', {
-      liftName: 'Bench press',
-      recordLabel: 'New rep best',
-    }),
-    buildShareWinDraft('block_milestone', {
-      blockName: 'Strength block',
-      milestone: 'Block complete',
-    }),
-    buildShareWinDraft('progress_card', {
-      label: 'Private progress card',
-    }),
-  ].filter(Boolean));
+  return Object.freeze(SHARE_WIN_TYPES
+    .map((type) => buildShareWinDraft(type.key, EXAMPLE_PAYLOADS[type.key]))
+    .filter(Boolean));
+}
+
+export function buildShareWinExamplePreviews() {
+  return Object.freeze(SHARE_WIN_TYPES
+    .map((type) => buildShareWinPreview(type.key, EXAMPLE_PAYLOADS[type.key]))
+    .filter(Boolean));
 }
