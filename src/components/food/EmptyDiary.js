@@ -8,9 +8,9 @@
  * training-day cue is carried by the summary card's day-type chip, so it is not
  * repeated here. Scan stays on the persistent FAB.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type } from '../../styles/theme';
+import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
 import Button from '../Button';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
@@ -28,15 +28,22 @@ export default function EmptyDiary({
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
       <Text style={styles.body}>{EMPTY_DIARY_COPY}</Text>
       {onPlanDay ? (
-        <Button
-          title="Build a meal plan"
-          variant="outline"
-          size="sm"
-          icon="sparkles-outline"
+        <TouchableOpacity
+          style={styles.planRow}
           onPress={onPlanDay}
-          accessibilityLabel="Build a meal plan: a day or week of meals built to your targets"
-          style={styles.planButton}
-        />
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel="Plan meals: create meals for today or the week, review them, then add them to your diary"
+        >
+          <View style={styles.planIcon}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.planCopy}>
+            <Text style={styles.planTitle}>Plan meals</Text>
+            <Text style={styles.planText}>Create today or the week, swap anything, then add it to your diary.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
       ) : null}
       <View style={styles.actions}>
         {onAdd ? (
@@ -103,6 +110,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
-  planButton: { minHeight: 44 },
+  planRow: {
+    alignSelf: 'stretch',
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  planIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  planCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
+  planTitle: { ...type.label, color: colors.primary },
+  planText: { ...type.caption, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
   actionButton: { minHeight: 44 },
 });
