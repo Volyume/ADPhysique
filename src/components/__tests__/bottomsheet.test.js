@@ -58,6 +58,18 @@ describe('BottomSheet', () => {
     expect(panel.props.accessibilityLabel).toBe('Quick add');
   });
 
+  test('scrolling sheets shrink inside the panel instead of overflowing', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <BottomSheet visible scroll onClose={() => {}}><Text>Long sheet body</Text></BottomSheet>
+      );
+    });
+    const scroll = tree.root.findByProps({ keyboardShouldPersistTaps: 'handled' });
+    expect(scroll.props.style).toMatchObject({ flexShrink: 1 });
+    expect(JSON.stringify(tree.toJSON())).toContain('Long sheet body');
+  });
+
   test('unmounts after visible flips to false (reduce motion: synchronous)', () => {
     const onClose = jest.fn();
     let tree;

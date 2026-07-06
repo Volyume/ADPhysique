@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxHeight: '92%',
   },
-  scroll: { alignSelf: 'stretch' },
+  scroll: { alignSelf: 'stretch', flexShrink: 1 },
   scrollContent: { gap: spacing.md, paddingBottom: spacing.sm },
   handle: {
     alignSelf: 'center',
