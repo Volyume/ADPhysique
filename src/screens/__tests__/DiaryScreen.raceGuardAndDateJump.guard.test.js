@@ -130,9 +130,9 @@ describe('DiaryScreen empty-day add flow', () => {
 });
 
 describe('DiaryScreen macro detail entry points', () => {
-  test('the day summary opens the same macro breakdown as the rings when entries exist', () => {
+  test('the macro rings open breakdown details without a duplicate day-summary card', () => {
     expect(SRC).toMatch(/<MacroRings[\s\S]*onPress=\{viewEntries\.length \? \(\) => setBreakdownVisible\(true\) : undefined\}/);
-    expect(SRC).toMatch(/<DiaryDaySummaryCard[\s\S]*onPress=\{viewEntries\.length \? \(\) => setBreakdownVisible\(true\) : undefined\}/);
-    expect(SRC).toMatch(/accessibilityLabel=\{onPress \? 'Open day macro and meal breakdown' : undefined\}/);
+    expect(SRC).not.toMatch(/DiaryDaySummaryCard/);
+    expect(SRC).not.toMatch(/Today at a glance/);
   });
 });
