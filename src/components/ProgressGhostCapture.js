@@ -424,7 +424,7 @@ export default function ProgressGhostCapture({
         {countdown != null ? (
           <View style={[styles.countdownWrap, compactOverlay && styles.countdownWrapCompact]} pointerEvents="none" accessible={false}>
             <Text style={styles.countdownText}>{countdown}</Text>
-            <Text style={styles.countdownHint}>Step into the frame</Text>
+            {!compactOverlay ? <Text style={styles.countdownHint}>Step into the frame</Text> : null}
           </View>
         ) : null}
       </CameraView>
