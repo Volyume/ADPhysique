@@ -118,3 +118,13 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
     expect(SRC).toMatch(/Gesture\.Fling\(\)\.direction\(Directions\.LEFT\)\.onEnd\(\(\) => \{ runOnJS\(next\)\(\); \}\)/);
   });
 });
+
+describe('DiaryScreen empty-day add flow', () => {
+  test('the empty diary uses the same inferred meal slot as barcode scanning', () => {
+    expect(SRC).toMatch(/const likelyMealSlot = useMemo\(\(\) => \{/);
+    expect(SRC).toMatch(/inferMealSlotForHour\(new Date\(\)\.getHours\(\), keys\)/);
+    expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
+    expect(SRC).toMatch(/addLabel=\{`Log \$\{likelyMealLabel\}`\}/);
+    expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);
+  });
+});

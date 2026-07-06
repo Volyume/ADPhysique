@@ -547,6 +547,12 @@ export default function DiaryScreen({ navigation }) {
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
   const mealSlots = useMemo(() => buildMealSlots(viewEntries, mealsPerDay), [viewEntries, mealsPerDay]);
+  const likelyMealSlot = useMemo(() => {
+    const keys = mealSlots.map((m) => m.key);
+    if (selectedDate === isoDate(new Date())) return inferMealSlotForHour(new Date().getHours(), keys);
+    return keys[0] ?? null;
+  }, [mealSlots, selectedDate]);
+  const likelyMealLabel = mealSlots.find((slot) => slot.key === likelyMealSlot)?.label || 'Meal 1';
   // E10 read-only lapse views: only render meals that actually have food. An
   // empty ladder slot exists to be added to; with the add affordances hidden
   // it would just be a dead header-only card.
@@ -1188,7 +1194,9 @@ export default function DiaryScreen({ navigation }) {
             </View>
           ) : (
             <EmptyDiary
-              onAdd={() => addFood('meal_1')}
+              onAdd={() => addFood(likelyMealSlot || 'meal_1')}
+              addLabel={`Log ${likelyMealLabel}`}
+              addAccessibilityLabel={`Log ${likelyMealLabel}`}
               onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
               onSuggested={!yesterdayHasFood ? goToSuggested : undefined}
               onPlanDay={() => navigation.navigate('MealPlan')}
@@ -1363,13 +1371,8 @@ export default function DiaryScreen({ navigation }) {
           style={styles.scanFab}
           onPress={() => {
             // Pass the likely meal slot so a scan no longer defaults to
-            // 'snack'. Time-of-day inference only makes sense for today;
-            // for a past or future day fall to the first ladder slot.
-            const keys = mealSlots.map((m) => m.key);
-            const slot = selectedDate === isoDate(new Date())
-              ? inferMealSlotForHour(new Date().getHours(), keys)
-              : (keys[0] ?? null);
-            navigation.navigate('ScanBarcode', { entryDate: selectedDate, mealSlot: slot });
+            // 'snack'. The empty-day CTA uses the same inferred slot.
+            navigation.navigate('ScanBarcode', { entryDate: selectedDate, mealSlot: likelyMealSlot });
           }}
           activeOpacity={0.85}
           accessibilityRole="button"
