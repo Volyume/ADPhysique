@@ -33,6 +33,8 @@
  *   onDelete(name)                       remove the photo + its meta (the
  *                                        integrator owns the actual delete;
  *                                        called only after confirm + tier check)
+ *   deleteModeForPhoto(name)             return 'scan-set' when deleting this
+ *                                        photo removes the full saved photo set
  *   onCompareFrom(name)                  open the comparison seeded from here
  *   onSetReference(name)                 mark this the ghost-overlay reference
  *   hideWeight                           withhold exact bodyweight in contexts
@@ -80,6 +82,7 @@ export default function ProgressPhotoViewer({
   initialName,
   onClose,
   onDelete,
+  deleteModeForPhoto,
   onCompareFrom,
   onSetReference,
   hideWeight = false,
@@ -303,10 +306,20 @@ export default function ProgressPhotoViewer({
   function onPressDelete() {
     if (!current) return;
     const name = current.name;
-    appAlert(formatProgressPhotoDay(currentMeta.takenAt), 'Remove this photo from your device?', [
+    const deleteMode = deleteModeForPhoto?.(name);
+    const deleteCopy = deleteMode === 'scan-set'
+      ? {
+        buttonTitle: 'Delete set',
+        message: 'Delete this photo set from your device? This removes all photos in the set and its saved Physique Score.',
+      }
+      : {
+        buttonTitle: 'Delete',
+        message: 'Remove this photo from your device?',
+      };
+    appAlert(formatProgressPhotoDay(currentMeta.takenAt), deleteCopy.message, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: deleteCopy.buttonTitle,
         style: 'destructive',
         onPress: () => {
           // Live-tier re-check: a delete prompt open across a pro-to-free flip
@@ -419,8 +432,13 @@ export default function ProgressPhotoViewer({
                   icon="images-outline" onPress={onPressCompare} accessibilityLabel="Compare from here"
                 />
                 <Button
-                  title="Delete" variant="destructive" size="sm" fullWidth={false}
-                  icon="trash-outline" onPress={onPressDelete} accessibilityLabel="Remove this photo"
+                  title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : 'Delete'}
+                  variant="destructive"
+                  size="sm"
+                  fullWidth={false}
+                  icon="trash-outline"
+                  onPress={onPressDelete}
+                  accessibilityLabel={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Remove this photo set' : 'Remove this photo'}
                 />
               </View>
             </>

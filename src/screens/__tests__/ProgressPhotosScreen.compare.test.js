@@ -124,6 +124,7 @@ import { appAlert } from '../../components/AppAlert';
 import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { listProgressPhotos, deleteProgressPhoto } from '../../lib/progressPhotos';
 import { deletePhotoMeta } from '../../lib/progressPhotoMeta';
+import { deleteProgressScanSession, listProgressScanEntries } from '../../lib/progressScanStore';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
 import ProgressPhotosScreen, { filterAndSort } from '../ProgressPhotosScreen';
 import PhotoDateRangeSheet from '../../components/PhotoDateRangeSheet';
@@ -153,13 +154,14 @@ async function flush() {
 }
 
 async function render(photos = [NEW, MID, OLD], {
-  mode = 'unspecified', reduceMotion = false, tier = 'pro', suppressed = false,
+  mode = 'unspecified', reduceMotion = false, tier = 'pro', suppressed = false, scans = [],
 } = {}) {
-  useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
+  useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier, user: { id: 'u-test' } }));
   useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
   usePhotoSuppression.mockReturnValue(suppressed);
   await AsyncStorage.setItem(WELLBEING_KEY, mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
+  listProgressScanEntries.mockResolvedValue(scans);
   let tree;
   await act(async () => { tree = create(<ProgressPhotosScreen navigation={nav} />); });
   await flush();
@@ -268,6 +270,8 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
+    expect(text).toContain('Private on this device');
+    expect(text).toContain('not visible to partners');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photo set');
     expect(text).toContain('Your first set can be new photos or older photos from your phone.');
@@ -359,6 +363,34 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', OLD.name);
     expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', OLD.uri);
     expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
+  });
+
+  test('viewer onDelete removes the whole Physique Score photo set in one action', async () => {
+    const scan = {
+      id: 'scan-1',
+      status: 'complete',
+      requiredPosesComplete: true,
+      capturedAt: NEW.ts,
+      assets: [
+        { id: 'front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts },
+        { id: 'back', pose: 'back', photoName: MID.name, uri: MID.uri, takenAt: NEW.ts },
+        { id: 'side', pose: 'side', photoName: OLD.name, uri: OLD.uri, takenAt: NEW.ts },
+      ],
+    };
+    const tree = await render([NEW, MID, OLD], { scans: [scan] });
+    await pressCheckIn(tree, NEW);
+    const viewer = hostNode(tree, 'ProgressPhotoViewer');
+    expect(viewer.props.deleteModeForPhoto(NEW.name)).toBe('scan-set');
+    expect(viewer.props.deleteModeForPhoto('standalone.jpg')).toBe('photo');
+
+    listProgressPhotos.mockClear();
+    await act(async () => { await viewer.props.onDelete(NEW.name); });
+
+    expect(deleteProgressScanSession).toHaveBeenCalledWith('u-test', 'scan-1', { deleteFiles: true });
+    expect(mockDetachProgressScanPhoto).not.toHaveBeenCalled();
+    expect(deletePhotoMeta).not.toHaveBeenCalled();
+    expect(deleteProgressPhoto).not.toHaveBeenCalled();
+    expect(listProgressPhotos).toHaveBeenCalled();
   });
 });
 

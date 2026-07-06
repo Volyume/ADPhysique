@@ -46,6 +46,7 @@ import {
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
+  findScanForPhotoName,
   buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
   buildPhysiqueStudioNextAction,
@@ -781,13 +782,29 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
   }
 
+  const visibleScans = useMemo(
+    () => visibleCompletedScans(scans),
+    [scans],
+  );
+
   // Real delete wiring: remove the file AND its metadata row, then refresh.
   // Re-checks the live tier (a pro-to-free flip with the confirm open must not
   // delete); the viewer also re-checks before calling this.
   const onViewerDelete = useCallback(async (name) => {
     if (!canWrite()) return;
     const uid = useAppStore.getState().user?.id ?? userId;
+    const owningScan = findScanForPhotoName(visibleScans, name);
     try {
+      if (owningScan?.id) {
+        const deleted = await deleteProgressScanSession(uid, owningScan.id, { deleteFiles: true });
+        if (!deleted) throw new Error('progress_scan_delete_failed');
+        const setNames = new Set((owningScan.assets || []).map((asset) => asset?.photoName).filter(Boolean));
+        setReferenceName((prev) => (setNames.has(prev) ? null : prev));
+        setViewerOpen(false);
+        setViewerName(null);
+        await refresh();
+        return;
+      }
       await deleteViewerProgressPhoto({
         userId: uid,
         name,
@@ -804,7 +821,12 @@ export default function ProgressPhotosScreen({ navigation }) {
     setReferenceName((prev) => (prev === name ? null : prev));
     setViewerOpen(false);
     await refresh();
-  }, [canWrite, photos, refresh, toast, userId]);
+  }, [canWrite, photos, refresh, toast, userId, visibleScans]);
+
+  const viewerDeleteModeForPhoto = useCallback(
+    (name) => (findScanForPhotoName(visibleScans, name) ? 'scan-set' : 'photo'),
+    [visibleScans],
+  );
 
   function openCompare() { setCompareOpen(true); }
   function openScanCompare() { setScanCompareOpen(true); }
@@ -813,10 +835,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   // NEW high-risk surfaces are withheld under the shared suppression gate
   // (fail-closed): the comparison entry and the share card. Viewing the dated
   // timeline and delete stay available. Share is additionally Pro-gated.
-  const visibleScans = useMemo(
-    () => visibleCompletedScans(scans),
-    [scans],
-  );
   const scanPhotoNames = useMemo(() => buildScanPhotoNameSet(visibleScans), [visibleScans]);
   const scanShareItems = scanShareItemsFromEntries(visibleScans);
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
@@ -1032,6 +1050,15 @@ export default function ProgressPhotosScreen({ navigation }) {
           )}
 
           <View style={styles.studioPanel}>
+            <View style={styles.privacyNotice}>
+              <View style={styles.privacyNoticeIcon}>
+                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+              </View>
+              <Text style={styles.privacyNoticeText}>
+                Private on this device. Your photos and Physique Scores stay on your phone and are not visible to partners, Volyume staff or anyone else unless you choose to share or export them.
+              </Text>
+            </View>
+
             <View style={styles.studioMetricsGrid}>
               {studioStats.map((stat) => (
                 <View key={stat.key} style={styles.studioMetricCard}>
@@ -1329,6 +1356,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           initialName={viewerName}
           onClose={() => setViewerOpen(false)}
           onDelete={onViewerDelete}
+          deleteModeForPhoto={viewerDeleteModeForPhoto}
           onCompareFrom={() => { setViewerOpen(false); openCompare(); }}
           onSetReference={(name) => setReferenceName(name)}
           hideWeight={hideExactScans && scanPhotoNames.has(viewerName)}
@@ -1619,6 +1647,26 @@ const styles = StyleSheet.create({
   heroTextTitle: { ...type.h3, color: colors.textPrimary },
   heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   studioPanel: { padding: spacing.lg, gap: spacing.lg },
+  privacyNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primaryBg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  privacyNoticeIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  privacyNoticeText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   studioMetricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

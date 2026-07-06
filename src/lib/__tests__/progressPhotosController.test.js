@@ -7,6 +7,7 @@ import {
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
   enrichProgressPhotos,
+  findScanForPhotoName,
   progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
@@ -36,6 +37,19 @@ describe('progressPhotosController transforms', () => {
     const visible = visibleCompletedScans([complete, measured, draft, incomplete]);
     expect(visible).toEqual([complete, measured]);
     expect([...buildScanPhotoNameSet(visible)].sort()).toEqual(['back.jpg', 'front.jpg']);
+  });
+
+  test('findScanForPhotoName resolves the full scan set that owns a photo', () => {
+    const scan = {
+      id: 'scan-1',
+      assets: [
+        { photoName: 'front.jpg' },
+        { photoName: 'back.jpg' },
+      ],
+    };
+    expect(findScanForPhotoName([scan], 'back.jpg')).toBe(scan);
+    expect(findScanForPhotoName([scan], 'side.jpg')).toBeNull();
+    expect(findScanForPhotoName([scan], null)).toBeNull();
   });
 
   test('scanShareItemsFromEntries ignores drafts and prefers the front asset', () => {
