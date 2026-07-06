@@ -461,7 +461,7 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Plan my day' : 'Plan my week'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Plan meals' : isDayPlan ? "Today's meals" : 'Week of meals'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
@@ -479,10 +479,24 @@ export default function MealPlanScreen({ navigation }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Build meals for your diary</Text>
+          <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Choose today or the week ahead. Nothing is added until you review the meals and press Add.
+            Choose one day or a week. You review the meals, swap anything you want, then add them to your diary.
           </Text>
+          <View style={styles.planExplainer} accessibilityRole="summary">
+            <View style={styles.planExplainerStep}>
+              <Ionicons name="eye-outline" size={15} color={colors.primary} />
+              <Text style={styles.planExplainerText}>Review first</Text>
+            </View>
+            <View style={styles.planExplainerStep}>
+              <Ionicons name="swap-horizontal-outline" size={15} color={colors.primary} />
+              <Text style={styles.planExplainerText}>Swap anything</Text>
+            </View>
+            <View style={styles.planExplainerStep}>
+              <Ionicons name="checkmark-circle-outline" size={15} color={colors.primary} />
+              <Text style={styles.planExplainerText}>Add when ready</Text>
+            </View>
+          </View>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
@@ -490,9 +504,9 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Today</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              A single day for the diary you are working on.
+              One day built to your targets. Best when you only want help with today.
             </Text>
-            <Button title="Build today's plan" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Plan today" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -501,9 +515,9 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Seven days plus a shopping list. Logged days are left alone.
+              Seven days plus a shopping list. Days with food already logged are left alone.
             </Text>
-            <Button title="Build weekly plan" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </View>
       ) : (
@@ -669,16 +683,16 @@ export default function MealPlanScreen({ navigation }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? "Today's plan" : 'Week plan'}</Text>
+                <Text style={styles.planActionTitle}>{isDayPlan ? 'Ready to add today' : 'Ready to schedule the week'}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
-                    ? 'Review the meals above, swap anything you want, then add this day to your diary.'
-                    : 'Review the week, swap anything you want, then add it from today onwards. Logged days are left alone.'}
+                    ? 'Nothing has been added yet. Review the meals above, swap anything you want, then add them to today.'
+                    : 'Nothing has been added yet. Review each day, swap anything you want, then add the week from today onwards.'}
                 </Text>
               </View>
             </View>
             {isDayPlan ? (
-              <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
+              <Button title="Add today to diary" onPress={handleLogDay} loading={busy} fullWidth />
             ) : (
               <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
             )}
@@ -691,7 +705,7 @@ export default function MealPlanScreen({ navigation }) {
                 accessibilityLabel="Refresh meals"
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Refresh</Text>
+                <Text style={styles.planQuickActionText}>Refresh meals</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.planQuickAction}
@@ -711,7 +725,7 @@ export default function MealPlanScreen({ navigation }) {
                 accessibilityLabel={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Plan week' : 'Plan day'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -878,6 +892,27 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
+  planExplainer: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  planExplainerStep: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 108,
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+  },
+  planExplainerText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   planOption: {
     alignSelf: 'stretch',
     gap: spacing.sm,

@@ -1278,14 +1278,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals: build meals for today or the week, swap anything first, then add them to your diary"
+                  accessibilityLabel="Plan meals: create meals for today or the week, review and swap them, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Build today or the week ahead, swap anything, then add it to your diary.</Text>
+                    <Text style={styles.buildPlanSub}>Create today or a week ahead. Review and swap first; nothing is added automatically.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
