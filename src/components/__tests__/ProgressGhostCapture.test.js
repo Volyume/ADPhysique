@@ -103,7 +103,7 @@ test('renders the camera preview and the ghost overlay when a reference is given
   const json = JSON.stringify(tree.toJSON());
   // Pose-specific studio guidance, no cadence.
   expect(json).toContain('Front relaxed');
-  expect(json).toContain('Check-in capture: Front relaxed');
+  expect(json).toContain('Progress photo capture: Front relaxed');
   expect(json).toContain('Full body visible');
   expect(json).toContain('Camera at mid-torso height');
   expect(json).toContain('arms across the body');

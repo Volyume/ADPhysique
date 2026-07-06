@@ -367,7 +367,7 @@ export default function ProgressGhostCapture({
 
   const hasReference = !!referencePhoto?.uri;
   const guidance = getPoseCaptureGuidance(pose);
-  const modeLabel = `${title ? 'Scan capture' : 'Check-in capture'}: ${guidance.title}`;
+  const modeLabel = `${title ? 'Scan capture' : 'Progress photo capture'}: ${guidance.title}`;
   const referenceLine = hasReference
     ? `Reference: ${referencePhoto.poseLabel || 'previous photo'}${referencePhoto.label ? ` from ${referencePhoto.label}` : ''}.`
     : null;
