@@ -15,7 +15,7 @@ export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {
   if (suppressed) return 'Scan saved privately. Physique scan details are hidden right now.';
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume Leanness Score ${assessment.visualLeannessScore}/100`;
+    const score = `Volyume Physique Score ${assessment.visualLeannessScore}/100`;
     const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
     const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
     if (hideExact) {

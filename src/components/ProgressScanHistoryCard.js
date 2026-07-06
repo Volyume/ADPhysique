@@ -130,7 +130,7 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Score</Text>
+                <Text style={styles.scanInsightLabel}>Physique score</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>

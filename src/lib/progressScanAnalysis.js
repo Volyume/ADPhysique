@@ -7,6 +7,7 @@ export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
 export const PROGRESS_SCAN_ESTIMATOR_VERSION = bfEstimatorAsset.id;
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
 export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v1';
+export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 14 * 86400000;
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
   { key: 'foundation', label: 'Foundation', min: 0, max: 19 },
@@ -535,7 +536,7 @@ function progressScanAssessmentCopy(assessment = null) {
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
-  return `Volyume Leanness Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body-fat percentage.`;
+  return `Volyume Physique Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body-fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -667,6 +668,10 @@ function hasRequiredPoseSet(scan = {}) {
   return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
 }
 
+function scanCapturedAtMs(scan = {}) {
+  return finiteNumber(scan?.capturedAt ?? scan?.captured_at);
+}
+
 export function scanComparability(currentScan = null, previousScan = null) {
   if (!currentScan) {
     return { comparable: false, status: 'missing_current', reason: 'Current scan is missing.', comparableCount: 0 };
@@ -681,6 +686,20 @@ export function scanComparability(currentScan = null, previousScan = null) {
   }
   if (!hasRequiredPoseSet(currentScan) || !hasRequiredPoseSet(previousScan)) {
     return { comparable: false, status: 'not_comparable', reason: 'Front and back photos are needed on both scans.', comparableCount: 0 };
+  }
+  const currentCapturedAt = scanCapturedAtMs(currentScan);
+  const previousCapturedAt = scanCapturedAtMs(previousScan);
+  if (
+    currentCapturedAt != null
+    && previousCapturedAt != null
+    && Math.abs(currentCapturedAt - previousCapturedAt) < PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS
+  ) {
+    return {
+      comparable: false,
+      status: 'not_comparable',
+      reason: 'Photo sets are too close together for a fair progress comparison.',
+      comparableCount: 0,
+    };
   }
   const currentQuality = currentScan.qualityLabel ?? 'unknown';
   const previousQuality = previousScan.qualityLabel ?? 'unknown';
@@ -774,9 +793,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
     trendMagnitudePctPoints = Math.abs(delta);
     if (progressSignal.signal === 'holding_steady') {
-      lines.push('Volyume Leanness Score is broadly level against the last like-for-like scan.');
+      lines.push('Volyume Physique Score is broadly level against the last like-for-like scan.');
     } else {
-      lines.push(`Volyume Leanness Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
+      lines.push(`Volyume Physique Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
       trendVotes.push(delta > 0 ? 'leaner' : 'softer');
     }
   }

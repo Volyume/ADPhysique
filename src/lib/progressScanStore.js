@@ -283,6 +283,7 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
     physiqueAssessment: analysis.physiqueAssessment ?? null,
   });
   const currentForDelta = {
+    capturedAt: session.capturedAt,
     analysisStatus: analysis.analysisStatus,
     qualityLabel: analysis.qualityLabel,
     assets,

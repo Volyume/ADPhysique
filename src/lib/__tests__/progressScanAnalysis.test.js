@@ -46,6 +46,8 @@ const modelBackedAssets = [
   { pose: 'back', qualityScore: 0.9, lightingScore: 0.92, blurScore: 0.86, framingScore: 0.88, segmentationConfidence: 0.9, signals: backSignal },
 ];
 
+const DAY_MS = 86400000;
+
 function comparableScan({ id = 'scan', score = 66, confidence = 'moderate', side = false, lighting = 0.9, framing = 0.88, segmentation = 0.9, tilt = 0, centerX = 0.5, centerY = 0.5, height = 0.78, width = 0.36 } = {}) {
   const poses = side ? ['front', 'back', 'side'] : ['front', 'back'];
   return {
@@ -172,7 +174,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Volyume Leanness Score 68\/100/i);
+    expect(out.copySummary).toMatch(/Volyume Physique Score 68\/100/i);
     expect(out.copySummary).toMatch(/not a body-fat percentage/i);
   });
 
@@ -373,7 +375,7 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
     expect(out.measuredSignalsOnly).toBe(true);
-    expect(out.summary).toMatch(/Volyume Leanness Score is up 12 points/i);
+    expect(out.summary).toMatch(/Volyume Physique Score is up 12 points/i);
     expect(out.summary).toMatch(/visual physique signal/i);
     expect(out.summary).not.toMatch(/body-fat ranges|midpoint|provisional photo-scan estimate/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
@@ -397,6 +399,25 @@ describe('Progress Scan uncertainty and abstention', () => {
       'front_camera_angle_changed',
     ]));
     expect(scanComparability(movedCamera, previous).comparable).toBe(false);
+  });
+
+  test('scan comparability refuses short-interval photo sets before reporting progress', () => {
+    const previous = comparableScan({ id: 'old', score: 60 });
+    const current = comparableScan({ id: 'new', score: 72 });
+    previous.capturedAt = Date.parse('2026-07-01T08:00:00Z');
+    current.capturedAt = previous.capturedAt + (7 * DAY_MS);
+
+    const comparability = scanComparability(current, previous);
+    expect(comparability).toMatchObject({
+      comparable: false,
+      status: 'not_comparable',
+      reason: 'Photo sets are too close together for a fair progress comparison.',
+    });
+
+    const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
+    expect(out.comparisonStatus).toBe('not_comparable');
+    expect(out.summary).toMatch(/too close together/i);
+    expect(out.progressSignal).toBeUndefined();
   });
 
   test('comparison progress signal is capped by the weaker scan confidence', () => {
