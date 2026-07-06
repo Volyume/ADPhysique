@@ -14,13 +14,14 @@
  */
 
 export type SleepMinute = {
-  ts: number; // epoch seconds
+  ts: number; // epoch milliseconds, usually rounded to the minute
   hr: number | null;
   motion: number | null; // arbitrary units; higher = more movement
   rmssd?: number | null;
 };
 
 export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
+export type SleepSource = 'auto_hr' | 'manual_hr' | 'manual_duration';
 
 export type SleepResult = {
   startTs: number;
@@ -36,6 +37,8 @@ export type SleepResult = {
   hypnogram: Array<{ stage: SleepStage; minutes: number }>;
   performance: number | null; // asleepMin / neededMin
   neededMin: number;
+  source: SleepSource;
+  signalMin: number; // minutes that had a heart-rate sample
 };
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
@@ -85,66 +88,189 @@ export function computeSleepNeed(input: {
   return { baselineMin, strainMin, debtMin, napMin, neededMin: Math.round(neededMin) };
 }
 
-/** Find the main sleep window: the longest low-motion, low-HR stretch. */
+function percentile(values: number[], pct: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * pct)));
+  return sorted[idx] ?? sorted[0] ?? 0;
+}
+
+/** Fill minute gaps inside a detected/manual window so durations stay honest. */
+function expandToMinutes(
+  samples: SleepMinute[],
+  startTs?: number,
+  endTs?: number,
+): SleepMinute[] {
+  if (samples.length === 0 && (startTs == null || endTs == null)) return [];
+  const firstTs = startTs ?? samples[0]?.ts;
+  const sampleLastTs = samples[samples.length - 1]?.ts ?? firstTs;
+  const lastTs = endTs ?? (sampleLastTs == null ? undefined : sampleLastTs + 60000);
+  if (firstTs == null || lastTs == null || lastTs <= firstTs) return [];
+
+  const startMinute = Math.floor(firstTs / 60000);
+  const endMinute = Math.ceil(lastTs / 60000);
+  const byMinute = new Map<number, SleepMinute>();
+  for (const s of samples) {
+    byMinute.set(Math.floor(s.ts / 60000), s);
+  }
+
+  const out: SleepMinute[] = [];
+  for (let minute = startMinute; minute < endMinute; minute += 1) {
+    const existing = byMinute.get(minute);
+    out.push(existing ?? { ts: minute * 60000, hr: null, motion: null, rmssd: null });
+  }
+  return out;
+}
+
+/** Find the main sleep window from HR-first wearable data. */
 function findSleepWindow(samples: SleepMinute[]): { start: number; end: number } | null {
   if (samples.length < 30) return null;
   const hrs = samples.map((s) => s.hr).filter((v): v is number => v != null);
   if (hrs.length === 0) return null;
-  const meanHr = hrs.reduce((a, b) => a + b, 0) / hrs.length;
 
-  const asleepFlag = samples.map((s) => {
-    const lowHr = s.hr != null ? s.hr < meanHr * 0.95 : false;
+  const p20 = percentile(hrs, 0.2);
+  const p50 = percentile(hrs, 0.5);
+  const p80 = percentile(hrs, 0.8);
+  const spread = Math.max(6, p80 - p20);
+  const sleepishThreshold = p20 + spread * 0.55;
+  const bridgeThreshold = p20 + spread * 0.95;
+
+  const asleepFlag = samples.map((s, i) => {
+    if (s.hr == null) return false;
+    const prev = samples[i - 1]?.hr ?? s.hr;
+    const next = samples[i + 1]?.hr ?? s.hr;
+    const smoothedHr = (prev + s.hr + next) / 3;
+    const lowHr = smoothedHr <= sleepishThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.2 : true;
     return lowHr && lowMotion;
   });
+  const bridgeFlag = samples.map((s, i) => {
+    if (s.hr == null) return false;
+    const prev = samples[i - 1]?.hr ?? s.hr;
+    const next = samples[i + 1]?.hr ?? s.hr;
+    const smoothedHr = (prev + s.hr + next) / 3;
+    const quietEnough = smoothedHr <= bridgeThreshold;
+    const lowMotion = s.motion != null ? s.motion < 0.35 : true;
+    return quietEnough && lowMotion;
+  });
 
-  // Longest run of asleepFlag, tolerating short awakenings (<=5 min).
+  // Longest quiet HR run, tolerating normal awakenings/arousals. The previous
+  // 95%-of-mean rule missed HR-only nights where most samples were already from
+  // sleep, so this uses the night's low-to-high HR distribution instead.
   let bestStart = 0;
-  let bestLen = 0;
+  let bestEnd = 0;
+  let bestElapsed = 0;
   let runStart = -1;
   let gap = 0;
+  const closeRun = (endExclusive: number) => {
+    if (runStart < 0 || endExclusive <= runStart) return;
+    const startTs = samples[runStart]?.ts ?? 0;
+    const endTs = (samples[endExclusive - 1]?.ts ?? startTs) + 60000;
+    const elapsed = Math.round((endTs - startTs) / 60000);
+    if (elapsed > bestElapsed) {
+      bestElapsed = elapsed;
+      bestStart = runStart;
+      bestEnd = endExclusive;
+    }
+  };
   for (let i = 0; i < asleepFlag.length; i += 1) {
+    const prev = samples[i - 1];
+    const current = samples[i];
+    if (prev && current && current.ts - prev.ts > 45 * 60000) {
+      closeRun(i - gap);
+      runStart = -1;
+      gap = 0;
+    }
+
     if (asleepFlag[i]) {
       if (runStart < 0) runStart = i;
       gap = 0;
-    } else if (runStart >= 0) {
+    } else if (runStart >= 0 && bridgeFlag[i]) {
       gap += 1;
-      if (gap > 5) {
-        const len = i - gap - runStart;
-        if (len > bestLen) {
-          bestLen = len;
-          bestStart = runStart;
-        }
+      if (gap > 25) {
+        closeRun(i - gap);
         runStart = -1;
         gap = 0;
       }
+    } else if (runStart >= 0) {
+      closeRun(i - gap);
+      runStart = -1;
+      gap = 0;
     }
   }
   if (runStart >= 0) {
-    const len = asleepFlag.length - runStart;
-    if (len > bestLen) {
-      bestLen = len;
-      bestStart = runStart;
-    }
+    closeRun(asleepFlag.length - gap);
   }
-  if (bestLen < 30) return null;
-  return { start: bestStart, end: bestStart + bestLen };
+  if (bestElapsed >= 90) return { start: bestStart, end: bestEnd };
+
+  // If the app was opened only for a sleep session, the whole capture may be a
+  // low-variance sleeping HR stream. Treat that as a valid main sleep instead of
+  // requiring a relative HR dip that cannot exist in an already-sleep-only set.
+  const firstTs = samples[0]?.ts ?? 0;
+  const lastTs = samples[samples.length - 1]?.ts ?? firstTs;
+  const spanMin = Math.round((lastTs - firstTs) / 60000) + 1;
+  if (spanMin >= 90 && spanMin <= 11 * 60 && p50 <= 85 && p80 - p20 <= 25) {
+    return { start: 0, end: samples.length };
+  }
+
+  return null;
+}
+
+export function durationOnlySleep(
+  startTs: number,
+  endTs: number,
+  neededMin = BASE_NEED_MIN,
+): SleepResult {
+  const inBedMin = Math.max(1, Math.round((endTs - startTs) / 60000));
+  const asleepMin = Math.round(inBedMin * 0.9);
+  const awakeMin = inBedMin - asleepMin;
+  return {
+    startTs,
+    endTs,
+    inBedMin,
+    asleepMin,
+    restorativeMin: 0,
+    latencyMin: 0,
+    wakeEvents: 0,
+    efficiency: 0.9,
+    stages: { awake: awakeMin, light: asleepMin, deep: 0, rem: 0 },
+    hypnogram: [
+      ...(awakeMin > 0 ? [{ stage: 'awake' as const, minutes: awakeMin }] : []),
+      { stage: 'light', minutes: asleepMin },
+    ],
+    performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
+    neededMin,
+    source: 'manual_duration',
+    signalMin: 0,
+  };
 }
 
 export function computeSleep(
   samples: SleepMinute[],
   neededMin = BASE_NEED_MIN,
-  opts: { forceWindow?: boolean } = {},
+  opts: { forceWindow?: boolean; startTs?: number; endTs?: number; source?: SleepSource } = {},
 ): SleepResult | null {
   // forceWindow: treat the WHOLE input as the sleep window (used when the user
   // has manually logged or adjusted the sleep period, so we score exactly those
   // bounds instead of auto-detecting within them).
   const win = opts.forceWindow ? { start: 0, end: samples.length } : findSleepWindow(samples);
-  if (!win || win.end - win.start < 1) return null;
+  if (!win || win.end - win.start < 1) {
+    if (opts.forceWindow && opts.startTs != null && opts.endTs != null) {
+      return durationOnlySleep(opts.startTs, opts.endTs, neededMin);
+    }
+    return null;
+  }
 
-  const window = samples.slice(win.start, win.end);
+  const rawWindow = samples.slice(win.start, win.end);
+  const window = expandToMinutes(rawWindow, opts.startTs, opts.endTs);
+  if (window.length < 1) return null;
   const hrs = window.map((s) => s.hr).filter((v): v is number => v != null);
-  const meanHr = hrs.length ? hrs.reduce((a, b) => a + b, 0) / hrs.length : 0;
+  if (hrs.length === 0) {
+    const start = opts.startTs ?? window[0]?.ts ?? 0;
+    const end = opts.endTs ?? ((window[window.length - 1]?.ts ?? start) + 60000);
+    return durationOnlySleep(start, end, neededMin);
+  }
+  const meanHr = hrs.reduce((a, b) => a + b, 0) / hrs.length;
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
 
@@ -153,7 +279,12 @@ export function computeSleep(
   for (const s of window) {
     const hasMotion = s.motion != null;
     const motion = s.motion ?? 0;
-    const hr = s.hr ?? meanHr;
+    if (s.hr == null) {
+      stages.light += 1;
+      timeline.push('light');
+      continue;
+    }
+    const hr = s.hr;
     const rmssd = s.rmssd ?? meanRmssd;
     let stage: SleepStage;
     // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
@@ -180,8 +311,8 @@ export function computeSleep(
   const asleepMin = inBedMin - stages.awake;
   const restorativeMin = stages.deep + stages.rem;
   const efficiency = inBedMin > 0 ? asleepMin / inBedMin : 0;
-  const startTs = window[0]?.ts ?? 0;
-  const endTs = window[window.length - 1]?.ts ?? startTs;
+  const startTs = opts.startTs ?? window[0]?.ts ?? 0;
+  const endTs = opts.endTs ?? ((window[window.length - 1]?.ts ?? startTs) + 60000);
 
   // Sleep latency = leading awake before the first sustained sleep segment.
   let latencyMin = 0;
@@ -219,5 +350,7 @@ export function computeSleep(
     hypnogram,
     performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
     neededMin,
+    source: opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr'),
+    signalMin: hrs.length,
   };
 }

@@ -41,7 +41,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
-  const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
+  const steps = useStoreSelector(appStore, (s) => s.steps ?? s.bandSteps);
+  const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
 
   const [zones, setZones] = useState<HrZone[]>([]);
   const [curve, setCurve] = useState<Array<{ tsMs: number; strain: number }>>([]);
@@ -111,9 +112,9 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow
-          label="Steps (band)"
-          display={bandSteps != null ? `${bandSteps}` : 'Needs calibration'}
-          current={bandSteps}
+          label={stepSource === 'phone' ? 'Steps (phone)' : 'Steps'}
+          display={steps != null ? `${steps}` : 'Needs motion permission'}
+          current={steps}
           prior={null}
         />
       </Card>

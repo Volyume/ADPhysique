@@ -35,6 +35,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
+  const capture = useStoreSelector(appStore, (s) => s.sleepCapture);
   const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
@@ -93,6 +94,25 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         <NavRow label="Log / adjust sleep" icon="create" onPress={() => nav.navigate({ name: 'editSleep' })} last />
       </Card>
 
+      <SectionLabel>Capture quality</SectionLabel>
+      <Card>
+        {capture ? (
+          <>
+            <View style={styles.grid}>
+              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={capture.coveragePct >= 60 ? colors.recoveryGreen : colors.recoveryYellow} />
+              <Stat label="R-R beats" value={capture.rrCount} />
+            </View>
+            <View style={[styles.grid, { marginTop: 12 }]}>
+              <Stat label="Signal minutes" value={capture.signalMin} />
+              <Stat label="Source" value={sourceLabel(capture.source)} />
+            </View>
+            <Text style={styles.captureNote}>{capture.note}</Text>
+          </>
+        ) : (
+          <Empty text="Capture quality appears after the first metric refresh." />
+        )}
+      </Card>
+
       {/* Last night's sleep */}
       <SectionLabel>Last night's sleep</SectionLabel>
       <Card>
@@ -117,7 +137,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             </View>
           </>
         ) : (
-          <Empty text="No sleep recorded last night. Wear the strap to bed with the app connected — sleep is detected automatically from your overnight heart rate, or log it manually above." />
+          <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to sync stored history; you can also log it manually above." />
         )}
       </Card>
 
@@ -298,8 +318,16 @@ function fmtMin(minOfDay: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+function sourceLabel(source: 'auto_hr' | 'manual_hr' | 'manual_duration' | null): string {
+  if (source === 'auto_hr') return 'Auto HR';
+  if (source === 'manual_hr') return 'Manual HR';
+  if (source === 'manual_duration') return 'Manual';
+  return 'None';
+}
+
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  captureNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },

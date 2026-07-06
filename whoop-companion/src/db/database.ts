@@ -4,7 +4,7 @@
  * architecture.
  *
  * Tables:
- *   hr_samples     per-notification live HR + R-R (the raw stream we derive from)
+ *   hr_samples     live and backfilled HR + R-R (the raw stream we derive from)
  *   daily_metrics  one row per day: recovery / sleep / strain / steps / HRV / RHR
  *   cardio         logged or auto-detected activities with per-session strain
  *   journal        lightweight daily behaviour entries
@@ -15,6 +15,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
+export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 /**
  * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
  * sub-metrics (Sleep Need breakdown, the four Sleep Performance contributors,
@@ -38,6 +39,9 @@ export type SleepDetail = {
   stressHigh: number | null; // % of TIB in HIGH stress
   stressMed: number | null;
   stressLow: number | null;
+  source?: string | null; // auto_hr | manual_hr | manual_duration
+  signalMin?: number | null; // minutes with HR samples in the scored window
+  coveragePct?: number | null; // HR sample coverage across the scored window
 };
 export type DailyMetricRow = {
   day: string; // YYYY-MM-DD (local)
@@ -122,9 +126,15 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           hex TEXT NOT NULL,
           decoded INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS step_samples (
+          ts INTEGER PRIMARY KEY,
+          counter INTEGER NOT NULL,
+          activity_class INTEGER
+        );
         CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
+        CREATE INDEX IF NOT EXISTS idx_step_samples_ts ON step_samples(ts);
       `);
       // Migrations: add columns for DBs created before these features. Each
       // ALTER is independent so a partial upgrade still completes.
@@ -182,6 +192,27 @@ export async function getHrSamplesBetween(fromTs: number, toTs: number): Promise
 export async function pruneHrSamples(olderThanTs: number): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM hr_samples WHERE ts < ?', olderThanTs);
+}
+
+// ---- Band step counters ----
+export async function insertStepSample(s: StepSampleRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
+    s.ts,
+    s.counter,
+    s.activityClass,
+  );
+}
+
+export async function getStepSamplesBetween(fromTs: number, toTs: number): Promise<StepSampleRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ ts: number; counter: number; activity_class: number | null }>(
+    'SELECT ts, counter, activity_class FROM step_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    fromTs,
+    toTs,
+  );
+  return rows.map((r) => ({ ts: r.ts, counter: r.counter, activityClass: r.activity_class }));
 }
 
 // ---- Daily metrics ----

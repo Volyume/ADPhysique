@@ -37,6 +37,7 @@ import { decodeHeartRate, HeartRateSample } from './heartRate';
 import {
   cmdEnableHrBroadcast,
   cmdGetHello,
+  cmdGetHelloHarvard,
   cmdLinkValid,
   cmdSetClock,
   cmdToggleRealtimeHr,
@@ -290,7 +291,8 @@ export class WhoopBle {
   private async startStreaming(): Promise<void> {
     if (!this.canSendCommands) return;
     try {
-      await this.writeCommand(cmdGetHello()); // GET_HELLO_HARVARD (35)
+      await this.writeCommand(cmdGetHelloHarvard()); // GET_HELLO_HARVARD (35)
+      await this.writeCommand(cmdGetHello()); // GET_HELLO (145)
       await this.writeCommand(cmdSetClock()); // SET_CLOCK (10)
       await this.writeCommand(cmdEnableHrBroadcast(true)); // 14 -> standard 0x2A37
       await this.writeCommand(cmdToggleRealtimeHr(true)); // 3 -> proprietary HR

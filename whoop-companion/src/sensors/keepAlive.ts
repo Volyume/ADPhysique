@@ -1,11 +1,11 @@
 /**
  * Background keep-alive — keeps the app's process running while the phone is
- * locked so the BLE strap connection (and overnight HR/R-R logging) survives.
+ * locked for optional live diagnostics.
  *
  * Android suspends background apps (Doze), which kills the BLE link — the reason
- * no overnight data was captured. The only first-party Expo mechanism to prevent
- * that is a foreground service, and Expo exposes one via expo-location. So we run
- * a MINIMAL, lowest-accuracy location foreground service purely as a keep-alive:
+ * live diagnostics can stop updating. The only first-party Expo mechanism to prevent that is a
+ * foreground service, and Expo exposes one via expo-location. So we run a
+ * MINIMAL, lowest-accuracy location foreground service purely as a keep-alive:
  * its job is the persistent notification that stops Android suspending us, not the
  * location data (which we ignore). This mirrors WHOOP's own
  * `connectedDevice|location` foreground service.
@@ -52,7 +52,7 @@ export async function startKeepAlive(): Promise<boolean> {
       showsBackgroundLocationIndicator: false,
       foregroundService: {
         notificationTitle: 'VOLYUME Pulse',
-        notificationBody: 'Keeping your WHOOP strap connected',
+        notificationBody: 'Keeping the diagnostic WHOOP link connected',
         notificationColor: '#F59E0B',
       },
     });

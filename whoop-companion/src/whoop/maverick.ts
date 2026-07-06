@@ -14,7 +14,8 @@
  *      | crc32(inner)
  *
  * Inner buffer (whoop-vault xg0/a.java):
- *   [0] packet_type   35=COMMAND, 47=HISTORICAL_DATA, 48=EVENT, 49=METADATA
+ *   [0] packet_type   35=COMMAND, 47=HISTORICAL_DATA, 48=EVENT,
+ *                     49=METADATA, 56=PUFFIN_METADATA
  *   [1] sequence number
  *   [2] command_byte  (see commands.ts)
  *   [3..] payload
@@ -43,9 +44,12 @@ export enum PacketType {
   METADATA = 49,
   REALTIME_IMU_DATA_STREAM = 51,
   HISTORICAL_IMU_DATA_STREAM = 52,
+  PUFFIN_METADATA = 56,
 }
 
 export type MaverickFrame = {
+  /** The complete, reassembled wire frame including header and CRCs. */
+  raw: Uint8Array;
   version: number;
   roleA: number;
   roleB: number;
@@ -127,7 +131,7 @@ export function buildInner(
   return inner;
 }
 
-function parseInner(inner: Uint8Array): Omit<MaverickFrame, 'version' | 'roleA' | 'roleB'> {
+function parseInner(inner: Uint8Array): Omit<MaverickFrame, 'raw' | 'version' | 'roleA' | 'roleB'> {
   return {
     inner,
     packetType: inner.length > 0 ? (inner[0] as number) : -1,
@@ -168,11 +172,12 @@ export class FrameAssembler {
       }
       if (this.buf.length < total) break; // wait for more bytes
 
+      const raw = new Uint8Array(this.buf.slice(0, total));
       const version = this.buf[1] as number;
       const roleA = this.buf[4] as number;
       const roleB = this.buf[5] as number;
       const inner = new Uint8Array(this.buf.slice(8, 8 + innerLen));
-      frames.push({ version, roleA, roleB, ...parseInner(inner) });
+      frames.push({ raw, version, roleA, roleB, ...parseInner(inner) });
 
       this.buf.splice(0, total);
     }

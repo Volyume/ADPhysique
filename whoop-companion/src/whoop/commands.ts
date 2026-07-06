@@ -12,8 +12,8 @@
  *      here, flagged below)
  *   2. SET_CONFIG enable_r22_packets        (turns on the deep optical/PPG stream)
  *   3. ENTER_HIGH_FREQ_SYNC (96) → wait ~0.5 s → SEND_HISTORICAL_DATA (22)
- *   4. ACK each HISTORICAL_DATA chunk with HISTORICAL_DATA_RESULT (23),
- *      payload [SUCCESS=1, start_id u32 LE, end_id u32 LE] = 9 bytes, padded to 12.
+ *   4. ACK each HISTORY_END chunk with HISTORICAL_DATA_RESULT (23),
+ *      payload [SUCCESS=1] + the HISTORY_END end_data bytes.
  *
  * Until step 1/2 are validated on real 50.40.1.0 frames, the historical drain
  * may return little/nothing; live HR (standard GATT) is unaffected.
@@ -28,6 +28,7 @@ export enum Command {
   TOGGLE_GENERIC_HR_PROFILE = 14, // makes the strap broadcast standard GATT 0x2A37
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
+  GET_DATA_RANGE = 34,
   GET_HELLO_HARVARD = 35, // session hello
   ENTER_HIGH_FREQ_SYNC = 96,
   EXIT_HIGH_FREQ_SYNC = 97,
@@ -55,12 +56,11 @@ export function cmdStartRawData(): Uint8Array {
 /** SET_CLOCK (10): epoch seconds u32 LE + tz byte (0 = UTC). Part of bring-up. */
 export function cmdSetClock(): Uint8Array {
   const epoch = Math.floor(Date.now() / 1000);
-  const payload = new Uint8Array(5);
+  const payload = new Uint8Array(8);
   payload[0] = epoch & 0xff;
   payload[1] = (epoch >> 8) & 0xff;
   payload[2] = (epoch >> 16) & 0xff;
   payload[3] = (epoch >> 24) & 0xff;
-  payload[4] = 0; // UTC
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_CLOCK, payload));
 }
 
@@ -71,7 +71,12 @@ export function cmdLinkValid(): Uint8Array {
 
 /** Session hello sent right after connecting. */
 export function cmdGetHello(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_HELLO_HARVARD));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_HELLO, new Uint8Array([0x01])));
+}
+
+/** Harvard hello is still sent by NOOP before the WHOOP 5/MG hello. */
+export function cmdGetHelloHarvard(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_HELLO_HARVARD, new Uint8Array([0x00])));
 }
 
 /**
@@ -97,16 +102,40 @@ export function cmdToggleRealtimeHr(on = true): Uint8Array {
  * Offsets beyond the flag name are NOOP's interpretation and should be
  * validated against captured frames.
  */
-export function cmdSetConfig(flag: string, value = 1): Uint8Array {
+export function cmdSetConfig(flag: string, value = 0x32): Uint8Array {
   const body = new Uint8Array(40);
   for (let i = 0; i < flag.length && i < 32; i += 1) body[i] = flag.charCodeAt(i) & 0x7f;
   body[32] = value & 0xff;
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_FF_VALUE, body));
+  const payload = new Uint8Array(1 + body.length);
+  payload[0] = 0x01;
+  payload.set(body, 1);
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_FF_VALUE, payload));
 }
 
 /** The "most load-bearing" flag — opens the deep optical/PPG + history streams. */
 export function cmdEnableDeepStreams(): Uint8Array {
-  return cmdSetConfig('enable_r22_packets', 1);
+  return cmdSetConfig('enable_r22_packets', 0x32);
+}
+
+export function cmdEnableDeepStreamSequence(): Uint8Array[] {
+  const flags: Array<[string, number]> = [
+    ['enable_r22_packets', 0x32],
+    ['enable_r22_v2_packets', 0x32],
+    ['enable_r22_v3_packets', 0x32],
+    ['enable_r22_v4_packets', 0x31],
+    ['enable_r22_v5_packets', 0x32],
+    ['enable_r22_v6_packets', 0x32],
+    ['enable_r22_v8_packets', 0x32],
+    ['make_hrfm_visible', 0x32],
+    ['disable_pip_r26_packets', 0x32],
+    ['wear_detect_bias', 0x32],
+    ['hr_ch_switching', 0x32],
+    ['ir_hw_switching', 0x32],
+    ['enable_passive_strap_fit_gen5', 0x31],
+    ['enable_sig11_during_sleep', 0x32],
+    ['dorset_inhibit_wpt', 0x32],
+  ];
+  return flags.map(([name, value]) => cmdSetConfig(name, value));
 }
 
 let seq = 0;
@@ -119,40 +148,52 @@ export function cmdEnterHighFreqSync(): Uint8Array {
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.ENTER_HIGH_FREQ_SYNC));
 }
 
-export function cmdSendHistoricalData(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SEND_HISTORICAL_DATA));
+export function cmdGetDataRange(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_DATA_RANGE, new Uint8Array([0x00])));
 }
 
-export function cmdHistoricalDataResult(startId: number, endId: number): Uint8Array {
-  // [SUCCESS=1, start_id u32 LE, end_id u32 LE]; encodeFrame pads inner to 4-byte.
-  const payload = new Uint8Array(9);
+export function cmdSendHistoricalData(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SEND_HISTORICAL_DATA, new Uint8Array([0x00])));
+}
+
+export function cmdHistoricalDataResult(endData: Uint8Array): Uint8Array {
+  const payload = new Uint8Array(1 + endData.length);
   payload[0] = 1; // SUCCESS
-  payload[1] = startId & 0xff;
-  payload[2] = (startId >> 8) & 0xff;
-  payload[3] = (startId >> 16) & 0xff;
-  payload[4] = (startId >> 24) & 0xff;
-  payload[5] = endId & 0xff;
-  payload[6] = (endId >> 8) & 0xff;
-  payload[7] = (endId >> 16) & 0xff;
-  payload[8] = (endId >> 24) & 0xff;
+  payload.set(endData, 1);
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.HISTORICAL_DATA_RESULT, payload));
 }
 
-/** Metadata HISTORY_END (packet_type 49, subtype 2) carries start_id + end_id. */
-export function parseHistoryEnd(payload: Uint8Array): { startId: number; endId: number } | null {
-  // payload layout after the command byte: [subtype, start_id u32 LE, end_id u32 LE].
-  if (payload.length < 9) return null;
-  const subtype = payload[0] as number;
-  if (subtype !== 2) return null;
-  const startId =
-    (payload[1] as number) |
-    ((payload[2] as number) << 8) |
-    ((payload[3] as number) << 16) |
-    ((payload[4] as number) << 24);
-  const endId =
-    (payload[5] as number) |
-    ((payload[6] as number) << 8) |
-    ((payload[7] as number) << 16) |
-    ((payload[8] as number) << 24);
-  return { startId: startId >>> 0, endId: endId >>> 0 };
+export type HistoryMetadata =
+  | { kind: 'start' }
+  | { kind: 'complete' }
+  | { kind: 'end'; unix: number | null; trim: number | null; endData: Uint8Array };
+
+function u32le(bytes: Uint8Array, off: number): number | null {
+  if (off + 4 > bytes.length) return null;
+  return (
+    ((bytes[off] as number) |
+      ((bytes[off + 1] as number) << 8) |
+      ((bytes[off + 2] as number) << 16) |
+      ((bytes[off + 3] as number) << 24)) >>>
+    0
+  );
+}
+
+export function parseHistoryMetadata(inner: Uint8Array): HistoryMetadata | null {
+  if (
+    inner.length < 3 ||
+    (inner[0] !== PacketType.METADATA && inner[0] !== PacketType.PUFFIN_METADATA)
+  ) {
+    return null;
+  }
+  const metaType = inner[2] as number;
+  if (metaType === 1) return { kind: 'start' };
+  if (metaType === 3) return { kind: 'complete' };
+  if (metaType !== 2 || inner.length < 21) return null;
+  return {
+    kind: 'end',
+    unix: u32le(inner, 3),
+    trim: u32le(inner, 13),
+    endData: inner.slice(13, 21),
+  };
 }

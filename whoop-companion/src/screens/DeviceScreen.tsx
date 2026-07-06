@@ -36,6 +36,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const error = useStoreSelector(appStore, (s) => s.error);
   const profile = useStoreSelector(appStore, (s) => s.profile);
   const bufferedRecords = useStoreSelector(appStore, (s) => s.bufferedRecords);
+  const historySync = useStoreSelector(appStore, (s) => s.historySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
 
@@ -149,26 +150,34 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <SectionLabel>Sync</SectionLabel>
       <Card>
         <Text style={styles.diagText}>Last sync: {lastSyncText}</Text>
-        <Text style={styles.diagText}>Buffered records pulled: {bufferedRecords}</Text>
+        <Text style={styles.diagText}>Raw records archived: {bufferedRecords}</Text>
+        <Text style={styles.diagText}>Sync status: {historySync?.status ?? 'Waiting for reconnect'}</Text>
+        <Text style={styles.diagText}>Decoded records: {historySync?.decodedRecords ?? 0}</Text>
+        <Text style={styles.diagText}>HR samples backfilled: {historySync?.hrSamples ?? 0}</Text>
+        <Text style={styles.diagText}>R-R intervals backfilled: {historySync?.rrSamples ?? 0}</Text>
+        <Text style={styles.diagText}>Band step counters: {historySync?.stepSamples ?? 0}</Text>
+        <Text style={styles.diagText}>
+          History layouts: {historySync?.versions.length ? historySync.versions.join(', ') : 'none yet'}
+        </Text>
+        <Text style={styles.diagText}>Rejected records: {historySync?.rejectedRecords ?? 0}</Text>
         <SecondaryButton
           title={draining ? 'Syncing…' : 'Sync now'}
           onPress={() => void appStore.runHistoryDrain()}
           disabled={!connected || draining}
         />
         <Text style={styles.hint}>
-          The strap records to its own memory continuously. On every connect the app automatically drains that
-          buffer, so days and nights you weren't connected still fill in. Live data is captured continuously while
-          connected (including in the background).
+          The strap records to its own memory. On every reconnect this app requests stored history, decodes v18
+          HR/R-R records and v26 PPG-derived HR, then backfills sleep from those rows.
         </Text>
       </Card>
 
       <SectionLabel>Profile (for strain &amp; zones)</SectionLabel>
       <ProfileEditor profile={profile} />
 
-      <SectionLabel>Overnight</SectionLabel>
+      <SectionLabel>Live diagnostics</SectionLabel>
       <Card>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Keep strap connected overnight</Text>
+          <Text style={styles.toggleLabel}>Optional live diagnostic link</Text>
           <Switch
             value={keepAlive}
             onValueChange={(v) => void appStore.setBackgroundKeepAlive(v)}
@@ -176,11 +185,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           />
         </View>
         <Text style={styles.hint}>
-          Runs a foreground service so Android doesn’t suspend the app and drop the Bluetooth link while
-          you sleep. This adds a permanent “Keeping your WHOOP strap connected” notification, needs the
-          “Allow all the time” location permission, and uses a little extra battery. It mirrors how WHOOP’s
-          own app stays alive. This is the mechanism that should let overnight HR / HRV / sleep record —
-          verify it actually survives a full night before trusting it.
+          This is not required for sleep backfill. It keeps a foreground Bluetooth link open for short live
+          diagnostics, while normal sleep tracking comes from stored-history sync when the band reconnects.
         </Text>
       </Card>
 
