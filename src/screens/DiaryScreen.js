@@ -48,6 +48,7 @@ import MacroRings from '../components/food/MacroRings';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
+import BottomSheet from '../components/BottomSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
@@ -645,7 +646,7 @@ export default function DiaryScreen({ navigation }) {
   }
 
   function addSavedMeal(slot) {
-    navigation.navigate('MyMeals', { mealSlot: slot, entryDate: selectedDate });
+    setSavedPickerSlot(slot);
   }
 
   function scanForMeal(slot) {
@@ -658,6 +659,13 @@ export default function DiaryScreen({ navigation }) {
   // meals not worth a lookup. Same sheet and write path as the tertiary
   // flash-icon route in FoodSearchScreen, reached with zero navigation.
   const [quickAddSlot, setQuickAddSlot] = useState(null); // meal slot key | null
+  const [savedPickerSlot, setSavedPickerSlot] = useState(null); // meal slot key | null
+
+  function openSavedFoodRoute(routeName) {
+    const mealSlot = savedPickerSlot || likelyMealSlot || 'snack';
+    setSavedPickerSlot(null);
+    navigation.navigate(routeName, { mealSlot, entryDate: selectedDate });
+  }
 
   async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
     if (!canWrite()) return;
@@ -1336,6 +1344,45 @@ export default function DiaryScreen({ navigation }) {
         onClose={() => setQuickAddSlot(null)}
       />
 
+      <BottomSheet
+        visible={!!savedPickerSlot && !readOnly}
+        onClose={() => setSavedPickerSlot(null)}
+        accessibilityLabel="Saved food"
+      >
+        <Text style={styles.savedFoodTitle}>Saved food</Text>
+        <Text style={styles.savedFoodIntro}>Use a meal saved from your diary, or a recipe you built.</Text>
+        <TouchableOpacity
+          style={styles.savedFoodOption}
+          onPress={() => openSavedFoodRoute('MyMeals')}
+          accessibilityRole="button"
+          accessibilityLabel="Open saved meals"
+        >
+          <View style={styles.savedFoodIcon}>
+            <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.savedFoodText}>
+            <Text style={styles.savedFoodOptionTitle}>Saved meals</Text>
+            <Text style={styles.savedFoodOptionSub}>Foods you saved together from the diary.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.savedFoodOption}
+          onPress={() => openSavedFoodRoute('MyRecipes')}
+          accessibilityRole="button"
+          accessibilityLabel="Open my recipes"
+        >
+          <View style={styles.savedFoodIcon}>
+            <Ionicons name="restaurant-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.savedFoodText}>
+            <Text style={styles.savedFoodOptionTitle}>My recipes</Text>
+            <Text style={styles.savedFoodOptionSub}>Recipes with ingredients and servings.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      </BottomSheet>
+
       <MacroBreakdownSheet
         visible={breakdownVisible}
         entries={viewEntries}
@@ -1676,6 +1723,26 @@ const styles = StyleSheet.create({
   saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   saveMealBtnText: { ...type.body, color: colors.textPrimary },
   saveMealBtnTextPrimary: { ...type.label, color: colors.onPrimary },
+  savedFoodTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  savedFoodIntro: { ...type.bodySm, color: colors.textMuted },
+  savedFoodOption: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  savedFoodIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  savedFoodText: { flex: 1 },
+  savedFoodOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  savedFoodOptionSub: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
   headerNutritionIcon: {
     width: 34,
     height: 34,
