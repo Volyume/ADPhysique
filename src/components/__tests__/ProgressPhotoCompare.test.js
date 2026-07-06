@@ -240,7 +240,7 @@ describe('ProgressPhotoCompare, slider accessibility', () => {
 describe('ProgressPhotoCompare, suppression self-guard', () => {
   test('suppressed renders a calm placeholder, never a comparison', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: true });
-    expect(flattenText(tree.toJSON())).toContain('Comparing is resting for now.');
+    expect(flattenText(tree.toJSON())).toContain('Comparison is hidden for now.');
     // No comparison surface: no pane images, no mode switch, no adjustable.
     expect(paneImages(tree)).toHaveLength(0);
     expect(findByLabel(tree, 'Slider')).toBeUndefined();

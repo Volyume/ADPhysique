@@ -111,7 +111,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         </View>
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Score comparison is resting for now.</Text>
+          <Text style={styles.placeholderText}>Score comparison is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );

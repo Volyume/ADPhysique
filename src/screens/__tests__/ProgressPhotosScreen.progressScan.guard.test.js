@@ -118,6 +118,15 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/discardScanDraft\(scanFlow\); pickFrom\('library'\)/);
   });
 
+  test('library scan imports abandon unfinished draft sessions on every failed path', () => {
+    expect(SCREEN).toMatch(/async function pickScanPoseFromLibrary\(flow = scanFlow, pose = capturePose\)/);
+    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photos need a rebuild on this device/);
+    expect(SCREEN).toMatch(/if \(result\?\.canceled\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
+    expect(SCREEN).toMatch(/if \(!uri\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
+    expect(SCREEN).toMatch(/let savedPhoto = null;[\s\S]*savedPhoto = saved;/);
+    expect(SCREEN).toMatch(/catch \(e\) \{[\s\S]*if \(flow\?\.scanId\) await abandonLapsedScanFlow\(flow, savedPhoto\?\.name, savedPhoto\);/);
+  });
+
   test('refresh results are guarded before committing photo and scan state', () => {
     expect(SCREEN).toMatch(/const refreshRequestRef = useRef\(0\);/);
     expect(SCREEN).toMatch(/const isCurrentRefresh = \(\) => refreshRequestRef\.current === requestId;/);

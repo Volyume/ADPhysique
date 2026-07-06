@@ -1734,9 +1734,9 @@ export default function HomeScreen({ navigation, route }) {
                   <View style={styles.noPlanIconWrap}>
                     <Ionicons name="barbell-outline" size={28} color={colors.primary} />
                   </View>
-                  <Text style={styles.noPlanTitle}>No active plan on this device</Text>
+                  <Text style={styles.noPlanTitle}>No active plan yet</Text>
                   <Text style={styles.noPlanSub}>
-                    If you just signed in we may still be pulling your data from the cloud, give it a moment. If nothing arrives, tap below to rebuild your plan from your profile.
+                    If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1747,13 +1747,13 @@ export default function HomeScreen({ navigation, route }) {
                     if (result.ok) {
                       await loadData();
                     } else {
-                      toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
+                      toast.show(`Couldn't start plan: ${result.error}`, { variant: 'error', duration: 5000 });
                     }
                   }}
                   activeOpacity={0.88}
                 >
                   <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
-                  <Text style={styles.proRecoverBtnText}>Build my plan</Text>
+                  <Text style={styles.proRecoverBtnText}>Start with a plan</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -1764,19 +1764,17 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={styles.noPlanIconWrap}>
                   <Ionicons name="compass-outline" size={28} color={colors.primary} />
                 </View>
-                <Text style={styles.noPlanTitle}>
-                  {lastSession == null ? 'Not sure where to start?' : 'Put a plan behind your training'}
-                </Text>
+                <Text style={styles.noPlanTitle}>No active plan yet</Text>
                 <Text style={styles.noPlanSub}>
                   {lastSession == null
-                    ? "Answer three quick questions and we'll set you up with a plan that tells you exactly what to do each session."
-                    : "You've been training without a set plan. Answer three quick questions and we'll suggest one, so your progress is tracked properly."}
+                    ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
+                    : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
                 </Text>
                 <View style={styles.starterActions}>
                   <Button
-                    title="Find my plan"
+                    title="Start with a plan"
                     onPress={() => navigation.navigate('FreeStarter')}
-                    accessibilityLabel="Answer three quick questions to find your plan"
+                    accessibilityLabel="Answer three quick questions to start with a plan"
                   />
                   <Button
                     title="Browse plans"
@@ -2968,7 +2966,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     // D3: tinted edge, not a solid amber border (amber-inflation rule),
-    // "Build my plan" above is the no-plan state's one amber fill.
+    // "Start with a plan" above is the no-plan state's one amber fill.
     borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.lg,
     marginBottom: spacing.lg,

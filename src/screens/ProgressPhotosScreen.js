@@ -286,39 +286,45 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function pickScanPoseFromLibrary(flow = scanFlow, pose = capturePose) {
-    if (!canWrite()) return;
+    if (!canWrite()) {
+      if (flow?.scanId) await abandonLapsedScanFlow(flow);
+      return;
+    }
     if (!flow?.scanId || !pose) {
       pickFrom('library');
       return;
     }
-    if (!ImagePicker) { toast.show('Photos need a rebuild on this device.', { variant: 'warning' }); return; }
+    if (!ImagePicker) {
+      await abandonLapsedScanFlow(flow);
+      toast.show('Photos need a rebuild on this device.', { variant: 'warning' });
+      return;
+    }
     setBusy(true);
+    let savedPhoto = null;
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
         quality: 0.7,
       });
       if (result?.canceled) {
-        if (flow?.mode === 'library') await discardScanDraft(flow);
+        await abandonLapsedScanFlow(flow);
         return;
       }
       const uri = result?.assets?.[0]?.uri;
       if (!uri) {
-        if (flow?.mode === 'library') await discardScanDraft(flow);
+        await abandonLapsedScanFlow(flow);
         return;
       }
-      if (!canWrite()) return;
+      if (!canWrite()) {
+        await abandonLapsedScanFlow(flow);
+        return;
+      }
       const uid = useAppStore.getState().user?.id ?? userId;
       const saved = await saveProgressPhoto(uri, undefined, uid);
+      savedPhoto = saved;
       if (!saved?.name || !saved?.uri) throw new Error('progress_scan_library_save_failed');
       if (!canWrite()) {
-        await cleanupUnattachedSavedScanPhoto({
-          userId: uid,
-          name: saved.name,
-          saved,
-          deleteProgressPhoto,
-          deletePhotoMeta,
-        });
+        await abandonLapsedScanFlow(flow, saved.name, saved);
         return;
       }
       const scanTakenAt = Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now());
@@ -335,19 +341,14 @@ export default function ProgressPhotosScreen({ navigation }) {
         throw e;
       }
       if (!canWrite()) {
-        await cleanupUnattachedSavedScanPhoto({
-          userId: uid,
-          name: saved.name,
-          saved,
-          deleteProgressPhoto,
-          deletePhotoMeta,
-        });
+        await abandonLapsedScanFlow(flow, saved.name, saved);
         return;
       }
       setBusy(false);
       await onScanCaptured(saved.name, saved, flow, pose);
     } catch (e) {
       logError('ProgressPhotos.scanLibraryPose', e, { userId, pose });
+      if (flow?.scanId) await abandonLapsedScanFlow(flow, savedPhoto?.name, savedPhoto);
       toast.show('Could not add that scan photo. Please try again.', { variant: 'error' });
     } finally {
       setBusy(false);

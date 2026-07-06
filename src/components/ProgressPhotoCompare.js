@@ -462,7 +462,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
         </View>
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Comparing is resting for now.</Text>
+          <Text style={styles.placeholderText}>Comparison is hidden for now.</Text>
           <Text style={styles.placeholderSub}>Your photos stay private to this device.</Text>
         </View>
       </SafeAreaView>

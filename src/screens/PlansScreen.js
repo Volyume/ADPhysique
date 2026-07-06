@@ -760,17 +760,16 @@ export default function PlansScreen({ navigation }) {
               <Text style={styles.noPlanCardTitle}>No active plan yet</Text>
             </View>
             <Text style={styles.noPlanCardBody}>
-              Answer a few quick questions and we'll set you up with a starter plan,
-              or browse the library and pick your own.
+              Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself.
             </Text>
             <View style={styles.noPlanCardActions}>
               <Button
-                title="Find my plan"
+                title="Start with a plan"
                 onPress={() => navigation.navigate('FreeStarter')}
-                accessibilityLabel="Answer three quick questions to find your plan"
+                accessibilityLabel="Answer three quick questions to start with a plan"
               />
               <Button
-                title="Browse the library"
+                title="Browse plans"
                 variant="secondary"
                 onPress={() => navigation.navigate('PlanLibrary')}
                 accessibilityLabel="Browse the plan library"
@@ -781,7 +780,7 @@ export default function PlansScreen({ navigation }) {
           <Card style={styles.noActivePlanRow}>
             <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
             <Text style={styles.noActivePlanText}>
-              No active plan · Build one, browse the library, or create your own from scratch.
+              No active plan · Start with a plan, browse the library, or create your own.
             </Text>
           </Card>
         )}
@@ -986,10 +985,10 @@ export default function PlansScreen({ navigation }) {
         </Card>
 
         {/* Decision Hub, visible to everyone. Section title and copy adapt:
-            Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
+            Pro with active plan → "Switch your plan", Free / no plan → "Start with a plan". */}
         <View style={styles.section}>
           <SectionLabel>
-            {isProWithPlan ? 'Switch your plan' : 'Start or build a plan'}
+            {isProWithPlan ? 'Switch your plan' : 'Start with a plan'}
           </SectionLabel>
           {isProWithPlan && (
             <Text style={styles.sectionSubtitle}>

@@ -889,7 +889,7 @@ export default function PartnerScreen({ route }) {
     const name = pair.partnerFirstName || 'your partner';
     appAlert(
       `Block ${name}`,
-      'This ends the partnership, deletes everything you shared, and stops them pairing with you again. They will not be told.',
+      'Volyume blocks them first, then ends the partnership and removes shared data. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
