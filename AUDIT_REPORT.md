@@ -397,6 +397,7 @@ Status: release decision.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
 - Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
 - Partner active cards now include a `Share wins` consent surface and review sheet that defines the only eligible future share categories: workout summary, personal record, block milestone and progress card.
+- Partner shareable wins now have a pure draft contract that builds narrow future cards and strips/forbids raw sets, reps, loads, food, coach notes, body metrics, scan scores and private photo paths.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
 
 ### Partner Optional Sharing Direction
@@ -404,7 +405,8 @@ Status: release decision.
 - Optional partner sharing makes product sense if it is explicit, granular and event-based: share a completed workout summary, a PR, a block milestone, or a user-generated progress card.
 - It should not become blanket partner access to workout history, food, bodyweight, coach notes, body metrics, private notes or progress photos.
 - The app now has the first `Share wins` policy surface: default `Ask every time`, no passive feed, no leaderboard, no workout history browsing, no food diary, no coach notes, no body metrics and no automatic photo sharing.
-- Remaining implementation work: real event-card creation, delivery, revocation/delete handling, ED/calm suppression for body/progress cards, and partner acknowledgement only through curated responses.
+- The app now also has the pure future-card draft contract: one card, one moment, one partner, no raw workout/body/food/coach/photo fields.
+- Remaining implementation work: real event-card creation UI, delivery, revocation/delete handling, ED/calm suppression for body/progress cards, and partner acknowledgement only through curated responses.
 
 ## Product And UX Notes
 
