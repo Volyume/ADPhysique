@@ -429,14 +429,19 @@ export function computeVisualLeannessScore(inputs = {}) {
     inputs.bodyAreaRatio,
   ].some((value) => finiteNumber(value) == null)) return null;
 
-  const score =
-    scoreComponent(inputs.waistToShoulder, 0.45, 0.75) * 0.30
-    + scoreComponent(inputs.waistToHip, 0.68, 1.00) * 0.20
-    + scoreComponent(inputs.waistToHeight, 0.18, 0.34) * 0.15
-    + scoreComponent(inputs.bodyAreaRatio, 0.26, 0.42) * 0.15
-    + consistencyScoreFromSpread(inputs.frontBackWaistSpread) * 0.10
-    + scoreComponent(inputs.sideWaistToHeight, 0.18, 0.34, 0.55) * 0.10;
-  return rounded0(clamp(score * 100, 0, 100));
+  const components = [
+    { score: scoreComponent(inputs.waistToShoulder, 0.45, 0.75), weight: 0.30 },
+    { score: scoreComponent(inputs.waistToHip, 0.68, 1.00), weight: 0.20 },
+    { score: scoreComponent(inputs.waistToHeight, 0.18, 0.34), weight: 0.15 },
+    { score: scoreComponent(inputs.bodyAreaRatio, 0.26, 0.42), weight: 0.15 },
+    { score: consistencyScoreFromSpread(inputs.frontBackWaistSpread), weight: 0.10 },
+  ];
+  if (finiteNumber(inputs.sideWaistToHeight) != null) {
+    components.push({ score: scoreComponent(inputs.sideWaistToHeight, 0.18, 0.34), weight: 0.10 });
+  }
+  const totalWeight = components.reduce((sum, item) => sum + item.weight, 0);
+  const weighted = components.reduce((sum, item) => sum + item.score * item.weight, 0);
+  return rounded0(clamp((weighted / totalWeight) * 100, 0, 100));
 }
 
 export function leannessBandForScore(score) {
