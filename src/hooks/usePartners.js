@@ -283,7 +283,13 @@ export default function usePartners(userId, tier) {
       });
     } catch (_) {
       if (!isCurrentRequest()) return;
-      setState({ ...EMPTY, loading: false, error: true, reload: load });
+      setState((prev) => {
+        const hasUsablePartnerState = (prev.pairs || []).length > 0 || !!prev.pendingInvite || !!prev.partnership;
+        if (hasUsablePartnerState) {
+          return { ...prev, loading: false, error: false, reload: load };
+        }
+        return { ...EMPTY, loading: false, error: true, reload: load };
+      });
     }
   }, [userId, tier]);
 

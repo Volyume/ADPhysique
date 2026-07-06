@@ -141,8 +141,8 @@ describe('load error state', () => {
     mockHook.value = base({ error: true, reload });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain("Couldn't load partners");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't refresh partners");
+    expect(text).toContain('We could not read your partner connection right now.');
     expect(text).not.toContain('Train with a partner');
     await press(tree, 'Try again');
     expect(reload).toHaveBeenCalledTimes(1);
@@ -193,8 +193,8 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('Next step');
-    expect(text).toContain('Choose how many sessions you plan this week. Sam sees the number only, not your workout plan.');
+    expect(text).toContain('This week with Sam');
+    expect(text).toContain('Set how many sessions you plan to train this week. Sam sees only that number, not your plan.');
     expect(text).toContain('Your partner only sees the items listed below and cards you choose to send. Food, coach notes, body metrics and photos stay private.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('You have logged 2 of 4.');

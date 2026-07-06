@@ -990,8 +990,8 @@ export default function PartnerScreen({ route }) {
         <View style={styles.errorWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load partners"
-            text="Check your connection and try again."
+            title="Couldn't refresh partners"
+            text="We could not read your partner connection right now. Try again in a moment."
             actionLabel="Try again"
             onAction={p.reload}
           />
