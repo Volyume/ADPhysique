@@ -20,17 +20,17 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   let primaryAction = { key: 'share_wins', label: 'Choose a win', accessibilityLabel: 'Choose a win to share' };
 
   if (!myAimSet) {
-    headline = `Choose how many sessions you plan this week. ${name} sees the number only, not your workout plan.`;
+    headline = `Set how many sessions you plan to train this week. ${name} sees only that number, not your plan.`;
     primaryAction = { key: 'set_aim', label: 'Set this week\'s sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `Send ${name} one fixed cheer for today. It is a quick acknowledgement, not a chat or feed.`;
+    headline = `Send ${name} one fixed cheer for today. It is a quick acknowledgement, not a message thread or feed.`;
     primaryAction = { key: 'cheer', label: 'Choose a cheer', accessibilityLabel: 'Choose a cheer for today' };
   } else if (pair.weekKept) {
     headline = `Last week is marked as kept. ${name} still only sees the items listed below and cards you send.`;
   }
 
   return Object.freeze({
-    title: 'Next step',
+    title: `This week with ${name}`,
     headline,
     primaryAction,
     privacyLine: PARTNER_SUPPORT_PRIVACY_LINE,

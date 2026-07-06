@@ -134,6 +134,38 @@ describe('usePartners load error state', () => {
     }));
   });
 
+  test('a failed refresh keeps the last usable partner state visible', async () => {
+    db.getPartnershipsLocal.mockResolvedValueOnce([{
+      id: 'pair1',
+      status: 'active',
+      memberA: 'me',
+      memberB: 'sam',
+      partnerFirstName: 'Sam',
+      streakEnabled: true,
+      acceptedAt: 1,
+    }]);
+    db.getActivePartnerCount.mockResolvedValueOnce(1);
+    const ref = {};
+    function Probe() {
+      Object.assign(ref, usePartners('me', 'pro'));
+      return null;
+    }
+
+    await act(async () => { create(<Probe />); });
+    await flush();
+    expect(ref.error).toBe(false);
+    expect(ref.pairs).toHaveLength(1);
+
+    db.getPartnershipsLocal.mockRejectedValueOnce(new Error('temporary read failure'));
+    await act(async () => { await ref.reload(); });
+    await flush();
+
+    expect(ref.loading).toBe(false);
+    expect(ref.error).toBe(false);
+    expect(ref.pairs).toHaveLength(1);
+    expect(ref.pairs[0]).toEqual(expect.objectContaining({ id: 'pair1', partnerFirstName: 'Sam' }));
+  });
+
   test('older partnership reads cannot overwrite a newer load', async () => {
     const older = deferred();
     const newer = deferred();

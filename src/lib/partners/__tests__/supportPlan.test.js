@@ -10,8 +10,8 @@ describe('partner support plan', () => {
 
   test('starts with a calm aim when the user has not set one', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
-    expect(plan.title).toBe('Next step');
-    expect(plan.headline).toBe('Choose how many sessions you plan this week. Sam sees the number only, not your workout plan.');
+    expect(plan.title).toBe('This week with Sam');
+    expect(plan.headline).toBe('Set how many sessions you plan to train this week. Sam sees only that number, not your plan.');
     expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: "Set this week's sessions" });
     expect(plan.steps.find((step) => step.key === 'aim')).toMatchObject({
       label: 'Your sessions',
@@ -31,7 +31,7 @@ describe('partner support plan', () => {
 
   test('routes to cheer when aim is set and the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is a quick acknowledgement, not a chat or feed.');
+    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is a quick acknowledgement, not a message thread or feed.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Choose a cheer' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       label: 'Optional sharing',
