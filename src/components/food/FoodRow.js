@@ -13,7 +13,7 @@ export const SOURCE_LABEL = {
 };
 
 // Per-100g foods (curated staples, some database rows) carry no serving
-// size. Fall back to a 100g basis so the row shows "100g · X kcal" rather
+// size. Fall back to a 100g basis so the row shows "100g - X kcal" rather
 // than "nullg".
 export function servingGrams(food) {
   return food?.serving_g && food.serving_g > 0 ? food.serving_g : 100;
@@ -29,7 +29,17 @@ export function kcalForServing(food) {
 // signal "you've said you don't eat this". Tapping still works
 // (the user can deliberately log a disliked food); it only
 // affects coach suggestions and the Favourites surface.
-export default function FoodRow({ food, isFav, preference, onPress, onLongPress, onAdd, longPressHint }) {
+export default function FoodRow({
+  food,
+  isFav,
+  preference,
+  onPress,
+  onLongPress,
+  onAdd,
+  addLabel = 'Plate',
+  addAccessibilityLabel,
+  longPressHint,
+}) {
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
   // kcalForServing stays in kcal (other callers/tests depend on the numeric
   // helper). Energy DISPLAY unit (kcal | kj) is applied here, at the render
@@ -53,21 +63,21 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
       accessibilityLabel={`${food.name}, ${kcalPerServing != null ? toEnergy(kcalPerServing, energyUnit) : '?'} ${energyWord} per serving. ${a11yPref}`}
       accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
     >
-      <View style={{ flex: 1 }}>
+      <View style={styles.rowMain}>
         <Text
           style={[styles.rowName, isDislike && styles.rowNameMuted]}
           numberOfLines={1}
         >
           {food.name}
-          {pref === 'fav' ? '  ★' : ''}
+          {pref === 'fav' ? '  Starred' : ''}
         </Text>
         <Text
           style={[styles.rowMeta, isDislike && styles.rowMetaMuted]}
           numberOfLines={1}
         >
-          {food.brand ? `${food.brand} · ` : ''}
+          {food.brand ? `${food.brand} - ` : ''}
           {food.serving_label || `${servingGrams(food)}g`}
-          {kcalPerServing != null ? ` · ${toEnergy(kcalPerServing, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
+          {kcalPerServing != null ? ` - ${toEnergy(kcalPerServing, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
           {sourceTag ? `  ${sourceTag}` : ''}
         </Text>
       </View>
@@ -76,15 +86,17 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
         : null}
       {onAdd ? (
         <TouchableOpacity
+          style={styles.addBtn}
           onPress={onAdd}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel={`Add ${food.name}`}
+          accessibilityLabel={addAccessibilityLabel || `Add ${food.name} to plate`}
         >
-          <Ionicons name="add-circle" size={26} color={colors.primary} />
+          <Ionicons name="add" size={16} color={colors.primary} />
+          <Text style={styles.addBtnText}>{addLabel}</Text>
         </TouchableOpacity>
       ) : (
-        <Ionicons name="add-circle-outline" size={22} color={colors.primary} importantForAccessibility="no" accessibilityElementsHidden />
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />
       )}
     </TouchableOpacity>
   );
@@ -95,10 +107,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
-    minHeight: 56,
+    minHeight: 64,
   },
+  rowMain: { flex: 1, minWidth: 0, paddingRight: spacing.sm },
   rowName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   rowNameMuted: { color: colors.textMuted, textDecorationLine: 'line-through' },
   rowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   rowMetaMuted: { color: colors.textMuted, opacity: 0.7 },
+  addBtn: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    borderRadius: 999,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  rowChevron: { marginLeft: spacing.xs },
 });

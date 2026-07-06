@@ -145,6 +145,7 @@ export default function PhotoDetailsSheet({
               variant="tertiary"
               size="sm"
               fullWidth={false}
+              style={styles.actionButton}
               onPress={onCancel}
               accessibilityLabel="Cancel adding the photo"
             />
@@ -152,6 +153,7 @@ export default function PhotoDetailsSheet({
               title="Save photo"
               size="sm"
               fullWidth={false}
+              style={styles.actionButton}
               onPress={() => onConfirm?.({ takenAt: dateMs, pose })}
               accessibilityLabel="Save the progress photo"
             />
@@ -213,5 +215,15 @@ const styles = StyleSheet.create({
   poseOptionActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   poseOptionText: { ...type.label, color: colors.textSecondary },
   poseOptionTextActive: { color: colors.primary },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.xl },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  actionButton: {
+    flexGrow: 1,
+    minWidth: 136,
+  },
 });

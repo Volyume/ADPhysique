@@ -897,12 +897,16 @@ export default function PartnerScreen({ route }) {
           style: 'destructive',
           onPress: async () => {
             const b = await p.block(pair.partnerId);
-            if (!b?.ok) logError('PartnerScreen.block', new Error(b?.error || 'unknown'), { userId: user?.id });
+            if (!b?.ok) {
+              logError('PartnerScreen.block', new Error(b?.error || 'unknown'), { userId: user?.id });
+              toast.show('Could not block right now. Check your connection and try again.', { variant: 'error' });
+              return;
+            }
             const r = await p.unpair(pair.id);
-            if (r?.ok) toast.show('Partnership ended', { variant: 'success' });
+            if (r?.ok) toast.show('Partner blocked and partnership ended', { variant: 'success' });
             else {
               logError('PartnerScreen.blockUnpair', new Error(r?.error || 'unknown'), { userId: user?.id });
-              toast.show('Could not block right now. Check your connection and try again.', { variant: 'error' });
+              toast.show('They are blocked, but the partnership could not be ended. Try ending the partnership again.', { variant: 'error', duration: 6000 });
             }
           },
         },
@@ -1348,7 +1352,17 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
 
 function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
   const [checking, setChecking] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [checkLine, setCheckLine] = useState('');
+  async function shareAgain() {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      await onShareAgain?.();
+    } finally {
+      setSharing(false);
+    }
+  }
   async function checkConnection() {
     if (checking) return;
     setChecking(true);
@@ -1376,14 +1390,20 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
       <Text style={styles.pendingHint}>Share the same invite again if they missed it. It still only pairs one person.</Text>
       {checkLine ? <Text style={styles.pendingCheckLine}>{checkLine}</Text> : null}
       <TouchableOpacity
-        onPress={onShareAgain}
-        style={styles.pendingPrimary}
+        onPress={shareAgain}
+        style={[styles.pendingPrimary, sharing && styles.pendingPrimaryDisabled]}
+        disabled={sharing}
         hitSlop={hitSlop}
         accessibilityRole="button"
+        accessibilityState={{ disabled: sharing }}
         accessibilityLabel="Share invite again"
       >
-        <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.pendingPrimaryText}>Share invite again</Text>
+        {sharing ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
+        )}
+        <Text style={styles.pendingPrimaryText}>{sharing ? 'Opening share...' : 'Share invite again'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={checkConnection}

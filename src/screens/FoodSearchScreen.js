@@ -775,14 +775,24 @@ export default function FoodSearchScreen({ navigation, route }) {
       return (
         <View style={styles.noResults}>
           <Text style={styles.noResultsText}>No matches for "{query.trim()}".</Text>
-          <TouchableOpacity
-            style={styles.noResultsBtn}
-            onPress={gotoCustomReplace}
-            accessibilityRole="button"
-            accessibilityLabel="Create a custom food"
-          >
-            <Text style={styles.noResultsBtnText}>Create a custom food</Text>
-          </TouchableOpacity>
+          <View style={styles.noResultsActions}>
+            <TouchableOpacity
+              style={[styles.noResultsBtn, styles.noResultsBtnSecondary]}
+              onPress={() => setQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel="Clear food search"
+            >
+              <Text style={styles.noResultsBtnSecondaryText}>Clear search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.noResultsBtn}
+              onPress={gotoCustomReplace}
+              accessibilityRole="button"
+              accessibilityLabel="Create a custom food"
+            >
+              <Text style={styles.noResultsBtnText}>Create a custom food</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1207,12 +1217,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noResultsText: { ...type.body, color: colors.textSecondary, marginBottom: spacing.md, textAlign: 'center' },
+  noResultsActions: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
   noResultsBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
     borderRadius: radius.md,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   noResultsBtnText: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  noResultsBtnSecondary: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  noResultsBtnSecondaryText: { color: colors.textPrimary, fontWeight: fontWeight.bold },
 
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

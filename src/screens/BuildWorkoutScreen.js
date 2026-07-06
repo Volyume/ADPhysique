@@ -335,27 +335,26 @@ export default function BuildWorkoutScreen({ navigation }) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button
-          testID="volyume-btn-start-training"
-          title={`Start training${exercises.length > 0 ? ` (${exercises.length})` : ''}`}
-          icon="play-circle"
-          size="lg"
-          loading={starting}
-          disabled={exercises.length === 0}
-          onPress={handleStartTraining}
-        />
         {exercises.length === 0 ? (
           <Button
             testID="volyume-btn-start-empty"
             title="Start empty"
             icon="play-skip-forward-outline"
-            variant="secondary"
             size="lg"
             loading={starting}
             onPress={handleSkip}
             accessibilityLabel="Start an empty workout"
           />
-        ) : null}
+        ) : (
+          <Button
+            testID="volyume-btn-start-training"
+            title={`Start training (${exercises.length})`}
+            icon="play-circle"
+            size="lg"
+            loading={starting}
+            onPress={handleStartTraining}
+          />
+        )}
       </View>
 
       {/* Travel Mode equipment picker */}

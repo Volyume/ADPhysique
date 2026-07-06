@@ -5,9 +5,10 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'NutritionTargetsScree
 
 describe('NutritionTargetsScreen meal guidance', () => {
   test('surfaces the exact recommended meal count and can store it for Eat surfaces', () => {
-    expect(source).toMatch(/Recommended: \$\{recommended\} feedings for this protein target/);
+    expect(source).toMatch(/Recommended: \$\{recommended\} meals per day for this protein target/);
     expect(source).toMatch(/Use recommended/);
     expect(source).toMatch(/changeMealsPerDay\(recommended\)/);
-    expect(source).toMatch(/Use Volyume's recommended \$\{recommended\} feedings/);
+    expect(source).toMatch(/Use Volyume's recommended \$\{recommended\} meals per day/);
+    expect(source).not.toMatch(/feedings/);
   });
 });
