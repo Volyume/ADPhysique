@@ -44,7 +44,7 @@ import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
 import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
-import { SHARE_WIN_POLICY, SHARE_WIN_TYPES } from '../lib/partners/shareWins';
+import { SHARE_WIN_CARD_RULES, SHARE_WIN_POLICY, SHARE_WIN_TYPES } from '../lib/partners/shareWins';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
@@ -1014,6 +1014,14 @@ function ShareWinsSheetBody() {
       <Text style={styles.sheetHeading}>Shareable wins</Text>
       <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
       <Text style={styles.shareWinDefault}>Default: {SHARE_WIN_POLICY.defaultState}.</Text>
+      <View style={styles.shareWinRules}>
+        {SHARE_WIN_CARD_RULES.map((rule) => (
+          <View key={rule} style={styles.shareWinRuleRow}>
+            <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
+            <Text style={styles.shareWinRuleText}>{rule}</Text>
+          </View>
+        ))}
+      </View>
       {SHARE_WIN_TYPES.map((typeItem) => (
         <View key={typeItem.key} style={styles.shareWinType}>
           <Text style={styles.shareWinTitle}>{typeItem.title}</Text>
@@ -1318,6 +1326,13 @@ const styles = StyleSheet.create({
   },
   ackRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
   shareWinDefault: { ...type.label, color: colors.textPrimary },
+  shareWinRules: { gap: spacing.sm },
+  shareWinRuleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  shareWinRuleText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   shareWinType: {
     gap: spacing.xxs,
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -184,6 +184,9 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Shareable wins');
     expect(text).toContain('Partner wins are off by default.');
     expect(text).toContain('Default: Ask every time.');
+    expect(text).toContain('Ask every time before a card is sent.');
+    expect(text).toContain('One card, one moment, one partner.');
+    expect(text).toContain('Future delivery must support revoke and delete.');
     expect(text).toContain('Workout summary');
     expect(text).toContain('Personal record');
     expect(text).toContain('Block milestone');
