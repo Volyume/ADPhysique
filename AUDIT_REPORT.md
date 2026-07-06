@@ -392,9 +392,16 @@ Status: release decision.
 - Compare/share surfaces now use clearer premium framing: `Compare Check-Ins`, pose-matched scan comparison, and `Private Share Card` copy with explicit one-image/privacy boundaries.
 - Check-In cadence now reads calmly as `Capture baseline`, `Ready now`, `Tomorrow`, or `In N days`; the scan cadence gate now redirects to a normal Check-In without forcing a scan read.
 - Check-In cards now show deterministic setup quality (`Strong setup`, `Usable setup`, `Partial setup`) and partial cards can launch guided capture directly for the next missing pose.
+- Physique Studio now has a deterministic `Next best action` layer that guides users to complete a partial Check-In, compare scans, compare matched Check-Ins, or capture the next baseline depending on their current state.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
 - Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
+
+### Partner Optional Sharing Direction
+
+- Optional partner sharing makes product sense if it is explicit, granular and event-based: share a completed workout summary, a PR, a block milestone, a consistency milestone, or a user-generated progress card.
+- It should not become blanket partner access to workout history, food, bodyweight, coach notes, body metrics, private notes or progress photos.
+- Recommended model: `Share a win`, with per-event consent, per-category settings, partner acknowledgement only through curated responses, revocation/delete handling, and calm/ED suppression for body/progress surfaces.
 
 ## Product And UX Notes
 

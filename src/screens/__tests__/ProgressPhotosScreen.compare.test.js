@@ -209,6 +209,16 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
 
+  test('next best action guides the user to complete a partial latest Check-In', async () => {
+    const tree = await render([NEW]);
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Next best action');
+    expect(text).toContain('Complete latest Check-In');
+    await press(tree, 'Next best action: Complete with Front');
+    expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
+    expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
+  });
+
   test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());

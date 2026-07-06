@@ -1,6 +1,7 @@
 import {
   buildScanPhotoNameSet,
   buildProgressScanFinishPayload,
+  buildPhysiqueStudioNextAction,
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
@@ -73,6 +74,40 @@ describe('progressPhotosController transforms', () => {
     expect(progressCheckInCadenceLabel(latest, latest + min, min)).toBe('Ready now');
     expect(progressCheckInCadenceLabel(latest, latest + min - 86400000, min)).toBe('Tomorrow');
     expect(progressCheckInCadenceLabel(latest, latest + min - 3 * 86400000, min)).toBe('In 3 days');
+  });
+
+  test('buildPhysiqueStudioNextAction completes the latest partial Check-In before anything else', () => {
+    const partial = { type: 'checkin', takenAt: 300, poses: ['side'], cover: { uri: 'file:///side.jpg' } };
+    const olderComplete = { type: 'checkin', takenAt: 100, poses: ['front', 'side', 'back'] };
+
+    expect(buildPhysiqueStudioNextAction({
+      checkIns: [olderComplete, partial],
+      scans: [{ id: 's1', status: 'complete', requiredPosesComplete: true }, { id: 's2', status: 'complete', requiredPosesComplete: true }],
+    })).toEqual({
+      kind: 'complete_pose',
+      title: 'Complete latest Check-In',
+      body: 'Add the missing pose now so this Check-In is easier to compare later.',
+      cta: 'Complete with Front',
+      pose: 'front',
+      checkIn: partial,
+    });
+  });
+
+  test('buildPhysiqueStudioNextAction prioritises scan compare, matched check-in compare, then capture', () => {
+    const completeA = { type: 'checkin', takenAt: 100, poses: ['front', 'side', 'back'] };
+    const completeB = { type: 'checkin', takenAt: 200, poses: ['front', 'side', 'back'] };
+    const scans = [
+      { id: 's1', status: 'complete', requiredPosesComplete: true },
+      { id: 's2', status: 'measured', requiredPosesComplete: true },
+    ];
+
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).kind).toBe('compare_scans');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }).kind)
+      .toBe('capture');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)
+      .toBe('compare_checkins');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [] }).kind).toBe('capture');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [], readOnly: true })).toBeNull();
   });
 
   test('buildProgressScanFinishPayload preserves profile-first scan profile precedence', () => {
