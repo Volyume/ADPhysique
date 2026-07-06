@@ -1,0 +1,1 @@
+Trigger Android build for nutrition day summary checkpoint.
