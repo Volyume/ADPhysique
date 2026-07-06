@@ -55,6 +55,13 @@ function StatTile({ label, value, sub }) {
   );
 }
 
+function scanConfidenceLabel(confidence) {
+  if (confidence === 'high') return 'High confidence';
+  if (confidence === 'moderate') return 'Moderate confidence';
+  if (confidence === 'low') return 'Low confidence';
+  return 'Visual scan';
+}
+
 function Row({ icon, label, sub, onPress, pro, status = null }) {
   const statusLabel = profileRowStatusLabel(status);
   const accessibility = buildProfileRowAccessibility({ label, sub, status, pro });
@@ -190,10 +197,19 @@ export default function AthleteProfileScreen({ navigation }) {
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
-  const scanText = summary.scan?.leannessBandLabel || 'No scan yet';
-  const scanSub = summary.scan?.visualLeannessScore != null
-    ? `Visual score ${Math.round(summary.scan.visualLeannessScore)} - ${summary.scan.confidence || 'low'} confidence`
-    : 'Physique Scan is a visual signal, not exact body fat';
+  const hasPhysiqueScore = summary.scan?.visualLeannessScore != null;
+  const physiqueTile = hasPhysiqueScore ? {
+    label: 'Physique',
+    value: [
+      summary.scan?.leannessBandLabel || null,
+      `${Math.round(summary.scan.visualLeannessScore)}/100`,
+    ].filter(Boolean).join(' - '),
+    sub: `${scanConfidenceLabel(summary.scan?.confidence)} - not body fat`,
+  } : {
+    label: 'Body fat',
+    value: bodyFatText,
+    sub: summary.bodyFatLoggedAt ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry` : 'Manual entry only',
+  };
   const freshness = buildProfileFreshness({
     latestMetricAt: summary.latestMetric?.loggedAt ?? summary.latestMetric?.logged_at ?? summary.bodyFatLoggedAt,
     latestScanAt: summary.scan?.capturedAt ?? summary.scan?.captured_at,
@@ -255,8 +271,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
-          <StatTile label="Body fat" value={bodyFatText} sub={summary.bodyFatLoggedAt ? formatDate(summary.bodyFatLoggedAt) : 'Manual entry only'} />
-          <StatTile label="Physique Scan" value={scanText} sub={scanSub} />
+          <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
           <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and core lifts'} />
         </View>
 
