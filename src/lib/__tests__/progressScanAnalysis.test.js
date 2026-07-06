@@ -130,7 +130,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.range).toBeNull();
   });
 
-  test('model-backed silhouette signals produce a Volyume physique assessment without public body-fat fields', () => {
+  test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
     const estimate = estimateBodyFatFromScanAssets({
       assets: modelBackedAssets,
       sex: 'male',
@@ -175,7 +175,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
     expect(out.copySummary).toMatch(/Volyume Physique Score 68\/100/i);
-    expect(out.copySummary).toMatch(/not a body-fat percentage/i);
+    expect(out.copySummary).toMatch(/not a body fat percentage/i);
   });
 
   test('known bias flags concretely lower scan confidence, not just copy', () => {
@@ -309,7 +309,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
     expect(out.measuredSignalsOnly).toBe(true);
     expect(out.comparisonStatus).toBe('comparable');
-    expect(out.summary).toMatch(/not a body-fat estimate/i);
+    expect(out.summary).toMatch(/not a body fat estimate/i);
     expect(out.summary).not.toMatch(/estimate moved|estimate is/i);
     expect(out.summary).toMatch(/waist-to-height/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
@@ -377,7 +377,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.measuredSignalsOnly).toBe(true);
     expect(out.summary).toMatch(/Volyume Physique Score is up 12 points/i);
     expect(out.summary).toMatch(/visual physique signal/i);
-    expect(out.summary).not.toMatch(/body-fat ranges|midpoint|provisional photo-scan estimate/i);
+    expect(out.summary).not.toMatch(/body fat ranges|midpoint|provisional photo-scan estimate/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
   });
 

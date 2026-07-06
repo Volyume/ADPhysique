@@ -11,7 +11,7 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('deterministic, explainable coaching system, not a chat coach');
   });
 
-  test('optional body composition points users towards Physique Score, not body-fat guessing', () => {
+  test('optional body composition points users towards Physique Score, not body fat guessing', () => {
     expect(SOURCE).toContain('Volyume Physique Score for visual progress');
     expect(SOURCE).toContain('without asking you to guess exact body fat');
   });

@@ -10,7 +10,7 @@
 //    buildLiftProgressRows over the SAME recent window as the composition read.
 //  - NA-coaching-3: "weight broadly flat" reuses the screen's phase rule
 //    (|slope| <= 0.15 kg per entry over the last <=8 weight entries, mirroring
-//    BodyMetricsScreen.js:105-128); "composition moved" = body-fat changed
+//    BodyMetricsScreen.js:105-128); "composition moved" = body fat changed
 //    >= 0.5 percentage points OR any single site changed >= 1.0 cm; the strength
 //    stream counts when a tracked lift's estimated-1RM rose >= 2.5 kg (the
 //    smallest standard plate-pair increment) over the window.

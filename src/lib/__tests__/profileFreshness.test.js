@@ -12,7 +12,7 @@ describe('profileFreshness', () => {
     expect(freshnessTone(out.bodyMetrics.state)).toBe('attention');
   });
 
-  test('uses weekly, four-week and lift cadences without exact body-fat promises', () => {
+  test('uses weekly, four-week and lift cadences without exact body fat promises', () => {
     const out = buildProfileFreshness({
       latestMetricAt: NOW - 8 * DAY,
       latestScanAt: NOW - 29 * DAY,

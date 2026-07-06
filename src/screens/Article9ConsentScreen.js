@@ -190,7 +190,7 @@ export default function Article9ConsentScreen({ navigation }) {
         ]} />
 
         <Text style={styles.body}>
-          Physique Scan is a visual progress tool, not a medical assessment, DEXA scan, or exact body-fat percentage. It may abstain or ask for a retake when photo quality is poor.
+          Physique Scan is a visual progress tool, not a medical assessment, DEXA scan, or exact body fat percentage. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
         <Text style={styles.subhead}>An automated safety check:</Text>

@@ -254,7 +254,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
 function BodyFatTrendChart({ entries }) {
   const withData = useMemo(() => {
     return entries
-      // DATA-001: > 0, not just non-null (a 0 or negative body-fat is corrupt).
+      // DATA-001: > 0, not just non-null (a 0 or negative body fat is corrupt).
       .filter(e => Number(e.body_fat) > 0)
       .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
       .slice(-12);
@@ -972,10 +972,10 @@ export default function BodyMetricsScreen() {
         ) : (
           <EmptyState
             icon="body-outline"
-            title="Your progress starts here"
+            title="No body metrics yet"
             text={onboardingWeightKg && !readOnly
-              ? `We have your onboarding bodyweight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.`
-              : 'Log your body weight and measurements to track your physique over time.'}
+              ? `We have your onboarding bodyweight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Log a fresh weight to start the trend.`
+              : 'Log body weight or measurements when you want this trend to start.'}
           />
         )}
 
@@ -1253,7 +1253,7 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
   // S4 (world-class audit 04a): "Make a card" extended to this insight, the
   // most only-Volyume read in the app, previously unshareable. Privacy gate
   // lives in buildRecompShareParams: it returns null unless the strength
-  // signal fired, so a share card NEVER carries a body-fat or measurement
+  // signal fired, so a share card NEVER carries a body fat or measurement
   // delta, only ever the lift gain (pure training data).
   const shareParams = onMakeCard ? buildRecompShareParams(vm, weightUnits) : null;
 

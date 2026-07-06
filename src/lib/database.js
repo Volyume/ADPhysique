@@ -3780,12 +3780,12 @@ export async function getBodyWeightNearestTo(userId, t) {
   return bodyMetricsRepository.getBodyWeightNearestTo(userId, t);
 }
 
-// Most recent logged body composition that actually carries a body-fat figure.
+// Most recent logged body composition that actually carries a body fat figure.
 // Used by the plan-update and nutrition-target flows to recover BF% + method for
 // users who onboarded before the profile started persisting them, so the BMR
 // formula (Katch-McArdle when a credible BF% exists) stays consistent across
 // onboarding, Update Your Plan and the manual recalc. Read-only, returns null
-// when the user has never logged a body-fat reading.
+// when the user has never logged a body fat reading.
 export async function getLatestBodyComposition(userId) {
   return bodyMetricsRepository.getLatestBodyComposition(userId);
 }

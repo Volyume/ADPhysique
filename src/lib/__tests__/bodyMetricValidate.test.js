@@ -79,7 +79,7 @@ describe('validateBodyMetricForm — DATA-001 gate', () => {
     },
   );
 
-  test('valid body-fat-only entry succeeds', () => {
+  test('valid body fat-only entry succeeds', () => {
     const r = validateBodyMetricForm({ ...base, body_fat: '18' }, { bwu: 'kg' });
     expect(r.ok).toBe(true);
     expect(r.data.bodyFatPercent).toBe(18);

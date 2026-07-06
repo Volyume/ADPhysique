@@ -46,7 +46,7 @@ describe('Progress Scan safety-floor isolation', () => {
     expect(isAuthoritativeBodyFatSource('dexa')).toBe(true);
   });
 
-  test('a high photo_scan body-fat value cannot lower the FFM calorie floor', () => {
+  test('a high photo_scan body fat value cannot lower the FFM calorie floor', () => {
     const photoScan = computeFFMFloor(80, { bodyFatPercent: 45, bodyFatSource: 'photo_scan', sex: 'male' });
     const fallback = computeFFMFloor(80, { bodyFatPercent: null, bodyFatSource: null, sex: 'male' });
     const dangerousIfAuthoritative = computeFFMFloor(80, { bodyFatPercent: 45, bodyFatSource: 'dexa', sex: 'male' });

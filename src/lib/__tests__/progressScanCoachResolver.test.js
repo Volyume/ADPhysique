@@ -21,7 +21,7 @@ describe('Progress Scan out-of-engine coach resolver', () => {
     expect(resolveProgressScanCoachNote({ scan: { ...scan, source: 'dexa' } })).toBeNull();
   });
 
-  test('visual context never requires or exposes a body-fat range', () => {
+  test('visual context never requires or exposes a body fat range', () => {
     expect(resolveProgressScanCoachNote({ scan })).toMatchObject({
       rangeLow: null,
       rangeHigh: null,

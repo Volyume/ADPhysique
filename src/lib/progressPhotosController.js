@@ -134,7 +134,7 @@ export function buildPhysiqueStudioNextAction({
       reason: `${visibleScans.length} scored photo sets are ready.`,
       detailItems: [
         'The score shows broad change, not an exact number.',
-        'This is not an exact body-fat percentage.',
+        'This is not an exact body fat percentage.',
       ],
       cta: 'Compare scores',
     };

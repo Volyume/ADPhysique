@@ -120,7 +120,7 @@ export const FFM_FLOOR_KCAL_PER_KG = 30;
 // averages. Conservative defaults chosen so the floor errs on the
 // higher (safer) side rather than the lower side that would let the
 // engine keep cutting under-fuelled users. Sex-aware because typical
-// body-fat percentages differ meaningfully by sex.
+// body fat percentages differ meaningfully by sex.
 const FFM_FALLBACK_FRACTION = {
   male:   0.78, // ~22% BF (conservative for typical male trainee)
   female: 0.72, // ~28% BF (conservative for typical female trainee)
@@ -185,7 +185,7 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
 }
 
 // Generic EWMA over a plain numeric series, same smoothing factor as the
-// weight trend. Used for the body-fat trend chart (GAP row 25) so the
+// weight trend. Used for the body fat trend chart (GAP row 25) so the
 // line follows the trend rather than the daily noise. Non-numeric or
 // empty input yields []. Each output is rounded to 2 dp.
 export function ewmaValues(values, alpha = EWMA_ALPHA) {
@@ -577,7 +577,7 @@ export function isAuthoritativeBodyFatSource(bodyFatSource) {
 function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSource) {
   const useKatchMcArdle =
     Number.isFinite(bodyFatPercent) &&
-    // Range guard: a corrupt or fat-fingered body-fat reading (negative, 0,
+    // Range guard: a corrupt or fat-fingered body fat reading (negative, 0,
     // or > 60%) would poison the lean-mass formula and produce absurd calorie
     // and protein targets. Mirror the same physiological band computeFFMFloor
     // already enforces, and fall back to Mifflin outside it.

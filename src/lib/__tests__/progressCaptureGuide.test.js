@@ -45,7 +45,7 @@ describe('progress capture guide copy', () => {
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
-    expect(prompt).toContain('not a body-fat estimate');
+    expect(prompt).toContain('not a body fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
     expect(how).toContain('Volyume Physique Score is our own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');

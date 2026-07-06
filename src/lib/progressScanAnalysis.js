@@ -533,13 +533,13 @@ export function buildPhysiqueAssessment({
 function progressScanAssessmentCopy(assessment = null) {
   if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful scan result.';
   if (assessment.scanConfidenceTier === 'not_enough' || assessment.visualLeannessScore == null) {
-    return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, full body in frame, and the same setup next time.';
+    return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
   const score = `${assessment.visualLeannessScore}/100`;
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
-  return `Volyume Physique Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body-fat percentage.`;
+  return `Volyume Physique Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -900,7 +900,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignalLabel: progressSignal?.label ?? null,
     progressDirection: progressSignal?.direction ?? null,
     lines,
-    summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal, not a body-fat estimate or target-setting input.`,
+    summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal, not a body fat estimate or target-setting input.`,
     trendSummary,
     coachSummary: `${trendSummary} I am treating it as photo context only.`,
   };
@@ -920,7 +920,7 @@ export function explainProgressScan(scan) {
   if (scan.analysisStatus === 'measured') {
     return signals.deltaExplanation?.trendSummary
       || scan.copySummary
-      || 'The scan measured outline signals only. It is not a body-fat estimate.';
+      || 'The scan measured outline signals only. It is not a body fat estimate.';
   }
   return 'The scan is saved. Physique scan analysis is not available for this scan.';
 }
@@ -1036,10 +1036,10 @@ function estimatorUnavailableCopy({ assets = [], sex = null, heightCm = null, we
     return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful scan score.';
   }
   if (!normalisedSex(sex)) {
-    return 'Scan measured and saved. The visual score can still be used as photo context; body-fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The visual score can still be used as photo context; body fat percentages are not shown from photos.';
   }
   if (bmiFrom(heightCm, weightKg) == null) {
-    return 'Scan measured and saved. The visual score can still be used as photo context; body-fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The visual score can still be used as photo context; body fat percentages are not shown from photos.';
   }
   return 'Scan measured and saved. The measured signals were not complete enough for a useful score.';
 }
