@@ -8,29 +8,29 @@ export function trendOnlyScanCopy(scan) {
   if (direction === 'down') return 'Progress Signal: positive against the last like-for-like scan.';
   if (direction === 'up') return 'Progress Signal: drift to watch against the last like-for-like scan.';
   if (direction === 'steady') return 'Progress Signal: holding steady.';
-  return 'Trend context: baseline scan saved.';
+  return 'Trend context: baseline photo set saved.';
 }
 
 export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Scan saved privately. Physique scan details are hidden right now.';
+  if (suppressed) return 'Photo set saved privately. Score details are hidden right now.';
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume Physique Score ${assessment.visualLeannessScore}/100`;
+    const score = `Volyume Physique Score ${Math.round(Number(assessment.visualLeannessScore))}/100`;
     const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
     const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
     if (hideExact) {
-      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed scan score is hidden. This is not a body-fat percentage.`;
+      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden. This is not a body fat percentage.`;
     }
-    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual progress score, not a body-fat percentage.']
+    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual progress score, not a body fat percentage.']
       .filter(Boolean)
       .join('. ');
   }
   if (scan?.analysisStatus === 'complete' || scan?.analysisStatus === 'measured') {
     return hideExact
       ? trendOnlyScanCopy(scan)
-      : (scan?.copySummary || 'Scan measured and saved. Volyume could not produce a useful score from this photo set yet.');
+      : (scan?.copySummary || 'Photo set measured and saved. Volyume could not produce a useful score from it yet.');
   }
-  return scan?.copySummary || 'Saved as a scan. Analysis is withheld until the photos and profile data are reliable enough.';
+  return scan?.copySummary || 'Saved as a photo set. Analysis is withheld until the photos and profile data are reliable enough.';
 }
 
 export function scanStatsCopy(scan, { suppressed = false, hideExact = false } = {}) {
@@ -41,5 +41,5 @@ export function scanStatsCopy(scan, { suppressed = false, hideExact = false } = 
   if (Array.isArray(stats.poses) && stats.poses.length) {
     parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
   }
-  return parts.length ? parts.join(' | ') : 'Stored scan photos';
+  return parts.length ? parts.join(' | ') : 'Stored photo set';
 }

@@ -91,12 +91,12 @@ describe('ProgressScanCompare component', () => {
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Compare scores');
-    expect(text).toContain('Not body-fat');
+    expect(text).toContain('Not body fat');
     expect(text).toContain('Defined 54/100');
     expect(text).toContain('Lean 66/100');
     expect(text).toContain('Volyume Physique Score is up 12 points');
     expect(text).not.toContain('Stored delta should not render');
-    expect(text).not.toMatch(/\d+-\d+%|BF est|body-fat range/i);
+    expect(text).not.toMatch(/\d+-\d+%|BF est|body fat range/i);
   });
 
   test('hideExact switches to trend-only copy and removes score values', async () => {
@@ -114,7 +114,7 @@ describe('ProgressScanCompare component', () => {
     usePhotoSuppression.mockReturnValue(true);
     const tree = await render([scan('new', 20), scan('old', 1)]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Scan comparison is resting for now.');
+    expect(text).toContain('Score comparison is resting for now.');
     expect(text).not.toContain('66/100');
   });
 });

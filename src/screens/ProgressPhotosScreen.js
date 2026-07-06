@@ -109,6 +109,35 @@ function localDateKey(ms) {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
+function roundedScore(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function progressSignalSentence(label) {
+  if (!label) return null;
+  const clean = String(label)
+    .replace(/^Progress Signal:\s*/i, '')
+    .replace(/^Progress Signal is\s*/i, '')
+    .trim();
+  const lower = clean.toLowerCase();
+  if (!clean) return null;
+  if (lower.includes('baseline')) return 'This is your baseline photo set for future comparisons.';
+  if (lower.includes('inconclusive')) return 'This photo set is saved, but the comparison is not clear enough to judge.';
+  if (lower.includes('holding') || lower.includes('steady')) return 'Your latest like-for-like photo set is holding steady.';
+  if (lower.includes('positive')) {
+    return lower.includes('slight')
+      ? 'Your latest like-for-like photo set is showing a slight positive trend.'
+      : 'Your latest like-for-like photo set is showing a clear positive trend.';
+  }
+  if (lower.includes('drift')) {
+    return lower.includes('slight')
+      ? 'Your latest like-for-like photo set shows a slight drift to watch.'
+      : 'Your latest like-for-like photo set shows drift to review.';
+  }
+  return `${clean}.`;
+}
+
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
 export default function ProgressPhotosScreen({ navigation }) {
@@ -864,14 +893,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.visualLeannessScore != null
-      ? (hideExactScans ? (latestAssessment.leannessBandLabel || 'Saved') : `${Math.round(latestAssessment.visualLeannessScore)}/100`)
+      ? (hideExactScans ? (latestAssessment.leannessBandLabel || 'Saved') : `${roundedScore(latestAssessment.visualLeannessScore)}/100`)
       : (latestScan ? 'Saved' : 'No score yet');
+  const latestSignalSentence = progressSignalSentence(latestAssessment?.progressSignalLabel);
   const currentPhotoText = suppressed
-    ? 'Scan details are hidden for now. Your photos are still private on this phone.'
+    ? 'Score details are hidden for now. Your photos are still private on this phone.'
     : latestPartialCapture
       ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
-      : latestAssessment?.progressSignalLabel
-        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat estimate.`
+      : latestSignalSentence
+        ? `${latestSignalSentence} Volyume Physique Score is a progress score, not a body fat estimate.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
         : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and Physique Score together.');
@@ -896,8 +926,9 @@ export default function ProgressPhotosScreen({ navigation }) {
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
     const scanForDay = scanByDateKey.get(localDateKey(item.takenAt));
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
-    const scoreText = scanScore != null
-      ? (suppressed || hideExactScans ? 'Score hidden' : `Physique ${scanScore}/100`)
+    const roundedScanScore = roundedScore(scanScore);
+    const scoreText = roundedScanScore != null
+      ? (suppressed || hideExactScans ? 'Score hidden' : `Physique ${roundedScanScore}/100`)
       : null;
     const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
@@ -1022,7 +1053,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Take or import front and back photos. Clear sets can receive Volyume Physique Score: a progress signal, confidence and leanness band, not a body-fat estimate.
+              Take or import front and back photos. Clear sets can receive Volyume Physique Score: a progress signal, confidence and leanness band, not a body fat estimate.
             </Text>
           </View>
 
@@ -1282,7 +1313,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         />
       ) : null}
 
-      {/* Scan comparison. This is the Physique Scan specific over-time view:
+      {/* Score comparison. This is the Physique Score specific over-time view:
           dated entries, visual score/band context, measured deltas, and
           pose-matched photos. It self-suppresses through usePhotoSuppression
           too. */}

@@ -30,7 +30,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
   if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scored'} ${assessment.visualLeannessScore}/100`;
+    return `${assessment.leannessBandLabel || 'Scored'} ${Math.round(Number(assessment.visualLeannessScore))}/100`;
   }
   if (assessment?.scanConfidenceTier === 'not_enough') return 'Not enough confidence';
   return scan?.analysisStatus === 'measured' ? 'Measured only' : 'No score';
@@ -103,7 +103,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Compare scores</Text>
-            <Text style={styles.subtitle}>Compare two photo sets with their score trend, confidence and matched poses. Not body-fat.</Text>
+            <Text style={styles.subtitle}>Compare two photo sets with their score trend, confidence and matched poses. Not body fat.</Text>
           </View>
           <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
             <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -111,7 +111,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         </View>
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Scan comparison is resting for now.</Text>
+          <Text style={styles.placeholderText}>Score comparison is resting for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -122,7 +122,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Compare scores</Text>
-          <Text style={styles.subtitle}>Compare two photo sets with their score trend, confidence and matched poses. Not body-fat.</Text>
+          <Text style={styles.subtitle}>Compare two photo sets with their score trend, confidence and matched poses. Not body fat.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
