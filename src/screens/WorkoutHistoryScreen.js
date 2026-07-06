@@ -339,7 +339,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               <View style={styles.cardMeta}>
                 <Ionicons name="time-outline" size={14} color={colors.textMuted} />
                 <Text style={styles.cardMetaText}>{workout.durationMinutes || 0}m</Text>
-                <Text style={styles.cardMetaDivider}>·</Text>
+                <Text style={styles.cardMetaDivider}>-</Text>
                 <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
                 <Text style={styles.cardMetaText}>{workingSetCount} sets</Text>
               </View>

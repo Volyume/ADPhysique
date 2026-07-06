@@ -434,7 +434,7 @@ export default function VolumeHeatmapScreen() {
             '  First tick: the least amount needed to maintain or grow\n' +
             '  Second tick: the sweet spot for growth\n' +
             '  End of bar: beyond this, recovery suffers\n\n' +
-            'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit Volume Targets" button below.'
+            'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit volume targets" button below.'
           } />
         </Card>
 
@@ -553,11 +553,11 @@ export default function VolumeHeatmapScreen() {
           </Card>
         )}
 
-        {/* Edit Volume Targets */}
+        {/* Edit volume targets */}
         {editing ? (
           <Card style={styles.editSection}>
-            <Text style={styles.editTitle}>Edit Volume Targets</Text>
-            <Text style={styles.editSubtitle}>Weekly sets per muscle · Minimum / Target / Ceiling</Text>
+            <Text style={styles.editTitle}>Edit volume targets</Text>
+            <Text style={styles.editSubtitle}>Weekly sets per muscle - minimum / target / ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
@@ -604,7 +604,7 @@ export default function VolumeHeatmapScreen() {
         ) : (
           <View style={styles.actionRow}>
             <Button
-              title="Edit Volume Targets"
+              title="Edit volume targets"
               variant="secondary"
               size="sm"
               onPress={() => setEditing(true)}
@@ -612,7 +612,7 @@ export default function VolumeHeatmapScreen() {
               style={styles.actionButton}
             />
             <Button
-              title="Reset to Defaults"
+              title="Reset to defaults"
               variant="outline"
               size="sm"
               onPress={resetToDefaults}

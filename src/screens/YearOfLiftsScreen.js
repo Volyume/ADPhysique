@@ -375,7 +375,7 @@ export function buildBlockCards(data, units) {
   const shapeBits = [];
   if (weeks) shapeBits.push(`${weeks} week${weeks === 1 ? '' : 's'}`);
   if (startMs && endMs) shapeBits.push(`${fmtDate(startMs)} to ${fmtDate(endMs)}`);
-  cards.push({ type: 'intro', icon: 'sparkles', tone: 'gold', headline: name, subline: shapeBits.join(' · ') });
+  cards.push({ type: 'intro', icon: 'sparkles', tone: 'gold', headline: name, subline: shapeBits.join(' - ') });
 
   if (data.tonnageDelta != null) {
     const up = data.tonnageDelta >= 0;
@@ -398,7 +398,7 @@ export function buildBlockCards(data, units) {
     type: 'stat', icon: 'layers', tone: 'primary',
     value: data.totalSessions.toLocaleString('en-GB'),
     unit: data.totalSessions === 1 ? 'session' : 'sessions',
-    caption: `${data.totalSets.toLocaleString('en-GB')} sets · ${data.tonnage.toLocaleString('en-GB')} kg moved.`,
+    caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} kg moved.`,
   });
 
   cards.push({
@@ -647,7 +647,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {loading && (
         <View style={styles.loadingWrap}>
-          <Text style={styles.loadingText}>{variant === 'month' ? 'Building your recap…' : variant === 'week' ? 'Building your week…' : variant === 'block' ? 'Building your block story…' : 'Building your year…'}</Text>
+          <Text style={styles.loadingText}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
         </View>
       )}
 
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     lineHeight: 100,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: -2,
+    letterSpacing: 0,
   },
   statUnit: {
     ...type.h3,
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     lineHeight: 48,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: -1,
+    letterSpacing: 0,
   },
   heroSubline: {
     ...type.body,

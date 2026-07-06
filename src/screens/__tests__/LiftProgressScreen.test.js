@@ -224,9 +224,9 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
     expect(squatRow.latestWeight).toBe(100);
 
     const benchText = renderedText(capturedListProps.renderItem({ item: benchRow, index: 0 }));
-    expect(benchText).toContain(`Last time: 60kg · e1RM ${benchE1rm}kg`);
+    expect(benchText).toContain(`Last time: 60kg - e1RM ${benchE1rm}kg`);
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
-    expect(squatText).toContain(`Last time: 100kg · e1RM ${squatE1rm}kg`);
+    expect(squatText).toContain(`Last time: 100kg - e1RM ${squatE1rm}kg`);
   });
 });

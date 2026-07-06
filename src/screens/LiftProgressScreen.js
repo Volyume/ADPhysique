@@ -251,18 +251,18 @@ export default function LiftProgressScreen({ navigation }) {
             <SectionLabel>Relative strength</SectionLabel>
             <InfoTooltip
               size={13}
-              text={'How your best estimated lifts compare to your own bodyweight.\n\n1.0× = you can lift your bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite'}
+              text={'How your best estimated lifts compare to your own body weight.\n\n1.0x = you can lift your body weight\n1.5x = strong for most people\n2.0x = advanced\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
             />
           </View>
-          <Text style={styles.sectionSub}>Based on {bodyWeight} {units} bodyweight</Text>
+          <Text style={styles.sectionSub}>Based on {bodyWeight} {units} body weight</Text>
           {Object.entries(strengthLevels).map(([name, lvl]) => (
             <View key={name} style={styles.strengthRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.strengthName} numberOfLines={1}>{name}</Text>
                 <Text style={styles.strengthNarrative}>
                   {lvl.ratio >= 1
-                    ? `${lvl.ratio.toFixed(2)}× your bodyweight`
-                    : `${Math.round(lvl.ratio * 100)}% of your bodyweight`}
+                    ? `${lvl.ratio.toFixed(2)}x your body weight`
+                    : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
               <View style={[styles.levelBadge, { backgroundColor: withAlpha(getLevelColor(lvl.label), 0.133) }]}>
@@ -283,7 +283,7 @@ export default function LiftProgressScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.bwPromptTitle}>Add your body weight</Text>
             <Text style={styles.bwPromptText}>
-              Add your body weight once and we'll show you how your lifts compare to your bodyweight.
+              Add your body weight once and we'll show you how your lifts compare to your body weight.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -383,14 +383,14 @@ export default function LiftProgressScreen({ navigation }) {
                   )}
                 </View>
                 <Text style={styles.meta}>
-                  {muscle ? `${muscle} · ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} · last {format(new Date(item.lastTrainedAt), 'd MMM')}
+                  {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} - last {format(new Date(item.lastTrainedAt), 'd MMM')}
                 </Text>
                 {/* C1: the last logged session's own numbers, distinct from the
                     all-time best headline below. liftProgress.js tracks the
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
                 <Text style={styles.lastTime}>
-                  Last time: {item.latestWeight}{units} · e1RM {item.latestE1rm}{units}
+                  Last time: {item.latestWeight}{units} - e1RM {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
