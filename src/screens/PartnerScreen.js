@@ -199,11 +199,11 @@ function IntentionBlock({ pair, onSetAim }) {
         style={styles.intentionSet}
         hitSlop={hitSlop}
         accessibilityRole="button"
-        accessibilityLabel={pair.myAim > 0 ? 'Change your aim for the week' : 'Set your aim for the week'}
+        accessibilityLabel={pair.myAim > 0 ? 'Change your weekly aim' : 'Set your weekly aim'}
       >
         <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.intentionSetText}>
-          {pair.myAim > 0 ? 'Change your aim' : 'Set your aim for the week'}
+          {pair.myAim > 0 ? 'Change weekly aim' : 'Set weekly aim'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -948,11 +948,11 @@ export default function PartnerScreen({ route }) {
             ) : null}
 
             {pending ? (
-              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onCancel={confirmCancelInvite} />
+              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.reload} onCancel={confirmCancelInvite} />
             ) : null}
           </>
         ) : pending ? (
-          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onCancel={confirmCancelInvite} />
+          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.reload} onCancel={confirmCancelInvite} />
         ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIconCircle}>
@@ -1044,11 +1044,6 @@ export default function PartnerScreen({ route }) {
         {managePair ? (
           <View style={styles.sheetBody}>
             <SheetRow
-              icon="barbell-outline"
-              label="Suggest a training block"
-              onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
-            />
-            <SheetRow
               icon="exit-outline"
               label="End partnership"
               onPress={() => { const pr = managePair; setManagePair(null); confirmUnpair(pr); }}
@@ -1064,7 +1059,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Shared-block sheet ── */}
-      <BottomSheet visible={!!blockSheetPair} onClose={closeBlockSheet} accessibilityLabel="Shared training block">
+      <BottomSheet visible={!!blockSheetPair} onClose={closeBlockSheet} accessibilityLabel="Shared training block" scroll>
         {blockSheetPair ? (
           <BlockSheetBody
             pair={blockSheetPair}
@@ -1095,7 +1090,7 @@ export default function PartnerScreen({ route }) {
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins">
+      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins" scroll>
         {shareWinsPair ? (
           <ShareWinsSheetBody
             initialType={route?.params?.shareWinType}
@@ -1275,7 +1270,7 @@ function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload 
   );
 }
 
-function PendingCard({ pending, onShareAgain, onCancel }) {
+function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
   return (
     <View style={styles.pendingCard}>
       <View style={styles.pendingRow}>
@@ -1293,6 +1288,16 @@ function PendingCard({ pending, onShareAgain, onCancel }) {
       >
         <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.pendingPrimaryText}>Share invite again</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onRefresh}
+        style={styles.pendingPrimary}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel="Check partner connection"
+      >
+        <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.pendingPrimaryText}>Check connection</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
@@ -1441,7 +1446,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Suggest a training block</Text>
+      <Text style={styles.sheetHeading}>Share a block name</Text>
       <Text style={styles.blockPitch}>
         Only the block&apos;s name is shared with {name}. Never what is inside it.
       </Text>

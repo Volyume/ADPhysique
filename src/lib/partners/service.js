@@ -13,6 +13,7 @@
 
 import { getSupabaseClient } from '../supabase';
 import { track } from '../engineTelemetry';
+import { todayLocalKey } from '../dayKey';
 import { buildInviteLinks, inviteShareMessage } from './link';
 import { recordPartnerSharingConsent } from './consent';
 import { isValidAckKey, DEFAULT_ACK_KEY } from './acknowledgements';
@@ -22,6 +23,18 @@ import {
 
 function fail(error) {
   return { ok: false, error: error?.message || String(error || 'unknown') };
+}
+
+function cheerFailureCode(error, data) {
+  const status = error?.status ?? error?.context?.status ?? error?.context?.response?.status;
+  const text = [
+    data?.error,
+    error?.message,
+    error?.name,
+    status,
+  ].filter(v => v != null).join(' ').toLowerCase();
+  if (status === 429 || text.includes('already_cheered') || text.includes('429')) return 'already_cheered';
+  return data?.error || null;
 }
 
 /**
@@ -112,7 +125,11 @@ export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, recipr
   if (!c || !userId || !pairId) return fail('offline');
   const ackKind = isValidAckKey(kind) ? kind : DEFAULT_ACK_KEY;
   try {
-    const { data, error } = await c.functions.invoke('partner-cheer', { body: { pairId, kind: ackKind } });
+    const { data, error } = await c.functions.invoke('partner-cheer', {
+      body: { pairId, kind: ackKind, sentOn: todayLocalKey() },
+    });
+    const failureCode = cheerFailureCode(error, data);
+    if (failureCode) return { ok: false, error: failureCode };
     if (error) return fail(error);
     track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
     trackCheerSent();

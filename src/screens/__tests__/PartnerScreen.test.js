@@ -183,12 +183,12 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('Support plan');
-    expect(text).toContain('Start with a calm aim for your own week.');
-    expect(text).toContain('Set a calm aim for your own plan.');
+    expect(text).toContain('This week together');
+    expect(text).toContain('Set how many sessions you plan to do this week. Your partner sees the number, not your workout details.');
+    expect(text).toContain('Choose your own session aim for the week.');
     expect(text).toContain('Your week row reads 2 of 4 against your own plan.');
-    expect(text).toContain('Own-plan signals only. Food, coach notes, body metrics and photos stay private.');
-    await press(tree, 'Set your aim for the week', 1);
+    expect(text).toContain('Your partner sees weekly training status and optional cards only. Food, coach notes, body metrics and photos stay private.');
+    await press(tree, 'Set your weekly aim', 1);
     expect(allText(tree)).toContain('Your aim for the week');
   });
 
@@ -466,7 +466,16 @@ describe('pending state', () => {
     expect(allText(tree)).toContain('Invitation sent. Waiting for your partner.');
     expect(allText(tree)).toContain('Share the same invite again if they missed it. It still only pairs one person.');
     expect(findPress(tree, 'Share invite again').length).toBeGreaterThan(0);
+    expect(findPress(tree, 'Check partner connection').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Cancel invitation').length).toBeGreaterThan(0);
+  });
+
+  test('can manually refresh a pending connection after the other person accepts', async () => {
+    const hook = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Check partner connection');
+    expect(hook.reload).toHaveBeenCalledTimes(1);
   });
 
   test('can share the same pending invite again without minting a second path', async () => {

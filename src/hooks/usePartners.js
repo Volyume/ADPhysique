@@ -8,7 +8,7 @@
  * Pro three-partner list is a follow-on). Recomputes on focus so a synced cheer
  * or week signal reflects immediately.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
@@ -37,6 +37,8 @@ const EMPTY = {
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
   sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, reload: () => {},
 };
+
+const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 
 // Pick the partnership to surface: an active one first, else a pending invite,
 // else the most recent ended tombstone, else none.
@@ -214,6 +216,14 @@ export default function usePartners(userId, tier) {
   }, [userId, tier]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const pendingRefreshKey = state.pendingInvite?.id
+    || (state.partnership?.status === 'invited' ? state.partnership.id : null);
+  useEffect(() => {
+    if (!PASSIVE_PENDING_REFRESH_ENABLED || !userId || !pendingRefreshKey) return undefined;
+    const timer = setInterval(() => { load(); }, 5000);
+    return () => clearInterval(timer);
+  }, [userId, pendingRefreshKey, load]);
 
   // ── Actions (online; refresh local view after) ──
   // Single-mint (A1 s9.5): every share channel reuses the ONE active pending

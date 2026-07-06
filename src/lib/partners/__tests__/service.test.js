@@ -219,10 +219,30 @@ describe('shared training block (Wave 5 C5 A1)', () => {
 });
 
 describe('sendCheer', () => {
-  test('invokes the edge function and emits partner_cheer_sent with reciprocal', async () => {
+  test('invokes the edge function with the sender local day and emits partner_cheer_sent with reciprocal', async () => {
+    const client = fakeClient();
+    _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1', reciprocal: true });
     expect(r.ok).toBe(true);
+    expect(client.functions.invoke).toHaveBeenCalledWith('partner-cheer', {
+      body: { pairId: 'p1', kind: 'here', sentOn: expect.any(String) },
+    });
     expect(postEvent).toHaveBeenCalledWith('u1', 'partner_cheer_sent', { reciprocal: true });
+  });
+
+  test('normalises the daily cheer limit instead of surfacing a generic edge error', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: { ok: false, error: 'already_cheered' },
+          error: { status: 429, message: 'Edge Function returned a non-2xx status code' },
+        })),
+      },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'already_cheered' });
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 });
 
