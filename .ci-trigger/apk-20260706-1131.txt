@@ -1,0 +1,4 @@
+Trigger Android APK workflow for Eat meal-planning polish checkpoint.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Source commit: 4877804d
