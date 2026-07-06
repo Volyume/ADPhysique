@@ -367,7 +367,7 @@ export default function useAccountActions() {
     }
   }
 
-  // ─── Health-data consent withdrawal (UK GDPR Article 9) ─────────────────
+  // Health-data consent withdrawal (UK GDPR Article 9).
   // Per PRIVACY_CONSENT_LOCKED.md lines 71-72 and 251: withdrawing
   // Article 9 consent is the legal end of our lawful basis to process
   // the user's special-category data, so it must queue account

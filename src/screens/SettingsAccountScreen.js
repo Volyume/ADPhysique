@@ -33,7 +33,7 @@ export default function SettingsAccountScreen({ navigation }) {
           <SettingRow
             icon="sparkles"
             label="Go Pro"
-            sub="Precision Coaching™ and weekly check-ins"
+            sub="Precision Coaching and weekly check-ins"
             onPress={() => navigation.navigate('ProUpgrade')}
           />
         )}
@@ -64,13 +64,15 @@ export default function SettingsAccountScreen({ navigation }) {
       <View style={styles.section}>
         <SettingRow
           icon="log-out-outline"
-          label={signingOut ? 'Signing out…' : 'Sign out'}
+          label={signingOut ? 'Signing out...' : 'Sign out'}
+          sub="Ends this session after your local data is safe."
           destructive
           onPress={signingOut ? undefined : handleSignOut}
         />
         <SettingRow
           icon="trash-outline"
-          label={deletingAccount ? 'Deleting account…' : 'Delete account'}
+          label={deletingAccount ? 'Deleting account...' : 'Delete account'}
+          sub="Permanently removes your account and app data."
           destructive
           onPress={deletingAccount ? undefined : handleDeleteAccount}
         />

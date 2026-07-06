@@ -87,7 +87,7 @@ export default function SettingsProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={settingsStyles.settingLabel}>Biological sex</Text>
-              <Text style={settingsStyles.settingSub}>Sets your calorie and nutrition targets. Updates on your next weekly coach run.</Text>
+              <Text style={settingsStyles.settingSub}>Used for calorie floors and nutrition targets. Changes apply on your next weekly coach run.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
@@ -115,7 +115,7 @@ export default function SettingsProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={settingsStyles.settingLabel}>Diet preference</Text>
-              <Text style={settingsStyles.settingSub}>This filters the meals we suggest</Text>
+              <Text style={settingsStyles.settingSub}>Filters the meals Volyume suggests.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>

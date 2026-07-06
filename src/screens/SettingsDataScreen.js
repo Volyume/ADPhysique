@@ -37,7 +37,7 @@ export default function SettingsDataScreen({ navigation }) {
     }, []),
   );
 
-  // Manual cloud resync. The lock (PRODUCTION_READINESS_LOCKED § 1) allows a
+  // Manual cloud resync. The production-readiness lock allows a
   // manual resync from Settings; this routes through the same syncAll runner
   // as the automatic triggers, so its in-memory lock dedupes against any
   // background round already in flight.
@@ -199,7 +199,7 @@ export default function SettingsDataScreen({ navigation }) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Clear Everything',
+          text: 'Clear everything',
           style: 'destructive',
           onPress: async () => {
             if (!user?.id) return;
@@ -221,14 +221,14 @@ export default function SettingsDataScreen({ navigation }) {
       <View style={styles.section}>
         <SettingRow
           icon="cloud-outline"
-          label={syncingNow ? 'Syncing…' : 'Cloud sync'}
+          label={syncingNow ? 'Syncing...' : 'Cloud sync'}
           sub={syncingNow ? 'Checking for changes.' : formatLastSynced(syncSnapshot)}
           onPress={syncingNow ? null : handleSyncNow}
           showArrow={!syncingNow}
         />
         <SettingRow
           icon="nutrition-outline"
-          label={refreshingFood ? 'Refreshing…' : 'Refresh food library'}
+          label={refreshingFood ? 'Refreshing...' : 'Refresh food library'}
           sub="Pull the latest food data now"
           onPress={refreshingFood ? null : handleRefreshFoodLibrary}
           showArrow={!refreshingFood}
@@ -248,6 +248,7 @@ export default function SettingsDataScreen({ navigation }) {
         <SettingRow
           icon="cloud-upload-outline"
           label="Restore from backup"
+          sub="Choose a Volyume JSON backup and replace current app data"
           onPress={handleRestoreBackup}
         />
         <SettingRow
@@ -264,7 +265,7 @@ export default function SettingsDataScreen({ navigation }) {
         />
         <SettingRow
           icon="document-text-outline"
-          label={buildingReport ? 'Preparing the report…' : 'Coach handover report (PDF)'}
+          label={buildingReport ? 'Preparing the report...' : 'Coach handover report (PDF)'}
           sub="Training, trend, targets and coaching decisions, for a coach or GP"
           onPress={buildingReport ? null : exportCoachReport}
           showArrow={!buildingReport}
@@ -272,12 +273,13 @@ export default function SettingsDataScreen({ navigation }) {
         <SettingRow
           icon="trash-outline"
           label="Clear workout history"
+          sub="Deletes logged sessions and the PRs calculated from them"
           destructive
           onPress={handleClearHistory}
         />
       </View>
       <Text style={styles.dataPrivacyNote}>
-        Your data is always yours. Export workout sets or back up app database records any time, no account required.
+        Your data is always yours. Export workout sets, create a JSON database backup, or restore a safety snapshot any time. Photo image files stay on this device unless you share or export them yourself.
       </Text>
     </SettingsPage>
   );

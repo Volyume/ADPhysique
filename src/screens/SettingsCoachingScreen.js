@@ -131,8 +131,8 @@ export default function SettingsCoachingScreen() {
       <View style={settingsStyles.section}>
         <SettingRow
           icon="heart-outline"
-          label="Calmer experience"
-          sub="This drops the aggressive calorie targets and quietens the progress prompts"
+          label="Calmer coaching"
+          sub="Uses safer calorie floors and quieter progress prompts."
           showArrow={false}
           rightElement={
             <Switch
@@ -165,7 +165,7 @@ export default function SettingsCoachingScreen() {
               icon="footsteps-outline"
               label="Daily step target"
               sub={stepsEnabled
-                ? "Steps are the coach's first lever when progress slows, before your food. Your phone fills the number in."
+                ? "Steps are the coach's first lever when progress slows, before changing your food. Your phone can fill the number in."
                 : 'Off. The coach leans on your food, and later cardio, instead of steps.'}
               showArrow={false}
               rightElement={
@@ -196,7 +196,7 @@ export default function SettingsCoachingScreen() {
             )}
             <SettingRow
               icon="heart-outline"
-              label="Cardio"
+              label="Cardio logging"
               sub={cardioEnabled
                 ? 'On. Log any cardio you do, your choice of activity. The coach only suggests cardio if a cut stalls.'
                 : 'Off. No cardio logging or library.'}
@@ -272,7 +272,7 @@ export default function SettingsCoachingScreen() {
           <SettingRow
             icon="calendar-outline"
             label="Cycle tracking"
-            sub="Adds an optional question to your weekly check-in so the coach can steady your targets around your period"
+            sub="Adds an optional weekly check-in question so the coach can steady targets around your period."
             showArrow={false}
             rightElement={
               <Switch

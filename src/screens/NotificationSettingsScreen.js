@@ -323,7 +323,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
       // Load the user's last check-in so we can enforce the 7-day minimum
       // gap when they change their check-in day, and so the UI can show
-      // an honest "next reminder fires on …" preview.
+      // an honest "next reminder fires on ..." preview.
       try {
         // eslint-disable-next-line global-require
         const { getLatestCheckin } = require('../lib/database');
@@ -501,7 +501,7 @@ export default function NotificationSettingsScreen({ navigation }) {
     }).catch(() => {});
   }, []);
 
-  // ── Quiet hours (E2.2) ──────────────────────────────────────────────────────
+  // Quiet hours (E2.2).
   const [quietHours, setQuietHoursState] = useState(DEFAULT_QUIET_HOURS);
   useEffect(() => {
     getQuietHours().then(setQuietHoursState).catch(() => {});
@@ -604,7 +604,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         )}
 
         {/* Morning weight + weekly check-in reminders moved to a dedicated
-            Pro screen (Settings → Coaching reminders). The toggles here
+            Pro screen (Settings > Coaching reminders). The toggles here
             were misleading. Those reminders are non-optional inputs to
             Precision Coaching, so flipping them off broke the coaching
             loop. CoachingRemindersScreen exposes the day + hour pickers
@@ -624,7 +624,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.crossLinkTitle}>Coaching reminders</Text>
               <Text style={styles.crossLinkSub}>
-                Morning weight + weekly check-in schedule. Always on for Pro.
+                Morning weight and weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -673,7 +673,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
+              Pick the time. Volyume sends it only on the training days from your active plan.
             </Text>
           </View>
         </Card>
@@ -697,7 +697,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              A gentle reminder in your first couple of weeks if you have not got a session in yet. It stops on its own once you are into a routine.
+              A gentle reminder in your first couple of weeks if you have not logged a session yet. It stops on its own once you are into a routine.
             </Text>
           </View>
         </Card>
@@ -740,7 +740,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           ))}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Optional, gentle nudges to log a meal. No streaks and no pressure. Turn any of them off whenever you like.
+              Optional reminders to log meals. No streaks and no pressure. Turn any of them off whenever you like.
             </Text>
           </View>
         </Card>
@@ -800,12 +800,12 @@ export default function NotificationSettingsScreen({ navigation }) {
         {/* Bottom note */}
         <View style={styles.bottomNote}>
           <Text style={styles.bottomNoteText}>
-            Volyume never sends marketing notifications. These are local-only reminders with no server involved. You can disable them anytime from your device settings.
+            Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings.
           </Text>
         </View>
 
         {/* Save status */}
-        {saving && <Text style={styles.savingText}>Saving…</Text>}
+        {saving && <Text style={styles.savingText}>Saving...</Text>}
         {!saving && saved && <Text style={styles.savedText}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
