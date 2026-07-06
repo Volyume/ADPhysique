@@ -121,14 +121,14 @@ export function buildPhysiqueStudioNextAction({
   if (!suppressed && visibleScans.length >= 2) {
     return {
       kind: 'compare_scans',
-      title: 'Compare scan results',
-      body: 'Compare two completed Physique Scans using photos taken in the same poses.',
-      reason: `${visibleScans.length} completed scans are ready.`,
+      title: 'Compare Physique Scores',
+      body: 'Compare two scored photo sets using photos taken in the same poses.',
+      reason: `${visibleScans.length} scored photo sets are ready.`,
       detailItems: [
-        'The scan shows broad change, not an exact number.',
+        'The score shows broad change, not an exact number.',
         'This is not an exact body-fat percentage.',
       ],
-      cta: 'Compare scans',
+      cta: 'Compare scores',
     };
   }
 

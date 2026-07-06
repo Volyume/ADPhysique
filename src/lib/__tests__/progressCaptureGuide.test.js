@@ -53,9 +53,8 @@ describe('progress capture guide copy', () => {
     expect(`${prompt}\n${how}`).toContain('Photos stay on this device unless you choose to share or export them.');
   });
 
-  test('builds action-first scan routes for guided capture and photo import', () => {
+  test('builds action-first photo-set routes for capture and import', () => {
     const routes = buildProgressStudioCaptureRoutes({
-      latestPartial: { nextPose: 'back', nextPoseLabel: 'Back' },
       canScan: true,
     });
     expect(routes.map((route) => route.key)).toEqual([
@@ -74,6 +73,27 @@ describe('progress capture guide copy', () => {
     });
     expect(routes[1].bestFor).toContain('real capture date and weight snapshot');
     expect(routes[1].steps).toContain('Choose the front relaxed photo');
+  });
+
+  test('prioritises finishing the latest partial photo set', () => {
+    const routes = buildProgressStudioCaptureRoutes({
+      latestPartial: { nextPose: 'back', nextPoseLabel: 'Back' },
+      canScan: true,
+    });
+    expect(routes.map((route) => route.key)).toEqual([
+      'complete_latest',
+      'scan',
+      'scan_library',
+    ]);
+    expect(routes[0]).toMatchObject({
+      title: 'Add the back photo',
+      actionLabel: 'Add Back photo',
+      recommended: true,
+    });
+    expect(routes[1]).toMatchObject({
+      key: 'scan',
+      recommended: false,
+    });
   });
 
   test('can still build the legacy non-scan fallback routes', () => {

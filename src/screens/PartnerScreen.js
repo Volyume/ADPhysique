@@ -286,17 +286,6 @@ function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) 
         <Text style={styles.supportPlanTitle}>{plan.title}</Text>
       </View>
       <Text style={styles.supportPlanHeadline}>{plan.headline}</Text>
-      <View style={styles.supportPlanGrid}>
-        {plan.steps.map((step) => (
-          <View key={step.key} style={styles.supportPlanStep}>
-            <View style={styles.supportPlanStepTop}>
-              <Text style={styles.supportPlanStepLabel}>{step.label}</Text>
-              <Text style={styles.supportPlanStepState}>{step.state}</Text>
-            </View>
-            <Text style={styles.supportPlanStepCopy}>{step.copy}</Text>
-          </View>
-        ))}
-      </View>
       <Text style={styles.supportPlanPrivacy}>{plan.privacyLine}</Text>
       <TouchableOpacity
         onPress={onPrimary}
@@ -321,15 +310,15 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       activeOpacity={0.85}
       hitSlop={hitSlop}
       accessibilityRole="button"
-      accessibilityLabel="Review shareable wins"
+      accessibilityLabel="Review win sharing"
     >
       <View style={styles.shareWinsIcon}>
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text style={styles.shareWinsTitle}>Share wins</Text>
+        <Text style={styles.shareWinsTitle}>Share a win</Text>
         <Text style={styles.shareWinsText}>
-          Send one chosen card to {name}. You approve it first. No feed.
+          Choose one workout, PR or progress card for {name}. You review it before it leaves.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -444,6 +433,9 @@ function PairCard({
   const block = pair.sharedBlock;
   const hasChip = block && (block.status === 'active' || block.status === 'proposed');
   const showReconnect = pair.sharedStreak?.status === 'archived' && !reconnectDismissed;
+  const myAimSet = Math.round(Number(pair.myAim) || 0) > 0;
+  const supportPlanOwnsCheer = !moment && myAimSet && pair.cheerEnabled;
+  const supportPlanPair = moment ? { ...pair, cheerEnabled: false } : pair;
 
   return (
     <Card style={styles.pairCard} tone="primary">
@@ -501,7 +493,7 @@ function PairCard({
       ) : null}
 
       <PartnerSupportPlan
-        pair={pair}
+        pair={supportPlanPair}
         name={name}
         onSetAim={onSetAim}
         onCheer={onCheer}
@@ -533,7 +525,7 @@ function PairCard({
       {/* The moment IS that day's cheer surface (it carries its own pill), so
           the standing cheer row is hidden while a moment shows; it returns as
           the pair's cheer affordance when no moment is visible. */}
-      {moment ? null : (
+      {moment || supportPlanOwnsCheer ? null : (
         <CheerPill enabled={pair.cheerEnabled} onPress={() => onCheer(pair)} style={styles.cheerRowAlign} />
       )}
     </Card>
@@ -1159,6 +1151,11 @@ export default function PartnerScreen({ route }) {
         {managePair ? (
           <View style={styles.sheetBody}>
             <SheetRow
+              icon="barbell-outline"
+              label="Share training block name"
+              onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
+            />
+            <SheetRow
               icon="exit-outline"
               label="End partnership"
               onPress={() => { const pr = managePair; setManagePair(null); confirmUnpair(pr); }}
@@ -1665,20 +1662,6 @@ const styles = StyleSheet.create({
   supportPlanHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   supportPlanTitle: { ...type.label, color: colors.textPrimary },
   supportPlanHeadline: { ...type.body, color: colors.textPrimary, lineHeight: 22 },
-  supportPlanGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  supportPlanStep: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    minWidth: 132,
-    gap: spacing.xxs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    padding: spacing.sm,
-  },
-  supportPlanStepTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
-  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary, flexShrink: 1 },
-  supportPlanStepState: { ...type.caption, color: colors.primary, flexShrink: 0 },
-  supportPlanStepCopy: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
   supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   supportPlanButton: {
     flexDirection: 'row',

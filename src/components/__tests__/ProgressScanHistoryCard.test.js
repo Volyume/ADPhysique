@@ -51,13 +51,13 @@ describe('ProgressScanHistoryCard', () => {
     const tree = await render({ onToggleHideExact, onDeleteScan, onOpenPhoto });
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Physique Scan results');
-    expect(text).toContain('Private visual reads');
-    expect(text).toContain('Not a body-fat percentage');
-    expect(text).toContain('Visual trend');
+    expect(text).toContain('Physique Score results');
+    expect(text).toContain("Volyume's private photo score");
+    expect(text).toContain('not body-fat percentage');
+    expect(text).toContain('Photo score');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
-    expect(text).toContain('Physique score');
+    expect(text).toContain('Volyume score');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72/100');
     expect(text).toContain('Show details');
@@ -78,7 +78,7 @@ describe('ProgressScanHistoryCard', () => {
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
     expect(hiddenText).toContain('Lean band');
-    expect(hiddenText).toContain('Physique scoreHidden');
+    expect(hiddenText).toContain('Volyume scoreHidden');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
@@ -92,7 +92,7 @@ describe('ProgressScanHistoryCard', () => {
   test('read-only mode hides delete and disables thumbnail opening', async () => {
     const onOpenPhoto = jest.fn();
     const tree = await render({ readOnly: true, onOpenPhoto });
-    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Physique Scan results');
+    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Physique Score results');
     expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete scan/.test(node.props.accessibilityLabel))).toBe(false);
     const thumb = tree.root.findAllByType(TouchableOpacity).find((node) => /Front photo/.test(node.props.accessibilityLabel));
     expect(thumb.props.disabled).toBe(true);

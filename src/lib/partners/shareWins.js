@@ -27,7 +27,7 @@ export const SHARE_WIN_TYPES = Object.freeze([
 
 export const SHARE_WIN_POLICY = Object.freeze({
   defaultState: 'Ask every time',
-  summary: 'Partner wins are off by default. A partner only sees the win card you choose to send.',
+  summary: 'Nothing is shared automatically. Your partner only sees the win card you choose to send.',
   excluded: 'No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.',
 });
 

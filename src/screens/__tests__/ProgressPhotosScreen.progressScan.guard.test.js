@@ -11,8 +11,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCAN_HISTORY).toMatch(/Physique Scan results/);
-    expect(SCAN_HISTORY).toMatch(/Visual trend/);
+    expect(SCAN_HISTORY).toMatch(/Physique Score results/);
+    expect(SCAN_HISTORY).toMatch(/Photo score/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -39,12 +39,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
     expect(SCREEN).toMatch(/ProgressScanCompare/);
-    expect(SCREEN).toMatch(/Compare two Physique Scan entries/);
+    expect(SCREEN).toMatch(/Compare two Physique Score entries/);
     expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
     expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
     expect(SCREEN).toMatch(/hideWeight=\{hideExactScans && scanPhotoNames\.has\(viewerName\)\}/);
-    expect(SCREEN).toMatch(/Share scan/);
+    expect(SCREEN).toMatch(/Share score card/);
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
