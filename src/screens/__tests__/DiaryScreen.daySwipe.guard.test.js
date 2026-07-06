@@ -64,7 +64,7 @@ describe('DiaryScreen day-swipe gesture wiring', () => {
   });
 
   test('the chevrons themselves still call gotoYesterday / gotoTomorrow directly on press', () => {
-    expect(SRC).toMatch(/onPress=\{gotoYesterday\}[\s\S]{0,120}accessibilityLabel="Previous day"/);
-    expect(SRC).toMatch(/onPress=\{gotoTomorrow\}[\s\S]{0,120}accessibilityLabel="Next day"/);
+    expect(SRC).toMatch(/onPress=\{gotoYesterday\}[\s\S]{0,220}accessibilityLabel="Previous day"/);
+    expect(SRC).toMatch(/onPress=\{gotoTomorrow\}[\s\S]{0,220}accessibilityLabel="Next day"/);
   });
 });

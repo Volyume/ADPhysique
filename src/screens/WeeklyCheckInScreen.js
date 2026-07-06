@@ -19,7 +19,6 @@ import {
   getWeeklyVolumeByMuscle,
   getNutritionTargets,
   getUserBodyProfile,
-  getDailyStepsRange,
   getCardioLogRange,
   activityDayKey,
 } from '../lib/database';
@@ -29,7 +28,6 @@ import {
   formatWeekRange, hasLoggedToday, earliestWeightTs,
   deriveTrainingPerformance, deriveCalsAdherence, stripAutoNotes, PERF_VERDICT_TEXT,
 } from '../lib/checkinDerive';
-import { summariseWeekSteps } from '../lib/stepsSummary';
 // M4: the submit haptic now rides the Button primitive's success beat
 // (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
 import Button from '../components/Button';
@@ -46,7 +44,7 @@ import { SkeletonCard } from '../components/Skeleton';
 // COMP-023: the first-check-in gate constants live in trialActivation.js as the
 // single source of truth, so the day-3 unlock date this screen gates on and the
 // date the trial moment promises can never drift apart.
-import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS } from '../lib/trialActivation';
+import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS, firstReviewUnlockDate } from '../lib/trialActivation';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -157,9 +155,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // PIPE-006: bump to re-run the loader after a load failure, so the error
   // state is recoverable rather than failing open into the form.
   const [reloadKey, setReloadKey] = useState(0);
-  // For 'too_soon': how many more days the user needs to wait + which
-  // chosen day that lands on. Both surfaced in the gate copy.
-  const [tooSoonCtx, setTooSoonCtx] = useState({ daysToWait: 0, nextDayLabel: null });
+  // For 'too_soon': how much baseline data is missing, plus the first
+  // scheduled check-in day after that baseline is ready. These are different
+  // dates when the data floor clears mid-week, so keep them separate.
+  const [tooSoonCtx, setTooSoonCtx] = useState({
+    daysToWait: 0,
+    firstCheckinLabel: null,
+    scheduledDayName: DAYS_FULL[0],
+    hasStartedBaseline: false,
+  });
   // Auto-derivation context: PR count, planned/completed sessions,
   // and the food-rollup-derived calorie adherence verdict. Populated
   // in the same load() that runs the gate evaluation so step 1 and
@@ -178,15 +182,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
     getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
     getCycleTracking().then(setCycleEnabled).catch(() => {});
-    // The week's registered steps: the trailing seven days up to the review
-    // anchor (today normally; yesterday when a day late per OB-7, so the
-    // counts describe the week actually being reviewed, the effect re-runs
-    // when load() shifts the anchor).
     const toDate = activityDayKey(weekAnchorMs);
     const fromDate = activityDayKey(weekAnchorMs - 6 * 24 * 60 * 60 * 1000);
-    getDailyStepsRange(user.id, fromDate, toDate)
-      .then(rows => setStepsSummary(summariseWeekSteps(rows)))
-      .catch(() => setStepsSummary(null));
     // Cardio compliance: prefill the adherence verdict from the actual log
     // (sessions done vs the coach target) so the user usually just confirms.
     // The engine returns the same hit/mostly/missed values the question uses.
@@ -251,12 +248,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // A7 provenance for the cardio prefill: { sessions, targetSessions } from
   // the week's cardio log, so the pre-selected answer names its source.
   const [cardioMeta, setCardioMeta] = useState(null);
-  // Steps: the week's auto summary (null until loaded). When 4+ days are
-  // registered the check-in shows the average and offers a tap-to-override,
-  // for users whose real count lives on a watch or another app; otherwise the
-  // user types a single average as the fallback. stepsOverride flips the auto
-  // display to the manual field, prefilled with the auto value to edit.
-  const [stepsSummary, setStepsSummary] = useState(null);
+  // Legacy steps state remains only so older saved check-ins can be read
+  // without schema churn. The shipped check-in no longer asks for steps.
+  const [stepsSummary] = useState(null);
   const [stepsManual, setStepsManual] = useState('');
   const [stepsOverride, setStepsOverride] = useState(false);
 
@@ -271,12 +265,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
-  // Steps section shows whenever the user has not explicitly opted out
-  // (stepsEnabled === false). A step target is no longer required to see it:
-  // without one we still capture the weekly average and show a short line
-  // pointing at Settings (founder direction 2026-06-08). hasStepsTarget is kept
-  // for the target-comparison verdict only.
-  const showSteps = userProfile?.stepsEnabled !== false;
+  // Step collection is not part of the shipped coaching surface. The old
+  // internal fields remain for backwards compatibility, but the user is no
+  // longer asked for a weekly step average.
+  const showSteps = false;
   const hasStepsTarget = showSteps
     && Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
@@ -465,11 +457,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
         if (todayDay !== scheduledDay && !dayLate) {
           setGateState('wrong_day');
         } else if (daysToWait > 0) {
-          const nextDate = new Date(Date.now() + daysToWait * 86400000);
+          const firstCheckinDate = earliestTs
+            ? firstReviewUnlockDate(earliestTs, scheduledDay, Date.now())
+            : null;
           setTooSoonCtx({
             daysToWait,
-            nextDayLabel: nextDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+            firstCheckinLabel: firstCheckinDate
+              ? firstCheckinDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+              : null,
             scheduledDayName: DAYS_FULL[scheduledDay],
+            hasStartedBaseline: !!earliestTs,
           });
           setGateState('too_soon');
         } else if (thisWeek.length < MIN_WEIGH_INS) {
@@ -1297,7 +1294,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }
 
   if (gateState === 'too_soon') {
-    const { daysToWait, nextDayLabel, scheduledDayName } = tooSoonCtx;
+    const { daysToWait, firstCheckinLabel, scheduledDayName, hasStartedBaseline } = tooSoonCtx;
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
@@ -1310,11 +1307,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Ionicons name="time-outline" size={32} color={colors.primary} />
           </View>
           <Text style={styles.gateTitle}>First check-in needs more data</Text>
-          <Text style={styles.gateBody}>
-            Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} left.
-            {'\n\n'}
-            Coaching adjustments compare this week to last. With nothing to compare against yet, the weekly read would not be reliable. Log your morning weight each day and food data if you're using Eat, and the first check-in lands on {nextDayLabel} (your chosen day, {scheduledDayName}).
-          </Text>
+          {hasStartedBaseline ? (
+            <Text style={styles.gateBody}>
+              Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
+              {'\n\n'}
+              Volyume waits for the first {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in is {firstCheckinLabel || `your next ${scheduledDayName}`}.
+            </Text>
+          ) : (
+            <Text style={styles.gateBody}>
+              Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
+              {'\n\n'}
+              Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
+            </Text>
+          )}
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>

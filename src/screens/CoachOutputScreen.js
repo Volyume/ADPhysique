@@ -32,7 +32,6 @@ import {
   upsertPlannedMuscleVolume,
   setMesocycleWeekDeload,
   getCardioLogRange,
-  getDailyStepsRange,
   activityDayKey,
   getActivePeakWeekPlan,
 } from '../lib/database';
@@ -1416,14 +1415,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         cardioSessionsLogged = cardioWeekSummary.sessions;
       } catch (_) { /* cardio optional; coach runs without it */ }
 
-      // COMP-026 (B): the last ~42 days of daily steps feed the step-trend
-      // confidence modifier. Optional; the coach runs unchanged without it.
-      let dailyStepsSeries = null;
-      const stepsTodayKey = activityDayKey();
-      try {
-        dailyStepsSeries = await getDailyStepsRange(user.id, activityDayKey(Date.now() - 41 * 86400000), stepsTodayKey);
-      } catch (_) { /* steps optional; modifier stays inert (gain 0.50) */ }
-
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         morningWeights: weights,
@@ -1439,9 +1430,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Cardio compliance from the check-in (pre-filled from the log,
         // user-overridable) so the coach acts on it, not just the raw count.
         cardioCompliance: checkin?.cardioAdherence ?? null,
-        // COMP-026 (B) step-trend confidence modifier inputs.
-        dailyStepsSeries,
-        stepsTodayKey,
+        // Step targets are not part of the shipped coaching product.
+        dailyStepsSeries: null,
+        stepsTodayKey: null,
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
@@ -1456,9 +1447,8 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentFatG: nutrition?.fatG ?? null,
         currentMaintenanceKcal: nutrition?.tdee ?? null,
         lastRefeedAt: userProfile?.refeed?.appliedAt ?? null,
-        currentStepsTarget: userProfile?.stepsTarget ?? 8000,
-        // Undefined/null means the user never opted out, so default on.
-        stepsEnabled: userProfile?.stepsEnabled !== false,
+        currentStepsTarget: 0,
+        stepsEnabled: false,
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,

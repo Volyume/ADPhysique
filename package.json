@@ -16,8 +16,9 @@
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",
     "verify:android:16kb": "node scripts/verify-android-elf-page-size.cjs",
-    "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand && npm run release:audit",
-    "release:audit": "npm audit --omit=dev --audit-level=high"
+    "release:quality": "npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand",
+    "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npm run release:quality && npm run release:audit",
+    "release:audit": "node scripts/release-audit-report.cjs"
   },
   "jest": {
     "testEnvironment": "node",
