@@ -225,5 +225,5 @@ export function buildProgressStudioHowItWorksCopy() {
 
 export function buildScanCaptureSubtitle(pose) {
   const guidance = getPoseCaptureGuidance(pose);
-  return `${guidance.line} Set the phone down and use the timer if you need to step into place.`;
+  return guidance.line;
 }

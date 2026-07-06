@@ -104,8 +104,8 @@ test('renders the camera preview and the ghost overlay when a reference is given
   // Pose-specific studio guidance, kept short in the camera overlay.
   expect(json).toContain('Front relaxed');
   expect(json).toContain('Progress photo');
-  expect(json).toContain('Match the faint previous photo.');
   expect(json).toContain('Stand tall, feet planted, arms relaxed by your sides, with your waistline visible.');
+  expect(json).not.toContain('Match the faint previous photo.');
   expect(json).not.toContain('Full body visible');
   expect(json).not.toContain('Camera at mid-torso height');
   expect(json).not.toContain('arms across the body');
