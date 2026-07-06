@@ -47,4 +47,13 @@ describe('WorkoutSummaryScreen partner-beat moment wiring', () => {
     expect(src).toMatch(/!readOnly\s*&&\s*!calmSuppressed\s*&&\s*tier === 'pro'/);
     expect(src).toMatch(/partners\.rowState === 'active'\s*\|\|\s*partners\.rowState === 'resting'/);
   });
+
+  test('the beat can open a one-card partner win preview without widening sharing', () => {
+    expect(src).toMatch(/import\s*\{\s*navigateCrossTab\s*\}\s*from\s*'\.\.\/navigation\/navigateCrossTab'/);
+    expect(src).toMatch(/accessibilityLabel="Preview this workout win for a partner"/);
+    expect(src).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'Partner'/);
+    expect(src).toMatch(/shareWinType:\s*'personal_record'/);
+    expect(src).toMatch(/shareWinType:\s*'workout_summary'/);
+    expect(src).toMatch(/source:\s*'workout_summary_partner_win'/);
+  });
 });

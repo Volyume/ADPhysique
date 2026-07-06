@@ -282,6 +282,41 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Weight is off for this export.');
   });
 
+  test('incoming workout-summary route opens a narrow partner preview', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount({
+      shareWinType: 'workout_summary',
+      shareWinPayload: {
+        workoutName: 'Upper body strength',
+        completedAt: '6 Jul 2026',
+        sets: 18,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Shareable wins');
+    expect(text).toContain('Upper body strength completed on 6 Jul 2026.');
+    expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private.');
+    expect(text).not.toContain('18');
+  });
+
+  test('incoming PR route opens a narrow partner preview', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount({
+      shareWinType: 'personal_record',
+      shareWinPayload: {
+        liftName: 'Incline press',
+        recordLabel: 'New rep best',
+        reps: 10,
+        load: 40,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Incline press: New rep best.');
+    expect(text).toContain('Only this chosen record is shared. Wider lift history stays private.');
+    expect(text).not.toContain('40');
+    expect(text).not.toContain('10');
+  });
+
   test('pro under the cap offers "Invite another partner"', async () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();

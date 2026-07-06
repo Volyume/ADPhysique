@@ -529,6 +529,7 @@ export default function PartnerScreen({ route }) {
 
   const source = route?.params?.source;
   const incomingShareWinType = route?.params?.shareWinType;
+  const incomingShareWinPayload = route?.params?.shareWinPayload;
   const incomingProgressCardPayload = route?.params?.progressCardSharePayload;
   const incomingCode = route?.params?.code ? parseInviteCode(route.params.code) : null;
   const handledCodeRef = useRef(null);
@@ -612,15 +613,17 @@ export default function PartnerScreen({ route }) {
     if (!firstPair) return;
     const marker = [
       incomingShareWinType,
+      incomingShareWinPayload?.workoutName || incomingShareWinPayload?.liftName || incomingShareWinPayload?.recordLabel || '',
       incomingProgressCardPayload?.dateRange || '',
       incomingProgressCardPayload?.format || '',
+      incomingProgressCardPayload?.label || '',
       incomingProgressCardPayload?.includesWeight === true ? 'weight' : 'no-weight',
       incomingProgressCardPayload?.includesScanScore === true ? 'scan' : 'no-scan',
     ].join('|');
     if (shareWinsRouteHandledRef.current === marker) return;
     shareWinsRouteHandledRef.current = marker;
     setShareWinsPair(firstPair);
-  }, [incomingShareWinType, incomingProgressCardPayload, p.loading, p.pairs]);
+  }, [incomingShareWinType, incomingShareWinPayload, incomingProgressCardPayload, p.loading, p.pairs]);
 
   // ── Invite journey ──
   function openJourney() {
@@ -1096,6 +1099,7 @@ export default function PartnerScreen({ route }) {
         {shareWinsPair ? (
           <ShareWinsSheetBody
             initialType={route?.params?.shareWinType}
+            shareWinPayload={route?.params?.shareWinPayload}
             progressCardPayload={route?.params?.progressCardSharePayload}
           />
         ) : null}
@@ -1169,8 +1173,12 @@ function AckSheetBody({ pair, onSend }) {
   );
 }
 
-function ShareWinsSheetBody({ initialType, progressCardPayload }) {
-  const previewPayloads = progressCardPayload ? { progress_card: progressCardPayload } : {};
+function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload }) {
+  const previewPayloads = {};
+  if (initialType && shareWinPayload && typeof shareWinPayload === 'object') {
+    previewPayloads[initialType] = shareWinPayload;
+  }
+  if (progressCardPayload) previewPayloads.progress_card = progressCardPayload;
   const examplePreviews = buildShareWinExamplePreviews(previewPayloads);
   const initialPreview = examplePreviews.find((preview) => preview.type === initialType) || examplePreviews[0];
   const [selectedType, setSelectedType] = useState(initialPreview?.type || 'workout_summary');
