@@ -1,0 +1,4 @@
+Trigger Android APK workflow for Physique Scan score hardening checkpoint.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Source commit: 7ac209f0
