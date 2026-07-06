@@ -137,6 +137,15 @@ describe('DiaryScreen macro detail entry points', () => {
   });
 });
 
+describe('DiaryScreen meal-planning entry point', () => {
+  test('meal planning stays as one plain route, not another summary block', () => {
+    expect(SRC).toMatch(/accessibilityLabel="Plan meals: build meals for today or the week, swap anything first, then add them to your diary"/);
+    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
+    expect(SRC).toMatch(/Build today or the week ahead, swap anything, then add it to your diary\./);
+  });
+});
+
 describe('DiaryScreen saved food entry points', () => {
   test('the meal-card Saved action opens one chooser for saved meals and recipes', () => {
     expect(SRC).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
