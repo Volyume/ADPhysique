@@ -393,6 +393,7 @@ Status: release decision.
 - Check-In cadence now reads calmly as `Capture baseline`, `Ready now`, `Tomorrow`, or `In N days`; the scan cadence gate now redirects to a normal Check-In without forcing a scan read.
 - Check-In cards now show deterministic setup quality (`Strong setup`, `Usable setup`, `Partial setup`) and partial cards can launch guided capture directly for the next missing pose.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
+- Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
 
 ## Product And UX Notes

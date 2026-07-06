@@ -160,6 +160,17 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toMatch(/missed|fail|broke/i);
   });
 
+  test('active pairs show a support snapshot with shared and private boundaries', async () => {
+    mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
+    const text = allText(await mount()).join(' ');
+    expect(text).toContain('Support snapshot');
+    expect(text).toContain('Shared');
+    expect(text).toContain('Weekly training against your own plans, your chosen aim, cheers and shared block name.');
+    expect(text).toContain('Private');
+    expect(text).toContain('Weights, sets, reps, food, coach notes, body metrics and photos.');
+    expect(text).toContain('Current week: You 2 of 4. Sam 3 of 4.');
+  });
+
   test('pro under the cap offers "Invite another partner"', async () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();
