@@ -368,9 +368,7 @@ export default function ProgressGhostCapture({
   const hasReference = !!referencePhoto?.uri;
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Physique Scan' : 'Progress photo';
-  const captureInstruction = hasReference
-    ? `Match the faint previous photo. ${subtitle || guidance.line}`
-    : subtitle || guidance.line;
+  const captureInstruction = subtitle || guidance.line;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -432,10 +430,10 @@ export default function ProgressGhostCapture({
       <View style={styles.topBar} pointerEvents="box-none">
         <View style={styles.topCopy} pointerEvents="none">
           <Text style={styles.modeChip}>{modeLabel}</Text>
-          <Text style={styles.title}>
+          <Text style={styles.title} numberOfLines={1}>
             {title || guidance.title}
           </Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} numberOfLines={2}>
             {captureInstruction}
           </Text>
         </View>
@@ -614,14 +612,15 @@ const styles = StyleSheet.create({
   topCopy: {
     flex: 1,
     gap: spacing.xxs,
-    padding: spacing.md,
-    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
     backgroundColor: withAlpha(colors.background, 0.62),
     borderWidth: 1,
     borderColor: withAlpha(colors.textPrimary, 0.16),
   },
   title: {
-    ...type.title,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   modeChip: {

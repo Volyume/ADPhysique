@@ -94,7 +94,8 @@ describe('progress capture guide copy', () => {
 
   test('builds a scan subtitle from the active pose', () => {
     expect(buildScanCaptureSubtitle('front')).toContain('Stand tall');
-    expect(buildScanCaptureSubtitle('front')).toContain('use the timer');
+    expect(buildScanCaptureSubtitle('front')).toBe(getPoseCaptureGuidance('front').line);
+    expect(buildScanCaptureSubtitle('front')).not.toContain('timer');
     expect(buildScanCaptureSubtitle('front')).not.toContain(QUALITY_FIRST_CAPTURE_NOTE);
   });
 });
