@@ -45,7 +45,7 @@ const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && proc
 const PENDING_INVITE_REFRESH_MS = 2000;
 
 async function pullPartnerMirrorNow(userId) {
-  if (!userId) return;
+  if (!userId) return false;
   try {
     // Dynamic require keeps the hook's test imports light and avoids dragging
     // sync transport into screens that only need cached partner reads.
@@ -56,9 +56,12 @@ async function pullPartnerMirrorNow(userId) {
     const client = getSupabaseClient?.();
     if (client && typeof pullPartners === 'function') {
       await pullPartners(client, { userId });
+      return true;
     }
+    return false;
   } catch (_) {
     // Online action already returned its result; the normal sync loop heals.
+    return false;
   }
 }
 
@@ -309,8 +312,9 @@ export default function usePartners(userId, tier) {
   }, [userId, pendingRefreshKey, load]);
 
   const refresh = useCallback(async () => {
-    await pullPartnerMirrorNow(userId);
+    const pulled = await pullPartnerMirrorNow(userId);
     await load();
+    return { ok: pulled };
   }, [userId, load]);
 
   // ── Actions (online; refresh local view after) ──

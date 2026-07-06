@@ -31,7 +31,7 @@ describe('partner support plan', () => {
 
   test('routes to cheer when aim is set and the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is a quick acknowledgement, not a message thread or feed.');
+    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is a quick acknowledgement, not a chat.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Choose a cheer' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       label: 'Optional sharing',
@@ -56,9 +56,9 @@ describe('partner support plan', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('Share one win with Sam only when you want to. You preview the exact card before anything is sent.');
+    expect(plan.headline).toBe('Share one win with Sam only when you want to. You preview the card before it is sent.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Food, coach notes, body metrics and photos stay private.');
+    expect(copy).toContain('Nothing else is shared unless you choose a card.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
   });
 });
