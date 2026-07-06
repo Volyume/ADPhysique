@@ -1263,7 +1263,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 />
                 {bodyFat.trim() ? (
                   <View style={{ marginTop: spacing.sm }}>
-                    {/* U-E-1: gloss the body-fat method abbreviations (BIA/Caliper/DEXA). */}
+                    {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
                     <View style={styles.measuredRow}>
                       <Text style={styles.fieldHint}>How was it measured?</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />

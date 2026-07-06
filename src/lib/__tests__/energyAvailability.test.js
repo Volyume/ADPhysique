@@ -48,7 +48,7 @@ describe('energyAvailabilityCaution', () => {
     expect(r.suggestedKcal).toBeGreaterThan(1100); // still raises
   });
 
-  test('uses a credible body-fat % for FFM when provided (not the fallback)', () => {
+  test('uses a credible body fat % for FFM when provided (not the fallback)', () => {
     // 80 kg at 10% BF (DEXA) → FFM 72 kg. 2000 kcal → EA 27.8 < 35.
     const r = energyAvailabilityCaution(2000, 2600, {
       weightKg: 80, sex: 'male', bodyFatPercent: 10, bodyFatSource: 'dexa',

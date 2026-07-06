@@ -24,7 +24,7 @@ export default function PrivacyPolicyScreen() {
             If you use Progress Photos or Physique Scan, the photo files stay on this device unless you choose
             to share or export them. The app may store local metadata and scan outputs such as photo quality,
             scan confidence, leanness band, visual score and progress signal. Physique Scan is a visual
-            progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
+            progress feature, not an exact body fat percentage, DEXA scan, diagnosis, or medical assessment.
           </Body>
           <Body>
             We do not sell your data. We do not share it with third parties for advertising purposes.

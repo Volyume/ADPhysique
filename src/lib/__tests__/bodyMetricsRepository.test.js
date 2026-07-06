@@ -121,7 +121,7 @@ describe('bodyMetricsRepository', () => {
     expect(conn.getFirstAsync).toHaveBeenCalledTimes(2);
   });
 
-  test('getLatestBodyComposition returns the latest body-fat row and tolerates read errors', async () => {
+  test('getLatestBodyComposition returns the latest body fat row and tolerates read errors', async () => {
     const { conn, repo } = createHarness();
     conn.getFirstAsync.mockResolvedValueOnce({
       body_fat_percent: 13.5,

@@ -41,7 +41,7 @@ export const GLOSSARY = {
   // U-E-1 onboarding term (drafted 2026-06-13, grounded in the methods themselves;
   // founder reviewing wording per _SPEC-006).
   bodyFatMethod:
-    'How a body-fat % was measured: Visual (eyeballed), BIA (a bioelectrical scale or handheld), Caliper (a skinfold pinch), DEXA (a clinical scan, the most accurate).',
+    'How a body fat % was measured: Visual (eyeballed), BIA (a bioelectrical scale or handheld), Caliper (a skinfold pinch), DEXA (a clinical scan, the most accurate).',
   // U-E-1 / U-D-3 / U-F-5 terms: founder approved drafts 2026-06-13 (_SPEC-006).
   engineLog:
     'A plain record of what Precision Coaching changed in your training, and why.',

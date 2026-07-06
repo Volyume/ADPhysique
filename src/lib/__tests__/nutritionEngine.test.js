@@ -613,7 +613,7 @@ describe('onboarding default protein approach matches the engine auto-pick', () 
   });
 });
 
-// CALC-1: an explicit NaN (e.g. a partial "." in the body-fat field) used to
+// CALC-1: an explicit NaN (e.g. a partial "." in the body fat field) used to
 // survive the `?? default` guards and the Katch-McArdle path, producing NaN
 // calorie/macro targets that then persisted (NaN serialises to JSON null).
 describe('calculateNutritionTargets is NaN-safe', () => {
@@ -665,7 +665,7 @@ describe('calculateNutritionTargets is NaN-safe', () => {
     const withBf = calculateNutritionTargets({ ...valid, bodyFatPercent: 12, bodyFatSource: 'dexa' });
     const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
     expect(isFiniteNum(withBf.bmrKcal)).toBe(true);
-    // A real body-fat input changes the BMR formula, so the result should differ.
+    // A real body fat input changes the BMR formula, so the result should differ.
     expect(withBf.bmrKcal).not.toBe(without.bmrKcal);
   });
 

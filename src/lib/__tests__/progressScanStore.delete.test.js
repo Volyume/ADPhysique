@@ -195,7 +195,7 @@ describe('detachProgressScanPhoto privacy cleanup', () => {
 });
 
 describe('finishProgressScanSession estimator persistence', () => {
-  test('stores Volyume physique assessment while leaving body-fat estimate columns null', async () => {
+  test('stores Volyume physique assessment while leaving body fat estimate columns null', async () => {
     seedCompletedSessionAssets();
 
     await finishProgressScanSession('user-1', 'scan-1', {

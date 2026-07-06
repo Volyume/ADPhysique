@@ -13,7 +13,7 @@ describe('privacy, consent, export and store-copy truth', () => {
 
     expect(source).toContain("const CONSENT_VERSION = '2026-07-04'");
     expect(source).toContain('Physique Scan quality, confidence, leanness band, visual score and progress signal');
-    expect(source).toContain('not a medical assessment, DEXA scan, or exact body-fat percentage');
+    expect(source).toContain('not a medical assessment, DEXA scan, or exact body fat percentage');
     expect(source).toContain('Progress photos and scan image files stay on this device');
   });
 
@@ -23,7 +23,7 @@ describe('privacy, consent, export and store-copy truth', () => {
 
     expect(privacy).toContain("LAST_UPDATED = '4 July 2026'");
     expect(privacy).toMatch(/Physique Scan is a visual\s+progress feature/);
-    expect(privacy).toContain('not an exact body-fat percentage');
+    expect(privacy).toContain('not an exact body fat percentage');
     expect(privacy).toContain('progress photo metadata and Physique Scan metadata');
     expect(privacy).toContain('private photo image files');
     expect(data).toContain('Back up app data (JSON)');

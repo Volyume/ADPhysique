@@ -56,7 +56,7 @@ describe('buildNutritionEngineInputs', () => {
     expect(buildNutritionEngineInputs({ ...FIXTURE, experience: null }).experienceLevel).toBe('intermediate');
   });
 
-  test('drops body-fat source when the percentage is missing or out of range', () => {
+  test('drops body fat source when the percentage is missing or out of range', () => {
     expect(buildNutritionEngineInputs({ ...FIXTURE, bodyFatPct: null }).bodyFatSource).toBeNull();
     expect(buildNutritionEngineInputs({ ...FIXTURE, bodyFatPct: 0 }).bodyFatPercent).toBeNull();
     expect(buildNutritionEngineInputs({ ...FIXTURE, bodyFatPct: 80 }).bodyFatPercent).toBeNull();
@@ -114,7 +114,7 @@ describe('onboarding vs Update Your Plan parity', () => {
     expect(cut('competitive')).toBe(cut('beginner'));
   });
 
-  test('regression: dropping body-fat source (the old update bug) diverges', () => {
+  test('regression: dropping body fat source (the old update bug) diverges', () => {
     // Reproduces the pre-fix update path: BF% present but source missing -> Mifflin.
     const broken = calculateNutritionTargets({
       ...onboardingInputs,

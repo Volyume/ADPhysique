@@ -1173,7 +1173,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const proteinWhy = results.proteinBasis === 'lbm'
                   ? (() => {
                       const lbmLine = `You have roughly ${lbmKg} kg of muscle and bone. At ${results.proteinGPerKgLbm} g per kg of that muscle mass, ${results.proteinG}g is based on ${approachLabel}. `;
-                      const scalingLine = `We scale to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body-fat level. `;
+                      const scalingLine = `We scale to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
@@ -1187,7 +1187,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       const bwLine = safeProteinGPerKg != null
                         ? `At ${safeProteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `
                         : `Your target of ${results.proteinG}g is based on ${approachLabel}. `;
-                      const tipLine = `Tip: entering a measured body fat % (from a scan or body fat caliper) lets us scale to your muscle mass instead of total weight. That gives a more precise target, especially if your body-fat % is high or low. `;
+                      const tipLine = `Tip: entering a measured body fat % (from a scan or body fat caliper) lets us scale to your muscle mass instead of total weight. That gives a more precise target, especially if your body fat % is high or low. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp

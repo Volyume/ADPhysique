@@ -1076,7 +1076,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.scoreGuideTitle}>What Volyume measures</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Keep the same setup each time: full body in frame, even light, camera at mid-torso height.
+                Use similar light and camera height each time so Volyume can compare like with like.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (

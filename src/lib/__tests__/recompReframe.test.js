@@ -26,7 +26,7 @@ function liftSet(exerciseId, dateKey, weight, reps) {
 const EXERCISES = [{ id: 1, name: 'Bench Press' }, { id: 2, name: 'Back Squat' }];
 
 describe('deriveRecomp — warrant gate', () => {
-  test('flat weight + body-fat down + waist down → renders the reframe', () => {
+  test('flat weight + body fat down + waist down → renders the reframe', () => {
     const history = flatWeeks({
       0: { body_fat: 20, waist: 86 },
       7: { body_fat: 18.5, waist: 83.5 },
@@ -122,7 +122,7 @@ describe('deriveRecomp — suppression & resilience', () => {
 
 // S4 (world-class audit 04a): "Make a card" extended to the recomposition
 // insight. Pins the privacy gate: a share card is deliberately narrower than
-// the on-screen reframe and must never carry a body-fat or measurement delta,
+// the on-screen reframe and must never carry a body fat or measurement delta,
 // only the strength signal.
 describe('buildRecompShareParams, share-card privacy gate (S4, "Make a card")', () => {
   const liftGainSets = [
@@ -140,7 +140,7 @@ describe('buildRecompShareParams, share-card privacy gate (S4, "Make a card")', 
     expect(buildRecompShareParams(vm, 'kg')).toBeNull();
   });
 
-  test('warranted by shape ALONE (no strength signal) → null: never shares a body-fat or measurement delta', () => {
+  test('warranted by shape ALONE (no strength signal) → null: never shares a body fat or measurement delta', () => {
     const vm = deriveRecomp(shapeMovedHistory, [], []);
     expect(vm.render).toBe(true);
     expect(vm.lift).toBeNull();
@@ -163,7 +163,7 @@ describe('buildRecompShareParams, share-card privacy gate (S4, "Make a card")', 
     expect(buildRecompShareParams(vm, 'lbs').heroUnit).toBe('lbs strength gained');
   });
 
-  test('the share params never carry a name, bodyweight, body-fat or measurement field', () => {
+  test('the share params never carry a name, bodyweight, body fat or measurement field', () => {
     const vm = deriveRecomp(shapeMovedHistory, liftGainSets, EXERCISES);
     const params = buildRecompShareParams(vm, 'kg');
     expect(Object.keys(params).sort()).toEqual(
