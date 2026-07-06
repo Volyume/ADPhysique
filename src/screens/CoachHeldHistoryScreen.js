@@ -176,7 +176,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Every call the coach has made, what changed, what didn't, and why.
+          Every weekly coaching decision, what changed, what stayed the same, and why.
         </Text>
 
         {/* S1 the coach's scorecard (the track record). Hidden under ED/calm
@@ -204,7 +204,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
             icon="book-outline"
             title="No entries yet"
             text="After your first weekly check-in, decisions and holds will appear here."
-            actionLabel="Start weekly check-in"
+            actionLabel="Start check-in"
             onAction={() => navigation?.navigate('WeeklyCheckIn')}
             compact
           />

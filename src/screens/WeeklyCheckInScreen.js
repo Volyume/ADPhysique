@@ -694,7 +694,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <>
         <Text style={styles.stepHeading}>How are you feeling?</Text>
-        <Text style={styles.stepSubtitle}>How your body and mind are doing sets the context for everything else.</Text>
+        <Text style={styles.stepSubtitle}>These answers help Volyume read the week in context, not just by numbers.</Text>
 
         <View style={styles.section}>
           <SectionLabel>Energy and motivation this week</SectionLabel>
@@ -750,7 +750,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <>
         <Text style={styles.stepHeading}>This week's data</Text>
-        <Text style={styles.stepSubtitle}>How did the week go against your targets?</Text>
+        <Text style={styles.stepSubtitle}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -1154,7 +1154,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       <>
         <Text style={styles.stepHeading}>Quick check-in</Text>
         <Text style={styles.stepSubtitle}>
-          We've read your week from your logs. Just confirm how you're recovering.
+          Volyume has read your week from your logs. Confirm recovery and submit.
         </Text>
 
         <View style={styles.fastSummaryCard}>
@@ -1305,7 +1305,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.gateCenter}>
+        <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={styles.gateIconWrap}>
             <Ionicons name="time-outline" size={32} color={colors.primary} />
           </View>
@@ -1313,12 +1313,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <Text style={styles.gateBody}>
             Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} left.
             {'\n\n'}
-            Coaching adjustments compare this week to last. With nothing to compare against yet, the weekly read would be guesswork. Log your morning weight each day and food data if you're on Diary, and the first check-in lands on {nextDayLabel} (your chosen day, {scheduledDayName}).
+            Coaching adjustments compare this week to last. With nothing to compare against yet, the weekly read would not be reliable. Log your morning weight each day and food data if you're using Eat, and the first check-in lands on {nextDayLabel} (your chosen day, {scheduledDayName}).
           </Text>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1333,7 +1333,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.gateCenter}>
+        <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={styles.gateIconWrap}>
             <Ionicons name="scale-outline" size={32} color={colors.warning} />
           </View>
@@ -1362,7 +1362,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
             <Text style={styles.gateDeferBtnText}>Check in anyway</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1375,7 +1375,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.gateCenter}>
+        <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={styles.gateIconWrap}>
             <Ionicons name="cloud-offline-outline" size={32} color={colors.warning} />
           </View>
@@ -1391,7 +1391,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           >
             <Text style={styles.gateBtnText}>Try again</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -1449,7 +1449,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
-              <Text style={styles.ritualIntroSub}>Just four questions, and your coach reads them every week. Your coaching decision lands as soon as you submit.</Text>
+              <Text style={styles.ritualIntroSub}>Four short questions. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
             </View>
           )}
 
@@ -1565,6 +1565,14 @@ const styles = StyleSheet.create({
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xxl, gap: spacing.lg,
   },
+  gateCenterScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xxl,
+    gap: spacing.lg,
+  },
   gateIconWrap: {
     width: 72, height: 72, borderRadius: circle(72),
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -1589,13 +1597,21 @@ const styles = StyleSheet.create({
   },
   gateBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center',
+    minHeight: 52,
+    minWidth: 180,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gateBtnText: {
     fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary,
   },
   gateDeferBtn: {
-    paddingVertical: spacing.md, alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gateDeferBtnText: {
     fontSize: fontSize.sm, color: colors.textMuted,

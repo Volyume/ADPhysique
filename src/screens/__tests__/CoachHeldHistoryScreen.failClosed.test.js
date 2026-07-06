@@ -70,8 +70,8 @@ describe('CoachHeldHistoryScreen fail-closed loading', () => {
     await act(async () => { tree = create(<CoachHeldHistoryScreen navigation={navigation} />); });
     await flush();
 
-    expect(flattenText(tree.toJSON())).toContain('Start weekly check-in');
-    const action = tree.root.findByProps({ accessibilityLabel: 'Start weekly check-in' });
+    expect(flattenText(tree.toJSON())).toContain('Start check-in');
+    const action = tree.root.findByProps({ accessibilityLabel: 'Start check-in' });
     await act(async () => { action.props.onPress(); });
     expect(navigation.navigate).toHaveBeenCalledWith('WeeklyCheckIn');
   });
