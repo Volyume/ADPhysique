@@ -270,7 +270,7 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(text).toContain('Progress Photos');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photos');
-    expect(text).toContain('Add a guided set or import existing photos');
+    expect(text).toContain('Add a guided photo set or import existing photos');
     expect(text).not.toContain('Suggested next step');
   });
 });

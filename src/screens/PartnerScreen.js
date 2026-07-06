@@ -664,9 +664,10 @@ export default function PartnerScreen({ route }) {
   useEffect(() => {
     if (!incomingCode || p.loading) return;
     if (handledCodeRef.current === incomingCode) return;
-    handledCodeRef.current = incomingCode;
     setCode(incomingCode);
-    if (p.canAdd) handleRedeem(incomingCode);
+    if (!p.canAdd) return;
+    handledCodeRef.current = incomingCode;
+    handleRedeem(incomingCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingCode, p.loading, p.canAdd]);
 
@@ -816,9 +817,9 @@ export default function PartnerScreen({ route }) {
     // Consuming the day's cheer also consumes the pair's moment, but only once
     // the send actually succeeds or the server says today's cheer exists.
     if (r?.ok || r?.error === 'already_cheered') consumeMoment(pair);
-    if (!r?.ok && r?.error && r.error !== 'already_cheered') {
-      logError('PartnerScreen.handleSendAck', new Error(r.error), { userId: user?.id });
-      toast.show('Could not send that right now. Check your connection and try again.', { variant: 'error' });
+    if (!r?.ok && r?.error !== 'already_cheered') {
+      logError('PartnerScreen.handleSendAck', new Error(r?.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not send that cheer. Check your connection and try again.', { variant: 'error' });
     }
   }
 

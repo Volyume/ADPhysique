@@ -18,6 +18,8 @@
 import { Linking, Share } from 'react-native';
 import { create, act } from 'react-test-renderer';
 
+const mockToastShow = jest.fn();
+
 const mockState = { user: { id: 'u1' }, tier: 'pro', accessibility: { reduceMotion: true } };
 jest.mock('../../store/useAppStore', () => {
   const useAppStore = (sel) => (sel ? sel(mockState) : mockState);
@@ -30,7 +32,7 @@ jest.mock('../../hooks/usePartners', () => ({ __esModule: true, default: () => m
 
 jest.mock('../../components/Toast', () => ({
   __esModule: true,
-  useToast: () => ({ show: jest.fn(), hide: jest.fn() }),
+  useToast: () => ({ show: mockToastShow, hide: jest.fn() }),
 }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
@@ -124,6 +126,7 @@ async function press(tree, label, i = 0) {
 beforeEach(() => {
   mockState.tier = 'pro';
   mockAlertCalls.length = 0;
+  mockToastShow.mockClear();
   mockGetVisibleMoments.mockReset().mockResolvedValue([]);
   mockMarkMomentSeen.mockReset().mockResolvedValue();
 });
@@ -422,6 +425,22 @@ describe('cheer affordance', () => {
     expect(mockMarkMomentSeen).not.toHaveBeenCalled();
     expect(allText(tree)).toContain('Another week you both showed up.');
   });
+
+  test('a failed acknowledgement without an error still tells the user', async () => {
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Could not send that cheer. Check your connection and try again.',
+      { variant: 'error' },
+    );
+  });
 });
 
 describe('milestone moment slot', () => {
@@ -580,6 +599,23 @@ describe('invite journey', () => {
     await act(async () => { field.props.onChangeText('https://volyume.app/partner/abcd1234?ref=sms'); });
     await press(tree, 'Join with code');
     expect(hook.redeem).toHaveBeenCalledWith('ABCD1234');
+  });
+
+  test('deep-linked invite redemption waits until partner capacity has loaded', async () => {
+    const redeem = jest.fn(async () => ({ ok: true }));
+    mockHook.value = base({ pairs: [], canAdd: false, redeem });
+    let tree;
+    await act(async () => { tree = create(<PartnerScreen route={{ params: { code: 'abcd1234' } }} />); });
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(redeem).not.toHaveBeenCalled();
+
+    mockHook.value = base({ pairs: [], canAdd: true, redeem });
+    await act(async () => {
+      tree.update(<PartnerScreen route={{ params: { code: 'abcd1234' } }} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(redeem).toHaveBeenCalledWith('ABCD1234');
   });
 });
 

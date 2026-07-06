@@ -63,14 +63,14 @@ describe('progress capture guide copy', () => {
       'scan_library',
     ]);
     expect(routes[0]).toMatchObject({
-      title: 'Guided physique scan',
-      actionLabel: 'Start guided scan',
+      title: 'Guided photo set',
+      actionLabel: 'Start guided set',
       recommended: true,
     });
     expect(routes[0].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
     expect(routes[1]).toMatchObject({
-      title: 'Import photos to scan',
-      actionLabel: 'Import photos to scan',
+      title: 'Import a photo set',
+      actionLabel: 'Import photo set',
     });
     expect(routes[1].bestFor).toContain('real capture date and weight snapshot');
     expect(routes[1].steps).toContain('Choose the front relaxed photo');
@@ -87,7 +87,7 @@ describe('progress capture guide copy', () => {
       key: 'scan',
       recommended: true,
       disabled: true,
-      disabledReason: 'Sign in to save a guided scan.',
+      disabledReason: 'Sign in to save a guided photo set.',
     });
     expect(buildProgressStudioCaptureRoutes({ readOnly: true })).toEqual([]);
   });

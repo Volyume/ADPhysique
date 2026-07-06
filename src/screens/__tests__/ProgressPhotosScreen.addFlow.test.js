@@ -181,7 +181,7 @@ function allTexts(tree) {
 async function openImportScanDateStep(tree) {
   await pressLabel(tree, 'Add photos');
   await flush();
-  await pressLabel(tree, 'Import photos to scan');
+  await pressLabel(tree, 'Import photo set');
 }
 
 async function importFrontScanPhoto(tree) {
@@ -200,13 +200,13 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
   expect(copy).toContain('Add photos');
-  expect(copy).toContain('Choose guided capture or import existing photos.');
-  expect(copy).toContain('Guided physique scan');
-  expect(copy).toContain('Import photos to scan');
+  expect(copy).toContain('Choose a guided photo set or import photos you already have.');
+  expect(copy).toContain('Guided photo set');
+  expect(copy).toContain('Import a photo set');
   expect(copy).toContain('Choose the front relaxed photo');
   expect(copy).toContain('Photos stay on this phone unless you share or export them.');
-  expect(hasPressableLabel(tree, 'Start guided scan')).toBe(true);
-  expect(hasPressableLabel(tree, 'Import photos to scan')).toBe(true);
+  expect(hasPressableLabel(tree, 'Start guided set')).toBe(true);
+  expect(hasPressableLabel(tree, 'Import photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);
 });
 
