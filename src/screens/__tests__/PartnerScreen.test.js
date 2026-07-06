@@ -171,6 +171,26 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Current week: You 2 of 4. Sam 3 of 4.');
   });
 
+  test('active pairs show consent-gated shareable wins without widening partner privacy', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount();
+    let text = allText(tree).join(' ');
+    expect(text).toContain('Share wins');
+    expect(text).toContain('Ask every time. Share only a workout, record, block milestone or progress card you choose.');
+    expect(text).toContain('Nothing becomes a feed.');
+
+    await press(tree, 'Review shareable wins');
+    text = allText(tree).join(' ');
+    expect(text).toContain('Shareable wins');
+    expect(text).toContain('Partner wins are off by default.');
+    expect(text).toContain('Default: Ask every time.');
+    expect(text).toContain('Workout summary');
+    expect(text).toContain('Personal record');
+    expect(text).toContain('Block milestone');
+    expect(text).toContain('Progress card');
+    expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+  });
+
   test('pro under the cap offers "Invite another partner"', async () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();

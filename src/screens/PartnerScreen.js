@@ -44,6 +44,7 @@ import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
 import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
+import { SHARE_WIN_POLICY, SHARE_WIN_TYPES } from '../lib/partners/shareWins';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
@@ -207,6 +208,31 @@ function PartnerSupportSnapshot({ pair, name }) {
   );
 }
 
+function PartnerShareWinsCard({ onOpen }) {
+  return (
+    <View style={styles.shareWinsCard}>
+      <View style={styles.shareWinsHead}>
+        <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.shareWinsTitle}>Share wins</Text>
+      </View>
+      <Text style={styles.shareWinsText}>
+        {SHARE_WIN_POLICY.defaultState}. Share only a workout, record, block milestone or progress card you choose.
+        Nothing becomes a feed.
+      </Text>
+      <TouchableOpacity
+        onPress={onOpen}
+        style={styles.shareWinsButton}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel="Review shareable wins"
+      >
+        <Text style={styles.shareWinsButtonText}>Review shareable wins</Text>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // D5-B3 reconnection surface: shown only when the shared run has archived. One
 // tap reaches out (opens the acknowledgement picker); dismissable and never
 // nagging (the dismissal persists). Reuses the existing archived copy.
@@ -237,7 +263,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
 
 function PairCard({
   pair, moment, onCheer, onManage, onOpenBlock, onSetAim, onReconnect,
-  reconnectDismissed, onDismissReconnect,
+  reconnectDismissed, onDismissReconnect, onOpenShareWins,
 }) {
   const name = pair.partnerFirstName || 'Your partner';
   const run = pair.sharedStreak?.run ?? 0;
@@ -294,6 +320,8 @@ function PairCard({
       <IntentionBlock pair={pair} onSetAim={onSetAim} />
 
       <PartnerSupportSnapshot pair={pair} name={name} />
+
+      <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} />
 
       {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
@@ -374,6 +402,7 @@ export default function PartnerScreen({ route }) {
   const [aimSheetPair, setAimSheetPair] = useState(null);
   const [aimValue, setAimValue] = useState(1);
   const [ackSheetPair, setAckSheetPair] = useState(null);
+  const [shareWinsPair, setShareWinsPair] = useState(null);
   const [reconnectDismissed, setReconnectDismissed] = useState([]);
 
   // Milestone moments, indexed by pair (at most one per pair per local day).
@@ -743,6 +772,7 @@ export default function PartnerScreen({ route }) {
                 onReconnect={openAckSheet}
                 reconnectDismissed={reconnectDismissed.includes(pair.id)}
                 onDismissReconnect={dismissReconnect}
+                onOpenShareWins={setShareWinsPair}
               />
             ))}
 
@@ -905,6 +935,10 @@ export default function PartnerScreen({ route }) {
           <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} />
         ) : null}
       </BottomSheet>
+
+      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins">
+        {shareWinsPair ? <ShareWinsSheetBody /> : null}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -970,6 +1004,24 @@ function AckSheetBody({ pair, onSend }) {
           <Text style={styles.ackRowText}>{ack.line}</Text>
         </TouchableOpacity>
       ))}
+    </View>
+  );
+}
+
+function ShareWinsSheetBody() {
+  return (
+    <View style={styles.sheetBody}>
+      <Text style={styles.sheetHeading}>Shareable wins</Text>
+      <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
+      <Text style={styles.shareWinDefault}>Default: {SHARE_WIN_POLICY.defaultState}.</Text>
+      {SHARE_WIN_TYPES.map((typeItem) => (
+        <View key={typeItem.key} style={styles.shareWinType}>
+          <Text style={styles.shareWinTitle}>{typeItem.title}</Text>
+          <Text style={styles.shareWinCopy}>Can share: {typeItem.shared}</Text>
+          <Text style={styles.shareWinCopy}>Stays private: {typeItem.private}</Text>
+        </View>
+      ))}
+      <Text style={styles.shareWinFooter}>{SHARE_WIN_POLICY.excluded}</Text>
     </View>
   );
 }
@@ -1206,6 +1258,23 @@ const styles = StyleSheet.create({
   supportLabel: { ...type.caption, color: colors.textSecondary },
   supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
   supportFoot: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinsCard: {
+    gap: spacing.sm,
+    backgroundColor: withAlpha(colors.primary, alpha.tint),
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  shareWinsHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  shareWinsTitle: { ...type.label, color: colors.textPrimary },
+  shareWinsText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
+  shareWinsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
+  shareWinsButtonText: { ...type.label, color: colors.primary },
 
   // D5-B3 reconnection surface
   reconnect: {
@@ -1248,6 +1317,16 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   ackRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
+  shareWinDefault: { ...type.label, color: colors.textPrimary },
+  shareWinType: {
+    gap: spacing.xxs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  shareWinTitle: { ...type.label, color: colors.textPrimary },
+  shareWinCopy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinFooter: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
 
   // Moment card
   momentCard: {
