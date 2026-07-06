@@ -23,8 +23,13 @@ const UNAVAILABLE_RETAKE_REASONS = new Set([
 
 let modelPromise = null;
 
-function hasUriScheme(uri) {
-  return /^[a-z][a-z0-9+.-]*:/i.test(String(uri || ''));
+function normaliseFastTfliteUri(uri) {
+  const value = String(uri || '').trim();
+  if (!value) return null;
+  if (/^(file|https?):\/\//i.test(value)) return value;
+  if (/^[a-z]:[\\/]/i.test(value)) return `file:///${value.replace(/\\/g, '/')}`;
+  if (value.startsWith('/')) return `file://${value}`;
+  return null;
 }
 
 export async function resolveProgressScanModelSource() {
@@ -32,11 +37,13 @@ export async function resolveProgressScanModelSource() {
   const { Asset } = require('expo-asset');
   const asset = Asset.fromModule(source);
   const downloaded = await asset.downloadAsync();
-  const uri = downloaded?.localUri || downloaded?.uri || asset.localUri || asset.uri;
-  if (!hasUriScheme(uri)) {
-    throw new Error('progress_scan_model_asset_uri_unresolved');
-  }
-  return { url: uri };
+  const uri = [
+    downloaded?.localUri,
+    asset.localUri,
+    downloaded?.uri,
+    asset.uri,
+  ].map(normaliseFastTfliteUri).find(Boolean);
+  return uri ? { url: uri } : null;
 }
 
 function finiteNumber(v) {
@@ -114,7 +121,12 @@ function loadProgressScanModel() {
   if (!modelPromise) {
     modelPromise = (async () => {
       const { loadTensorflowModel } = require('react-native-fast-tflite');
-      return loadTensorflowModel(await resolveProgressScanModelSource(), []);
+      const modelSource = await resolveProgressScanModelSource();
+      if (!modelSource) {
+        modelPromise = null;
+        return null;
+      }
+      return loadTensorflowModel(modelSource, []);
     })().catch((e) => {
       modelPromise = null;
       throw e;
@@ -445,6 +457,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
 
     const input = rgbBytesToFloat32(rgb);
     const model = await loadProgressScanModel();
+    if (!model) return unavailableVisionResult('model_unavailable');
     const outputs = await model.run([exactBuffer(input)]);
     const mask = outputToFloat32Array(outputs);
     return measureMaskSignals(mask, {

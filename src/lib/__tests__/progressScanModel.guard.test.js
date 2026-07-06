@@ -39,7 +39,10 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(vision).toMatch(/loadTensorflowModel/);
     expect(vision).toMatch(/selfie_segmentation\.tflite/);
     expect(vision).toMatch(/Asset\.fromModule\(source\)/);
-    expect(vision).toMatch(/loadTensorflowModel\(await resolveProgressScanModelSource\(\), \[\]\)/);
+    expect(vision).toMatch(/normaliseFastTfliteUri/);
+    expect(vision).toMatch(/const modelSource = await resolveProgressScanModelSource\(\)/);
+    expect(vision).toMatch(/if \(!modelSource\)/);
+    expect(vision).toMatch(/loadTensorflowModel\(modelSource, \[\]\)/);
     expect(vision).not.toMatch(/loadTensorflowModel\(MODEL_SOURCE\(\), \[\]\)/);
     expect(`${read('package.json')}\n${vision}`).not.toMatch(/executorch|react-native-pytorch-core/i);
   });

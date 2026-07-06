@@ -322,7 +322,18 @@ export default function ProgressPhotosScreen({ navigation }) {
         return;
       }
       const scanTakenAt = Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now());
-      await upsertPhotoMeta(uid, saved.name, { takenAt: scanTakenAt, pose });
+      try {
+        await upsertPhotoMeta(uid, saved.name, { takenAt: scanTakenAt, pose }, { throwOnError: true });
+      } catch (e) {
+        await cleanupUnattachedSavedScanPhoto({
+          userId: uid,
+          name: saved.name,
+          saved,
+          deleteProgressPhoto,
+          deletePhotoMeta,
+        });
+        throw e;
+      }
       if (!canWrite()) {
         await cleanupUnattachedSavedScanPhoto({
           userId: uid,
@@ -374,30 +385,40 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function onDetailsConfirm({ takenAt, pose }) {
-    setDetailsOpen(false);
     // Live-tier re-check (the add-alert write-guard class): a pro-to-free flip
     // with the sheet open must not save or write metadata.
     if (!canWrite()) { resetPending(); return; }
     const uid = useAppStore.getState().user?.id;
     setBusy(true);
+    let savedPhoto = null;
+    const savedFromPendingUri = !!pendingUri;
     try {
       let name = pendingName;
       if (pendingUri) {
-        const saved = await saveProgressPhoto(pendingUri, undefined, uid);
-        name = saved?.name || null;
+        savedPhoto = await saveProgressPhoto(pendingUri, undefined, uid);
+        name = savedPhoto?.name || null;
       }
       if (name) {
         // Creates the metadata row and snapshots the weigh-in nearest takenAt
         // (or re-snapshots for a captured photo whose date the user moved).
-        await upsertPhotoMeta(uid, name, { takenAt, pose });
+        await upsertPhotoMeta(uid, name, { takenAt, pose }, { throwOnError: true });
       }
-    } catch (e) {
-      logError('ProgressPhotos.addDetails', e, {});
-      toast.show('Could not add the photo. Try again.', { variant: 'error' });
-    } finally {
-      setBusy(false);
       resetPending();
       await refresh();
+    } catch (e) {
+      if (savedFromPendingUri && savedPhoto?.uri) {
+        await cleanupUnattachedSavedScanPhoto({
+          userId: uid,
+          name: savedPhoto.name,
+          saved: savedPhoto,
+          deleteProgressPhoto,
+          deletePhotoMeta,
+        });
+      }
+      logError('ProgressPhotos.addDetails', e, {});
+      toast.show('Could not save those photo details. Please try again.', { variant: 'error' });
+    } finally {
+      setBusy(false);
     }
   }
 

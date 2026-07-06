@@ -42,13 +42,13 @@ export default function SettingsPrivacyScreen({ navigation }) {
       <View style={styles.section}>
         <SettingRow
           icon="shield-checkmark-outline"
-          label="Health-data consent"
+          label={healthConsent === true ? 'Withdraw consent and delete account' : 'Health-data consent'}
           sub={healthConsent === true
-            ? 'Granted. Withdrawing deletes your account because Volyume cannot keep health data without it.'
+            ? 'Destructive action. This withdraws health-data consent and permanently deletes your Volyume account, cloud data and local data.'
             : healthConsent === false
               ? 'Withdrawn. Account deletion is in progress or complete.'
               : 'Not recorded yet.'}
-          value={healthConsent === true ? 'Granted' : healthConsent === false ? 'Withdrawn' : '-'}
+          value={healthConsent === true ? 'Delete account' : healthConsent === false ? 'Withdrawn' : '-'}
           onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
           showArrow={healthConsent === true}
         />

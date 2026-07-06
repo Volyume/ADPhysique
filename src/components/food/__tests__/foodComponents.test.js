@@ -430,14 +430,14 @@ describe('FoodRow', () => {
     expect(txt).toContain('OFF');
   });
 
-  test('appends star when isFav', () => {
+  test('names the favourite state when isFav', () => {
     const tree = create(<FoodRow food={baseFood} isFav={true} onPress={() => {}} />).toJSON();
-    expect(JSON.stringify(tree)).toContain('★');
+    expect(JSON.stringify(tree)).toContain('Starred');
   });
 
-  test('omits star when not isFav', () => {
+  test('omits favourite marker when not isFav', () => {
     const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />).toJSON();
-    expect(JSON.stringify(tree)).not.toContain('★');
+    expect(JSON.stringify(tree)).not.toContain('Starred');
   });
 
   test('falls back to "<serving_g>g" when no serving_label', () => {

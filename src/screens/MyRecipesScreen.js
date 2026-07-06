@@ -141,45 +141,56 @@ export default function MyRecipesScreen({ navigation, route }) {
   function renderItem({ item }) {
     const busy = loggingId === item.id;
     return (
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => onLog(item)}
-        disabled={!!loggingId}
-        accessibilityRole="button"
-        accessibilityLabel={`Log ${item.name}`}
-        accessibilityHint="Choose servings before adding it to your diary"
-      >
-        <View style={styles.rowText}>
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.meta}>
-            {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
-            {item.notes ? ` - ${item.notes}` : ''}
-          </Text>
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.rowMain}
+          onPress={() => onLog(item)}
+          disabled={!!loggingId}
+          accessibilityRole="button"
+          accessibilityLabel={`Log ${item.name}`}
+          accessibilityHint="Choose servings before adding it to your diary"
+        >
+          <View style={styles.rowText}>
+            <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.meta}>
+              {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
+              {item.notes ? ` - ${item.notes}` : ''}
+            </Text>
+          </View>
+          {busy
+            ? <ActivityIndicator size="small" color={colors.primary} />
+            : (
+              <View style={styles.logPill}>
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={styles.logPillText}>Log</Text>
+              </View>
+            )}
+        </TouchableOpacity>
+        <View style={styles.rowActions}>
+          <TouchableOpacity
+            onPress={() => onEdit(item)}
+            disabled={!!loggingId}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${item.name}`}
+            style={styles.actionBtn}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.actionText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onDelete(item)}
+            disabled={!!loggingId}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${item.name}`}
+            style={styles.actionBtn}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.error} />
+            <Text style={[styles.actionText, styles.actionDanger]}>Delete</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={() => onEdit(item)}
-          disabled={!!loggingId}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={`Edit ${item.name}`}
-          style={styles.editBtn}
-        >
-          <Ionicons name="create-outline" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => onDelete(item)}
-          disabled={!!loggingId}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={`Delete ${item.name}`}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="trash-outline" size={20} color={colors.error} />
-        </TouchableOpacity>
-        {busy
-          ? <ActivityIndicator size="small" color={colors.primary} />
-          : <Ionicons name="add-circle" size={26} color={colors.primary} />}
-      </TouchableOpacity>
+      </View>
     );
   }
 
@@ -261,23 +272,46 @@ export default function MyRecipesScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   row: {
-    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
-    minHeight: 64,
+    gap: spacing.sm,
   },
-  rowText: { flex: 1, paddingRight: spacing.sm },
+  rowMain: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rowText: { flex: 1, minWidth: 0 },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
-  editBtn: {
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: spacing.xs,
+  logPill: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    borderRadius: 999,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  iconBtn: {
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: spacing.xs,
+  logPillText: { ...type.label, color: colors.primary },
+  rowActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  actionBtn: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  actionText: { ...type.label, color: colors.textSecondary },
+  actionDanger: {
+    color: colors.error,
   },
   // Servings picker bottom sheet (food audit F-4)
   servingsSheet: { alignItems: 'center' },

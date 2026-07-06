@@ -120,7 +120,7 @@ export async function getPhotoMetaMap(names, userId = null) {
  * Returns the resulting metadata in the shared shape. `userId` is only needed
  * for the weight snapshot; a null userId simply yields weightKg = null.
  */
-export async function upsertPhotoMeta(userId, name, patch = {}) {
+export async function upsertPhotoMeta(userId, name, patch = {}, options = {}) {
   if (!name) return defaultMeta(name);
   try {
     const d = await db();
@@ -185,6 +185,7 @@ export async function upsertPhotoMeta(userId, name, patch = {}) {
     return { name, takenAt, pose: pose ?? null, weightKg: weightKg ?? null, note: note ?? null };
   } catch (e) {
     logError('ProgressPhotoMeta.upsert', e, { name });
+    if (options?.throwOnError) throw e;
     return defaultMeta(name);
   }
 }

@@ -137,16 +137,17 @@ export default function PhotoDateRangeSheet({
                 variant="tertiary"
                 size="sm"
                 fullWidth={false}
+                style={styles.actionButton}
                 onPress={() => { setFromDraft(null); setToDraft(null); }}
                 accessibilityLabel="Clear both dates"
               />
             ) : null}
-            <View style={styles.actionsSpacer} />
             <Button
               title="Cancel"
               variant="tertiary"
               size="sm"
               fullWidth={false}
+              style={styles.actionButton}
               onPress={onCancel}
               accessibilityLabel="Cancel the date filter"
             />
@@ -154,6 +155,7 @@ export default function PhotoDateRangeSheet({
               title="Done"
               size="sm"
               fullWidth={false}
+              style={styles.actionButton}
               onPress={apply}
               accessibilityLabel="Apply the date filter"
             />
@@ -201,6 +203,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
   },
   dateText: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xl },
-  actionsSpacer: { flex: 1 },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  actionButton: {
+    flexGrow: 1,
+    minWidth: 118,
+  },
 });

@@ -214,7 +214,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
   // returns). We pick the smallest meal count where per-meal protein stays at or
   // below the ceiling, so bodybuilders on high daily targets automatically split
-  // across more feedings rather than overshooting the per-meal ceiling.
+  // across more meals rather than overshooting the per-meal ceiling.
   const [mealsPerDay,     setMealsPerDay]     = useState(null);  // null = use recommended
   useEffect(() => {
     AsyncStorage.getItem('@volyume_meals_per_day')
@@ -988,7 +988,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* ── Per-meal protein distribution ───────────────────
                   Guidance only, daily total unchanged. Splits the
-                  prescribed daily protein across 3 to 6 feedings, with
+                  prescribed daily protein across 3 to 6 meals, with
                   the recommended count chosen to keep per-meal in the
                   0.4 to 0.55 g/kg muscle protein synthesis window. */}
               {results.proteinG > 0 && (() => {
@@ -1063,12 +1063,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                           );
                         })}
                       </View>
-                      <Text style={styles.mealCountLabel}>feedings</Text>
+                      <Text style={styles.mealCountLabel}>meals per day</Text>
                     </View>
 
                     <Text style={styles.mealCountRecCaption}>
                       <Text style={styles.mealCountRecCaptionDot}>●</Text>
-                      {` Recommended: ${recommended} feedings for this protein target`}
+                      {` Recommended: ${recommended} meals per day for this protein target`}
                     </Text>
 
                     {mealsPerDay !== null && mealsPerDay !== recommended && (
@@ -1076,7 +1076,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         style={styles.mealCountRecButton}
                         onPress={() => changeMealsPerDay(recommended)}
                         accessibilityRole="button"
-                        accessibilityLabel={`Use Volyume's recommended ${recommended} feedings`}
+                        accessibilityLabel={`Use Volyume's recommended ${recommended} meals per day`}
                       >
                         <Ionicons name="sparkles-outline" size={13} color={colors.primary} />
                         <Text style={styles.mealCountRecButtonText}>

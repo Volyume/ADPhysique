@@ -7,6 +7,7 @@ import { colors, spacing, type } from '../styles/theme';
 import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
 import TextField from '../components/TextField';
 import Chip from '../components/Chip';
+import { appAlert } from '../components/AppAlert';
 import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
@@ -42,14 +43,29 @@ export default function SettingsProfileScreen() {
   // per founder direction the next weekly coach run picks up the new sex.
   async function changeSex(value) {
     if (!user?.id || (value !== 'male' && value !== 'female')) return;
+    const previous = sex;
     setSex(value);
     try {
       await saveLocalProfile(user.id, { ...(userProfile || {}), sex: value });
       const existing = await getUserBodyProfile(user.id).catch(() => null);
       await saveUserBodyProfile(user.id, { ...(existing || {}), sex: value });
     } catch (e) {
+      setSex(previous);
       logError('SettingsProfile.changeSex', e, {});
     }
+  }
+
+  function requestSexChange(value) {
+    if (value === sex) return;
+    const label = SEX_OPTIONS.find((opt) => opt.value === value)?.label || value;
+    appAlert(
+      'Change biological sex?',
+      `Set biological sex to ${label}. This affects BMR, calorie floors and future nutrition targets. Your current targets are not recalculated until the next weekly coach run.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Update', onPress: () => changeSex(value) },
+      ],
+    );
   }
 
   return (
@@ -98,7 +114,7 @@ export default function SettingsProfileScreen() {
                   key={opt.value}
                   label={opt.label}
                   selected={active}
-                  onPress={() => changeSex(opt.value)}
+                  onPress={() => requestSexChange(opt.value)}
                   accessibilityRole="radio"
                   accessibilityLabel={`Biological sex ${opt.label}`}
                   style={styles.dietChip}

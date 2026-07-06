@@ -250,7 +250,7 @@ export default function YouScreen({ navigation }) {
               />
               <NavRow
                 icon="book-outline"
-                label="How decisions work"
+                label="How Precision Coaching works"
                 sub="Training volume, calorie, macro, cardio, deload and hold logic."
                 onPress={() => navigation.navigate('Methodology', { source: 'coach_tab' })}
               />

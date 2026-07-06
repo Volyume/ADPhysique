@@ -1,4 +1,5 @@
 import {
+  analyseProgressScanPhoto,
   assetFieldsFromVisionResult,
   base64ToUint8Array,
   measureMaskSignals,
@@ -16,11 +17,19 @@ const mockFromModule = jest.fn(() => ({
   uri: 'assets_ml_selfie_segmentation',
   downloadAsync: mockDownloadAsync,
 }));
+const mockExtractRgb = jest.fn();
+const mockLoadTensorflowModel = jest.fn();
 
 jest.mock('expo-asset', () => ({
   Asset: {
     fromModule: mockFromModule,
   },
+}));
+jest.mock('progress-scan-image', () => ({
+  extractRgb: (...args) => mockExtractRgb(...args),
+}));
+jest.mock('react-native-fast-tflite', () => ({
+  loadTensorflowModel: (...args) => mockLoadTensorflowModel(...args),
 }));
 
 function syntheticPersonMask({
@@ -42,10 +51,28 @@ function syntheticPersonMask({
   return mask;
 }
 
+function bytesToBase64(bytes) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    const n = (a << 16) | (b << 8) | c;
+    out += chars[(n >> 18) & 63];
+    out += chars[(n >> 12) & 63];
+    out += i + 1 < bytes.length ? chars[(n >> 6) & 63] : '=';
+    out += i + 2 < bytes.length ? chars[n & 63] : '=';
+  }
+  return out;
+}
+
 describe('Progress Scan vision signal extraction', () => {
   beforeEach(() => {
     mockDownloadAsync.mockClear();
     mockFromModule.mockClear();
+    mockExtractRgb.mockReset();
+    mockLoadTensorflowModel.mockReset();
   });
 
   test('base64 decoder returns exact bytes without relying on Buffer', () => {
@@ -58,6 +85,28 @@ describe('Progress Scan vision signal extraction', () => {
     });
     expect(mockFromModule).toHaveBeenCalledWith(1);
     expect(mockDownloadAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not pass bare Android asset keys to the native TFLite URL loader', async () => {
+    mockDownloadAsync.mockResolvedValueOnce({
+      localUri: null,
+      uri: 'assets_ml_selfie_segmentation',
+    });
+    await expect(resolveProgressScanModelSource()).resolves.toBeNull();
+
+    mockDownloadAsync.mockResolvedValueOnce({
+      localUri: null,
+      uri: 'assets_ml_selfie_segmentation',
+    });
+    mockExtractRgb.mockResolvedValueOnce({
+      rgbBase64: bytesToBase64(new Uint8Array(256 * 256 * 3).fill(128)),
+      lightingScore: 0.9,
+      blurScore: 0.9,
+    });
+    const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
+    expect(result.modelBacked).toBe(false);
+    expect(result.abstentionReasons).toContain('model_unavailable');
+    expect(mockLoadTensorflowModel).not.toHaveBeenCalled();
   });
 
   test('TFLite mask measurements produce quality and silhouette signals', () => {
