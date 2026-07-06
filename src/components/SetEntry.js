@@ -368,9 +368,9 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    width: 104,
+    flexShrink: 0,
+    gap: 2,
   },
   e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   e1rmHint: {

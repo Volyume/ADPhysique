@@ -121,6 +121,11 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   const fmt = formatLoggedSet(set, units, exerciseType);
   const est1RM = (!isWarmup && fmt.showE1RM) ? calculate1RM(set.weight, set.actualReps) : null;
   const perSide = formatPerSide(set.leftReps, set.rightReps);
+  const spokenSetLabel = [
+    isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`,
+    fmt.text,
+    perSide,
+  ].filter(Boolean).join(': ');
   return (
     <TouchableOpacity
       style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}
@@ -128,7 +133,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       // handler; an inline closure per row was defeating this memo.
       onPress={() => onEdit(set)}
       accessibilityRole="button"
-      accessibilityLabel={`Edit set ${progressNum}`}
+      accessibilityLabel={spokenSetLabel}
       accessibilityHint="Opens a sheet to change or delete this logged set"
     >
       {isWarmup ? (
@@ -2281,7 +2286,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
                   Choose a weight and reps, then tap Log set when done.
-                  Tap ⋯ above for how to do this exercise correctly.
+                  Open More above for how to do this exercise correctly.
                 </Text>
               </View>
             )}
@@ -2511,7 +2516,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityState={{ disabled: saving }}
                 accessibilityLabel={
                   currentSet.setType === 'warmup' ? 'Done with warm-up'
-                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'
+                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
                 }
               >
                 <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.onPrimary} />
