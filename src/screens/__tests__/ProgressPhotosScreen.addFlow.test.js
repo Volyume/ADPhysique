@@ -99,41 +99,55 @@ function pressLabel(tree, label) {
   return act(async () => { node.props.onPress(); });
 }
 
-// Drive the add alert straight to the library path.
-function chooseLibraryOnAdd() {
-  mockAppAlert.mockImplementation((title, message, buttons) => {
-    const b = buttons.find((x) => x.text === 'Choose from library');
-    b?.onPress?.();
-  });
+function hasPressableLabel(tree, label) {
+  return tree.root.findAll(
+    (n) => typeof n.type === 'string' && n.props?.accessibilityLabel === label && typeof n.props.onPress === 'function',
+  ).length > 0;
+}
+
+function allTexts(tree) {
+  return tree.root
+    .findAll((n) => typeof n.type === 'string' && n.type === 'Text')
+    .map((t) => {
+      const walk = (node) => {
+        if (node == null) return '';
+        if (typeof node === 'string' || typeof node === 'number') return String(node);
+        if (Array.isArray(node)) return node.map(walk).join('');
+        return walk(node.children);
+      };
+      return walk(t.props.children);
+    });
+}
+
+async function chooseLibraryOnAdd(tree) {
+  await pressLabel(tree, 'Capture check-in');
+  await flush();
+  await pressLabel(tree, 'Choose from library');
 }
 
 beforeEach(() => jest.clearAllMocks());
 
-test('capture prompt distinguishes Physique Scan from a single guided photo', async () => {
+test('capture route sheet distinguishes Physique Scan from single-photo routes', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await pressLabel(tree, 'Capture check-in');
 
-  expect(mockAppAlert).toHaveBeenCalledTimes(1);
-  const [title, message, buttons] = mockAppAlert.mock.calls[0];
-  expect(title).toBe('Capture check-in');
-  expect(message).toContain('same room, same lighting, same camera height, same distance');
-  expect(message).toContain('leanness band, progress signal and confidence');
-  expect(message).toContain('not an exact body-fat percentage');
-  expect(message).toContain('Photos stay on this device unless you choose to share or export them.');
-  expect(buttons.map((b) => b.text)).toEqual([
-    'Start Physique Scan',
-    'Single guided photo',
-    'Take photo',
-    'Choose from library',
-    'Cancel',
-  ]);
+  expect(mockAppAlert).not.toHaveBeenCalled();
+  const copy = allTexts(tree).join(' ');
+  expect(copy).toContain('Capture route');
+  expect(copy).toContain('Same room, lighting, camera height and distance matter more than forcing a read.');
+  expect(copy).toContain('Leanness band, progress signal and scan confidence');
+  expect(copy).toContain('Not an exact body-fat percentage');
+  expect(copy).toContain('Photos stay private unless you choose to share or export.');
+  expect(hasPressableLabel(tree, 'Start Physique Scan')).toBe(true);
+  expect(hasPressableLabel(tree, 'Open guided camera')).toBe(true);
+  expect(hasPressableLabel(tree, 'Take photo')).toBe(true);
+  expect(hasPressableLabel(tree, 'Choose from library')).toBe(true);
 });
 
 test('picking an image opens the details step and does NOT save before confirm', async () => {
-  chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Capture check-in');
+  await chooseLibraryOnAdd(tree);
   await flush();
   // Details sheet is up (its Save button exists); nothing saved yet.
   const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the check-in');
@@ -143,9 +157,8 @@ test('picking an image opens the details step and does NOT save before confirm',
 });
 
 test('confirming with the default date saves then snapshots weight for today', async () => {
-  chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Capture check-in');
+  await chooseLibraryOnAdd(tree);
   await flush();
 
   await pressLabel(tree, 'Save the check-in');
@@ -163,9 +176,8 @@ test('confirming with the default date saves then snapshots weight for today', a
 });
 
 test('setting the date to the past indexes the photo under that past day (the founder scenario)', async () => {
-  chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Capture check-in');
+  await chooseLibraryOnAdd(tree);
   await flush();
 
   // Open the picker in the details sheet and choose a week ago.
@@ -191,9 +203,8 @@ test('setting the date to the past indexes the photo under that past day (the fo
 });
 
 test('a pro-to-free flip with the details sheet open blocks the save (live-tier re-check)', async () => {
-  chooseLibraryOnAdd();
   const tree = await render();
-  await pressLabel(tree, 'Capture check-in');
+  await chooseLibraryOnAdd(tree);
   await flush();
 
   // Tier lapses while the sheet is open.

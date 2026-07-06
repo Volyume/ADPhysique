@@ -79,6 +79,75 @@ export function buildProgressStudioCapturePromptCopy() {
   ].join('\n\n');
 }
 
+export function buildProgressStudioCaptureRoutes({
+  latestPartial = null,
+  canScan = true,
+  readOnly = false,
+} = {}) {
+  if (readOnly) return [];
+
+  const routes = [];
+  const missingPoseLabel = latestPartial?.nextPoseLabel || latestPartial?.missingPoseLabel || null;
+
+  if (latestPartial?.nextPose && missingPoseLabel) {
+    routes.push({
+      key: 'complete_latest',
+      icon: 'checkmark-circle-outline',
+      eyebrow: 'Best next',
+      title: 'Complete latest Check-In',
+      body: `Add the ${missingPoseLabel.toLowerCase()} photo to make this set cleaner for future reviews.`,
+      bestFor: 'Finishing an in-progress front, side and back set.',
+      actionLabel: `Complete with ${missingPoseLabel}`,
+      recommended: true,
+    });
+  }
+
+  routes.push({
+    key: 'scan',
+    icon: 'scan',
+    eyebrow: latestPartial?.nextPose ? 'Flagship' : 'Best next',
+    title: 'Physique Scan',
+    body: 'Front and back relaxed photos, with an optional side photo.',
+    bestFor: 'Leanness band, progress signal and scan confidence. Not an exact body-fat percentage.',
+    actionLabel: 'Start Physique Scan',
+    recommended: !latestPartial?.nextPose,
+    disabled: !canScan,
+    disabledReason: 'Sign in to save a guided scan.',
+  });
+
+  routes.push({
+    key: 'guided',
+    icon: 'camera-outline',
+    eyebrow: 'Guided photo',
+    title: 'Single guided photo',
+    body: 'Use the ghost overlay and timer to match an older pose.',
+    bestFor: 'Replacing a noisy setup or adding one missing pose.',
+    actionLabel: 'Open guided camera',
+  });
+
+  routes.push({
+    key: 'camera',
+    icon: 'camera-reverse-outline',
+    eyebrow: 'Quick capture',
+    title: 'Take normal photo',
+    body: 'Take a photo now, then set its date and pose before saving.',
+    bestFor: 'Fast capture when you do not need the overlay.',
+    actionLabel: 'Take photo',
+  });
+
+  routes.push({
+    key: 'library',
+    icon: 'images-outline',
+    eyebrow: 'Import',
+    title: 'Import from library',
+    body: 'Add an existing photo, then set the correct date and pose.',
+    bestFor: 'Backfilling older check-ins without losing the timeline.',
+    actionLabel: 'Choose from library',
+  });
+
+  return routes;
+}
+
 export function buildProgressStudioHowItWorksCopy() {
   return [
     'Build a private visual baseline with repeatable check-ins.',
