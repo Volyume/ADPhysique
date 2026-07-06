@@ -36,10 +36,12 @@ import { importRecipeFromUrl } from '../lib/food/recipeImport';
 import { searchFoods } from '../lib/food/waterfall';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { logError } from '../lib/errorLog';
 
 // FOOD-002: an ingredient row is only persisted (and only resolves later) when
 // it has a food_ref and a finite, positive gram amount. This mirrors exactly
@@ -67,6 +69,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   // { id?, food_ref, quantity_g, food }
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(!!recipeId);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importing, setImporting] = useState(false);
@@ -76,13 +80,21 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!recipeId || loadedRef.current) {
+      if (!recipeId) {
+        setLoadError(false);
         setLoading(false);
         return;
       }
+      if (loadedRef.current) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setLoadError(false);
       try {
         const recipe = await getRecipeWithIngredients(userId, recipeId);
-        if (cancelled || !recipe) { setLoading(false); return; }
+        if (cancelled) return;
+        if (!recipe) throw new Error('Recipe not found');
         setName(recipe.name ?? '');
         setTotalServings(String(recipe.total_servings ?? 4));
         setNotes(recipe.notes ?? '');
@@ -101,13 +113,18 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         if (cancelled) return;
         setIngredients(resolved);
         loadedRef.current = true;
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(true);
+          logError('RecipeBuilder.load', e, { userId, recipeId });
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [recipeId, userId]);
+  }, [recipeId, userId, loadAttempt]);
 
   // Accept newly-picked ingredients handed back by FoodSearchScreen
   // via route params. Append + clear so a screen focus event doesn't
@@ -138,6 +155,11 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       returnTo: 'RecipeBuilder',
       mealSlot, entryDate,
     });
+  }
+
+  function onRetryLoad() {
+    loadedRef.current = false;
+    setLoadAttempt((n) => n + 1);
   }
 
   // Best-effort import from a web URL. Reads a schema.org Recipe out
@@ -291,6 +313,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           <SkeletonRow />
           <SkeletonRow />
         </View>
+      ) : loadError ? (
+        <View style={styles.loadError}>
+          <EmptyState
+            icon="restaurant-outline"
+            title="Couldn't load this recipe"
+            text="The recipe details did not load. Try again before making changes."
+            actionLabel="Try again"
+            onAction={onRetryLoad}
+          />
+        </View>
       ) : (
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.section}>
@@ -443,6 +475,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { color: colors.textPrimary, ...type.title },
+  loadError: { padding: spacing.lg },
 
   section: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   row2: { flexDirection: 'row', paddingHorizontal: spacing.lg },

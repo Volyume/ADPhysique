@@ -44,9 +44,10 @@ jest.mock('../../lib/food/db', () => ({
 jest.mock('../../lib/food/sources/localCache', () => ({ resolveFoodRef: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/recipeImport', () => ({ importRecipeFromUrl: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/waterfall', () => ({ searchFoods: jest.fn(() => Promise.resolve([])) }));
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 import useAppStore from '../../store/useAppStore';
-import { createRecipe, setRecipeIngredients } from '../../lib/food/db';
+import { createRecipe, getRecipeWithIngredients, setRecipeIngredients } from '../../lib/food/db';
 import RecipeBuilderScreen from '../RecipeBuilderScreen';
 
 const store = { user: { id: 'u1' }, accessibility: { energyUnit: 'kcal' } };
@@ -127,5 +128,22 @@ describe('RecipeBuilderScreen save guard (FOOD-002)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual(expect.objectContaining({ food_ref: 'global:f1', quantity_g: 200 }));
     expect(nav.goBack).toHaveBeenCalled();
+  });
+});
+
+describe('RecipeBuilderScreen edit load recovery', () => {
+  test('shows a retry state instead of a blank form when an existing recipe fails to load', async () => {
+    getRecipeWithIngredients.mockRejectedValueOnce(new Error('read failed'));
+    const nav = makeNav();
+    let tree;
+    await act(async () => {
+      tree = create(<RecipeBuilderScreen navigation={nav} route={{ params: { recipeId: 'recipe-404' } }} />);
+    });
+    await flush();
+
+    const retryText = tree.root.findAll((n) => n.props?.children === "Couldn't load this recipe");
+    expect(retryText.length).toBeGreaterThan(0);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Name')).toHaveLength(0);
+    expect(createRecipe).not.toHaveBeenCalled();
   });
 });
