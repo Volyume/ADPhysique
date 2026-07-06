@@ -63,6 +63,7 @@ import {
   buildProgressStudioCaptureRoutes,
   buildProgressStudioHowItWorksCopy,
   buildScanCaptureSubtitle,
+  PROGRESS_STUDIO_SETUP_STEPS,
   QUALITY_FIRST_CAPTURE_NOTE,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
@@ -431,8 +432,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!canWrite() || !userId) return;
     const cadence = shouldGateProgressScanStart(scans, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated) {
-      appAlert('Give the scan time', 'Physique Scan works best when like-for-like scans are at least 2 to 4 weeks apart. You can still capture a normal Check-In today and save the photos without forcing a scan read.', [
-        { text: 'Capture Check-In', onPress: openGhostCapture },
+      appAlert('Give the scan time', 'Physique Scan works best when progress photos are spaced at least 2 to 4 weeks apart. You can still add normal progress photos today and save them without forcing a scan read.', [
+        { text: 'Add photos', onPress: openGhostCapture },
         { text: 'OK', style: 'cancel' },
       ]);
       return;
@@ -670,7 +671,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   // has to guess. No cadence pressure, no streak: "at your own pace" by design.
   function onHowItWorks() {
     appAlert(
-      'How Physique Studio works',
+      'How Progress Photos works',
       buildProgressStudioHowItWorksCopy(),
       [{ text: 'Got it' }],
     );
@@ -687,7 +688,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCaptureReference({
       uri: item.cover.uri,
       label: item.label || formatProgressPhotoDay(item.takenAt),
-      poseLabel: item.cover.pose ? POSE_LABEL[item.cover.pose] : 'Current Check-In',
+      poseLabel: item.cover.pose ? POSE_LABEL[item.cover.pose] : 'Current photo set',
     });
     setCapturePose(pose);
     setCaptureOpen(true);
@@ -769,23 +770,28 @@ export default function ProgressPhotosScreen({ navigation }) {
     return [...visibleScans].sort((a, b) => (Number(b.capturedAt) || Number(b.captured_at) || 0) - (Number(a.capturedAt) || Number(a.captured_at) || 0))[0] || null;
   }, [visibleScans]);
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
-  const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No check-in yet';
+  const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
   const nextCheckInLabel = progressCheckInCadenceLabel(latestPhoto?.takenAt, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.scanConfidenceLabel || latestScan?.qualityLabel || (latestScan ? 'Saved' : 'No scan yet');
   const progressSignalText = suppressed
     ? 'Scan details are hidden right now. Your photos remain private on this device.'
-    : latestAssessment?.progressSignalLabel
-      ? `${latestAssessment.progressSignalLabel}. This is a visual progress signal, not a body-fat percentage.`
+      : latestAssessment?.progressSignalLabel
+        ? `${latestAssessment.progressSignalLabel}. This is a visual progress signal, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
-        ? 'Your latest check-in is saved. Use the same setup next time for a cleaner comparison.'
-        : 'Build your first visual baseline with a private, repeatable check-in.');
+        ? 'Your latest progress photos are saved. The more consistent the lighting and camera position, the more useful the comparison becomes.'
+        : 'Start with clear front, side and back progress photos. Physique Scan can then give broad visual signals when the photos are good enough.');
   const confidenceText = suppressed
     ? 'Photos and scan details stay under your control. Nothing is uploaded or shared unless you choose it.'
     : latestScan
       ? 'Best results come from matched pose, full-body framing and repeatable lighting. Photos stay on this device unless you choose to share or export them.'
       : 'Use front, side and back photos under the same lighting. Photos stay on this device unless you choose to share or export them.';
+  const studioStats = [
+    { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
+    { key: 'next', icon: 'time-outline', label: 'Suggested gap', value: nextCheckInLabel },
+    { key: 'scan', icon: 'scan', label: 'Scan status', value: scanStatusLabel },
+  ];
   const nextAction = useMemo(
     () => buildPhysiqueStudioNextAction({
       checkIns: allCheckIns,
@@ -894,11 +900,11 @@ export default function ProgressPhotosScreen({ navigation }) {
           {item.note ? <Text style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
           {missingPoses.length > 0 ? (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Add {missingPoses.map((pose) => POSE_LABEL[pose].toLowerCase()).join(', ')} next time for a stronger like-for-like check-in.
+              Add {missingPoses.map((pose) => POSE_LABEL[pose].toLowerCase()).join(', ')} next time for a more useful photo set.
             </Text>
           ) : (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Matched front, side and back photos are ready for cleaner comparison.
+              Front, side and back photos are ready for a clearer review.
             </Text>
           )}
           {!readOnly && nextMissingPose ? (
@@ -906,16 +912,308 @@ export default function ProgressPhotosScreen({ navigation }) {
               onPress={() => openCheckInPoseCapture(item, nextMissingPose)}
               style={styles.completeCheckInButton}
               accessibilityRole="button"
-              accessibilityLabel={`Complete this Check-In with a ${POSE_LABEL[nextMissingPose]} photo`}
+              accessibilityLabel={`Add a ${POSE_LABEL[nextMissingPose]} photo to this photo set`}
             >
               <Ionicons name="camera-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.completeCheckInText}>
-                Complete with {POSE_LABEL[nextMissingPose]}
+                Add {POSE_LABEL[nextMissingPose]} photo
               </Text>
             </TouchableOpacity>
           ) : null}
         </View>
       </TouchableOpacity>
+    );
+  }
+
+  function renderStudioHeader() {
+    return (
+      <>
+        <Card padding="none" style={styles.studioHero}>
+          <View style={styles.heroImageFrame}>
+            {latestPhoto ? (
+              <Image source={{ uri: latestPhoto.uri }} style={styles.heroImage} resizeMode="cover" />
+            ) : (
+              <View style={styles.heroPlaceholder}>
+                <Ionicons name="body-outline" size={38} color={colors.textMuted} />
+                <Text style={styles.heroPlaceholderText}>Private progress photos</Text>
+              </View>
+            )}
+            <View style={styles.heroScrim} />
+            <View style={styles.heroTopRow}>
+              <View style={styles.privacyPill}>
+                <Ionicons name="lock-closed-outline" size={13} color={colors.onPrimary} />
+                <Text style={styles.privacyPillText}>Private on this device</Text>
+              </View>
+              <TouchableOpacity
+                onPress={onHowItWorks}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="How Progress Photos works"
+                style={styles.heroInfoButton}
+              >
+                <Ionicons name="information-circle-outline" size={18} color={colors.onPrimary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroEyebrow}>Progress Photos</Text>
+              <Text style={styles.heroTitle}>See what is actually changing.</Text>
+              <Text style={styles.heroSubtitle}>
+                Store your physique photos by date and pose. Physique Scan adds broad leanness, progress and confidence signals when the photos are good enough.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.studioPanel}>
+            <View style={styles.studioMetricsGrid}>
+              {studioStats.map((stat) => (
+                <View key={stat.key} style={styles.studioMetricCard}>
+                  <View style={styles.studioMetricHead}>
+                    <Ionicons name={stat.icon} size={iconSize.sm} color={colors.primary} />
+                    <Text style={styles.studioMetricLabel} numberOfLines={1}>{stat.label}</Text>
+                  </View>
+                  <Text style={styles.studioMetricValue}>{stat.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.setupStandardCard}>
+              <View style={styles.setupStandardHead}>
+                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.setupStandardTitle}>How to get useful photos</Text>
+              </View>
+              <Text style={styles.setupStandardIntro}>
+                Small changes in lighting, distance or angle can make a physique look very different. These steps keep the photo honest enough to review later.
+              </Text>
+              <View style={styles.setupStandardGrid}>
+                {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
+                  <View key={step.key} style={styles.setupStandardStep}>
+                    <View style={styles.setupStandardIcon}>
+                      <Ionicons name={step.icon} size={iconSize.sm} color={colors.primary} />
+                    </View>
+                    <View style={styles.setupStandardCopy}>
+                      <Text style={styles.setupStandardStepTitle}>{step.title}</Text>
+                      <Text style={styles.setupStandardStepBody}>{step.copy}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.heroActions}>
+              {!readOnly ? (
+                <Button
+                  title="Add photos"
+                  icon="camera-outline"
+                  onPress={onAdd}
+                  fullWidth={false}
+                  style={styles.heroPrimaryAction}
+                  accessibilityLabel="Add progress photos"
+                />
+              ) : null}
+              {!readOnly ? (
+                <Button
+                  title="Physique Scan"
+                  icon="scan"
+                  variant="secondary"
+                  onPress={openProgressScan}
+                  fullWidth={false}
+                  style={styles.heroSecondaryAction}
+                  accessibilityLabel="Start guided Physique Scan"
+                />
+              ) : null}
+              {(canCompareScans || canCompare) ? (
+                <Button
+                  title="Compare"
+                  icon="git-compare-outline"
+                  variant="tertiary"
+                  onPress={canCompareScans ? openScanCompare : openCompare}
+                  fullWidth={false}
+                  style={styles.heroSecondaryAction}
+                  accessibilityLabel={canCompareScans ? 'Compare two Physique Scan entries' : 'Compare two photos'}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.signalCard}>
+              <Text style={styles.signalTitle}>Current signal</Text>
+              <Text style={styles.signalBody}>{progressSignalText}</Text>
+              <Text style={styles.signalSupport}>{confidenceText}</Text>
+            </View>
+            {readOnly ? (
+              <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos are safe and stay yours.</Text>
+            ) : null}
+          </View>
+        </Card>
+
+        {!loading && visibleScans.length > 0 ? (
+          <ProgressScanHistoryCard
+            scans={visibleScans}
+            hideExact={hideExactScans}
+            suppressed={suppressed}
+            readOnly={readOnly}
+            onToggleHideExact={toggleHideExactScans}
+            onDeleteScan={deleteScanEntry}
+            onOpenPhoto={openViewer}
+          />
+        ) : null}
+
+        {!loading && nextAction ? (
+          <Card style={styles.nextActionCard}>
+            <View style={styles.nextActionCopy}>
+              <Text style={styles.nextActionEyebrow}>Next best action</Text>
+              <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
+              <Text style={styles.nextActionBody}>{nextAction.body}</Text>
+              {nextAction.reason ? (
+                <View style={styles.nextActionReason}>
+                  <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.primary} />
+                  <Text style={styles.nextActionReasonText}>{nextAction.reason}</Text>
+                </View>
+              ) : null}
+              {nextAction.detailItems?.length ? (
+                <View style={styles.nextActionDetails}>
+                  {nextAction.detailItems.map((detail) => (
+                    <View key={detail} style={styles.nextActionDetailRow}>
+                      <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
+                      <Text style={styles.nextActionDetailText}>{detail}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+            <Button
+              title={nextAction.cta}
+              icon={nextAction.kind === 'capture' || nextAction.kind === 'complete_pose' ? 'camera-outline' : 'git-compare-outline'}
+              variant={nextAction.kind === 'capture' ? 'primary' : 'secondary'}
+              fullWidth={false}
+              onPress={() => onNextActionPress(nextAction)}
+              accessibilityLabel={`Next best action: ${nextAction.cta}`}
+            />
+          </Card>
+        ) : null}
+
+        {!loading && photos.length > 0 ? (
+          <View style={styles.filterRow} accessibilityLabel="Filter by pose">
+            {POSES.map((p) => {
+              const active = p.key === poseFilter;
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setPoseFilter(p.key)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={p.label}
+                >
+                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{p.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {!loading && photos.length > 0 ? (
+          <View style={styles.controlRow}>
+            <View style={styles.sortGroup} accessibilityLabel="Sort order">
+              {SORTS.map((s) => {
+                const active = s.key === sortOrder;
+                return (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.sortChip, active && styles.filterChipActive]}
+                    onPress={() => setSortOrder(s.key)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={s.a11y}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{s.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={[styles.datesChip, hasRange && styles.datesChipActive]}
+              onPress={() => setRangeOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
+            >
+              <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
+              <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+              {hasRange ? (
+                <TouchableOpacity
+                  onPress={() => { setRangeFrom(null); setRangeTo(null); }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear the date filter"
+                >
+                  <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
+                </TouchableOpacity>
+              ) : null}
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {showShareAction ? (
+          <View style={styles.actionRow}>
+            <Button
+              title={scanShareItems.length >= 2 ? 'Share scan' : 'Share photos'}
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
+              icon="share-outline"
+              onPress={openShare}
+              accessibilityLabel="Share progress"
+            />
+          </View>
+        ) : null}
+      </>
+    );
+  }
+
+  function renderTimelineEmpty() {
+    if (loading) {
+      return <ActivityIndicator style={styles.loadingIndicator} color={colors.primary} />;
+    }
+    if (photos.length === 0) {
+      return (
+        <View style={styles.empty}>
+          <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
+          {readOnly ? (
+            <Text style={styles.emptyText}>No photos on this device.</Text>
+          ) : (
+            <>
+              <Text style={styles.emptyTitle}>Start Progress Photos</Text>
+              <Text style={styles.emptyHint}>
+                Add your first private front, side or back photos. Volyume keeps them organised by date and pose so future reviews are fairer.
+              </Text>
+              <Text style={styles.emptySupport}>
+                Physique Scan can give a leanness band, progress signal and confidence when photo quality is good enough.
+              </Text>
+              <Button
+                title="Add photos"
+                icon="camera-outline"
+                onPress={onAdd}
+                fullWidth={false}
+                style={styles.emptyAdd}
+                accessibilityLabel="Add progress photos"
+              />
+            </>
+          )}
+        </View>
+      );
+    }
+    return (
+      <View style={styles.empty}>
+        <Ionicons name="images-outline" size={32} color={colors.textMuted} />
+        <Text style={styles.emptyText}>
+          {poseFilter !== 'all' && hasRange
+            ? 'No photos match this pose and date range.'
+            : hasRange
+              ? 'No photos in this date range.'
+              : 'No photos with this pose yet.'}
+        </Text>
+      </View>
     );
   }
 
@@ -925,293 +1223,43 @@ export default function ProgressPhotosScreen({ navigation }) {
           rest of the app. The add action rides the header's right slot; it is a
           write, so it is hidden in the E10 view-only lapse state. */}
       <BackHeader
-        title="Physique Studio"
+        title="Progress Photos"
         onBack={() => navigation.goBack()}
         right={!readOnly ? (
-          <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Capture check-in">
+          <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add progress photos">
             {busy ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="add" size={26} color={colors.primary} />}
           </TouchableOpacity>
         ) : null}
       />
 
-      <Card padding="none" style={styles.studioHero}>
-        <View style={styles.heroImageFrame}>
-          {latestPhoto ? (
-            <Image source={{ uri: latestPhoto.uri }} style={styles.heroImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="body-outline" size={38} color={colors.textMuted} />
-              <Text style={styles.heroPlaceholderText}>Private check-ins</Text>
-            </View>
-          )}
-          <View style={styles.heroScrim} />
-          <View style={styles.heroTopRow}>
-            <View style={styles.privacyPill}>
-              <Ionicons name="lock-closed-outline" size={13} color={colors.onPrimary} />
-              <Text style={styles.privacyPillText}>Private on this device</Text>
-            </View>
-            <TouchableOpacity
-              onPress={onHowItWorks}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="How Physique Studio works"
-              style={styles.heroInfoButton}
-            >
-              <Ionicons name="information-circle-outline" size={18} color={colors.onPrimary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>Physique Studio</Text>
-            <Text style={styles.heroTitle}>Capture like-for-like check-ins.</Text>
-            <Text style={styles.heroSubtitle}>Same setup. Same poses. Clearer comparisons over time.</Text>
-          </View>
-        </View>
-
-        <View style={styles.studioPanel}>
-          <View style={styles.statStrip}>
-            <View style={styles.statCell}>
-              <Text style={styles.statLabel} numberOfLines={1}>Last</Text>
-              <Text style={styles.statValue} numberOfLines={1}>{lastCheckInLabel}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statLabel} numberOfLines={1}>Next</Text>
-              <Text style={styles.statValue} numberOfLines={1}>{nextCheckInLabel}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statLabel} numberOfLines={1}>Scan</Text>
-              <Text style={styles.statValue} numberOfLines={1}>{scanStatusLabel}</Text>
-            </View>
-          </View>
-
-          <View style={styles.heroActions}>
-            {!readOnly ? (
-              <Button
-                title="Capture Check-In"
-                icon="camera-outline"
-                onPress={onAdd}
-                fullWidth={false}
-                style={styles.heroPrimaryAction}
-                accessibilityLabel="Capture check-in"
-              />
-            ) : null}
-            {!readOnly ? (
-              <Button
-                title="Scan"
-                icon="scan"
-                variant="secondary"
-                onPress={openProgressScan}
-                fullWidth={false}
-                style={styles.heroSecondaryAction}
-                accessibilityLabel="Start guided Physique Scan"
-              />
-            ) : null}
-            {(canCompareScans || canCompare) ? (
-              <Button
-                title="Compare"
-                icon="git-compare-outline"
-                variant="tertiary"
-                onPress={canCompareScans ? openScanCompare : openCompare}
-                fullWidth={false}
-                style={styles.heroSecondaryAction}
-                accessibilityLabel={canCompareScans ? 'Compare two Physique Scan entries' : 'Compare two photos'}
-              />
-            ) : null}
-          </View>
-
-          <View style={styles.signalCard}>
-            <Text style={styles.signalTitle}>Current signal</Text>
-            <Text style={styles.signalBody}>{progressSignalText}</Text>
-            <Text style={styles.signalSupport}>{confidenceText}</Text>
-          </View>
-          {readOnly ? (
-            <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos are safe and stay yours.</Text>
-          ) : null}
-        </View>
-      </Card>
-
-      {!loading && visibleScans.length > 0 ? (
-        <ProgressScanHistoryCard
-          scans={visibleScans}
-          hideExact={hideExactScans}
-          suppressed={suppressed}
-          readOnly={readOnly}
-          onToggleHideExact={toggleHideExactScans}
-          onDeleteScan={deleteScanEntry}
-          onOpenPhoto={openViewer}
-        />
-      ) : null}
-
-      {!loading && nextAction ? (
-        <Card style={styles.nextActionCard}>
-          <View style={styles.nextActionCopy}>
-            <Text style={styles.nextActionEyebrow}>Next best action</Text>
-            <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
-            <Text style={styles.nextActionBody}>{nextAction.body}</Text>
-            {nextAction.reason ? (
-              <View style={styles.nextActionReason}>
-                <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.nextActionReasonText}>{nextAction.reason}</Text>
-              </View>
-            ) : null}
-            {nextAction.detailItems?.length ? (
-              <View style={styles.nextActionDetails}>
-                {nextAction.detailItems.map((detail) => (
-                  <View key={detail} style={styles.nextActionDetailRow}>
-                    <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
-                    <Text style={styles.nextActionDetailText}>{detail}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </View>
-          <Button
-            title={nextAction.cta}
-            icon={nextAction.kind === 'capture' || nextAction.kind === 'complete_pose' ? 'camera-outline' : 'git-compare-outline'}
-            variant={nextAction.kind === 'capture' ? 'primary' : 'secondary'}
-            fullWidth={false}
-            onPress={() => onNextActionPress(nextAction)}
-            accessibilityLabel={`Next best action: ${nextAction.cta}`}
-          />
-        </Card>
-      ) : null}
-
-      {!loading && photos.length > 0 && (
-        <View style={styles.filterRow} accessibilityLabel="Filter by pose">
-          {POSES.map((p) => {
-            const active = p.key === poseFilter;
-            return (
-              <TouchableOpacity
-                key={p.key}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setPoseFilter(p.key)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={p.label}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{p.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-
-      {/* Neutral timeline navigation: sort order and an optional date range.
-          Both are pure viewing controls (spec PART 2): no cadence, no streak,
-          no comparison forcing. They compose with the pose filter above and
-          read as the same chip family. */}
-      {!loading && photos.length > 0 && (
-        <View style={styles.controlRow}>
-          <View style={styles.sortGroup} accessibilityLabel="Sort order">
-            {SORTS.map((s) => {
-              const active = s.key === sortOrder;
-              return (
-                <TouchableOpacity
-                  key={s.key}
-                  style={[styles.sortChip, active && styles.filterChipActive]}
-                  onPress={() => setSortOrder(s.key)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={s.a11y}
-                >
-                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{s.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <TouchableOpacity
-            style={[styles.datesChip, hasRange && styles.datesChipActive]}
-            onPress={() => setRangeOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
-          >
-            <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
-            <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
-            {hasRange ? (
-              <TouchableOpacity
-                onPress={() => { setRangeFrom(null); setRangeTo(null); }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Clear the date filter"
-              >
-                <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
-              </TouchableOpacity>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {showShareAction && (
-        <View style={styles.actionRow}>
-          <Button
-            title={scanShareItems.length >= 2 ? 'Share scan' : 'Share photos'}
-            variant="tertiary"
-            size="sm"
-            fullWidth={false}
-            icon="share-outline"
-            onPress={openShare}
-            accessibilityLabel="Share progress"
-          />
-        </View>
-      )}
-
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.primary} />
-      ) : photos.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
-          {readOnly ? (
-            <Text style={styles.emptyText}>No photos on this device.</Text>
-          ) : (
-            <>
-              <Text style={styles.emptyTitle}>Build your visual baseline</Text>
-              <Text style={styles.emptyHint}>
-                Capture your first private check-in with front, side or back photos.
-                Use the same setup next time so comparisons stay fair.
-              </Text>
-              <Text style={styles.emptySupport}>
-                Start with one full-body front photo, then add side and back when you are ready.
-              </Text>
-              <Button
-                title="Capture Check-In"
-                icon="camera-outline"
-                onPress={onAdd}
-                fullWidth={false}
-                style={styles.emptyAdd}
-                accessibilityLabel="Capture check-in"
-              />
-            </>
-          )}
-        </View>
-      ) : timeline.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="images-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.emptyText}>
-            {poseFilter !== 'all' && hasRange
-              ? 'No photos match this pose and date range.'
-              : hasRange
-                ? 'No photos in this date range.'
-                : 'No photos with this pose yet.'}
-          </Text>
-        </View>
-      ) : (
-        <FlashList
-          data={timeline}
-          extraData={{ readOnly }}
-          keyExtractor={(item) => item.key}
-          getItemType={(item) => item.type}
-          contentContainerStyle={styles.grid}
-          renderItem={({ item }) => {
-            if (item.type === 'header') {
-              return <Text style={styles.monthHeader}>{item.label}</Text>;
-            }
-            return renderCheckInCard(item);
-          }}
-        />
-      )}
+      <FlashList
+        style={styles.timelineList}
+        data={loading || photos.length === 0 || timeline.length === 0 ? [] : timeline}
+        extraData={{
+          readOnly,
+          loading,
+          photosCount: photos.length,
+          timelineCount: timeline.length,
+          poseFilter,
+          rangeFrom,
+          rangeTo,
+          sortOrder,
+          hideExactScans,
+          suppressed,
+        }}
+        keyExtractor={(item) => item.key}
+        getItemType={(item) => item.type}
+        contentContainerStyle={styles.grid}
+        ListHeaderComponent={<View style={styles.listHeaderBleed}>{renderStudioHeader()}</View>}
+        ListEmptyComponent={renderTimelineEmpty}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => {
+          if (item.type === 'header') {
+            return <Text style={styles.monthHeader}>{item.label}</Text>;
+          }
+          return renderCheckInCard(item);
+        }}
+      />
 
       {/* Full-size viewer (pose/date/note, weight gated by suppression). Own
           Modal; only mounted while open. */}
@@ -1316,6 +1364,16 @@ export default function ProgressPhotosScreen({ navigation }) {
                         <Text style={styles.captureRouteName}>{route.title}</Text>
                         <Text style={styles.captureRouteBody}>{route.disabled ? route.disabledReason : route.body}</Text>
                         <Text style={styles.captureRouteBestFor}>{route.bestFor}</Text>
+                        {route.steps?.length ? (
+                          <View style={styles.captureRouteSteps}>
+                            {route.steps.map((step) => (
+                              <View key={step} style={styles.captureRouteStep}>
+                                <View style={styles.captureRouteStepDot} />
+                                <Text style={styles.captureRouteStepText}>{step}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -1394,6 +1452,10 @@ export default function ProgressPhotosScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  timelineList: { flex: 1 },
+  listHeaderBleed: {
+    marginHorizontal: -spacing.lg,
+  },
   studioHero: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
@@ -1460,25 +1522,63 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.h2, color: colors.appleBtnText },
   heroSubtitle: { ...type.bodySm, color: colors.appleBtnText, opacity: 0.88 },
   studioPanel: { padding: spacing.lg, gap: spacing.lg },
-  statStrip: {
+  studioMetricsGrid: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  studioMetricCard: {
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 142,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
-    overflow: 'hidden',
+    padding: spacing.md,
+    gap: spacing.xs,
   },
-  statCell: {
-    flex: 1,
+  studioMetricHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     minWidth: 0,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.md,
-    gap: spacing.xxs,
   },
-  statDivider: { width: 1, backgroundColor: colors.border },
-  statLabel: { ...type.caption, color: colors.textMuted },
-  statValue: { ...type.label, color: colors.textPrimary, lineHeight: 18, flexShrink: 1 },
+  studioMetricLabel: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  studioMetricValue: { ...type.label, color: colors.textPrimary, lineHeight: 20 },
+  setupStandardCard: {
+    borderWidth: 1,
+    borderColor: colors.primaryBg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  setupStandardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  setupStandardTitle: { ...type.label, color: colors.textPrimary },
+  setupStandardIntro: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  setupStandardGrid: { gap: spacing.sm },
+  setupStandardStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  setupStandardIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  setupStandardCopy: { flex: 1, minWidth: 0, gap: 2 },
+  setupStandardStepTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  setupStandardStepBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1564,6 +1664,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+  loadingIndicator: { marginVertical: spacing.xxl },
   monthHeader: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   checkInCard: {
     flexDirection: 'row',
@@ -1750,6 +1851,27 @@ const styles = StyleSheet.create({
   captureRouteName: { ...type.label, color: colors.textPrimary },
   captureRouteBody: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   captureRouteBestFor: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  captureRouteSteps: {
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  captureRouteStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  captureRouteStepDot: {
+    width: 5,
+    height: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    marginTop: 7,
+    flexShrink: 0,
+  },
+  captureRouteStepText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   captureRouteNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',

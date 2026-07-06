@@ -192,7 +192,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     let text = allText(tree).join(' ');
     expect(text).toContain('Share wins');
-    expect(text).toContain('Ask every time. Share only a workout, record, block milestone or progress card you choose.');
+    expect(text).toContain('Ask every time. Preview one card first. Nothing becomes a feed.');
     expect(text).toContain('Nothing becomes a feed.');
 
     await press(tree, 'Review shareable wins');
@@ -209,14 +209,18 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Stays private');
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
     expect(text).toContain('Not sent until you choose one partner and approve this exact card.');
+    expect(text).toContain('Review before sending');
+    expect(text).toContain('Choose the moment');
+    expect(text).toContain('Pick one workout, record, block milestone or exported progress card.');
+    expect(text).toContain('Preview exact card');
+    expect(text).toContain('Confirm one partner');
+    expect(text).toContain('Keep control');
+    expect(text).toContain('Future send controls must show the partner name, card type and exact card copy on one screen.');
+    expect(text).toContain('Hard boundaries');
     expect(text).toContain('Ask every time before a card is sent.');
     expect(text).toContain('One card, one moment, one partner.');
     expect(text).toContain('Future delivery must support revoke and delete.');
-    expect(text).toContain('Delivery guardrails');
-    expect(text).toContain('Preview the exact card before sending.');
-    expect(text).toContain('Confirm the one partner who will receive it.');
-    expect(text).toContain('Send one card only. No background feed is created.');
-    expect(text).toContain('Keep revoke and delete controls attached to the card.');
+    expect(text).toContain('Eligible cards');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
     expect(text).toContain('Bench press: New rep best.');

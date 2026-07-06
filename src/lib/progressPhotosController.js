@@ -79,10 +79,10 @@ export function buildCheckInCompletenessModel(checkIn = {}) {
     present,
     missing,
     percent,
-    label: complete ? 'Complete studio set' : `${present.length}/${NEXT_ACTION_POSES.length} poses captured`,
+    label: complete ? 'Complete photo set' : `${present.length}/${NEXT_ACTION_POSES.length} poses captured`,
     detail: complete
-      ? 'Front, side and back are ready for like-for-like comparison.'
-      : `Missing ${missing.map((pose) => NEXT_ACTION_POSE_LABEL[pose].toLowerCase()).join(', ')} for a cleaner comparison.`,
+      ? 'Front, side and back are saved for a clearer photo review.'
+      : `Missing ${missing.map((pose) => NEXT_ACTION_POSE_LABEL[pose].toLowerCase()).join(', ')} for a more useful photo set.`,
     nextPose: missing[0] || null,
     nextPoseLabel: missing[0] ? NEXT_ACTION_POSE_LABEL[missing[0]] : null,
   };
@@ -105,11 +105,11 @@ export function buildPhysiqueStudioNextAction({
     const pose = NEXT_ACTION_POSES.find((p) => !poses.includes(p));
     return {
       kind: 'complete_pose',
-      title: 'Complete latest Check-In',
-      body: 'Add the missing pose now so this Check-In is easier to compare later.',
-      reason: `${NEXT_ACTION_POSE_LABEL[pose]} is missing from the latest Check-In.`,
+      title: 'Finish latest photo set',
+      body: 'Add the missing pose now so this date has a fuller progress photo record.',
+      reason: `${NEXT_ACTION_POSE_LABEL[pose]} is missing from the latest photo set.`,
       detailItems: [
-        'A complete set means front, side and back under the same setup.',
+        'A complete photo set means front, side and back under similar lighting.',
         'If the setup drifts, save the photo without forcing a scan read.',
       ],
       cta: `Complete with ${NEXT_ACTION_POSE_LABEL[pose]}`,
@@ -135,30 +135,30 @@ export function buildPhysiqueStudioNextAction({
   if (!suppressed && completed.length >= 2) {
     return {
       kind: 'compare_checkins',
-      title: 'Compare matched Check-Ins',
-      body: 'Use front, side or back photos from complete Check-Ins for a cleaner visual review.',
-      reason: `${completed.length} complete Check-Ins are ready.`,
+      title: 'Compare matched photo sets',
+      body: 'Use front, side or back photos from complete photo sets for a clearer visual review.',
+      reason: `${completed.length} complete photo sets are ready.`,
       detailItems: [
         'Matched poses reduce angle and lighting noise.',
         'Choose the same pose on both dates.',
       ],
-      cta: 'Compare Check-Ins',
+      cta: 'Compare photos',
     };
   }
 
   if (!readOnly) {
     return {
       kind: 'capture',
-      title: latest ? 'Keep the setup consistent' : 'Build your baseline',
+      title: latest ? 'Add your next progress photos' : 'Start Progress Photos',
       body: latest
-        ? 'Capture your next Check-In with the same room, lighting, distance and poses.'
-        : 'Start with front, side and back photos under repeatable lighting.',
-      reason: latest ? 'Your next review is stronger when the setup matches.' : 'No private visual baseline is saved yet.',
+        ? 'Use the same room, lighting and camera height so the photo reflects you, not the camera.'
+        : 'Start with front, side and back photos in clear, repeatable lighting.',
+      reason: latest ? 'Progress is easier to judge when the photo conditions are similar.' : 'No private visual photo record is saved yet.',
       detailItems: [
         'Use the timer and place the phone at mid-torso height.',
         'Photos stay private unless you export or share.',
       ],
-      cta: 'Capture Check-In',
+      cta: 'Add photos',
     };
   }
 

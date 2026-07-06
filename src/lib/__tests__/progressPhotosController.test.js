@@ -77,7 +77,7 @@ describe('progressPhotosController transforms', () => {
     expect(progressCheckInCadenceLabel(latest, latest + min - 3 * 86400000, min)).toBe('In 3 days');
   });
 
-  test('buildPhysiqueStudioNextAction completes the latest partial Check-In before anything else', () => {
+  test('buildPhysiqueStudioNextAction completes the latest partial photo set before anything else', () => {
     const partial = { type: 'checkin', takenAt: 300, poses: ['side'], cover: { uri: 'file:///side.jpg' } };
     const olderComplete = { type: 'checkin', takenAt: 100, poses: ['front', 'side', 'back'] };
 
@@ -86,11 +86,11 @@ describe('progressPhotosController transforms', () => {
       scans: [{ id: 's1', status: 'complete', requiredPosesComplete: true }, { id: 's2', status: 'complete', requiredPosesComplete: true }],
     })).toMatchObject({
       kind: 'complete_pose',
-      title: 'Complete latest Check-In',
-      body: 'Add the missing pose now so this Check-In is easier to compare later.',
-      reason: 'Front is missing from the latest Check-In.',
+      title: 'Finish latest photo set',
+      body: 'Add the missing pose now so this date has a fuller progress photo record.',
+      reason: 'Front is missing from the latest photo set.',
       detailItems: [
-        'A complete set means front, side and back under the same setup.',
+        'A complete photo set means front, side and back under similar lighting.',
         'If the setup drifts, save the photo without forcing a scan read.',
       ],
       cta: 'Complete with Front',
@@ -99,14 +99,14 @@ describe('progressPhotosController transforms', () => {
     });
   });
 
-  test('buildCheckInCompletenessModel explains complete and partial check-ins', () => {
+  test('buildCheckInCompletenessModel explains complete and partial photo sets', () => {
     expect(buildCheckInCompletenessModel({ poses: ['front', 'back'] })).toEqual({
       complete: false,
       present: ['front', 'back'],
       missing: ['side'],
       percent: 67,
       label: '2/3 poses captured',
-      detail: 'Missing side for a cleaner comparison.',
+      detail: 'Missing side for a more useful photo set.',
       nextPose: 'side',
       nextPoseLabel: 'Side',
     });
@@ -114,8 +114,8 @@ describe('progressPhotosController transforms', () => {
     expect(buildCheckInCompletenessModel({ poses: ['front', 'side', 'back'] })).toMatchObject({
       complete: true,
       percent: 100,
-      label: 'Complete studio set',
-      detail: 'Front, side and back are ready for like-for-like comparison.',
+      label: 'Complete photo set',
+      detail: 'Front, side and back are saved for a clearer photo review.',
       nextPose: null,
     });
   });

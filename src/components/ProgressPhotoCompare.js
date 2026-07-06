@@ -448,7 +448,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Compare Check-Ins</Text>
+            <Text style={styles.title}>Compare Progress Photos</Text>
             <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
           </View>
           <TouchableOpacity
@@ -476,7 +476,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Compare Check-Ins</Text>
+          <Text style={styles.title}>Compare Progress Photos</Text>
           <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
         </View>
         <TouchableOpacity

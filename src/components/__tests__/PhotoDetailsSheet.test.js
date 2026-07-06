@@ -76,8 +76,8 @@ test('renders nothing when not visible', async () => {
 test('Save reports the default date (today) and no pose', async () => {
   const props = baseProps();
   const tree = await mount(props);
-  expect(JSON.stringify(tree.toJSON())).toContain('Date and pose keep comparisons honest');
-  await pressLabel(tree, 'Save the check-in');
+  expect(JSON.stringify(tree.toJSON())).toContain('Progress Photos can keep this image in the right place');
+  await pressLabel(tree, 'Save the progress photo');
   expect(props.onConfirm).toHaveBeenCalledTimes(1);
   const arg = props.onConfirm.mock.calls[0][0];
   expect(arg.pose).toBeNull();
@@ -96,7 +96,7 @@ test('the backdrop dismisses the details sheet', async () => {
 test('a pre-filled pose is carried through to Save', async () => {
   const props = baseProps({ initialPose: 'side' });
   const tree = await mount(props);
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   expect(props.onConfirm.mock.calls[0][0].pose).toBe('side');
 });
 
@@ -104,7 +104,7 @@ test('a pose can be chosen and reported on Save', async () => {
   const props = baseProps();
   const tree = await mount(props);
   await pressLabel(tree, 'Set pose to Back');
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   expect(props.onConfirm.mock.calls[0][0].pose).toBe('back');
 });
 
@@ -113,7 +113,7 @@ test('re-tapping the active pose clears it', async () => {
   const props = baseProps({ initialPose: 'front' });
   const tree = await mount(props);
   await pressLabel(tree, 'Set pose to Front');
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   expect(props.onConfirm.mock.calls[0][0].pose).toBeNull();
 });
 
@@ -139,7 +139,7 @@ test('a past date is accepted and reported on Save', async () => {
   const past = new Date(pastDay.getFullYear(), pastDay.getMonth(), pastDay.getDate()).getTime();
   await act(async () => { p.props.onChange({ type: 'set' }, new Date(past)); });
 
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   const arg = props.onConfirm.mock.calls[0][0];
   expect(arg.takenAt).toBe(past);
   expect(arg.takenAt).toBeLessThan(Date.now() - 6 * DAY);
@@ -159,7 +159,7 @@ test('a future date is clamped to now, never accepted into the future', async ()
   const future = Date.now() + 30 * DAY;
   await act(async () => { p.props.onChange({ type: 'set' }, new Date(future)); });
 
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   const arg = props.onConfirm.mock.calls[0][0];
   expect(arg.takenAt).toBeLessThanOrEqual(Date.now() + 1000);
   expect(arg.takenAt).toBeLessThan(future);
