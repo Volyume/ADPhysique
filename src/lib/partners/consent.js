@@ -26,10 +26,9 @@ import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { getSupabaseClient } from '../supabase';
 
-// v1 IS the receipt as first shipped, including the "Your first name" line
-// (added pre-release, before any user was shown any notice, so no bump was
-// due). Bump on any material receipt change from here on.
-export const PARTNER_PRIVACY_NOTICE_VERSION = 1;
+// v2 is the shorter, plainer receipt copy introduced pre-launch with the
+// Partners clarity pass. Bump on any material receipt change from here on.
+export const PARTNER_PRIVACY_NOTICE_VERSION = 2;
 
 /**
  * Append a partner_sharing consent_log row (granted true on accept, false on
