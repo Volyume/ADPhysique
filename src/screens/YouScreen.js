@@ -157,8 +157,8 @@ export default function YouScreen({ navigation }) {
               <Text style={styles.statusTitle}>
                 {isPro
                   ? latestReview
-                    ? `Latest review${reviewDate ? `: ${reviewDate}` : ''}`
-                    : 'Ready for your first weekly review'
+                    ? `Latest coaching decision${reviewDate ? `: ${reviewDate}` : ''}`
+                    : 'Ready for your first check-in'
                   : 'Precision Coaching is available on Pro'}
               </Text>
             </View>
@@ -166,8 +166,8 @@ export default function YouScreen({ navigation }) {
           <Text style={styles.statusBody}>
             {isPro
               ? latestReview
-                ? 'Open the review to see what changed, what was held, and the exact signals behind the decision.'
-                : 'Log training, morning weight, food where relevant, and a weekly check-in. Volyume waits for enough signal before changing targets.'
+                ? 'Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
+                : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
               : 'The coach is not a chatbot. It is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
@@ -178,13 +178,13 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
-              sub="Answer the weekly questions that drive coaching changes."
+              sub="Answer this week's questions so the coach has context."
               onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
             <NavRow
               icon="pulse-outline"
-              label="This week's review"
-              sub="What changed, what held, why it happened, and what to do next."
+              label="Coaching decision"
+              sub="The output from your check-in: changes, holds, rationale and next steps."
               onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             />
             <NavRow
@@ -223,39 +223,11 @@ export default function YouScreen({ navigation }) {
                 onPress={() => navigation.navigate('CoachHeldHistory')}
               />
             ) : null}
-            <NavRow
-              icon="book-outline"
-              label="How Precision Coaching works"
-              sub="The rules behind changes, holds, safety floors and data confidence."
-              onPress={() => navigation.navigate('Methodology', { source: 'coach_tab' })}
-            />
           </View>
         )}
 
         <View style={styles.section}>
-          <SectionLabel>Safety and context</SectionLabel>
-          {isPro ? (
-            <>
-              <NavRow
-                icon="shield-checkmark-outline"
-                label="Goal lock"
-                sub="Set how conservative the safety check should be for aggressive cuts."
-                onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
-              />
-              <NavRow
-                icon="heart-outline"
-                label="Wellbeing check"
-                sub="Update the screening answers that shape how coaching is applied."
-                onPress={() => navigation.navigate('WellbeingCheck')}
-              />
-              <NavRow
-                icon="book-outline"
-                label="How Precision Coaching works"
-                sub="Training volume, calorie, macro, cardio, deload and hold logic."
-                onPress={() => navigation.navigate('Methodology', { source: 'coach_tab' })}
-              />
-            </>
-          ) : null}
+          <SectionLabel>Accountability</SectionLabel>
           <NavRow
             icon="people-outline"
             label="Partners"
@@ -265,14 +237,26 @@ export default function YouScreen({ navigation }) {
           />
         </View>
 
+        {isPro ? (
+          <View style={styles.section}>
+            <SectionLabel>Safety</SectionLabel>
+            <NavRow
+              icon="shield-checkmark-outline"
+              label="Goal lock"
+              sub="Set how conservative the safety check should be for aggressive cuts."
+              onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
+            />
+            <NavRow
+              icon="heart-outline"
+              label="Wellbeing check"
+              sub="Update the screening answers that shape how coaching is applied."
+              onPress={() => navigation.navigate('WellbeingCheck')}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.section}>
-          <SectionLabel>Profile and settings</SectionLabel>
-          <NavRow
-            icon="person-outline"
-            label="Athlete profile"
-            sub="Profile picture, physique snapshot, strength baselines and body data shortcuts."
-            onPress={() => navigation.navigate('AthleteProfile')}
-          />
+          <SectionLabel>Settings</SectionLabel>
           <NavRow
             icon="settings-outline"
             label="Settings"

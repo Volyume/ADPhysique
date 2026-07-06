@@ -83,6 +83,18 @@ jobs:
         # Codex audit 2026-05-26 F11.
         run: npm ci --legacy-peer-deps
 
+      # Run the expensive JS quality gate BEFORE the native Gradle build. If
+      # type-check, lint, imports, or Jest fail, fail quickly instead of
+      # compiling APK/AAB first and then dropping the run at the old
+      # post-build "Release gate" step.
+      - name: Release quality gate
+        run: npm run release:quality
+
+      # Reporting-only by design. The accepted Expo/RN build-chain advisories
+      # stay visible in logs without failing branch APK delivery.
+      - name: Production audit report
+        run: npm run release:audit
+
       # Fail loudly if backend credentials aren't set. Without these, Metro
       # bundles empty strings and the app crashes at first launch with
       # "Error: supabaseUrl is required." — a silent config bug that has
@@ -386,20 +398,6 @@ jobs:
             echo "::error::Play Store will reject this AAB. Check the Configure release signing step."
             exit 1
           fi
-
-      # IMP-001: release quality gate. Runs the release:check script (strict
-      # type-check, lint, full test suite, then the production audit) BEFORE the
-      # APK/AAB are published as artifacts, so a build that fails type-check,
-      # lint or tests never produces an uploadable release artifact. A failure here fails
-      # the job. See package.json "release:check".
-      # DEP-001: the production audit (`release:audit`) reports the Expo
-      # build-chain advisories (@xmldom/xmldom, postcss, uuid) but no longer
-      # FAILS the gate on them. They are build-host-only tooling, not shipped in
-      # the app runtime, and are formally excepted per
-      # docs/audit/npm-audit-survey-2026-06-01.md. The advisories are still
-      # printed in the log; revisit on the next Expo SDK bump.
-      - name: Release gate (release:check)
-        run: npm run release:check
 
       - name: Verify native libraries are 16 KB page-size compatible
         run: |

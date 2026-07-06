@@ -67,6 +67,10 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   // both devices while keeping the sync row auditable.
   'sender_id', 'card_type', 'title', 'summary', 'detail',
   'visible_to_partner', 'remains_private', 'revoked_at',
+  // Partner cheers: one derived in-app acknowledgement per local day. sent_on
+  // is the lifecycle day key used for duplicate prevention, not raw training,
+  // body, nutrition, photo or location data.
+  'sent_on',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the

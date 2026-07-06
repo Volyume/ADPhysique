@@ -1,7 +1,7 @@
 // COMP-006, "How Precision Coaching works".
 //
-// A static, offline, copy-only trust surface: six sections, the first always
-// open, the rest collapsible. No data dependencies, no Supabase reads, no
+// A static, offline, copy-only trust surface: the first section starts open
+// and the rest are collapsible. No data dependencies, no Supabase reads, no
 // personalised state, so it renders identically for every user (including with
 // an ED-pattern flag open, it describes the safety system in general terms and
 // names no individual state). Reached from the Coach tab, from the coach-output
@@ -29,13 +29,25 @@ import BackHeader from '../components/BackHeader';
 
 // The always-open opener.
 const INTRO =
-  'Every week, Precision Coaching reads your weight trend, your check-in and ' +
-  'your training. It compares what happened to what was expected. That ' +
-  'comparison drives the decision. Nothing is random. Everything can be explained.';
+  'Precision Coaching is a rules-based system, not a chat bot. Each week it ' +
+  'reads your logged training, your morning-weight trend, your food data when ' +
+  'you use Eat, and your weekly check-in answers. It then decides what should ' +
+  'change, what should hold, and why.';
 
-// Sections 2 to 6: collapsible. Each opens with the rule and closes with the
+// Collapsible sections. Each opens with the rule and closes with the
 // mechanism (the "why the rule works", not just what it is).
 const SECTIONS = [
+  {
+    key: 'inputs',
+    title: 'What the coach reads',
+    body:
+      'The main signals are your completed sessions, your morning-weight trend, ' +
+      'your nutrition target and diary data if you use Eat, and the weekly ' +
+      'check-in. The check-in is where you add the context numbers cannot see: ' +
+      'energy, soreness, sleep, stress, joint pain, illness, travel and anything ' +
+      'else that affected the week. Volyume uses those inputs together; one ' +
+      'noisy number on its own should not move the plan.',
+  },
   {
     key: 'cooldown',
     title: 'Why changes wait',
@@ -45,19 +57,6 @@ const SECTIONS = [
       'The one exception is safety: if your weight is dropping faster than it should ' +
       'and your energy is low, Precision Coaching can raise your calories straight ' +
       'away, without waiting for the two weeks.',
-  },
-  {
-    key: 'steps',
-    title: 'How your steps inform the estimate',
-    body:
-      'Steps are never given a calorie value, and they never add or remove calories ' +
-      'on their own. What they do is sharpen confidence: when your daily movement has ' +
-      'clearly shifted for a couple of weeks and that shift points the same way as ' +
-      'your weight trend, Precision Coaching lets your maintenance estimate update a ' +
-      'little faster. If your steps and your weight disagree, or the change is just a ' +
-      'noisy week, nothing changes. The shift can only speed up a change your weight ' +
-      'trend already justified. It can never reverse one, create one, or move past any ' +
-      'of the safety floors.',
   },
   {
     key: 'holds',
@@ -96,8 +95,9 @@ const SECTIONS = [
     key: 'limits',
     title: 'What Precision Coaching cannot do',
     body:
-      'It cannot see food you did not log. It cannot read how you feel, only what ' +
-      'you scored. It cannot override your choices. Its adjustments are suggestions ' +
+      'It cannot see food you did not log. It cannot know how a set felt unless ' +
+      'you log it or tell the check-in. It cannot diagnose injury, illness or body ' +
+      'composition. It cannot override your choices. Its adjustments are suggestions ' +
       'until you apply them.',
   },
 ];
@@ -107,12 +107,12 @@ const SECTIONS = [
 // first section for unknown sources so the page never opens fully closed.
 const SOURCE_SECTION = {
   held_decisions: 'holds',
-  why_block: 'cooldown',
+  why_block: 'inputs',
   paywall: 'safety',
   goal_lock: 'safety',
   plan_reveal: 'training',
-  trial_banner: 'cooldown',
-  setup_complete: 'cooldown',
+  trial_banner: 'inputs',
+  setup_complete: 'inputs',
 };
 
 export default function MethodologyScreen({ route }) {
