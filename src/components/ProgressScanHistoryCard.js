@@ -42,6 +42,12 @@ function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
   return score != null ? `${score}/100` : 'Withheld';
 }
 
+function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
+  if (suppressed || hideExact) return 'Hidden';
+  const weightKg = scan?.stats?.weightKg;
+  return Number.isFinite(weightKg) ? `${weightKg.toFixed(1)} kg` : 'Not logged';
+}
+
 function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   if (suppressed) return 'Scan detail is hidden right now. Your photos remain private.';
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
@@ -126,6 +132,10 @@ export default function ProgressScanHistoryCard({
               <View style={styles.scanInsightCell}>
                 <Text style={styles.scanInsightLabel}>Score</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
+              </View>
+              <View style={styles.scanInsightCell}>
+                <Text style={styles.scanInsightLabel}>Bodyweight</Text>
+                <Text style={styles.scanInsightValue} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
               </View>
             </View>
             <View style={styles.scanReasonBox}>

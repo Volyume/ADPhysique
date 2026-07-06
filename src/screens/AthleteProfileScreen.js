@@ -195,6 +195,18 @@ export default function AthleteProfileScreen({ navigation }) {
     ]);
   }
 
+  function onAvatarPress() {
+    if (!avatarUri) {
+      pickAvatar();
+      return;
+    }
+    appAlert('Profile photo', 'Choose a new photo or remove the one saved on this device.', [
+      { text: 'Change photo', onPress: pickAvatar },
+      { text: 'Remove photo', style: 'destructive', onPress: removeAvatar },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
   const hasPhysiqueScore = summary.scan?.visualLeannessScore != null;
@@ -224,14 +236,19 @@ export default function AthleteProfileScreen({ navigation }) {
         <Card style={styles.hero}>
           <TouchableOpacity
             style={styles.avatar}
-            onPress={pickAvatar}
+            onPress={onAvatarPress}
             accessibilityRole="button"
-            accessibilityLabel={avatarUri ? 'Change profile photo' : 'Add profile photo'}
+            accessibilityLabel={avatarUri ? 'Profile photo. Tap to change or remove.' : 'Add profile photo'}
           >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
-              <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
+              <>
+                <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
+                <View style={styles.avatarEditBadge}>
+                  <Ionicons name="camera-outline" size={13} color={colors.onPrimary} />
+                </View>
+              </>
             )}
           </TouchableOpacity>
           <View style={styles.heroInfo}>
@@ -242,30 +259,10 @@ export default function AthleteProfileScreen({ navigation }) {
             {loading ? (
               <Skeleton width={120} height={12} />
             ) : (
-              <Text style={styles.heroSub}>
+            <Text style={styles.heroSub}>
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <View style={styles.avatarActions}>
-              <TouchableOpacity
-                style={styles.avatarActionButton}
-                onPress={pickAvatar}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.avatarActionText}>{avatarUri ? 'Change photo' : 'Add photo'}</Text>
-              </TouchableOpacity>
-              {avatarUri ? (
-                <TouchableOpacity
-                  style={styles.avatarActionButton}
-                  onPress={removeAvatar}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.avatarRemoveText}>Remove</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
           </View>
         </Card>
 
@@ -375,14 +372,23 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.primary },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: 4,
+    bottom: 4,
+    width: 24,
+    height: 24,
+    borderRadius: circle(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
   heroInfo: { flex: 1, gap: spacing.xs },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
   heroSub: { ...type.num('caption'), color: colors.textSecondary },
-  avatarActions: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.xs },
-  avatarActionButton: { minHeight: 36, justifyContent: 'center' },
-  avatarActionText: { ...type.label, color: colors.primary },
-  avatarRemoveText: { ...type.label, color: colors.error },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statTile: {
     width: '48%',

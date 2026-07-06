@@ -36,6 +36,14 @@ const SCAN_CONFIDENCE_COPY = {
   unknown: 'Unknown',
 };
 
+const SCAN_CONFIDENCE_RANK = {
+  high: 3,
+  moderate: 2,
+  low: 1,
+  not_enough: 0,
+  unknown: 0,
+};
+
 const COMPETITION_GOALS = new Set([
   'mens_physique',
   'classic_physique',
@@ -447,10 +455,12 @@ function progressSignalFromDelta(delta, confidence = 'low') {
     return { signal: 'inconclusive', direction: 'uncertain', label: progressSignalLabel('inconclusive') };
   }
   if (n == null) return { signal: 'baseline', direction: 'baseline', label: progressSignalLabel('baseline') };
-  if (n >= 8) return { signal: 'clear_positive', direction: 'positive', label: progressSignalLabel('clear_positive') };
-  if (n >= 3) return { signal: 'slight_positive', direction: 'positive', label: progressSignalLabel('slight_positive') };
-  if (n <= -8) return { signal: 'clear_drift', direction: 'drift', label: progressSignalLabel('clear_drift') };
-  if (n <= -3) return { signal: 'slight_drift', direction: 'drift', label: progressSignalLabel('slight_drift') };
+  const slightThreshold = confidence === 'high' ? 4 : confidence === 'moderate' ? 5 : 7;
+  const clearThreshold = confidence === 'high' ? 9 : confidence === 'moderate' ? 11 : Infinity;
+  if (n >= clearThreshold) return { signal: 'clear_positive', direction: 'positive', label: progressSignalLabel('clear_positive') };
+  if (n >= slightThreshold) return { signal: 'slight_positive', direction: 'positive', label: progressSignalLabel('slight_positive') };
+  if (n <= -clearThreshold) return { signal: 'clear_drift', direction: 'drift', label: progressSignalLabel('clear_drift') };
+  if (n <= -slightThreshold) return { signal: 'slight_drift', direction: 'drift', label: progressSignalLabel('slight_drift') };
   return { signal: 'holding_steady', direction: 'steady', label: progressSignalLabel('holding_steady') };
 }
 
@@ -530,6 +540,123 @@ function scanPoseSet(scan = {}) {
   return new Set([...signalAssets, ...directAssets].map((asset) => normalisePose(asset?.pose)).filter(Boolean));
 }
 
+function scanAssetsForComparison(scan = {}) {
+  const signals = scanSignals(scan);
+  const signalAssets = Array.isArray(signals.assets) ? signals.assets : [];
+  const directAssets = Array.isArray(scan.assets) ? scan.assets : [];
+  const byPose = new Map();
+  for (const asset of signalAssets) {
+    const pose = normalisePose(asset?.pose);
+    if (pose) byPose.set(pose, asset);
+  }
+  for (const asset of directAssets) {
+    const pose = normalisePose(asset?.pose);
+    if (pose) byPose.set(pose, { ...(byPose.get(pose) || {}), ...asset });
+  }
+  return [...byPose.values()];
+}
+
+function scanAssetForPose(scan = {}, pose) {
+  return scanAssetsForComparison(scan).find((asset) => normalisePose(asset?.pose) === pose) || null;
+}
+
+function scanComparisonConfidenceTier(scan = {}) {
+  const tier = scanSignals(scan)?.physiqueAssessment?.scanConfidenceTier;
+  if (Object.prototype.hasOwnProperty.call(SCAN_CONFIDENCE_RANK, tier)) return tier;
+  if (['good', 'usable'].includes(scan?.qualityLabel ?? scan?.quality_label)) return 'low';
+  return 'unknown';
+}
+
+function lowerConfidenceTier(a, b) {
+  const left = Object.prototype.hasOwnProperty.call(SCAN_CONFIDENCE_RANK, a) ? a : 'unknown';
+  const right = Object.prototype.hasOwnProperty.call(SCAN_CONFIDENCE_RANK, b) ? b : 'unknown';
+  return SCAN_CONFIDENCE_RANK[left] <= SCAN_CONFIDENCE_RANK[right] ? left : right;
+}
+
+function metricFromAsset(asset = {}, key) {
+  const signals = assetSignals(asset);
+  if (key === 'lightingScore') return finiteNumber(asset?.lightingScore ?? asset?.quality?.lightingScore ?? signals?.quality?.lightingScore);
+  if (key === 'framingScore') return finiteNumber(asset?.framingScore ?? asset?.quality?.framingScore ?? signals?.quality?.framingScore);
+  if (key === 'segmentationConfidence') return finiteNumber(asset?.segmentationConfidence ?? asset?.quality?.segmentationConfidence ?? signals?.quality?.segmentationConfidence);
+  if (key === 'cameraTiltDegrees') return finiteNumber(asset?.cameraTiltDegrees ?? asset?.quality?.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees);
+  return finiteNumber(asset?.[key] ?? asset?.quality?.[key] ?? signals?.quality?.[key]);
+}
+
+function bodyBoxFromAsset(asset = {}) {
+  return asset?.bodyBox ?? assetSignals(asset)?.bodyBox ?? null;
+}
+
+function compareSetupMetric({ current, previous, key, threshold, reason, absolute = false }) {
+  const cur = absolute ? Math.abs(metricFromAsset(current, key)) : metricFromAsset(current, key);
+  const prev = absolute ? Math.abs(metricFromAsset(previous, key)) : metricFromAsset(previous, key);
+  if (cur == null || prev == null) return { compared: false, issue: null };
+  return { compared: true, issue: Math.abs(cur - prev) > threshold ? reason : null };
+}
+
+function compareBodyBoxMetric({ current, previous, key, threshold, reason }) {
+  const cur = finiteNumber(bodyBoxFromAsset(current)?.[key]);
+  const prev = finiteNumber(bodyBoxFromAsset(previous)?.[key]);
+  if (cur == null || prev == null) return { compared: false, issue: null };
+  return { compared: true, issue: Math.abs(cur - prev) > threshold ? reason : null };
+}
+
+export function scanSetupStability(currentScan = null, previousScan = null) {
+  if (!currentScan || !previousScan) {
+    return { stable: false, issues: ['missing_scan'], comparedSignalCount: 0 };
+  }
+  const currentPoses = scanPoseSet(currentScan);
+  const previousPoses = scanPoseSet(previousScan);
+  const issues = [];
+  let comparedSignalCount = 0;
+
+  if (currentPoses.has('side') !== previousPoses.has('side')) {
+    issues.push('side_pose_set_changed');
+  }
+
+  for (const pose of REQUIRED_SCAN_POSES) {
+    const current = scanAssetForPose(currentScan, pose);
+    const previous = scanAssetForPose(previousScan, pose);
+    if (!current || !previous) continue;
+    const metricIssues = [
+      compareSetupMetric({
+        current, previous, key: 'lightingScore', threshold: 0.24, reason: 'lighting_changed',
+      }),
+      compareSetupMetric({
+        current, previous, key: 'framingScore', threshold: 0.22, reason: 'framing_changed',
+      }),
+      compareSetupMetric({
+        current, previous, key: 'segmentationConfidence', threshold: 0.22, reason: 'outline_confidence_changed',
+      }),
+      compareSetupMetric({
+        current, previous, key: 'cameraTiltDegrees', threshold: 4, reason: 'camera_angle_changed',
+      }),
+      compareBodyBoxMetric({
+        current, previous, key: 'height', threshold: 0.09, reason: 'camera_distance_changed',
+      }),
+      compareBodyBoxMetric({
+        current, previous, key: 'width', threshold: 0.10, reason: 'camera_distance_changed',
+      }),
+      compareBodyBoxMetric({
+        current, previous, key: 'centerX', threshold: 0.11, reason: 'body_position_changed',
+      }),
+      compareBodyBoxMetric({
+        current, previous, key: 'centerY', threshold: 0.11, reason: 'camera_height_changed',
+      }),
+    ];
+    for (const metric of metricIssues) {
+      if (!metric.compared) continue;
+      comparedSignalCount += 1;
+      if (metric.issue) issues.push(`${pose}_${metric.issue}`);
+    }
+  }
+
+  return {
+    stable: issues.length === 0,
+    issues: [...new Set(issues)],
+    comparedSignalCount,
+  };
+}
+
 function hasRequiredPoseSet(scan = {}) {
   const poses = scanPoseSet(scan);
   return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
@@ -555,7 +682,30 @@ export function scanComparability(currentScan = null, previousScan = null) {
   if (['poor', 'unknown'].includes(currentQuality) || ['poor', 'unknown'].includes(previousQuality)) {
     return { comparable: false, status: 'not_comparable', reason: 'Scan quality was not strong enough for a like-for-like comparison.', comparableCount: 0 };
   }
-  return { comparable: true, status: 'comparable', reason: 'Like-for-like front and back scan.', comparableCount: 1 };
+  const currentConfidence = scanComparisonConfidenceTier(currentScan);
+  const previousConfidence = scanComparisonConfidenceTier(previousScan);
+  if (SCAN_CONFIDENCE_RANK[currentConfidence] <= 0 || SCAN_CONFIDENCE_RANK[previousConfidence] <= 0) {
+    return { comparable: false, status: 'not_comparable', reason: 'One scan did not have enough confidence for a fair comparison.', comparableCount: 0 };
+  }
+  const setup = scanSetupStability(currentScan, previousScan);
+  if (!setup.stable) {
+    return {
+      comparable: false,
+      status: 'not_comparable',
+      reason: 'The photo setup changed too much for a fair comparison.',
+      comparableCount: 0,
+      setupIssues: setup.issues,
+      setupComparedSignalCount: setup.comparedSignalCount,
+    };
+  }
+  return {
+    comparable: true,
+    status: 'comparable',
+    reason: 'Like-for-like front and back scan.',
+    comparableCount: REQUIRED_SCAN_POSES.length,
+    scanConfidenceTier: lowerConfidenceTier(currentConfidence, previousConfidence),
+    setupComparedSignalCount: setup.comparedSignalCount,
+  };
 }
 
 function scanWeightKg(scan = {}) {
@@ -606,6 +756,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   let trendMagnitudePctPoints = null;
   let progressDeltaScore = null;
   let progressSignal = null;
+  const pairConfidenceTier = comparability.scanConfidenceTier || 'low';
 
   const curAssessment = scanSignals(currentScan)?.physiqueAssessment ?? null;
   const prevAssessment = scanSignals(previousScan)?.physiqueAssessment ?? null;
@@ -615,13 +766,13 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     comparedSignalCount += 1;
     const delta = rounded0(curScore - prevScore);
     progressDeltaScore = delta;
-    progressSignal = progressSignalFromDelta(delta, curAssessment?.scanConfidenceTier || 'low');
+    progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
     trendMagnitudePctPoints = Math.abs(delta);
-    if (Math.abs(delta) < 3) {
+    if (progressSignal.signal === 'holding_steady') {
       lines.push('Volyume Leanness Score is broadly level against the last like-for-like scan.');
     } else {
       lines.push(`Volyume Leanness Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
-      trendVotes.push(delta > 0 ? 'down' : 'up');
+      trendVotes.push(delta > 0 ? 'leaner' : 'softer');
     }
   }
 
@@ -664,8 +815,8 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   ].filter(Boolean);
   lines.push(...ratioLines.slice(0, 2));
   comparedSignalCount += ratioComparisonCount;
-  if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('down');
-  if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('up');
+  if (ratioLines.some((line) => /lower/i.test(line))) trendVotes.push('leaner');
+  if (ratioLines.some((line) => /higher/i.test(line))) trendVotes.push('softer');
 
   if (comparedSignalCount === 0) {
     return {
@@ -683,22 +834,26 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   if (lines.length === 0) {
     lines.push('Measured scan signals are broadly steady against the last comparable scan.');
   }
-  const downVotes = trendVotes.filter((v) => v === 'down').length;
-  const upVotes = trendVotes.filter((v) => v === 'up').length;
-  const trendDirection = downVotes > upVotes ? 'down' : upVotes > downVotes ? 'up' : 'steady';
-  const trendSummary = trendDirection === 'down'
-    ? 'Progress Signal is positive against the last like-for-like scan.'
-    : trendDirection === 'up'
-      ? 'Progress Signal shows a slight drift against the last like-for-like scan.'
-      : 'Progress Signal is holding steady against the last like-for-like scan.';
+  const leanerVotes = trendVotes.filter((v) => v === 'leaner').length;
+  const softerVotes = trendVotes.filter((v) => v === 'softer').length;
+  const visualTrendDirection = leanerVotes > softerVotes ? 'leaner' : softerVotes > leanerVotes ? 'softer' : 'steady';
+  const trendDirection = visualTrendDirection === 'leaner' ? 'down' : visualTrendDirection === 'softer' ? 'up' : 'steady';
+  const trendSummary = visualTrendDirection === 'leaner'
+    ? 'Visual progress signal is positive against the last like-for-like scan.'
+    : visualTrendDirection === 'softer'
+      ? 'Visual progress signal shows a drift to watch against the last like-for-like scan.'
+      : 'Visual progress signal is holding steady against the last like-for-like scan.';
 
   return {
     measuredSignalsOnly: true,
     comparisonStatus: 'comparable',
     comparableCount: comparability.comparableCount,
+    pairConfidenceTier,
     trendDirection,
+    visualTrendDirection,
     trendMagnitudePctPoints,
     progressDeltaScore,
+    previousLeannessScore: prevScore,
     progressSignal: progressSignal?.signal ?? null,
     progressSignalLabel: progressSignal?.label ?? null,
     progressDirection: progressSignal?.direction ?? null,
@@ -877,6 +1032,11 @@ export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, e
         framingScore: a.framingScore ?? signals?.quality?.framingScore ?? null,
         blurScore: a.blurScore ?? signals?.quality?.blurScore ?? null,
         lightingScore: a.lightingScore ?? signals?.quality?.lightingScore ?? null,
+        cameraTiltDegrees: a.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees ?? null,
+        bodyBox: signals?.bodyBox ?? null,
+        mask: signals?.mask ? {
+          foregroundRatio: signals.mask.foregroundRatio ?? null,
+        } : null,
         silhouetteRatios: signals?.silhouetteRatios ?? null,
         abstentionReasons: signals?.abstentionReasons ?? [],
       };

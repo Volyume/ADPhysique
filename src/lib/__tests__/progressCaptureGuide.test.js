@@ -41,40 +41,42 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('broad scan results');
+    expect(prompt).toContain('Volyume\'s own guided front and back photo sequence');
+    expect(prompt).toContain('visual progress signal');
+    expect(prompt).toContain('leanness band');
+    expect(prompt).toContain('scan confidence');
     expect(prompt).toContain('not an exact body-fat percentage');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
+    expect(how).toContain('Volyume\'s own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
     expect(`${prompt}\n${how}`).toContain('Photos stay on this device unless you choose to share or export them.');
   });
 
-  test('builds action-first capture routes with a partial progress photo set priority', () => {
+  test('builds action-first scan routes for guided capture and photo import', () => {
     const routes = buildProgressStudioCaptureRoutes({
       latestPartial: { nextPose: 'back', nextPoseLabel: 'Back' },
       canScan: true,
     });
     expect(routes.map((route) => route.key)).toEqual([
-      'complete_latest',
       'scan',
-      'guided',
-      'camera',
-      'library',
+      'scan_library',
     ]);
     expect(routes[0]).toMatchObject({
-      title: 'Add back photo',
-      actionLabel: 'Add Back photo',
+      title: 'Guided physique scan',
+      actionLabel: 'Start guided scan',
       recommended: true,
     });
-    expect(routes[0].steps).toContain('Capture Back relaxed');
-    expect(routes[1].bestFor).toContain('A broad scan result');
-    expect(routes[1].bestFor).toContain('Not an exact body-fat percentage');
-    expect(routes[1].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
-    expect(routes[4].bestFor).toContain('Adding older photos in the right order');
-    expect(routes[4].steps).toContain('Set the real capture date');
+    expect(routes[0].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
+    expect(routes[1]).toMatchObject({
+      title: 'Import photos to scan',
+      actionLabel: 'Import photos to scan',
+    });
+    expect(routes[1].bestFor).toContain('real capture date and weight snapshot');
+    expect(routes[1].steps).toContain('Choose the front relaxed photo');
   });
 
-  test('can omit Physique Scan from the progress-photo add sheet', () => {
+  test('can still build the legacy non-scan fallback routes', () => {
     const routes = buildProgressStudioCaptureRoutes({ includeScan: false });
     expect(routes.map((route) => route.key)).toEqual(['guided', 'camera', 'library']);
   });

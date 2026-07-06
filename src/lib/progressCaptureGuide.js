@@ -92,7 +92,7 @@ export function getPoseCaptureGuidance(pose) {
 export function buildProgressStudioCapturePromptCopy() {
   return [
     'Choose how you want to add progress photos today. The aim is not a perfect pose. It is a clear photo you can compare later.',
-    'Physique Scan is a guided front and back photo sequence, with an optional side photo. It gives broad scan results, not an exact body-fat percentage.',
+    'Physique Scan is Volyume\'s own guided front and back photo sequence, with an optional side photo. It gives a visual progress signal, leanness band and scan confidence, not an exact body-fat percentage.',
     'Guided single photo is best when you are adding one missing angle or matching an older photo.',
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
     QUALITY_FIRST_CAPTURE_NOTE,
@@ -111,6 +111,39 @@ export function buildProgressStudioCaptureRoutes({
   const routes = [];
   const missingPoseLabel = latestPartial?.nextPoseLabel || latestPartial?.missingPoseLabel || null;
 
+  if (includeScan) {
+    routes.push({
+      key: 'scan',
+      icon: 'scan',
+      eyebrow: 'Guided capture',
+      title: 'Guided physique scan',
+      body: 'Volyume talks you through a fresh front and back photo set, with an optional side photo.',
+      bestFor: 'A new physique score from photos taken in the same setup.',
+      steps: PROGRESS_SCAN_SEQUENCE,
+      actionLabel: 'Start guided scan',
+      recommended: true,
+      disabled: !canScan,
+      disabledReason: 'Sign in to save a guided scan.',
+    });
+    routes.push({
+      key: 'scan_library',
+      icon: 'images-outline',
+      eyebrow: 'Import',
+      title: 'Import photos to scan',
+      body: 'Choose existing front and back photos. Volyume saves them to your library and scores the set.',
+      bestFor: 'Scoring older photos you already have, using the real capture date and weight snapshot.',
+      steps: Object.freeze([
+        'Choose the front relaxed photo',
+        'Choose the back relaxed photo',
+        'Add the optional side photo or finish the scan',
+      ]),
+      actionLabel: 'Import photos to scan',
+      disabled: !canScan,
+      disabledReason: 'Sign in to save imported scans.',
+    });
+    return routes;
+  }
+
   if (latestPartial?.nextPose && missingPoseLabel) {
     routes.push({
       key: 'complete_latest',
@@ -126,22 +159,6 @@ export function buildProgressStudioCaptureRoutes({
       ]),
       actionLabel: `Add ${missingPoseLabel} photo`,
       recommended: true,
-    });
-  }
-
-  if (includeScan) {
-    routes.push({
-      key: 'scan',
-      icon: 'scan',
-      eyebrow: latestPartial?.nextPose ? 'Flagship' : 'Best next',
-      title: 'Physique Scan',
-      body: 'Front and back relaxed photos, with an optional side photo.',
-      bestFor: 'A broad scan result. Not an exact body-fat percentage.',
-      steps: PROGRESS_SCAN_SEQUENCE,
-      actionLabel: 'Start Physique Scan',
-      recommended: !latestPartial?.nextPose,
-      disabled: !canScan,
-      disabledReason: 'Sign in to save a guided scan.',
     });
   }
 
@@ -199,7 +216,7 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Physique Scan sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Physique Scan can show a broad result, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
+    'Physique Scan is Volyume\'s own visual progress measure. It can show a leanness band, progress signal, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',

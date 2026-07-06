@@ -269,8 +269,8 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
     expect(text).toContain('No saved photos yet');
-    expect(text).toContain('Add progress photos');
-    expect(text).toContain('Start Physique Scan');
+    expect(text).toContain('Add photos');
+    expect(text).toContain('Add a guided set or import existing photos');
     expect(text).not.toContain('Suggested next step');
   });
 });
@@ -452,7 +452,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
 describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('free tier hides the add button and says the state plainly', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Add progress photos')).toBeUndefined();
+    expect(findPressable(tree, 'Add photos')).toBeUndefined();
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
@@ -475,7 +475,7 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
 
   test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
-    expect(findPressable(tree, 'Add progress photos')).toBeDefined();
+    expect(findPressable(tree, 'Add photos')).toBeDefined();
     await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });

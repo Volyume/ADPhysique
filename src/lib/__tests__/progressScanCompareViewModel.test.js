@@ -53,7 +53,7 @@ describe('progressScanCompareViewModel', () => {
   });
 
   test('resolves selected ids oldest-first and builds pose rows plus measured delta', () => {
-    const entries = orderedScanEntries([scan('new', 20, 72, ['front', 'back', 'side']), scan('old', 1, 60, ['front', 'back'])]);
+    const entries = orderedScanEntries([scan('new', 20, 72, ['front', 'back', 'side']), scan('old', 1, 60, ['front', 'back', 'side'])]);
     expect(resolveScanComparePair(entries, ['new', 'old']).map((s) => s.id)).toEqual(['old', 'new']);
     expect(poseRowsForPair(entries[0], entries[1]).map((row) => row.pose)).toEqual(['front', 'back', 'side']);
 

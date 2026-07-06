@@ -88,6 +88,34 @@ jest.mock('../../lib/progressPhotoMeta', () => ({
   deletePhotoMeta: jest.fn(async () => true),
   upsertPhotoMeta: jest.fn(async () => ({})),
 }));
+jest.mock('../../lib/progressScanStore', () => ({
+  createProgressScanSession: jest.fn(async (_userId, opts = {}) => ({ id: 'scan-1', capturedAt: opts.capturedAt })),
+  addProgressScanAsset: jest.fn(async () => ({ id: 'asset-1' })),
+  detachProgressScanPhoto: jest.fn(async () => true),
+  deleteProgressScanSession: jest.fn(async () => true),
+  finishProgressScanSession: jest.fn(async () => ({ id: 'scan-1' })),
+  listProgressScanEntries: jest.fn(async () => []),
+}));
+jest.mock('../../lib/progressScanVision', () => ({
+  analyseProgressScanPhoto: jest.fn(async () => ({ ok: true })),
+  assetFieldsFromVisionResult: jest.fn(() => ({
+    qualityScore: 0.9,
+    lightingScore: 0.9,
+    blurScore: 0.9,
+    framingScore: 0.9,
+    segmentationConfidence: 0.9,
+    signals: { modelBacked: true, quality: { lightingScore: 0.9, framingScore: 0.9 } },
+  })),
+  retakeCopyForVisionResult: jest.fn(() => null),
+}));
+jest.mock('../../lib/progressScanPreferences', () => ({
+  getProgressScanCapturePreferences: jest.fn(async () => ({ timerSeconds: 10 })),
+  getProgressScanHideExactPreference: jest.fn(async () => false),
+  setProgressScanHideExactPreference: jest.fn(async () => {}),
+}));
+jest.mock('../../lib/database', () => ({
+  getUserBodyProfile: jest.fn(async () => null),
+}));
 jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: jest.fn(() => false) }));
 
 const stub = (name) => ({ __esModule: true, default: (props) => {
@@ -102,6 +130,8 @@ jest.mock('../../components/BeforeAfterShareSheet', () => stub('BeforeAfterShare
 import useAppStore from '../../store/useAppStore';
 import { saveProgressPhoto } from '../../lib/progressPhotos';
 import { upsertPhotoMeta } from '../../lib/progressPhotoMeta';
+import { createProgressScanSession, addProgressScanAsset } from '../../lib/progressScanStore';
+import { analyseProgressScanPhoto } from '../../lib/progressScanVision';
 import ProgressPhotosScreen from '../ProgressPhotosScreen';
 
 const USER_ID = 'u-add-1';
@@ -148,75 +178,88 @@ function allTexts(tree) {
     });
 }
 
-async function chooseLibraryOnAdd(tree) {
-  await pressLabel(tree, 'Add progress photos');
+async function openImportScanDateStep(tree) {
+  await pressLabel(tree, 'Add photos');
   await flush();
-  await pressLabel(tree, 'Choose from photos');
+  await pressLabel(tree, 'Import photos to scan');
+}
+
+async function importFrontScanPhoto(tree) {
+  await openImportScanDateStep(tree);
+  await flush();
+  await pressLabel(tree, 'Import photos for this scan');
 }
 
 beforeEach(() => jest.clearAllMocks());
 
-test('add progress photos sheet keeps Physique Scan as a separate main action', async () => {
+test('add photos sheet presents guided capture and import as the two scan paths', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Add progress photos');
+  await pressLabel(tree, 'Add photos');
 
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
-  expect(copy).toContain('Add progress photos');
-  expect(copy).toContain('Choose how to add progress photos. Use Physique Scan from the main screen when you want the guided scan.');
-  expect(copy).toContain('Guided single photo');
-  expect(copy).toContain('Take a quick photo');
-  expect(copy).toContain('Import from photos');
-  expect(copy).toContain('Set the real capture date');
+  expect(copy).toContain('Add photos');
+  expect(copy).toContain('Choose guided capture or import existing photos.');
+  expect(copy).toContain('Guided physique scan');
+  expect(copy).toContain('Import photos to scan');
+  expect(copy).toContain('Choose the front relaxed photo');
   expect(copy).toContain('Photos are stored on this phone unless you share or export them.');
   expect(copy).toContain('Export anything you want to keep before uninstalling the app');
-  expect(copy).not.toContain('Front relaxed');
-  expect(copy).not.toContain('Back relaxed');
-  expect(hasPressableLabel(tree, 'Open guided photo camera')).toBe(true);
-  expect(hasPressableLabel(tree, 'Take photo')).toBe(true);
-  expect(hasPressableLabel(tree, 'Choose from photos')).toBe(true);
+  expect(hasPressableLabel(tree, 'Start guided scan')).toBe(true);
+  expect(hasPressableLabel(tree, 'Import photos to scan')).toBe(true);
+  expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);
 });
 
-test('picking an image opens the details step and does NOT save before confirm', async () => {
+test('importing photos asks for the scan date before touching the library', async () => {
+  mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await chooseLibraryOnAdd(tree);
+  await openImportScanDateStep(tree);
   await flush();
-  // Details sheet is up (its Save button exists); nothing saved yet.
-  const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the progress photo');
-  expect(save.length).toBeGreaterThan(0);
+  const importAction = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Import photos for this scan');
+  expect(importAction.length).toBeGreaterThan(0);
+  expect(createProgressScanSession).not.toHaveBeenCalled();
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
 });
 
-test('confirming with the default date saves then snapshots weight for today', async () => {
+test('confirming the scan date imports the first photo into the scan pipeline', async () => {
+  mockAppAlert.mockImplementation((title, _message, buttons = []) => {
+    if (title === 'Use this photo?') buttons.find((b) => b.text === 'Use photo')?.onPress?.();
+  });
   const tree = await render();
-  await chooseLibraryOnAdd(tree);
+  await importFrontScanPhoto(tree);
   await flush();
 
-  await pressLabel(tree, 'Save the progress photo');
-  await flush();
-
+  expect(createProgressScanSession).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ capturedAt: expect.any(Number) }));
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
   expect(upsertPhotoMeta).toHaveBeenCalledTimes(1);
   const [uid, name, patch] = upsertPhotoMeta.mock.calls[0];
   expect(uid).toBe(USER_ID);
   expect(name).toBe('1700000000000.jpg');
-  expect(patch.pose).toBeNull();
+  expect(patch.pose).toBe('front');
   // Today by default.
   const startOfToday = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   expect(patch.takenAt).toBeGreaterThanOrEqual(startOfToday);
+  expect(analyseProgressScanPhoto).toHaveBeenCalledWith({ uri: 'file:///photos/1700000000000.jpg', pose: 'front' });
+  expect(addProgressScanAsset).toHaveBeenCalledWith(USER_ID, 'scan-1', expect.objectContaining({
+    pose: 'front',
+    photoName: '1700000000000.jpg',
+    takenAt: patch.takenAt,
+  }));
 });
 
-test('setting the date to the past indexes the photo under that past day (the founder scenario)', async () => {
+test('setting the imported scan date to the past indexes the set under that day', async () => {
+  mockAppAlert.mockImplementation((title, _message, buttons = []) => {
+    if (title === 'Use this photo?') buttons.find((b) => b.text === 'Use photo')?.onPress?.();
+  });
   const tree = await render();
-  await chooseLibraryOnAdd(tree);
+  await openImportScanDateStep(tree);
   await flush();
 
-  // Open the picker in the details sheet and choose a week ago.
   const field = tree.root.findAll(
     (n) => typeof n.props?.accessibilityLabel === 'string'
-      && n.props.accessibilityLabel.startsWith('Change the date')
+      && n.props.accessibilityLabel.startsWith('Change scan date')
       && typeof n.props.onPress === 'function',
   )[0];
   await act(async () => { field.props.onPress(); });
@@ -227,25 +270,27 @@ test('setting the date to the past indexes the photo under that past day (the fo
   const pastDay = new Date(wk.getFullYear(), wk.getMonth(), wk.getDate()).getTime();
   await act(async () => { dtp.props.onChange({ type: 'set' }, new Date(pastDay)); });
 
-  await pressLabel(tree, 'Save the progress photo');
+  await pressLabel(tree, 'Import photos for this scan');
   await flush();
 
-  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
+  expect(createProgressScanSession).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ capturedAt: pastDay }));
   const patch = upsertPhotoMeta.mock.calls[0][2];
   expect(patch.takenAt).toBe(pastDay);
 });
 
-test('a pro-to-free flip with the details sheet open blocks the save (live-tier re-check)', async () => {
+test('a pro-to-free flip with the scan date sheet open blocks the import', async () => {
+  mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await chooseLibraryOnAdd(tree);
+  await openImportScanDateStep(tree);
   await flush();
 
   // Tier lapses while the sheet is open.
   useAppStore.getState = () => ({ tier: 'free', user: { id: USER_ID } });
 
-  await pressLabel(tree, 'Save the progress photo');
+  await pressLabel(tree, 'Import photos for this scan');
   await flush();
 
+  expect(createProgressScanSession).not.toHaveBeenCalled();
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
 });
