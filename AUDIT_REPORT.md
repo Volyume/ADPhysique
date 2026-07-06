@@ -395,13 +395,15 @@ Status: release decision.
 - Physique Studio now has a deterministic `Next best action` layer that guides users to complete a partial Check-In, compare scans, compare matched Check-Ins, or capture the next baseline depending on their current state.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
 - Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
+- Partner active cards now include a `Share wins` consent surface and review sheet that defines the only eligible future share categories: workout summary, personal record, block milestone and progress card.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
 
 ### Partner Optional Sharing Direction
 
-- Optional partner sharing makes product sense if it is explicit, granular and event-based: share a completed workout summary, a PR, a block milestone, a consistency milestone, or a user-generated progress card.
+- Optional partner sharing makes product sense if it is explicit, granular and event-based: share a completed workout summary, a PR, a block milestone, or a user-generated progress card.
 - It should not become blanket partner access to workout history, food, bodyweight, coach notes, body metrics, private notes or progress photos.
-- Recommended model: `Share a win`, with per-event consent, per-category settings, partner acknowledgement only through curated responses, revocation/delete handling, and calm/ED suppression for body/progress surfaces.
+- The app now has the first `Share wins` policy surface: default `Ask every time`, no passive feed, no leaderboard, no workout history browsing, no food diary, no coach notes, no body metrics and no automatic photo sharing.
+- Remaining implementation work: real event-card creation, delivery, revocation/delete handling, ED/calm suppression for body/progress cards, and partner acknowledgement only through curated responses.
 
 ## Product And UX Notes
 
