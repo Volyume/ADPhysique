@@ -378,7 +378,7 @@ export default function FoodInsightsScreen({ navigation }) {
           </>
         ) : null}
 
-        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS · CALORIE TREND</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS - CALORIE TREND</SectionLabel>
         <Card style={styles.card}>
           {calorieLine.length >= 2 ? (
             <>
@@ -416,12 +416,12 @@ export default function FoodInsightsScreen({ navigation }) {
             </>
           ) : (
             <Text style={styles.emptyText}>
-              Log a couple of days to see your calorie trend.
+              Log at least two days to see your calorie trend.
             </Text>
           )}
         </Card>
 
-        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS · CALORIES</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>LAST {windowDays} DAYS - CALORIES</SectionLabel>
         <Card style={styles.card}>
           {chartBars.map((b) => {
             const pct = Math.min(1, b.kcal / maxKcal);
@@ -453,7 +453,7 @@ export default function FoodInsightsScreen({ navigation }) {
             </Text>
           ) : (
             <Text style={styles.cardFootnote}>
-              Set your calorie target in Precision Coaching to see adherence colours.
+              Set your calorie target in Precision Coaching to see target colours.
             </Text>
           )}
         </Card>
@@ -527,7 +527,7 @@ export default function FoodInsightsScreen({ navigation }) {
           ) : (
             <View style={styles.emptyActionStack}>
               <Text style={styles.emptyText}>
-                Log a few days to see your last {windowDays} days.
+                Log food on a few days to fill this view.
               </Text>
               <Button
                 title="Open diary"
@@ -566,7 +566,7 @@ export default function FoodInsightsScreen({ navigation }) {
             </>
           ) : (
             <Text style={styles.emptyText}>
-              Log a few days to see your nutrient averages.
+              Log food on a few days to see your averages.
             </Text>
           )}
         </Card>

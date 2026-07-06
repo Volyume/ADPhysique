@@ -146,7 +146,7 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     expect(text).toContain("Couldn't load nutrition insights");
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
-    expect(text).not.toContain('Log a few days to see your last 7 days.');
+    expect(text).not.toContain('Log food on a few days to fill this view.');
   });
 
   test('reports days hit of days logged using the existing 10% band', async () => {
@@ -172,7 +172,7 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     const text = await mountWith([]);
     expect(text).not.toContain('You hit your protein on');
     // The macro-block empty copy still shows (window-aware since NUT-05; default 7).
-    expect(text).toContain('Log a few days to see your last 7 days.');
+    expect(text).toContain('Log food on a few days to fill this view.');
   });
 
   test('carries no praise or streak language (locked voice)', async () => {
@@ -189,7 +189,7 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
   test('defaults to the 7-day window with one bar per day', async () => {
     const tree = await render(lastN(90).map((d) => rollup(d, true)));
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 7 DAYS · CALORIES');
+    expect(text).toContain('LAST 7 DAYS - CALORIES');
     expect(barRowCount(tree)).toBe(7);
     expect(text).toContain('Bars within 10% turn green.');
     expect(text).not.toContain('weekly average'); // 7d stays per-day
@@ -200,14 +200,14 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
 
     await tapWindow(tree, 30);
     let text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 30 DAYS · CALORIES');
+    expect(text).toContain('LAST 30 DAYS - CALORIES');
     expect(barRowCount(tree)).toBe(5); // 30 days → 5 weekly bars, not 30 rows
     expect(text).toContain('Each bar is a weekly average');
     expect(text).not.toContain('Bars within 10% turn green.');
 
     await tapWindow(tree, 90);
     text = flattenText(tree.toJSON());
-    expect(text).toContain('LAST 90 DAYS · CALORIES');
+    expect(text).toContain('LAST 90 DAYS - CALORIES');
     expect(barRowCount(tree)).toBe(13); // 90 days → 13 weekly bars, not 90 rows
   });
 
@@ -216,7 +216,7 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     await tapWindow(tree, 90);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Export 90 days as CSV');
-    expect(text).toContain('Log a few days to see your last 90 days.');
+    expect(text).toContain('Log food on a few days to fill this view.');
     expect(text).toContain('Open diary');
     const openDiary = tree.root.findByProps({ accessibilityLabel: 'Open diary' });
     await act(async () => { openDiary.props.onPress(); });

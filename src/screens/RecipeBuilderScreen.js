@@ -242,7 +242,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     // keep the user on the builder with a clear, actionable reason rather than
     // silently filtering rows away.
     if (ingredients.length === 0) {
-      toast.show('Add at least one ingredient before saving.', { variant: 'warning' });
+      toast.show('Add one ingredient before saving.', { variant: 'warning' });
       return;
     }
     const usable = ingredients.filter(isUsableIngredient);
@@ -410,7 +410,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </View>
 
           {ingredients.length === 0 ? (
-            <Text style={styles.ingEmpty}>No ingredients yet. Add your first to watch the macros build up.</Text>
+            <Text style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will build here.</Text>
           ) : ingredients.map((ing, i) => (
             <View key={`${ing.food_ref}-${i}`} style={styles.ingRow}>
               <View style={{ flex: 1 }}>
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   qtyUnit: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 
   macros: { marginHorizontal: spacing.lg, marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
-  macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: spacing.sm },
+  macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0, marginBottom: spacing.sm },
   macrosRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   macrosSub: { color: colors.textMuted, ...type.num('caption') },
   pill: {

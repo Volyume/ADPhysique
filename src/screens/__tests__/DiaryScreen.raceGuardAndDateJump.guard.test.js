@@ -146,7 +146,7 @@ describe('DiaryScreen diary tools', () => {
     expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Day tools<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
-    expect(SRC).toMatch(/Food logging stays here\./);
+    expect(SRC).toMatch(/Need a shortcut\? Copy a logged day, check trends, or export your diary\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
@@ -156,7 +156,7 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/accessibilityLabel="Plan meals: build a day or week, review it, then add it to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
-    expect(SRC).toMatch(/Build from your targets, review it, then add it to the diary\./);
+    expect(SRC).toMatch(/Build a day or week from your targets, then add it when ready\./);
   });
 });
 

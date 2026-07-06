@@ -61,9 +61,9 @@ import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 
 const EMPTY_COPY = {
-  recents: 'Nothing logged here yet. Add a food to get started.',
-  favourites: 'No favourites yet. Long-press a food to star it.',
-  frequents: 'Nothing logged often enough yet.',
+  recents: 'Your recent foods will appear here after you log them.',
+  favourites: 'No favourites yet. Hold a food to star it.',
+  frequents: 'Foods you log often will appear here.',
 };
 
 // The "Add again" re-log tabs (Move #1): a row tap here logs the food in one
@@ -512,7 +512,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     // A2 (first-week trust): every log gets the same success + Undo feedback,
     // matching DiaryScreen's onLogUsual. The toast provider is app-level, so
     // it survives the goBack the caller triggers on sheet close.
-    toast.show('Quick add added.', {
+    toast.show('Quick add saved.', {
       variant: 'undo',
       action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
     });
@@ -809,7 +809,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (suggestMeta && !suggestMeta.hasTargets) {
       return (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Set your daily targets to get meal ideas.</Text>
+          <Text style={styles.emptyText}>Set your targets first and Volyume can suggest meals that fit them.</Text>
           <TouchableOpacity
             style={styles.emptyAction}
             onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
@@ -825,7 +825,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!suggestions.length) {
       return (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Nothing to suggest right now.</Text>
+          <Text style={styles.emptyText}>No suggestions ready yet. Log a few meals and check back.</Text>
         </View>
       );
     }
@@ -1014,7 +1014,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityLabel="Review selected foods"
           >
             <Text style={styles.plateCount}>{plate.length} selected</Text>
-            <Text style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} · tap to review</Text>
+            <Text style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.plateLogBtn}

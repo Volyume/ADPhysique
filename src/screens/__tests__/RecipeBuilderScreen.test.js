@@ -99,7 +99,7 @@ describe('RecipeBuilderScreen save guard (FOOD-002)', () => {
     expect(createRecipe).not.toHaveBeenCalled();
     expect(setRecipeIngredients).not.toHaveBeenCalled();
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Add at least one ingredient before saving.',
+      'Add one ingredient before saving.',
       { variant: 'warning' },
     );
     expect(nav.goBack).not.toHaveBeenCalled();

@@ -897,7 +897,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="nutrition" size={14} color={colors.textMuted} />
                 <Text style={styles.collapsedText} numberOfLines={1}>
                   {age && weight && heightFt
-                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age}yrs · ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} · ${weight}kg · ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${weight}kg - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
@@ -1100,7 +1100,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   same-shape siblings. Every element is unchanged; only the
                   grouping and header treatment moved. ── */}
               <View style={styles.howCard}>
-              <Text style={styles.howCardTitle}>How we got here</Text>
+              <Text style={styles.howCardTitle}>Why these targets</Text>
 
               {/* Phase, may be absent when loaded from DB */}
               {(results.goal || results.phase) ? (
@@ -1216,11 +1216,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                       activeOpacity={0.7}
                       accessibilityRole="button"
                       accessibilityState={{ expanded: whyExpanded }}
-                      accessibilityLabel="Why these numbers for you?"
+                      accessibilityLabel="Open the full target calculation"
                     >
                       <View style={styles.whyHeaderLeft}>
                         <Ionicons name="school-outline" size={18} color={colors.textSecondary} />
-                        <Text style={styles.whyHeaderLabel}>Why these numbers for you?</Text>
+                        <Text style={styles.whyHeaderLabel}>Open the full calculation</Text>
                       </View>
                       <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -1632,7 +1632,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   macroPerKg: {
     ...type.caption,
@@ -1678,7 +1678,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.textMuted,
-    letterSpacing: 1.5,
+    letterSpacing: 0,
   },
   perMealCenter: {
     alignItems: 'center',
@@ -1696,7 +1696,7 @@ const styles = StyleSheet.create({
   perMealUnit: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   mealDotsRow: {
     flexDirection: 'row',
