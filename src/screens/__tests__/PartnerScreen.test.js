@@ -15,8 +15,12 @@
  *  - the milestone-moment slot renders from the mocked module;
  *  - the cheer disables and reads "Sent today" once spent.
  */
+import fs from 'fs';
+import path from 'path';
 import { Linking, Share } from 'react-native';
 import { create, act } from 'react-test-renderer';
+
+const PARTNER_SCREEN_SOURCE = fs.readFileSync(path.resolve(__dirname, '../PartnerScreen.js'), 'utf8');
 
 const mockToastShow = jest.fn();
 
@@ -648,6 +652,13 @@ describe('invite journey', () => {
 });
 
 describe('manage sheet: block confirm', () => {
+  test('partner bottom sheets that can overflow opt into internal scrolling', () => {
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Manage partnership" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="This week's sessions" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send an acknowledgement" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share" scroll/);
+  });
+
   test('manage sheet exposes name-only training block sharing', async () => {
     mockHook.value = base({ pairs: [pair({ partnerFirstName: 'Sam', partnerId: 'sam-id' })] });
     const tree = await mount();

@@ -1148,7 +1148,7 @@ export default function PartnerScreen({ route }) {
       />
 
       {/* ── Manage sheet ── */}
-      <BottomSheet visible={!!managePair} onClose={() => setManagePair(null)} accessibilityLabel="Manage partnership">
+      <BottomSheet visible={!!managePair} onClose={() => setManagePair(null)} accessibilityLabel="Manage partnership" scroll>
         {managePair ? (
           <View style={styles.sheetBody}>
             <SheetRow
@@ -1186,7 +1186,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Weekly-aim sheet (D5-A) ── */}
-      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="This week's sessions">
+      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="This week's sessions" scroll>
         {aimSheetPair ? (
           <AimSheetBody
             value={aimValue}
@@ -1197,7 +1197,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Acknowledgement picker (D5-B1) ── */}
-      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send an acknowledgement">
+      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send an acknowledgement" scroll>
         {ackSheetPair ? (
           <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} />
         ) : null}
