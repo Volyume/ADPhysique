@@ -479,13 +479,30 @@ export default function BeforeAfterShareSheet({
         <View style={styles.section}>
           <View style={styles.togglesCard}>
             <View style={[styles.toggleRow, styles.toggleRowLast]}>
-              <Text style={styles.toggleLabel}>Show weight</Text>
+              <Text style={styles.toggleLabel}>Include weight on this export</Text>
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
                 trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, alpha.strong) }}
                 thumbColor={showWeight ? colors.primary : colors.textMuted}
               />
+            </View>
+          </View>
+          <View style={styles.exportReceipt}>
+            <View style={styles.exportReceiptCol}>
+              <Text style={styles.exportReceiptTitle}>Included</Text>
+              <Text style={styles.exportReceiptLine}>Two selected photos</Text>
+              <Text style={styles.exportReceiptLine}>Dates and elapsed time</Text>
+              {usingScans && !hideScanRange ? (
+                <Text style={styles.exportReceiptLine}>Visible scan score</Text>
+              ) : null}
+              <Text style={styles.exportReceiptLine}>Weight: {showWeight ? 'included' : 'off'}</Text>
+            </View>
+            <View style={styles.exportReceiptCol}>
+              <Text style={styles.exportReceiptTitle}>Kept private</Text>
+              <Text style={styles.exportReceiptLine}>Raw photo files</Text>
+              <Text style={styles.exportReceiptLine}>Name, notes and measurements</Text>
+              <Text style={styles.exportReceiptLine}>Your photo library</Text>
             </View>
           </View>
           <Text style={styles.privacyNote}>
@@ -610,6 +627,19 @@ const styles = StyleSheet.create({
   },
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
+  exportReceipt: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  exportReceiptCol: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
+  exportReceiptTitle: { ...type.caption, color: colors.primary },
+  exportReceiptLine: { ...type.captionTight, color: colors.textPrimary, lineHeight: 17 },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
   galleryBtn: { marginTop: spacing.md },
 });

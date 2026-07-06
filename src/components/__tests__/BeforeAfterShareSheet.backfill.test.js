@@ -83,4 +83,10 @@ test('renders the private share-card receipt', async () => {
   expect(text).toContain('Exports one composed PNG, not your raw photos.');
   expect(text).toContain('Nothing leaves the device until you tap Share or Save.');
   expect(text).toContain('Names, notes, measurements and your photo library never appear.');
+  expect(text).toContain('Included');
+  expect(text).toContain('Two selected photos');
+  expect(text).toContain('Dates and elapsed time');
+  expect(text).toContain('Weight: off');
+  expect(text).toContain('Kept private');
+  expect(text).toContain('Raw photo files');
 });
