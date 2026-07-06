@@ -203,21 +203,35 @@ function IntentionBlock({ pair, onSetAim }) {
   const { shared, mine, theirs } = resolveIntention({
     myAim: pair.myAim, partnerAim: pair.partnerAim, partnerName: name,
   });
+  const hasAnyLine = !!(shared || mine || theirs);
   return (
     <View style={styles.intention}>
+      <View style={styles.intentionHead}>
+        <View style={styles.intentionTitleRow}>
+          <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.primary} />
+          <Text style={styles.intentionTitle}>Weekly sessions</Text>
+        </View>
+        <View style={styles.intentionStatePill}>
+          <Text style={styles.intentionStateText}>{pair.myAim > 0 ? 'Set' : 'Not set'}</Text>
+        </View>
+      </View>
+      <Text style={styles.intentionIntro}>
+        Choose the number you expect to train this week. {name} sees that number only, not your plan.
+      </Text>
       {shared ? <Text style={styles.intentionShared}>{shared}</Text> : null}
       {mine ? <Text style={styles.intentionOwn}>{mine}</Text> : null}
       {theirs ? <Text style={styles.intentionOwn}>{theirs}</Text> : null}
+      {!hasAnyLine ? <Text style={styles.intentionOwn}>No weekly sessions set yet.</Text> : null}
       <TouchableOpacity
         onPress={() => onSetAim(pair)}
-        style={styles.intentionSet}
+        style={styles.intentionSetLarge}
         hitSlop={hitSlop}
         accessibilityRole="button"
         accessibilityLabel={pair.myAim > 0 ? 'Change this week\'s sessions' : 'Set this week\'s sessions'}
       >
         <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.intentionSetText}>
-          {pair.myAim > 0 ? 'Change sessions' : 'Set sessions'}
+        <Text style={styles.intentionSetLargeText}>
+          {pair.myAim > 0 ? 'Change weekly sessions' : 'Set weekly sessions'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -274,7 +288,7 @@ function PartnerSupportSnapshot({ pair, name }) {
 
 function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) {
   const plan = buildPartnerSupportPlan(pair, name);
-  if (plan.primaryAction.key === 'share_wins') return null;
+  if (plan.primaryAction.key === 'share_wins' || plan.primaryAction.key === 'set_aim') return null;
   const onPrimary = () => {
     if (plan.primaryAction.key === 'set_aim') onSetAim(pair);
     else if (plan.primaryAction.key === 'cheer') onCheer(pair);
@@ -283,11 +297,14 @@ function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) 
   return (
     <View style={styles.partnerWeekPanel}>
       <View style={styles.supportPlanHead}>
-        <Ionicons name="people-outline" size={iconSize.sm} color={colors.primary} />
+        <Ionicons name="sparkles-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.supportPlanTitle}>{plan.title}</Text>
       </View>
       <Text style={styles.supportPlanHeadline}>{plan.headline}</Text>
-      <Text style={styles.supportPlanPrivacy}>{plan.privacyLine}</Text>
+      <View style={styles.supportPlanPrivacyRow}>
+        <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.supportPlanPrivacy}>{plan.privacyLine}</Text>
+      </View>
       <TouchableOpacity
         onPress={onPrimary}
         style={styles.supportPlanButton}
@@ -311,15 +328,15 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       activeOpacity={0.85}
       hitSlop={hitSlop}
       accessibilityRole="button"
-      accessibilityLabel="Choose a win to share"
+      accessibilityLabel="Share a win"
     >
       <View style={styles.shareWinsIcon}>
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text style={styles.shareWinsTitle}>Choose a win to share</Text>
+        <Text style={styles.shareWinsTitle}>Share a win</Text>
         <Text style={styles.shareWinsText}>
-          Pick one workout, PR or progress card for {name}. You check the exact preview before anything leaves.
+          Send one workout, PR or progress card to {name}. You review the card before anything leaves.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -462,6 +479,7 @@ function PairCard({
       </View>
 
       <View style={styles.partnerStatusBand}>
+        <Text style={styles.statusEyebrow}>This week together</Text>
         {showHero ? (
           <View style={styles.hero}>
             <View style={styles.heroRow}>
@@ -473,12 +491,10 @@ function PairCard({
               />
               <Text style={styles.heroWord}>weeks running, together</Text>
             </View>
-            <Text style={styles.heroSub}>
-              Counted in weeks you both trained against your own plans. Resting never breaks it.
-            </Text>
+            <Text style={styles.heroSub}>Counted against each person's own plan. Rest weeks never break it.</Text>
           </View>
         ) : (
-          <Text style={styles.heroFirst}>Your first shared week is under way.</Text>
+          <Text style={styles.heroFirst}>Your first shared week is under way</Text>
         )}
 
         <View style={styles.people}>
@@ -1159,7 +1175,7 @@ export default function PartnerScreen({ route }) {
           <View style={styles.sheetBody}>
             <SheetRow
               icon="barbell-outline"
-              label="Share block name only"
+              label="Optional: share block name"
               onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
             />
             <SheetRow
@@ -1203,7 +1219,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Acknowledgement picker (D5-B1) ── */}
-      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send an acknowledgement" scroll>
+      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send a cheer" scroll>
         {ackSheetPair ? (
           <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} />
         ) : null}
@@ -1272,7 +1288,8 @@ function AimSheetBody({ value, onChange, onConfirm }) {
 function AckSheetBody({ pair, onSend }) {
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Send an acknowledgement</Text>
+      <Text style={styles.sheetHeading}>Send a cheer</Text>
+      <Text style={styles.blockPitch}>One fixed message for today. No chat, no free text, no pressure.</Text>
       {ACKNOWLEDGEMENTS.map((ack) => (
         <TouchableOpacity
           key={ack.key}
@@ -1470,7 +1487,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={styles.beatTitle}>A partner, not an audience</Text>
               <Text style={styles.beatLine}>One person you already know and trust.</Text>
               <Text style={styles.beatLine}>No feed, no followers, no comparing numbers.</Text>
-              <Text style={styles.beatLine}>Just whether you each showed up for your own plan.</Text>
+              <Text style={styles.beatLine}>Just whether you each trained against your own plan.</Text>
               <Button
                 title="Continue"
                 style={styles.primaryBtn}
@@ -1581,7 +1598,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Share a block name only</Text>
       <Text style={styles.blockPitch}>
-        Optional. Share the block name only. It does not sync workouts or change anything the Coach has set.
+        Optional. Most users can ignore this. It shares the block name only, and does not sync workouts or change anything the Coach has set.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1633,6 +1650,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     padding: spacing.md,
   },
+  statusEyebrow: {
+    ...type.caption,
+    color: colors.primary,
+    textTransform: 'uppercase',
+  },
   hero: { gap: spacing.xs },
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: spacing.sm },
   heroNum: { ...type.display, color: colors.textPrimary },
@@ -1653,18 +1675,39 @@ const styles = StyleSheet.create({
   personText: { ...type.body, color: colors.textPrimary, flex: 1 },
 
   // D5-A weekly intention
-  intention: { gap: spacing.xs },
+  intention: {
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  intentionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  intentionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  intentionTitle: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
+  intentionIntro: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   intentionShared: { ...type.body, color: colors.textPrimary },
   intentionOwn: { ...type.body, color: colors.textSecondary },
-  intentionSet: {
+  intentionStatePill: {
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  intentionStateText: { ...type.caption, color: colors.primary },
+  intentionSetLarge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
-    paddingVertical: spacing.xs,
     minHeight: 44,
+    paddingTop: spacing.xs,
   },
-  intentionSetText: { ...type.label, color: colors.primary },
+  intentionSetLargeText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
 
   partnerWeekPanel: {
@@ -1678,7 +1721,15 @@ const styles = StyleSheet.create({
   supportPlanHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   supportPlanTitle: { ...type.label, color: colors.textPrimary },
   supportPlanHeadline: { ...type.body, color: colors.textPrimary, lineHeight: 22 },
-  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  supportPlanPrivacyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+  },
+  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   supportPlanButton: {
     flexDirection: 'row',
     alignItems: 'center',
