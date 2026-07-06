@@ -3406,17 +3406,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerSide: { width: 104, alignItems: 'flex-start', justifyContent: 'center' },
+  headerSide: { width: 88, alignItems: 'flex-start', justifyContent: 'center' },
   // CL-6.2: a real 44pt frame under the top-corner controls (plus hitSlop);
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerSideRight: { width: 104, alignItems: 'flex-end', justifyContent: 'center' },
+  headerSideRight: { width: 88, alignItems: 'flex-end', justifyContent: 'center' },
   finishBtn: { ...type.label, color: colors.primary, paddingVertical: spacing.xs, textAlign: 'right' },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
+  timerText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
@@ -3425,9 +3425,9 @@ const styles = StyleSheet.create({
   },
   starterBannerText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   starterBannerAction: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
+  exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 44 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
-  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface2 },
+  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface2 },
   navTabActive: { backgroundColor: colors.primaryBg },
   navTabText: { ...type.label, color: colors.textSecondary },
   navTabTextActive: { color: colors.primary },
@@ -3447,7 +3447,7 @@ const styles = StyleSheet.create({
   notesExpanded: { gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  exerciseName: { flex: 1, fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
@@ -3462,7 +3462,7 @@ const styles = StyleSheet.create({
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   targetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   targetText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
-  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
+  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
@@ -3473,13 +3473,13 @@ const styles = StyleSheet.create({
   warmupOneTimeHint: {
     ...type.bodySm, color: colors.textMuted, paddingTop: spacing.xs,
   },
-  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
+  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs },
   firstSetHintText: { ...type.caption, flex: 1, color: colors.primary, lineHeight: 18 },
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
   orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  beatLine: { alignSelf: 'stretch', minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs },
-  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  beatLine: { alignSelf: 'stretch', minHeight: 38, justifyContent: 'center', paddingVertical: spacing.xxs },
+  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
   beatLineHint: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
@@ -3490,9 +3490,9 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryFill },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.onPrimary, letterSpacing: 0 },
+  completeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
@@ -3503,11 +3503,11 @@ const styles = StyleSheet.create({
   // keeping the bottom bar's CTA the single filled-amber object on screen.
   extraSetBtnPromoted: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    gap: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
   },
-  extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0 },
+  extraSetBtnPromotedText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0 },
   // C3: quiet inline row for the auto-advance countdown, sits under the
   // "Log another set" button so it reads as one calm sentence with a
   // tappable ending, not another banner competing for attention.
@@ -3522,7 +3522,7 @@ const styles = StyleSheet.create({
   // bottom spacer keeps content clear of it.
   bottomBar: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
@@ -3562,11 +3562,11 @@ const styles = StyleSheet.create({
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0 },
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
-  setNumBadge: { width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
+  setNumBadge: { width: 24, height: 24, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  setNumText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   loggedSetText: { ...type.bodyStrong, flex: 1, color: colors.textPrimary, minWidth: 0 },
   loggedEst1RM: { ...type.caption, color: colors.textMuted },
   emptyView: { flex: 1, backgroundColor: colors.background },

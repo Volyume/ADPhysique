@@ -36,6 +36,10 @@ jest.mock('../../store/useAppStore', () => {
   return { __esModule: true, default: store };
 });
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 24, left: 0 }),
+}));
+
 jest.mock('expo-camera', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -127,6 +131,9 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text style=\{styles\.countdownHint\}>Step into the frame<\/Text> : null/);
   expect(SOURCE).toMatch(/key: 'strong'/);
   expect(SOURCE).toMatch(/\$\{preset\.label\} overlay strength/);
+  expect(SOURCE).toMatch(/useSafeAreaInsets/);
+  expect(SOURCE).toMatch(/controlsInsetStyle/);
+  expect(SOURCE).toMatch(/insets\?\.bottom/);
 });
 
 test('renders side and back pose guidance for scan captures', async () => {

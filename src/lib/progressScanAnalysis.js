@@ -94,6 +94,14 @@ export function normalisePose(pose) {
   return ['front', 'back', 'side'].includes(pose) ? pose : null;
 }
 
+function isRequiredPose(pose) {
+  return REQUIRED_SCAN_POSES.includes(normalisePose(pose));
+}
+
+function requiredPoseAssets(assets = []) {
+  return (assets || []).filter((asset) => isRequiredPose(asset?.pose));
+}
+
 export function requiredPosesComplete(assets = []) {
   const poses = new Set((assets || []).map((a) => normalisePose(a.pose)).filter(Boolean));
   return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
@@ -143,7 +151,7 @@ export function abstentionReasonsForAssets(assets = []) {
   const reasons = new Set();
   if (!requiredPosesComplete(assets)) reasons.add('missing_required_pose');
   else if (!requiredModelBackedPosesComplete(assets)) reasons.add('model_unavailable');
-  for (const asset of assets || []) {
+  for (const asset of requiredPoseAssets(assets)) {
     const signals = assetSignals(asset);
     for (const reason of signals?.abstentionReasons || []) {
       const canonical = canonicalReason(reason);
@@ -161,7 +169,7 @@ export function abstentionReasonsForAssets(assets = []) {
     if (framing != null && framing < 0.55) reasons.add('whole_body_not_visible');
     if (landmarks != null && landmarks < 0.55) reasons.add('pose_not_clear');
     if (segmentation != null && segmentation < 0.55) reasons.add('segmentation_low_confidence');
-    if (tilt != null && Math.abs(tilt) > 6) reasons.add('camera_tilted');
+    if (tilt != null && Math.abs(tilt) > 10) reasons.add('camera_tilted');
     if (separation != null && separation < 0.45) reasons.add('clothing_or_background_uncertain');
   }
   return [...reasons];
@@ -331,7 +339,7 @@ function viewCompletenessScore(assets = []) {
   const poses = new Set((assets || []).map((asset) => normalisePose(asset?.pose)).filter(Boolean));
   const hasRequired = REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
   if (!hasRequired) return 0.25;
-  return poses.has('side') ? 1 : 0.88;
+  return poses.has('side') ? 1 : 0.92;
 }
 
 function biasConfidencePenalty(biasFlags = []) {
@@ -339,14 +347,14 @@ function biasConfidencePenalty(biasFlags = []) {
   let penalty = 0;
   if (flags.has('female_overestimation_risk')) penalty += 0.04;
   if (flags.has('darker_skin_overestimation_risk')) penalty += 0.06;
-  if (flags.has('skin_tone_not_collected_validation_gap')) penalty += 0.03;
+  if (flags.has('skin_tone_not_collected_validation_gap')) penalty += 0.015;
   if (flags.has('very_muscular')) penalty += 0.04;
   if (flags.has('large_body')) penalty += 0.03;
   if (flags.has('stage_lean_or_prep')) penalty += 0.05;
   if (flags.has('physique_competition_context')) penalty += 0.03;
-  if (flags.has('model_signal_limited')) penalty += 0.03;
-  if (flags.has('physique_athlete_validation_pending')) penalty += 0.04;
-  if (flags.has('side_pose_missing')) penalty += 0.02;
+  if (flags.has('model_signal_limited')) penalty += 0.025;
+  if (flags.has('physique_athlete_validation_pending')) penalty += 0.025;
+  if (flags.has('side_pose_missing')) penalty += 0.01;
   return clamp(penalty, 0, 0.22);
 }
 
@@ -364,15 +372,17 @@ export function scanConfidenceLabel(tier) {
 }
 
 export function computeScanConfidenceScore({ assets = [], quality = {}, biasFlags = [], previousScan = null } = {}) {
+  const scoringAssets = requiredPoseAssets(assets);
+  const metricAssets = scoringAssets.length ? scoringAssets : assets;
   const qualityFallback = finiteNumber(quality?.score) ?? 0.7;
-  const segmentation = averageQualityMetric(assets, 'segmentationConfidence', 'segmentationConfidence', qualityFallback);
-  const pose = averageQualityMetric(assets, 'landmarkConfidence', 'poseConfidence', qualityFallback);
-  const framing = averageQualityMetric(assets, 'framingScore', 'framingScore', qualityFallback);
-  const lighting = averageQualityMetric(assets, 'lightingScore', 'lightingScore', qualityFallback);
-  const clothing = clothingAndOcclusionScore(assets);
+  const segmentation = averageQualityMetric(metricAssets, 'segmentationConfidence', 'segmentationConfidence', qualityFallback);
+  const pose = averageQualityMetric(metricAssets, 'landmarkConfidence', 'poseConfidence', qualityFallback);
+  const framing = averageQualityMetric(metricAssets, 'framingScore', 'framingScore', qualityFallback);
+  const lighting = averageQualityMetric(metricAssets, 'lightingScore', 'lightingScore', qualityFallback);
+  const clothing = clothingAndOcclusionScore(metricAssets);
   const completeness = viewCompletenessScore(assets);
-  const stability = averageQualityMetric(assets, 'blurScore', 'blurScore', qualityFallback);
-  const setupConsistency = previousScan ? 0.8 : 0.75;
+  const stability = averageQualityMetric(metricAssets, 'blurScore', 'blurScore', qualityFallback);
+  const setupConsistency = previousScan ? 0.84 : 0.82;
 
   const base =
     segmentation * 0.22
@@ -950,7 +960,12 @@ function bmiFrom(heightCm, weightKg) {
 function ratiosForPose(assets = [], pose) {
   const signal = (assets || [])
     .map((asset) => ({ asset, signal: assetSignals(asset) }))
-    .find(({ asset, signal }) => normalisePose(asset?.pose) === pose && signal?.modelBacked);
+    .find(({ asset, signal }) => {
+      if (normalisePose(asset?.pose) !== pose || !signal?.modelBacked) return false;
+      if (isRequiredPose(asset?.pose)) return true;
+      const reasons = new Set((signal?.abstentionReasons || []).map(canonicalReason).filter(Boolean));
+      return reasons.size === 0;
+    });
   return signal?.signal?.silhouetteRatios ?? null;
 }
 
@@ -1096,7 +1111,8 @@ export function analyseProgressScan({
   userBiasFlags = [],
   modelValidated = false,
 } = {}) {
-  const quality = aggregateQuality(assets);
+  const scoringAssets = requiredPoseAssets(assets);
+  const quality = aggregateQuality(scoringAssets.length ? scoringAssets : assets);
   const reasons = abstentionReasonsForAssets(assets);
   const resolvedModelEstimate = modelEstimate == null ? null : modelEstimate;
   const estimateBiasFlags = Array.isArray(resolvedModelEstimate?.biasFlags) ? resolvedModelEstimate.biasFlags : [];

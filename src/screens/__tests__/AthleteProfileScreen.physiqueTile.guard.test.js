@@ -24,12 +24,15 @@ describe('AthleteProfileScreen physique tile', () => {
   test('keeps gym avatar presets behind the tappable profile image', () => {
     const presetSource = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'profileAvatarPresets.js'), 'utf8');
     expect(source).toMatch(/import \{ AVATAR_PRESETS, avatarPresetFor \} from '\.\.\/lib\/profileAvatarPresets';/);
-    expect(presetSource).toMatch(/key: 'volyume_lift', label: 'Strength badge'/);
-    expect(presetSource).toMatch(/key: 'volyume_physique', label: 'Physique badge'/);
-    expect(presetSource).toMatch(/key: 'volyume_consistency', label: 'Consistency badge'/);
-    expect(presetSource).toMatch(/key: 'volyume_progress', label: 'Progress badge'/);
-    expect(source).toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
-    expect(source).toMatch(/Add profile picture or Volyume badge/);
+    expect(presetSource).toMatch(/key: 'volyume_lift', label: 'Strength'/);
+    expect(presetSource).toMatch(/key: 'volyume_physique', label: 'Physique'/);
+    expect(presetSource).toMatch(/key: 'volyume_consistency', label: 'Consistency'/);
+    expect(presetSource).toMatch(/key: 'volyume_progress', label: 'Progress'/);
+    expect(source).toMatch(/<BottomSheet[\s\S]*accessibilityLabel="Select avatar"/);
+    expect(source).toMatch(/styles\.avatarPresetGrid/);
+    expect(source).toMatch(/AVATAR_PRESETS\.map\(\(preset\) => \{/);
+    expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
+    expect(source).toMatch(/Add profile picture or Volyume avatar/);
     expect(source).not.toMatch(/title="Change photo"/);
     expect(source).not.toMatch(/title="Remove profile picture"/);
     expect(coachSource).toMatch(/import \{ avatarPresetFor \} from '\.\.\/lib\/profileAvatarPresets';/);

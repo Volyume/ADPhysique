@@ -130,7 +130,7 @@ describe('MealPlanScreen meal-swap sheet', () => {
       tree = create(<MealPlanScreen navigation={nav} />);
     });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).toContain("Couldn't load meal planning");
+    expect(text).toContain("Couldn't load meal builder");
     expect(text).toContain('Your diary has not been changed.');
     expect(text).not.toContain('Build a day or week to your targets');
   });
@@ -181,8 +181,8 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('Plan meals for your diary');
-    expect(source).toContain('Choose today or the week. Volyume builds meals from your targets, you review them, and nothing is added until you confirm.');
+    expect(source).toContain('Build your meal plan');
+    expect(source).toContain('Volyume builds meals from your targets for today or the week. Review the plan first; nothing is added until you confirm.');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source).toContain("isDayPlan ? 'Ready to add today' : 'Ready to add the week'");
     expect(source).toContain('Check the meals above, swap anything you want, then add them to today.');

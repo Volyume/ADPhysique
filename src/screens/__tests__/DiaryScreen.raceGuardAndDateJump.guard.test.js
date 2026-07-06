@@ -111,8 +111,8 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
   });
 
   test('the chevrons are untouched: still call gotoYesterday / gotoTomorrow directly', () => {
-    expect(SRC).toMatch(/onPress=\{gotoYesterday\}[\s\S]{0,120}accessibilityLabel="Previous day"/);
-    expect(SRC).toMatch(/onPress=\{gotoTomorrow\}[\s\S]{0,120}accessibilityLabel="Next day"/);
+    expect(SRC).toMatch(/onPress=\{gotoYesterday\}[\s\S]{0,220}accessibilityLabel="Previous day"/);
+    expect(SRC).toMatch(/onPress=\{gotoTomorrow\}[\s\S]{0,220}accessibilityLabel="Next day"/);
   });
 
   test('the day-swipe gesture wiring is untouched', () => {
@@ -126,7 +126,8 @@ describe('DiaryScreen empty-day add flow', () => {
     expect(SRC).toMatch(/const likelyMealSlot = useMemo\(\(\) => \{/);
     expect(SRC).toMatch(/inferMealSlotForHour\(new Date\(\)\.getHours\(\), keys\)/);
     expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
-    expect(SRC).toMatch(/addLabel=\{`Log \$\{likelyMealLabel\}`\}/);
+    expect(SRC).toMatch(/addLabel="Add food"/);
+    expect(SRC).not.toMatch(/likelyMealLabel/);
     expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);
   });
 });
@@ -153,10 +154,19 @@ describe('DiaryScreen diary tools', () => {
 
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
-    expect(SRC).toMatch(/accessibilityLabel="Plan meals: choose today or the week, review the meals, then add them to your diary"/);
+    expect(SRC).toMatch(/accessibilityLabel="Build Meal Plan: choose today or the week, review the meals, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
-    expect(SRC).toMatch(/Choose today or the week\. Nothing is added until you confirm\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Build Meal Plan<\/Text>/);
+    expect(SRC).toMatch(/Create today or the week from your targets\. You review it before anything is added\./);
+  });
+});
+
+describe('DiaryScreen date navigation polish', () => {
+  test('date navigation renders as one coherent rail, not separate dark chevrons around a grey box', () => {
+    expect(SRC).toMatch(/<View style=\{styles\.dateCluster\}>/);
+    expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
+    expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
+    expect(SRC).toMatch(/dateCluster: \{[\s\S]*backgroundColor: colors\.surface2/);
   });
 });
 

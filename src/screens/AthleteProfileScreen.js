@@ -15,6 +15,7 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import BottomSheet from '../components/BottomSheet';
 import useAppStore from '../store/useAppStore';
 import {
   getAllExercises,
@@ -188,6 +189,7 @@ export default function AthleteProfileScreen({ navigation }) {
     strength: null,
     keyLifts: [],
   });
+  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -248,6 +250,7 @@ export default function AthleteProfileScreen({ navigation }) {
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const uri = await saveAvatarPhoto(user.id, result.assets[0].uri, avatarUri);
       await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: uri, avatarPreset: null });
+      setAvatarSheetOpen(false);
       toast.show('Profile picture updated', { variant: 'success' });
     } catch (e) {
       logError('AthleteProfile.pickAvatar', e, { userId: user?.id });
@@ -260,7 +263,8 @@ export default function AthleteProfileScreen({ navigation }) {
     try {
       if (avatarUri) await deleteAvatarPhoto(avatarUri);
       await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: avatarPresetFor(presetKey).key });
-      toast.show('Profile badge updated', { variant: 'success' });
+      setAvatarSheetOpen(false);
+      toast.show('Avatar updated', { variant: 'success' });
     } catch (e) {
       logError('AthleteProfile.applyAvatarPreset', e, { userId: user?.id });
       toast.show("Couldn't update avatar", { variant: 'error' });
@@ -269,7 +273,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   function removeAvatar() {
     if ((!avatarUri && !avatarPreset) || !user?.id) return;
-    appAlert('Remove profile picture?', 'This clears the photo or Volyume badge from your profile.', [
+    appAlert('Remove profile picture?', 'This clears the photo or Volyume avatar from your profile.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -277,23 +281,14 @@ export default function AthleteProfileScreen({ navigation }) {
         onPress: async () => {
           if (avatarUri) await deleteAvatarPhoto(avatarUri);
           await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: null });
+          setAvatarSheetOpen(false);
         },
       },
     ]);
   }
 
   function onAvatarPress() {
-    const actions = [
-      { text: avatarUri ? 'Change photo' : 'Choose photo', onPress: pickAvatar },
-      ...AVATAR_PRESETS.map((preset) => ({ text: preset.label, onPress: () => applyAvatarPreset(preset.key) })),
-    ];
-    if (avatarUri || avatarPreset) {
-      actions.push({ text: 'Remove profile picture', style: 'destructive', onPress: removeAvatar });
-    }
-    actions.push(
-      { text: 'Cancel', style: 'cancel' },
-    );
-    appAlert('Profile picture', 'Choose a photo or pick a Volyume training badge.', actions);
+    setAvatarSheetOpen(true);
   }
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
@@ -340,7 +335,7 @@ export default function AthleteProfileScreen({ navigation }) {
               ? 'Profile picture. Tap to change or remove.'
               : avatarPresetConfig
                 ? `${avatarPresetConfig.label}. Tap to change or remove.`
-                : 'Add profile picture or Volyume badge'}
+                : 'Add profile picture or Volyume avatar'}
           >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
@@ -460,6 +455,61 @@ export default function AthleteProfileScreen({ navigation }) {
           />
         </View>
       </ScrollView>
+      <BottomSheet
+        visible={avatarSheetOpen}
+        onClose={() => setAvatarSheetOpen(false)}
+        accessibilityLabel="Select avatar"
+      >
+        <Text style={styles.avatarSheetTitle}>Select avatar</Text>
+        <Text style={styles.avatarSheetIntro}>Choose a photo, or pick a Volyume avatar.</Text>
+        <TouchableOpacity
+          style={styles.photoOption}
+          onPress={pickAvatar}
+          accessibilityRole="button"
+          accessibilityLabel={avatarUri ? 'Change profile photo' : 'Choose profile photo'}
+        >
+          <View style={styles.photoOptionIcon}>
+            <Ionicons name="image-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.photoOptionCopy}>
+            <Text style={styles.photoOptionTitle}>{avatarUri ? 'Change photo' : 'Choose photo'}</Text>
+            <Text style={styles.photoOptionSub}>Use your own profile picture.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.avatarPresetGrid}>
+          {AVATAR_PRESETS.map((preset) => {
+            const selected = avatarPreset === preset.key && !avatarUri;
+            return (
+              <TouchableOpacity
+                key={preset.key}
+                style={[styles.avatarPresetOption, selected && styles.avatarPresetOptionSelected]}
+                onPress={() => applyAvatarPreset(preset.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`${preset.label} avatar`}
+              >
+                <View style={[styles.avatarPresetCircle, selected && styles.avatarPresetCircleSelected]}>
+                  <Ionicons name={preset.icon} size={24} color={selected ? colors.onPrimary : colors.primary} />
+                </View>
+                <Text style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
+                  {preset.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {avatarUri || avatarPreset ? (
+          <TouchableOpacity
+            style={styles.removeAvatarRow}
+            onPress={removeAvatar}
+            accessibilityRole="button"
+            accessibilityLabel="Remove profile picture"
+          >
+            <Text style={styles.removeAvatarText}>Remove profile picture</Text>
+          </TouchableOpacity>
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -562,4 +612,71 @@ const styles = StyleSheet.create({
   statusPillText_fresh: { color: colors.success },
   statusPillText_soon: { color: colors.warning },
   statusPillText_attention: { color: colors.error },
+  avatarSheetTitle: { ...type.h3, color: colors.textPrimary },
+  avatarSheetIntro: { ...type.bodySm, color: colors.textSecondary },
+  photoOption: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  photoOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  photoOptionCopy: { flex: 1, minWidth: 0 },
+  photoOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  photoOptionSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  avatarPresetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  avatarPresetOption: {
+    width: '23%',
+    minWidth: 72,
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  avatarPresetOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  avatarPresetCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: circle(48),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  avatarPresetCircleSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  avatarPresetOptionText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  avatarPresetOptionTextSelected: { color: colors.primary },
+  removeAvatarRow: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  removeAvatarText: { ...type.label, color: colors.error },
 });

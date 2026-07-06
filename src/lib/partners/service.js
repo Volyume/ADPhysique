@@ -38,6 +38,59 @@ function cheerFailureCode(error, data) {
   return data?.error || null;
 }
 
+function isDuplicateCheerError(error) {
+  const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
+  return error?.code === '23505' || text.includes('duplicate') || text.includes('unique');
+}
+
+function isMissingCheerKindColumn(error) {
+  const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
+  return text.includes('kind')
+    && (text.includes('schema cache') || text.includes('column') || text.includes('could not find'));
+}
+
+function normaliseCheerInsertError(error) {
+  if (!error) return null;
+  if (isDuplicateCheerError(error)) return 'already_cheered';
+  const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('row-level security') || text.includes('rls') || text.includes('permission denied')) return 'not_active';
+  return error?.message || String(error);
+}
+
+async function runCheerInsert(c, row) {
+  const inserted = c.from('partner_cheers').insert(row);
+  if (inserted?.select) {
+    const selected = inserted.select('*');
+    if (selected?.single) return selected.single();
+    if (typeof selected?.then === 'function') return selected;
+  }
+  if (typeof inserted?.then === 'function') return inserted;
+  return { data: null, error: null };
+}
+
+async function insertCheerDirectly(c, { userId, pairId, sentOn, kind }) {
+  let { data, error } = await runCheerInsert(c, {
+    pair_id: pairId,
+    sender_id: userId,
+    sent_on: sentOn,
+    kind,
+  });
+
+  if (error && isMissingCheerKindColumn(error)) {
+    const retry = await runCheerInsert(c, {
+      pair_id: pairId,
+      sender_id: userId,
+      sent_on: sentOn,
+    });
+    data = retry?.data;
+    error = retry?.error;
+  }
+
+  const normalised = normaliseCheerInsertError(error);
+  if (normalised) return { ok: false, error: normalised };
+  return { ok: true, data: data || { ok: true, delivered: 'in_app' } };
+}
+
 function isMissingPartnerWinTable(error) {
   const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
   return text.includes('pgrst205') || text.includes('partner_win_cards');
@@ -149,18 +202,43 @@ export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, recipr
   const c = getSupabaseClient();
   if (!c || !userId || !pairId) return fail('offline');
   const ackKind = isValidAckKey(kind) ? kind : DEFAULT_ACK_KEY;
+  const sentOn = todayLocalKey();
   try {
     const { data, error } = await c.functions.invoke('partner-cheer', {
-      body: { pairId, kind: ackKind, sentOn: todayLocalKey() },
+      body: { pairId, kind: ackKind, sentOn },
     });
     const failureCode = cheerFailureCode(error, data);
-    if (failureCode) return { ok: false, error: failureCode };
-    if (error) return fail(error);
+    if (failureCode === 'already_cheered') return { ok: false, error: failureCode };
+    if (failureCode || error) {
+      const direct = await insertCheerDirectly(c, {
+        userId,
+        pairId,
+        sentOn,
+        kind: ackKind,
+      });
+      if (!direct.ok) return direct;
+      track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
+      trackCheerSent();
+      return direct;
+    }
     track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
     trackCheerSent();
     return { ok: true, data };
-  } catch (e) {
-    return fail(e);
+  } catch (_e) {
+    try {
+      const direct = await insertCheerDirectly(c, {
+        userId,
+        pairId,
+        sentOn,
+        kind: ackKind,
+      });
+      if (!direct.ok) return direct;
+      track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
+      trackCheerSent();
+      return direct;
+    } catch (inner) {
+      return fail(inner);
+    }
   }
 }
 

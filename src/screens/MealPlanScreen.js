@@ -462,14 +462,14 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={!plan ? 'Plan meals' : isDayPlan ? "Today's meal plan" : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Build Meal Plan' : isDayPlan ? "Today's meal plan" : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load meal planning"
+            title="Couldn't load meal builder"
             text="Check your connection and try again. Your diary has not been changed."
             actionLabel="Try again"
             onAction={load}
@@ -480,9 +480,9 @@ export default function MealPlanScreen({ navigation }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
+          <Text style={styles.emptyTitle}>Build your meal plan</Text>
           <Text style={styles.emptyBody}>
-            Choose today or the week. Volyume builds meals from your targets, you review them, and nothing is added until you confirm.
+            Volyume builds meals from your targets for today or the week. Review the plan first; nothing is added until you confirm.
           </Text>
 
           <Card style={styles.planOption}>
@@ -493,7 +493,7 @@ export default function MealPlanScreen({ navigation }) {
             <Text style={styles.planOptionDesc}>
               Build one day's meals for this diary date. Good when you want a quick structure.
             </Text>
-            <Button title="Plan today" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Build today" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -504,7 +504,7 @@ export default function MealPlanScreen({ navigation }) {
             <Text style={styles.planOptionDesc}>
               Build seven days plus a shopping list. Existing logged days are left alone.
             </Text>
-            <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Build the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </ScrollView>
       ) : (

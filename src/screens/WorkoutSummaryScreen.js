@@ -1211,7 +1211,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             the celebratory "what happened" zone above. Same controls, same
             handlers; only the grouping and header treatment changed. */}
         {!readOnly && (
-          <RevealSection delay={1580}>
           <View style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Tell your coach</Text>
@@ -1269,7 +1268,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               numberOfLines={3}
             />
           </View>
-          </RevealSection>
         )}
 
         {!readOnly && !routineId && exerciseData.length > 0 && (

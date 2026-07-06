@@ -23,26 +23,27 @@ describe('EmptyDiary', () => {
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
-  test('can name the likely meal slot for the primary action', () => {
+  test('can name a human meal action without exposing slot numbers', () => {
     const onAdd = jest.fn();
     const tree = create(
       <EmptyDiary
         onAdd={onAdd}
-        addLabel="Log Meal 2"
-        addAccessibilityLabel="Log Meal 2"
+        addLabel="Add breakfast"
+        addAccessibilityLabel="Add breakfast"
       />,
     );
-    expect(text(tree)).toContain('Log Meal 2');
-    press(tree, 'Log Meal 2');
+    expect(text(tree)).toContain('Add breakfast');
+    expect(text(tree)).not.toContain('Log Meal');
+    press(tree, 'Add breakfast');
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
   test('can open meal planning from the empty day', () => {
     const onPlanDay = jest.fn();
     const tree = create(<EmptyDiary onPlanDay={onPlanDay} />);
-    expect(text(tree)).toContain('Plan meals');
-    expect(text(tree)).toContain('Choose today or the week. Nothing is added until you confirm.');
-    press(tree, 'Plan meals: choose today or the week, review the meals, then add them to your diary');
+    expect(text(tree)).toContain('Build Meal Plan');
+    expect(text(tree)).toContain('Create today or the week. You review it before anything is added.');
+    press(tree, 'Build Meal Plan: choose today or the week, review the meals, then add them to your diary');
     expect(onPlanDay).toHaveBeenCalledTimes(1);
   });
 });

@@ -337,7 +337,7 @@ export function measureMaskSignals(mask, opts = {}) {
   if (segmentationConfidence < 0.55) reasons.push('segmentation_low_confidence');
   if (separation < 0.45) reasons.push('clothing_or_background_uncertain');
   if (poseConfidence < 0.45) reasons.push('pose_not_clear');
-  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 6) reasons.push('camera_tilted');
+  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 10) reasons.push('camera_tilted');
   if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people');
 
   return {
