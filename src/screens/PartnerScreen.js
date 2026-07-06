@@ -212,6 +212,18 @@ function IntentionBlock({ pair, onSetAim }) {
 
 function PartnerSupportSnapshot({ pair, name }) {
   const hasBlock = pair.sharedBlock && (pair.sharedBlock.status === 'active' || pair.sharedBlock.status === 'proposed');
+  const sharedRows = [
+    'Your first name',
+    'Weekly training against your own plan',
+    'Your chosen weekly aim',
+    'One fixed acknowledgement a day',
+    hasBlock ? 'Shared block name' : null,
+  ].filter(Boolean);
+  const privateRows = [
+    'Weights, sets and reps',
+    'Food diary and coach notes',
+    'Body metrics and progress photos',
+  ];
   return (
     <View style={styles.supportSnapshot}>
       <View style={styles.supportHead}>
@@ -221,15 +233,21 @@ function PartnerSupportSnapshot({ pair, name }) {
       <View style={styles.supportGrid}>
         <View style={styles.supportCell}>
           <Text style={styles.supportLabel}>Shared</Text>
-          <Text style={styles.supportText}>
-            Weekly training against your own plans, your chosen aim, cheers{hasBlock ? ' and shared block name' : ''}.
-          </Text>
+          {sharedRows.map((row) => (
+            <View key={row} style={styles.supportBulletRow}>
+              <View style={styles.supportDot} />
+              <Text style={styles.supportText}>{row}</Text>
+            </View>
+          ))}
         </View>
         <View style={styles.supportCell}>
           <Text style={styles.supportLabel}>Private</Text>
-          <Text style={styles.supportText}>
-            Weights, sets, reps, food, coach notes, body metrics and photos.
-          </Text>
+          {privateRows.map((row) => (
+            <View key={row} style={styles.supportBulletRow}>
+              <View style={styles.supportDotMuted} />
+              <Text style={styles.supportText}>{row}</Text>
+            </View>
+          ))}
         </View>
       </View>
       <Text style={styles.supportFoot}>
@@ -1496,10 +1514,31 @@ const styles = StyleSheet.create({
   },
   supportHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   supportTitle: { ...type.label, color: colors.textPrimary },
-  supportGrid: { flexDirection: 'row', gap: spacing.sm },
-  supportCell: { flex: 1, gap: spacing.xxs },
+  supportGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  supportCell: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
   supportLabel: { ...type.caption, color: colors.textSecondary },
-  supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
+  supportBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  supportDot: {
+    width: 5,
+    height: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    marginTop: 7,
+    flexShrink: 0,
+  },
+  supportDotMuted: {
+    width: 5,
+    height: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.textMuted,
+    marginTop: 7,
+    flexShrink: 0,
+  },
+  supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   supportFoot: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',

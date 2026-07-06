@@ -165,9 +165,14 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(await mount()).join(' ');
     expect(text).toContain('Support snapshot');
     expect(text).toContain('Shared');
-    expect(text).toContain('Weekly training against your own plans, your chosen aim, cheers and shared block name.');
+    expect(text).toContain('Weekly training against your own plan');
+    expect(text).toContain('Your chosen weekly aim');
+    expect(text).toContain('One fixed acknowledgement a day');
+    expect(text).toContain('Shared block name');
     expect(text).toContain('Private');
-    expect(text).toContain('Weights, sets, reps, food, coach notes, body metrics and photos.');
+    expect(text).toContain('Weights, sets and reps');
+    expect(text).toContain('Food diary and coach notes');
+    expect(text).toContain('Body metrics and progress photos');
     expect(text).toContain('Current week: you against your own plan: 2 of 4. Sam against their own plan: 3 of 4. No score table.');
     expect(text).toContain('Training the same block');
     expect(text).toContain('Upper Lower is shared by name only. Workouts, loading and notes stay private.');
