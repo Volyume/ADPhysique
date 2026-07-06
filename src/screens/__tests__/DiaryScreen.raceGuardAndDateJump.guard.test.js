@@ -98,7 +98,7 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
 
   test('the date label is wrapped in a labelled pressable that opens the picker', () => {
     expect(SRC).toMatch(/const dateHeading = isViewingToday \? 'Today' : friendlyDate\(selectedDate\);/);
-    expect(SRC).toMatch(/const dateSubCopy = isViewingToday \? friendlyDate\(selectedDate\) : selectedDateDetail;/);
+    expect(SRC).toMatch(/const dateSubCopy = selectedDateDetail;/);
     expect(SRC).toMatch(
       /onPress=\{openDatePicker\}[\s\S]{0,160}accessibilityLabel=\{`\$\{dateHeading\}, \$\{dateSubCopy\}\. Jump to a date`\}/,
     );
@@ -143,20 +143,20 @@ describe('DiaryScreen diary tools', () => {
   test('copy and insights live in a clear tools sheet, not a generic alert', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
     expect(SRC).toMatch(/accessibilityLabel="Diary tools"/);
-    expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Food tools<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy a logged day<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Insights and export<\/Text>/);
-    expect(SRC).toMatch(/Daily logging stays on the main screen\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Manage day<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Nutrition trends<\/Text>/);
+    expect(SRC).toMatch(/Food logging stays here\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
 
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
-    expect(SRC).toMatch(/accessibilityLabel="Meal planner: build meals for today or the week, review and swap them, then add them to your diary"/);
+    expect(SRC).toMatch(/accessibilityLabel="Plan meals: build meals for today or the week, review and swap them, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal planner<\/Text>/);
-    expect(SRC).toMatch(/Build today or a week ahead\. Review swaps first; nothing is added automatically\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
+    expect(SRC).toMatch(/Build to your targets, review, swap, then add to the diary\./);
   });
 });
 

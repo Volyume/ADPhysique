@@ -475,26 +475,26 @@ export default function MealPlanScreen({ navigation }) {
           />
         </View>
       ) : !plan ? (
-        <View style={styles.emptyWrap}>
+        <ScrollView contentContainerStyle={styles.emptyScroll}>
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
           <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Choose one day or a week. You review the meals, swap anything you want, then add them to your diary.
+            Build meals to your targets. They are not logged until you review them and tap add.
           </Text>
           <View style={styles.planExplainer} accessibilityRole="summary">
             <View style={styles.planExplainerStep}>
-              <Ionicons name="eye-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Review first</Text>
+              <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
+              <Text style={styles.planExplainerText}>Build</Text>
             </View>
             <View style={styles.planExplainerStep}>
               <Ionicons name="swap-horizontal-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Swap anything</Text>
+              <Text style={styles.planExplainerText}>Swap</Text>
             </View>
             <View style={styles.planExplainerStep}>
               <Ionicons name="checkmark-circle-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Add when ready</Text>
+              <Text style={styles.planExplainerText}>Add to diary</Text>
             </View>
           </View>
 
@@ -504,7 +504,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Today</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              One day built to your targets. Best when you only want help with today.
+              One day matched to your targets. Best when you only want help now.
             </Text>
             <Button title="Plan today" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
@@ -515,11 +515,11 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Seven days plus a shopping list. Days with food already logged are left alone.
+              Seven days plus a shopping list. Existing logged days are left alone.
             </Text>
             <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
-        </View>
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
           {/* Day picker, only for a multi-day (week) plan; a "Plan my day"
@@ -630,7 +630,7 @@ export default function MealPlanScreen({ navigation }) {
                       );
                     })}
                     <Text style={styles.macroLine} numberOfLines={1} ellipsizeMode="tail">
-                      {`P ${formatNumber(slot.totals.protein)} g · C ${formatNumber(slot.totals.carbs)} g · F ${formatNumber(slot.totals.fat)} g`}
+                      {`P ${formatNumber(slot.totals.protein)} g - C ${formatNumber(slot.totals.carbs)} g - F ${formatNumber(slot.totals.fat)} g`}
                     </Text>
                     {/* Season to taste: the free additions that suit this meal
                         (e.g. saffron on chicken & rice). Maps by the meal's
@@ -672,7 +672,7 @@ export default function MealPlanScreen({ navigation }) {
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Day</Text>
               <Text style={styles.totalsText}>
-                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${formatNumber(day.totals.protein)} · C ${formatNumber(day.totals.carbs)} · F ${formatNumber(day.totals.fat)}`}
+                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} - C ${formatNumber(day.totals.carbs)} - F ${formatNumber(day.totals.fat)}`}
               </Text>
             </View>
           ) : null}
@@ -683,7 +683,7 @@ export default function MealPlanScreen({ navigation }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? 'Ready to add today' : 'Ready to schedule the week'}</Text>
+                <Text style={styles.planActionTitle}>{isDayPlan ? 'Add this day when ready' : 'Add this week when ready'}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
                     ? 'Nothing has been added yet. Review the meals above, swap anything you want, then add them to today.'
@@ -705,7 +705,7 @@ export default function MealPlanScreen({ navigation }) {
                 accessibilityLabel="Refresh meals"
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Refresh meals</Text>
+                <Text style={styles.planQuickActionText}>Refresh</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.planQuickAction}
@@ -718,14 +718,14 @@ export default function MealPlanScreen({ navigation }) {
                 <Text style={styles.planQuickActionText}>Shopping list</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.planQuickAction}
+                style={[styles.planQuickAction, styles.planQuickActionMode]}
                 onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
+                accessibilityLabel={isDayPlan ? 'Switch to a week plan' : 'Switch to a day plan'}
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Plan week' : 'Plan day'}</Text>
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -817,7 +817,7 @@ export default function MealPlanScreen({ navigation }) {
                     {recommended ? <Text style={styles.swapOptionTag}>Closest match</Text> : null}
                   </View>
                   <Text style={styles.swapOptionMacros}>
-                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${meal.totals.protein} g`}
+                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${meal.totals.protein} g`}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -859,7 +859,7 @@ export default function MealPlanScreen({ navigation }) {
                       {section.items.map((item, i) => (
                         <View key={`${section.label}-${item.name}-${i}`} style={styles.groceryRow}>
                           <Text style={styles.groceryName}>
-                            {item.name}{item.count ? ` ×${item.count}` : ''}
+                            {item.name}{item.count ? ` x${item.count}` : ''}
                           </Text>
                           {item.grams != null ? (
                             <Text style={styles.groceryQty}>{formatNumber(item.grams)} g</Text>
@@ -882,6 +882,13 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
+  emptyScroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
   emptyIcon: {
     width: 56,
     height: 56,
@@ -970,6 +977,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
+  },
+  planQuickActionMode: {
+    flexBasis: '100%',
   },
   planQuickActionText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   mealCard: { gap: spacing.xs },
