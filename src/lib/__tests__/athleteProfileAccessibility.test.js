@@ -10,15 +10,15 @@ describe('athleteProfileAccessibility', () => {
 
   test('keeps the concise row label and exposes status/subtext through the hint', () => {
     const out = buildProfileRowAccessibility({
-      label: 'Progress photos and Physique Scan',
-      sub: 'Last scan 29 days ago. Retake when light, pose and timing are consistent.',
+      label: 'Progress photos',
+      sub: 'Last scored 29 days ago. Retake when light, pose and timing are consistent.',
       status: 'attention',
       pro: true,
     });
 
-    expect(out.accessibilityLabel).toBe('Progress photos and Physique Scan');
+    expect(out.accessibilityLabel).toBe('Progress photos');
     expect(out.accessibilityHint).toContain('Status: Update.');
-    expect(out.accessibilityHint).toContain('Last scan 29 days ago');
+    expect(out.accessibilityHint).toContain('Last scored 29 days ago');
     expect(out.accessibilityHint).toContain('Pro plan may be required.');
   });
 

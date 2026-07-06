@@ -23,6 +23,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
+import { avatarPresetFor } from '../lib/profileAvatarPresets';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -97,6 +98,7 @@ export default function YouScreen({ navigation }) {
     || 'Athlete';
   const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
+  const avatarPresetConfig = userProfile?.avatarPreset ? avatarPresetFor(userProfile.avatarPreset) : null;
   const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
 
   const partners = usePartners(isPro ? user?.id : null, tier);
@@ -125,6 +127,8 @@ export default function YouScreen({ navigation }) {
           <View style={styles.avatar}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : avatarPresetConfig ? (
+              <Ionicons name={avatarPresetConfig.icon} size={22} color={colors.primary} />
             ) : (
               <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
             )}
@@ -266,7 +270,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="person-outline"
             label="Athlete profile"
-            sub="Profile photo, physique snapshot, strength baselines and body data shortcuts."
+            sub="Profile picture, physique snapshot, strength baselines and body data shortcuts."
             onPress={() => navigation.navigate('AthleteProfile')}
           />
           <NavRow
