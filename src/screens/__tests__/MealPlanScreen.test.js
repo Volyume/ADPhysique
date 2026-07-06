@@ -21,19 +21,26 @@ jest.mock('../../components/Button', () => () => null);
 jest.mock('../../components/Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/food/mealPlanService', () => ({
   loadActiveMealPlan: jest.fn(),
+  generateAndSaveDayPlan: jest.fn(),
   generateAndSaveMealPlan: jest.fn(),
   regenerateActiveMealPlan: jest.fn(),
   applyPlanDayToDiary: jest.fn(),
+  applyPlanWeekToDiary: jest.fn(),
   answerTrainingTodayOnActivePlan: jest.fn(),
   swapMealInPlan: jest.fn(),
   swapFoodInMeal: jest.fn(),
 }));
-jest.mock('../../lib/food/db', () => ({ updateMealPlan: jest.fn() }));
+jest.mock('../../lib/food/db', () => ({
+  updateMealPlan: jest.fn(),
+  getFoodEntriesForDay: jest.fn(async () => []),
+  clearPlannedDay: jest.fn(),
+}));
 
 import useAppStore from '../../store/useAppStore';
-import { swapMealInPlan } from '../../lib/food/mealPlanService';
+import { loadActiveMealPlan, swapMealInPlan } from '../../lib/food/mealPlanService';
 import { updateMealPlan } from '../../lib/food/db';
 import MealPlanScreen from '../MealPlanScreen';
 
@@ -116,6 +123,18 @@ async function mountLoaded() {
 }
 
 describe('MealPlanScreen meal-swap sheet', () => {
+  test('shows a retryable load error instead of the empty builder state', async () => {
+    loadActiveMealPlan.mockRejectedValueOnce(new Error('db failed'));
+    let tree;
+    await act(async () => {
+      tree = create(<MealPlanScreen navigation={nav} />);
+    });
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain("Couldn't load meal planning");
+    expect(text).toContain('Your diary has not been changed.');
+    expect(text).not.toContain('Build meals to your targets');
+  });
+
   test('opens a sheet listing the replacement plus more than 4 alternatives', async () => {
     const tree = await mountLoaded();
 
