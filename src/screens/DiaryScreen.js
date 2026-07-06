@@ -1278,14 +1278,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals: create meals for today or the week, review and swap them, then add them to your diary"
+                  accessibilityLabel="Meal planner: build meals for today or the week, review and swap them, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Create today or a week ahead. Review and swap first; nothing is added automatically.</Text>
+                    <Text style={styles.buildPlanLabel}>Meal planner</Text>
+                    <Text style={styles.buildPlanSub}>Build today or a week ahead. Review swaps first; nothing is added automatically.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1524,9 +1524,9 @@ export default function DiaryScreen({ navigation }) {
         onClose={() => setDiaryToolsOpen(false)}
         accessibilityLabel="Diary tools"
       >
-        <Text style={styles.moveTitle}>Diary tools</Text>
+        <Text style={styles.moveTitle}>Food tools</Text>
         <Text style={styles.saveMealHint}>
-          Copy food from a logged day, or open your nutrition insights and export.
+          Extra actions for the day. Daily logging stays on the main screen.
         </Text>
         <TouchableOpacity
           style={styles.diaryToolRow}
@@ -1539,7 +1539,7 @@ export default function DiaryScreen({ navigation }) {
           </View>
           <View style={styles.diaryToolCopy}>
             <Text style={styles.diaryToolTitle}>Copy a logged day</Text>
-            <Text style={styles.diaryToolText}>Choose from your recent days with food logged.</Text>
+            <Text style={styles.diaryToolText}>Choose a recent day and copy its foods here.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -1554,7 +1554,7 @@ export default function DiaryScreen({ navigation }) {
           </View>
           <View style={styles.diaryToolCopy}>
             <Text style={styles.diaryToolTitle}>Insights and export</Text>
-            <Text style={styles.diaryToolText}>Review trends and export your food data.</Text>
+            <Text style={styles.diaryToolText}>Open trends, consistency and food export.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
