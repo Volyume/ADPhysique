@@ -79,10 +79,10 @@ export function buildCheckInCompletenessModel(checkIn = {}) {
     present,
     missing,
     percent,
-    label: complete ? 'Complete photo set' : `${present.length}/${NEXT_ACTION_POSES.length} poses captured`,
+    label: complete ? 'Front, side and back saved' : `${present.length} of ${NEXT_ACTION_POSES.length} photos added`,
     detail: complete
-      ? 'Front, side and back are saved for a clearer photo review.'
-      : `Missing ${missing.map((pose) => NEXT_ACTION_POSE_LABEL[pose].toLowerCase()).join(', ')} for a more useful photo set.`,
+      ? 'Front, side and back are saved together.'
+      : `Add ${missing.map((pose) => `${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date.`,
     nextPose: missing[0] || null,
     nextPoseLabel: missing[0] ? NEXT_ACTION_POSE_LABEL[missing[0]] : null,
   };
@@ -105,14 +105,14 @@ export function buildPhysiqueStudioNextAction({
     const pose = NEXT_ACTION_POSES.find((p) => !poses.includes(p));
     return {
       kind: 'complete_pose',
-      title: 'Finish latest photo set',
-      body: 'Add the missing pose now so this date has a fuller progress photo record.',
-      reason: `${NEXT_ACTION_POSE_LABEL[pose]} is missing from the latest photo set.`,
+      title: `Add ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`,
+      body: `Your latest date is missing the ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo.`,
+      reason: 'Add it if you want front, side and back photos for the same date.',
       detailItems: [
-        'A complete photo set means front, side and back under similar lighting.',
-        'If the setup drifts, save the photo without forcing a scan read.',
+        'Use similar lighting, distance and camera height.',
+        'If the photo is not clear enough, save it without using it for a scan.',
       ],
-      cta: `Complete with ${NEXT_ACTION_POSE_LABEL[pose]}`,
+      cta: `Add ${NEXT_ACTION_POSE_LABEL[pose]} photo`,
       pose,
       checkIn: latest,
     };
@@ -121,11 +121,11 @@ export function buildPhysiqueStudioNextAction({
   if (!suppressed && visibleScans.length >= 2) {
     return {
       kind: 'compare_scans',
-      title: 'Review scan trend',
-      body: 'Compare two completed Physique Scan entries with pose-matched photos and trend-only privacy controls.',
+      title: 'Compare scan results',
+      body: 'Compare two completed Physique Scans using photos taken in the same poses.',
       reason: `${visibleScans.length} completed scans are ready.`,
       detailItems: [
-        'Trend and confidence come first.',
+        'The scan shows broad change, not an exact number.',
         'This is not an exact body-fat percentage.',
       ],
       cta: 'Compare scans',
@@ -136,29 +136,27 @@ export function buildPhysiqueStudioNextAction({
     return {
       kind: 'compare_checkins',
       title: 'Compare matched photo sets',
-      body: 'Use front, side or back photos from complete photo sets for a clearer visual review.',
+      body: 'Compare front, side or back photos from complete photo sets.',
       reason: `${completed.length} complete photo sets are ready.`,
       detailItems: [
-        'Matched poses reduce angle and lighting noise.',
-        'Choose the same pose on both dates.',
+        'Matching angles and lighting makes changes easier to see.',
+        'Choose the same angle on both dates.',
       ],
       cta: 'Compare photos',
     };
   }
 
-  if (!readOnly) {
+  if (!readOnly && latest) {
     return {
       kind: 'capture',
-      title: latest ? 'Add your next progress photos' : 'Start Progress Photos',
-      body: latest
-        ? 'Use the same room, lighting and camera height so the photo reflects you, not the camera.'
-        : 'Start with front, side and back photos in clear, repeatable lighting.',
-      reason: latest ? 'Progress is easier to judge when the photo conditions are similar.' : 'No private visual photo record is saved yet.',
+      title: 'Add your next progress photos',
+      body: 'Use the same room, lighting and camera height so the photo reflects you, not the camera.',
+      reason: 'Progress is easier to judge when the photo conditions are similar.',
       detailItems: [
         'Use the timer and place the phone at mid-torso height.',
-        'Photos stay private unless you export or share.',
+        'Photos stay on your phone unless you export or share.',
       ],
-      cta: 'Add photos',
+      cta: 'Add progress photos',
     };
   }
 

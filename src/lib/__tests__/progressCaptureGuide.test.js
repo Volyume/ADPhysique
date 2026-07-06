@@ -35,16 +35,16 @@ describe('progress capture guide copy', () => {
     expect(getPoseCaptureGuidance('front').checks).toContain('Camera at mid-torso height');
     expect(getPoseCaptureGuidance('side').checks).toContain('Torso not blocked');
     expect(getPoseCaptureGuidance('back').checks).toContain('Shoulders level');
-    expect(getPoseCaptureGuidance('unknown').title).toBe('Progress photo setup');
+    expect(getPoseCaptureGuidance('unknown').title).toBe('Progress photo');
   });
 
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('leanness band, progress signal and confidence');
+    expect(prompt).toContain('broad scan results');
     expect(prompt).toContain('not an exact body-fat percentage');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
-    expect(how).toContain('withhold the scan read rather than guess');
+    expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
     expect(`${prompt}\n${how}`).toContain('Photos stay on this device unless you choose to share or export them.');
   });
@@ -62,16 +62,21 @@ describe('progress capture guide copy', () => {
       'library',
     ]);
     expect(routes[0]).toMatchObject({
-      title: 'Finish latest photo set',
-      actionLabel: 'Complete with Back',
+      title: 'Add back photo',
+      actionLabel: 'Add Back photo',
       recommended: true,
     });
     expect(routes[0].steps).toContain('Capture Back relaxed');
-    expect(routes[1].bestFor).toContain('Leanness band, progress signal and scan confidence');
+    expect(routes[1].bestFor).toContain('A broad scan result');
     expect(routes[1].bestFor).toContain('Not an exact body-fat percentage');
     expect(routes[1].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
-    expect(routes[4].bestFor).toContain('Adding older progress photos');
+    expect(routes[4].bestFor).toContain('Adding older photos in the right order');
     expect(routes[4].steps).toContain('Set the real capture date');
+  });
+
+  test('can omit Physique Scan from the progress-photo add sheet', () => {
+    const routes = buildProgressStudioCaptureRoutes({ includeScan: false });
+    expect(routes.map((route) => route.key)).toEqual(['guided', 'camera', 'library']);
   });
 
   test('keeps Physique Scan as the best route when there is no partial set', () => {

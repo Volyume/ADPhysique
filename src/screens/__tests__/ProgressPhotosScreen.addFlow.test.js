@@ -19,6 +19,35 @@ jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
 }));
+jest.mock('@shopify/flash-list', () => ({
+  FlashList: ({
+    data = [],
+    renderItem,
+    ListHeaderComponent,
+    ListEmptyComponent,
+    ...props
+  }) => {
+    const React = require('react');
+    const renderComponent = (Component, key) => {
+      if (!Component) return null;
+      if (typeof Component === 'function') return React.createElement(Component, { key });
+      return React.cloneElement(Component, { key });
+    };
+    const children = [
+      renderComponent(ListHeaderComponent, 'header'),
+      ...(data.length
+        ? data.map((item, index) => React.createElement(React.Fragment, { key: item.key || index }, renderItem({ item, index })))
+        : [renderComponent(ListEmptyComponent, 'empty')]),
+    ].filter(Boolean);
+    return React.createElement('FlatList', {
+      ...props,
+      data,
+      renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
+    }, children);
+  },
+}));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/wellbeing', () => ({
@@ -33,7 +62,7 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
-// AppAlert is driven so we can pick "Choose from library".
+// AppAlert is driven so we can pick "Choose from photos".
 const mockAppAlert = jest.fn();
 jest.mock('../../components/AppAlert', () => ({ appAlert: (...a) => mockAppAlert(...a) }));
 
@@ -93,7 +122,7 @@ async function render({ tier = 'pro' } = {}) {
 
 function pressLabel(tree, label) {
   const node = tree.root.findAll(
-    (n) => typeof n.type === 'string' && n.props?.accessibilityLabel === label && typeof n.props.onPress === 'function',
+    (n) => n.props?.accessibilityLabel === label && typeof n.props.onPress === 'function',
   )[0];
   if (!node) throw new Error(`No pressable labelled "${label}"`);
   return act(async () => { node.props.onPress(); });
@@ -122,31 +151,31 @@ function allTexts(tree) {
 async function chooseLibraryOnAdd(tree) {
   await pressLabel(tree, 'Add progress photos');
   await flush();
-  await pressLabel(tree, 'Choose from library');
+  await pressLabel(tree, 'Choose from photos');
 }
 
 beforeEach(() => jest.clearAllMocks());
 
-test('capture route sheet distinguishes Physique Scan from single-photo routes', async () => {
+test('add progress photos sheet keeps Physique Scan as a separate main action', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await pressLabel(tree, 'Add progress photos');
 
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
-  expect(copy).toContain('Capture route');
-  expect(copy).toContain('Same room, lighting, camera height and distance matter more than forcing a read.');
-  expect(copy).toContain('Leanness band, progress signal and scan confidence');
-  expect(copy).toContain('Not an exact body-fat percentage');
-  expect(copy).toContain('Front relaxed');
-  expect(copy).toContain('Back relaxed');
+  expect(copy).toContain('Add progress photos');
+  expect(copy).toContain('Choose how to add progress photos. Use Physique Scan from the main screen when you want the guided scan.');
+  expect(copy).toContain('Guided single photo');
+  expect(copy).toContain('Take a quick photo');
+  expect(copy).toContain('Import from photos');
   expect(copy).toContain('Set the real capture date');
-  expect(copy).toContain('Photos are stored on this device and stay private unless you choose to share or export.');
+  expect(copy).toContain('Photos are stored on this phone unless you share or export them.');
   expect(copy).toContain('Export anything you want to keep before uninstalling the app');
-  expect(hasPressableLabel(tree, 'Start Physique Scan')).toBe(true);
-  expect(hasPressableLabel(tree, 'Open guided camera')).toBe(true);
+  expect(copy).not.toContain('Front relaxed');
+  expect(copy).not.toContain('Back relaxed');
+  expect(hasPressableLabel(tree, 'Open guided photo camera')).toBe(true);
   expect(hasPressableLabel(tree, 'Take photo')).toBe(true);
-  expect(hasPressableLabel(tree, 'Choose from library')).toBe(true);
+  expect(hasPressableLabel(tree, 'Choose from photos')).toBe(true);
 });
 
 test('picking an image opens the details step and does NOT save before confirm', async () => {
