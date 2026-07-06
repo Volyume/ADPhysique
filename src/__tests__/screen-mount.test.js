@@ -1194,7 +1194,7 @@ describe('Edge: empty arrays in expected-populated state', () => {
     }
   });
 
-  test('AnalyticsScreen zero-data empty state carries the Start a workout CTA (A4)', async () => {
+  test('AnalyticsScreen zero-data empty state stays on Progress without a Train CTA (A4)', async () => {
     // True day-0: no workouts, no sets — the empty state must render with a
     // way forward, and tapping it must not throw (cross-tab getParent nav).
     //
@@ -1232,7 +1232,9 @@ describe('Edge: empty arrays in expected-populated state', () => {
           .map(n => (Array.isArray(n.props.children) ? n.props.children.join('') : n.props.children))
           .filter(c => typeof c === 'string')
           .join(' ');
-        expect(text).toContain('Start a workout');
+        expect(text).toContain('No training trends yet');
+        expect(text).toContain('Training charts appear here once sessions are logged.');
+        expect(text).not.toContain('Start a workout');
         const { failures } = await bashTappables(tree);
         const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
         expect(real).toEqual([]);
