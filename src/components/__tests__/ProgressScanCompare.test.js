@@ -94,7 +94,7 @@ describe('ProgressScanCompare component', () => {
     expect(text).toContain('not body-fat');
     expect(text).toContain('Defined 54/100');
     expect(text).toContain('Lean 66/100');
-    expect(text).toContain('Volyume Leanness Score is up 12 points');
+    expect(text).toContain('Volyume Physique Score is up 12 points');
     expect(text).not.toContain('Stored delta should not render');
     expect(text).not.toMatch(/\d+-\d+%|BF est|body-fat range/i);
   });

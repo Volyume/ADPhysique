@@ -10,7 +10,7 @@ const scan = {
   qualityLabel: 'good',
   deltaExplanation: {
     comparisonStatus: 'comparable',
-    summary: 'Volyume Leanness Score is down 4 points against the last like-for-like scan.',
+    summary: 'Volyume Physique Score is down 4 points against the last like-for-like scan.',
     trendSummary: 'Progress Signal is positive against the last like-for-like scan.',
   },
   trendDirection: 'down',
@@ -57,10 +57,11 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('Visual trend');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
+    expect(text).toContain('Physique score');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72/100');
     expect(text).toContain('Show details');
-    expect(text).toContain('Volyume Leanness Score 72/100');
+    expect(text).toContain('Volyume Physique Score 72/100');
     expect(text).toContain('82.5 kg weight snapshot');
 
     const buttons = tree.root.findAllByType(TouchableOpacity);
@@ -77,7 +78,7 @@ describe('ProgressScanHistoryCard', () => {
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
     expect(hiddenText).toContain('Lean band');
-    expect(hiddenText).toContain('ScoreHidden');
+    expect(hiddenText).toContain('Physique scoreHidden');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
@@ -85,7 +86,7 @@ describe('ProgressScanHistoryCard', () => {
     const suppressedText = flattenText(suppressed.toJSON());
     expect(suppressedText).toContain('Scan saved privately');
     expect(suppressedText).not.toContain('82.5 kg weight snapshot');
-    expect(suppressedText).not.toContain('Volyume Leanness Score is down');
+    expect(suppressedText).not.toContain('Volyume Physique Score is down');
   });
 
   test('read-only mode hides delete and disables thumbnail opening', async () => {
