@@ -176,3 +176,14 @@ describe('MealPlanScreen meal-swap sheet', () => {
     expect(savedSlot.slot).toBe('meal_1');
   });
 });
+
+describe('MealPlanScreen review-before-add flow', () => {
+  const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
+
+  test('puts the add-to-diary action after the meal list and day totals', () => {
+    expect(source).toContain('Build meals for your diary');
+    expect(source).toContain('Nothing is added until you review the meals and press Add.');
+    expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source).toContain('Review the meals above, swap anything you want, then add this day to your diary.');
+  });
+});

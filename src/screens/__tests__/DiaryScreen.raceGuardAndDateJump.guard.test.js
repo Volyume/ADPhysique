@@ -97,8 +97,10 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
   });
 
   test('the date label is wrapped in a labelled pressable that opens the picker', () => {
+    expect(SRC).toMatch(/const dateHeading = isViewingToday \? 'Today' : friendlyDate\(selectedDate\);/);
+    expect(SRC).toMatch(/const dateSubCopy = isViewingToday \? friendlyDate\(selectedDate\) : selectedDateDetail;/);
     expect(SRC).toMatch(
-      /onPress=\{openDatePicker\}[\s\S]{0,120}accessibilityLabel=\{`\$\{friendlyDate\(selectedDate\)\}\. Jump to a date`\}/,
+      /onPress=\{openDatePicker\}[\s\S]{0,160}accessibilityLabel=\{`\$\{dateHeading\}, \$\{dateSubCopy\}\. Jump to a date`\}/,
     );
   });
 
@@ -134,6 +136,16 @@ describe('DiaryScreen macro detail entry points', () => {
     expect(SRC).toMatch(/<MacroRings[\s\S]*onPress=\{viewEntries\.length \? \(\) => setBreakdownVisible\(true\) : undefined\}/);
     expect(SRC).not.toMatch(/DiaryDaySummaryCard/);
     expect(SRC).not.toMatch(/Today at a glance/);
+  });
+});
+
+describe('DiaryScreen diary tools', () => {
+  test('copy and insights live in a clear tools sheet, not a generic alert', () => {
+    expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
+    expect(SRC).toMatch(/accessibilityLabel="Diary tools"/);
+    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy a logged day<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Insights and export<\/Text>/);
+    expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
 

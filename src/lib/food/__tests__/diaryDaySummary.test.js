@@ -12,6 +12,7 @@ describe('diary day summary model', () => {
     expect(model.remainingKcal).toBe(260);
 
     const copy = formatDiaryDaySummary(model, 'kcal');
+    expect(copy.title).toBe('Nutrition summary');
     expect(copy.primary).toBe('260 kcal left today');
     expect(copy.secondary).toBe('4 entries logged so far.');
     expect(copy.chips.map((chip) => chip.value)).toEqual([
