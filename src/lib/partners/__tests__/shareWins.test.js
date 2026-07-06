@@ -1,10 +1,13 @@
 import {
   SHARE_WIN_CARD_RULES,
+  SHARE_WIN_DELIVERY_GUARDRAILS,
   SHARE_WIN_FORBIDDEN_FIELDS,
   SHARE_WIN_POLICY,
   SHARE_WIN_TYPES,
   buildShareWinExampleDrafts,
+  buildShareWinExamplePreviews,
   buildShareWinDraft,
+  buildShareWinPreview,
   isValidShareWinType,
   shareWinDraftHasForbiddenFields,
   shareWinTypeByKey,
@@ -39,6 +42,8 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_POLICY.excluded).toContain('automatic photo sharing');
     expect(SHARE_WIN_CARD_RULES).toContain('Ask every time before a card is sent.');
     expect(SHARE_WIN_CARD_RULES).toContain('Future delivery must support revoke and delete.');
+    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact card before sending.');
+    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one card only. No background feed is created.');
   });
 
   test('each category states both shared and private boundaries', () => {
@@ -121,5 +126,41 @@ describe('partner shareable wins policy', () => {
       expect(draft.defaultConsent).toBe('Ask every time');
     }
     expect(examples.map((draft) => draft.summary).join(' ')).not.toContain('file://');
+  });
+
+  test('builds explicit preview receipts for one-card partner sharing', () => {
+    const preview = buildShareWinPreview('personal_record', {
+      liftName: 'Deadlift',
+      recordLabel: 'New triple best',
+      bodyWeight: 92,
+    });
+    expect(preview).toMatchObject({
+      type: 'personal_record',
+      status: 'Preview only',
+      shared: 'The lift name and the record you choose to celebrate.',
+      private: 'Your wider lift history and other records stay private.',
+      confirmation: 'Not sent until you choose one partner and approve this exact card.',
+    });
+    expect(preview.draft.summary).toBe('Deadlift: New triple best.');
+    expect(preview.guardrails).toContain('Confirm the one partner who will receive it.');
+    expect(preview.guardrails).toContain('Keep revoke and delete controls attached to the card.');
+    expect(Object.keys(preview.draft)).not.toContain('bodyWeight');
+    expect(buildShareWinPreview('food_diary', {})).toBeNull();
+  });
+
+  test('builds safe preview examples for every share-win type', () => {
+    const previews = buildShareWinExamplePreviews();
+    expect(previews.map((preview) => preview.type)).toEqual([
+      'workout_summary',
+      'personal_record',
+      'block_milestone',
+      'progress_card',
+    ]);
+    for (const preview of previews) {
+      expect(validateShareWinDraft(preview.draft)).toBe(true);
+      expect(shareWinDraftHasForbiddenFields(preview)).toBe(false);
+      expect(preview.status).toBe('Preview only');
+      expect(preview.confirmation).toContain('Not sent');
+    }
   });
 });

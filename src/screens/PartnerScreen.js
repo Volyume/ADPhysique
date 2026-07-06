@@ -27,7 +27,7 @@ import Animated, {
 import { appAlert } from '../components/AppAlert';
 import {
   colors, spacing, radius, type, iconSize, hitSlop, withAlpha, alpha,
-  motion, letterSpacing, stateColors, circle,
+  motion, letterSpacing, stateColors, circle, fontWeight,
 } from '../styles/theme';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
@@ -49,7 +49,7 @@ import {
   SHARE_WIN_CARD_RULES,
   SHARE_WIN_POLICY,
   SHARE_WIN_TYPES,
-  buildShareWinExampleDrafts,
+  buildShareWinExamplePreviews,
 } from '../lib/partners/shareWins';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
@@ -1128,12 +1128,60 @@ function AckSheetBody({ pair, onSend }) {
 }
 
 function ShareWinsSheetBody() {
-  const exampleDrafts = buildShareWinExampleDrafts();
+  const examplePreviews = buildShareWinExamplePreviews();
+  const [selectedType, setSelectedType] = useState(examplePreviews[0]?.type || 'workout_summary');
+  const selectedPreview = examplePreviews.find((preview) => preview.type === selectedType) || examplePreviews[0];
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Shareable wins</Text>
       <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
       <Text style={styles.shareWinDefault}>Default: {SHARE_WIN_POLICY.defaultState}.</Text>
+      <View style={styles.shareWinPreviewIntro}>
+        <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.shareWinPreviewIntroText}>
+          Preview the exact card first. Nothing is sent from this sheet.
+        </Text>
+      </View>
+      <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
+        {examplePreviews.map((preview) => {
+          const active = preview.type === selectedType;
+          return (
+            <TouchableOpacity
+              key={preview.type}
+              style={[styles.shareWinChoice, active && styles.shareWinChoiceActive]}
+              onPress={() => setSelectedType(preview.type)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Preview ${preview.draft.title.toLowerCase()}`}
+            >
+              <Text style={[styles.shareWinChoiceTitle, active && styles.shareWinChoiceTitleActive]}>
+                {preview.draft.title}
+              </Text>
+              <Text style={styles.shareWinChoiceSummary} numberOfLines={2}>{preview.draft.summary}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {selectedPreview ? (
+        <View style={styles.shareWinPreviewCard}>
+          <View style={styles.shareWinPreviewTop}>
+            <Text style={styles.shareWinPreviewStatus}>{selectedPreview.status}</Text>
+            <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
+          </View>
+          <Text style={styles.shareWinExampleTitle}>{selectedPreview.draft.title}</Text>
+          <Text style={styles.shareWinExampleSummary}>{selectedPreview.draft.summary}</Text>
+          <Text style={styles.shareWinExampleDetail}>{selectedPreview.draft.detail}</Text>
+          <View style={styles.shareWinBoundary}>
+            <Text style={styles.shareWinBoundaryLabel}>Partner sees</Text>
+            <Text style={styles.shareWinBoundaryText}>{selectedPreview.shared}</Text>
+          </View>
+          <View style={styles.shareWinBoundary}>
+            <Text style={styles.shareWinBoundaryLabel}>Stays private</Text>
+            <Text style={styles.shareWinBoundaryText}>{selectedPreview.private}</Text>
+          </View>
+          <Text style={styles.shareWinExampleConsent}>{selectedPreview.confirmation}</Text>
+        </View>
+      ) : null}
       <View style={styles.shareWinRules}>
         {SHARE_WIN_CARD_RULES.map((rule) => (
           <View key={rule} style={styles.shareWinRuleRow}>
@@ -1143,13 +1191,10 @@ function ShareWinsSheetBody() {
         ))}
       </View>
       <View style={styles.shareWinExamples}>
-        <Text style={styles.shareWinSectionTitle}>Card examples</Text>
-        {exampleDrafts.map((draft) => (
-          <View key={draft.type} style={styles.shareWinExampleCard}>
-            <Text style={styles.shareWinExampleTitle}>{draft.title}</Text>
-            <Text style={styles.shareWinExampleSummary}>{draft.summary}</Text>
-            <Text style={styles.shareWinExampleDetail}>{draft.detail}</Text>
-            <Text style={styles.shareWinExampleConsent}>Consent: {draft.defaultConsent}.</Text>
+        <Text style={styles.shareWinSectionTitle}>Delivery guardrails</Text>
+        {selectedPreview?.guardrails?.map((guardrail) => (
+          <View key={guardrail} style={styles.shareWinExampleCard}>
+            <Text style={styles.shareWinExampleDetail}>{guardrail}</Text>
           </View>
         ))}
       </View>
@@ -1503,6 +1548,66 @@ const styles = StyleSheet.create({
   },
   ackRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
   shareWinDefault: { ...type.label, color: colors.textPrimary },
+  shareWinPreviewIntro: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    padding: spacing.md,
+  },
+  shareWinPreviewIntroText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  shareWinChooser: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  shareWinChoice: {
+    flexGrow: 1,
+    flexBasis: '48%',
+    minWidth: 132,
+    minHeight: 78,
+    gap: spacing.xxs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  shareWinChoiceActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  shareWinChoiceTitle: { ...type.label, color: colors.textPrimary },
+  shareWinChoiceTitleActive: { color: colors.primary },
+  shareWinChoiceSummary: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinPreviewCard: {
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  shareWinPreviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  shareWinPreviewStatus: {
+    ...type.caption,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  shareWinBoundary: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
+    gap: spacing.xxs,
+  },
+  shareWinBoundaryLabel: { ...type.caption, color: colors.textMuted },
+  shareWinBoundaryText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
   shareWinRules: { gap: spacing.sm },
   shareWinRuleRow: {
     flexDirection: 'row',
