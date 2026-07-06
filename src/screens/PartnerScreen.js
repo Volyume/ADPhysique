@@ -176,7 +176,7 @@ function blockStatusCopy(block, partnerName, userId) {
   if (block.status === 'active') {
     return {
       title: 'Block name only',
-      copy: `${block.blockName} is visible by name only. Workouts, exercises, loading, notes and coach changes stay private.`,
+      copy: `${block.blockName} is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
@@ -1311,7 +1311,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Choose one card, check exactly what {partnerName} will see, then send it. No feed is created.
+          Choose one card, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1378,10 +1378,23 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
 
 function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
   const [checking, setChecking] = useState(false);
+  const [checkLine, setCheckLine] = useState('');
   async function checkConnection() {
     if (checking) return;
     setChecking(true);
-    try { await onRefresh?.(); } finally { setChecking(false); }
+    setCheckLine('');
+    try {
+      const result = await onRefresh?.();
+      if (result?.ok === false) {
+        setCheckLine('Could not check the cloud connection just now. Your invite is still safe to share again.');
+      } else {
+        setCheckLine('Checked just now. If they have accepted, the connection will appear here as soon as sync catches up.');
+      }
+    } catch (_) {
+      setCheckLine('Could not check the cloud connection just now. Your invite is still safe to share again.');
+    } finally {
+      setChecking(false);
+    }
   }
   return (
     <View style={styles.pendingCard}>
@@ -1391,6 +1404,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
       </View>
       <Text style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
       <Text style={styles.pendingHint}>Share the same invite again if they missed it. It still only pairs one person.</Text>
+      {checkLine ? <Text style={styles.pendingCheckLine}>{checkLine}</Text> : null}
       <TouchableOpacity
         onPress={onShareAgain}
         style={styles.pendingPrimary}
@@ -1534,7 +1548,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name only</Text>
-        <Text style={styles.blockPitch}>Only the name is shared. Workouts, exercises, loading, notes and coach changes stay private.</Text>
+        <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1544,7 +1558,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name sent</Text>
-        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. Workouts, exercises, loading and coach changes stay private.</Text>
+        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. Training details and Coach changes stay private.</Text>
         <SheetRow icon="close-circle-outline" label="Withdraw name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1554,7 +1568,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name suggested</Text>
-        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares the name only. It will not sync workouts or change either plan.</Text>
+        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares only that label and will not change either plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Share this name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
@@ -1566,7 +1580,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Share a block name only</Text>
       <Text style={styles.blockPitch}>
-        Optional. This is only a label in Partners. It does not sync workouts, assign a plan, or change anything the Coach has set.
+        Optional. Partners shares the block name only. It does not sync workouts or change anything the Coach has set.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1978,6 +1992,7 @@ const styles = StyleSheet.create({
   pendingText: { ...type.body, color: colors.textPrimary, flex: 1 },
   pendingExpiry: { ...type.caption, color: colors.textSecondary },
   pendingHint: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  pendingCheckLine: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
   pendingPrimary: {
     flexDirection: 'row',
     alignItems: 'center',

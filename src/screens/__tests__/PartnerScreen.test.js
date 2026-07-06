@@ -185,7 +185,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Body metrics and progress photos');
     expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. No ranking or comparison.');
     expect(text).toContain('Block name only');
-    expect(text).toContain('Upper Lower is visible by name only. Workouts, exercises, loading, notes and coach changes stay private.');
+    expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
     expect(text).toContain('Manage name');
   });
 
@@ -195,7 +195,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('This week with Sam');
     expect(text).toContain('Set how many sessions you plan to train this week. Sam sees only that number, not your plan.');
-    expect(text).toContain('Your partner only sees the items listed below and cards you choose to send. Food, coach notes, body metrics and photos stay private.');
+    expect(text).toContain('Nothing else is shared unless you choose a card.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('You have logged 2 of 4.');
     await press(tree, "Set this week's sessions");
@@ -216,7 +216,7 @@ describe('connected state: isolated pair cards', () => {
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Choose a win to share');
     expect(text).toContain('Nothing is shared automatically.');
-    expect(text).toContain('Choose one card, check exactly what Sam will see, then send it. No feed is created.');
+    expect(text).toContain('Choose one card, check exactly what Sam will see, then send it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');

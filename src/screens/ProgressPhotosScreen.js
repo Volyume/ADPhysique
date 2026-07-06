@@ -49,7 +49,6 @@ import {
   findScanForPhotoName,
   buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
-  buildPhysiqueStudioNextAction,
   enrichProgressPhotos,
   progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
@@ -877,37 +876,13 @@ export default function ProgressPhotosScreen({ navigation }) {
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
-      ? 'Use the same full-body frame each time. Photos stay on this phone unless you share or export them.'
+      ? 'Use the same full-body frame, lighting and camera height whenever you take the next set.'
       : 'Front and back are enough for a score. Side is optional, but helpful for shape and posture.';
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'next', icon: 'time-outline', label: 'Next useful set', value: nextCheckInLabel },
     { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
   ];
-  const nextAction = useMemo(
-    () => buildPhysiqueStudioNextAction({
-      checkIns: allCheckIns,
-      scans: visibleScans,
-      suppressed,
-      readOnly,
-    }),
-    [allCheckIns, visibleScans, suppressed, readOnly],
-  );
-  const photoSetAction = nextAction?.kind === 'complete_pose' ? nextAction : null;
-
-  function onNextActionPress(action = nextAction) {
-    if (!action) return;
-    if (action.kind === 'complete_pose') {
-      openCheckInPoseCapture(action.checkIn, action.pose);
-    } else if (action.kind === 'compare_scans') {
-      openScanCompare();
-    } else if (action.kind === 'compare_checkins') {
-      openCompare();
-    } else if (action.kind === 'capture') {
-      onAdd();
-    }
-  }
-
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
     const completeness = buildCheckInCompletenessModel(item);
@@ -1145,40 +1120,6 @@ export default function ProgressPhotosScreen({ navigation }) {
           />
         ) : null}
 
-        {!loading && photoSetAction ? (
-          <Card style={styles.nextActionCard}>
-            <View style={styles.nextActionCopy}>
-              <Text style={styles.nextActionEyebrow}>Latest set needs another angle</Text>
-              <Text style={styles.nextActionTitle}>{photoSetAction.title}</Text>
-              <Text style={styles.nextActionBody}>{photoSetAction.body}</Text>
-              {photoSetAction.reason ? (
-                <View style={styles.nextActionReason}>
-                  <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.nextActionReasonText}>{photoSetAction.reason}</Text>
-                </View>
-              ) : null}
-              {photoSetAction.detailItems?.length ? (
-                <View style={styles.nextActionDetails}>
-                  {photoSetAction.detailItems.map((detail) => (
-                    <View key={detail} style={styles.nextActionDetailRow}>
-                      <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
-                      <Text style={styles.nextActionDetailText}>{detail}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-            <Button
-              title={photoSetAction.cta}
-              icon="camera-outline"
-              variant="secondary"
-              fullWidth={false}
-              onPress={() => onNextActionPress(photoSetAction)}
-              accessibilityLabel={`Add missing photo: ${photoSetAction.cta}`}
-            />
-          </Card>
-        ) : null}
-
         {!loading && photos.length > 0 ? (
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
@@ -1398,37 +1339,43 @@ export default function ProgressPhotosScreen({ navigation }) {
           accessibilityLabel="Close scan date"
         >
           <View style={styles.scanDateSheet} onStartShouldSetResponder={() => true}>
-            <Text style={styles.scanDateTitle}>Date for this scan</Text>
-            <Text style={styles.scanDateIntro}>
-              Pick the day these photos were taken. Volyume uses that date for the library entry and the bodyweight snapshot.
-            </Text>
-            <TouchableOpacity
-              style={styles.scanDateField}
-              onPress={() => setScanDatePickerOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Change scan date, currently ${formatProgressPhotoDay(scanDateMs)}`}
+            <ScrollView
+              contentContainerStyle={styles.scanDateContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.scanDateValue}>{formatProgressPhotoDay(scanDateMs)}</Text>
-              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
-            </TouchableOpacity>
-            <View style={styles.scanDateActions}>
-              <Button
-                title="Cancel"
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                onPress={closeScanImportDateStep}
-                accessibilityLabel="Cancel imported scan"
-              />
-              <Button
-                title="Import photos"
-                size="sm"
-                fullWidth={false}
-                onPress={confirmScanImportDate}
-                accessibilityLabel="Import photos for this scan"
-              />
-            </View>
+              <Text style={styles.scanDateTitle}>Date for this scan</Text>
+              <Text style={styles.scanDateIntro}>
+                Pick the day these photos were taken. Volyume uses that date for the library entry and the bodyweight snapshot.
+              </Text>
+              <TouchableOpacity
+                style={styles.scanDateField}
+                onPress={() => setScanDatePickerOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Change scan date, currently ${formatProgressPhotoDay(scanDateMs)}`}
+              >
+                <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
+                <Text style={styles.scanDateValue}>{formatProgressPhotoDay(scanDateMs)}</Text>
+                <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+              </TouchableOpacity>
+              <View style={styles.scanDateActions}>
+                <Button
+                  title="Cancel"
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={closeScanImportDateStep}
+                  accessibilityLabel="Cancel imported scan"
+                />
+                <Button
+                  title="Import photos"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={confirmScanImportDate}
+                  accessibilityLabel="Import photos for this scan"
+                />
+              </View>
+            </ScrollView>
           </View>
         </TouchableOpacity>
         <PhotoDatePicker
@@ -1460,7 +1407,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
                   <Text style={styles.captureRouteTitle}>
-                    {latestPartialCapture ? 'Finish or add photo set' : 'Add photo set'}
+                    {latestPartialCapture ? 'Add missing angle' : 'Add photo set'}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setCaptureRouteOpen(false)}
@@ -1473,7 +1420,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 </View>
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
-                    ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it to that date, or start a new set if this is a different day.`
+                    ? `Your latest date is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate photo set if these photos are from another day.`
                     : 'Take new photos or import ones you already have. Both routes save to the same private library and only get a Physique Score when the front and back photos are usable.'}
                 </Text>
                 <ScrollView
@@ -1524,7 +1471,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   <View style={styles.captureRouteNote}>
                     <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                     <Text style={styles.captureRouteNoteText}>
-                      If the photos are not clear enough, Volyume saves them without forcing a Physique Score. Photos stay on this phone unless you share or export them.
+                      If the photos are not clear enough, Volyume saves them without forcing a Physique Score.
                     </Text>
                   </View>
                 </ScrollView>
@@ -1750,33 +1697,6 @@ const styles = StyleSheet.create({
   signalBody: { ...type.bodySm, color: colors.textSecondary },
   signalSupport: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   readOnlyNote: { ...type.caption, color: colors.textMuted },
-  nextActionCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    gap: spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  nextActionCopy: { gap: spacing.xs },
-  nextActionEyebrow: {
-    ...type.caption,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-  nextActionTitle: { ...type.label, color: colors.textPrimary },
-  nextActionBody: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
-  nextActionReason: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-  },
-  nextActionReasonText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
-  nextActionDetails: { gap: spacing.xs },
-  nextActionDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
-  nextActionDetailText: { ...type.caption, color: colors.textMuted, lineHeight: 18, flex: 1 },
   libraryHeader: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
@@ -2048,13 +1968,14 @@ const styles = StyleSheet.create({
   scanDateSheet: {
     width: '100%',
     maxWidth: 420,
+    maxHeight: '86%',
     backgroundColor: colors.surfaceElevated ?? colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.xl,
-    gap: spacing.md,
   },
+  scanDateContent: { gap: spacing.md },
   scanDateTitle: { ...type.title, color: colors.textPrimary },
   scanDateIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanDateField: {
