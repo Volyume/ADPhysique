@@ -41,8 +41,8 @@ describe('EmptyDiary', () => {
     const onPlanDay = jest.fn();
     const tree = create(<EmptyDiary onPlanDay={onPlanDay} />);
     expect(text(tree)).toContain('Plan meals');
-    expect(text(tree)).toContain('Build to your targets, review, swap, then add to the diary.');
-    press(tree, 'Plan meals: build meals for today or the week, review them, then add them to your diary');
+    expect(text(tree)).toContain('Build from your targets, review it, then add it to the diary.');
+    press(tree, 'Plan meals: build a day or week, review it, then add it to your diary');
     expect(onPlanDay).toHaveBeenCalledTimes(1);
   });
 });

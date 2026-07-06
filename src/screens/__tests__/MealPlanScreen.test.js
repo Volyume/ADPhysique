@@ -182,8 +182,9 @@ describe('MealPlanScreen review-before-add flow', () => {
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('Plan meals for your diary');
-    expect(source).toContain('Build a day or week to your targets. Swap anything, then add it to Diary when ready.');
+    expect(source).toContain('Build a day or week from your targets. Review it, swap meals if needed, then add it to Diary when ready.');
     expect(source).toContain('Build');
+    expect(source).toContain('Review');
     expect(source).toContain('Add to diary');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source).toContain("isDayPlan ? 'Review then add today' : 'Review then add week'");

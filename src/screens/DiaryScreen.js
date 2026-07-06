@@ -1278,14 +1278,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals: build meals for today or the week, review and swap them, then add them to your diary"
+                  accessibilityLabel="Plan meals: build a day or week, review it, then add it to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Build to your targets, review, swap, then add to the diary.</Text>
+                    <Text style={styles.buildPlanSub}>Build from your targets, review it, then add it to the diary.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1524,9 +1524,9 @@ export default function DiaryScreen({ navigation }) {
         onClose={() => setDiaryToolsOpen(false)}
         accessibilityLabel="Diary tools"
       >
-        <Text style={styles.moveTitle}>Manage day</Text>
+        <Text style={styles.moveTitle}>Day tools</Text>
         <Text style={styles.saveMealHint}>
-          Copy from another day or review nutrition trends. Food logging stays here.
+          Copy food from another day, or open trends and export. Food logging stays here.
         </Text>
         <TouchableOpacity
           style={styles.diaryToolRow}
@@ -1553,8 +1553,8 @@ export default function DiaryScreen({ navigation }) {
             <Ionicons name="analytics-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.diaryToolCopy}>
-            <Text style={styles.diaryToolTitle}>Nutrition trends</Text>
-            <Text style={styles.diaryToolText}>See calorie, macro and consistency trends, with export when needed.</Text>
+            <Text style={styles.diaryToolTitle}>Trends and export</Text>
+            <Text style={styles.diaryToolText}>See calorie, macro and consistency trends, or export your diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>

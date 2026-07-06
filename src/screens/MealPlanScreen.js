@@ -453,6 +453,7 @@ export default function MealPlanScreen({ navigation }) {
   // Feature A "Plan my day": a single-day plan renders without the week picker
   // and adds to today rather than logging an abstract "Day N".
   const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
+  const activeDayLabel = isDayPlan ? 'Today' : (dayLabels[dayIndex] || `Day ${dayIndex + 1}`);
 
   const honestyLine = useMemo(() => {
     if (!day || day.withinTolerance) return null;
@@ -481,7 +482,7 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Build a day or week to your targets. Swap anything, then add it to Diary when ready.
+            Build a day or week from your targets. Review it, swap meals if needed, then add it to Diary when ready.
           </Text>
           <View style={styles.planExplainer} accessibilityRole="summary">
             <View style={styles.planExplainerStep}>
@@ -490,7 +491,7 @@ export default function MealPlanScreen({ navigation }) {
             </View>
             <View style={styles.planExplainerStep}>
               <Ionicons name="swap-horizontal-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Swap</Text>
+              <Text style={styles.planExplainerText}>Review</Text>
             </View>
             <View style={styles.planExplainerStep}>
               <Ionicons name="checkmark-circle-outline" size={15} color={colors.primary} />
@@ -551,11 +552,14 @@ export default function MealPlanScreen({ navigation }) {
               advanced cutters and competitors) it is dropped so the day is just
               "the whole number, the same every day". */}
           <View style={styles.dayHeader}>
-            {cycleOn ? (
-              <View style={styles.typeChip}>
-                <Text style={styles.typeChipText}>{dayTypeLabel}</Text>
-              </View>
-            ) : null}
+            <View style={styles.dayTitleGroup}>
+              <Text style={styles.dayLabel}>{activeDayLabel}</Text>
+              {cycleOn ? (
+                <View style={styles.typeChip}>
+                  <Text style={styles.typeChipText}>{dayTypeLabel}</Text>
+                </View>
+              ) : null}
+            </View>
             {day ? (
               <Text style={styles.dayKcal} maxFontSizeMultiplier={1.3}>
                 {formatEnergy(day.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
@@ -670,9 +674,9 @@ export default function MealPlanScreen({ navigation }) {
           {/* Day totals (Eddie's row) */}
           {day ? (
             <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Day</Text>
+              <Text style={styles.totalsLabel}>Day total</Text>
               <Text style={styles.totalsText}>
-                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} - C ${formatNumber(day.totals.carbs)} - F ${formatNumber(day.totals.fat)}`}
+                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} g - C ${formatNumber(day.totals.carbs)} g - F ${formatNumber(day.totals.fat)} g`}
               </Text>
             </View>
           ) : null}
@@ -776,7 +780,7 @@ export default function MealPlanScreen({ navigation }) {
           ) : null}
 
           <Text style={styles.footNote}>
-            Built from your calories and macros. Swap any meal you like, and the day stays close to your target.
+            A plan is not logged food until you add it to your diary. Swap any meal you like; the day stays close to your target.
           </Text>
         </ScrollView>
       )}
@@ -935,10 +939,12 @@ const styles = StyleSheet.create({
   dayLetterOn: { color: colors.textPrimary },
   dayDot: { width: 5, height: 5, borderRadius: circle(5), backgroundColor: colors.border, marginTop: 3 },
   dayDotTrain: { backgroundColor: colors.primary },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  dayTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  dayLabel: { ...type.label, color: colors.textPrimary },
   typeChip: { backgroundColor: colors.surface, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },
   typeChipText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
-  dayKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
+  dayKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 0 },
   dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
   cycleNote: { ...type.bodySm, color: colors.textSecondary },
   honesty: { ...type.bodySm, color: colors.textSecondary, fontStyle: 'italic' },
@@ -1004,7 +1010,7 @@ const styles = StyleSheet.create({
   swapText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
-  totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 1 },
   footNote: { ...type.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 17 },
   // Prominent so people find it: a bordered card with a primary accent, not a
   // faint text row (founder 2026-06-16: the prefs were too hidden, people miss them).
