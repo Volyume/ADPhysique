@@ -545,8 +545,8 @@ export default function AnalyticsScreen({ navigation, route }) {
         {!loading && allSets.length === 0 && (
           <EmptyState
             icon="analytics-outline"
-            title="No progress data yet"
-            text="Your charts will appear here once you have logged training, body metrics, photos or scans."
+            title="No training trends yet"
+            text="Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below."
           />
         )}
 
