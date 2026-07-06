@@ -123,7 +123,7 @@ import useAppStore from '../../store/useAppStore';
 import { appAlert } from '../../components/AppAlert';
 import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { listProgressPhotos, deleteProgressPhoto } from '../../lib/progressPhotos';
-import { deletePhotoMeta } from '../../lib/progressPhotoMeta';
+import { deletePhotoMeta, getPhotoMetaMap } from '../../lib/progressPhotoMeta';
 import { deleteProgressScanSession, listProgressScanEntries } from '../../lib/progressScanStore';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
 import ProgressPhotosScreen, { filterAndSort } from '../ProgressPhotosScreen';
@@ -256,12 +256,12 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
 
-  test('next best action guides the user to add a missing pose to the latest photo set', async () => {
+  test('partial-set prompt guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Suggested next step');
+    expect(text).toContain('Finish this photo set');
     expect(text).toContain('Add front photo');
-    await press(tree, 'Suggested next step: Add Front photo');
+    await press(tree, 'Finish this photo set: Add Front photo');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
@@ -270,8 +270,8 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Private on this device');
-    expect(text).toContain('not visible to partners');
+    expect(text).toContain('Private on this phone');
+    expect(text).toContain('not shown to partners');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photo set');
     expect(text).toContain('Your first set can be new photos or older photos from your phone.');
@@ -406,6 +406,31 @@ describe('ProgressPhotosScreen compare entry', () => {
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(false);
     await press(tree, 'Compare two photos');
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
+  });
+
+  test('score comparison stays in the main Compare button instead of a duplicate prompt card', async () => {
+    const newBack = { name: `${NEW.ts + 1}.jpg`, uri: `file:///photos/${NEW.ts + 1}.jpg`, ts: NEW.ts + 1 };
+    const newSide = { name: `${NEW.ts + 2}.jpg`, uri: `file:///photos/${NEW.ts + 2}.jpg`, ts: NEW.ts + 2 };
+    const oldBack = { name: `${OLD.ts + 1}.jpg`, uri: `file:///photos/${OLD.ts + 1}.jpg`, ts: OLD.ts + 1 };
+    const oldSide = { name: `${OLD.ts + 2}.jpg`, uri: `file:///photos/${OLD.ts + 2}.jpg`, ts: OLD.ts + 2 };
+    getPhotoMetaMap.mockResolvedValueOnce({
+      [NEW.name]: { name: NEW.name, takenAt: NEW.ts, pose: 'front', weightKg: null, note: null },
+      [newBack.name]: { name: newBack.name, takenAt: NEW.ts, pose: 'back', weightKg: null, note: null },
+      [newSide.name]: { name: newSide.name, takenAt: NEW.ts, pose: 'side', weightKg: null, note: null },
+      [OLD.name]: { name: OLD.name, takenAt: OLD.ts, pose: 'front', weightKg: null, note: null },
+      [oldBack.name]: { name: oldBack.name, takenAt: OLD.ts, pose: 'back', weightKg: null, note: null },
+      [oldSide.name]: { name: oldSide.name, takenAt: OLD.ts, pose: 'side', weightKg: null, note: null },
+    });
+    const scans = [
+      { id: 'scan-old', status: 'complete', requiredPosesComplete: true, capturedAt: OLD.ts, assets: [{ id: 'old-front', pose: 'front', photoName: OLD.name, uri: OLD.uri, takenAt: OLD.ts }, { id: 'old-back', pose: 'back', photoName: oldBack.name, uri: oldBack.uri, takenAt: OLD.ts }] },
+      { id: 'scan-new', status: 'complete', requiredPosesComplete: true, capturedAt: NEW.ts, assets: [{ id: 'new-front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts }, { id: 'new-back', pose: 'back', photoName: newBack.name, uri: newBack.uri, takenAt: NEW.ts }] },
+    ];
+    const tree = await render([newSide, newBack, NEW, oldSide, oldBack, OLD], { scans });
+    const text = flattenText(tree.toJSON());
+
+    expect(findPressable(tree, 'Compare two Physique Score entries')).toBeDefined();
+    expect(text).not.toContain('Finish this photo set');
+    expect(text).not.toContain('Compare Physique Scores');
   });
 
   test('the compare surface honours reduce motion on its wrapping modal', async () => {
