@@ -67,7 +67,7 @@ export default function ProgressScanHistoryCard({
         <View style={styles.scanHeadingGroup}>
           <Text style={styles.scanTitle}>Physique Scan results</Text>
           <Text style={styles.scanSubtitle}>
-            Private visual reads. Bands, confidence and trend only.
+            Private visual reads. Bands, confidence and trend only. Not a body-fat percentage.
           </Text>
         </View>
         <TouchableOpacity
@@ -161,13 +161,26 @@ export default function ProgressScanHistoryCard({
 
 const styles = StyleSheet.create({
   scanCard: { marginHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.xs },
-  scanCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
-  scanHeadingGroup: { flex: 1, gap: spacing.xxs },
+  scanCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  scanHeadingGroup: { flex: 1, minWidth: 0, gap: spacing.xxs },
   scanTitle: { ...type.h3, color: colors.textPrimary },
   scanSubtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   scanDate: { ...type.caption, color: colors.textMuted },
   scanBody: { ...type.bodySm, color: colors.textMuted },
-  hideExactToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+  hideExactToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xxs,
+    minHeight: 40,
+    paddingHorizontal: spacing.xs,
+  },
   hideExactText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   scanEntry: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -175,37 +188,46 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     gap: spacing.sm,
   },
-  scanEntryHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
-  scanEntryTitleGroup: { flex: 1, gap: spacing.xxs },
+  scanEntryHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    minWidth: 0,
+  },
+  scanEntryTitleGroup: { flex: 1, minWidth: 0, gap: spacing.xxs },
   scanEntryTitle: { ...type.label, color: colors.textPrimary },
-  scanEntryActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  scanEntryActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1, maxWidth: '58%' },
   confidencePill: {
     borderRadius: radius.full,
     backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    maxWidth: 150,
+    maxWidth: 180,
   },
-  confidencePillText: { ...type.caption, color: colors.primary },
+  confidencePillText: { ...type.caption, color: colors.primary, flexShrink: 1 },
   scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   scanQuality: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
   scanStats: { ...type.caption, color: colors.textMuted },
   scanLimit: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
-  scanInsightGrid: { flexDirection: 'row', gap: spacing.xs },
+  scanInsightGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   scanInsightCell: {
     flex: 1,
-    minHeight: 78,
+    minWidth: 96,
+    minHeight: 82,
     borderRadius: radius.sm,
     backgroundColor: colors.surface2,
     padding: spacing.sm,
     gap: spacing.xxs,
   },
   scanInsightLabel: { ...type.caption, color: colors.textMuted },
-  scanInsightValue: { ...type.label, color: colors.textPrimary },
+  scanInsightValue: { ...type.label, color: colors.textPrimary, lineHeight: 18, flexShrink: 1 },
   scanReasonBox: {
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
-    paddingLeft: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
     gap: spacing.xs,
   },
   scanReasonLabel: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
