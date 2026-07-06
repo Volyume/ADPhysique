@@ -63,6 +63,21 @@ function scanConfidenceLabel(confidence) {
   return 'Visual scan';
 }
 
+function finiteMs(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
+  if (scan?.visualLeannessScore == null) return false;
+  if (bodyFat == null) return true;
+  const scanAt = finiteMs(scan?.capturedAt ?? scan?.captured_at);
+  const bodyFatAt = finiteMs(bodyFatLoggedAt);
+  if (!bodyFatAt) return true;
+  if (!scanAt) return false;
+  return scanAt >= bodyFatAt;
+}
+
 const COACHING_PHASE_LABELS = {
   mild_cut: 'Lose fat (cut)',
   mild_bulk: 'Build muscle (lean gain)',
@@ -282,8 +297,12 @@ export default function AthleteProfileScreen({ navigation }) {
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
-  const hasPhysiqueScore = summary.scan?.visualLeannessScore != null;
-  const physiqueTile = hasPhysiqueScore ? {
+  const showPhysiqueScore = shouldShowPhysiqueScore({
+    scan: summary.scan,
+    bodyFat: summary.bodyFat,
+    bodyFatLoggedAt: summary.bodyFatLoggedAt,
+  });
+  const physiqueTile = showPhysiqueScore ? {
     label: 'Physique score',
     value: [
       summary.scan?.leannessBandLabel || null,
