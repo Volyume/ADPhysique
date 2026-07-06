@@ -179,7 +179,7 @@ function allTexts(tree) {
 }
 
 async function openImportScanDateStep(tree) {
-  await pressLabel(tree, 'Add photos');
+  await pressLabel(tree, 'Add photo set');
   await flush();
   await pressLabel(tree, 'Import photo set');
 }
@@ -195,17 +195,17 @@ beforeEach(() => jest.clearAllMocks());
 test('add photos sheet presents guided capture and import as the two scan paths', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Add photos');
+  await pressLabel(tree, 'Add photo set');
 
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
-  expect(copy).toContain('Add photos');
-  expect(copy).toContain('Choose a guided photo set or import photos you already have.');
-  expect(copy).toContain('Guided photo set');
+  expect(copy).toContain('Add photo set');
+  expect(copy).toContain('Take a new set or import one you already have.');
+  expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
   expect(copy).toContain('Choose the front relaxed photo');
   expect(copy).toContain('Photos stay on this phone unless you share or export them.');
-  expect(hasPressableLabel(tree, 'Start guided set')).toBe(true);
+  expect(hasPressableLabel(tree, 'Start photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Import photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);
 });

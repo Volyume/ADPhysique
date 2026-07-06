@@ -368,9 +368,9 @@ export default function ProgressGhostCapture({
   }
 
   const hasReference = !!referencePhoto?.uri;
-  const compactOverlay = Number.isFinite(viewportHeight) && viewportHeight < 820;
+  const compactOverlay = Number.isFinite(viewportHeight) && viewportHeight < 900;
   const guidance = getPoseCaptureGuidance(pose);
-  const modeLabel = title ? 'Physique Scan' : 'Progress photo';
+  const modeLabel = title ? 'Photo set' : 'Progress photo';
   const captureInstruction = subtitle || guidance.line;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so

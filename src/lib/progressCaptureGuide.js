@@ -40,7 +40,7 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
-  'If the photo is not clear enough, save it as a progress photo instead of forcing a Physique score.';
+  'If the photo is not clear enough, save it as a progress photo instead of forcing a Physique Score.';
 
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
@@ -91,9 +91,9 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Choose how you want to add progress photos today. The aim is not a perfect pose. It is a clear photo you can compare later.',
-    'Physique Scan is Volyume\'s own guided front and back photo sequence, with an optional side photo. It gives a visual progress signal, leanness band and scan confidence, not an exact body-fat percentage.',
-    'Guided single photo is best when you are adding one missing angle or matching an older photo.',
+    'Add a photo set by taking new photos or importing existing ones. The aim is not a perfect pose. It is a clear record you can compare later.',
+    'Volyume Physique Score is our own visual progress measure. It reads front and back relaxed photos for a leanness band, progress signal and confidence. It is not an exact body-fat percentage.',
+    'A side photo is optional, but it helps you compare shape and posture over time.',
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
     QUALITY_FIRST_CAPTURE_NOTE,
     'Photos stay on this device unless you choose to share or export them.',
@@ -115,23 +115,23 @@ export function buildProgressStudioCaptureRoutes({
     routes.push({
       key: 'scan',
       icon: 'scan',
-      eyebrow: 'Best for a new score',
-      title: 'Guided photo set',
-      body: 'Take front and back photos in one guided flow. If the set is clear enough, Volyume adds a Physique score.',
-      bestFor: 'A new score from photos taken in the same setup.',
+      eyebrow: 'New photos',
+      title: 'Take a new photo set',
+      body: 'Volyume guides the front and back photos, with side optional. If the set is clear enough, it gets a Physique Score.',
+      bestFor: 'Your next regular progress entry.',
       steps: PROGRESS_SCAN_SEQUENCE,
-      actionLabel: 'Start guided set',
+      actionLabel: 'Start photo set',
       recommended: true,
       disabled: !canScan,
-      disabledReason: 'Sign in to save a guided photo set.',
+      disabledReason: 'Sign in to save a photo set.',
     });
     routes.push({
       key: 'scan_library',
       icon: 'images-outline',
-      eyebrow: 'Import',
+      eyebrow: 'Existing photos',
       title: 'Import a photo set',
-      body: 'Choose existing front and back photos. Volyume adds them to your library and gives the set a score when the photos are usable.',
-      bestFor: 'Scoring older photos you already have, using the real capture date and weight snapshot.',
+      body: 'Choose front and back photos from your phone. Volyume adds them to the same library and scores the set when the photos are usable.',
+      bestFor: 'Older photos with the real capture date and weight snapshot.',
       steps: Object.freeze([
         'Choose the front relaxed photo',
         'Choose the back relaxed photo',
@@ -214,9 +214,9 @@ export function buildProgressStudioHowItWorksCopy() {
   return [
     'Progress Photos helps you keep private physique photos in date order.',
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
-    `Physique Scan sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
+    `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Physique Scan is Volyume\'s own visual progress measure. It can show a leanness band, progress signal, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
+    'Volyume Physique Score is our own visual progress measure. It can show a leanness band, progress signal, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',

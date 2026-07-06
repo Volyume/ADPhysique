@@ -41,13 +41,13 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Volyume\'s own guided front and back photo sequence');
-    expect(prompt).toContain('visual progress signal');
+    expect(prompt).toContain('Volyume Physique Score is our own visual progress measure');
+    expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
-    expect(prompt).toContain('scan confidence');
+    expect(prompt).toContain('confidence');
     expect(prompt).toContain('not an exact body-fat percentage');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
-    expect(how).toContain('Volyume\'s own visual progress measure');
+    expect(how).toContain('Volyume Physique Score is our own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
     expect(`${prompt}\n${how}`).toContain('Photos stay on this device unless you choose to share or export them.');
@@ -63,8 +63,8 @@ describe('progress capture guide copy', () => {
       'scan_library',
     ]);
     expect(routes[0]).toMatchObject({
-      title: 'Guided photo set',
-      actionLabel: 'Start guided set',
+      title: 'Take a new photo set',
+      actionLabel: 'Start photo set',
       recommended: true,
     });
     expect(routes[0].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
@@ -87,7 +87,7 @@ describe('progress capture guide copy', () => {
       key: 'scan',
       recommended: true,
       disabled: true,
-      disabledReason: 'Sign in to save a guided photo set.',
+      disabledReason: 'Sign in to save a photo set.',
     });
     expect(buildProgressStudioCaptureRoutes({ readOnly: true })).toEqual([]);
   });
