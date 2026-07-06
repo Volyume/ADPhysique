@@ -67,7 +67,7 @@ export default function SettingsHealthScreen() {
       // Health Connect / HealthKit deliberately don't expose a "revoke"
       // API to the app. Send the user to the system Settings where they
       // can flip it themselves; reflect the intent in our toast.
-      toast.show(`Open Health settings to turn weight read off`, { variant: 'info' });
+      toast.show('Open Health settings to turn weight reading off', { variant: 'info' });
       await openSystemHealthSettings();
       return;
     }
@@ -98,7 +98,7 @@ export default function SettingsHealthScreen() {
 
   async function handleToggleSteps(next) {
     if (!next) {
-      toast.show('Open Health settings to turn step read off', { variant: 'info' });
+      toast.show('Open Health settings to turn step reading off', { variant: 'info' });
       await openSystemHealthSettings();
       return;
     }
@@ -130,7 +130,7 @@ export default function SettingsHealthScreen() {
 
   async function handleToggleCardio(next) {
     if (!next) {
-      toast.show('Open Health settings to turn cardio read off', { variant: 'info' });
+      toast.show('Open Health settings to turn cardio reading off', { variant: 'info' });
       await openSystemHealthSettings();
       return;
     }
@@ -161,7 +161,7 @@ export default function SettingsHealthScreen() {
 
   async function handleToggleWorkout(next) {
     if (!next) {
-      toast.show(`Open Health settings to turn workout write off`, { variant: 'info' });
+      toast.show('Open Health settings to turn workout writing off', { variant: 'info' });
       await openSystemHealthSettings();
       return;
     }
@@ -215,7 +215,7 @@ export default function SettingsHealthScreen() {
           sub={
             healthWeightStatus === 'granted'
               ? 'Connected. Volyume picks up new readings from your scale or wearable in the background.'
-              : `Pull bodyweight readings from ${getHealthProviderLabel()} into your morning weight log.`
+              : `Pull body weight readings from ${getHealthProviderLabel()} into your morning weight log.`
           }
           showArrow={false}
           rightElement={
@@ -254,7 +254,7 @@ export default function SettingsHealthScreen() {
             sub={
               healthCardioStatus === 'granted'
                 ? `Connected. Volyume brings in your cardio sessions from ${getHealthProviderLabel()} in the background.`
-                : `Bring in cardio from ${getHealthProviderLabel()}. Read only. Volyume never sends your health data out.`
+                : `Bring in cardio from ${getHealthProviderLabel()}. Read only for this scope.`
             }
             showArrow={false}
             rightElement={
@@ -290,7 +290,7 @@ export default function SettingsHealthScreen() {
         {healthWeightStatus === 'granted' && (
           <SettingRow
             icon="refresh-outline"
-            label={healthSyncing ? 'Syncing…' : 'Sync weight now'}
+            label={healthSyncing ? 'Syncing...' : 'Sync weight now'}
             sub="Pull any new readings since the last check."
             onPress={healthSyncing ? null : handleSyncHealthNow}
             showArrow={!healthSyncing}
@@ -306,7 +306,7 @@ export default function SettingsHealthScreen() {
         )}
       </View>
       <Text style={styles.dataPrivacyNote}>
-        Volyume only touches what you switch on. Everything else stays on this device.
+        Volyume only uses the Health scopes you switch on. Everything else stays untouched.
       </Text>
     </SettingsPage>
   );

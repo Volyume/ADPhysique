@@ -9,7 +9,7 @@
 // added a way to break the experience.
 //
 // This screen exposes only the day + hour pickers. Both reminders are
-// always scheduled. Toggle removed. Lives in Settings → Coaching
+// always scheduled. Toggle removed. Lives in Settings > Coaching
 // reminders (Pro-only row).
 
 import { useState, useEffect, useRef } from 'react';

@@ -44,18 +44,18 @@ export default function SettingsPrivacyScreen({ navigation }) {
           icon="shield-checkmark-outline"
           label="Health-data consent"
           sub={healthConsent === true
-            ? 'Granted. Tap to withdraw at any time.'
+            ? 'Granted. Withdrawing deletes your account because Volyume cannot keep health data without it.'
             : healthConsent === false
-              ? 'Withdrawn. Some features are read-only.'
+              ? 'Withdrawn. Account deletion is in progress or complete.'
               : 'Not recorded yet.'}
-          value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '-'}
+          value={healthConsent === true ? 'Granted' : healthConsent === false ? 'Withdrawn' : '-'}
           onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
           showArrow={healthConsent === true}
         />
         <SettingRow
           icon="share-social-outline"
           label="Share scanned labels with Open Food Facts"
-          sub="This sends the macros you confirm and the label photo, so the next person who scans it gets a match."
+          sub="Only if switched on: sends the label photo and nutrition details you confirm, so future scans can match it."
           showArrow={false}
           rightElement={
             <Switch
@@ -82,7 +82,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
         />
         <SettingRow
           icon="document-text-outline"
-          label="Privacy Policy"
+          label="Privacy policy"
           onPress={() => navigation.navigate('PrivacyPolicy')}
         />
       </View>

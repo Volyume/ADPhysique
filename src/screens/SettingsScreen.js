@@ -95,13 +95,13 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="person-outline"
           label="Profile"
-          sub="Name and diet preference"
+          sub="Name, sex and diet preference"
           onPress={() => navigation.navigate('SettingsProfile')}
         />
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
-          sub="Calmer mode, steps, cardio"
+          sub="Coach tone, steps and cardio"
           onPress={() => navigation.navigate('SettingsCoaching')}
         />
         {tier === 'pro' ? (
@@ -177,7 +177,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="shield-checkmark-outline"
           label="Privacy and legal"
-          sub="Consent, data sharing, policy"
+          sub="Consent, data sharing and policy"
           onPress={() => navigation.navigate('SettingsPrivacy')}
         />
         <SettingRow
