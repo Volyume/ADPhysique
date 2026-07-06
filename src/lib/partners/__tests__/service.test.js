@@ -46,7 +46,9 @@ function fakeClient(overrides = {}) {
     accepted_at: '2026-07-06T10:01:00.000Z',
     updated_at: '2026-07-06T10:01:00.000Z',
   };
+  const calls = { cheerRows: [] };
   return {
+    _calls: calls,
     rpc: jest.fn((name) => {
       if (name === 'create_partner_invite') {
         return Promise.resolve({ data: [{ partnership_id: 'p1', invite_code: 'ABCD1234EF' }], error: null });
@@ -57,17 +59,38 @@ function fakeClient(overrides = {}) {
       return Promise.resolve({ data: null, error: null });
     }),
     functions: { invoke: jest.fn(() => Promise.resolve({ data: { ok: true }, error: null })) },
-    from: jest.fn((table) => ({
-      select: table === 'partnerships'
-        ? jest.fn(() => ({
-          eq: jest.fn(() => ({
-            single: jest.fn(() => Promise.resolve({ data: partnership, error: null })),
+    from: jest.fn((table) => {
+      if (table === 'partnerships') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn(() => ({
+              single: jest.fn(() => Promise.resolve({ data: partnership, error: null })),
+            })),
           })),
-        }))
-        : undefined,
-      upsert: jest.fn(() => Promise.resolve({ error: null })),
-      update: jest.fn(() => ({ eq: jest.fn(() => Promise.resolve({ error: null })) })),
-    })),
+          upsert: jest.fn(() => Promise.resolve({ error: null })),
+          update: jest.fn(() => ({ eq: jest.fn(() => Promise.resolve({ error: null })) })),
+        };
+      }
+      if (table === 'partner_cheers') {
+        return {
+          insert: jest.fn((row) => {
+            calls.cheerRows.push(row);
+            return {
+              select: jest.fn(() => ({
+                single: jest.fn(() => Promise.resolve({
+                  data: { id: 'cheer1', ...row, created_at: '2026-07-06T10:02:00.000Z' },
+                  error: overrides.cheerInsertError || null,
+                })),
+              })),
+            };
+          }),
+        };
+      }
+      return {
+        upsert: jest.fn(() => Promise.resolve({ error: null })),
+        update: jest.fn(() => ({ eq: jest.fn(() => Promise.resolve({ error: null })) })),
+      };
+    }),
     ...overrides,
   };
 }
@@ -379,6 +402,42 @@ describe('sendCheer', () => {
           error: { status: 429, message: 'Edge Function returned a non-2xx status code' },
         })),
       },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'already_cheered' });
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
+
+  test('falls back to a direct RLS insert when the cheer edge function is unavailable', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: null,
+          error: { status: 404, message: 'Function not found' },
+        })),
+      },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1', kind: 'proud', reciprocal: true });
+    expect(r.ok).toBe(true);
+    expect(client._calls.cheerRows[0]).toMatchObject({
+      pair_id: 'p1',
+      sender_id: 'u1',
+      kind: 'proud',
+    });
+    expect(postEvent).toHaveBeenCalledWith('u1', 'partner_cheer_sent', { reciprocal: true });
+  });
+
+  test('normalises a direct-insert duplicate as already cheered', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: null,
+          error: { status: 404, message: 'Function not found' },
+        })),
+      },
+      cheerInsertError: { code: '23505', message: 'duplicate key value violates unique constraint' },
     });
     _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1' });

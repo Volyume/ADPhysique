@@ -178,6 +178,55 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.copySummary).toMatch(/not a body fat percentage/i);
   });
 
+  test('optional side photo quality cannot withhold a clear front and back score', () => {
+    const optionalBadSide = {
+      pose: 'side',
+      qualityScore: 0.2,
+      lightingScore: 0.2,
+      blurScore: 0.9,
+      framingScore: 0.2,
+      segmentationConfidence: 0.2,
+      signals: {
+        modelBacked: true,
+        quality: {
+          segmentationConfidence: 0.2,
+          framingScore: 0.2,
+          blurScore: 0.9,
+          lightingScore: 0.2,
+          poseConfidence: 0.2,
+          cameraTiltDegrees: 14,
+          backgroundSeparation: 0.2,
+        },
+        silhouetteRatios: {
+          waistToShoulder: 0.9,
+          waistToHip: 1.1,
+          waistToHeight: 0.4,
+          bodyAreaRatio: 0.5,
+        },
+        abstentionReasons: ['too_dark', 'whole_body_not_visible', 'camera_tilted'],
+      },
+    };
+    const assets = [...modelBackedAssets, optionalBadSide];
+    const estimate = estimateBodyFatFromScanAssets({
+      assets,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+    });
+    const out = analyseProgressScan({
+      assets,
+      modelEstimate: estimate,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+    });
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.abstentionReasons).toEqual([]);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
+    expect(out.copySummary).toMatch(/Volyume Physique Score/i);
+  });
+
   test('known bias flags concretely lower scan confidence, not just copy', () => {
     const base = computeScanConfidenceScore({
       assets: modelBackedAssets,

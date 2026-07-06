@@ -382,12 +382,12 @@ export default memo(SetEntry);
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   fieldLabelRow: {
     width: 90,
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
-    width: 104,
+    width: 92,
     flexShrink: 0,
     gap: 2,
   },
@@ -427,25 +427,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stepBtn: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface3,
   },
   stepBtnText: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     color: colors.primary,
     fontWeight: fontWeight.bold,
-    lineHeight: 28,
+    lineHeight: 24,
   },
   valueInput: {
     flex: 1,
     textAlign: 'center',
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     fontVariant: ['tabular-nums'],
   },
   valueInputGhost: {

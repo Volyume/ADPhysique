@@ -41,6 +41,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import useAppStore from '../store/useAppStore';
@@ -170,6 +171,7 @@ export default function ProgressGhostCapture({
   const userId = useAppStore((s) => s.user?.id);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const { height: viewportHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -369,6 +371,12 @@ export default function ProgressGhostCapture({
 
   const hasReference = !!referencePhoto?.uri;
   const compactOverlay = Number.isFinite(viewportHeight) && viewportHeight < 900;
+  const controlsInsetStyle = {
+    paddingBottom: Math.max(
+      compactOverlay ? spacing.lg : spacing.xxl,
+      (Number(insets?.bottom) || 0) + (compactOverlay ? spacing.md : spacing.lg),
+    ),
+  };
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Photo set' : 'Progress photo';
   const captureInstruction = subtitle || guidance.line;
@@ -452,7 +460,7 @@ export default function ProgressGhostCapture({
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
-      <View style={[styles.controls, compactOverlay && styles.controlsCompact]} pointerEvents="box-none">
+      <View style={[styles.controls, compactOverlay && styles.controlsCompact, controlsInsetStyle]} pointerEvents="box-none">
         {hasReference ? (
           <View style={[styles.overlayControls, compactOverlay && styles.overlayControlsCompact]}>
             <OpacitySlider value={opacity} onChange={setOpacity} />

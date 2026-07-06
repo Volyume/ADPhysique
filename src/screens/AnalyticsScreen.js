@@ -33,7 +33,6 @@ import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
-import { localWeekStartMs } from '../lib/dayKey';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan,
 // no comparison, no rank. Founder copy review at PR.
@@ -74,33 +73,6 @@ function recentMonthRecapParams(earliestWorkoutAt) {
     startMs: curMonthStart,
     endMs: startOfTomorrow,
     monthLabel: `${format(new Date(curMonthStart), 'MMMM')} so far`,
-  };
-}
-
-// S4 (world-class audit 04a: "Your week, in one card"): the same shape as
-// recentMonthRecapParams, one cadence down. localWeekStartMs is the app's one
-// week rule (local Monday 00:00, dayKey.js) so this story always describes
-// the same week the streak strip and weekly coach already do. The last
-// COMPLETED week when the user trained before this week began; otherwise the
-// current week so far (mirrors the month helper's first-month framing).
-function recentWeekRecapParams(earliestWorkoutAt) {
-  const now = new Date();
-  const curWeekStart = localWeekStartMs(now.getTime());
-  const prevWeekStart = curWeekStart - 7 * 86400000;
-  const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
-  if (earliestWorkoutAt != null && earliestWorkoutAt < curWeekStart) {
-    return {
-      variant: 'week',
-      startMs: prevWeekStart,
-      endMs: curWeekStart,
-      weekLabel: 'Last week',
-    };
-  }
-  return {
-    variant: 'week',
-    startMs: curWeekStart,
-    endMs: startOfTomorrow,
-    weekLabel: 'This week so far',
   };
 }
 
@@ -487,21 +459,6 @@ export default function AnalyticsScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             ) : null}
-            {/* S4 (world-class audit 04a): "Your week, in one card", the
-                YearOfLifts StoryCard deck at weekly frequency. Always offered
-                once there is a week to reflect on (no separate lock/gate);
-                a quiet week falls back to the deck's existing "No sessions
-                this week" empty state rather than ever being hidden. */}
-            <TouchableOpacity
-              style={styles.weekStoryRow}
-              onPress={() => navigation.navigate('RecapStory', recentWeekRecapParams(earliestWorkoutAt))}
-              accessibilityRole="button"
-              accessibilityLabel="Your week, in one card"
-            >
-              <Ionicons name="albums-outline" size={16} color={colors.primary} />
-              <Text style={styles.weekStoryText}>Your week, in one card</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
           </View>
         )}
 
@@ -1081,10 +1038,6 @@ const styles = StyleSheet.create({
   milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   milestoneCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  // S4: "Your week, in one card": a persistent (not milestone-gated) link
-  // alongside the streak strip, matching milestoneRow's layout.
-  weekStoryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs, marginTop: spacing.xs },
-  weekStoryText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeAll:      { ...type.label, color: colors.primary },
 

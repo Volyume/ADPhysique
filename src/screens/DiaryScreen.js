@@ -524,7 +524,6 @@ export default function DiaryScreen({ navigation }) {
     if (selectedDate === isoDate(new Date())) return inferMealSlotForHour(new Date().getHours(), keys);
     return keys[0] ?? null;
   }, [mealSlots, selectedDate]);
-  const likelyMealLabel = mealSlots.find((slot) => slot.key === likelyMealSlot)?.label || 'Meal 1';
   // E10 read-only lapse views: only render meals that actually have food. An
   // empty ladder slot exists to be added to; with the add affordances hidden
   // it would just be a dead header-only card.
@@ -1040,39 +1039,41 @@ export default function DiaryScreen({ navigation }) {
             Progress and You at the top, with day navigation as a
             secondary row rather than the whole header bar. */}
         <View style={styles.dayPagerCard}>
-          <TouchableOpacity
-            onPress={gotoYesterday}
-            hitSlop={12}
-            style={styles.dayPagerNav}
-            accessibilityRole="button"
-            accessibilityLabel="Previous day"
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          {/* NAV-3: the date itself is the jump-to-date affordance, opening
-              the native date picker so any day is reachable directly. */}
-          <TouchableOpacity
-            onPress={openDatePicker}
-            hitSlop={12}
-            style={styles.dateButton}
-            accessibilityRole="button"
-            accessibilityLabel={`${dateHeading}, ${dateSubCopy}. Jump to a date`}
-          >
-            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-            <View style={styles.dateCopy}>
-              <Text style={styles.dateLabel}>{dateHeading}</Text>
-              <Text style={styles.dateSubLabel}>{dateSubCopy}</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={gotoTomorrow}
-            hitSlop={12}
-            style={styles.dayPagerNav}
-            accessibilityRole="button"
-            accessibilityLabel="Next day"
-          >
-            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.dateCluster}>
+            <TouchableOpacity
+              onPress={gotoYesterday}
+              hitSlop={12}
+              style={styles.dayPagerNav}
+              accessibilityRole="button"
+              accessibilityLabel="Previous day"
+            >
+              <Ionicons name="chevron-back" size={21} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {/* NAV-3: the date itself is the jump-to-date affordance, opening
+                the native date picker so any day is reachable directly. */}
+            <TouchableOpacity
+              onPress={openDatePicker}
+              hitSlop={12}
+              style={styles.dateButton}
+              accessibilityRole="button"
+              accessibilityLabel={`${dateHeading}, ${dateSubCopy}. Jump to a date`}
+            >
+              <Ionicons name="calendar-outline" size={15} color={colors.primary} />
+              <View style={styles.dateCopy}>
+                <Text style={styles.dateLabel}>{dateHeading}</Text>
+                <Text style={styles.dateSubLabel}>{dateSubCopy}</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={gotoTomorrow}
+              hitSlop={12}
+              style={styles.dayPagerNav}
+              accessibilityRole="button"
+              accessibilityLabel="Next day"
+            >
+              <Ionicons name="chevron-forward" size={21} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
           {!isViewingToday ? (
             <TouchableOpacity onPress={gotoToday} hitSlop={10} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
               <Text style={styles.todayPillText}>Today</Text>
@@ -1086,7 +1087,7 @@ export default function DiaryScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Open diary tools"
             >
-              <Ionicons name="options-outline" size={20} color={colors.textPrimary} />
+              <Ionicons name="options-outline" size={19} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -1192,8 +1193,8 @@ export default function DiaryScreen({ navigation }) {
           ) : (
             <EmptyDiary
               onAdd={() => addFood(likelyMealSlot || 'meal_1')}
-              addLabel={`Log ${likelyMealLabel}`}
-              addAccessibilityLabel={`Log ${likelyMealLabel}`}
+              addLabel="Add food"
+              addAccessibilityLabel="Add food"
               onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
               onSuggested={!yesterdayHasFood ? goToSuggested : undefined}
               onPlanDay={() => navigation.navigate('MealPlan')}
@@ -1278,14 +1279,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals: choose today or the week, review the meals, then add them to your diary"
+                  accessibilityLabel="Build Meal Plan: choose today or the week, review the meals, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Choose today or the week. Nothing is added until you confirm.</Text>
+                    <Text style={styles.buildPlanLabel}>Build Meal Plan</Text>
+                    <Text style={styles.buildPlanSub}>Create today or the week from your targets. You review it before anything is added.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1804,49 +1805,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.xs,
     marginBottom: spacing.md,
   },
+  dateCluster: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface2,
+    padding: spacing.xxs,
+  },
   dayPagerNav: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
   },
   dateButton: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
   },
   dateCopy: { alignItems: 'center', justifyContent: 'center', minWidth: 0 },
   dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
   dateSubLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: -2 },
   todayPill: {
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
   },
   todayPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   dayPagerMore: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     backgroundColor: colors.surface2,
   },
   scroll: { flex: 1 },

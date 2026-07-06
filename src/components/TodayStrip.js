@@ -45,7 +45,7 @@ import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
-  buildMealSlots, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY,
+  buildMealSlots, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY,
 } from '../lib/food/mealSlots';
 import {
   stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs, formatBodyWeightShort,
@@ -328,18 +328,16 @@ export default function TodayStrip({
   }
 
   // D1: the verb chip. No number, no progress, no valence. The visible label is
-  // a plain "Log" so the cell matches WEIGHT and CARDIO exactly (founder review
-  // 2026-07-03: the meal-slot number read as odd and inconsistent beside the
-  // clean cardio "Log", and the extra text crowded the cell). The tap still
-  // targets the time-inferred slot, and the slot name stays in the
-  // accessibility label so screen-reader users keep the context.
+  // a plain "Log" so the cell matches WEIGHT and CARDIO exactly. The tap still
+  // targets the time-inferred slot, but the label stays human rather than
+  // exposing internal "Meal 2 / Meal 4" slot names.
   function MealCell() {
     return (
       <TouchableOpacity
         style={styles.cellInner}
         onPress={() => onLogMeal(mealSlot)}
         accessibilityRole="button"
-        accessibilityLabel={`Log ${mealSlotLabel(mealSlot)}`}
+        accessibilityLabel="Log food"
       >
         <Text style={styles.cellLabel}>MEAL</Text>
         <View style={styles.loggedRow}>

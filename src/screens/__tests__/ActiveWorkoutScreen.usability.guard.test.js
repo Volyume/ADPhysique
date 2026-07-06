@@ -53,8 +53,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel={spokenSetLabel}');
   });
 
-  test('set entry keeps a stable label column beside the thumb steppers', () => {
-    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 104,\s*flexShrink: 0,\s*gap: 2,/);
+  test('set entry stays compact while keeping thumb-sized steppers', () => {
+    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 92,\s*flexShrink: 0,\s*gap: 2,/);
+    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 44,\s*height: 44,/);
   });
 
   test('distance time input is announced as time, not duration', () => {

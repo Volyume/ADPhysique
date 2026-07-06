@@ -429,43 +429,43 @@ export default function PlanLibraryScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Plan library" />
 
-      {/* Search */}
-      <SearchBar
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search plans"
-        style={styles.searchRow}
-      />
+      <View style={styles.filterPanel}>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search plans"
+          style={styles.searchRow}
+        />
 
-      {/* Collection chips */}
-      <FlatList
-        horizontal
-        data={COLLECTIONS}
-        keyExtractor={c => c.key}
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipsList}
-        contentContainerStyle={styles.chipsContent}
-        renderItem={({ item }) => {
-          const active = activeCollection === item.key;
-          return (
-            <Chip
-              label={item.label}
-              icon={item.key === 'division' ? 'trophy-outline' : undefined}
-              selected={active}
-              onPress={() => {
-                setActiveCollection(item.key);
-                if (item.key !== 'division') setSelectedDivision(null);
-                listRef.current?.scrollToOffset({ offset: 0, animated: false });
-              }}
-              accessibilityRole="radio"
-              accessibilityLabel={item.label}
-              style={styles.collectionChip}
-              labelStyle={styles.collectionChipText}
-              selectedLabelStyle={styles.collectionChipTextActive}
-            />
-          );
-        }}
-      />
+        <FlatList
+          horizontal
+          data={COLLECTIONS}
+          keyExtractor={c => c.key}
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipsList}
+          contentContainerStyle={styles.chipsContent}
+          renderItem={({ item }) => {
+            const active = activeCollection === item.key;
+            return (
+              <Chip
+                label={item.label}
+                icon={item.key === 'division' ? 'trophy-outline' : undefined}
+                selected={active}
+                onPress={() => {
+                  setActiveCollection(item.key);
+                  if (item.key !== 'division') setSelectedDivision(null);
+                  listRef.current?.scrollToOffset({ offset: 0, animated: false });
+                }}
+                accessibilityRole="radio"
+                accessibilityLabel={item.label}
+                style={styles.collectionChip}
+                labelStyle={styles.collectionChipText}
+                selectedLabelStyle={styles.collectionChipTextActive}
+              />
+            );
+          }}
+        />
+      </View>
 
       {/* Division grid, shown when Division prep is selected */}
       {showDivisionGrid && (
@@ -704,16 +704,25 @@ export default function PlanLibraryScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
+  filterPanel: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+  },
   searchRow: {
-    margin: spacing.lg, marginBottom: spacing.sm,
+    margin: 0,
   },
 
-  chipsList: { height: 52, flexShrink: 0 },
+  chipsList: { maxHeight: 38, flexShrink: 0 },
   chipsContent: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    paddingVertical: 0,
     gap: spacing.sm, alignItems: 'center',
   },
-  collectionChip: { paddingVertical: 7 },
+  collectionChip: { paddingVertical: 6 },
   collectionChipText: { ...type.label, color: colors.textSecondary },
   collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
@@ -746,7 +755,7 @@ const styles = StyleSheet.create({
   divisionDescText: { ...type.bodySm, color: colors.textSecondary },
 
   // Plan list
-  listContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xxl },
 
   // Quiz banner. Card owns background/radius/padding/border here.
   quizBanner: {

@@ -14,4 +14,11 @@ describe('PlanLibraryScreen shared empty states', () => {
     );
     expect(source).not.toMatch(/styles\.empty(?:Title|Text)?/);
   });
+
+  test('keeps search and category chips in one compact filter band', () => {
+    expect(source).toMatch(/<View style=\{styles\.filterPanel\}>[\s\S]*<SearchBar[\s\S]*<FlatList/);
+    expect(source).toMatch(/filterPanel: \{[\s\S]*backgroundColor: colors\.surface[\s\S]*borderBottomColor: colors\.borderSubtle/);
+    expect(source).toMatch(/chipsList: \{ maxHeight: 38, flexShrink: 0 \}/);
+    expect(source).not.toMatch(/chipsList: \{ height: 52/);
+  });
 });
