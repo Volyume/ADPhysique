@@ -65,12 +65,21 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
 
   // Time stepper for the duration / distance schemas. Steps the seconds count
   // (stored in value.reps) by `delta` seconds, clamped to [0, 5999] (99:59).
-  function adjustSeconds(delta) {
+  function adjustSecondsFrom(v, delta) {
     haptics.selection();
-    const raw = value.reps;
+    const raw = v.reps;
     const current = typeof raw === 'number' ? raw : (parseInt(raw, 10) || 0);
     const next = Math.min(Math.max(current + delta, 0), 5999);
-    onChange({ ...value, reps: next, isGhost: false });
+    onChange({ ...v, reps: next, isGhost: false });
+  }
+
+  function adjustSeconds(delta) {
+    adjustSecondsFrom(valueRef.current, delta);
+  }
+
+  function startSecondsRepeat(delta) {
+    stopRepeat();
+    repeatRef.current = setInterval(() => adjustSecondsFrom(valueRef.current, delta), 200);
   }
 
   const liveWeight = parseFloat(value.weight);
@@ -99,7 +108,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onPressOut={stopRepeat}
             delayLongPress={300}
             accessibilityRole="button"
-            accessibilityLabel="Decrease weight"
+            accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
@@ -137,7 +146,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onPressOut={stopRepeat}
             delayLongPress={300}
             accessibilityRole="button"
-            accessibilityLabel="Increase weight"
+            accessibilityLabel={`Increase weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
@@ -158,8 +167,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjustSeconds(-5)}
+            onLongPress={() => startSecondsRepeat(-5)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Decrease time"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
@@ -178,8 +191,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjustSeconds(5)}
+            onLongPress={() => startSecondsRepeat(5)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Increase time"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
@@ -201,8 +218,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('weight', -1)}
+            onLongPress={() => startRepeat('weight', -1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Decrease distance"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
@@ -222,8 +243,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('weight', 1)}
+            onLongPress={() => startRepeat('weight', 1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Increase distance"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
@@ -237,8 +262,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjustSeconds(-5)}
+            onLongPress={() => startSecondsRepeat(-5)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Decrease time"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
@@ -257,8 +286,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjustSeconds(5)}
+            onLongPress={() => startSecondsRepeat(5)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Increase time"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
@@ -290,7 +323,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onPressOut={stopRepeat}
             delayLongPress={300}
             accessibilityRole="button"
-            accessibilityLabel="Decrease reps"
+            accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
@@ -323,7 +356,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onPressOut={stopRepeat}
             delayLongPress={300}
             accessibilityRole="button"
-            accessibilityLabel="Increase reps"
+            accessibilityLabel="Increase reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>

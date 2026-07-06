@@ -1300,9 +1300,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         exerciseId: exercise?.id,
         setType: currentSet.setType,
       });
+      const retryAction = currentSet.setType === 'warmup'
+        ? 'Done'
+        : isClusterType(currentSet.setType)
+          ? 'Start cluster'
+          : 'Log set';
       appAlert(
         'Couldn\'t save set',
-        'Your set wasn\'t saved. Tap Log set to retry. Tell me if this keeps happening: ' + (e?.message ?? 'unknown error'),
+        `Your set wasn't saved. Tap ${retryAction} to retry. Tell me if this keeps happening: ${e?.message ?? 'unknown error'}`,
       );
     } finally {
       setSaving(false);
@@ -1851,6 +1856,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     : (readinessTweak?.acknowledgement && currentExerciseIndex === 0
       ? readinessTweak.acknowledgement
       : null);
+  const activeExerciseType = exercise?.exerciseType || 'weight_reps';
+  const firstSetPrompt = (() => {
+    if (activeExerciseType === 'duration') return 'Enter the time, then tap Log set when done.';
+    if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
+    if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
+    return 'Enter weight and reps, then tap Log set when done.';
+  })();
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
@@ -1991,7 +2003,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   audit('workout.overflow.open', { exerciseId: exercise?.id });
                   setShowOverflow(true);
                 }}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="More options for this exercise"
               >
@@ -2285,8 +2297,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  Choose a weight and reps, then tap Log set when done.
-                  Open More above for how to do this exercise correctly.
+                  {firstSetPrompt}
+                  Open the menu above for how to do this exercise correctly.
                 </Text>
               </View>
             )}
@@ -2302,7 +2314,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               units={units}
               isWarmup={currentSet.setType === 'warmup'}
               onSubmitComplete={handleCompleteSetPress}
-              exerciseType={exercise?.exerciseType || 'weight_reps'}
+              exerciseType={activeExerciseType}
               weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
             />
 
@@ -2428,7 +2440,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     set={s}
                     units={units}
                     progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
-                    exerciseType={exercise?.exerciseType || 'weight_reps'}
+                    exerciseType={activeExerciseType}
                     onEdit={openEditSet}
                   />
                 </AnimatedRow>
@@ -2456,7 +2468,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityLabel="Add note to set"
             >
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Note</Text>
+              <Text style={styles.actionBtnText}>Add note</Text>
             </TouchableOpacity>
           </View>
 
@@ -3281,7 +3293,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   onChange={setEditValue}
                   units={units}
                   isWarmup={editValue.setType === 'warmup'}
-                  exerciseType={exercise?.exerciseType || 'weight_reps'}
+                  exerciseType={activeExerciseType}
                   weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                 />
               )}
@@ -3509,7 +3521,7 @@ const styles = StyleSheet.create({
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 44, borderWidth: 1, borderColor: colors.border },
   actionBtnText: { ...type.label, color: colors.textSecondary },
-  overflowBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  overflowBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
