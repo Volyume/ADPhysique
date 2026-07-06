@@ -163,6 +163,13 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Add a saved meal"/);
     expect(SCREEN_SOURCE).toMatch(/name="bookmark-outline"/);
   });
+
+  test('the no-target suggested state can open Nutrition Targets across tabs', () => {
+    expect(SCREEN_SOURCE).toMatch(/import \{ navigateCrossTab \} from '\.\.\/navigation\/navigateCrossTab';/);
+    expect(SCREEN_SOURCE).toMatch(/Set your daily targets to get meal ideas\./);
+    expect(SCREEN_SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionTargets'\)/);
+    expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Set nutrition targets"/);
+  });
 });
 
 describe('FoodSearchScreen confirmLog (A2)', () => {
