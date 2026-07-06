@@ -83,18 +83,18 @@ export default function PhotoDetailsSheet({
         accessibilityLabel="Dismiss photo details"
       >
         <View style={styles.sheet} onStartShouldSetResponder={() => true}>
-          <Text style={styles.sheetTitle}>Check-In details</Text>
+          <Text style={styles.sheetTitle}>Photo details</Text>
           <Text style={styles.sheetIntro}>
-            Tag the photo so your timeline can group like-for-like check-ins. Keep the setup consistent next time.
+            Add the date and pose so Progress Photos can keep this image in the right place.
           </Text>
           <View style={styles.contextBox}>
             <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
             <Text style={styles.contextText}>
-              Date and pose keep comparisons honest by placing this photo in the right Check-In.
+              Date and pose make future reviews fairer by grouping photos from the same day together.
             </Text>
           </View>
 
-          <Text style={styles.helper}>When was this check-in taken?</Text>
+          <Text style={styles.helper}>When was this photo taken?</Text>
           <TouchableOpacity
             style={styles.dateField}
             onPress={() => setPickerOpen(true)}
@@ -142,11 +142,11 @@ export default function PhotoDetailsSheet({
               accessibilityLabel="Cancel adding the photo"
             />
             <Button
-              title="Save Check-In"
+              title="Save photo"
               size="sm"
               fullWidth={false}
               onPress={() => onConfirm?.({ takenAt: dateMs, pose })}
-              accessibilityLabel="Save the check-in"
+              accessibilityLabel="Save the progress photo"
             />
           </View>
         </View>

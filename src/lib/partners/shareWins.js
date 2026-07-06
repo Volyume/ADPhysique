@@ -45,6 +45,29 @@ export const SHARE_WIN_DELIVERY_GUARDRAILS = Object.freeze([
   'Keep revoke and delete controls attached to the card.',
 ]);
 
+export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
+  Object.freeze({
+    key: 'choose',
+    title: 'Choose the moment',
+    body: 'Pick one workout, record, block milestone or exported progress card.',
+  }),
+  Object.freeze({
+    key: 'preview',
+    title: 'Preview exact card',
+    body: 'Show the exact title, summary and privacy receipt before anything leaves the device.',
+  }),
+  Object.freeze({
+    key: 'partner',
+    title: 'Confirm one partner',
+    body: 'Send to one selected partner only. No feed, no audience and no automatic repeats.',
+  }),
+  Object.freeze({
+    key: 'control',
+    title: 'Keep control',
+    body: 'Attach revoke and delete controls to every card once delivery exists.',
+  }),
+]);
+
 export const SHARE_WIN_FORBIDDEN_FIELDS = Object.freeze([
   'sets',
   'reps',
@@ -188,6 +211,19 @@ export function buildShareWinPreview(typeKey, payload = {}) {
     private: type.private,
     confirmation: 'Not sent until you choose one partner and approve this exact card.',
     guardrails: SHARE_WIN_DELIVERY_GUARDRAILS,
+  });
+}
+
+export function buildShareWinReviewReceipt(preview) {
+  if (!preview || typeof preview !== 'object' || !validateShareWinDraft(preview.draft)) return null;
+  return Object.freeze({
+    title: 'Review before sending',
+    status: preview.status,
+    steps: SHARE_WIN_REVIEW_STEPS,
+    visibleToPartner: preview.shared,
+    remainsPrivate: preview.private,
+    consentLine: preview.confirmation,
+    finalCheck: 'Future send controls must show the partner name, card type and exact card copy on one screen.',
   });
 }
 

@@ -50,6 +50,7 @@ import {
   SHARE_WIN_POLICY,
   SHARE_WIN_TYPES,
   buildShareWinExamplePreviews,
+  buildShareWinReviewReceipt,
 } from '../lib/partners/shareWins';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
@@ -280,26 +281,25 @@ function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) 
 
 function PartnerShareWinsCard({ onOpen }) {
   return (
-    <View style={styles.shareWinsCard}>
-      <View style={styles.shareWinsHead}>
+    <TouchableOpacity
+      onPress={onOpen}
+      style={styles.shareWinsRow}
+      activeOpacity={0.85}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel="Review shareable wins"
+    >
+      <View style={styles.shareWinsIcon}>
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.shareWinsTitle}>Share wins</Text>
       </View>
-      <Text style={styles.shareWinsText}>
-        {SHARE_WIN_POLICY.defaultState}. Share only a workout, record, block milestone or progress card you choose.
-        Nothing becomes a feed.
-      </Text>
-      <TouchableOpacity
-        onPress={onOpen}
-        style={styles.shareWinsButton}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel="Review shareable wins"
-      >
-        <Text style={styles.shareWinsButtonText}>Review shareable wins</Text>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
-      </TouchableOpacity>
-    </View>
+      <View style={styles.shareWinsRowCopy}>
+        <Text style={styles.shareWinsTitle}>Share wins</Text>
+        <Text style={styles.shareWinsText}>
+          {SHARE_WIN_POLICY.defaultState}. Preview one card first. Nothing becomes a feed.
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+    </TouchableOpacity>
   );
 }
 
@@ -1131,6 +1131,7 @@ function ShareWinsSheetBody() {
   const examplePreviews = buildShareWinExamplePreviews();
   const [selectedType, setSelectedType] = useState(examplePreviews[0]?.type || 'workout_summary');
   const selectedPreview = examplePreviews.find((preview) => preview.type === selectedType) || examplePreviews[0];
+  const receipt = selectedPreview ? buildShareWinReviewReceipt(selectedPreview) : null;
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Shareable wins</Text>
@@ -1171,18 +1172,41 @@ function ShareWinsSheetBody() {
           <Text style={styles.shareWinExampleTitle}>{selectedPreview.draft.title}</Text>
           <Text style={styles.shareWinExampleSummary}>{selectedPreview.draft.summary}</Text>
           <Text style={styles.shareWinExampleDetail}>{selectedPreview.draft.detail}</Text>
-          <View style={styles.shareWinBoundary}>
-            <Text style={styles.shareWinBoundaryLabel}>Partner sees</Text>
-            <Text style={styles.shareWinBoundaryText}>{selectedPreview.shared}</Text>
+          <View style={styles.shareWinBoundaryGrid}>
+            <View style={styles.shareWinBoundary}>
+              <Text style={styles.shareWinBoundaryLabel}>Partner sees</Text>
+              <Text style={styles.shareWinBoundaryText}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
+            </View>
+            <View style={styles.shareWinBoundary}>
+              <Text style={styles.shareWinBoundaryLabel}>Stays private</Text>
+              <Text style={styles.shareWinBoundaryText}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
+            </View>
           </View>
-          <View style={styles.shareWinBoundary}>
-            <Text style={styles.shareWinBoundaryLabel}>Stays private</Text>
-            <Text style={styles.shareWinBoundaryText}>{selectedPreview.private}</Text>
+          <Text style={styles.shareWinExampleConsent}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
+        </View>
+      ) : null}
+      {receipt ? (
+        <View style={styles.shareWinReceipt}>
+          <View style={styles.shareWinReceiptHead}>
+            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+            <Text style={styles.shareWinSectionTitle}>{receipt.title}</Text>
           </View>
-          <Text style={styles.shareWinExampleConsent}>{selectedPreview.confirmation}</Text>
+          {receipt.steps.map((step, index) => (
+            <View key={step.key} style={styles.shareWinReceiptStep}>
+              <View style={styles.shareWinReceiptNumber}>
+                <Text style={styles.shareWinReceiptNumberText}>{index + 1}</Text>
+              </View>
+              <View style={styles.shareWinReceiptCopy}>
+                <Text style={styles.shareWinReceiptTitle}>{step.title}</Text>
+                <Text style={styles.shareWinReceiptBody}>{step.body}</Text>
+              </View>
+            </View>
+          ))}
+          <Text style={styles.shareWinReceiptFinal}>{receipt.finalCheck}</Text>
         </View>
       ) : null}
       <View style={styles.shareWinRules}>
+        <Text style={styles.shareWinSectionTitle}>Hard boundaries</Text>
         {SHARE_WIN_CARD_RULES.map((rule) => (
           <View key={rule} style={styles.shareWinRuleRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
@@ -1190,21 +1214,10 @@ function ShareWinsSheetBody() {
           </View>
         ))}
       </View>
-      <View style={styles.shareWinExamples}>
-        <Text style={styles.shareWinSectionTitle}>Delivery guardrails</Text>
-        {selectedPreview?.guardrails?.map((guardrail) => (
-          <View key={guardrail} style={styles.shareWinExampleCard}>
-            <Text style={styles.shareWinExampleDetail}>{guardrail}</Text>
-          </View>
-        ))}
-      </View>
-      {SHARE_WIN_TYPES.map((typeItem) => (
-        <View key={typeItem.key} style={styles.shareWinType}>
-          <Text style={styles.shareWinTitle}>{typeItem.title}</Text>
-          <Text style={styles.shareWinCopy}>Can share: {typeItem.shared}</Text>
-          <Text style={styles.shareWinCopy}>Stays private: {typeItem.private}</Text>
-        </View>
-      ))}
+      <Text style={styles.shareWinSectionTitle}>Eligible cards</Text>
+      <Text style={styles.shareWinFooter}>
+        {SHARE_WIN_TYPES.map((typeItem) => typeItem.title).join(', ')}. Each card carries its own visible/private receipt before sending.
+      </Text>
       <Text style={styles.shareWinFooter}>{SHARE_WIN_POLICY.excluded}</Text>
     </View>
   );
@@ -1488,23 +1501,29 @@ const styles = StyleSheet.create({
   supportLabel: { ...type.caption, color: colors.textSecondary },
   supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
   supportFoot: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
-  shareWinsCard: {
-    gap: spacing.sm,
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  shareWinsHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  shareWinsTitle: { ...type.label, color: colors.textPrimary },
-  shareWinsText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
-  shareWinsButton: {
+  shareWinsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 44,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    minHeight: 72,
   },
-  shareWinsButtonText: { ...type.label, color: colors.primary },
+  shareWinsIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  shareWinsRowCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  shareWinsTitle: { ...type.label, color: colors.textPrimary },
+  shareWinsText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
 
   // D5-B3 reconnection surface
   reconnect: {
@@ -1600,7 +1619,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
+  shareWinBoundaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   shareWinBoundary: {
+    flexGrow: 1,
+    flexBasis: '48%',
+    minWidth: 136,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingTop: spacing.xs,
@@ -1615,26 +1642,44 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   shareWinRuleText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
-  shareWinExamples: { gap: spacing.sm },
   shareWinSectionTitle: { ...type.label, color: colors.textPrimary },
-  shareWinExampleCard: {
-    gap: spacing.xxs,
+  shareWinReceipt: {
+    gap: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  shareWinReceiptHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  shareWinReceiptStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  shareWinReceiptNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  shareWinReceiptNumberText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  shareWinReceiptCopy: { flex: 1, minWidth: 0, gap: 2 },
+  shareWinReceiptTitle: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  shareWinReceiptBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinReceiptFinal: {
+    ...type.caption,
+    color: colors.textPrimary,
+    lineHeight: 18,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
     padding: spacing.md,
   },
   shareWinExampleTitle: { ...type.label, color: colors.textPrimary },
   shareWinExampleSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
   shareWinExampleDetail: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinExampleConsent: { ...type.caption, color: colors.primary, lineHeight: 18 },
-  shareWinType: {
-    gap: spacing.xxs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-  },
-  shareWinTitle: { ...type.label, color: colors.textPrimary },
-  shareWinCopy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinFooter: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
 
   // Moment card

@@ -120,7 +120,7 @@ function allTexts(tree) {
 }
 
 async function chooseLibraryOnAdd(tree) {
-  await pressLabel(tree, 'Capture check-in');
+  await pressLabel(tree, 'Add progress photos');
   await flush();
   await pressLabel(tree, 'Choose from library');
 }
@@ -130,7 +130,7 @@ beforeEach(() => jest.clearAllMocks());
 test('capture route sheet distinguishes Physique Scan from single-photo routes', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Capture check-in');
+  await pressLabel(tree, 'Add progress photos');
 
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
@@ -138,6 +138,9 @@ test('capture route sheet distinguishes Physique Scan from single-photo routes',
   expect(copy).toContain('Same room, lighting, camera height and distance matter more than forcing a read.');
   expect(copy).toContain('Leanness band, progress signal and scan confidence');
   expect(copy).toContain('Not an exact body-fat percentage');
+  expect(copy).toContain('Front relaxed');
+  expect(copy).toContain('Back relaxed');
+  expect(copy).toContain('Set the real capture date');
   expect(copy).toContain('Photos stay private unless you choose to share or export.');
   expect(hasPressableLabel(tree, 'Start Physique Scan')).toBe(true);
   expect(hasPressableLabel(tree, 'Open guided camera')).toBe(true);
@@ -150,7 +153,7 @@ test('picking an image opens the details step and does NOT save before confirm',
   await chooseLibraryOnAdd(tree);
   await flush();
   // Details sheet is up (its Save button exists); nothing saved yet.
-  const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the check-in');
+  const save = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Save the progress photo');
   expect(save.length).toBeGreaterThan(0);
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
@@ -161,7 +164,7 @@ test('confirming with the default date saves then snapshots weight for today', a
   await chooseLibraryOnAdd(tree);
   await flush();
 
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   await flush();
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
@@ -194,7 +197,7 @@ test('setting the date to the past indexes the photo under that past day (the fo
   const pastDay = new Date(wk.getFullYear(), wk.getMonth(), wk.getDate()).getTime();
   await act(async () => { dtp.props.onChange({ type: 'set' }, new Date(pastDay)); });
 
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   await flush();
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
@@ -210,7 +213,7 @@ test('a pro-to-free flip with the details sheet open blocks the save (live-tier 
   // Tier lapses while the sheet is open.
   useAppStore.getState = () => ({ tier: 'free', user: { id: USER_ID } });
 
-  await pressLabel(tree, 'Save the check-in');
+  await pressLabel(tree, 'Save the progress photo');
   await flush();
 
   expect(saveProgressPhoto).not.toHaveBeenCalled();

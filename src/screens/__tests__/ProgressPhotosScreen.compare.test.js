@@ -31,6 +31,51 @@ jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 // global mock, so stub the vocabulary module itself.
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+jest.mock('@shopify/flash-list', () => ({
+  FlashList: ({
+    data = [],
+    renderItem,
+    ListHeaderComponent,
+    ListEmptyComponent,
+    ...props
+  }) => {
+    const React = require('react');
+    const renderComponent = (Component, key) => {
+      if (!Component) return null;
+      if (typeof Component === 'function') return React.createElement(Component, { key });
+      return React.cloneElement(Component, { key });
+    };
+    const children = [
+      renderComponent(ListHeaderComponent, 'header'),
+      ...(data.length
+        ? data.map((item, index) => React.createElement(React.Fragment, { key: item.key || index }, renderItem({ item, index })))
+        : [renderComponent(ListEmptyComponent, 'empty')]),
+    ].filter(Boolean);
+    return React.createElement('FlatList', {
+      ...props,
+      data,
+      renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
+    }, children);
+  },
+  AnimatedFlashList: ({
+    data = [],
+    renderItem,
+    ListHeaderComponent,
+    ListEmptyComponent,
+    ...props
+  }) => {
+    const React = require('react');
+    return React.createElement('FlatList', {
+      ...props,
+      data,
+      renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
+    });
+  },
+}));
 jest.mock('../../lib/wellbeing', () => ({
   WELLBEING_KEY: jest.requireActual('../../lib/wellbeing').WELLBEING_KEY,
   isCalm: (m) => m === 'calm',
@@ -196,11 +241,11 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(dateText).toBeTruthy();
   });
 
-  test('partial Check-In cards show setup quality and can complete the next missing pose', async () => {
+  test('partial progress photo cards show setup quality and can add the next missing pose', async () => {
     const tree = await render([NEW]);
     const card = checkInFor(tree, NEW);
     const quality = findElement(card, (n) => n.props && n.props.children === 'Partial setup');
-    const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Complete this Check-In with a Front photo');
+    const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Add a Front photo to this photo set');
 
     expect(quality).toBeTruthy();
     expect(complete).toBeTruthy();
@@ -209,11 +254,11 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
 
-  test('next best action guides the user to complete a partial latest Check-In', async () => {
+  test('next best action guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Next best action');
-    expect(text).toContain('Complete latest Check-In');
+    expect(text).toContain('Finish latest photo set');
     await press(tree, 'Next best action: Complete with Front');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
@@ -222,10 +267,10 @@ describe('ProgressPhotosScreen timeline', () => {
   test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Physique Studio');
-    expect(text).toContain('Build your visual baseline');
-    expect(text).toContain('Start with one full-body front photo');
-    expect(text).toContain('Capture Check-In');
+    expect(text).toContain('Progress Photos');
+    expect(text).toContain('Start Progress Photos');
+    expect(text).toContain('Physique Scan can give a leanness band');
+    expect(text).toContain('Add photos');
   });
 });
 
@@ -386,11 +431,11 @@ describe('ProgressPhotosScreen suppression copy', () => {
 describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('free tier hides the add button and says the state plainly', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Capture check-in')).toBeUndefined();
+    expect(findPressable(tree, 'Add progress photos')).toBeUndefined();
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
-  test('free tier: a Check-In card is inert (no editable viewer, no delete path)', async () => {
+  test('free tier: a progress photo card is inert (no editable viewer, no delete path)', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
     const checkIn = checkInFor(tree, NEW);
     expect(checkIn.props.onPress).toBeUndefined();
@@ -409,7 +454,7 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
 
   test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
-    expect(findPressable(tree, 'Capture check-in')).toBeDefined();
+    expect(findPressable(tree, 'Add progress photos')).toBeDefined();
     await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });

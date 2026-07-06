@@ -415,7 +415,7 @@ export default function BeforeAfterShareSheet({
         {/* Choose two photos (default earliest and latest). Older reads on the
             left, newer on the right, whatever the tap order was. */}
         <View style={styles.section}>
-          <SectionLabel>{usingScans ? 'Choose Scans' : 'Choose Check-Ins'}</SectionLabel>
+          <SectionLabel>{usingScans ? 'Choose Scans' : 'Choose Photos'}</SectionLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
             {sorted.map((item) => {
               const on = selected.includes(item.name);
@@ -441,8 +441,8 @@ export default function BeforeAfterShareSheet({
           </ScrollView>
           <Text style={styles.hint}>
             {pairReady
-              ? `Ready with two ${usingScans ? 'scans' : 'check-ins'}.`
-              : `Choose two ${usingScans ? 'scans' : 'check-ins'} for the card.`}
+              ? `Ready with two ${usingScans ? 'scans' : 'photos'}.`
+              : `Choose two ${usingScans ? 'scans' : 'photos'} for the card.`}
           </Text>
         </View>
 

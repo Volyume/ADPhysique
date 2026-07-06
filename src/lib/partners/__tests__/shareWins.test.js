@@ -3,11 +3,13 @@ import {
   SHARE_WIN_DELIVERY_GUARDRAILS,
   SHARE_WIN_FORBIDDEN_FIELDS,
   SHARE_WIN_POLICY,
+  SHARE_WIN_REVIEW_STEPS,
   SHARE_WIN_TYPES,
   buildShareWinExampleDrafts,
   buildShareWinExamplePreviews,
   buildShareWinDraft,
   buildShareWinPreview,
+  buildShareWinReviewReceipt,
   isValidShareWinType,
   shareWinDraftHasForbiddenFields,
   shareWinTypeByKey,
@@ -44,6 +46,18 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_CARD_RULES).toContain('Future delivery must support revoke and delete.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact card before sending.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one card only. No background feed is created.');
+    expect(SHARE_WIN_REVIEW_STEPS.map((step) => step.key)).toEqual([
+      'choose',
+      'preview',
+      'partner',
+      'control',
+    ]);
+    expect(SHARE_WIN_REVIEW_STEPS.map((step) => step.title)).toEqual([
+      'Choose the moment',
+      'Preview exact card',
+      'Confirm one partner',
+      'Keep control',
+    ]);
   });
 
   test('each category states both shared and private boundaries', () => {
@@ -146,6 +160,25 @@ describe('partner shareable wins policy', () => {
     expect(preview.guardrails).toContain('Keep revoke and delete controls attached to the card.');
     expect(Object.keys(preview.draft)).not.toContain('bodyWeight');
     expect(buildShareWinPreview('food_diary', {})).toBeNull();
+  });
+
+  test('builds a review receipt around the selected preview', () => {
+    const preview = buildShareWinPreview('workout_summary', {
+      workoutName: 'Pull session',
+      completedAt: '6 July 2026',
+    });
+    const receipt = buildShareWinReviewReceipt(preview);
+    expect(receipt).toMatchObject({
+      title: 'Review before sending',
+      status: 'Preview only',
+      visibleToPartner: 'Workout name, date and completed status.',
+      remainsPrivate: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+      consentLine: 'Not sent until you choose one partner and approve this exact card.',
+    });
+    expect(receipt.steps).toBe(SHARE_WIN_REVIEW_STEPS);
+    expect(receipt.finalCheck).toContain('partner name');
+    expect(receipt.finalCheck).toContain('exact card copy');
+    expect(buildShareWinReviewReceipt(null)).toBeNull();
   });
 
   test('builds safe preview examples for every share-win type', () => {
