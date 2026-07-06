@@ -83,17 +83,11 @@ jobs:
         # Codex audit 2026-05-26 F11.
         run: npm ci --legacy-peer-deps
 
-      # Run the expensive JS quality gate BEFORE the native Gradle build. If
-      # type-check, lint, imports, or Jest fail, fail quickly instead of
-      # compiling APK/AAB first and then dropping the run at the old
-      # post-build "Release gate" step.
-      - name: Release quality gate
-        run: npm run release:quality
-
-      # Reporting-only by design. The accepted Expo/RN build-chain advisories
-      # stay visible in logs without failing branch APK delivery.
-      - name: Production audit report
-        run: npm run release:audit
+      # This workflow is the artifact builder. Main CI owns Jest, lint,
+      # type-checking, Expo Doctor, and dependency audit so a transient or
+      # unrelated JS quality failure does not block branch APK/AAB delivery for
+      # device testing. The native build below still fails on real compile,
+      # signing, packaging, or compatibility errors.
 
       # Fail loudly if backend credentials aren't set. Without these, Metro
       # bundles empty strings and the app crashes at first launch with
