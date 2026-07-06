@@ -103,7 +103,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Compare scans</Text>
-            <Text style={styles.subtitle}>Pose-matched scan entries with trend-only privacy controls.</Text>
+            <Text style={styles.subtitle}>Pose-matched scan entries. Trend, confidence and matched photos, not body-fat.</Text>
           </View>
           <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
             <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -122,7 +122,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Compare scans</Text>
-          <Text style={styles.subtitle}>Pose-matched scan entries with trend-only privacy controls.</Text>
+          <Text style={styles.subtitle}>Pose-matched scan entries. Trend, confidence and matched photos, not body-fat.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -198,15 +198,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
-  headerCopy: { flex: 1, gap: spacing.xxs },
-  subtitle: { ...type.caption, color: colors.textMuted },
+  headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   strip: { gap: spacing.sm, paddingRight: spacing.lg },
   scanChip: {
     minWidth: 122,
+    maxWidth: 184,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.sm,
@@ -216,11 +218,12 @@ const styles = StyleSheet.create({
   scanChipActive: { backgroundColor: colors.primaryFill },
   scanChipDate: { ...type.caption, color: colors.textMuted },
   scanChipDateActive: { color: colors.onPrimary },
-  scanChipRange: { ...type.bodyStrong, color: colors.textPrimary },
+  scanChipRange: { ...type.bodyStrong, color: colors.textPrimary, lineHeight: 20 },
   scanChipRangeActive: { color: colors.onPrimary },
-  summaryRow: { flexDirection: 'row', gap: spacing.sm },
+  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   summaryPanel: {
     flex: 1,
+    minWidth: 142,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -229,9 +232,9 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   summaryLabel: { ...type.caption, color: colors.textMuted, fontWeight: fontWeight.semibold },
-  summaryDate: { ...type.bodyStrong, color: colors.textPrimary },
-  summaryRange: { ...type.h3, color: colors.primary },
-  summaryMeta: { ...type.caption, color: colors.textMuted },
+  summaryDate: { ...type.bodyStrong, color: colors.textPrimary, lineHeight: 20 },
+  summaryRange: { ...type.h3, color: colors.primary, lineHeight: 25 },
+  summaryMeta: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   deltaBox: {
     borderRadius: radius.md,
     backgroundColor: colors.primaryBg,

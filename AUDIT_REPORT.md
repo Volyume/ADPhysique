@@ -396,6 +396,7 @@ Status: release decision.
 - Physique Studio capture guidance now shares one source of truth across the entry prompt, `How it works`, the live camera HUD and the details sheet: standard setup, pose-specific checks, overlay presets, avoid-list, scan sequence and exact body-fat abstention.
 - Physique Studio page hierarchy now has stronger overlap guards and clearer layers: stat cells are constrained, the primary capture CTA owns its row, the current signal sits in a contained block, timeline card text cannot crowd the cover image, and the camera permission wait state offers a library fallback.
 - Physique Scan history cards now wrap and constrain their result cells, present the reason block as a contained panel, and explicitly state that scan reads are not a body-fat percentage.
+- Physique Scan comparison now carries the same no-body-fat framing and has stronger wrapping/width constraints for chips and summary panels.
 - Free-plan lapse behavior remains view-only: Check-In cards are inert, while allowed comparison viewing remains available.
 - Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
 - Partner active cards now include a `Share wins` consent surface and review sheet that defines the only eligible future share categories: workout summary, personal record, block milestone and progress card.

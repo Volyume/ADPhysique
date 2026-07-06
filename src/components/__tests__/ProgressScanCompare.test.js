@@ -91,6 +91,7 @@ describe('ProgressScanCompare component', () => {
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Compare scans');
+    expect(text).toContain('not body-fat');
     expect(text).toContain('Defined 54/100');
     expect(text).toContain('Lean 66/100');
     expect(text).toContain('Volyume Leanness Score is up 12 points');
