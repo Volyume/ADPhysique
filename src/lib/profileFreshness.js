@@ -72,11 +72,11 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
             yesterday: 'Updated yesterday. Strength baselines are current.',
             days: (days, soon, due) => days >= 21 ? due(days) : days >= 14 ? soon(days) : `Last hard data ${days} days ago. Baselines are current.`,
           },
-          (days) => `Last hard data ${days} days ago. Keep core lifts moving through the plan.`,
-          (days) => `Last hard data ${days} days ago. Log key compounds to refresh baselines.`,
+          (days) => `Last hard data ${days} days ago. Keep your main lifts moving through the plan.`,
+          (days) => `Last hard data ${days} days ago. Log your main lifts to refresh baselines.`,
           'No completed workout date found yet. Finish sessions to build baselines.',
         )
-        : 'Log at least three core lifts with body weight to make standards useful.',
+        : 'Log at least three main lifts with body weight to make standards useful.',
     },
   };
 }
