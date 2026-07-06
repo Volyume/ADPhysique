@@ -204,8 +204,7 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(copy).toContain('Guided physique scan');
   expect(copy).toContain('Import photos to scan');
   expect(copy).toContain('Choose the front relaxed photo');
-  expect(copy).toContain('Photos are stored on this phone unless you share or export them.');
-  expect(copy).toContain('Export anything you want to keep before uninstalling the app');
+  expect(copy).toContain('Photos stay on this phone unless you share or export them.');
   expect(hasPressableLabel(tree, 'Start guided scan')).toBe(true);
   expect(hasPressableLabel(tree, 'Import photos to scan')).toBe(true);
   expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);

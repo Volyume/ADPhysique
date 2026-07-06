@@ -166,20 +166,20 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Training the same block',
+      title: 'Shared block label',
       copy: `${block.blockName} is shared by name only. Workouts, loading and notes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
     return {
-      title: 'Block suggested',
+      title: 'Label suggested',
       copy: `Waiting for ${name}. Only the block name is visible.`,
     };
   }
   if (block.status === 'proposed') {
     return {
-      title: 'Block suggestion',
-      copy: `${name} suggested ${block.blockName}. Review it before anything changes.`,
+      title: 'Label suggestion',
+      copy: `${name} suggested ${block.blockName}. It will not change your plan.`,
     };
   }
   return null;
@@ -204,11 +204,11 @@ function IntentionBlock({ pair, onSetAim }) {
         style={styles.intentionSet}
         hitSlop={hitSlop}
         accessibilityRole="button"
-        accessibilityLabel={pair.myAim > 0 ? 'Change your weekly aim' : 'Set your weekly aim'}
+        accessibilityLabel={pair.myAim > 0 ? 'Change this week\'s sessions' : 'Set this week\'s sessions'}
       >
         <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.intentionSetText}>
-          {pair.myAim > 0 ? 'Change weekly aim' : 'Set weekly aim'}
+          {pair.myAim > 0 ? 'Change this week' : 'Set this week'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -270,9 +270,9 @@ function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) 
     else onOpenShareWins(pair);
   };
   return (
-    <View style={styles.supportPlan}>
+    <View style={styles.partnerWeekPanel}>
       <View style={styles.supportPlanHead}>
-        <Ionicons name="compass-outline" size={iconSize.sm} color={colors.primary} />
+        <Ionicons name="people-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.supportPlanTitle}>{plan.title}</Text>
       </View>
       <Text style={styles.supportPlanHeadline}>{plan.headline}</Text>
@@ -319,7 +319,7 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       <View style={styles.shareWinsRowCopy}>
         <Text style={styles.shareWinsTitle}>Share wins</Text>
         <Text style={styles.shareWinsText}>
-          Ask each time. Review one card, then send it to {name} only. No feed.
+          Send one chosen card to {name}. You approve it first. No feed.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -406,7 +406,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       style={styles.blockStatusCard}
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`Shared block, ${status.title}`}
+      accessibilityLabel={`Shared block label, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
@@ -415,7 +415,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-        <Text style={styles.blockStatusActionText}>Manage block</Text>
+        <Text style={styles.blockStatusActionText}>Manage label</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -1037,11 +1037,11 @@ export default function PartnerScreen({ route }) {
             ) : null}
 
             {pending ? (
-              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.reload} onCancel={confirmCancelInvite} />
+              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.refresh || p.reload} onCancel={confirmCancelInvite} />
             ) : null}
           </>
         ) : pending ? (
-          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.reload} onCancel={confirmCancelInvite} />
+          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.refresh || p.reload} onCancel={confirmCancelInvite} />
         ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIconCircle}>
@@ -1162,7 +1162,7 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Weekly-aim sheet (D5-A) ── */}
-      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="Your weekly aim">
+      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="This week's sessions">
         {aimSheetPair ? (
           <AimSheetBody
             value={aimValue}
@@ -1200,9 +1200,9 @@ function AimSheetBody({ value, onChange, onConfirm }) {
   const v = clampAim(value);
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Your aim for the week</Text>
+      <Text style={styles.sheetHeading}>This week's sessions</Text>
       <Text style={styles.blockPitch}>
-        A number of sessions to aim for this week, against your own plan. It is an aim, not a promise.
+        Choose the number of sessions you plan to train this week. Your partner sees the number only.
       </Text>
       <View style={styles.stepperRow}>
         <TouchableOpacity
@@ -1215,7 +1215,7 @@ function AimSheetBody({ value, onChange, onConfirm }) {
         >
           <Ionicons name="remove" size={iconSize.md} color={v <= 1 ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.stepperValue} accessibilityLabel={`Aiming for ${v} this week`}>{v}</Text>
+        <Text style={styles.stepperValue} accessibilityLabel={`${v} sessions this week`}>{v}</Text>
         <TouchableOpacity
           style={styles.stepperBtn}
           onPress={() => onChange(clampAim(v + 1))}
@@ -1228,11 +1228,11 @@ function AimSheetBody({ value, onChange, onConfirm }) {
         </TouchableOpacity>
       </View>
       <Button
-        title="Confirm my aim"
+        title="Save"
         style={styles.primaryBtn}
         textStyle={styles.primaryBtnText}
         onPress={onConfirm}
-        accessibilityLabel="Confirm my aim"
+        accessibilityLabel="Save this week's sessions"
       />
     </View>
   );
@@ -1284,11 +1284,10 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Shareable wins</Text>
       <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
-      <Text style={styles.shareWinDefault}>Default: {SHARE_WIN_POLICY.defaultState}.</Text>
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Review the exact card first, then send it to {partnerName} only.
+          Pick a card, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1340,38 +1339,18 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
           />
         </View>
       ) : null}
-      {receipt ? (
-        <View style={styles.shareWinReceipt}>
-          <View style={styles.shareWinReceiptHead}>
-            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-            <Text style={styles.shareWinSectionTitle}>{receipt.title}</Text>
-          </View>
-          {receipt.steps.map((step, index) => (
-            <View key={step.key} style={styles.shareWinReceiptStep}>
-              <View style={styles.shareWinReceiptNumber}>
-                <Text style={styles.shareWinReceiptNumberText}>{index + 1}</Text>
-              </View>
-              <View style={styles.shareWinReceiptCopy}>
-                <Text style={styles.shareWinReceiptTitle}>{step.title}</Text>
-                <Text style={styles.shareWinReceiptBody}>{step.body}</Text>
-              </View>
-            </View>
-          ))}
-          <Text style={styles.shareWinReceiptFinal}>{receipt.finalCheck}</Text>
-        </View>
-      ) : null}
       <View style={styles.shareWinRules}>
-        <Text style={styles.shareWinSectionTitle}>Hard boundaries</Text>
-        {SHARE_WIN_CARD_RULES.map((rule) => (
+        <Text style={styles.shareWinSectionTitle}>What never happens</Text>
+        {SHARE_WIN_CARD_RULES.slice(0, 3).map((rule) => (
           <View key={rule} style={styles.shareWinRuleRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
             <Text style={styles.shareWinRuleText}>{rule}</Text>
           </View>
         ))}
       </View>
-      <Text style={styles.shareWinSectionTitle}>Eligible cards</Text>
+      <Text style={styles.shareWinSectionTitle}>Card types</Text>
       <Text style={styles.shareWinFooter}>
-        {SHARE_WIN_TYPES.map((typeItem) => typeItem.title).join(', ')}. Each card carries its own visible/private receipt before sending.
+        {SHARE_WIN_TYPES.map((typeItem) => typeItem.title).join(', ')}.
       </Text>
       <Text style={styles.shareWinFooter}>{SHARE_WIN_POLICY.excluded}</Text>
     </View>
@@ -1524,8 +1503,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Training the same block</Text>
-        <Text style={styles.blockPitch}>You are both training {block.blockName}. The week counts are your shared week on it.</Text>
-        <SheetRow icon="exit-outline" label="Leave this block" onPress={() => onLeave(pair)} />
+        <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loading and coach changes stay private.</Text>
+        <SheetRow icon="exit-outline" label="Remove shared label" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1534,8 +1513,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block suggested</Text>
-        <Text style={styles.blockPitch}>You suggested {block.blockName}. Waiting for {name}.</Text>
-        <SheetRow icon="close-circle-outline" label="Withdraw suggestion" onPress={() => onLeave(pair)} />
+        <Text style={styles.blockPitch}>You suggested sharing the label {block.blockName}. Waiting for {name}.</Text>
+        <SheetRow icon="close-circle-outline" label="Withdraw label" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1544,9 +1523,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Train the same block</Text>
-        <Text style={styles.blockPitch}>{name} suggested training {block.blockName} together.</Text>
-        <SheetRow icon="checkmark-circle-outline" label="Train this block too" onPress={() => onAdopt(pair)} />
-        <SheetRow icon="close-circle-outline" label="Not for me" onPress={() => onLeave(pair)} />
+        <Text style={styles.blockPitch}>{name} suggested sharing the label {block.blockName}. It will not change your plan.</Text>
+        <SheetRow icon="checkmark-circle-outline" label="Use this label" onPress={() => onAdopt(pair)} />
+        <SheetRow icon="close-circle-outline" label="Decline label" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1554,9 +1533,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block name</Text>
+      <Text style={styles.sheetHeading}>Share a block label</Text>
       <Text style={styles.blockPitch}>
-        Only the block&apos;s name is shared with {name}. Never what is inside it.
+        Optional. Use this only if you and {name} want to show that you are following the same named block. It does not alter either plan.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1642,7 +1621,7 @@ const styles = StyleSheet.create({
   intentionSetText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
 
-  supportPlan: {
+  partnerWeekPanel: {
     gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,

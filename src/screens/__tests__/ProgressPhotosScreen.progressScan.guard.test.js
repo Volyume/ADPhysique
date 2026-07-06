@@ -21,8 +21,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/setProgressScanHideExactPreference/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*14 \* 86400000/);
     expect(SCREEN).toMatch(/Leave more time between scans/);
-    expect(SCREEN).toMatch(/add progress photos today/);
-    expect(SCREEN).toMatch(/without using them for a scan result/);
+    expect(SCREEN).toMatch(/save photos today/);
+    expect(SCREEN).toMatch(/without forcing a scan result/);
     expect(SCREEN).toMatch(/progressCheckInCadenceLabel\(latestPhoto\?\.takenAt, Date\.now\(\), PROGRESS_SCAN_MIN_INTERVAL_MS\)/);
     expect(SCREEN).not.toMatch(/at least a week apart/);
   });
@@ -74,7 +74,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/abandonLapsedScanFlow/);
     expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{\s*await abandonLapsedScanFlow\(flow, name, saved\);/);
     expect(SCREEN).toMatch(/const vision = await analyseProgressScanPhoto\(\{ uri: saved\.uri, pose \}\);[\s\S]*if \(!canWrite\(\)\) \{[\s\S]*await abandonLapsedScanFlow\(flow, name, saved\);/);
-    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{ abandonLapsedScanFlow\(flow\); return; \} setCaptureOpen\(true\);/);
+    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{ abandonLapsedScanFlow\(flow\); return; \}[\s\S]*else setCaptureOpen\(true\);/);
   });
 
   test('viewer delete detaches scan analysis before deleting the source photo', () => {
@@ -86,7 +86,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('scan sessions capture camera preferences and finish uses canonical body profile fallback', () => {
     expect(SCREEN).toMatch(/getProgressScanCapturePreferences/);
-    expect(SCREEN).toMatch(/createProgressScanSession\(userId, capturePrefs\)/);
+    expect(SCREEN).toMatch(/createProgressScanSession\(userId, \{ \.\.\.capturePrefs, capturedAt \}\)/);
     expect(SCREEN).toMatch(/getUserBodyProfile\(userId\)/);
     expect(SCREEN).toMatch(/buildProgressScanFinishPayload\(profile, bodyProfile, userSex\)/);
     expect(CONTROLLER).toMatch(/heightCm: safeProfile\.heightCm \?\? safeBodyProfile\.heightCm \?\? null/);

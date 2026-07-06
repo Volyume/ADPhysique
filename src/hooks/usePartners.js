@@ -18,6 +18,7 @@ import {
   upsertPartnerSharedBlockFromCloud,
   getPartnerWeeklyIntention, setLocalPartnerWeeklyIntention,
   getPartnerWinCards, upsertPartnerWinCardFromCloud, markLocalPartnerWinCardRevoked,
+  setLocalPartnerCheerSent,
 } from '../lib/database';
 import { todayLocalKey, localWeekStartMs } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
@@ -41,6 +42,24 @@ const EMPTY = {
 };
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
+
+async function pullPartnerMirrorNow(userId) {
+  if (!userId) return;
+  try {
+    // Dynamic require keeps the hook's test imports light and avoids dragging
+    // sync transport into screens that only need cached partner reads.
+    // eslint-disable-next-line global-require
+    const { getSupabaseClient } = require('../lib/supabase');
+    // eslint-disable-next-line global-require
+    const { pullPartners } = require('../lib/sync/tables/partners');
+    const client = getSupabaseClient?.();
+    if (client && typeof pullPartners === 'function') {
+      await pullPartners(client, { userId });
+    }
+  } catch (_) {
+    // Online action already returned its result; the normal sync loop heals.
+  }
+}
 
 // Pick the partnership to surface: an active one first, else a pending invite,
 // else the most recent ended tombstone, else none.
@@ -230,6 +249,11 @@ export default function usePartners(userId, tier) {
     return () => clearInterval(timer);
   }, [userId, pendingRefreshKey, load]);
 
+  const refresh = useCallback(async () => {
+    await pullPartnerMirrorNow(userId);
+    await load();
+  }, [userId, load]);
+
   // ── Actions (online; refresh local view after) ──
   // Single-mint (A1 s9.5): every share channel reuses the ONE active pending
   // code. Only mint a fresh code when nothing is cached (after cancel / expiry /
@@ -253,6 +277,7 @@ export default function usePartners(userId, tier) {
     if (r.ok) {
       clearCachedInvite();
       await clearPendingPartnerCode();
+      await pullPartnerMirrorNow(userId);
       await load();
     }
     return r;
@@ -260,6 +285,12 @@ export default function usePartners(userId, tier) {
 
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
     const r = await sendCheer(userId, { pairId, kind, reciprocal });
+    if (r?.ok || r?.error === 'already_cheered') {
+      try {
+        await setLocalPartnerCheerSent({ pairId, senderId: userId, sentOn: todayLocalKey(), kind });
+      } catch (_) { /* pull heals */ }
+      await pullPartnerMirrorNow(userId);
+    }
     await load();
     return r;
   }, [userId, load]);
@@ -373,6 +404,6 @@ export default function usePartners(userId, tier) {
 
   return {
     ...state, invite, redeem, cheer, unpair, block,
-    proposeBlock, adoptBlock, leaveBlock, setIntention, shareWin, revokeWin,
+    proposeBlock, adoptBlock, leaveBlock, setIntention, shareWin, revokeWin, refresh,
   };
 }

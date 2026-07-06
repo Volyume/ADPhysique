@@ -72,12 +72,13 @@ const COACHING_PHASE_LABELS = {
 };
 
 function currentFocusTile(profile = {}) {
-  const phaseLabel = PHASE_LABELS[profile.trainingPhase]
-    || COACHING_PHASE_LABELS[profile.goalPhase]
+  const safeProfile = profile || {};
+  const phaseLabel = PHASE_LABELS[safeProfile.trainingPhase]
+    || COACHING_PHASE_LABELS[safeProfile.goalPhase]
     || 'Not set';
-  const divisionLabel = GOAL_LABELS[profile.trainingGoal]
-    || (profile.trainingGoal ? String(profile.trainingGoal).replace(/_/g, ' ') : null);
-  const days = Number(profile.daysPerWeek);
+  const divisionLabel = GOAL_LABELS[safeProfile.trainingGoal]
+    || (safeProfile.trainingGoal ? String(safeProfile.trainingGoal).replace(/_/g, ' ') : null);
+  const days = Number(safeProfile.daysPerWeek);
   const detail = [
     divisionLabel && divisionLabel !== 'Not competing' ? divisionLabel : null,
     Number.isFinite(days) && days > 0 ? `${days} days/week` : null,
@@ -239,7 +240,7 @@ export default function AthleteProfileScreen({ navigation }) {
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
   const hasPhysiqueScore = summary.scan?.visualLeannessScore != null;
   const physiqueTile = hasPhysiqueScore ? {
-    label: 'Physique',
+    label: 'Physique score',
     value: [
       summary.scan?.leannessBandLabel || null,
       `${Math.round(summary.scan.visualLeannessScore)}/100`,

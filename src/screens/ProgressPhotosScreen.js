@@ -63,7 +63,6 @@ import {
   buildProgressStudioCaptureRoutes,
   buildScanCaptureSubtitle,
   PROGRESS_STUDIO_SETUP_STEPS,
-  QUALITY_FIRST_CAPTURE_NOTE,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -851,10 +850,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
-        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's visual progress score, not a body-fat percentage.`
+        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's physique score, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add a guided set or import existing photos. Volyume saves the photos by date, adds the bodyweight snapshot, and scores the set when front and back are available.');
+        : 'Add a guided set or import existing photos. Volyume saves the date, bodyweight snapshot and physique score together when front and back are usable.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -1021,7 +1020,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.heroEyebrow}>Progress Photos</Text>
               <Text style={styles.heroTitle}>Your progress photos</Text>
               <Text style={styles.heroSubtitle}>
-                Add a guided photo set or import existing photos. Volyume saves the date, bodyweight snapshot and visual physique score together.
+                Add guided photos or import older ones. Volyume keeps the date, bodyweight snapshot and physique score together.
               </Text>
             </View>
           </View>
@@ -1045,7 +1044,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.setupStandardTitle}>What Physique Scan tells you</Text>
               </View>
               <Text style={styles.setupStandardIntro}>
-                Physique Scan is Volyume's own visual physique progress measure. It reads guided front and back photos, scan quality and setup consistency to show a leanness band, scan confidence and progress signal. A photo cannot truthfully give an exact body-fat number, so Volyume focuses on whether your physique is changing and how reliable that read is.
+                Volyume does not guess an exact body-fat number from a photo. Physique Scan scores a front and back photo set for leanness band, setup quality, confidence and whether your physique appears to be changing.
               </Text>
             </View>
 
@@ -1070,13 +1069,6 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </View>
                 ))}
               </View>
-            </View>
-
-            <View style={styles.deviceStorageCard}>
-              <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
-              <Text style={styles.deviceStorageText}>
-                Photos are stored on this phone. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
-              </Text>
             </View>
 
             <View style={styles.heroActions}>
@@ -1104,7 +1096,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
 
             <View style={styles.signalCard}>
-              <Text style={styles.signalTitle}>Current status</Text>
+              <Text style={styles.signalTitle}>Latest read</Text>
               <Text style={styles.signalBody}>{currentPhotoText}</Text>
               <Text style={styles.signalSupport}>{currentPhotoSupport}</Text>
             </View>
@@ -1158,6 +1150,15 @@ export default function ProgressPhotosScreen({ navigation }) {
               accessibilityLabel={`Suggested next step: ${nextAction.cta}`}
             />
           </Card>
+        ) : null}
+
+        {!loading && photos.length > 0 ? (
+          <View style={styles.libraryHeader}>
+            <Text style={styles.libraryTitle}>Photo library</Text>
+            <Text style={styles.librarySubtitle}>
+              Each day shows its date, saved weight, pose set and physique score when a scan result is available.
+            </Text>
+          </View>
         ) : null}
 
         {!loading && photos.length > 0 ? (
@@ -1441,7 +1442,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Choose guided capture or import existing photos. Both save a dated photo set and run Volyume's scan when front and back are available.
+                  Choose guided capture or import existing photos. Both create the same dated library entry and scan the set when front and back photos are usable.
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1491,7 +1492,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <View style={styles.captureRouteNote}>
                   <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                   <Text style={styles.captureRouteNoteText}>
-                    {QUALITY_FIRST_CAPTURE_NOTE} Photos are stored on this phone unless you share or export them. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
+                    If the photos are not clear enough, Volyume saves them without forcing a scan result. Photos stay on this phone unless you share or export them.
                   </Text>
                 </View>
               </View>
@@ -1588,38 +1589,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.surface2,
   },
-  heroPlaceholderText: { ...type.bodySm, color: colors.textMuted },
   heroScrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.scrim,
     opacity: 0.45,
-  },
-  heroTopRow: {
-    position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
-    right: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  privacyPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    backgroundColor: colors.scrim,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  privacyPillText: { ...type.caption, color: colors.appleBtnText },
-  heroInfoButton: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.scrim,
   },
   heroCopy: {
     position: 'absolute',
@@ -1689,17 +1662,6 @@ const styles = StyleSheet.create({
   setupStandardCopy: { flex: 1, minWidth: 0, gap: 2 },
   setupStandardStepTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   setupStandardStepBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
-  deviceStorageCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-  },
-  deviceStorageText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1749,6 +1711,14 @@ const styles = StyleSheet.create({
   nextActionDetails: { gap: spacing.xs },
   nextActionDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   nextActionDetailText: { ...type.caption, color: colors.textMuted, lineHeight: 18, flex: 1 },
+  libraryHeader: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  libraryTitle: { ...type.title, color: colors.textPrimary },
+  librarySubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,

@@ -21,6 +21,7 @@ jest.mock('../../lib/database', () => ({
   getPartnerWinCards: jest.fn(async () => []),
   upsertPartnerWinCardFromCloud: jest.fn(async () => {}),
   markLocalPartnerWinCardRevoked: jest.fn(async () => {}),
+  setLocalPartnerCheerSent: jest.fn(async () => {}),
 }));
 
 jest.mock('../../lib/partners/service', () => ({

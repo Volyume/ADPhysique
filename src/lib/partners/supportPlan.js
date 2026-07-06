@@ -1,7 +1,7 @@
 import { ticksLabel } from './signals';
 
 export const PARTNER_SUPPORT_PRIVACY_LINE =
-  'Your partner sees weekly training status and optional cards only. Food, coach notes, body metrics and photos stay private.';
+  'They see weekly training status and cards you choose to send. Food, coach notes, body metrics and photos stay private.';
 
 function hasAim(value) {
   return Math.round(Number(value) || 0) > 0;
@@ -16,48 +16,48 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const myAimSet = hasAim(pair.myAim);
   const partnerAimSet = hasAim(pair.partnerAim);
   const cheerAvailable = pair.cheerEnabled !== false;
-  let headline = 'A private partner space for encouragement, not comparison.';
-  let primaryAction = { key: 'share_wins', label: 'Share a win', accessibilityLabel: 'Review shareable wins' };
+  let headline = `You and ${name} only see simple weekly status, fixed cheers and cards you deliberately send.`;
+  let primaryAction = { key: 'share_wins', label: 'Share a chosen win', accessibilityLabel: 'Review shareable wins' };
 
   if (!myAimSet) {
-    headline = 'Set how many sessions you plan to do this week. Your partner sees the number, not your workout details.';
-    primaryAction = { key: 'set_aim', label: 'Set weekly aim', accessibilityLabel: 'Set your weekly aim' };
+    headline = `Choose how many sessions you plan to train this week. ${name} sees that number, not your workout details.`;
+    primaryAction = { key: 'set_aim', label: 'Set this week\'s sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `A fixed cheer is available for ${name} today.`;
-    primaryAction = { key: 'cheer', label: 'Send cheer', accessibilityLabel: 'Send a cheer' };
+    headline = `You can send ${name} one fixed cheer today. No chat, no feed, no pressure.`;
+    primaryAction = { key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' };
   } else if (pair.weekKept) {
-    headline = 'Your shared week is kept.';
+    headline = 'You both showed up against your own plans last week.';
   }
 
   return Object.freeze({
-    title: 'This week together',
+    title: `This week with ${name}`,
     headline,
     primaryAction,
     privacyLine: PARTNER_SUPPORT_PRIVACY_LINE,
     steps: Object.freeze([
       Object.freeze({
         key: 'aim',
-        label: 'Your aim',
+        label: 'You',
         state: myAimSet ? 'set' : 'next',
-        copy: myAimSet ? 'Your session aim is set.' : 'Choose your own session aim for the week.',
+        copy: myAimSet ? `Aiming for ${Math.round(Number(pair.myAim) || 0)} sessions.` : 'Choose your session number for this week.',
       }),
       Object.freeze({
         key: 'partner_aim',
-        label: `${name}'s aim`,
+        label: name,
         state: partnerAimSet ? 'set' : 'private',
-        copy: partnerAimSet ? `${name} chose an aim too.` : `${name}'s aim appears only if they set one.`,
+        copy: partnerAimSet ? `Aiming for ${Math.round(Number(pair.partnerAim) || 0)} sessions.` : 'Appears only if they choose to set it.',
       }),
       Object.freeze({
         key: 'week',
-        label: 'Week view',
+        label: 'Weekly status',
         state: 'own plan',
-        copy: `Your week row reads ${ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })} against your own plan.`,
+        copy: `Your row reads ${ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}.`,
       }),
       Object.freeze({
         key: 'share',
-        label: 'Share',
+        label: 'Cards',
         state: 'optional',
-        copy: cheerAvailable ? 'You can send one fixed cheer today. Win cards ask every time.' : 'Your cheer is sent for today. Win cards still ask every time.',
+        copy: cheerAvailable ? 'Cheers are fixed. Win cards ask every time.' : 'Your cheer is sent. Win cards still ask every time.',
       }),
     ]),
   });
