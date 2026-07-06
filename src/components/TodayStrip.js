@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   cellLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     fontWeight: fontWeight.semibold,
   },
   cellValue: {

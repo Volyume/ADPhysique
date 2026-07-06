@@ -33,6 +33,6 @@ describe('profileFreshness', () => {
       keyLiftCount: 2,
     }, NOW);
     expect(out.lifts.state).toBe('missing');
-    expect(out.lifts.sub).toMatch(/at least three core lifts/i);
+    expect(out.lifts.sub).toMatch(/at least three main lifts/i);
   });
 });

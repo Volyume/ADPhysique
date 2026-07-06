@@ -377,7 +377,7 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
-          <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and core lifts'} />
+          <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and main lifts'} />
           <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
         </View>
 
@@ -405,7 +405,7 @@ export default function AthleteProfileScreen({ navigation }) {
             <EmptyState
               icon="barbell-outline"
               title="Strength standards unlock with data"
-              text="Log body weight and your core compound lifts to compare your strength against baseline standards."
+              text="Log body weight and your main lifts to compare your strength against baseline standards."
               compact
             />
           )}

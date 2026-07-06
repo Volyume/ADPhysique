@@ -1324,10 +1324,9 @@ export default function HomeScreen({ navigation, route }) {
         )}
 
         {/* ── Compact top start CTA (above-the-fold) ── */}
-        {/* The single start surface is the hero card below (Start workout / View
-            / Change workout / Blank session). The old top "Start workout + Start
-            empty workout" row duplicated it one-for-one, so it's gone (founder
-            2026-06-30). */}
+        {/* The single start surface is the hero card below. The old top
+            "Start workout + Start empty workout" row duplicated it one-for-one,
+            so it's gone (founder 2026-06-30). */}
 
         {/* Cloud restore banner removed, the typical pull completes
             in under a second on a healthy connection so the banner
@@ -1377,7 +1376,7 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.coachBannerLeft}>
               <Ionicons name="sparkles" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.coachBannerTitle}>Precision Coaching™ · this week's review</Text>
+                <Text style={styles.coachBannerTitle}>Precision Coaching - this week's review</Text>
                 <Text style={styles.coachBannerBody}>
                   {latestCoachOutput.adjustments?.calories?.applied
                     ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
@@ -1599,7 +1598,7 @@ export default function HomeScreen({ navigation, route }) {
             orients without competing with the hero / starter cards. Research:
             docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
             states. No weight/calorie line here (ED-safety). */}
-        {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
+        {!initialLoading && totalSessions === 0 && !welcomeDismissed && activePlan && nextWorkout && (
           <Card style={styles.welcomeCard}>
             <View style={styles.welcomeHead}>
               <Text style={styles.welcomeTitle}>Welcome to Volyume</Text>
@@ -1679,10 +1678,10 @@ export default function HomeScreen({ navigation, route }) {
                 />
                 <Text style={styles.mesoBriefText}>
                   {currentMesoWeek.isDeload
-                    ? `Deload week · pull effort back`
+                    ? `Deload week - pull effort back`
                     : `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}` +
                       (currentMesoWeek.rirTarget != null
-                        ? ` · stop ${currentMesoWeek.rirTarget} short of failure`
+                        ? ` - stop ${currentMesoWeek.rirTarget} short of failure`
                         : '')}
                 </Text>
                 <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
@@ -1697,56 +1696,29 @@ export default function HomeScreen({ navigation, route }) {
                 read as the wrong default, start the actual session). */}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
-              <TouchableOpacity
-                style={[styles.primaryBtn, { marginTop: 0 }, isStartingWorkout && { opacity: 0.6 }]}
-                onPress={() => handleStartNextWorkout(false)}
-                disabled={isStartingWorkout}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-              >
-                <Ionicons name="play" size={16} color={colors.onPrimary} />
-                <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
-                </Text>
-              </TouchableOpacity>
-              </View>
-              {displayWorkout?.routine?.id ? (
                 <TouchableOpacity
-                  style={styles.viewWorkoutBtn}
-                  onPress={() => navigation.navigate('PlansTab', {
-                    screen: 'RoutineDetail',
-                    params: { routineId: displayWorkout.routine.id },
-                    initial: false,
-                  })}
+                  style={[styles.primaryBtn, { marginTop: 0 }, isStartingWorkout && { opacity: 0.6 }]}
+                  onPress={() => handleStartNextWorkout(false)}
+                  disabled={isStartingWorkout}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                  accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
                 >
-                  <Text style={styles.viewWorkoutBtnText}>View</Text>
+                  <Ionicons name="play" size={16} color={colors.onPrimary} />
+                  <Text style={styles.primaryBtnText}>
+                    {isStartingWorkout ? 'Starting...' : 'Start workout'}
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
-            <View style={styles.heroSecondaryRow}>
+              </View>
               <TouchableOpacity
-                style={styles.heroSecondaryBtn}
+                style={styles.workoutOptionsBtn}
                 onPress={() => setShowChangeWorkout(true)}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Change planned workout"
+                accessibilityLabel="Workout options"
               >
-                <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.heroSecondaryBtnText}>Change workout</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.heroSecondaryBtn}
-                onPress={() => navigation.navigate('BuildWorkout')}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Start a blank workout instead"
-              >
-                <Ionicons name="add-circle-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.heroSecondaryBtnText}>Blank session</Text>
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
+                <Text style={styles.workoutOptionsText}>Options</Text>
               </TouchableOpacity>
             </View>
             {/* S2: the compact consistency echo + one-time forgiveness explainer,
@@ -1920,7 +1892,7 @@ export default function HomeScreen({ navigation, route }) {
           >
             <View style={{ flex: 1, gap: spacing.xxs }}>
               <Text style={styles.lastSessionLabel}>
-                Last session · {getRelativeDay(lastSession.startedAt)}
+                Last session - {getRelativeDay(lastSession.startedAt)}
               </Text>
               <Text style={styles.lastSessionName} numberOfLines={1}>
                 {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
@@ -1939,7 +1911,7 @@ export default function HomeScreen({ navigation, route }) {
                     : lastSessionTonnage
                       ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg`
                       : null,
-                ].filter(Boolean).join(' · ');
+                ].filter(Boolean).join(' - ');
                 return meta ? (
                   <Text style={styles.lastSessionMeta} numberOfLines={1}>{meta}</Text>
                 ) : null;
@@ -2053,9 +2025,54 @@ export default function HomeScreen({ navigation, route }) {
         />
         <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Choose Workout</Text>
+          <Text style={styles.sheetTitle}>Workout options</Text>
           {activePlan && <Text style={styles.sheetSub}>{activePlan.name}</Text>}
           <ScrollView showsVerticalScrollIndicator={false}>
+            {displayWorkout?.routine?.id ? (
+              <TouchableOpacity
+                style={styles.sheetActionRow}
+                onPress={() => {
+                  setShowChangeWorkout(false);
+                  navigation.navigate('PlansTab', {
+                    screen: 'RoutineDetail',
+                    params: { routineId: displayWorkout.routine.id },
+                    initial: false,
+                  });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+              >
+                <View style={styles.sheetActionIcon}>
+                  <Ionicons name="reader-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sheetActionTitle}>View workout</Text>
+                  <Text style={styles.sheetActionSub}>Review the exercises before you start.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.sheetActionRow}
+              onPress={() => {
+                setShowChangeWorkout(false);
+                navigation.navigate('BuildWorkout');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Start a blank workout"
+            >
+              <View style={styles.sheetActionIcon}>
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetActionTitle}>Blank session</Text>
+                <Text style={styles.sheetActionSub}>Log freely without changing your plan.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+            {planAllWorkouts.length > 0 ? (
+              <Text style={styles.sheetSectionLabel}>Choose a different workout</Text>
+            ) : null}
             {planAllWorkouts.map((routine, i) => {
               const isNext = i === nextWorkout?.idx && !selectedWorkoutOverride;
               const isSel = selectedWorkoutOverride?.idx === i;
@@ -2385,7 +2402,7 @@ const styles = StyleSheet.create({
   heroEyebrow: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
     textTransform: 'uppercase',
     fontWeight: fontWeight.semibold,
   },
@@ -2417,17 +2434,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   primaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
-  // Two-button row: primary "Start workout" + secondary "View" so the
-  // user can preview the routine's exercises before committing. Mirrors
-  // the Start Next Workout + View Plan layout on PlansScreen for visual
-  // consistency.
+  // One primary action plus one secondary options door. View, change workout
+  // and blank session live in the sheet so the hero keeps a single dominant CTA.
   startWorkoutRow: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
   startBtnSplit: { flex: 1, marginTop: 0 },
-  viewWorkoutBtn: {
+  workoutOptionsBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
@@ -2436,35 +2451,40 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  viewWorkoutBtnText: { ...type.label, color: colors.textSecondary },
-  heroSecondaryRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.md,
+    gap: spacing.xs,
   },
-  // Boxed secondary buttons matching the View / surface2 pill style
-  // used elsewhere on the screen, gives the Change workout / Blank
-  // session affordances proper tap targets and aligns visually with
-  // the History / Records / Volume tiles below.
-  heroSecondaryBtn: {
-    flex: 1,
+  workoutOptionsText: { ...type.label, color: colors.textSecondary },
+
+  // Home workout options sheet
+  sheetActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: spacing.md,
+    minHeight: 64,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  heroSecondaryBtnText: {
+  sheetActionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  sheetActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  sheetActionSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  sheetSectionLabel: {
     fontSize: fontSize.xs,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontWeight: fontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
 
   // No plan, plan-first section
@@ -2569,7 +2589,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   glanceRow: {
     flexDirection: 'row',
@@ -2606,7 +2626,7 @@ const styles = StyleSheet.create({
   },
   lastSessionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.2,
+    color: colors.textMuted, letterSpacing: 0,
   },
   lastSessionMeta: {
     ...type.caption, color: colors.textMuted,
