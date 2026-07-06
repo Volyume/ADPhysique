@@ -76,6 +76,7 @@ test('renders nothing when not visible', async () => {
 test('Save reports the default date (today) and no pose', async () => {
   const props = baseProps();
   const tree = await mount(props);
+  expect(JSON.stringify(tree.toJSON())).toContain('Date and pose keep comparisons honest');
   await pressLabel(tree, 'Save the check-in');
   expect(props.onConfirm).toHaveBeenCalledTimes(1);
   const arg = props.onConfirm.mock.calls[0][0];
@@ -83,6 +84,13 @@ test('Save reports the default date (today) and no pose', async () => {
   // Default is today (within the current day).
   expect(arg.takenAt).toBeGreaterThanOrEqual(startOfToday());
   expect(arg.takenAt).toBeLessThanOrEqual(Date.now() + 1000);
+});
+
+test('the backdrop dismisses the details sheet', async () => {
+  const props = baseProps();
+  const tree = await mount(props);
+  await pressLabel(tree, 'Dismiss photo details');
+  expect(props.onCancel).toHaveBeenCalledTimes(1);
 });
 
 test('a pre-filled pose is carried through to Save', async () => {

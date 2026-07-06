@@ -58,6 +58,11 @@ import {
   buildCheckInTimeline,
   filterAndSort,
 } from '../lib/progressPhotoTimeline';
+import {
+  buildProgressStudioCapturePromptCopy,
+  buildProgressStudioHowItWorksCopy,
+  buildScanCaptureSubtitle,
+} from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
@@ -633,7 +638,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function onAdd() {
-    appAlert('Capture check-in', 'Keep the setup repeatable: same lighting, same distance, same poses. Photos stay on this device unless you choose to share or export them.', [
+    appAlert('Capture check-in', buildProgressStudioCapturePromptCopy(), [
       { text: 'Start Physique Scan', onPress: openProgressScan },
       { text: 'Single guided photo', onPress: openGhostCapture },
       { text: 'Take photo', onPress: () => pickFrom('camera') },
@@ -647,14 +652,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   function onHowItWorks() {
     appAlert(
       'How Physique Studio works',
-      'Build a private visual baseline with repeatable check-ins.\n\n'
-      + 'Best setup: same room, same lighting, same camera height, same distance, same time of day where possible.\n\n'
-      + 'Standard scan: front and back relaxed photos. A side photo can improve like-for-like comparison.\n\n'
-      + 'Frame the full body from head to foot. Avoid mirror selfies, backlighting, deep shadows, bulky clothing, and arms blocking the waist.\n\n'
-      + 'Physique Scan can show a leanness band, visual progress signal, scan confidence, and why confidence changed. It is not a body-fat percentage.\n\n'
-      + 'If the setup is not reliable enough, Volyume should save the photos but withhold the scan read rather than guess.\n\n'
-      + 'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.\n\n'
-      + 'Use check-ins weekly or every couple of weeks. Daily scanning is not needed.',
+      buildProgressStudioHowItWorksCopy(),
       [{ text: 'Got it' }],
     );
   }
@@ -1188,7 +1186,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           referencePhoto={captureReference}
           pose={capturePose}
           title={scanFlow ? `${POSE_LABEL[capturePose] || 'Progress'} scan` : undefined}
-          subtitle={scanFlow ? 'Set the phone down, step into the frame, and use the timer if needed.' : undefined}
+          subtitle={scanFlow ? buildScanCaptureSubtitle(capturePose) : undefined}
           onCaptured={(name, saved) => {
             if (scanFlow) onScanCaptured(name, saved);
             else { setCaptureOpen(false); openDetailsForCaptured(name, capturePose); }

@@ -109,6 +109,27 @@ function chooseLibraryOnAdd() {
 
 beforeEach(() => jest.clearAllMocks());
 
+test('capture prompt distinguishes Physique Scan from a single guided photo', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await pressLabel(tree, 'Capture check-in');
+
+  expect(mockAppAlert).toHaveBeenCalledTimes(1);
+  const [title, message, buttons] = mockAppAlert.mock.calls[0];
+  expect(title).toBe('Capture check-in');
+  expect(message).toContain('same room, same lighting, same camera height, same distance');
+  expect(message).toContain('leanness band, progress signal and confidence');
+  expect(message).toContain('not an exact body-fat percentage');
+  expect(message).toContain('Photos stay on this device unless you choose to share or export them.');
+  expect(buttons.map((b) => b.text)).toEqual([
+    'Start Physique Scan',
+    'Single guided photo',
+    'Take photo',
+    'Choose from library',
+    'Cancel',
+  ]);
+});
+
 test('picking an image opens the details step and does NOT save before confirm', async () => {
   chooseLibraryOnAdd();
   const tree = await render();
