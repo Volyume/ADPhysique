@@ -2,9 +2,26 @@ import {
   assetFieldsFromVisionResult,
   base64ToUint8Array,
   measureMaskSignals,
+  resolveProgressScanModelSource,
   retakeCopyForVisionResult,
   unavailableVisionResult,
 } from '../progressScanVision';
+
+const mockDownloadAsync = jest.fn(async () => ({
+  localUri: 'file:///cache/selfie_segmentation.tflite',
+  uri: 'assets_ml_selfie_segmentation',
+}));
+const mockFromModule = jest.fn(() => ({
+  localUri: null,
+  uri: 'assets_ml_selfie_segmentation',
+  downloadAsync: mockDownloadAsync,
+}));
+
+jest.mock('expo-asset', () => ({
+  Asset: {
+    fromModule: mockFromModule,
+  },
+}));
 
 function syntheticPersonMask({
   width = 256, height = 256, shiftX = 0, top = 26, bottom = 236,
@@ -26,8 +43,21 @@ function syntheticPersonMask({
 }
 
 describe('Progress Scan vision signal extraction', () => {
+  beforeEach(() => {
+    mockDownloadAsync.mockClear();
+    mockFromModule.mockClear();
+  });
+
   test('base64 decoder returns exact bytes without relying on Buffer', () => {
     expect(Array.from(base64ToUint8Array('AAECA/8='))).toEqual([0, 1, 2, 3, 255]);
+  });
+
+  test('resolves bundled TFLite model to a protocol URL before native loading', async () => {
+    await expect(resolveProgressScanModelSource()).resolves.toEqual({
+      url: 'file:///cache/selfie_segmentation.tflite',
+    });
+    expect(mockFromModule).toHaveBeenCalledWith(1);
+    expect(mockDownloadAsync).toHaveBeenCalledTimes(1);
   });
 
   test('TFLite mask measurements produce quality and silhouette signals', () => {

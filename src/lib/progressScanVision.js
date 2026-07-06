@@ -23,6 +23,22 @@ const UNAVAILABLE_RETAKE_REASONS = new Set([
 
 let modelPromise = null;
 
+function hasUriScheme(uri) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(String(uri || ''));
+}
+
+export async function resolveProgressScanModelSource() {
+  const source = MODEL_SOURCE();
+  const { Asset } = require('expo-asset');
+  const asset = Asset.fromModule(source);
+  const downloaded = await asset.downloadAsync();
+  const uri = downloaded?.localUri || downloaded?.uri || asset.localUri || asset.uri;
+  if (!hasUriScheme(uri)) {
+    throw new Error('progress_scan_model_asset_uri_unresolved');
+  }
+  return { url: uri };
+}
+
 function finiteNumber(v) {
   if (v == null || v === '') return null;
   const n = Number(v);
@@ -98,7 +114,7 @@ function loadProgressScanModel() {
   if (!modelPromise) {
     modelPromise = (async () => {
       const { loadTensorflowModel } = require('react-native-fast-tflite');
-      return loadTensorflowModel(MODEL_SOURCE(), []);
+      return loadTensorflowModel(await resolveProgressScanModelSource(), []);
     })().catch((e) => {
       modelPromise = null;
       throw e;
