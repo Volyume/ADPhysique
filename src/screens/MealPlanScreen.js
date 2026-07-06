@@ -482,7 +482,7 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Build a day or week from your targets. Review it, swap meals if needed, then add it to Diary when ready.
+            Build a day or week from your targets. Review the meals, swap anything you want, then add them to your diary.
           </Text>
           <View style={styles.planExplainer} accessibilityRole="summary">
             <View style={styles.planExplainerStep}>
@@ -644,7 +644,7 @@ export default function MealPlanScreen({ navigation }) {
                       if (!adds || !adds.length) return null;
                       return (
                         <View style={styles.seasonWrap}>
-                          <Text style={styles.seasonLabel}>SEASON TO TASTE</Text>
+                          <Text style={styles.seasonLabel}>Season to taste</Text>
                           {adds.map((a) => (
                             <Text key={a.name} style={styles.seasonLine}>
                               <Text style={styles.seasonName}>{a.name}. </Text>
@@ -687,7 +687,7 @@ export default function MealPlanScreen({ navigation }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? 'Review then add today' : 'Review then add week'}</Text>
+                <Text style={styles.planActionTitle}>{isDayPlan ? 'Review and add today' : 'Review and add week'}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
                     ? 'Check the meals above, swap anything you want, then add them to today.'
@@ -990,7 +990,7 @@ const styles = StyleSheet.create({
   planQuickActionText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   mealCard: { gap: spacing.xs },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border, gap: 3,
   },
-  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0.5, marginBottom: 2 },
+  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0, marginBottom: 2 },
   seasonLine: { ...type.bodySm, color: colors.textSecondary },
   seasonName: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: spacing.sm, minHeight: 44 },
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
   prefsToggleText: { ...type.bodyStrong, flex: 1, color: colors.primary },
   prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
   prefRow: { gap: spacing.xs },
-  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
   prefOptOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },

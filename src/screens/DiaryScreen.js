@@ -1285,7 +1285,7 @@ export default function DiaryScreen({ navigation }) {
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Build from your targets, review it, then add it to the diary.</Text>
+                    <Text style={styles.buildPlanSub}>Build a day or week from your targets, then add it when ready.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1526,7 +1526,7 @@ export default function DiaryScreen({ navigation }) {
       >
         <Text style={styles.moveTitle}>Day tools</Text>
         <Text style={styles.saveMealHint}>
-          Copy food from another day, or open trends and export. Food logging stays here.
+          Need a shortcut? Copy a logged day, check trends, or export your diary.
         </Text>
         <TouchableOpacity
           style={styles.diaryToolRow}
@@ -1726,7 +1726,7 @@ const styles = StyleSheet.create({
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   moveTitle: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 1, textTransform: 'uppercase',
+    letterSpacing: 0, textTransform: 'uppercase',
     paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
   },
   moveOption: {

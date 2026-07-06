@@ -211,8 +211,8 @@ export default function MyRecipesScreen({ navigation, route }) {
       ) : recipes.length === 0 ? (
         <EmptyState
           icon="restaurant-outline"
-          title="Build your first recipe"
-          text="Build a recipe once. Log it as one line in your diary every time you eat it."
+          title="Create your first recipe"
+          text="Save the ingredients once, then log the recipe in one tap whenever you eat it."
           actionLabel="Build a recipe"
           onAction={onCreate}
         />

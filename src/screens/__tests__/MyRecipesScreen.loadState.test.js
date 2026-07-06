@@ -92,7 +92,7 @@ describe('MyRecipesScreen load states', () => {
     expect(text).toContain("Couldn't load recipes");
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
-    expect(text).not.toContain('Build your first recipe');
+    expect(text).not.toContain('Create your first recipe');
     expect(logError).toHaveBeenCalledWith('MyRecipesScreen.reload', expect.any(Error), { userId: 'u1' });
 
     const retry = tree.root.findByProps({ accessibilityLabel: 'Try again' });
@@ -117,7 +117,7 @@ describe('MyRecipesScreen load states', () => {
     await flush();
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Build your first recipe');
+    expect(text).toContain('Create your first recipe');
     expect(text).not.toContain("Couldn't load recipes");
 
     const build = tree.root.findByProps({ accessibilityLabel: 'Build a recipe' });

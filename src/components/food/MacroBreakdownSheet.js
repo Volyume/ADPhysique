@@ -55,15 +55,15 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   const fKcal = fat * 9;
   const macroKcal = pKcal + cKcal + fKcal;
   const split = macroKcal > 0
-    ? `P ${Math.round((pKcal / macroKcal) * 100)}% · C ${Math.round((cKcal / macroKcal) * 100)}% · F ${Math.round((fKcal / macroKcal) * 100)}%`
+    ? `P ${Math.round((pKcal / macroKcal) * 100)}% - C ${Math.round((cKcal / macroKcal) * 100)}% - F ${Math.round((fKcal / macroKcal) * 100)}%`
     : null;
   return (
     <View style={styles.macroCell}>
       <Text style={styles.rowMacros}>
-        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {protein}P {carbs}C {fat}F
+        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
       </Text>
       <Text style={styles.rowMacroKcal}>
-        {protein}×4 + {carbs}×4 + {fat}×9 = {macroKcal} kcal
+        {protein}x4 + {carbs}x4 + {fat}x9 = {macroKcal} kcal
       </Text>
       {split ? <Text style={styles.rowMacroSplit}>{split} of calories</Text> : null}
     </View>

@@ -320,7 +320,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
       </View>
       {macroSplit ? (
         <Text style={styles.macroSplit}>
-          {`P ${macroSplit.p}% · C ${macroSplit.c}% · F ${macroSplit.f}%`}
+          {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
           <Text style={styles.macroSplitCaption}> of calories</Text>
         </Text>
       ) : null}
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   },
   macroRow: {
     gap: spacing.md,

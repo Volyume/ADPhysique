@@ -13,7 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
 import Button from '../Button';
 
-export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Log a meal or build a plan when you\'re ready.';
+export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food or plan meals from your targets.';
 
 export default function EmptyDiary({
   onAdd,
@@ -40,7 +40,7 @@ export default function EmptyDiary({
           </View>
           <View style={styles.planCopy}>
             <Text style={styles.planTitle}>Plan meals</Text>
-            <Text style={styles.planText}>Build from your targets, review it, then add it to the diary.</Text>
+            <Text style={styles.planText}>Build a day or week from your targets, then add it when ready.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>

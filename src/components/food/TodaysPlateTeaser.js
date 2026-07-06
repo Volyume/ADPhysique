@@ -41,7 +41,7 @@ export default function TodaysPlateTeaser() {
 
   return (
     <View style={styles.card} accessibilityRole="summary" accessibilityLabel="Example meal plan day. Pro builds this around your own targets.">
-      <Text style={styles.eyebrow}>A DAY ON PRO</Text>
+      <Text style={styles.eyebrow}>A day on Pro</Text>
       <Text style={styles.title}>Your meals, sorted.</Text>
       <Text style={styles.sub}>
         Pro builds a day of real food to your own calories and macros, and lets
@@ -60,7 +60,7 @@ export default function TodaysPlateTeaser() {
         ))}
         <View style={styles.totalRow}>
           <Text style={styles.totalText}>
-            {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${day.totals.protein} · C ${day.totals.carbs} · F ${day.totals.fat}`}
+            {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${day.totals.protein} - C ${day.totals.carbs} - F ${day.totals.fat}`}
           </Text>
         </View>
       </View>
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.xs, alignSelf: 'stretch',
     marginBottom: spacing.lg,
   },
-  eyebrow: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0.6 },
+  eyebrow: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0 },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   sub: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   plates: { gap: spacing.sm },
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, padding: spacing.sm, gap: 2,
   },
   plateHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  plateSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  plateSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
   plateKcal: { color: colors.textSecondary, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
   plateName: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalRow: { paddingTop: spacing.xs, alignItems: 'flex-end' },
