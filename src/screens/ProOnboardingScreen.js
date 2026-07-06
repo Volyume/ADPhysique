@@ -57,8 +57,8 @@ const TOTAL_STEPS = 5;
 const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Coaching rhythm'];
 const STEP_OUTCOMES = {
   1: [
-    { icon: 'shield-checkmark-outline', label: 'Backed-up Pro setup' },
-    { icon: 'sync-outline', label: 'Plan sync' },
+    { icon: 'shield-checkmark-outline', label: 'Cloud backup' },
+    { icon: 'sync-outline', label: 'Plan restore' },
   ],
   2: [
     { icon: 'calculator-outline', label: 'Calorie baseline' },
@@ -944,7 +944,7 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
         </View>
         <ProgressBar />
-        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} · {stepLabel}</Text>
         <Text style={styles.stepTitle}>{title}</Text>
         {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
         {outcomes.length ? (
@@ -954,7 +954,7 @@ export default function ProOnboardingScreen({ navigation }) {
               {outcomes.map((item) => (
                 <View key={item.label} style={styles.outcomeChip}>
                   <Ionicons name={item.icon} size={14} color={colors.primary} />
-                  <Text style={styles.outcomeChipText}>{item.label}</Text>
+                  <Text style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
                 </View>
               ))}
             </View>
@@ -989,14 +989,14 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Save your Pro setup"
+              title="Keep your Pro setup safe"
               sub="Sign in once so your plan, weight history and coaching adjustments can be restored if you change device."
             />
 
             <QuestionGroup
               icon="person-circle-outline"
               title="Your account"
-              sub="This is only for keeping your Pro plan and coaching history tied to you. The training setup starts next."
+              sub="This only keeps your Pro plan and coaching history tied to you. The training setup starts next."
             >
               {/* OAuth only (Apple on iOS, Google on Android). The email +
                   password path was removed (founder 2026-07-01); OAuth needs no
@@ -1077,7 +1077,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Biological sex</Text>
-                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. It is not shown publicly.</Text>
+                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. This is not shown publicly.</Text>
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
@@ -1128,7 +1128,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <Text style={styles.fieldHint}>Used with your weight and age to calculate your calorie targets.</Text>
                 {localHeightUnits === 'imperial' ? (
                   <View style={styles.heightImperialRow}>
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.inputHalf}>
                       <TextField accessibilityLabel="Height feet"
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
@@ -1142,7 +1142,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         textContentType="none"
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.inputHalf}>
                       <TextField accessibilityLabel="Height inches"
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
@@ -1193,7 +1193,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 </Text>
                 {localBWUnits === 'st' ? (
                   <View style={styles.heightImperialRow}>
-                    <View style={{ flex: 2 }}>
+                    <View style={styles.inputStone}>
                       <TextField accessibilityLabel="Current body weight in stones"
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
@@ -1207,7 +1207,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         textContentType="none"
                       />
                     </View>
-                    <View style={{ flex: 3 }}>
+                    <View style={styles.inputPounds}>
                       <TextField accessibilityLabel="Current body weight remaining pounds"
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
@@ -1246,7 +1246,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.sectionLast}>
                 <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  A measured figure can sharpen targets. Progress Photos can track visual change without asking you to guess an exact percentage.
+                  A measured figure can sharpen targets. Progress Photos can create a Volyume Physique Score for visual progress without asking you to guess exact body fat.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}
@@ -1434,7 +1434,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Choose what the plan should serve"
+              title="Set your training focus"
               sub="Your goal sets the calorie direction, training bias and nutrition target."
               onBack={goBack}
             />
@@ -1512,7 +1512,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 accessibilityState={{ expanded: proteinOpen }}
                 accessibilityLabel={`Protein target, ${PROTEIN_APPROACHES[proteinApproach]?.label}. Tap to change.`}
               >
-                <View style={{ flex: 1 }}>
+                <View style={styles.proteinCopy}>
                   <View style={styles.measuredRow}>
                     <Text style={styles.fieldLabel}>Protein target</Text>
                     {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
@@ -1541,7 +1541,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         accessibilityState={{ selected: active }}
                         accessibilityLabel={`${opt.label}, ${opt.range}${recommended ? ', recommended' : ''}`}
                       >
-                        <View style={{ flex: 1 }}>
+                        <View style={styles.proteinOptionCopy}>
                           <View style={styles.proteinOptTop}>
                             <Text style={styles.proteinOptLabel}>{opt.label}</Text>
                             <Text style={styles.proteinOptRange}>{opt.range}</Text>
@@ -1626,7 +1626,7 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-5" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Header
-            title="Recovery & reminders."
+            title="Recovery and reminders"
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
             onBack={goBack}
           />
@@ -1639,7 +1639,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Volyume uses a deterministic, explainable coaching system. Morning weights and weekly check-ins drive the review; food logging makes it sharper, and the app stays cautious when data is missing.
+              Volyume uses a deterministic, explainable coaching system, not a chat coach. Morning weights and weekly check-ins drive the review; food logging makes it sharper, and the app stays cautious when data is missing.
             </Text>
           </View>
 
@@ -1670,7 +1670,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={styles.notifIconWrap}>
                   <Ionicons name="scale-outline" size={18} color={colors.primary} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.notifCopy}>
                   <Text style={styles.notifTitle}>Morning weight reminder</Text>
                   <Text style={styles.notifSub}>
                     A quick morning weigh-in gives the coach a cleaner trend than occasional scale checks.
@@ -1720,7 +1720,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={styles.notifIconWrap}>
                   <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.notifCopy}>
                   <Text style={styles.notifTitle}>Weekly check-in reminder</Text>
                   <Text style={styles.notifSub}>
                     Pick the day you are most likely to review training, food and recovery honestly.
@@ -1775,7 +1775,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={styles.notifIconWrap}>
                   <Ionicons name="heart-outline" size={18} color={colors.primary} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.notifCopy}>
                   <Text style={styles.notifTitle}>Cardio</Text>
                   <Text style={styles.notifSub}>
                     {cardioOn
@@ -1795,6 +1795,10 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </View>
           </View>
+
+          {!canContinue ? (
+            <Text style={styles.continueHint}>Choose your recovery rating to finish setup.</Text>
+          ) : null}
 
           <Button
             title="Continue"
@@ -1816,13 +1820,13 @@ export default function ProOnboardingScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { flexGrow: 1, padding: spacing.xl, paddingBottom: spacing.xxxl },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
   // Header
-  headerBlock: { marginBottom: spacing.xl },
+  headerBlock: { marginBottom: spacing.lg },
   brandRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4,
@@ -1844,15 +1848,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
     color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
   },
-  stepSub: { ...type.bodySm, color: colors.textSecondary },
+  stepSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   outcomeCard: {
     marginTop: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   outcomeEyebrow: {
     ...type.caption,
     color: colors.textMuted,
-    textTransform: 'uppercase',
+    fontWeight: fontWeight.semibold,
   },
   outcomeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   outcomeChip: {
@@ -1863,8 +1867,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    maxWidth: '100%',
   },
-  outcomeChipText: { ...type.caption, color: colors.textPrimary },
+  outcomeChipText: { ...type.caption, color: colors.textPrimary, flexShrink: 1 },
 
   // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
   seqScroll: {
@@ -1896,7 +1901,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1.5,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
     marginBottom: spacing.xl,
   },
   questionGroupHead: {
@@ -1936,13 +1941,16 @@ const styles = StyleSheet.create({
   measuredRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   // Protein target collapsible (step 3). Collapsed by default, the header
   // shows the chosen tier; expanding reveals the three tiers to pick from.
-  proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48 },
+  proteinCopy: { flex: 1, minWidth: 0 },
   proteinOptions: { marginTop: spacing.sm, gap: spacing.sm },
   proteinOpt: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border, padding: spacing.md,
+    minHeight: 64,
   },
+  proteinOptionCopy: { flex: 1, minWidth: 0 },
   proteinOptActive: { borderColor: colors.primary },
   proteinOptTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs, flexWrap: 'wrap' },
   proteinOptLabel: { ...type.bodyStrong, color: colors.textPrimary },
@@ -1987,14 +1995,18 @@ const styles = StyleSheet.create({
   },
 
   heightImperialRow: { flexDirection: 'row', gap: spacing.md },
+  inputHalf: { flex: 1, minWidth: 0 },
+  inputStone: { flex: 2, minWidth: 0 },
+  inputPounds: { flex: 3, minWidth: 0 },
 
   fieldLabelRow: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: spacing.sm,
+    justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm,
   },
   segmentRowSmall: {
     flexDirection: 'row', backgroundColor: colors.surface,
     borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.xxs,
+    flexShrink: 0,
   },
   segmentSmall: {
     paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
@@ -2014,6 +2026,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.md,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  notifCopy: { flex: 1, minWidth: 0 },
   notifIconWrap: {
     width: 36, height: 36, borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
@@ -2032,7 +2045,7 @@ const styles = StyleSheet.create({
   coachCardBody: { ...type.bodySm, color: colors.textSecondary },
 
   toggle: {
-    width: 44, height: 26, borderRadius: 13,
+    width: 48, height: 28, borderRadius: 14,
     backgroundColor: colors.surface3, justifyContent: 'center', paddingHorizontal: 3,
   },
   toggleOn: { backgroundColor: colors.primary },
@@ -2044,9 +2057,11 @@ const styles = StyleSheet.create({
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
+    minHeight: 44,
     paddingHorizontal: spacing.md, paddingVertical: 7,
     borderRadius: radius.full, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
+    justifyContent: 'center',
   },
   hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
