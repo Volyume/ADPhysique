@@ -30,6 +30,7 @@ import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
 import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
 import { buildAthleteProfileSummary } from '../lib/athleteProfileSummary';
 import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athleteProfileAccessibility';
+import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 
@@ -60,6 +61,33 @@ function scanConfidenceLabel(confidence) {
   if (confidence === 'moderate') return 'Moderate confidence';
   if (confidence === 'low') return 'Low confidence';
   return 'Visual scan';
+}
+
+const COACHING_PHASE_LABELS = {
+  mild_cut: 'Lose fat (cut)',
+  mild_bulk: 'Build muscle (lean gain)',
+  bulk: 'Build muscle (bulk)',
+  recomp: 'Recomp',
+  maint: 'Maintain',
+};
+
+function currentFocusTile(profile = {}) {
+  const phaseLabel = PHASE_LABELS[profile.trainingPhase]
+    || COACHING_PHASE_LABELS[profile.goalPhase]
+    || 'Not set';
+  const divisionLabel = GOAL_LABELS[profile.trainingGoal]
+    || (profile.trainingGoal ? String(profile.trainingGoal).replace(/_/g, ' ') : null);
+  const days = Number(profile.daysPerWeek);
+  const detail = [
+    divisionLabel && divisionLabel !== 'Not competing' ? divisionLabel : null,
+    Number.isFinite(days) && days > 0 ? `${days} days/week` : null,
+  ].filter(Boolean).join(' - ');
+
+  return {
+    label: 'Current goal',
+    value: phaseLabel,
+    sub: detail || 'Set in profile details',
+  };
 }
 
 function Row({ icon, label, sub, onPress, pro, status = null }) {
@@ -222,6 +250,7 @@ export default function AthleteProfileScreen({ navigation }) {
     value: bodyFatText,
     sub: summary.bodyFatLoggedAt ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry` : 'Manual entry only',
   };
+  const focusTile = currentFocusTile(userProfile);
   const freshness = buildProfileFreshness({
     latestMetricAt: summary.latestMetric?.loggedAt ?? summary.latestMetric?.logged_at ?? summary.bodyFatLoggedAt,
     latestScanAt: summary.scan?.capturedAt ?? summary.scan?.captured_at,
@@ -270,6 +299,7 @@ export default function AthleteProfileScreen({ navigation }) {
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
           <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and core lifts'} />
+          <StatTile label={focusTile.label} value={focusTile.value} sub={focusTile.sub} />
         </View>
 
         <View style={styles.section}>

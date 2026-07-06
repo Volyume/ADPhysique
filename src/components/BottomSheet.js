@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Modal, Animated, Easing, Pressable, View, StyleSheet, Platform, Keyboard,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
@@ -36,8 +36,11 @@ export default function BottomSheet({
   showHandle = true,
   // Lift the panel above the keyboard for sheets with text inputs.
   keyboardAvoiding = false,
+  // Long sheets opt into an internal scroll area instead of overflowing.
+  scroll = false,
   // Extra style merged onto the sheet panel.
   sheetStyle,
+  contentContainerStyle,
   accessibilityLabel,
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -82,6 +85,17 @@ export default function BottomSheet({
 
   if (!mounted) return null;
 
+  const body = scroll ? (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </ScrollView>
+  ) : children;
+
   return (
     <Modal
       transparent
@@ -114,7 +128,7 @@ export default function BottomSheet({
           accessibilityLabel={accessibilityLabel}
         >
           {showHandle ? <View style={styles.handle} /> : null}
-          {children}
+          {body}
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -134,7 +148,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxl + spacing.md,
     gap: spacing.md,
+    maxHeight: '92%',
   },
+  scroll: { alignSelf: 'stretch' },
+  scrollContent: { gap: spacing.md, paddingBottom: spacing.sm },
   handle: {
     alignSelf: 'center',
     width: 36,
