@@ -35,14 +35,14 @@ export const SHARE_WIN_CARD_RULES = Object.freeze([
   'Ask every time before a card is sent.',
   'One card, one moment, one partner.',
   'The card never opens workout history, food diary, coach notes, body metrics or photos.',
-  'Future delivery must support revoke and delete.',
+  'A sent card can be deleted by the sender.',
 ]);
 
 export const SHARE_WIN_DELIVERY_GUARDRAILS = Object.freeze([
   'Preview the exact card before sending.',
   'Confirm the one partner who will receive it.',
   'Send one card only. No background feed is created.',
-  'Keep revoke and delete controls attached to the card.',
+  'Keep the sender delete control attached to the card.',
 ]);
 
 export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
@@ -64,7 +64,7 @@ export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
   Object.freeze({
     key: 'control',
     title: 'Keep control',
-    body: 'Attach revoke and delete controls to every card once delivery exists.',
+    body: 'Sent cards keep a delete control for the sender.',
   }),
 ]);
 
@@ -241,7 +241,7 @@ export function buildShareWinReviewReceipt(preview) {
     visibleToPartner: preview.shared,
     remainsPrivate: preview.private,
     consentLine: preview.confirmation,
-    finalCheck: 'Future send controls must show the partner name, card type and exact card copy on one screen.',
+    finalCheck: 'Send controls show the partner name, card type and exact card copy on one screen.',
   });
 }
 

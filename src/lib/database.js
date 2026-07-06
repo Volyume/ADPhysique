@@ -1581,6 +1581,27 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `ALTER TABLE partner_cheers ADD COLUMN kind TEXT DEFAULT 'here'`,
   ],
+  // Partner win cards: explicit, user-approved, pair-scoped celebration cards.
+  // Sanitized text only: no raw workout sets/reps/load, food, coach notes, body
+  // metrics, raw photos, image files or scan internals. Revocation is a
+  // timestamp so both devices can hide the card without losing audit context.
+  [
+    `CREATE TABLE IF NOT EXISTS partner_win_cards (
+      id                 TEXT PRIMARY KEY NOT NULL,
+      pair_id            TEXT NOT NULL,
+      sender_id          TEXT NOT NULL,
+      card_type          TEXT NOT NULL,
+      title              TEXT NOT NULL,
+      summary            TEXT NOT NULL,
+      detail             TEXT NOT NULL,
+      visible_to_partner TEXT NOT NULL,
+      remains_private    TEXT NOT NULL,
+      created_at         INTEGER NOT NULL,
+      revoked_at         INTEGER,
+      updated_at         INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_partner_win_cards_pair ON partner_win_cards(pair_id, created_at)',
+  ],
   // v56, Progress Scan foundation. Local-only, no cloud counterpart:
   //   1) rebuild progress_photo_meta as user-scoped so one account cannot read
   //      another account's photo metadata on a shared device;
@@ -4219,6 +4240,7 @@ export async function wipeAllUserData(userId) {
       await d.runAsync('DELETE FROM partner_week_signals');
       await d.runAsync('DELETE FROM partner_shared_blocks');
       await d.runAsync('DELETE FROM partner_weekly_intentions');
+      await d.runAsync('DELETE FROM partner_win_cards');
       await d.runAsync('DELETE FROM partnerships');
     } catch (e) {
       logError('database.wipeAllUserData.partners', e, { userId });
@@ -4861,6 +4883,53 @@ export async function deleteLocalPartnerSharedBlock(pairId) {
 }
 
 /** Local "what cloud rows exist for my pairs" — used to prune unpaired rows on pull. */
+export async function getPartnerWinCards(pairId, { limit = 5, includeRevoked = false } = {}) {
+  if (!pairId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM partner_win_cards
+     WHERE pair_id = ? ${includeRevoked ? '' : 'AND revoked_at IS NULL'}
+     ORDER BY created_at DESC
+     LIMIT ?`,
+    [pairId, Math.max(1, Math.min(20, Math.round(Number(limit) || 5)))],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function upsertPartnerWinCardFromCloud(row) {
+  if (!row?.id || !row?.pair_id || !row?.sender_id || !row?.card_type) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_win_cards
+       (id, pair_id, sender_id, card_type, title, summary, detail, visible_to_partner, remains_private, created_at, revoked_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id,
+      row.pair_id,
+      row.sender_id,
+      String(row.card_type).slice(0, 40),
+      String(row.title || 'Shared win').slice(0, 80),
+      String(row.summary || '').slice(0, 160),
+      String(row.detail || '').slice(0, 240),
+      String(row.visible_to_partner || '').slice(0, 180),
+      String(row.remains_private || '').slice(0, 220),
+      _toMsLocal(row.created_at) ?? Date.now(),
+      _toMsLocal(row.revoked_at),
+      _toMsLocal(row.updated_at ?? row.created_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function markLocalPartnerWinCardRevoked(cardId, revokedAt = Date.now()) {
+  if (!cardId) return;
+  const d = await db();
+  const ts = _toMsLocal(revokedAt) ?? Date.now();
+  await d.runAsync(
+    'UPDATE partner_win_cards SET revoked_at = ?, updated_at = ? WHERE id = ?',
+    [ts, ts, cardId],
+  );
+}
+
 export async function getLocalPartnershipIds(userId) {
   if (!userId) return [];
   const d = await db();
@@ -4883,6 +4952,7 @@ export async function deleteLocalPairSharedData(pairId) {
   await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
   await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
   await d.runAsync('DELETE FROM partner_weekly_intentions WHERE pair_id = ?', [pairId]);
+  await d.runAsync('DELETE FROM partner_win_cards WHERE pair_id = ?', [pairId]);
 }
 
 /**
@@ -4911,6 +4981,7 @@ export async function clearLocalPartners() {
   await d.runAsync('DELETE FROM partner_week_signals');
   await d.runAsync('DELETE FROM partner_shared_blocks');
   await d.runAsync('DELETE FROM partner_weekly_intentions');
+  await d.runAsync('DELETE FROM partner_win_cards');
   await d.runAsync('DELETE FROM partnerships');
 }
 

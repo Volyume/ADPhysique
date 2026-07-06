@@ -43,7 +43,7 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_POLICY.excluded).toContain('body metrics');
     expect(SHARE_WIN_POLICY.excluded).toContain('automatic photo sharing');
     expect(SHARE_WIN_CARD_RULES).toContain('Ask every time before a card is sent.');
-    expect(SHARE_WIN_CARD_RULES).toContain('Future delivery must support revoke and delete.');
+    expect(SHARE_WIN_CARD_RULES).toContain('A sent card can be deleted by the sender.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact card before sending.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one card only. No background feed is created.');
     expect(SHARE_WIN_REVIEW_STEPS.map((step) => step.key)).toEqual([
@@ -187,7 +187,7 @@ describe('partner shareable wins policy', () => {
     });
     expect(preview.draft.summary).toBe('Deadlift: New triple best.');
     expect(preview.guardrails).toContain('Confirm the one partner who will receive it.');
-    expect(preview.guardrails).toContain('Keep revoke and delete controls attached to the card.');
+    expect(preview.guardrails).toContain('Keep the sender delete control attached to the card.');
     expect(Object.keys(preview.draft)).not.toContain('bodyWeight');
     expect(buildShareWinPreview('food_diary', {})).toBeNull();
   });

@@ -28,9 +28,11 @@ jest.mock('../consent', () => ({
 
 import { postEvent } from '../../telemetry/transport';
 import { recordPartnerSharingConsent } from '../consent';
+import { buildShareWinPreview } from '../shareWins';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, blockPartner, unpairPartner,
   proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
+  sendPartnerWinCard, revokePartnerWinCard,
 } from '../service';
 
 function fakeClient(overrides = {}) {
@@ -74,6 +76,62 @@ function sharedBlockClient({ insertError = null, adopted = [{ pair_id: 'p1' }] }
       insert: jest.fn((row) => { calls.inserted.push(row); return Promise.resolve({ error: insertError }); }),
       update: jest.fn((row) => { calls.updated.push(row); return chain({ data: adopted, error: null }); }),
     })),
+  };
+}
+
+function winCardClient({ insertError = null, updateError = null } = {}) {
+  const calls = { inserted: [], updated: [], eqs: [] };
+  const insertedRow = () => ({
+    id: 'win1',
+    ...calls.inserted[0],
+    created_at: '2026-07-06T10:00:00.000Z',
+    updated_at: '2026-07-06T10:00:00.000Z',
+    revoked_at: null,
+  });
+  const updatedRow = () => ({
+    id: 'win1',
+    pair_id: 'p1',
+    sender_id: 'u1',
+    card_type: 'workout_summary',
+    title: 'Workout complete',
+    summary: 'Pull session completed on 6 July 2026.',
+    detail: 'Exercises, sets, reps, loads, notes and effort stay private.',
+    visible_to_partner: 'Workout name, date and completed status.',
+    remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+    created_at: '2026-07-06T10:00:00.000Z',
+    updated_at: calls.updated[0]?.updated_at,
+    revoked_at: calls.updated[0]?.revoked_at,
+  });
+  const selectSingle = (result) => ({
+    select: jest.fn(() => ({ single: jest.fn(() => Promise.resolve(result)) })),
+  });
+  const updateChain = {
+    eq: jest.fn((key, value) => { calls.eqs.push([key, value]); return updateChain; }),
+    select: jest.fn(() => ({
+      single: jest.fn(() => Promise.resolve(updateError
+        ? { data: null, error: updateError }
+        : { data: updatedRow(), error: null })),
+    })),
+  };
+  return {
+    _calls: calls,
+    rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    functions: { invoke: jest.fn(() => Promise.resolve({ data: { ok: true }, error: null })) },
+    from: jest.fn((table) => {
+      if (table !== 'partner_win_cards') return {};
+      return {
+        insert: jest.fn((row) => {
+          calls.inserted.push(row);
+          return selectSingle(insertError
+            ? { data: null, error: insertError }
+            : { data: insertedRow(), error: null });
+        }),
+        update: jest.fn((row) => {
+          calls.updated.push(row);
+          return updateChain;
+        }),
+      };
+    }),
   };
 }
 
@@ -215,6 +273,70 @@ describe('shared training block (Wave 5 C5 A1)', () => {
     expect(r.ok).toBe(true);
     expect(c._calls.deleted).toBe(1);
     expect(postEvent).toHaveBeenCalledWith('u1', 'partner_block_left', expect.any(Object));
+  });
+});
+
+describe('partner win cards', () => {
+  test('sends one sanitized preview card to the selected pair', async () => {
+    const c = winCardClient();
+    _setClientForTests(c);
+    const preview = buildShareWinPreview('workout_summary', {
+      workoutName: 'Pull session',
+      completedAt: '6 July 2026',
+      sets: [{ reps: 8, load: 90 }],
+    });
+
+    const r = await sendPartnerWinCard('u1', { pairId: 'p1', preview });
+    expect(r.ok).toBe(true);
+    expect(c.from).toHaveBeenCalledWith('partner_win_cards');
+    expect(c._calls.inserted[0]).toEqual({
+      pair_id: 'p1',
+      sender_id: 'u1',
+      card_type: 'workout_summary',
+      title: 'Workout complete',
+      summary: 'Pull session completed on 6 July 2026.',
+      detail: expect.stringContaining('sets, reps, loads, notes and effort stay private'),
+      visible_to_partner: 'Workout name, date and completed status.',
+      remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+    });
+    expect(JSON.stringify(c._calls.inserted[0])).not.toContain('90');
+  });
+
+  test('rejects invalid win-card previews before writing', async () => {
+    const c = winCardClient();
+    _setClientForTests(c);
+    const r = await sendPartnerWinCard('u1', {
+      pairId: 'p1',
+      preview: { draft: { type: 'workout_summary', title: 'x', summary: 'x', detail: 'x', reps: 10 } },
+    });
+    expect(r.ok).toBe(false);
+    expect(c.from).not.toHaveBeenCalled();
+  });
+
+  test('normalises an unapplied cloud migration for win cards', async () => {
+    const c = winCardClient({ insertError: { code: 'PGRST205', message: 'partner_win_cards not found' } });
+    _setClientForTests(c);
+    const preview = buildShareWinPreview('personal_record', {
+      liftName: 'Incline press',
+      recordLabel: 'New 8-rep best',
+    });
+    const r = await sendPartnerWinCard('u1', { pairId: 'p1', preview });
+    expect(r).toEqual({ ok: false, error: 'win_cards_unavailable' });
+  });
+
+  test('revokes only the sender-owned win card', async () => {
+    const c = winCardClient();
+    _setClientForTests(c);
+    const r = await revokePartnerWinCard('u1', { cardId: 'win1' });
+    expect(r.ok).toBe(true);
+    expect(c._calls.updated[0]).toEqual({
+      revoked_at: expect.any(String),
+      updated_at: expect.any(String),
+    });
+    expect(c._calls.eqs).toEqual([
+      ['id', 'win1'],
+      ['sender_id', 'u1'],
+    ]);
   });
 });
 

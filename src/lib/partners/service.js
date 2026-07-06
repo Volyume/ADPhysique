@@ -17,6 +17,7 @@ import { todayLocalKey } from '../dayKey';
 import { buildInviteLinks, inviteShareMessage } from './link';
 import { recordPartnerSharingConsent } from './consent';
 import { isValidAckKey, DEFAULT_ACK_KEY } from './acknowledgements';
+import { validateShareWinDraft } from './shareWins';
 import {
   trackInviteMinted, trackInviteRedeemed, trackCheerSent, trackUnpair,
 } from './telemetry';
@@ -35,6 +36,11 @@ function cheerFailureCode(error, data) {
   ].filter(v => v != null).join(' ').toLowerCase();
   if (status === 429 || text.includes('already_cheered') || text.includes('429')) return 'already_cheered';
   return data?.error || null;
+}
+
+function isMissingPartnerWinTable(error) {
+  const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
+  return text.includes('pgrst205') || text.includes('partner_win_cards');
 }
 
 /**
@@ -133,6 +139,57 @@ export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, recipr
     if (error) return fail(error);
     track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
     trackCheerSent();
+    return { ok: true, data };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function sendPartnerWinCard(userId, { pairId, preview } = {}) {
+  const c = getSupabaseClient();
+  if (!c || !userId || !pairId) return fail('offline');
+  const draft = preview?.draft;
+  if (!validateShareWinDraft(draft)) return fail('invalid_card');
+  try {
+    const row = {
+      pair_id: pairId,
+      sender_id: userId,
+      card_type: draft.type,
+      title: draft.title,
+      summary: draft.summary,
+      detail: draft.detail,
+      visible_to_partner: preview?.shared || '',
+      remains_private: preview?.private || '',
+    };
+    const { data, error } = await c.from('partner_win_cards')
+      .insert(row)
+      .select('*')
+      .single();
+    if (error) {
+      if (isMissingPartnerWinTable(error)) return { ok: false, error: 'win_cards_unavailable' };
+      return fail(error);
+    }
+    return { ok: true, data };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function revokePartnerWinCard(userId, { cardId } = {}) {
+  const c = getSupabaseClient();
+  if (!c || !userId || !cardId) return fail('offline');
+  const revokedAt = new Date().toISOString();
+  try {
+    const { data, error } = await c.from('partner_win_cards')
+      .update({ revoked_at: revokedAt, updated_at: revokedAt })
+      .eq('id', cardId)
+      .eq('sender_id', userId)
+      .select('*')
+      .single();
+    if (error) {
+      if (isMissingPartnerWinTable(error)) return { ok: false, error: 'win_cards_unavailable' };
+      return fail(error);
+    }
     return { ok: true, data };
   } catch (e) {
     return fail(e);

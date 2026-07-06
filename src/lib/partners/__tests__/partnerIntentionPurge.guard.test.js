@@ -16,6 +16,7 @@ const ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const migration = read('supabase/migrate_105_partner_weekly_intention.sql');
+const winCardMigration = read('supabase/migrate_107_partner_win_cards.sql');
 const database = read('src/lib/database.js');
 const deleteAccount = read('supabase/functions/delete-account/index.ts');
 
@@ -64,5 +65,24 @@ describe('client + edge purge paths clear intentions', () => {
 
   test('delete-account edge function sweeps the pair intentions (account deletion)', () => {
     expect(deleteAccount).toMatch(/partner_weekly_intentions'\)\.delete\(\)\.in\('pair_id', pairIds\)/);
+  });
+});
+
+describe('migrate_107: partner win cards keep the same deletion promise', () => {
+  test('creates win cards as a sanitized pair-scoped table', () => {
+    expect(winCardMigration).toMatch(/CREATE TABLE IF NOT EXISTS partner_win_cards/);
+    expect(winCardMigration).toMatch(/card_type IN \('workout_summary', 'personal_record', 'block_milestone', 'progress_card'\)/);
+  });
+
+  test('end_partnership and status-ended trigger purge win cards', () => {
+    expect(winCardMigration).toMatch(/DELETE FROM partner_win_cards\s+WHERE pair_id = _pair_id/);
+    expect(winCardMigration).toMatch(/DELETE FROM partner_win_cards WHERE pair_id = NEW\.id/);
+    expect(winCardMigration).toMatch(/AFTER UPDATE OF status ON partnerships/);
+  });
+
+  test('local and delete-account purge paths clear win cards', () => {
+    expect(database).toMatch(/DELETE FROM partner_win_cards WHERE pair_id = \?/);
+    expect(database).toMatch(/DELETE FROM partner_win_cards'\)/);
+    expect(deleteAccount).toMatch(/partner_win_cards'\)\.delete\(\)\.in\('pair_id', pairIds\)/);
   });
 });

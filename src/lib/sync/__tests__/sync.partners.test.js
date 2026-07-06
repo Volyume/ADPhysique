@@ -27,6 +27,7 @@ jest.mock('../../database', () => ({
   upsertPartnerSharedBlockFromCloud: jest.fn(),
   deleteLocalPartnerSharedBlock: jest.fn(),
   upsertPartnerWeeklyIntentionFromCloud: jest.fn(),
+  upsertPartnerWinCardFromCloud: jest.fn(),
 }));
 
 const dbMock = require('../../database');
@@ -43,6 +44,7 @@ beforeEach(() => {
   dbMock.upsertPartnerSharedBlockFromCloud.mockResolvedValue(undefined);
   dbMock.deleteLocalPartnerSharedBlock.mockResolvedValue(undefined);
   dbMock.upsertPartnerWeeklyIntentionFromCloud.mockResolvedValue(undefined);
+  dbMock.upsertPartnerWinCardFromCloud.mockResolvedValue(undefined);
 });
 
 describe('pushPartners', () => {
@@ -115,7 +117,7 @@ describe('pushPartners', () => {
 describe('pullPartners', () => {
   function makeSb({
     partnerships = [], signals = [], cheers = [], blocks = [], blocksError = null,
-    intentions = [], intentionsError = null,
+    intentions = [], intentionsError = null, winCards = [], winCardsError = null,
   } = {}) {
     return {
       from: jest.fn((table) => {
@@ -133,6 +135,9 @@ describe('pullPartners', () => {
         }
         if (table === 'partner_weekly_intentions') {
           return { select: () => ({ in: () => Promise.resolve(intentionsError ? { data: null, error: intentionsError } : { data: intentions, error: null }) }) };
+        }
+        if (table === 'partner_win_cards') {
+          return { select: () => ({ in: () => Promise.resolve(winCardsError ? { data: null, error: winCardsError } : { data: winCards, error: null }) }) };
         }
         return { select: () => ({}) };
       }),
@@ -287,6 +292,38 @@ describe('pullPartners', () => {
     const r = await pullPartners(sb, { userId: 'me' });
     expect(r.errors).toBe(0);
     expect(dbMock.upsertPartnerWeeklyIntentionFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('restores explicit partner win cards for an active pair', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      winCards: [{
+        id: 'win1',
+        pair_id: 'pair1',
+        sender_id: 'sam',
+        card_type: 'personal_record',
+        title: 'Personal record',
+        summary: 'Incline press: New 8-rep best.',
+        detail: 'Wider lift history stays private.',
+        visible_to_partner: 'The lift name and the record you choose to celebrate.',
+        remains_private: 'Your wider lift history and other records stay private.',
+      }],
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    expect(dbMock.upsertPartnerWinCardFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'win1', pair_id: 'pair1', sender_id: 'sam' }),
+    );
+  });
+
+  test('a missing partner_win_cards cloud table is benign', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      winCardsError: { code: 'PGRST205', message: 'partner_win_cards not found' },
+    });
+    const r = await pullPartners(sb, { userId: 'me' });
+    expect(r.errors).toBe(0);
+    expect(dbMock.upsertPartnerWinCardFromCloud).not.toHaveBeenCalled();
   });
 
   test('a missing cloud partnerships table is a benign skip', async () => {

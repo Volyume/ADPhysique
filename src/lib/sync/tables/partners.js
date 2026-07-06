@@ -6,7 +6,7 @@
  * registry entry (`partner_signals`) drives all three local mirrors:
  *
  *   PULL  partnerships (mine, any status) -> local; then for active pairs,
- *         partner_week_signals + partner_cheers for BOTH members -> local.
+ *         partner_week_signals + partner_cheers + win cards for BOTH members -> local.
  *         A partnership the cloud no longer returns as mine is pruned locally
  *         (the unpair-while-offline case: the other side ended it).
  *   PUSH  my own derived week signals (planned/done/met/state) for active pairs.
@@ -214,6 +214,21 @@ export async function pullPartners(sb, { userId } = {}) {
         }
       } else if (!isMissingTableError(iErr, 'partner_weekly_intentions')) {
         errors += 1; logSyncError('sync.tables.partners.pullIntentions', iErr);
+      }
+
+      // 6. Explicit partner win cards. These are sanitized cards the sender
+      //    chose to share, never raw workout data, photos, food or coach notes.
+      //    Revoked rows still pull so both devices can hide the card promptly.
+      const { data: winCards, error: wErr } = await sb.from('partner_win_cards')
+        .select('*').in('pair_id', activePairIds);
+      if (!wErr) {
+        for (const row of (winCards || [])) {
+          try { await db.upsertPartnerWinCardFromCloud(row); applied += 1; } catch (e) {
+            errors += 1; logSyncError('sync.tables.partners.upsertWinCard', e);
+          }
+        }
+      } else if (!isMissingTableError(wErr, 'partner_win_cards')) {
+        errors += 1; logSyncError('sync.tables.partners.pullWinCards', wErr);
       }
     }
 

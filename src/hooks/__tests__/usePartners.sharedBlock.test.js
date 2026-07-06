@@ -23,6 +23,9 @@ jest.mock('../../lib/database', () => ({
   getPartnerSharedBlock: jest.fn(async () => null),
   deleteLocalPartnerSharedBlock: jest.fn(async () => {}),
   upsertPartnerSharedBlockFromCloud: jest.fn(async () => {}),
+  getPartnerWinCards: jest.fn(async () => []),
+  upsertPartnerWinCardFromCloud: jest.fn(async () => {}),
+  markLocalPartnerWinCardRevoked: jest.fn(async () => {}),
 }));
 
 jest.mock('../../lib/partners/service', () => ({
@@ -34,6 +37,8 @@ jest.mock('../../lib/partners/service', () => ({
   proposeSharedBlock: jest.fn(async () => ({ ok: true })),
   adoptSharedBlock: jest.fn(async () => ({ ok: true })),
   leaveSharedBlock: jest.fn(async () => ({ ok: true })),
+  sendPartnerWinCard: jest.fn(async () => ({ ok: true })),
+  revokePartnerWinCard: jest.fn(async () => ({ ok: true })),
 }));
 
 jest.mock('../../lib/partners/weekSignalWriter', () => ({

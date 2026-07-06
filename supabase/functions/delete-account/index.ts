@@ -130,7 +130,7 @@ serve(async (req) => {
     //     goes. The partnership FKs are ON DELETE SET NULL so the row survives
     //     as a tombstone the partner sees as "Partnership ended" (identical to
     //     a manual unpair — no death-vs-departure leak). We also hard-delete
-    //     the pair's week signals + cheers (both sides) so nothing of the
+    //     the pair's shared partner rows (both sides) so nothing of the
     //     partnership lingers. Best-effort: a failure here must not block the
     //     account deletion itself.
     try {
@@ -142,9 +142,11 @@ serve(async (req) => {
       if (pairIds.length > 0) {
         await adminClient.from('partner_week_signals').delete().in('pair_id', pairIds)
         await adminClient.from('partner_cheers').delete().in('pair_id', pairIds)
+        await adminClient.from('partner_shared_blocks').delete().in('pair_id', pairIds)
         // D5-A: the pair's weekly intentions go too (belt-and-braces; the
         // status->ended trigger in migrate_105 also covers this path).
         await adminClient.from('partner_weekly_intentions').delete().in('pair_id', pairIds)
+        await adminClient.from('partner_win_cards').delete().in('pair_id', pairIds)
         await adminClient
           .from('partnerships')
           .update({ status: 'ended', ended_at: new Date().toISOString() })
