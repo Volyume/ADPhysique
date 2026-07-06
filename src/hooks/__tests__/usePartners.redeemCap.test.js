@@ -46,6 +46,17 @@ jest.mock('../../lib/partners/weekSignalWriter', () => ({
   writeOwnWeekSignals: jest.fn(async () => {}),
 }));
 
+jest.mock('../../lib/partners/inviteCache', () => ({
+  getCachedInvite: jest.fn(() => null),
+  setCachedInvite: jest.fn(),
+  clearCachedInvite: jest.fn(),
+}));
+
+jest.mock('../../lib/partners/pendingInvite', () => ({
+  readPendingPartnerCode: jest.fn(async () => null),
+  clearPendingPartnerCode: jest.fn(async () => {}),
+}));
+
 const db = require('../../lib/database');
 const service = require('../../lib/partners/service');
 const usePartners = require('../usePartners').default;
@@ -108,5 +119,41 @@ describe('usePartners redeem enforces the partner cap', () => {
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r.ok).toBe(true);
     expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(partnership);
+  });
+
+  test('successful legacy redeem seeds an active local row before the pull catches up', async () => {
+    db.getActivePartnerCount.mockResolvedValue(0);
+    service.redeemPartnerInvite.mockResolvedValueOnce({
+      ok: true,
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+    });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.redeem('CODE1234'); });
+    expect(r.ok).toBe(true);
+    expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'p1',
+      member_b: 'me',
+      status: 'active',
+      partner_first_name: 'Sam',
+    }));
+  });
+
+  test('creating an invite seeds the pending local row before background sync', async () => {
+    service.createPartnerInvite.mockResolvedValueOnce({
+      ok: true,
+      data: { partnershipId: 'p-new', code: 'ABCD1234EF', shareMessage: 'Join me' },
+    });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.invite({ streakEnabled: false }); });
+    expect(r.ok).toBe(true);
+    expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'p-new',
+      member_a: 'me',
+      member_b: null,
+      status: 'invited',
+      streak_enabled: false,
+    }));
   });
 });

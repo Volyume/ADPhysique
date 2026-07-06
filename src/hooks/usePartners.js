@@ -88,6 +88,44 @@ async function optionalPartnerRead(read, fallback) {
   }
 }
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
+async function mirrorPendingInviteLocally(userId, invite, opts = {}) {
+  if (!userId || !invite?.partnershipId) return;
+  const now = nowIso();
+  try {
+    await upsertPartnershipFromCloud({
+      id: invite.partnershipId,
+      member_a: userId,
+      member_b: null,
+      status: 'invited',
+      streak_enabled: opts?.streakEnabled !== false,
+      partner_first_name: null,
+      created_at: now,
+      updated_at: now,
+    });
+  } catch (_) { /* pull heals */ }
+}
+
+async function mirrorAcceptedPartnershipLocally(userId, data = {}) {
+  const now = nowIso();
+  const row = data?.partnership || (data?.partnershipId ? {
+    id: data.partnershipId,
+    member_a: null,
+    member_b: userId,
+    status: 'active',
+    streak_enabled: true,
+    partner_first_name: data.partnerFirstName ?? null,
+    created_at: now,
+    accepted_at: now,
+    updated_at: now,
+  } : null);
+  if (!row?.id) return;
+  try { await upsertPartnershipFromCloud(row); } catch (_) { /* pull heals */ }
+}
+
 // Enrich one active partnership with its OWN derived view: both sides' week
 // signals, the shared streak, the cheer allowance, the last cheer received and
 // the shared block. Each pair is a private world — nothing here is compared or
@@ -255,8 +293,13 @@ export default function usePartners(userId, tier) {
     || (state.partnership?.status === 'invited' ? state.partnership.id : null);
   useEffect(() => {
     if (!PASSIVE_PENDING_REFRESH_ENABLED || !userId || !pendingRefreshKey) return undefined;
-    const timer = setInterval(() => { load(); }, PENDING_INVITE_REFRESH_MS);
-    return () => clearInterval(timer);
+    let cancelled = false;
+    const tick = () => {
+      if (!cancelled) pullPartnerMirrorNow(userId).finally(load);
+    };
+    tick();
+    const timer = setInterval(tick, PENDING_INVITE_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
   }, [userId, pendingRefreshKey, load]);
 
   const refresh = useCallback(async () => {
@@ -270,9 +313,15 @@ export default function usePartners(userId, tier) {
   // redemption clear it). The server enforces the same single-pending invariant.
   const invite = useCallback(async (opts) => {
     const cached = getCachedInvite(userId);
-    if (cached) return { ok: true, data: cached };
+    if (cached) {
+      await mirrorPendingInviteLocally(userId, cached, opts);
+      return { ok: true, data: cached };
+    }
     const r = await createPartnerInvite(userId, opts);
-    if (r.ok && r.data) setCachedInvite(userId, r.data);
+    if (r.ok && r.data) {
+      setCachedInvite(userId, r.data);
+      await mirrorPendingInviteLocally(userId, r.data, opts);
+    }
     return r; // caller drives the OS share sheet with r.data.shareMessage
   }, [userId]);
 
@@ -287,9 +336,7 @@ export default function usePartners(userId, tier) {
     if (r.ok) {
       clearCachedInvite();
       await clearPendingPartnerCode();
-      if (r.data?.partnership) {
-        try { await upsertPartnershipFromCloud(r.data.partnership); } catch (_) { /* pull heals */ }
-      }
+      await mirrorAcceptedPartnershipLocally(userId, r.data);
       await pullPartnerMirrorNow(userId);
       await load();
     }

@@ -65,6 +65,13 @@ function resolveAckKey(raw: unknown): string {
   return (typeof raw === 'string' && raw in ACK_LINES) ? raw : DEFAULT_ACK_KEY
 }
 
+function isMissingKindColumn(error: unknown): boolean {
+  const e = error as { code?: string; message?: string; details?: string; hint?: string }
+  const text = [e?.code, e?.message, e?.details, e?.hint].filter(Boolean).join(' ').toLowerCase()
+  return text.includes('kind')
+    && (text.includes('schema cache') || text.includes('column') || text.includes('could not find'))
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return jsonResponse({ ok: false, error: 'Method not allowed' }, 405)
@@ -115,9 +122,15 @@ serve(async (req: Request) => {
 
   // Insert the cheer AS the caller — RLS confirms membership, the UNIQUE
   // constraint is the rate limit. A duplicate is the daily limit, not an error.
-  const { error: insErr } = await userClient
+  let { error: insErr } = await userClient
     .from('partner_cheers')
     .insert({ pair_id: pairId, sender_id: senderId, sent_on: sentOn, kind: ackKind })
+  if (insErr && isMissingKindColumn(insErr)) {
+    const retry = await userClient
+      .from('partner_cheers')
+      .insert({ pair_id: pairId, sender_id: senderId, sent_on: sentOn })
+    insErr = retry.error
+  }
   if (insErr) {
     // 23505 = unique_violation -> already cheered today.
     if ((insErr as { code?: string }).code === '23505') {
@@ -149,7 +162,7 @@ serve(async (req: Request) => {
 
   // Sender's first name for the push title.
   const { data: senderProfile } = await admin
-    .from('profiles')
+    .from('users_profile')
     .select('first_name')
     .eq('id', senderId)
     .maybeSingle()
