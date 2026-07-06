@@ -168,7 +168,20 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Weekly training against your own plans, your chosen aim, cheers and shared block name.');
     expect(text).toContain('Private');
     expect(text).toContain('Weights, sets, reps, food, coach notes, body metrics and photos.');
-    expect(text).toContain('Current week: You 2 of 4. Sam 3 of 4.');
+    expect(text).toContain('Current week: you against your own plan: 2 of 4. Sam against their own plan: 3 of 4. No score table.');
+  });
+
+  test('active pairs show a compact support plan with the next safe action', async () => {
+    mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
+    const tree = await mount();
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Support plan');
+    expect(text).toContain('Start with a calm aim for your own week.');
+    expect(text).toContain('Set a calm aim for your own plan.');
+    expect(text).toContain('Your week row reads 2 of 4 against your own plan.');
+    expect(text).toContain('Own-plan signals only. Food, coach notes, body metrics and photos stay private.');
+    await press(tree, 'Set your aim for the week', 1);
+    expect(allText(tree)).toContain('Your aim for the week');
   });
 
   test('active pairs show consent-gated shareable wins without widening partner privacy', async () => {
