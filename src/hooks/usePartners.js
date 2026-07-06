@@ -55,8 +55,8 @@ async function pullPartnerMirrorNow(userId) {
     const { pullPartners } = require('../lib/sync/tables/partners');
     const client = getSupabaseClient?.();
     if (client && typeof pullPartners === 'function') {
-      await pullPartners(client, { userId });
-      return true;
+      const result = await pullPartners(client, { userId });
+      return Number(result?.errors || 0) === 0;
     }
     return false;
   } catch (_) {

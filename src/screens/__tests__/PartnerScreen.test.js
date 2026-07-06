@@ -147,6 +147,16 @@ describe('load error state', () => {
     await press(tree, 'Try again');
     expect(reload).toHaveBeenCalledTimes(1);
   });
+
+  test('retry uses the cloud-refresh path when the hook exposes it', async () => {
+    const reload = jest.fn();
+    const refresh = jest.fn(async () => ({ ok: true }));
+    mockHook.value = base({ error: true, reload, refresh });
+    const tree = await mount();
+    await press(tree, 'Try again');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+  });
 });
 
 describe('connected state: isolated pair cards', () => {
