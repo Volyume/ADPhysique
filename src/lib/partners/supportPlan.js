@@ -1,7 +1,7 @@
 import { ticksLabel } from './signals';
 
 export const PARTNER_SUPPORT_PRIVACY_LINE =
-  'They see weekly training status and cards you choose to send. Food, coach notes, body metrics and photos stay private.';
+  'They see the weekly support details on this card and anything you choose to send. Food, coach notes, body metrics and photos stay private.';
 
 function hasAim(value) {
   return Math.round(Number(value) || 0) > 0;
@@ -16,17 +16,17 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const myAimSet = hasAim(pair.myAim);
   const partnerAimSet = hasAim(pair.partnerAim);
   const cheerAvailable = pair.cheerEnabled !== false;
-  let headline = `You and ${name} only see simple weekly status, fixed cheers and cards you deliberately send.`;
-  let primaryAction = { key: 'share_wins', label: 'Share a chosen win', accessibilityLabel: 'Review shareable wins' };
+  let headline = `You and ${name} can support each other without opening up diaries, coach notes or body photos.`;
+  let primaryAction = { key: 'share_wins', label: 'Choose a win to share', accessibilityLabel: 'Review shareable wins' };
 
   if (!myAimSet) {
-    headline = `Choose how many sessions you plan to train this week. ${name} sees that number, not your workout details.`;
+    headline = `Set how many sessions you plan to train this week. ${name} sees the number only, not your workout details.`;
     primaryAction = { key: 'set_aim', label: 'Set this week\'s sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `You can send ${name} one fixed cheer today. No chat, no feed, no pressure.`;
+    headline = `You can send ${name} one fixed cheer today. No chat, no feed and no pressure.`;
     primaryAction = { key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' };
   } else if (pair.weekKept) {
-    headline = 'You both showed up against your own plans last week.';
+    headline = `You both showed up against your own plans last week. ${name} still only sees the support details shown here.`;
   }
 
   return Object.freeze({
@@ -37,27 +37,31 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
     steps: Object.freeze([
       Object.freeze({
         key: 'aim',
-        label: 'You',
-        state: myAimSet ? 'set' : 'next',
-        copy: myAimSet ? `Aiming for ${Math.round(Number(pair.myAim) || 0)} sessions.` : 'Choose your session number for this week.',
+        label: 'Your week',
+        state: myAimSet ? 'Set' : 'Not set',
+        copy: myAimSet
+          ? `${name} sees ${Math.round(Number(pair.myAim) || 0)} planned sessions.`
+          : `Choose a realistic number. ${name} sees the number only.`,
       }),
       Object.freeze({
         key: 'partner_aim',
-        label: name,
-        state: partnerAimSet ? 'set' : 'private',
-        copy: partnerAimSet ? `Aiming for ${Math.round(Number(pair.partnerAim) || 0)} sessions.` : 'Appears only if they choose to set it.',
+        label: `${name}'s week`,
+        state: partnerAimSet ? 'Set' : 'Not shared',
+        copy: partnerAimSet
+          ? `${name} shared ${Math.round(Number(pair.partnerAim) || 0)} planned sessions.`
+          : `Nothing shows until ${name} chooses a number.`,
       }),
       Object.freeze({
         key: 'week',
-        label: 'Weekly status',
-        state: 'own plan',
-        copy: `Your row reads ${ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}.`,
+        label: 'This week',
+        state: 'Own plan',
+        copy: `You have logged ${ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}.`,
       }),
       Object.freeze({
         key: 'share',
-        label: 'Cards',
-        state: 'optional',
-        copy: cheerAvailable ? 'Cheers are fixed. Win cards ask every time.' : 'Your cheer is sent. Win cards still ask every time.',
+        label: 'Sharing',
+        state: 'Optional',
+        copy: cheerAvailable ? 'Cheers are fixed. Wins ask every time before sending.' : 'Your cheer is sent. Wins still ask before sending.',
       }),
     ]),
   });

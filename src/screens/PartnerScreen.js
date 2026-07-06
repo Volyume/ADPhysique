@@ -228,14 +228,15 @@ function PartnerSupportSnapshot({ pair, name }) {
   const hasBlock = pair.sharedBlock && (pair.sharedBlock.status === 'active' || pair.sharedBlock.status === 'proposed');
   const sharedRows = [
     'Your first name',
-    'Weekly training against your own plan',
-    'Your chosen weekly aim',
-    'One fixed acknowledgement a day',
+    'This week\'s training status',
+    'This week\'s session target',
+    'One fixed cheer a day',
+    'Chosen wins you approve',
     hasBlock ? 'Shared block name' : null,
   ].filter(Boolean);
   const privateRows = [
-    'Weights, sets and reps',
-    'Food diary and coach notes',
+    'Workout weights, sets and reps',
+    'Food diary, coach notes and check-ins',
     'Body metrics and progress photos',
   ];
   return (
@@ -265,7 +266,7 @@ function PartnerSupportSnapshot({ pair, name }) {
         </View>
       </View>
       <Text style={styles.supportFoot}>
-        Current week: you against your own plan: {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} against their own plan: {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No score table.
+        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No ranking or comparison.
       </Text>
     </View>
   );
@@ -796,6 +797,7 @@ export default function PartnerScreen({ route }) {
     }
     setCode('');
     setCodeEntryOpen(false);
+    toast.show('Partner connected', { variant: 'success' });
   }
 
   // ── Cheer (D5-B1: pick a fixed acknowledgement, no free text) ──
@@ -1377,6 +1379,12 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
 }
 
 function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
+  const [checking, setChecking] = useState(false);
+  async function checkConnection() {
+    if (checking) return;
+    setChecking(true);
+    try { await onRefresh?.(); } finally { setChecking(false); }
+  }
   return (
     <View style={styles.pendingCard}>
       <View style={styles.pendingRow}>
@@ -1396,14 +1404,20 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         <Text style={styles.pendingPrimaryText}>Share invite again</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        onPress={onRefresh}
-        style={styles.pendingPrimary}
+        onPress={checkConnection}
+        style={[styles.pendingPrimary, checking && styles.pendingPrimaryDisabled]}
+        disabled={checking}
         hitSlop={hitSlop}
         accessibilityRole="button"
+        accessibilityState={{ disabled: checking }}
         accessibilityLabel="Check partner connection"
       >
-        <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.pendingPrimaryText}>Check connection</Text>
+        {checking ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
+        )}
+        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check connection'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
@@ -1987,6 +2001,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     minHeight: 44,
   },
+  pendingPrimaryDisabled: { opacity: 0.68 },
   pendingPrimaryText: { ...type.label, color: colors.primary },
   cancelText: { ...type.label, color: colors.primary },
 

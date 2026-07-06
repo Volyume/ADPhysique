@@ -108,7 +108,26 @@ export async function redeemPartnerInvite(userId, code) {
     }
     track(userId, 'partner_invite_accepted', {})?.catch?.(() => {});
     trackInviteRedeemed();
-    return { ok: true, data: { partnershipId: pairId, partnerFirstName } };
+    let partnership = null;
+    let resolvedPartnerFirstName = partnerFirstName;
+    try {
+      const { data: pairRow, error: pairErr } = await c.from('partnerships')
+        .select('*')
+        .eq('id', pairId)
+        .single();
+      if (!pairErr && pairRow) {
+        resolvedPartnerFirstName = resolvedPartnerFirstName
+          || (pairRow.member_a === userId ? pairRow.member_b_first_name : pairRow.member_a_first_name)
+          || null;
+        partnership = { ...pairRow, partner_first_name: resolvedPartnerFirstName };
+      }
+    } catch (_) {
+      // The normal partner pull below still hydrates the local mirror.
+    }
+    return {
+      ok: true,
+      data: { partnershipId: pairId, partnerFirstName: resolvedPartnerFirstName, partnership },
+    };
   } catch (e) {
     return fail(e);
   }

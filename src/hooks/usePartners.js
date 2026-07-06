@@ -18,7 +18,7 @@ import {
   upsertPartnerSharedBlockFromCloud,
   getPartnerWeeklyIntention, setLocalPartnerWeeklyIntention,
   getPartnerWinCards, upsertPartnerWinCardFromCloud, markLocalPartnerWinCardRevoked,
-  setLocalPartnerCheerSent,
+  setLocalPartnerCheerSent, upsertPartnershipFromCloud,
 } from '../lib/database';
 import { todayLocalKey, localWeekStartMs } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
@@ -42,6 +42,7 @@ const EMPTY = {
 };
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
+const PENDING_INVITE_REFRESH_MS = 2000;
 
 async function pullPartnerMirrorNow(userId) {
   if (!userId) return;
@@ -245,7 +246,7 @@ export default function usePartners(userId, tier) {
     || (state.partnership?.status === 'invited' ? state.partnership.id : null);
   useEffect(() => {
     if (!PASSIVE_PENDING_REFRESH_ENABLED || !userId || !pendingRefreshKey) return undefined;
-    const timer = setInterval(() => { load(); }, 5000);
+    const timer = setInterval(() => { load(); }, PENDING_INVITE_REFRESH_MS);
     return () => clearInterval(timer);
   }, [userId, pendingRefreshKey, load]);
 
@@ -277,6 +278,9 @@ export default function usePartners(userId, tier) {
     if (r.ok) {
       clearCachedInvite();
       await clearPendingPartnerCode();
+      if (r.data?.partnership) {
+        try { await upsertPartnershipFromCloud(r.data.partnership); } catch (_) { /* pull heals */ }
+      }
       await pullPartnerMirrorNow(userId);
       await load();
     }

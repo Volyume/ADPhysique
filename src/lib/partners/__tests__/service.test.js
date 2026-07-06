@@ -36,6 +36,16 @@ import {
 } from '../service';
 
 function fakeClient(overrides = {}) {
+  const partnership = overrides.partnershipRow || {
+    id: 'p1',
+    member_a: 'u1',
+    member_b: 'u2',
+    status: 'active',
+    streak_enabled: true,
+    created_at: '2026-07-06T10:00:00.000Z',
+    accepted_at: '2026-07-06T10:01:00.000Z',
+    updated_at: '2026-07-06T10:01:00.000Z',
+  };
   return {
     rpc: jest.fn((name) => {
       if (name === 'create_partner_invite') {
@@ -47,7 +57,14 @@ function fakeClient(overrides = {}) {
       return Promise.resolve({ data: null, error: null });
     }),
     functions: { invoke: jest.fn(() => Promise.resolve({ data: { ok: true }, error: null })) },
-    from: jest.fn(() => ({
+    from: jest.fn((table) => ({
+      select: table === 'partnerships'
+        ? jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn(() => Promise.resolve({ data: partnership, error: null })),
+          })),
+        }))
+        : undefined,
       upsert: jest.fn(() => Promise.resolve({ error: null })),
       update: jest.fn(() => ({ eq: jest.fn(() => Promise.resolve({ error: null })) })),
     })),
@@ -160,6 +177,7 @@ describe('redeemPartnerInvite', () => {
     expect(r.data.partnershipId).toBe('p1');
     // Pre-102 RPC carries no name; the 'Your partner' fallback holds downstream.
     expect(r.data.partnerFirstName).toBe(null);
+    expect(r.data.partnership).toEqual(expect.objectContaining({ id: 'p1', partner_first_name: null }));
     expect(postEvent).toHaveBeenCalledWith('u2', 'partner_invite_accepted', expect.any(Object));
   });
 
@@ -174,7 +192,8 @@ describe('redeemPartnerInvite', () => {
     }));
     const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
     expect(r.ok).toBe(true);
-    expect(r.data).toEqual({ partnershipId: 'p1', partnerFirstName: 'Sam' });
+    expect(r.data).toEqual(expect.objectContaining({ partnershipId: 'p1', partnerFirstName: 'Sam' }));
+    expect(r.data.partnership).toEqual(expect.objectContaining({ id: 'p1', partner_first_name: 'Sam' }));
   });
 
   test('a 102 row without a name maps to null (fallback holds)', async () => {
