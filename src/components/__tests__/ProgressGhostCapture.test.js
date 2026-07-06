@@ -163,7 +163,7 @@ test('exposes an adjustable opacity control for the overlay', async () => {
   expect(after).toBeGreaterThan(before);
 });
 
-test('capture saves the photo, then records the pose, then calls onCaptured (in order)', async () => {
+test('capture previews the photo, then saves, records the pose, and calls onCaptured when approved', async () => {
   act(() => { useAppStore.setState({ tier: 'pro' }); });
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
@@ -171,6 +171,15 @@ test('capture saves the photo, then records the pose, then calls onCaptured (in 
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();
+  });
+
+  expect(saveProgressPhoto).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Check this photo');
+  expect(JSON.stringify(tree.toJSON())).toContain('file:///captured.jpg');
+
+  const usePhotoBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Use photo');
+  await act(async () => {
+    await usePhotoBtn.props.onPress();
   });
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg', undefined, undefined);
@@ -183,6 +192,7 @@ test('capture saves the photo, then records the pose, then calls onCaptured (in 
     name: '1700000000000.jpg',
     ts: 1700000000000,
     uri: 'file:///photos/1700000000000.jpg',
+    previewApproved: true,
   });
   // Order is load-bearing: the meta row keys off the saved filename.
   expect(order).toEqual(['save', 'meta']);
@@ -241,6 +251,11 @@ test('capture cleans up a saved file if the tier lapses before metadata is writt
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();
+  });
+
+  const usePhotoBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Use photo');
+  await act(async () => {
+    await usePhotoBtn.props.onPress();
   });
 
   expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg', undefined, undefined);

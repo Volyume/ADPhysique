@@ -1,9 +1,11 @@
 import { logError } from './errorLog';
 
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
+export const PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION = 'mlkit_selfie_segmentation_16.0.0-beta6';
 export const PROGRESS_SCAN_MODEL_INPUT_SIZE = 256;
 
 const MODEL_SOURCE = () => require('../../assets/ml/selfie_segmentation.tflite');
+const MODEL_FILE_NAME = 'selfie_segmentation.tflite';
 const RETAKE_REASONS = new Set([
   'too_dark',
   'too_blurry',
@@ -22,6 +24,7 @@ const UNAVAILABLE_RETAKE_REASONS = new Set([
 ]);
 
 let modelPromise = null;
+let modelUnavailableReason = null;
 
 function normaliseFastTfliteUri(uri) {
   const value = String(uri || '').trim();
@@ -33,6 +36,13 @@ function normaliseFastTfliteUri(uri) {
 }
 
 export async function resolveProgressScanModelSource() {
+  try {
+    const imageModule = require('progress-scan-image');
+    const nativeUri = await imageModule.resolveBundledModel?.(MODEL_FILE_NAME);
+    const normalisedNativeUri = normaliseFastTfliteUri(nativeUri);
+    if (normalisedNativeUri) return { url: normalisedNativeUri };
+  } catch (_) { /* fall through to Expo Asset resolution */ }
+
   const source = MODEL_SOURCE();
   const { Asset } = require('expo-asset');
   const asset = Asset.fromModule(source);
@@ -107,6 +117,28 @@ export function rgbBytesToFloat32(rgb) {
   return out;
 }
 
+export function base64ToFloat32Array(base64) {
+  const bytes = base64ToUint8Array(base64);
+  if (bytes.length % 4 !== 0) return new Float32Array();
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const out = new Float32Array(bytes.byteLength / 4);
+  for (let i = 0; i < out.length; i += 1) {
+    const v = view.getFloat32(i * 4, true);
+    out[i] = Number.isFinite(v) ? clamp(v, 0, 1) : 0;
+  }
+  return out;
+}
+
+function nativeSegmentationMaskFromResult(result, expectedSize = PROGRESS_SCAN_MODEL_INPUT_SIZE) {
+  if (!result?.maskBase64) return null;
+  const width = finiteNumber(result.width) ?? expectedSize;
+  const height = finiteNumber(result.height) ?? expectedSize;
+  if (width <= 0 || height <= 0) return null;
+  const mask = base64ToFloat32Array(result.maskBase64);
+  if (mask.length !== width * height) return null;
+  return { mask, width, height };
+}
+
 function outputToFloat32Array(outputs) {
   const first = Array.isArray(outputs) ? outputs[0] : outputs;
   if (first instanceof Float32Array) return first;
@@ -118,18 +150,21 @@ function outputToFloat32Array(outputs) {
 }
 
 function loadProgressScanModel() {
+  if (modelUnavailableReason) return Promise.resolve(null);
   if (!modelPromise) {
     modelPromise = (async () => {
       const { loadTensorflowModel } = require('react-native-fast-tflite');
       const modelSource = await resolveProgressScanModelSource();
       if (!modelSource) {
-        modelPromise = null;
+        modelUnavailableReason = 'model_source_unavailable';
         return null;
       }
-      return loadTensorflowModel(modelSource, []);
-    })().catch((e) => {
-      modelPromise = null;
-      throw e;
+      try {
+        return await loadTensorflowModel(modelSource, []);
+      } catch (_) {
+        modelUnavailableReason = 'model_load_failed';
+        return null;
+      }
     });
   }
   return modelPromise;
@@ -276,7 +311,7 @@ export function measureMaskSignals(mask, opts = {}) {
     }
   }
 
-  if (foreground < contentArea * 0.06) return unavailableVisionResult('no_person_detected');
+  if (foreground < contentArea * 0.045) return unavailableVisionResult('no_person_detected');
 
   const bbox = {
     minX,
@@ -331,18 +366,20 @@ export function measureMaskSignals(mask, opts = {}) {
   const blurScore = finiteNumber(opts.blurScore);
 
   const reasons = [];
-  if (lightingScore != null && lightingScore < 0.45) reasons.push('too_dark');
-  if (blurScore != null && blurScore < 0.45) reasons.push('too_blurry');
-  if (framingScore < 0.55) reasons.push('whole_body_not_visible');
-  if (segmentationConfidence < 0.55) reasons.push('segmentation_low_confidence');
-  if (separation < 0.45) reasons.push('clothing_or_background_uncertain');
-  if (poseConfidence < 0.45) reasons.push('pose_not_clear');
-  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 10) reasons.push('camera_tilted');
+  if (lightingScore != null && lightingScore < 0.3) reasons.push('too_dark');
+  if (blurScore != null && blurScore < 0.3) reasons.push('too_blurry');
+  if (framingScore < 0.32) reasons.push('whole_body_not_visible');
+  if (segmentationConfidence < 0.38) reasons.push('segmentation_low_confidence');
+  if (separation < 0.28) reasons.push('clothing_or_background_uncertain');
+  if (poseConfidence < 0.28) reasons.push('pose_not_clear');
+  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 16) reasons.push('camera_tilted');
   if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people');
 
   return {
-    modelBacked: true,
-    modelVersion: PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
+    modelBacked: opts.modelBacked !== false,
+    heuristicBacked: !!opts.heuristicBacked,
+    modelVersion: opts.modelVersion || PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
+    fallbackReason: opts.fallbackReason || null,
     inputSize: width,
     contentRect,
     pose: opts.pose || null,
@@ -455,12 +492,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       return unavailableVisionResult('native_preprocess_shape_unusable');
     }
 
-    const input = rgbBytesToFloat32(rgb);
-    const model = await loadProgressScanModel();
-    if (!model) return unavailableVisionResult('model_unavailable');
-    const outputs = await model.run([exactBuffer(input)]);
-    const mask = outputToFloat32Array(outputs);
-    return measureMaskSignals(mask, {
+    const common = {
       width: PROGRESS_SCAN_MODEL_INPUT_SIZE,
       height: PROGRESS_SCAN_MODEL_INPUT_SIZE,
       rgb,
@@ -468,6 +500,37 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       lightingScore: extracted.lightingScore,
       contentRect: extracted.contentRect,
       pose,
+    };
+    const nativeSegmentation = await imageModule.segmentPersonMask?.(
+      uri,
+      PROGRESS_SCAN_MODEL_INPUT_SIZE,
+      PROGRESS_SCAN_MODEL_INPUT_SIZE,
+    );
+    const nativeMask = nativeSegmentationMaskFromResult(nativeSegmentation);
+    if (nativeMask) {
+      return measureMaskSignals(nativeMask.mask, {
+        ...common,
+        width: nativeMask.width,
+        height: nativeMask.height,
+        contentRect: nativeSegmentation.contentRect || extracted.contentRect,
+        modelBacked: true,
+        modelVersion: PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION,
+      });
+    }
+    const model = await loadProgressScanModel();
+    if (!model) return unavailableVisionResult(modelUnavailableReason || 'model_unavailable');
+    let mask;
+    try {
+      const input = rgbBytesToFloat32(rgb);
+      const outputs = await model.run([exactBuffer(input)]);
+      mask = outputToFloat32Array(outputs);
+    } catch (_) {
+      modelUnavailableReason = 'model_run_failed';
+      return unavailableVisionResult('model_run_failed');
+    }
+    return measureMaskSignals(mask, {
+      ...common,
+      modelBacked: true,
     });
   } catch (e) {
     logError('progressScanVision.analysePhoto', e, { pose });

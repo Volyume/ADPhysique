@@ -40,6 +40,15 @@ export const PUSH_TOKEN_KEY = '@volyume_expo_push_token';
 
 let _warnedNoProjectId = false;
 
+function isRemotePushNativeSetupError(error) {
+  const message = String(error?.message || error || '').toLowerCase();
+  return (
+    message.includes('default firebaseapp is not initialized')
+    || message.includes('fcm-credentials')
+    || message.includes('firebaseapp.initializeapp')
+  );
+}
+
 /**
  * Read the EAS projectId from app config. Returns null when absent.
  * expo-constants is required lazily so this module stays importable in
@@ -83,6 +92,7 @@ export async function getExpoPushToken() {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
     return data ?? null;
   } catch (e) {
+    if (isRemotePushNativeSetupError(e)) return null;
     logWarn('notifications.pushToken.fetchFailed', e?.message ?? 'unknown');
     return null;
   }

@@ -71,6 +71,36 @@ function makeClient(upsertError, capturedWorkoutIds) {
   };
 }
 
+function makeWorkoutSchemaDriftClient(capturedWorkoutRows) {
+  const readResult = { data: [], error: null };
+  let workoutAttempts = 0;
+  return {
+    from: jest.fn((table) => ({
+      upsert: jest.fn((payload) => {
+        if (table === 'workouts') {
+          workoutAttempts += 1;
+          capturedWorkoutRows.push({ ...payload });
+          if (workoutAttempts === 1) {
+            return makeChain({
+              data: null,
+              error: {
+                code: 'PGRST204',
+                message: "Could not find the 'energy_score' column of 'workouts' in the schema cache",
+              },
+            });
+          }
+        }
+        return makeChain({ error: null, data: [] });
+      }),
+      insert: jest.fn(() => makeChain({ error: null, data: [] })),
+      update: jest.fn(() => makeChain({ error: null, data: [] })),
+      delete: jest.fn(() => makeChain({ error: null, data: [] })),
+      select: jest.fn(() => makeChain(readResult)),
+    })),
+    rpc: jest.fn(async () => ({ data: null, error: null })),
+  };
+}
+
 beforeEach(() => {
   for (const k of Object.keys(mockStore)) delete mockStore[k];
   jest.clearAllMocks();
@@ -128,6 +158,30 @@ test('a rejected push leaves the watermark unchanged so the row retries next cyc
 
   expect(res.errors).toBeGreaterThan(0);
   expect(mockStore[WM_KEY]).toBe('3000');
+});
+
+test('stale workouts schema retries without optional readiness columns and still advances watermark', async () => {
+  db.getAllWorkouts.mockResolvedValue([
+    {
+      id: 'w4',
+      isCompleted: true,
+      updatedAt: 7000,
+      sleepQuality: 8,
+      energyScore: 7,
+    },
+  ]);
+  const capturedRows = [];
+  getSupabaseClient.mockReturnValue(makeWorkoutSchemaDriftClient(capturedRows));
+
+  const res = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  expect(res.errors).toBe(0);
+  expect(capturedRows).toHaveLength(2);
+  expect(capturedRows[0]).toMatchObject({ id: 'w4', sleep_quality: 8, energy_score: 7 });
+  expect(capturedRows[1]).toMatchObject({ id: 'w4' });
+  expect(capturedRows[1]).not.toHaveProperty('sleep_quality');
+  expect(capturedRows[1]).not.toHaveProperty('energy_score');
+  expect(mockStore[WM_KEY]).toBe('7000');
 });
 
 test('nothing newer than the cursor: no upserts, watermark unchanged', async () => {

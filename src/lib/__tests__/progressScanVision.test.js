@@ -1,6 +1,7 @@
 import {
   analyseProgressScanPhoto,
   assetFieldsFromVisionResult,
+  base64ToFloat32Array,
   base64ToUint8Array,
   measureMaskSignals,
   resolveProgressScanModelSource,
@@ -18,6 +19,7 @@ const mockFromModule = jest.fn(() => ({
   downloadAsync: mockDownloadAsync,
 }));
 const mockExtractRgb = jest.fn();
+const mockSegmentPersonMask = jest.fn();
 const mockLoadTensorflowModel = jest.fn();
 
 jest.mock('expo-asset', () => ({
@@ -27,6 +29,7 @@ jest.mock('expo-asset', () => ({
 }));
 jest.mock('progress-scan-image', () => ({
   extractRgb: (...args) => mockExtractRgb(...args),
+  segmentPersonMask: (...args) => mockSegmentPersonMask(...args),
 }));
 jest.mock('react-native-fast-tflite', () => ({
   loadTensorflowModel: (...args) => mockLoadTensorflowModel(...args),
@@ -67,16 +70,29 @@ function bytesToBase64(bytes) {
   return out;
 }
 
+function float32ToBase64(values) {
+  const bytes = new Uint8Array(values.length * 4);
+  const view = new DataView(bytes.buffer);
+  for (let i = 0; i < values.length; i += 1) view.setFloat32(i * 4, values[i], true);
+  return bytesToBase64(bytes);
+}
+
 describe('Progress Scan vision signal extraction', () => {
   beforeEach(() => {
     mockDownloadAsync.mockClear();
     mockFromModule.mockClear();
     mockExtractRgb.mockReset();
+    mockSegmentPersonMask.mockReset();
     mockLoadTensorflowModel.mockReset();
   });
 
   test('base64 decoder returns exact bytes without relying on Buffer', () => {
     expect(Array.from(base64ToUint8Array('AAECA/8='))).toEqual([0, 1, 2, 3, 255]);
+  });
+
+  test('float32 mask decoder reads little-endian ML Kit confidence masks', () => {
+    const values = new Float32Array([0, 0.25, 0.75, 1]);
+    expect(Array.from(base64ToFloat32Array(float32ToBase64(values)))).toEqual([0, 0.25, 0.75, 1]);
   });
 
   test('resolves bundled TFLite model to a protocol URL before native loading', async () => {
@@ -105,8 +121,36 @@ describe('Progress Scan vision signal extraction', () => {
     });
     const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
     expect(result.modelBacked).toBe(false);
-    expect(result.abstentionReasons).toContain('model_unavailable');
+    expect(result.abstentionReasons.some((reason) => ['model_unavailable', 'model_source_unavailable', 'model_run_failed'].includes(reason))).toBe(true);
+    for (const [source] of mockLoadTensorflowModel.mock.calls) {
+      expect(source).not.toEqual({ url: 'assets_ml_selfie_segmentation' });
+    }
+  });
+
+  test('uses native ML Kit segmentation masks before direct TFLite loading', async () => {
+    const rgb = new Uint8Array(256 * 256 * 3).fill(128);
+    const mask = syntheticPersonMask();
+    mockExtractRgb.mockResolvedValueOnce({
+      rgbBase64: bytesToBase64(rgb),
+      lightingScore: 0.9,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+    });
+    mockSegmentPersonMask.mockResolvedValueOnce({
+      width: 256,
+      height: 256,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+      maskBase64: float32ToBase64(mask),
+      engine: 'mlkit_selfie_segmentation',
+    });
+
+    const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
+
+    expect(mockSegmentPersonMask).toHaveBeenCalledWith('file:///scan.jpg', 256, 256);
     expect(mockLoadTensorflowModel).not.toHaveBeenCalled();
+    expect(result.modelBacked).toBe(true);
+    expect(result.modelVersion).toBe('mlkit_selfie_segmentation_16.0.0-beta6');
+    expect(result.quality.segmentationConfidence).toBeGreaterThan(0.75);
+    expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
   });
 
   test('TFLite mask measurements produce quality and silhouette signals', () => {
