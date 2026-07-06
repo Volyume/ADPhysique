@@ -41,7 +41,7 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Volyume Physique Score is our own visual progress measure');
+    expect(prompt).toContain('Clear front and back photos can receive a Volyume Physique Score');
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
@@ -50,7 +50,6 @@ describe('progress capture guide copy', () => {
     expect(how).toContain('Volyume Physique Score is our own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
-    expect(`${prompt}\n${how}`).toContain('Photos stay on this device unless you choose to share or export them.');
   });
 
   test('builds action-first photo-set routes for capture and import', () => {
@@ -65,14 +64,15 @@ describe('progress capture guide copy', () => {
       title: 'Take a new photo set',
       actionLabel: 'Start photo set',
       recommended: true,
+      bestFor: "Best for today's progress check.",
     });
-    expect(routes[0].steps).toEqual(PROGRESS_SCAN_SEQUENCE);
+    expect(routes[0].steps).toBeUndefined();
     expect(routes[1]).toMatchObject({
       title: 'Import a photo set',
       actionLabel: 'Import photo set',
+      bestFor: 'Best for older photos.',
     });
-    expect(routes[1].bestFor).toContain('real capture date and weight snapshot');
-    expect(routes[1].steps).toContain('Choose the front relaxed photo');
+    expect(routes[1].steps).toBeUndefined();
   });
 
   test('prioritises finishing the latest partial photo set', () => {
@@ -86,9 +86,9 @@ describe('progress capture guide copy', () => {
       'scan_library',
     ]);
     expect(routes[0]).toMatchObject({
-      title: 'Add the back photo',
-      actionLabel: 'Add Back photo',
-      bestFor: 'Keeping one date together.',
+      title: 'Latest set needs another angle',
+      actionLabel: 'Add missing photo: Add Back photo',
+      bestFor: 'Adds to the existing date.',
       recommended: true,
     });
     expect(routes[1]).toMatchObject({

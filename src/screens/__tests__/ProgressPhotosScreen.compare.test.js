@@ -261,7 +261,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Latest set needs another angle');
     expect(text).toContain('Add front photo');
-    await press(tree, 'Add missing photo: Add Front photo');
+    await press(tree, 'Add a Front photo for this date');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
