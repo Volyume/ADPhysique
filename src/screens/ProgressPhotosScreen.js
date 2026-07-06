@@ -61,7 +61,6 @@ import {
 } from '../lib/progressPhotoTimeline';
 import {
   buildProgressStudioCaptureRoutes,
-  buildProgressStudioHowItWorksCopy,
   buildScanCaptureSubtitle,
   PROGRESS_STUDIO_SETUP_STEPS,
   QUALITY_FIRST_CAPTURE_NOTE,
@@ -136,7 +135,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [photos, setPhotos] = useState([]);
   const [metaMap, setMetaMap] = useState({});
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [, setBusy] = useState(false);
   const [calm, setCalm] = useState(false);
   const suppressed = photoSuppressed || calm;
   const [poseFilter, setPoseFilter] = useState('all');
@@ -398,6 +397,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     latestPartial: latestPartialCapture,
     canScan: !!userId,
     readOnly,
+    includeScan: false,
   }), [latestPartialCapture, readOnly, userId]);
   const openPartnerProgressCardPreview = useCallback((progressCardSharePayload) => {
     setShareOpen(false);
@@ -440,8 +440,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!canWrite() || !userId) return;
     const cadence = shouldGateProgressScanStart(scans, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated) {
-      appAlert('Give the scan time', 'Physique Scan works best when progress photos are spaced at least 2 to 4 weeks apart. You can still add normal progress photos today and save them without forcing a scan read.', [
-        { text: 'Add photos', onPress: openGhostCapture },
+      appAlert('Leave more time between scans', 'Physique Scan works best when scans are spaced at least 2 to 4 weeks apart. You can still add progress photos today without using them for a scan result.', [
+        { text: 'Add progress photos', onPress: openGhostCapture },
         { text: 'OK', style: 'cancel' },
       ]);
       return;
@@ -650,7 +650,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         ], { cancelable: false });
         return;
       }
-      appAlert('Use this photo?', 'Check the pose, framing and lighting. Use it only if it looks like a fair like-for-like scan photo.', [
+      appAlert('Use this photo?', 'Check the angle, framing and lighting. Use it only if it looks fair to compare with future scans.', [
         { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
         {
           text: 'Use photo',
@@ -673,16 +673,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   function onAdd() {
     if (!canWrite()) return;
     setCaptureRouteOpen(true);
-  }
-
-  // Plain, calm guidance on what the feature is and how to use it, so nobody
-  // has to guess. No cadence pressure, no streak: "at your own pace" by design.
-  function onHowItWorks() {
-    appAlert(
-      'How Progress Photos works',
-      buildProgressStudioHowItWorksCopy(),
-      [{ text: 'Got it' }],
-    );
   }
 
   function openViewer(name) {
@@ -783,18 +773,18 @@ export default function ProgressPhotosScreen({ navigation }) {
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.scanConfidenceLabel || latestScan?.qualityLabel || (latestScan ? 'Saved' : 'No scan yet');
-  const progressSignalText = suppressed
-    ? 'Scan details are hidden right now. Your photos remain private on this device.'
+  const currentPhotoText = suppressed
+    ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
-        ? `${latestAssessment.progressSignalLabel}. This is a visual progress signal, not a body-fat percentage.`
+        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is a broad scan result, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
-        ? 'Your latest progress photos are saved. The more consistent the lighting and camera position, the more useful the comparison becomes.'
-        : 'Start with clear front, side and back progress photos. Physique Scan can then give broad visual signals when the photos are good enough.');
-  const confidenceText = suppressed
-    ? 'Photos and scan details stay under your control. Nothing is uploaded or shared unless you choose it.'
+        ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
+        : 'Add progress photos to keep a dated private gallery. Start Physique Scan when you want guided front and back photos with a broad scan result.');
+  const currentPhotoSupport = suppressed
+    ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
-      ? 'Best results come from matched pose, full-body framing and repeatable lighting. Photos stay on this device unless you choose to share or export them.'
-      : 'Use front, side and back photos under the same lighting. Photos stay on this device unless you choose to share or export them.';
+      ? 'For the clearest comparison, use the same angle, full-body framing and lighting each time. Photos stay on this phone unless you share or export them.'
+      : 'Use front, side and back photos under the same lighting. Photos stay on this phone unless you share or export them.';
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'next', icon: 'time-outline', label: 'Suggested gap', value: nextCheckInLabel },
@@ -843,8 +833,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         disabled={readOnly}
         accessibilityRole={readOnly ? 'image' : 'button'}
         accessibilityLabel={readOnly
-          ? `Photo set from ${dateLabel}.`
-          : `Photo set from ${dateLabel}. Tap to open.`}
+          ? `Photos from ${dateLabel}.`
+          : `Photos from ${dateLabel}. Tap to open.`}
         style={styles.checkInCard}
       >
         <View style={styles.checkInCover}>
@@ -908,11 +898,11 @@ export default function ProgressPhotosScreen({ navigation }) {
           {item.note ? <Text style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
           {missingPoses.length > 0 ? (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Add {missingPoses.map((pose) => POSE_LABEL[pose].toLowerCase()).join(', ')} next time for a more useful photo set.
+              Add {missingPoses.map((pose) => `${POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date.
             </Text>
           ) : (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Front, side and back photos are ready for a clearer review.
+              Front, side and back photos are saved together.
             </Text>
           )}
           {!readOnly && nextMissingPose ? (
@@ -920,7 +910,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               onPress={() => openCheckInPoseCapture(item, nextMissingPose)}
               style={styles.completeCheckInButton}
               accessibilityRole="button"
-              accessibilityLabel={`Add a ${POSE_LABEL[nextMissingPose]} photo to this photo set`}
+              accessibilityLabel={`Add a ${POSE_LABEL[nextMissingPose]} photo for this date`}
             >
               <Ionicons name="camera-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.completeCheckInText}>
@@ -943,30 +933,14 @@ export default function ProgressPhotosScreen({ navigation }) {
             ) : (
               <View style={styles.heroPlaceholder}>
                 <Ionicons name="body-outline" size={38} color={colors.textMuted} />
-                <Text style={styles.heroPlaceholderText}>Private progress photos</Text>
               </View>
             )}
             <View style={styles.heroScrim} />
-            <View style={styles.heroTopRow}>
-              <View style={styles.privacyPill}>
-                <Ionicons name="lock-closed-outline" size={13} color={colors.onPrimary} />
-                <Text style={styles.privacyPillText}>Private on this device</Text>
-              </View>
-              <TouchableOpacity
-                onPress={onHowItWorks}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="How Progress Photos works"
-                style={styles.heroInfoButton}
-              >
-                <Ionicons name="information-circle-outline" size={18} color={colors.onPrimary} />
-              </TouchableOpacity>
-            </View>
             <View style={styles.heroCopy}>
               <Text style={styles.heroEyebrow}>Progress Photos</Text>
-              <Text style={styles.heroTitle}>See what is actually changing.</Text>
+              <Text style={styles.heroTitle}>Your progress photos</Text>
               <Text style={styles.heroSubtitle}>
-                Store your physique photos by date and pose. Physique Scan adds broad leanness, progress and confidence signals when the photos are good enough.
+                Save progress photos by date and angle. Physique Scan is separate: a guided front and back scan with a broad result, not an exact body-fat percentage.
               </Text>
             </View>
           </View>
@@ -990,7 +964,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.setupStandardTitle}>How to get useful photos</Text>
               </View>
               <Text style={styles.setupStandardIntro}>
-                Small changes in lighting, distance or angle can make a physique look very different. These steps keep the photo honest enough to review later.
+                Lighting, distance and camera angle can change how your physique looks. These steps make later comparisons clearer.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
@@ -1010,14 +984,14 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.deviceStorageCard}>
               <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.deviceStorageText}>
-                Photos are stored on this device. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
+                Photos are stored on this phone. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
               </Text>
             </View>
 
             <View style={styles.heroActions}>
               {!readOnly ? (
                 <Button
-                  title="Add photos"
+                  title="Add progress photos"
                   icon="camera-outline"
                   onPress={onAdd}
                   fullWidth={false}
@@ -1027,7 +1001,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
               {!readOnly ? (
                 <Button
-                  title="Physique Scan"
+                  title="Start Physique Scan"
                   icon="scan"
                   variant="secondary"
                   onPress={openProgressScan}
@@ -1050,12 +1024,12 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
 
             <View style={styles.signalCard}>
-              <Text style={styles.signalTitle}>Current signal</Text>
-              <Text style={styles.signalBody}>{progressSignalText}</Text>
-              <Text style={styles.signalSupport}>{confidenceText}</Text>
+              <Text style={styles.signalTitle}>Current status</Text>
+              <Text style={styles.signalBody}>{currentPhotoText}</Text>
+              <Text style={styles.signalSupport}>{currentPhotoSupport}</Text>
             </View>
             {readOnly ? (
-              <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos are safe and stay yours.</Text>
+              <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos stay yours.</Text>
             ) : null}
           </View>
         </Card>
@@ -1075,7 +1049,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         {!loading && nextAction ? (
           <Card style={styles.nextActionCard}>
             <View style={styles.nextActionCopy}>
-              <Text style={styles.nextActionEyebrow}>Next best action</Text>
+              <Text style={styles.nextActionEyebrow}>Suggested next step</Text>
               <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
               <Text style={styles.nextActionBody}>{nextAction.body}</Text>
               {nextAction.reason ? (
@@ -1101,7 +1075,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               variant={nextAction.kind === 'capture' ? 'primary' : 'secondary'}
               fullWidth={false}
               onPress={() => onNextActionPress(nextAction)}
-              accessibilityLabel={`Next best action: ${nextAction.cta}`}
+              accessibilityLabel={`Suggested next step: ${nextAction.cta}`}
             />
           </Card>
         ) : null}
@@ -1198,21 +1172,10 @@ export default function ProgressPhotosScreen({ navigation }) {
             <Text style={styles.emptyText}>No photos on this device.</Text>
           ) : (
             <>
-              <Text style={styles.emptyTitle}>Start Progress Photos</Text>
+              <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add your first private front, side or back photos. Volyume keeps them organised by date and pose so future reviews are fairer.
+                Add progress photos for your private gallery, or start Physique Scan when you want guided front and back photos with a broad scan result.
               </Text>
-              <Text style={styles.emptySupport}>
-                Physique Scan can give a leanness band, progress signal and confidence when photo quality is good enough.
-              </Text>
-              <Button
-                title="Add photos"
-                icon="camera-outline"
-                onPress={onAdd}
-                fullWidth={false}
-                style={styles.emptyAdd}
-                accessibilityLabel="Add progress photos"
-              />
             </>
           )}
         </View>
@@ -1235,16 +1198,11 @@ export default function ProgressPhotosScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Standard pushed-screen scaffold (BackHeader), matching Partners and the
-          rest of the app. The add action rides the header's right slot; it is a
-          write, so it is hidden in the E10 view-only lapse state. */}
+          rest of the app. The write actions live in the hero so Add photos and
+          Physique Scan are not duplicated in the header. */}
       <BackHeader
         title="Progress Photos"
         onBack={() => navigation.goBack()}
-        right={!readOnly ? (
-          <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add progress photos">
-            {busy ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="add" size={26} color={colors.primary} />}
-          </TouchableOpacity>
-        ) : null}
       />
 
       <FlashList
@@ -1330,24 +1288,24 @@ export default function ProgressPhotosScreen({ navigation }) {
               activeOpacity={1}
               onPress={() => setCaptureRouteOpen(false)}
               accessibilityRole="button"
-              accessibilityLabel="Close capture routes"
+              accessibilityLabel="Close add photos options"
             />
             <SafeAreaView edges={['bottom']} style={styles.captureRouteSafe}>
               <View style={styles.captureRouteSheet}>
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
-                  <Text style={styles.captureRouteTitle}>Capture route</Text>
+                  <Text style={styles.captureRouteTitle}>Add progress photos</Text>
                   <TouchableOpacity
                     onPress={() => setCaptureRouteOpen(false)}
                     hitSlop={10}
                     accessibilityRole="button"
-                    accessibilityLabel="Close capture routes"
+                    accessibilityLabel="Close add photos options"
                   >
                     <Ionicons name="close" size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Pick the route that matches today. Same room, lighting, camera height and distance matter more than forcing a read.
+                  Choose how to add progress photos. Use Physique Scan from the main screen when you want the guided scan.
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1397,7 +1355,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <View style={styles.captureRouteNote}>
                   <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                   <Text style={styles.captureRouteNoteText}>
-                    {QUALITY_FIRST_CAPTURE_NOTE} Photos are stored on this device and stay private unless you choose to share or export. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
+                    {QUALITY_FIRST_CAPTURE_NOTE} Photos are stored on this phone unless you share or export them. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
                   </Text>
                 </View>
               </View>

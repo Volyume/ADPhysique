@@ -14,7 +14,7 @@ export const PROGRESS_STUDIO_SETUP_STEPS = Object.freeze([
   Object.freeze({
     key: 'lighting',
     title: 'Light',
-    copy: 'Even front light, no backlighting, no deep shadows and no heavy pump lighting.',
+    copy: 'Even front light, no backlighting, no deep shadows and no dramatic gym lighting.',
     icon: 'sunny-outline',
   }),
   Object.freeze({
@@ -40,7 +40,7 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
-  'If the setup drifts, save the photo and let the scan read wait.';
+  'If the photo is not clear enough, save it as a progress photo instead of using it for a scan result.';
 
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
@@ -79,7 +79,7 @@ export const POSE_CAPTURE_GUIDANCE = Object.freeze({
 });
 
 export const DEFAULT_CAPTURE_GUIDANCE = Object.freeze({
-  title: 'Progress photo setup',
+  title: 'Progress photo',
   line: 'Use the same room, lighting, distance and camera height each time.',
   checks: SETUP_STANDARD,
   avoid: Object.freeze(['mirrors', 'busy backgrounds', 'camera tilt']),
@@ -91,9 +91,9 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Choose how you want to add progress photos today. The aim is not a perfect pose. It is a fair photo you can compare later.',
-    'Physique Scan is for a front and back relaxed sequence, with an optional side photo. It gives a leanness band, progress signal and confidence, not an exact body-fat percentage.',
-    'Single guided photo is best when you are adding one missing pose or matching an older progress photo.',
+    'Choose how you want to add progress photos today. The aim is not a perfect pose. It is a clear photo you can compare later.',
+    'Physique Scan is a guided front and back photo sequence, with an optional side photo. It gives broad scan results, not an exact body-fat percentage.',
+    'Guided single photo is best when you are adding one missing angle or matching an older photo.',
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
     QUALITY_FIRST_CAPTURE_NOTE,
     'Photos stay on this device unless you choose to share or export them.',
@@ -104,6 +104,7 @@ export function buildProgressStudioCaptureRoutes({
   latestPartial = null,
   canScan = true,
   readOnly = false,
+  includeScan = true,
 } = {}) {
   if (readOnly) return [];
 
@@ -115,53 +116,55 @@ export function buildProgressStudioCaptureRoutes({
       key: 'complete_latest',
       icon: 'checkmark-circle-outline',
       eyebrow: 'Best next',
-      title: 'Finish latest photo set',
-      body: `Add the ${missingPoseLabel.toLowerCase()} photo so this date has a fuller front, side and back record.`,
-      bestFor: 'Finishing an in-progress progress photo set.',
+      title: `Add ${missingPoseLabel.toLowerCase()} photo`,
+      body: `Your latest date is missing the ${missingPoseLabel.toLowerCase()} photo.`,
+      bestFor: 'Adding the missing photo for the same date.',
       steps: Object.freeze([
         `Capture ${missingPoseLabel} relaxed`,
         'Match the same room, distance and camera height',
         'Save the pose before comparing this photo set',
       ]),
-      actionLabel: `Complete with ${missingPoseLabel}`,
+      actionLabel: `Add ${missingPoseLabel} photo`,
       recommended: true,
     });
   }
 
-  routes.push({
-    key: 'scan',
-    icon: 'scan',
-    eyebrow: latestPartial?.nextPose ? 'Flagship' : 'Best next',
-    title: 'Physique Scan',
-    body: 'Front and back relaxed photos, with an optional side photo.',
-    bestFor: 'Leanness band, progress signal and scan confidence. Not an exact body-fat percentage.',
-    steps: PROGRESS_SCAN_SEQUENCE,
-    actionLabel: 'Start Physique Scan',
-    recommended: !latestPartial?.nextPose,
-    disabled: !canScan,
-    disabledReason: 'Sign in to save a guided scan.',
-  });
+  if (includeScan) {
+    routes.push({
+      key: 'scan',
+      icon: 'scan',
+      eyebrow: latestPartial?.nextPose ? 'Flagship' : 'Best next',
+      title: 'Physique Scan',
+      body: 'Front and back relaxed photos, with an optional side photo.',
+      bestFor: 'A broad scan result. Not an exact body-fat percentage.',
+      steps: PROGRESS_SCAN_SEQUENCE,
+      actionLabel: 'Start Physique Scan',
+      recommended: !latestPartial?.nextPose,
+      disabled: !canScan,
+      disabledReason: 'Sign in to save a guided scan.',
+    });
+  }
 
   routes.push({
     key: 'guided',
     icon: 'camera-outline',
     eyebrow: 'Guided photo',
-    title: 'Single guided photo',
-    body: 'Use the ghost overlay and timer to match an older pose.',
+    title: 'Guided single photo',
+    body: 'Use the guide on screen and the timer to match an older photo.',
     bestFor: 'Replacing a poor photo or adding one missing pose.',
     steps: Object.freeze([
       'Pick or remember the pose you are matching',
-      'Use the timer and ghost overlay',
+      'Use the timer and previous-photo guide',
       'Set the date and pose before saving',
     ]),
-    actionLabel: 'Open guided camera',
+    actionLabel: 'Open guided photo camera',
   });
 
   routes.push({
     key: 'camera',
     icon: 'camera-reverse-outline',
     eyebrow: 'Quick capture',
-    title: 'Take normal photo',
+    title: 'Take a quick photo',
     body: 'Take a photo now, then set its date and pose before saving.',
     bestFor: 'Fast capture when you do not need the overlay.',
     steps: Object.freeze([
@@ -176,15 +179,15 @@ export function buildProgressStudioCaptureRoutes({
     key: 'library',
     icon: 'images-outline',
     eyebrow: 'Import',
-    title: 'Import from library',
+    title: 'Import from photos',
     body: 'Add an existing photo, then set the correct date and pose.',
-    bestFor: 'Adding older progress photos without losing the timeline.',
+    bestFor: 'Adding older photos in the right order.',
     steps: Object.freeze([
       'Choose the clearest full-body photo',
       'Set the real capture date',
-      'Assign front, side, back or leave unposed',
+      'Assign front, side, back or leave without a pose',
     ]),
-    actionLabel: 'Choose from library',
+    actionLabel: 'Choose from photos',
   });
 
   return routes;
@@ -192,12 +195,12 @@ export function buildProgressStudioCaptureRoutes({
 
 export function buildProgressStudioHowItWorksCopy() {
   return [
-    'Progress Photos helps you keep a private visual record of your physique without pretending every photo is perfect evidence.',
+    'Progress Photos helps you keep private physique photos in date order.',
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Physique Scan sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Physique Scan can show a leanness band, visual progress signal, scan confidence, and why confidence changed. It is not a body-fat percentage.',
-    'If the setup is not reliable enough, Volyume should save the photos but withhold the scan read rather than guess.',
+    'Physique Scan can show a broad result, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
+    'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',
   ].join('\n\n');

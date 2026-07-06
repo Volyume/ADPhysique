@@ -86,14 +86,14 @@ describe('progressPhotosController transforms', () => {
       scans: [{ id: 's1', status: 'complete', requiredPosesComplete: true }, { id: 's2', status: 'complete', requiredPosesComplete: true }],
     })).toMatchObject({
       kind: 'complete_pose',
-      title: 'Finish latest photo set',
-      body: 'Add the missing pose now so this date has a fuller progress photo record.',
-      reason: 'Front is missing from the latest photo set.',
+      title: 'Add front photo',
+      body: 'Your latest date is missing the front photo.',
+      reason: 'Add it if you want front, side and back photos for the same date.',
       detailItems: [
-        'A complete photo set means front, side and back under similar lighting.',
-        'If the setup drifts, save the photo without forcing a scan read.',
+        'Use similar lighting, distance and camera height.',
+        'If the photo is not clear enough, save it without using it for a scan.',
       ],
-      cta: 'Complete with Front',
+      cta: 'Add Front photo',
       pose: 'front',
       checkIn: partial,
     });
@@ -105,8 +105,8 @@ describe('progressPhotosController transforms', () => {
       present: ['front', 'back'],
       missing: ['side'],
       percent: 67,
-      label: '2/3 poses captured',
-      detail: 'Missing side for a more useful photo set.',
+      label: '2 of 3 photos added',
+      detail: 'Add side photo for this date.',
       nextPose: 'side',
       nextPoseLabel: 'Side',
     });
@@ -114,8 +114,8 @@ describe('progressPhotosController transforms', () => {
     expect(buildCheckInCompletenessModel({ poses: ['front', 'side', 'back'] })).toMatchObject({
       complete: true,
       percent: 100,
-      label: 'Complete photo set',
-      detail: 'Front, side and back are saved for a clearer photo review.',
+      label: 'Front, side and back saved',
+      detail: 'Front, side and back are saved together.',
       nextPose: null,
     });
   });
@@ -135,7 +135,7 @@ describe('progressPhotosController transforms', () => {
       .toBe('capture');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)
       .toBe('compare_checkins');
-    expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [] }).kind).toBe('capture');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [] })).toBeNull();
     expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [], readOnly: true })).toBeNull();
   });
 

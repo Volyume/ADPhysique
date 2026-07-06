@@ -109,7 +109,7 @@ test('renders the camera preview and the ghost overlay when a reference is given
   expect(json).toContain('arms across the body');
   expect(json).toContain('Match your previous setup');
   expect(json).toContain('Reference: Front from 6 Jul 2026.');
-  expect(json).toContain('If the setup drifts, save the photo and let the scan read wait.');
+  expect(json).toContain('If the photo is not clear enough, save it as a progress photo instead of using it for a scan result.');
   // The ghost overlay image carries the reference uri.
   expect(json).toContain('file:///photos/ref.jpg');
 });

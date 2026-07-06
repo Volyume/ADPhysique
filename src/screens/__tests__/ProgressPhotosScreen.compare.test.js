@@ -202,7 +202,7 @@ function checkInFor(tree, photo) {
   if (!checkInItem) return null;
   const el = fl.props.renderItem({ item: checkInItem, index: 0 });
   return findElement(el, (n) => typeof n.props?.accessibilityLabel === 'string'
-    && n.props.accessibilityLabel.startsWith(`Photo set from ${fmt(photo.ts)}`));
+    && n.props.accessibilityLabel.startsWith(`Photos from ${fmt(photo.ts)}`));
 }
 
 async function pressCheckIn(tree, photo) {
@@ -245,7 +245,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([NEW]);
     const card = checkInFor(tree, NEW);
     const quality = findElement(card, (n) => n.props && n.props.children === 'Partial setup');
-    const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Add a Front photo to this photo set');
+    const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Add a Front photo for this date');
 
     expect(quality).toBeTruthy();
     expect(complete).toBeTruthy();
@@ -257,9 +257,9 @@ describe('ProgressPhotosScreen timeline', () => {
   test('next best action guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Next best action');
-    expect(text).toContain('Finish latest photo set');
-    await press(tree, 'Next best action: Complete with Front');
+    expect(text).toContain('Suggested next step');
+    expect(text).toContain('Add front photo');
+    await press(tree, 'Suggested next step: Add Front photo');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
@@ -268,9 +268,10 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Start Progress Photos');
-    expect(text).toContain('Physique Scan can give a leanness band');
-    expect(text).toContain('Add photos');
+    expect(text).toContain('No saved photos yet');
+    expect(text).toContain('Add progress photos');
+    expect(text).toContain('Start Physique Scan');
+    expect(text).not.toContain('Suggested next step');
   });
 });
 
@@ -432,7 +433,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Scan details are hidden right now');
+    expect(text).toContain('Scan details are hidden for now');
     expect(text).toContain('Nothing is uploaded or shared unless you choose it.');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });
@@ -440,7 +441,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Photos stay on this device unless you choose to share or export them.');
+    expect(text).toContain('Photos stay on this phone unless you share or export them.');
     expect(text).not.toContain('Not synced, not shared');
   });
 });
