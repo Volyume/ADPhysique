@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -60,9 +60,10 @@ import {
   filterAndSort,
 } from '../lib/progressPhotoTimeline';
 import {
-  buildProgressStudioCapturePromptCopy,
+  buildProgressStudioCaptureRoutes,
   buildProgressStudioHowItWorksCopy,
   buildScanCaptureSubtitle,
+  QUALITY_FIRST_CAPTURE_NOTE,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -153,6 +154,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [scanCompareOpen, setScanCompareOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [captureRouteOpen, setCaptureRouteOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureReference, setCaptureReference] = useState(null);
   const [capturePose, setCapturePose] = useState(null);
@@ -379,6 +381,23 @@ export default function ProgressPhotosScreen({ navigation }) {
       .filter((item) => item.type === 'checkin'),
     [enriched],
   );
+  const latestPartialCapture = useMemo(() => {
+    const latest = allCheckIns[0] || null;
+    if (!latest) return null;
+    const completeness = buildCheckInCompletenessModel(latest);
+    if (completeness.complete || !completeness.nextPose) return null;
+    return {
+      checkIn: latest,
+      label: latest.label,
+      nextPose: completeness.nextPose,
+      nextPoseLabel: completeness.nextPoseLabel,
+    };
+  }, [allCheckIns]);
+  const captureRoutes = useMemo(() => buildProgressStudioCaptureRoutes({
+    latestPartial: latestPartialCapture,
+    canScan: !!userId,
+    readOnly,
+  }), [latestPartialCapture, readOnly, userId]);
 
   const hasRange = Number.isFinite(rangeFrom) || Number.isFinite(rangeTo);
   // Plain label for the date-range pill; "to" reads calmer than a dash and
@@ -643,13 +662,8 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function onAdd() {
-    appAlert('Capture check-in', buildProgressStudioCapturePromptCopy(), [
-      { text: 'Start Physique Scan', onPress: openProgressScan },
-      { text: 'Single guided photo', onPress: openGhostCapture },
-      { text: 'Take photo', onPress: () => pickFrom('camera') },
-      { text: 'Choose from library', onPress: () => pickFrom('library') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    if (!canWrite()) return;
+    setCaptureRouteOpen(true);
   }
 
   // Plain, calm guidance on what the feature is and how to use it, so nobody
@@ -677,6 +691,30 @@ export default function ProgressPhotosScreen({ navigation }) {
     });
     setCapturePose(pose);
     setCaptureOpen(true);
+  }
+
+  function onCaptureRoutePress(route) {
+    if (!route || route.disabled || !canWrite()) return;
+    setCaptureRouteOpen(false);
+    if (route.key === 'complete_latest') {
+      openCheckInPoseCapture(latestPartialCapture?.checkIn, latestPartialCapture?.nextPose);
+      return;
+    }
+    if (route.key === 'scan') {
+      openProgressScan();
+      return;
+    }
+    if (route.key === 'guided') {
+      openGhostCapture();
+      return;
+    }
+    if (route.key === 'camera') {
+      pickFrom('camera');
+      return;
+    }
+    if (route.key === 'library') {
+      pickFrom('library');
+    }
   }
 
   // Real delete wiring: remove the file AND its metadata row, then refresh.
@@ -1216,6 +1254,85 @@ export default function ProgressPhotosScreen({ navigation }) {
         <ProgressPhotoCompare photos={photos} onClose={() => setCompareOpen(false)} />
       </Modal>
 
+      <Modal
+        visible={captureRouteOpen}
+        transparent
+        animationType={reduceMotion ? 'none' : 'slide'}
+        onRequestClose={() => setCaptureRouteOpen(false)}
+      >
+        {captureRouteOpen ? (
+          <View style={styles.captureRouteOverlay}>
+            <TouchableOpacity
+              style={styles.captureRouteBackdrop}
+              activeOpacity={1}
+              onPress={() => setCaptureRouteOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close capture routes"
+            />
+            <SafeAreaView edges={['bottom']} style={styles.captureRouteSafe}>
+              <View style={styles.captureRouteSheet}>
+                <View style={styles.captureRouteHandle} />
+                <View style={styles.captureRouteHeader}>
+                  <Text style={styles.captureRouteTitle}>Capture route</Text>
+                  <TouchableOpacity
+                    onPress={() => setCaptureRouteOpen(false)}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close capture routes"
+                  >
+                    <Ionicons name="close" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.captureRouteIntro}>
+                  Pick the route that matches today. Same room, lighting, camera height and distance matter more than forcing a read.
+                </Text>
+                <ScrollView
+                  style={styles.captureRouteScroll}
+                  contentContainerStyle={styles.captureRouteList}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {captureRoutes.map((route) => (
+                    <TouchableOpacity
+                      key={route.key}
+                      style={[styles.captureRouteCard, route.disabled && styles.captureRouteCardDisabled]}
+                      onPress={() => onCaptureRoutePress(route)}
+                      disabled={route.disabled}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: !!route.disabled }}
+                      accessibilityLabel={route.actionLabel}
+                    >
+                      <View style={styles.captureRouteIcon}>
+                        <Ionicons name={route.icon} size={20} color={route.disabled ? colors.textMuted : colors.primary} />
+                      </View>
+                      <View style={styles.captureRouteCopy}>
+                        <View style={styles.captureRouteTopLine}>
+                          <Text style={styles.captureRouteEyebrow}>{route.eyebrow}</Text>
+                          {route.recommended ? (
+                            <View style={styles.captureRoutePill}>
+                              <Text style={styles.captureRoutePillText}>Recommended</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={styles.captureRouteName}>{route.title}</Text>
+                        <Text style={styles.captureRouteBody}>{route.disabled ? route.disabledReason : route.body}</Text>
+                        <Text style={styles.captureRouteBestFor}>{route.bestFor}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View style={styles.captureRouteNote}>
+                  <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+                  <Text style={styles.captureRouteNoteText}>
+                    {QUALITY_FIRST_CAPTURE_NOTE} Photos stay private unless you choose to share or export.
+                  </Text>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+        ) : null}
+      </Modal>
+
       {/* Guided (ghost-overlay) capture. Falls back to the existing library
           path when the camera is unavailable or declined. */}
       <Modal
@@ -1551,6 +1668,97 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   completeCheckInText: { ...type.label, color: colors.primary },
+  captureRouteOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.scrim,
+  },
+  captureRouteBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  captureRouteSafe: {
+    justifyContent: 'flex-end',
+  },
+  captureRouteSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+    maxHeight: '92%',
+  },
+  captureRouteHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: radius.hair,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+  },
+  captureRouteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  captureRouteTitle: { ...type.h3, color: colors.textPrimary, flex: 1 },
+  captureRouteIntro: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
+  captureRouteScroll: { maxHeight: 520 },
+  captureRouteList: { gap: spacing.sm, paddingBottom: spacing.xxs },
+  captureRouteCard: {
+    minHeight: 96,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  captureRouteCardDisabled: { opacity: 0.55 },
+  captureRouteIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  captureRouteCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  captureRouteTopLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  captureRouteEyebrow: {
+    ...type.caption,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  captureRoutePill: {
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  captureRoutePillText: { ...type.caption, color: colors.primary },
+  captureRouteName: { ...type.label, color: colors.textPrimary },
+  captureRouteBody: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  captureRouteBestFor: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  captureRouteNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    padding: spacing.md,
+  },
+  captureRouteNoteText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },

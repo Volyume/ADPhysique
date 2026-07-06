@@ -59,6 +59,7 @@ const POSES = [
   { key: 'side', label: 'Side' },
   { key: 'back', label: 'Back' },
 ];
+const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 
 const MODES = [
   { key: 'sideBySide', label: 'Side by side', icon: 'copy-outline' },
@@ -368,6 +369,30 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
     .filter(Boolean)
     .sort((a, b) => a.takenAt - b.takenAt), [selected, enriched]);
   const ready = pair.length === 2;
+  const setupStatus = useMemo(() => {
+    if (!ready) return null;
+    const [earlier, later] = pair;
+    if (earlier.pose && later.pose && earlier.pose === later.pose) {
+      const poseLabel = POSE_LABEL[earlier.pose] || 'Matched';
+      return {
+        icon: 'checkmark-circle-outline',
+        title: 'Pose match',
+        body: `${poseLabel} photos on both dates. Alignment is easier to read.`,
+      };
+    }
+    if (earlier.pose && later.pose && earlier.pose !== later.pose) {
+      return {
+        icon: 'alert-circle-outline',
+        title: 'Pose differs',
+        body: 'Treat this pair as context only. Pick the same pose for a clearer review.',
+      };
+    }
+    return {
+      icon: 'information-circle-outline',
+      title: 'Setup note',
+      body: 'Add pose labels to future photos for cleaner visual reviews.',
+    };
+  }, [pair, ready]);
 
   // A neutral time-relative quick action: the latest photo paired with the one
   // nearest to four weeks earlier, its real gap surfaced in the label.
@@ -503,6 +528,19 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
         </View>
       ) : (
         <View style={styles.body}>
+          {setupStatus ? (
+            <View
+              style={styles.setupStatus}
+              accessibilityLabel={`Compare setup status: ${setupStatus.title}. ${setupStatus.body}`}
+            >
+              <Ionicons name={setupStatus.icon} size={iconSize.sm} color={colors.primary} />
+              <View style={styles.setupStatusCopy}>
+                <Text style={styles.setupStatusTitle}>{setupStatus.title}</Text>
+                <Text style={styles.setupStatusBody}>{setupStatus.body}</Text>
+              </View>
+            </View>
+          ) : null}
+
           {mode === 'sideBySide' ? (
             <View style={styles.panes}>
               <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} />
@@ -602,6 +640,20 @@ const styles = StyleSheet.create({
   quickText: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
 
   body: { paddingHorizontal: spacing.lg },
+  setupStatus: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  setupStatusCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  setupStatusTitle: { ...type.label, color: colors.textPrimary },
+  setupStatusBody: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   panes: { flexDirection: 'row', gap: spacing.sm },
   pane: { flex: 1, alignItems: 'center' },
   paneImage: { borderRadius: radius.md, backgroundColor: colors.surface },

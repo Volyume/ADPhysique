@@ -51,6 +51,7 @@ jest.mock('../../lib/progressPhotoMeta', () => ({
 
 import useAppStore from '../../store/useAppStore';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
+import { getPhotoMetaMap } from '../../lib/progressPhotoMeta';
 import ProgressPhotoCompare from '../ProgressPhotoCompare';
 
 // The exact ban the legacy compare modal is held to (A1 section 3).
@@ -117,6 +118,14 @@ function paneImages(tree) {
     && /photo, /.test(n.props.accessibilityLabel));
 }
 
+beforeEach(() => {
+  getPhotoMetaMap.mockImplementation(async (names) => {
+    const map = {};
+    for (const n of names) map[n] = { name: n, takenAt: parseInt(n, 10), pose: null, weightKg: null, note: null };
+    return map;
+  });
+});
+
 afterEach(() => jest.clearAllMocks());
 
 describe('ProgressPhotoCompare, calm default', () => {
@@ -152,6 +161,21 @@ describe('ProgressPhotoCompare, calm default', () => {
       expect(img.props.resizeMode).toBe('contain');
       expect(img.props.resizeMethod).toBe('resize');
     }
+  });
+
+  test('surfaces a neutral setup status for same-pose pairs', async () => {
+    getPhotoMetaMap.mockImplementation(async (names) => {
+      const map = {};
+      for (const n of names) {
+        const ts = parseInt(n, 10);
+        map[n] = { name: n, takenAt: ts, pose: n === MID.name ? 'side' : 'front', weightKg: null, note: null };
+      }
+      return map;
+    });
+    const tree = await render();
+    const texts = allTexts(tree);
+    expect(texts).toContain('Pose match');
+    expect(texts).toContain('Front photos on both dates. Alignment is easier to read.');
   });
 });
 
