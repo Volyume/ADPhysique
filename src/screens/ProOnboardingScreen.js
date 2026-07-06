@@ -989,14 +989,14 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Keep your Pro setup safe"
-              sub="Sign in once so your plan, weight history and coaching adjustments can be restored if you change device."
+              title="Set up your Pro account safely"
+              sub="Sign in once so your plan, weight history and coaching updates can be restored if you change device."
             />
 
             <QuestionGroup
               icon="person-circle-outline"
               title="Your account"
-              sub="This only keeps your Pro plan and coaching history tied to you. The training setup starts next."
+              sub="This keeps your Pro plan and coaching history tied to you. The training setup comes next."
             >
               {/* OAuth only (Apple on iOS, Google on Android). The email +
                   password path was removed (founder 2026-07-01); OAuth needs no
@@ -1049,7 +1049,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
               title="Set your starting baseline"
-              sub="These details stop the app guessing. They set your first calorie, protein and progress baselines."
+              sub="These details let the app set a safe starting baseline without guessing."
             />
 
             <QuestionGroup
@@ -1077,7 +1077,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Biological sex</Text>
-                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. This is not shown publicly.</Text>
+                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. This stays private.</Text>
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
@@ -1088,7 +1088,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Age</Text>
-                <Text style={styles.fieldHint}>Used with your height and weight to calculate your calorie targets.</Text>
+                <Text style={styles.fieldHint}>Used with your height and weight to set your calorie targets.</Text>
                 <TextField accessibilityLabel="Age"
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
@@ -1125,7 +1125,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     ))}
                   </View>
                 </View>
-                <Text style={styles.fieldHint}>Used with your weight and age to calculate your calorie targets.</Text>
+                <Text style={styles.fieldHint}>Used with your weight and age to set your calorie targets.</Text>
                 {localHeightUnits === 'imperial' ? (
                   <View style={styles.heightImperialRow}>
                     <View style={styles.inputHalf}>
@@ -1189,7 +1189,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.sectionLast}>
                 <Text style={styles.fieldLabel}>Current body weight</Text>
                 <Text style={styles.fieldHint}>
-                  This seeds your weight trend and first calorie target. Update it from Today once the app is set up.
+                  This sets your starting trend and first calorie target. Update it from Today once setup is complete.
                 </Text>
                 {localBWUnits === 'st' ? (
                   <View style={styles.heightImperialRow}>
@@ -1241,12 +1241,12 @@ export default function ProOnboardingScreen({ navigation }) {
             <QuestionGroup
               icon="analytics-outline"
               title="Optional body composition"
-              sub="Only enter body fat if you have a measured figure. If you are unsure, leave it blank."
+              sub="Only enter body fat if you have a measured figure. Leave it blank if you are unsure."
             >
               <View style={styles.sectionLast}>
                 <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  A measured figure can sharpen targets. Progress Photos can create a Volyume Physique Score for visual progress without asking you to guess exact body fat.
+                  A measured figure can sharpen targets. Progress Photos can create a Volyume Physique Score for visual progress without asking you to estimate exact body fat.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}
@@ -1337,7 +1337,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Session length</Text>
-                <Text style={styles.fieldHint}>Pick the time you can usually complete, including warm-ups.</Text>
+                <Text style={styles.fieldHint}>Pick the time you can usually finish, including warm-ups.</Text>
                 <SegmentedControl
                   options={SESSION_LENGTH_OPTIONS}
                   value={sessionLengthMinutes}
@@ -1488,7 +1488,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     Anything to bring up? <Text style={styles.wpOptional}>(optional, up to 3)</Text>
                   </Text>
                   <Text style={styles.wpHint}>
-                    Pick one to three muscles you want to prioritise. Not sure? Leave it blank for a balanced plan.
+                    Pick one to three muscles you want to bring up. Not sure? Leave it blank for a balanced plan.
                   </Text>
                   <View style={styles.wpGrid}>
                     {weakPointSetForGoal(trainingGoal).map(muscle => (
@@ -1639,7 +1639,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Volyume uses a deterministic, explainable coaching system, not a chat coach. Morning weights and weekly check-ins drive the review; food logging makes it sharper, and the app stays cautious when data is missing.
+              Volyume uses a rule-based coaching system. Morning weights and weekly check-ins drive the review; food logging sharpens it, and the app stays cautious when data is missing.
             </Text>
           </View>
 
@@ -1673,7 +1673,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={styles.notifCopy}>
                   <Text style={styles.notifTitle}>Morning weight reminder</Text>
                   <Text style={styles.notifSub}>
-                    A quick morning weigh-in gives the coach a cleaner trend than occasional scale checks.
+                    A quick morning weigh-in gives a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1779,7 +1779,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   <Text style={styles.notifTitle}>Cardio</Text>
                   <Text style={styles.notifSub}>
                     {cardioOn
-                      ? 'On. You can log cardio if you do it. The coach only uses it as a lever when it is genuinely needed.'
+                      ? 'On. You can log cardio if you do it. The plan only uses it when it is genuinely needed.'
                       : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
                   </Text>
                 </View>
@@ -1994,10 +1994,10 @@ const styles = StyleSheet.create({
     top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
 
-  heightImperialRow: { flexDirection: 'row', gap: spacing.md },
-  inputHalf: { flex: 1, minWidth: 0 },
-  inputStone: { flex: 2, minWidth: 0 },
-  inputPounds: { flex: 3, minWidth: 0 },
+  heightImperialRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  inputHalf: { flex: 1, minWidth: 140 },
+  inputStone: { flex: 2, minWidth: 120 },
+  inputPounds: { flex: 3, minWidth: 120 },
 
   fieldLabelRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -2057,8 +2057,8 @@ const styles = StyleSheet.create({
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md, paddingVertical: 7,
+    minHeight: 48,
+    paddingHorizontal: spacing.md + 1, paddingVertical: 8,
     borderRadius: radius.full, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center',

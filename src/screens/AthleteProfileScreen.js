@@ -309,13 +309,13 @@ export default function AthleteProfileScreen({ navigation }) {
       summary.scan?.leannessBandLabel || null,
       `${Math.round(summary.scan.visualLeannessScore)}/100`,
     ].filter(Boolean).join(' - '),
-    sub: `Private photo score - ${scanConfidenceLabel(summary.scan?.confidence).toLowerCase()} - not body fat`,
+    sub: `Volyume score from private photos - ${scanConfidenceLabel(summary.scan?.confidence).toLowerCase()} - not body fat`,
   } : {
     label: 'Body fat',
     value: bodyFatText,
     sub: summary.bodyFatLoggedAt
       ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry`
-      : 'Manual entry. Photos can replace this with a score.',
+      : 'Shown until your first private photo score.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;
@@ -370,7 +370,7 @@ export default function AthleteProfileScreen({ navigation }) {
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text style={styles.heroFocus} numberOfLines={1}>{focusTile.label}: {focusTile.value}</Text>
+            <Text style={styles.heroFocus} numberOfLines={2}>{focusTile.label}: {focusTile.value}</Text>
           </View>
         </Card>
 

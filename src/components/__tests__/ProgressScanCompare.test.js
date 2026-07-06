@@ -114,7 +114,7 @@ describe('ProgressScanCompare component', () => {
     usePhotoSuppression.mockReturnValue(true);
     const tree = await render([scan('new', 20), scan('old', 1)]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Score comparison is resting for now.');
+    expect(text).toContain('Score comparison is hidden for now.');
     expect(text).not.toContain('66/100');
   });
 });

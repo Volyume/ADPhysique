@@ -711,7 +711,7 @@ describe('manage sheet: block confirm', () => {
     const call = mockAlertCalls.find((c) => c.title === 'Block Sam');
     expect(call).toBeTruthy();
     expect(call.message).toBe(
-      'This ends the partnership, deletes everything you shared, and stops them pairing with you again. They will not be told.',
+      'Volyume blocks them first, then ends the partnership and removes shared data. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
     );
     const blockBtn = call.buttons.find((b) => b.style === 'destructive');
     expect(blockBtn.text).toBe('Block');
