@@ -110,17 +110,19 @@ describe('ConsistencyScreen load states', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load consistency");
     expect(text).toContain('Your training history is safe.');
-    expect(text).not.toContain('Your consistency picture starts with your first session');
+    expect(text).not.toContain('No consistency data yet');
 
     const retry = tree.root.findByProps({ accessibilityLabel: 'Try again' });
     act(() => { retry.props.onPress(); });
     expect(mockProgressState.handleRefresh).toHaveBeenCalledTimes(1);
   });
 
-  test('keeps the genuine first-session empty state after a successful empty read', () => {
+  test('keeps the genuine empty state after a successful empty read without sending users to Train', () => {
     const tree = render();
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Your consistency picture starts with your first session');
+    expect(text).toContain('No consistency data yet');
+    expect(text).toContain('This page fills in after completed sessions');
+    expect(text).not.toContain('Start a workout');
     expect(text).not.toContain("Couldn't load consistency");
   });
 });
