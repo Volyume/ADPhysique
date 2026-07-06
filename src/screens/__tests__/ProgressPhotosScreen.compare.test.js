@@ -6,7 +6,7 @@
  * test (ProgressPhotoCompare.test.js) — the SAME regex the legacy inline modal
  * was held to. This suite pins the SCREEN's wiring and the safety invariants
  * that stay the screen's responsibility after the timeline rewrite:
- *   - the dated, pose-typed Check-In timeline (month headers, card dates) built from
+ *   - the dated, pose-typed photo-set timeline (month headers, card dates) built from
  *     getPhotoMetaMap, newest-first;
  *   - a tap opens the full-size VIEWER (not delete); delete flows through the
  *     viewer's onDelete → deleteProgressPhoto + deletePhotoMeta + refresh, with
@@ -193,7 +193,7 @@ function findElement(el, pred) {
   return findElement(el.props && el.props.children, pred);
 }
 
-// The Check-In TouchableOpacity for a photo, produced by renderItem.
+// The photo-set TouchableOpacity for a photo, produced by renderItem.
 function checkInFor(tree, photo) {
   const fl = flashList(tree);
   const checkInItem = (fl.props.data || []).find(
@@ -202,12 +202,12 @@ function checkInFor(tree, photo) {
   if (!checkInItem) return null;
   const el = fl.props.renderItem({ item: checkInItem, index: 0 });
   return findElement(el, (n) => typeof n.props?.accessibilityLabel === 'string'
-    && n.props.accessibilityLabel.startsWith(`Check-in from ${fmt(photo.ts)}`));
+    && n.props.accessibilityLabel.startsWith(`Photo set from ${fmt(photo.ts)}`));
 }
 
 async function pressCheckIn(tree, photo) {
   const checkIn = checkInFor(tree, photo);
-  if (!checkIn) throw new Error(`No Check-In for ${photo.name}`);
+  if (!checkIn) throw new Error(`No photo set for ${photo.name}`);
   await act(async () => { checkIn.props.onPress(); });
 }
 
@@ -226,10 +226,10 @@ function surfaceOpen(tree, childName) {
 afterEach(() => jest.clearAllMocks());
 
 describe('ProgressPhotosScreen timeline', () => {
-  test('builds a newest-first dated timeline with month headers and Check-In dates', async () => {
+  test('builds a newest-first dated timeline with month headers and photo-set dates', async () => {
     const tree = await render();
     const data = flashList(tree).props.data;
-    // Three photos in three different months => three headers + three Check-Ins,
+    // Three photos in three different months => three headers + three photo sets,
     // newest month first.
     const headers = data.filter((d) => d.type === 'header').map((d) => d.label);
     expect(headers).toEqual(['June 2026', 'March 2026', 'January 2026']);
@@ -275,7 +275,7 @@ describe('ProgressPhotosScreen timeline', () => {
 });
 
 // Sort + date-range navigation (NAV-4). Neutral controls that compose with the
-// pose filter; no cadence, no streak, no comparison forcing. The Check-In
+// pose filter; no cadence, no streak, no comparison forcing. The photo-set
 // timeline groups by contiguous month, so oldest-first simply reverses sections.
 describe('ProgressPhotosScreen timeline sort toggle', () => {
   const headers = (tree) => flashList(tree).props.data
@@ -286,7 +286,7 @@ describe('ProgressPhotosScreen timeline sort toggle', () => {
     expect(headers(tree)).toEqual(['June 2026', 'March 2026', 'January 2026']);
     await press(tree, 'Sort oldest first');
     expect(headers(tree)).toEqual(['January 2026', 'March 2026', 'June 2026']);
-    // First Check-In is now the OLDEST photo.
+    // First photo set is now the OLDEST photo.
     const first = flashList(tree).props.data.find((d) => d.type === 'checkin');
     expect(first.cover.name).toBe(OLD.name);
     // Toggling back restores newest-first.

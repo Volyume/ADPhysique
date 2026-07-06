@@ -843,8 +843,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         disabled={readOnly}
         accessibilityRole={readOnly ? 'image' : 'button'}
         accessibilityLabel={readOnly
-          ? `Check-in from ${dateLabel}.`
-          : `Check-in from ${dateLabel}. Tap to open.`}
+          ? `Photo set from ${dateLabel}.`
+          : `Photo set from ${dateLabel}. Tap to open.`}
         style={styles.checkInCard}
       >
         <View style={styles.checkInCover}>
