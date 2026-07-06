@@ -200,12 +200,13 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
   expect(copy).toContain('Add photo set');
-  expect(copy).toContain('Take new photos or import ones you already have.');
-  expect(copy).toContain('same private library');
+  expect(copy).toContain('Choose how to add this photo set.');
+  expect(copy).toContain('your private library');
   expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
-  expect(copy).toContain('Choose the front relaxed photo');
-  expect(copy).toContain('Photos stay on this phone unless you share or export them.');
+  expect(copy).toContain("Best for today's progress check.");
+  expect(copy).toContain('Best for older photos.');
+  expect(copy).not.toContain('Choose the front relaxed photo');
   expect(hasPressableLabel(tree, 'Start photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Import photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);

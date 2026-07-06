@@ -91,12 +91,10 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Add a photo set by taking new photos or importing existing ones. The aim is not a perfect pose. It is a clear record you can compare later.',
-    'Volyume Physique Score is our own visual progress measure. It reads clear front and back relaxed photos for a leanness band, progress signal and confidence. It is not a body-fat estimate.',
-    'A side photo is optional, but it helps you compare shape and posture over time.',
-    `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
+    'Take new photos or import existing ones. Both routes save a dated photo set to your private library.',
+    'Clear front and back photos can receive a Volyume Physique Score, leanness band, progress signal and confidence. It is not a body-fat estimate.',
+    'Use the same room, light, distance and camera height each time. Side is optional.',
     QUALITY_FIRST_CAPTURE_NOTE,
-    'Photos stay on this device unless you choose to share or export them.',
   ].join('\n\n');
 }
 
@@ -116,15 +114,10 @@ export function buildProgressStudioCaptureRoutes({
       key: 'complete_latest',
       icon: 'checkmark-circle-outline',
       eyebrow: 'Latest set',
-      title: `Add the ${missingPoseLabel.toLowerCase()} photo`,
-      body: `Your latest photo set is missing the ${missingPoseLabel.toLowerCase()} photo. Add it to keep that date together before starting another set.`,
-      bestFor: 'Keeping one date together.',
-      steps: Object.freeze([
-        `Take the ${missingPoseLabel.toLowerCase()} relaxed photo`,
-        'Use the same room, distance and camera height',
-        'Save it to the existing date',
-      ]),
-      actionLabel: `Add ${missingPoseLabel} photo`,
+      title: 'Latest set needs another angle',
+      body: `Keep the latest date together by adding its missing ${missingPoseLabel.toLowerCase()} photo.`,
+      bestFor: 'Adds to the existing date.',
+      actionLabel: `Add missing photo: Add ${missingPoseLabel} photo`,
       recommended: true,
     });
   }
@@ -135,9 +128,8 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'scan',
       eyebrow: 'New set',
       title: 'Take a new photo set',
-      body: 'Volyume guides the front and back photos, with side optional. If the set is clear enough, it gets a Physique Score.',
-      bestFor: 'Your next regular progress entry.',
-      steps: PROGRESS_SCAN_SEQUENCE,
+      body: 'Guided front and back photos. Side is optional. Clear sets can receive a Physique Score.',
+      bestFor: 'Best for today\'s progress check.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
       disabled: !canScan,
@@ -148,13 +140,8 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'images-outline',
       eyebrow: 'Existing set',
       title: 'Import a photo set',
-      body: 'Choose front and back photos from your phone. Volyume adds them to the same library and scores the set when the photos are usable.',
-      bestFor: 'Older photos with the real capture date and weight snapshot.',
-      steps: Object.freeze([
-        'Choose the front relaxed photo',
-        'Choose the back relaxed photo',
-        'Add the optional side photo or finish the set',
-      ]),
+      body: 'Choose existing front and back photos, set the real date, and save them to the same library.',
+      bestFor: 'Best for older photos.',
       actionLabel: 'Import photo set',
       disabled: !canScan,
       disabledReason: 'Sign in to save imported photo sets.',

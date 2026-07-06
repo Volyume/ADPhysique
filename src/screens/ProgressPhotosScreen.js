@@ -868,6 +868,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       : (latestScan ? 'Saved' : 'No score yet');
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
+    : latestPartialCapture
+      ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
       : latestAssessment?.progressSignalLabel
         ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat estimate.`
       : latestScan?.copySummary || (latestPhoto
@@ -1002,15 +1004,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   function renderStudioHeader() {
     return (
       <>
-        <View style={styles.privacyBanner}>
-          <View style={styles.privacyNoticeIcon}>
-            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-          </View>
-          <Text style={styles.privacyNoticeText}>
-            Private on this device. Your photos and scores are not visible to partners, staff or anyone else unless you choose to share or export them.
-          </Text>
-        </View>
-
         <Card padding="none" style={styles.studioHero}>
           <View style={styles.heroTextHeader}>
             <View style={styles.heroTitleRow}>
@@ -1022,8 +1015,14 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.heroTextTitle}>Your private physique record</Text>
               </View>
             </View>
+            <View style={styles.heroPrivacyPill}>
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+              <Text style={styles.heroPrivacyText}>
+                Private on this device: not visible to partners, staff or anyone else unless you choose to share or export.
+              </Text>
+            </View>
             <Text style={styles.heroTextSubtitle}>
-              Take or import front and back photos, keep them in date order, and let Volyume score the set only when the images are clear enough to compare fairly.
+              Take or import front and back photos. Clear sets can receive Volyume Physique Score: a progress signal, confidence and leanness band, not a body-fat estimate.
             </Text>
           </View>
 
@@ -1046,28 +1045,13 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.scoreGuideTitle}>What Volyume measures</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Volyume Physique Score is our own visual progress measure. It is designed to show whether your physique record is moving, not to guess body fat.
+                Keep the same setup each time: full body in frame, even light, camera at mid-torso height.
               </Text>
-              <View style={styles.scoreGuideRows}>
-                <View style={styles.scoreGuideRow}>
-                  <Text style={styles.scoreGuideRowTitle}>A useful set</Text>
-                  <Text style={styles.scoreGuideRowBody}>Front and back relaxed photos are required. Side is optional and helps shape comparisons.</Text>
-                </View>
-                <View style={styles.scoreGuideRow}>
-                  <Text style={styles.scoreGuideRowTitle}>A fair read</Text>
-                  <Text style={styles.scoreGuideRowBody}>You only get a score, band, confidence and progress signal when the photos are reliable enough.</Text>
-                </View>
-              </View>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
-                  <View key={step.key} style={styles.setupStandardStep}>
-                    <View style={styles.setupStandardIcon}>
-                      <Ionicons name={step.icon} size={iconSize.sm} color={colors.primary} />
-                    </View>
-                    <View style={styles.setupStandardCopy}>
-                      <Text style={styles.setupStandardStepTitle}>{step.title}</Text>
-                      <Text style={styles.setupStandardStepBody}>{step.copy}</Text>
-                    </View>
+                  <View key={step.key} style={styles.setupStandardChip}>
+                    <Ionicons name={step.icon} size={iconSize.sm} color={colors.primary} />
+                    <Text style={styles.setupStandardChipText}>{step.title}</Text>
                   </View>
                 ))}
               </View>
@@ -1421,7 +1405,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest date is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate photo set if these photos are from another day.`
-                    : 'Take new photos or import ones you already have. Both routes save to the same private library and only get a Physique Score when the front and back photos are usable.'}
+                    : 'Choose how to add this photo set. Both routes save to your private library; scoring only happens when front and back photos are usable.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1553,18 +1537,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     overflow: 'hidden',
   },
-  privacyBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primaryBg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-  },
   heroTextHeader: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
@@ -1590,18 +1562,18 @@ const styles = StyleSheet.create({
   heroTitleCopy: { flex: 1, minWidth: 0 },
   heroTextEyebrow: { ...type.caption, color: colors.primary },
   heroTextTitle: { ...type.title, color: colors.textPrimary },
+  heroPrivacyPill: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  heroPrivacyText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   studioPanel: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.lg },
-  privacyNoticeIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-    flexShrink: 0,
-  },
-  privacyNoticeText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   studioMetricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1641,40 +1613,18 @@ const styles = StyleSheet.create({
   },
   scoreGuideTitle: { ...type.label, color: colors.textPrimary },
   scoreGuideIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  scoreGuideRows: {
+  setupStandardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  setupStandardChip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  scoreGuideRow: {
-    flexGrow: 1,
-    flexBasis: '47%',
-    minWidth: 148,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    padding: spacing.sm,
-    gap: spacing.xxs,
-  },
-  scoreGuideRowTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
-  scoreGuideRowBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
-  setupStandardGrid: { gap: spacing.sm },
-  setupStandardStep: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  setupStandardIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.full,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-    flexShrink: 0,
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 32,
   },
-  setupStandardCopy: { flex: 1, minWidth: 0, gap: 2 },
-  setupStandardStepTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
-  setupStandardStepBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  setupStandardChipText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
