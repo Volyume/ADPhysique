@@ -26,7 +26,7 @@ const TRIAL_BULLETS = [
   'A plan built around your schedule, goals, and experience level.',
   'Your training and nutrition adjust as your body responds.',
   'Personalised calorie and protein targets, updated as your goals change.',
-  'After every check-in, your coach explains what changed, and why.',
+  'Precision Coaching explains what changed, what stayed the same, and why.',
 ];
 
 const AFTER_TRIAL_BULLETS = [
@@ -90,7 +90,7 @@ export default function WelcomeScreen({ navigation }) {
                 <View style={styles.proTitleRow}>
                   <Text style={styles.proTitle}>The full app, free for 14 days</Text>
                 </View>
-                <Text style={styles.proSubtitle}>A coach that reads your training and adjusts your plan.</Text>
+                <Text style={styles.proSubtitle}>A deterministic coaching system that adjusts from your logged training.</Text>
               </View>
             </View>
 
@@ -102,7 +102,7 @@ export default function WelcomeScreen({ navigation }) {
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
                   <Text style={styles.bulletText}>{b}</Text>
                   {/* U-E-1: inline gloss for the brand term on first appearance. */}
-                  {b.includes('Precision Coaching™') && (
+                  {b.includes('Precision Coaching') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
                   )}
                 </View>
@@ -158,10 +158,10 @@ export default function WelcomeScreen({ navigation }) {
           >
             <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
             <Text style={styles.trustText}>Works fully offline</Text>
-            <Text style={styles.trustDot}>·</Text>
+            <Text style={styles.trustDot}>-</Text>
             <Ionicons name="download-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
             <Text style={styles.trustText}>Exports anytime</Text>
-            <Text style={styles.trustDot}>·</Text>
+            <Text style={styles.trustDot}>-</Text>
             <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
             <Text style={styles.trustText}>No ads, ever</Text>
           </View>
@@ -188,15 +188,15 @@ const styles = StyleSheet.create({
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
   // Sized down so the wordmark reads as a brand mark, not a billboard.
-  // Dialled from 200→150, at 200 it was still overpowering the Pro
+  // Dialled from 200 to 150; at 200 it was still overpowering the Pro
   // card below; 150 keeps the brand visible without dominating.
   logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {
     // eslint-disable-next-line no-restricted-syntax -- welcome hero title, intentional display size
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
-    letterSpacing: 5, marginTop: spacing.xs,
+    letterSpacing: 0, marginTop: spacing.xs,
   },
-  tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
+  tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0 },
 
   cards: { gap: spacing.md },
 

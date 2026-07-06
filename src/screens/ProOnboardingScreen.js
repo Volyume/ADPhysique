@@ -585,7 +585,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const divisionLabel = trainingGoal && trainingGoal !== 'general' ? GOAL_LABELS[trainingGoal] : null;
     return [
       'Balancing your week',
-      divisionLabel ? `Setting your starting volume · ${divisionLabel} priorities` : 'Setting your starting volume',
+      divisionLabel ? `Setting your starting volume - ${divisionLabel} priorities` : 'Setting your starting volume',
       'Choosing your exercises',
       `Fitting sessions to your ${sessionLengthMinutes} minutes`,
     ];
@@ -944,7 +944,7 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
         </View>
         <ProgressBar />
-        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} · {stepLabel}</Text>
+        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
         <Text style={styles.stepTitle}>{title}</Text>
         {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
         {outcomes.length ? (
@@ -1519,7 +1519,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
                   </View>
                   <Text style={styles.fieldHint}>
-                    {PROTEIN_APPROACHES[proteinApproach]?.label} · {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
+                    {PROTEIN_APPROACHES[proteinApproach]?.label} - {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
                   </Text>
                 </View>
                 <Ionicons name={proteinOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
@@ -1834,7 +1834,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.black,
-    color: colors.onPrimary, letterSpacing: 0.8,
+    color: colors.onPrimary, letterSpacing: 0,
   },
 
   progressTrack: {
@@ -1931,7 +1931,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
+    color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
   // A3: provisional energy line under the focus dropdown (step 4).
@@ -1967,7 +1967,7 @@ const styles = StyleSheet.create({
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
   wpLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.xs,
+    color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs,
   },
   wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
   wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
@@ -2053,7 +2053,7 @@ const styles = StyleSheet.create({
   toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
 
   timeRow: { marginTop: spacing.md },
-  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, letterSpacing: 0.5 },
+  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, letterSpacing: 0 },
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
@@ -2081,7 +2081,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
+  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },

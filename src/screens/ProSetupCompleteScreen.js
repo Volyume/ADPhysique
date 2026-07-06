@@ -211,7 +211,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="scale-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>1 · Log your weight</Text>
+                <Text style={styles.routineTitle}>1. Log your weight</Text>
                 <Text style={styles.routineBody}>
                   Every morning before food, after the bathroom. Three seconds. Tracks your progress in the background.
                 </Text>
@@ -229,7 +229,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Ionicons name="flame-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.routineTitle}>2 · Hit your daily targets</Text>
+                  <Text style={styles.routineTitle}>2. Hit your daily targets</Text>
                 </View>
               </View>
               {/* Wave A B5: the primer is offered BEFORE the numbers. Most
@@ -337,10 +337,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="barbell-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>3 · Train your split</Text>
+                <Text style={styles.routineTitle}>3. Train your split</Text>
                 {hasPlan ? (
                   <Text style={styles.routineBody}>
-                    {planName ?? 'Your plan'} · {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
+                    {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
                   </Text>
                 ) : (
                   <Text style={styles.routineBody}>
@@ -395,7 +395,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>4 · Check in once a week</Text>
+                <Text style={styles.routineTitle}>4. Check in once a week</Text>
                 <Text style={styles.routineBody}>
                   {firstReviewLabel
                     ? `Keep logging your morning weight and your first review lands on ${firstReviewLabel}. Two minutes to review how the week went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.`
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
+  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0 },
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
-  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0 },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },

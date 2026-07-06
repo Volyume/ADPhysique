@@ -235,7 +235,7 @@ export default function Article9ConsentScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityState={{ disabled: !agreed || busy }}
         >
-          <Text style={styles.ctaPrimaryText}>{busy ? 'Saving…' : 'Continue'}</Text>
+          <Text style={styles.ctaPrimaryText}>{busy ? 'Saving...' : 'Continue'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={openPrivacyPolicy} style={styles.ctaGhost} accessibilityRole="link">
@@ -272,7 +272,7 @@ export default function Article9ConsentScreen({ navigation }) {
               accessibilityState={{ disabled: signingOut }}
             >
               <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.declineActionText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+              <Text style={styles.declineActionText}>{signingOut ? 'Signing out...' : 'Sign out'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={deletingAccount ? undefined : handleDeleteAccount}
@@ -281,7 +281,7 @@ export default function Article9ConsentScreen({ navigation }) {
               accessibilityState={{ disabled: deletingAccount }}
             >
               <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.declineActionText}>{deletingAccount ? 'Deleting account…' : 'Delete my account'}</Text>
+              <Text style={styles.declineActionText}>{deletingAccount ? 'Deleting account...' : 'Delete my account'}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -295,7 +295,7 @@ function BulletList({ items }) {
     <View style={styles.bullets}>
       {items.map((text, i) => (
         <View key={i} style={styles.bulletRow}>
-          <Text style={styles.bulletDot}>•</Text>
+          <Text style={styles.bulletDot}>-</Text>
           <Text style={styles.bulletText}>{text}</Text>
         </View>
       ))}

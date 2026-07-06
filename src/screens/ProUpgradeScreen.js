@@ -195,7 +195,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       }
       // Fail toward the purchase sheet, never self-grant: a response with NO
       // trial_state must not read as a live trial, so missing data maps to
-      // null → trialLive false → the honest Play purchase path below.
+      // null means trialLive false, which sends the user to the honest Play purchase path below.
       const ts = trial.data?.trial_state ?? null;
       const trialLive = ts === 'pro_trial_active' || ts === 'complete_trial_active';
       if (!trialLive) {
@@ -238,7 +238,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
   }
 
   // OAuth path (Google / Apple). Sign-in completes via the deep-link
-  // handler in App.js → onAuthStateChange in RootNavigator. We don't need
+  // handler in App.js > onAuthStateChange in RootNavigator. We don't need
   // to call activatePro from here, the SIGNED_IN handler runs
   // restoreSessionFromCloud which sets tier from the cloud row. New users
   // (no users_profile row yet) need the tier set explicitly though, so
@@ -290,7 +290,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
     }
   }
 
-  // ── Success state ────────────────────────────────────────────────────────────
+  // Success state.
   //
   // Show the "You're Pro" confirmation only when EITHER (a) this screen
   // just successfully activated them in this session (`done`), OR (b) they
@@ -357,7 +357,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
     );
   }
 
-  // ── Pitch + action ───────────────────────────────────────────────────────────
+  // Pitch + action.
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -384,7 +384,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.credentialNote}>
-            Precision Coaching™ is built from training research, your recovery, your food, and your progress.
+            Precision Coaching is deterministic and explainable. It uses training research, your recovery, your food, and your progress.
           </Text>
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.lg },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3,
+    color: colors.textMuted, letterSpacing: 0,
     marginBottom: spacing.sm,
   },
   fieldWrap: {
