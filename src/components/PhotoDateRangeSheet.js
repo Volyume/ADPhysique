@@ -97,7 +97,7 @@ export default function PhotoDateRangeSheet({
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Filter by date</Text>
-          <Text style={styles.helper}>Show only photos within a range. Leave a side on Any to keep everything before or after it.</Text>
+          <Text style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
 
           <Text style={styles.sectionLabel}>From</Text>
           <TouchableOpacity

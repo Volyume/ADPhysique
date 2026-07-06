@@ -491,7 +491,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Plan my day</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              One day for today. Swap anything you do not fancy, then add the plan to today&apos;s diary.
+              One day for today. Swap anything you do not fancy, then add the plan to today's diary.
             </Text>
             <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>

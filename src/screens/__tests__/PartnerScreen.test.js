@@ -195,6 +195,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('They see weekly training status and cards you choose to send. Food, coach notes, body metrics and photos stay private.');
     await press(tree, "Set this week's sessions");
     expect(allText(tree)).toContain("This week's sessions");
+    expect(findPress(tree, 'Decrease sessions').length).toBeGreaterThan(0);
+    expect(findPress(tree, 'Increase sessions').length).toBeGreaterThan(0);
   });
 
   test('active pairs show consent-gated shareable wins without widening partner privacy', async () => {
@@ -223,17 +225,16 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Ask every time before a card is sent.');
     expect(text).toContain('One card, one moment, one partner.');
     expect(text).toContain('The card never opens workout history, food diary, coach notes, body metrics or photos.');
-    expect(text).toContain('Card types');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
     expect(text).toContain('Bench press: New rep best.');
     expect(text).toContain('The lift name and the record you choose to celebrate.');
     expect(text).toContain('Your wider lift history and other records stay private.');
-    expect(text).toContain('Workout summary');
+    expect(text).toContain('Workout complete');
     expect(text).toContain('Personal record');
     expect(text).toContain('Block milestone');
     expect(text).toContain('Progress card');
-    expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+    expect(text).not.toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
   });
 
   test('sends the selected win card to the current partner only', async () => {
@@ -438,6 +439,22 @@ describe('cheer affordance', () => {
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
       'Could not send that cheer. Check your connection and try again.',
+      { variant: 'error' },
+    );
+  });
+
+  test('a stale partnership acknowledgement tells the user to refresh partners', async () => {
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false, error: 'not_active' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'That partnership is no longer active. Refresh Partners and try again.',
       { variant: 'error' },
     );
   });

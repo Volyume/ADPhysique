@@ -48,7 +48,6 @@ import { buildPartnerSupportPlan } from '../lib/partners/supportPlan';
 import {
   SHARE_WIN_CARD_RULES,
   SHARE_WIN_POLICY,
-  SHARE_WIN_TYPES,
   buildShareWinExamplePreviews,
   buildShareWinReviewReceipt,
 } from '../lib/partners/shareWins';
@@ -93,6 +92,16 @@ function weekPhrase(name, week, resting) {
   if (resting) return `${name}: resting this week`;
   const hasPlan = Number(week?.planned) > 0;
   return `${name}: ${ticksLabel({ done: week?.done, planned: week?.planned })}${hasPlan ? ' this week' : ''}`;
+}
+
+function cheerFailureMessage(error) {
+  if (error === 'not_active') {
+    return 'That partnership is no longer active. Refresh Partners and try again.';
+  }
+  if (error === 'insert_failed' || error === 'server_misconfigured') {
+    return 'Partner cheers are not available right now. Try again later.';
+  }
+  return 'Could not send that cheer. Check your connection and try again.';
 }
 
 // ── Small motion helpers (Reanimated, reduce-motion aware) ──
@@ -819,7 +828,7 @@ export default function PartnerScreen({ route }) {
     if (r?.ok || r?.error === 'already_cheered') consumeMoment(pair);
     if (!r?.ok && r?.error !== 'already_cheered') {
       logError('PartnerScreen.handleSendAck', new Error(r?.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not send that cheer. Check your connection and try again.', { variant: 'error' });
+      toast.show(cheerFailureMessage(r?.error), { variant: 'error' });
     }
   }
 
@@ -1226,7 +1235,7 @@ function AimSheetBody({ value, onChange, onConfirm }) {
           disabled={v <= 1}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="Fewer"
+          accessibilityLabel="Decrease sessions"
         >
           <Ionicons name="remove" size={iconSize.md} color={v <= 1 ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
@@ -1237,7 +1246,7 @@ function AimSheetBody({ value, onChange, onConfirm }) {
           disabled={v >= 14}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="More"
+          accessibilityLabel="Increase sessions"
         >
           <Ionicons name="add" size={iconSize.md} color={v >= 14 ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
@@ -1363,11 +1372,6 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
           </View>
         ))}
       </View>
-      <Text style={styles.shareWinSectionTitle}>Card types</Text>
-      <Text style={styles.shareWinFooter}>
-        {SHARE_WIN_TYPES.map((typeItem) => typeItem.title).join(', ')}.
-      </Text>
-      <Text style={styles.shareWinFooter}>{SHARE_WIN_POLICY.excluded}</Text>
     </View>
   );
 }
@@ -1517,7 +1521,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Training the same block</Text>
+        <Text style={styles.sheetHeading}>Shared block label</Text>
         <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loading and coach changes stay private.</Text>
         <SheetRow icon="exit-outline" label="Remove shared label" onPress={() => onLeave(pair)} />
       </View>
@@ -1537,8 +1541,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Train the same block</Text>
-        <Text style={styles.blockPitch}>{name} suggested sharing the label {block.blockName}. It will not change your plan.</Text>
+        <Text style={styles.sheetHeading}>Share a block label</Text>
+        <Text style={styles.blockPitch}>{name} suggested sharing the label {block.blockName}. It will not sync workouts or change your plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Use this label" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline label" onPress={() => onLeave(pair)} />
       </View>

@@ -5,7 +5,9 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'AthleteProfileScreen.
 
 describe('AthleteProfileScreen physique tile', () => {
   test('uses one adaptive Body fat / Physique tile instead of a permanent Physique Scan stat', () => {
-    expect(source).toMatch(/const hasPhysiqueScore = summary\.scan\?\.visualLeannessScore != null;/);
+    expect(source).toMatch(/function shouldShowPhysiqueScore\(\{ scan, bodyFat, bodyFatLoggedAt \}\)/);
+    expect(source).toMatch(/const showPhysiqueScore = shouldShowPhysiqueScore\(\{/);
+    expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
     expect(source).toMatch(/label: 'Physique score'/);
     expect(source).toMatch(/label: 'Body fat'/);
     expect(source).toMatch(/not body fat/);
