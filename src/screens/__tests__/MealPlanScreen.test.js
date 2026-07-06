@@ -132,7 +132,7 @@ describe('MealPlanScreen meal-swap sheet', () => {
     const text = JSON.stringify(tree.toJSON());
     expect(text).toContain("Couldn't load meal planning");
     expect(text).toContain('Your diary has not been changed.');
-    expect(text).not.toContain('Build meals to your targets');
+    expect(text).not.toContain('Build a day or week to your targets');
   });
 
   test('opens a sheet listing the replacement plus more than 4 alternatives', async () => {
@@ -182,12 +182,13 @@ describe('MealPlanScreen review-before-add flow', () => {
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('Plan meals for your diary');
-    expect(source).toContain('Build meals to your targets. They are not logged until you review them and tap add.');
+    expect(source).toContain('Build a day or week to your targets. Swap anything, then add it to Diary when ready.');
     expect(source).toContain('Build');
     expect(source).toContain('Add to diary');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
-    expect(source).toContain("isDayPlan ? 'Add this day when ready' : 'Add this week when ready'");
-    expect(source).toContain('Nothing has been added yet. Review the meals above, swap anything you want, then add them to today.');
+    expect(source).toContain("isDayPlan ? 'Review then add today' : 'Review then add week'");
+    expect(source).toContain('Check the meals above, swap anything you want, then add them to today.');
+    expect(source).toContain('accessibilityLabel="Rebuild meals"');
     expect(source).toContain("isDayPlan ? 'Switch to week' : 'Switch to day'");
   });
 });

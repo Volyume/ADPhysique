@@ -3,7 +3,7 @@
  * G-b). One plan object, progressive disclosure:
  *
  *  - Besa first: "Here's your day", plates with a single calm line each,
- *    Log this day, Swap on any plate, Refresh. Calories lead; macros
+ *    Log this day, Swap on any plate, Rebuild. Calories lead; macros
  *    sit behind a tap. No jargon.
  *  - Eddie one tap deeper: per-meal grams + kcal, the day totals row vs
  *    target, the day-type chip (training/rest), and the honest residual
@@ -192,7 +192,7 @@ export default function MealPlanScreen({ navigation }) {
     try {
       await regenerateActiveMealPlan(user.id, userProfile);
       await load();
-      toast.show('Meals refreshed. Your targets are unchanged.', { variant: 'success' });
+      toast.show('Meals rebuilt. Your targets are unchanged.', { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't refresh the plan. Try again.", { variant: 'error' });
     } finally {
@@ -461,7 +461,7 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={!plan ? 'Plan meals' : isDayPlan ? "Today's meals" : 'Week of meals'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Plan meals' : isDayPlan ? "Today's meal plan" : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
@@ -481,7 +481,7 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Build meals to your targets. They are not logged until you review them and tap add.
+            Build a day or week to your targets. Swap anything, then add it to Diary when ready.
           </Text>
           <View style={styles.planExplainer} accessibilityRole="summary">
             <View style={styles.planExplainerStep}>
@@ -683,11 +683,11 @@ export default function MealPlanScreen({ navigation }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? 'Add this day when ready' : 'Add this week when ready'}</Text>
+                <Text style={styles.planActionTitle}>{isDayPlan ? 'Review then add today' : 'Review then add week'}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
-                    ? 'Nothing has been added yet. Review the meals above, swap anything you want, then add them to today.'
-                    : 'Nothing has been added yet. Review each day, swap anything you want, then add the week from today onwards.'}
+                    ? 'Check the meals above, swap anything you want, then add them to today.'
+                    : 'Check each day, swap anything you want, then add the week from today onwards.'}
                 </Text>
               </View>
             </View>
@@ -702,10 +702,10 @@ export default function MealPlanScreen({ navigation }) {
                 onPress={handleRegenerate}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel="Refresh meals"
+                accessibilityLabel="Rebuild meals"
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Refresh</Text>
+                <Text style={styles.planQuickActionText}>Rebuild</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.planQuickAction}
