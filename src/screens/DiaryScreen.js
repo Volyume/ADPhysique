@@ -65,6 +65,7 @@ import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
+import { parseLocalDay } from '../lib/dayKey';
 
 export default function DiaryScreen({ navigation }) {
   const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
@@ -347,6 +348,11 @@ export default function DiaryScreen({ navigation }) {
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
   const weekDates = useMemo(() => weekDatesMon(selectedDate), [selectedDate]);
+  const selectedDateDetail = useMemo(() => {
+    const d = parseLocalDay(selectedDate);
+    if (Number.isNaN(d.getTime())) return selectedDate;
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  }, [selectedDate]);
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
 
   const applyBank = useCallback(async (bank) => {
@@ -1054,7 +1060,10 @@ export default function DiaryScreen({ navigation }) {
             accessibilityLabel={`${friendlyDate(selectedDate)}. Jump to a date`}
           >
             <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-            <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+            <View style={styles.dateCopy}>
+              <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+              <Text style={styles.dateSubLabel}>{selectedDateDetail}</Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={gotoTomorrow}
@@ -1271,10 +1280,16 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Build a meal plan: a day or week of meals built to your targets, with swaps"
+                  accessibilityLabel="Meal plan: build a day or week of meals to your targets, with swaps"
                 >
-                  <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
-                  <Text style={styles.buildPlanLabel}>Build a meal plan</Text>
+                  <View style={styles.buildPlanIcon}>
+                    <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
+                  </View>
+                  <View style={styles.buildPlanCopy}>
+                    <Text style={styles.buildPlanLabel}>Meal plan</Text>
+                    <Text style={styles.buildPlanSub}>Build a day or week, then add it to your diary.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               </>
             ) : null}
@@ -1755,7 +1770,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
   },
+  dateCopy: { alignItems: 'center', justifyContent: 'center', minWidth: 0 },
   dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
+  dateSubLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: -2 },
   todayPill: {
     minHeight: 40,
     alignItems: 'center',
@@ -1827,13 +1844,24 @@ const styles = StyleSheet.create({
   },
   addMealLabel: { ...type.label, color: colors.textPrimary },
   buildPlanBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: 48,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.sm, minHeight: 64,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.lg,
   },
+  buildPlanIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  buildPlanCopy: { flex: 1, minWidth: 0 },
   buildPlanLabel: { ...type.label, color: colors.primary },
+  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,

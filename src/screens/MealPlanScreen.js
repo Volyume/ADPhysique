@@ -459,30 +459,35 @@ export default function MealPlanScreen({ navigation }) {
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : !plan ? (
         <View style={styles.emptyWrap}>
-          <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
-          <Text style={styles.emptyTitle}>Your meals, sorted.</Text>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>Build meals to your targets</Text>
           <Text style={styles.emptyBody}>
-            Two ways to plan, both built to your calories and macros. Swap anything
-            you do not fancy. Your targets stay the coach&apos;s job, and you can switch any time.
+            Choose today or the week ahead. Volyume builds the meals from your calories and macros,
+            then lets you swap anything before it reaches your diary.
           </Text>
 
           <Card style={styles.planOption}>
-            <Text style={styles.planOptionTitle}>Plan my week</Text>
+            <View style={styles.planOptionHead}>
+              <Ionicons name="today-outline" size={18} color={colors.primary} />
+              <Text style={styles.planOptionTitle}>Plan my day</Text>
+            </View>
             <Text style={styles.planOptionDesc}>
-              Seven days of meals plus a shopping list, so you can prep ahead. Add the
-              whole week to your diary in one go (days you&apos;ve already logged are left
-              untouched). Best for a weekly shop and meal prep.
+              One day of meals for today. Swap the plates you do not fancy, then add it straight to today&apos;s diary.
             </Text>
-            <Button title="Plan my week" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
-            <Text style={styles.planOptionTitle}>Plan my day</Text>
+            <View style={styles.planOptionHead}>
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={styles.planOptionTitle}>Plan my week</Text>
+            </View>
             <Text style={styles.planOptionDesc}>
-              One day of meals for today. Tweak it, then add it straight to today&apos;s diary.
-              Best when you just want today sorted.
+              Seven days, plus a shopping list. Add the week in one go; days you have already logged are left alone.
             </Text>
-            <Button title="Plan my day" variant="secondary" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Plan my week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </View>
       ) : (
@@ -550,6 +555,59 @@ export default function MealPlanScreen({ navigation }) {
             </Text>
           ) : null}
           {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
+
+          <View style={styles.planActionPanel}>
+            <View style={styles.planActionHead}>
+              <View style={styles.planActionIcon}>
+                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
+              </View>
+              <View style={styles.planActionCopy}>
+                <Text style={styles.planActionTitle}>{isDayPlan ? "Today's plan" : 'Week plan'}</Text>
+                <Text style={styles.planActionSub}>
+                  {isDayPlan
+                    ? 'Add this day to your diary when you are happy with the meals.'
+                    : 'Add the week from today onwards. Logged days are left alone.'}
+                </Text>
+              </View>
+            </View>
+            {isDayPlan ? (
+              <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
+            ) : (
+              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
+            )}
+            <View style={styles.planQuickActions}>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={handleRegenerate}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="New meals"
+              >
+                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>New meals</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={() => setGrocerySheet(buildGroceryList(plan))}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Shopping list"
+              >
+                <Ionicons name="basket-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>Shopping list</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
+              >
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
@@ -687,21 +745,6 @@ export default function MealPlanScreen({ navigation }) {
             </View>
           ) : null}
 
-          {isDayPlan ? (
-            <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
-          ) : (
-            <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
-          )}
-          <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
-          <Button title="Shopping list" variant="secondary" onPress={() => setGrocerySheet(buildGroceryList(plan))} disabled={busy} fullWidth />
-          {/* Switch between the two clearly-separate modes at any time. */}
-          <Button
-            title={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
-            variant="tertiary"
-            onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
-            disabled={busy}
-            fullWidth
-          />
           <Text style={styles.footNote}>
             Built from your calories and macros. Swap any meal you like, and the day stays close to your target.
           </Text>
@@ -809,12 +852,21 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
   planOption: {
     alignSelf: 'stretch',
     gap: spacing.sm,
   },
+  planOptionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   planOptionDesc: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xs },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
@@ -832,6 +884,43 @@ const styles = StyleSheet.create({
   dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
   cycleNote: { ...type.bodySm, color: colors.textSecondary },
   honesty: { ...type.bodySm, color: colors.textSecondary, fontStyle: 'italic' },
+  planActionPanel: {
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  planActionHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  planActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  planActionCopy: { flex: 1, minWidth: 0 },
+  planActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  planActionSub: { ...type.bodySm, color: colors.textSecondary, marginTop: 2, lineHeight: 19 },
+  planQuickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  planQuickAction: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 108,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  planQuickActionText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   mealCard: { gap: spacing.xs },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
