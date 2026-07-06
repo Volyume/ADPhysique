@@ -2541,13 +2541,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityState={{ disabled: saving }}
                 accessibilityLabel={
-                  currentSet.setType === 'warmup' ? 'Done with warm-up'
+                  currentSet.setType === 'warmup' ? 'Log warm-up'
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
                 }
               >
                 <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.onPrimary} />
                 <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                  {currentSet.setType === 'warmup' ? 'Done'
+                  {currentSet.setType === 'warmup' ? 'Log warm-up'
                     : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
                 </Text>
               </TouchableOpacity>

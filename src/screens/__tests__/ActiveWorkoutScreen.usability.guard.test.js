@@ -14,8 +14,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('primary set CTA speaks the same action the user sees', () => {
     const spokenLabel = ACTIVE_WORKOUT.match(/accessibilityLabel=\{\s*currentSet\.setType === 'warmup'[\s\S]{0,420}\}/)?.[0] ?? '';
 
+    expect(spokenLabel).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
     expect(spokenLabel).toContain("? 'Start cluster' : 'Log set'");
     expect(spokenLabel).not.toContain("? 'Start cluster' : 'Complete set'");
+    expect(ACTIVE_WORKOUT).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
+    expect(ACTIVE_WORKOUT).not.toContain("currentSet.setType === 'warmup' ? 'Done'");
   });
 
   test('first-set hint names the More control instead of relying on the glyph', () => {
@@ -39,6 +42,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('set entry keeps a stable label column beside the thumb steppers', () => {
     expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 104,\s*flexShrink: 0,\s*gap: 2,/);
+  });
+
+  test('distance time input is announced as time, not duration', () => {
+    const distanceWindow = SET_ENTRY.match(/testID="volyume-distance-time-input"[\s\S]{0,700}/)?.[0] ?? '';
+    expect(distanceWindow).toContain('accessibilityLabel="Time in minutes and seconds"');
+    expect(distanceWindow).not.toContain('accessibilityLabel="Duration in minutes and seconds"');
   });
 
   test('all set-entry steppers support tired-thumb hold-to-adjust', () => {
