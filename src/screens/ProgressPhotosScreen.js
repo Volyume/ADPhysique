@@ -1092,7 +1092,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   onPress={canCompareScans ? openScanCompare : openCompare}
                   fullWidth={false}
                   style={styles.heroSecondaryAction}
-                  accessibilityLabel={canCompareScans ? 'Compare two Physique Scan entries' : 'Compare two photos'}
+                  accessibilityLabel={canCompareScans ? 'Compare two Physique Score entries' : 'Compare two photos'}
                 />
               ) : null}
             </View>
@@ -1158,7 +1158,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved weight, angles and Physique Score when available.
+              Each photo set shows its date, saved bodyweight, angles and Physique Score when available.
             </Text>
           </View>
         ) : null}
@@ -1229,7 +1229,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         {showShareAction ? (
           <View style={styles.actionRow}>
             <Button
-              title={scanShareItems.length >= 2 ? 'Share scan' : 'Share photos'}
+              title={scanShareItems.length >= 2 ? 'Share score card' : 'Share photos'}
               variant="tertiary"
               size="sm"
               fullWidth={false}
@@ -1433,7 +1433,9 @@ export default function ProgressPhotosScreen({ navigation }) {
               <View style={styles.captureRouteSheet}>
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
-                  <Text style={styles.captureRouteTitle}>Add photo set</Text>
+                  <Text style={styles.captureRouteTitle}>
+                    {latestPartialCapture ? 'Finish or add photo set' : 'Add photo set'}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => setCaptureRouteOpen(false)}
                     hitSlop={10}
@@ -1444,7 +1446,9 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Take a new set or import one you already have. Both end up in the same dated library and only get a Physique Score when the front and back photos are usable.
+                  {latestPartialCapture
+                    ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. You can finish that set, start a new one, or import older photos.`
+                    : 'Take a new set or import one you already have. Both end up in the same dated library and only get a Physique Score when the front and back photos are usable.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}

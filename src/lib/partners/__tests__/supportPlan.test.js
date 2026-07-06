@@ -10,13 +10,13 @@ describe('partner support plan', () => {
 
   test('starts with a calm aim when the user has not set one', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
-    expect(plan.title).toBe('This week with Sam');
-    expect(plan.headline).toBe('Set how many sessions you plan to train this week. Sam sees the number only, not your workout details.');
-    expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: "Set this week's sessions" });
+    expect(plan.title).toBe('Support this week');
+    expect(plan.headline).toBe('Set your planned sessions for the week. Sam sees the number only, not your workout details.');
+    expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: 'Set planned sessions' });
     expect(plan.steps.find((step) => step.key === 'aim')).toMatchObject({
-      label: 'Your week',
+      label: 'Planned sessions',
       state: 'Not set',
-      copy: 'Choose a realistic number. Sam sees the number only.',
+      copy: 'Choose a realistic number. Sam sees only that number.',
     });
     expect(plan.steps.find((step) => step.key === 'partner_aim')).toMatchObject({
       label: "Sam's week",
@@ -31,10 +31,10 @@ describe('partner support plan', () => {
 
   test('routes to cheer when aim is set and the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('You can send Sam one fixed cheer today. No chat, no feed and no pressure.');
-    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer' });
+    expect(plan.headline).toBe('Send Sam one fixed cheer today. It is a quick acknowledgement, not a chat or feed.');
+    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: "Send today's cheer" });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
-      label: 'Sharing',
+      label: 'Optional sharing',
       state: 'Optional',
       copy: 'Cheers are fixed. Wins ask every time before sending.',
     });
@@ -42,10 +42,10 @@ describe('partner support plan', () => {
 
   test('falls back to win preview when cheer is already sent', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, cheerEnabled: false }, 'Sam');
-    expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Choose a win to share' });
+    expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Share a win' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       state: 'Optional',
-      copy: 'Your cheer is sent. Wins still ask before sending.',
+      copy: 'Today\'s cheer is sent. Wins still ask before sending.',
     });
   });
 
@@ -56,7 +56,7 @@ describe('partner support plan', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('You and Sam can support each other without opening up diaries, coach notes or body photos.');
+    expect(plan.headline).toBe('Share one chosen win with Sam after checking exactly what they will see.');
     const copy = JSON.stringify(plan);
     expect(copy).toContain('Food, coach notes, body metrics and photos stay private.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);

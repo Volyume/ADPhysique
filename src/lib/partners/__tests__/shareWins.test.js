@@ -34,7 +34,7 @@ describe('partner shareable wins policy', () => {
 
   test('keeps partner wins consent-gated and narrow', () => {
     expect(SHARE_WIN_POLICY.defaultState).toBe('Ask every time');
-    expect(SHARE_WIN_POLICY.summary).toContain('off by default');
+    expect(SHARE_WIN_POLICY.summary).toContain('Nothing is shared automatically');
     expect(SHARE_WIN_POLICY.summary).toContain('only sees the win card you choose to send');
     expect(SHARE_WIN_POLICY.excluded).toContain('No passive feed');
     expect(SHARE_WIN_POLICY.excluded).toContain('workout history browsing');

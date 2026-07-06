@@ -189,12 +189,12 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('This week with Sam');
-    expect(text).toContain('Set how many sessions you plan to train this week. Sam sees the number only, not your workout details.');
-    expect(text).toContain('Choose a realistic number. Sam sees the number only.');
-    expect(text).toContain('You have logged 2 of 4.');
-    expect(text).toContain('They see the weekly support details on this card and anything you choose to send. Food, coach notes, body metrics and photos stay private.');
-    await press(tree, "Set this week's sessions");
+    expect(text).toContain('Support this week');
+    expect(text).toContain('Set your planned sessions for the week. Sam sees the number only, not your workout details.');
+    expect(text).toContain('Only this card and anything you deliberately send is shared. Food, coach notes, body metrics and photos stay private.');
+    expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
+    expect(text).not.toContain('You have logged 2 of 4.');
+    await press(tree, 'Set planned sessions');
     expect(allText(tree)).toContain("This week's sessions");
     expect(findPress(tree, 'Decrease sessions').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Increase sessions').length).toBeGreaterThan(0);
@@ -204,15 +204,14 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();
     let text = allText(tree).join(' ');
-    expect(text).toContain('Share wins');
-    expect(text).toContain('Send one chosen card to Sam. You approve it first. No feed.');
-    expect(text).toContain('No feed.');
+    expect(text).toContain('Share a win');
+    expect(text).toContain('Choose one workout, PR or progress card for Sam. You review it before it leaves.');
 
-    await press(tree, 'Review shareable wins');
+    await press(tree, 'Review win sharing');
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Shareable wins');
-    expect(text).toContain('Partner wins are off by default.');
+    expect(text).toContain('Nothing is shared automatically.');
     expect(text).toContain('Pick a card, check exactly what Sam will see, then send it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
@@ -242,7 +241,7 @@ describe('connected state: isolated pair cards', () => {
     const hook = base({ pairs: [pair()] });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Review shareable wins');
+    await press(tree, 'Review win sharing');
     await press(tree, 'Send workout complete to Sam');
     expect(hook.shareWin).toHaveBeenCalledWith('p1', expect.objectContaining({ type: 'workout_summary' }));
   });
@@ -282,7 +281,7 @@ describe('connected state: isolated pair cards', () => {
         imageUri: 'file:///private-card.png',
       },
     });
-    await press(tree, 'Review shareable wins');
+    await press(tree, 'Review win sharing');
     const text = allText(tree).join(' ');
     expect(text).toContain('Progress card');
     expect(text).toContain('Progress photo card, 5 Jan to 20 Jun.');
@@ -409,6 +408,17 @@ describe('cheer affordance', () => {
     expect(allText(tree)).toContain('Here with you.');
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+  });
+
+  test('support card owns the cheer action once planned sessions are set', async () => {
+    const hook = base({ pairs: [pair({ myAim: 4, cheerEnabled: true })] });
+    mockHook.value = hook;
+    const tree = await mount();
+    expect(allText(tree)).toContain("Send today's cheer");
+    expect(findPress(tree, 'Send a cheer')).toHaveLength(0);
+
+    await press(tree, "Send today's cheer");
+    expect(allText(tree)).toContain('Here with you.');
   });
 
   test('a failed acknowledgement does not consume the visible moment', async () => {
@@ -638,6 +648,16 @@ describe('invite journey', () => {
 });
 
 describe('manage sheet: block confirm', () => {
+  test('manage sheet exposes name-only training block sharing', async () => {
+    mockHook.value = base({ pairs: [pair({ partnerFirstName: 'Sam', partnerId: 'sam-id' })] });
+    const tree = await mount();
+
+    await press(tree, 'Manage partnership with Sam');
+
+    expect(allText(tree)).toContain('Share training block name');
+    expect(findPress(tree, 'Share training block name').length).toBeGreaterThan(0);
+  });
+
   test('block wires the real block + unpair primitives with the exact copy', async () => {
     const hook = base({ pairs: [pair({ partnerFirstName: 'Sam', partnerId: 'sam-id' })] });
     mockHook.value = hook;

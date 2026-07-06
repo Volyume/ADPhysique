@@ -111,24 +111,42 @@ export function buildProgressStudioCaptureRoutes({
   const routes = [];
   const missingPoseLabel = latestPartial?.nextPoseLabel || latestPartial?.missingPoseLabel || null;
 
+  if (includeScan && latestPartial?.nextPose && missingPoseLabel) {
+    routes.push({
+      key: 'complete_latest',
+      icon: 'checkmark-circle-outline',
+      eyebrow: 'Finish latest set',
+      title: `Add the ${missingPoseLabel.toLowerCase()} photo`,
+      body: `Your latest photo set is missing the ${missingPoseLabel.toLowerCase()} photo. Add it to keep that date together before starting another set.`,
+      bestFor: 'Completing the set you already started.',
+      steps: Object.freeze([
+        `Take the ${missingPoseLabel.toLowerCase()} relaxed photo`,
+        'Use the same room, distance and camera height',
+        'Save it to the existing date',
+      ]),
+      actionLabel: `Add ${missingPoseLabel} photo`,
+      recommended: true,
+    });
+  }
+
   if (includeScan) {
     routes.push({
       key: 'scan',
       icon: 'scan',
-      eyebrow: 'New photos',
+      eyebrow: 'New set',
       title: 'Take a new photo set',
       body: 'Volyume guides the front and back photos, with side optional. If the set is clear enough, it gets a Physique Score.',
       bestFor: 'Your next regular progress entry.',
       steps: PROGRESS_SCAN_SEQUENCE,
       actionLabel: 'Start photo set',
-      recommended: true,
+      recommended: !latestPartial?.nextPose,
       disabled: !canScan,
       disabledReason: 'Sign in to save a photo set.',
     });
     routes.push({
       key: 'scan_library',
       icon: 'images-outline',
-      eyebrow: 'Existing photos',
+      eyebrow: 'Existing set',
       title: 'Import a photo set',
       body: 'Choose front and back photos from your phone. Volyume adds them to the same library and scores the set when the photos are usable.',
       bestFor: 'Older photos with the real capture date and weight snapshot.',

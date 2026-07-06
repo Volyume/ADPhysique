@@ -71,9 +71,9 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text style={styles.scanTitle}>Physique Scan results</Text>
+          <Text style={styles.scanTitle}>Physique Score results</Text>
           <Text style={styles.scanSubtitle}>
-            Private visual reads. Bands, confidence and trend only. Not a body-fat percentage.
+            Volyume's private photo score. It shows a leanness band, confidence and trend, not body-fat percentage.
           </Text>
         </View>
         <TouchableOpacity
@@ -99,7 +99,7 @@ export default function ProgressScanHistoryCard({
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
                 <Text style={styles.scanDate}>{dateLabel}</Text>
-                <Text style={styles.scanEntryTitle}>Visual trend</Text>
+                <Text style={styles.scanEntryTitle}>Photo score</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={styles.confidencePill}>
@@ -130,7 +130,7 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Physique score</Text>
+                <Text style={styles.scanInsightLabel}>Volyume score</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
