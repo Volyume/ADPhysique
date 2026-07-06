@@ -561,6 +561,7 @@ export default function PartnerScreen({ route }) {
   const { user, tier } = useAppStore(useShallow((s) => ({ user: s.user, tier: s.tier })));
   const toast = useToast();
   const p = usePartners(user?.id, tier);
+  const retryPartners = p.refresh || p.reload;
 
   // Invite journey (three-beat full-screen modal).
   const [journeyOpen, setJourneyOpen] = useState(false);
@@ -763,7 +764,7 @@ export default function PartnerScreen({ route }) {
       return;
     }
     try { await Share.share({ message: r.data.shareMessage }); } catch (_) { /* user dismissed */ }
-    p.reload();
+    retryPartners?.();
   }
 
   // ── Redeem ──
@@ -993,7 +994,7 @@ export default function PartnerScreen({ route }) {
             title="Couldn't refresh partners"
             text="We could not read your partner connection right now. Try again in a moment."
             actionLabel="Try again"
-            onAction={p.reload}
+            onAction={retryPartners}
           />
         </View>
       </SafeAreaView>
@@ -1043,11 +1044,11 @@ export default function PartnerScreen({ route }) {
             ) : null}
 
             {pending ? (
-              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.refresh || p.reload} onCancel={confirmCancelInvite} />
+              <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={retryPartners} onCancel={confirmCancelInvite} />
             ) : null}
           </>
         ) : pending ? (
-          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={p.refresh || p.reload} onCancel={confirmCancelInvite} />
+          <PendingCard pending={pending} onShareAgain={sharePendingInvite} onRefresh={retryPartners} onCancel={confirmCancelInvite} />
         ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIconCircle}>
