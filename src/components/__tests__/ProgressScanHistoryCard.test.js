@@ -53,6 +53,7 @@ describe('ProgressScanHistoryCard', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Physique Scan results');
     expect(text).toContain('Private visual reads');
+    expect(text).toContain('Not a body-fat percentage');
     expect(text).toContain('Visual trend');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
