@@ -200,9 +200,9 @@ export default function PaywallScreen({ navigation, route }) {
       <ModalHeader title="Upgrade" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Pro is the coach</Text>
+        <Text style={styles.title}>Unlock Precision Coaching</Text>
         <Text style={styles.subtitle}>
-          Pro reads your training, weight, and food together and adjusts your plan and targets every week, with a written reason for every change.
+          Volyume reads your training, weight, food and check-ins together, then updates your plan and targets with a written reason for every change.
         </Text>
 
         {/* COMP-007 Stage B: one verified Google Play excerpt, proof BEFORE
@@ -215,8 +215,8 @@ export default function PaywallScreen({ navigation, route }) {
                 <Ionicons key={i} name="star" size={13} color={colors.primary} />
               ))}
             </View>
-            <Text style={styles.reviewQuote} numberOfLines={3}>{`“${excerpt.quote}”`}</Text>
-            <Text style={styles.reviewMeta}>{`${excerpt.name} · ${excerpt.source} · ${excerpt.date}`}</Text>
+            <Text style={styles.reviewQuote} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
+            <Text style={styles.reviewMeta}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
           </View>
         ) : null}
 
@@ -253,7 +253,7 @@ export default function PaywallScreen({ navigation, route }) {
           >
             <Text style={styles.legalLink}>Restore purchases</Text>
           </TouchableOpacity>
-          <Text style={styles.legalDot}>·</Text>
+          <Text style={styles.legalDot}>-</Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('SubscriptionPolicy')}
             hitSlop={hitSlop}
@@ -262,7 +262,7 @@ export default function PaywallScreen({ navigation, route }) {
           >
             <Text style={styles.legalLink}>Subscription terms</Text>
           </TouchableOpacity>
-          <Text style={styles.legalDot}>·</Text>
+          <Text style={styles.legalDot}>-</Text>
           <TouchableOpacity
             onPress={() => Linking.openURL(LINKS.privacyPolicy).catch(() => {})}
             hitSlop={hitSlop}

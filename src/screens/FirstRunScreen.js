@@ -11,7 +11,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
-// (profile → training → recovery → plan + nutrition generation). Free gets
+// (profile > training > recovery > plan + nutrition generation). Free gets
 // name + units, then the FreeStarter micro-quiz (B2, founder decision 4a):
 // three plain questions that install a beginner plan from the library, with
 // a visible skip for anyone who'd rather choose their own.

@@ -205,7 +205,7 @@ export default function FreeStarterScreen({ navigation, route }) {
                 {[
                   recDays ? `${recDays} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
-                ].filter(Boolean).join(' · ')}
+                ].filter(Boolean).join(' - ')}
               </Text>
             </Card>
             <Button
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
+  resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0 },
   resultName: { ...type.bodyStrong, color: colors.textPrimary },
   resultDesc: { ...type.bodySm, color: colors.textSecondary },
   resultMeta: { ...type.caption, color: colors.textMuted },

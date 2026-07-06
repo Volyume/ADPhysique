@@ -1,7 +1,7 @@
 /**
  * SubscriptionScreen
  *
- * Reached from You → Subscription. Surfaces current tier + cascade
+ * Reached from You > Subscription. Surfaces current tier + cascade
  * stage + locked-in price + days remaining + manage CTAs.
  *
  * Locked in UI_FLOWS_LOCKED.md line 195 and
@@ -143,7 +143,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           </Text>
           <Text style={styles.cardSub}>
             {STAGE_LABEL[stage] ?? '-'}
-            {daysLeft != null ? ` · ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
+            {daysLeft != null ? ` - ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
         </Card>
 
@@ -152,7 +152,7 @@ export default function SubscriptionScreen({ navigation, route }) {
             <Text style={styles.cardLabel}>Price</Text>
             {/* PLAY-002: the store's localised price, or a short placeholder
                 until Google Play responds. Never a hardcoded fallback. */}
-            <Text style={styles.cardValue}>{priceFor('pro', period) ?? '…'}</Text>
+            <Text style={styles.cardValue}>{priceFor('pro', period) ?? '...'}</Text>
             <Text style={styles.cardSub}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>
