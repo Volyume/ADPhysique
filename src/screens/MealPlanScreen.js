@@ -482,22 +482,8 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Plan meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Build a day or week from your targets. Review the meals, swap anything you want, then add them to your diary.
+            Choose today or the week. Volyume builds meals from your targets, you review them, and nothing is added until you confirm.
           </Text>
-          <View style={styles.planExplainer} accessibilityRole="summary">
-            <View style={styles.planExplainerStep}>
-              <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Build</Text>
-            </View>
-            <View style={styles.planExplainerStep}>
-              <Ionicons name="swap-horizontal-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Review</Text>
-            </View>
-            <View style={styles.planExplainerStep}>
-              <Ionicons name="checkmark-circle-outline" size={15} color={colors.primary} />
-              <Text style={styles.planExplainerText}>Add to diary</Text>
-            </View>
-          </View>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
@@ -505,7 +491,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Today</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              One day matched to your targets. Best when you only want help now.
+              Build one day's meals for this diary date. Good when you want a quick structure.
             </Text>
             <Button title="Plan today" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
@@ -516,7 +502,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Seven days plus a shopping list. Existing logged days are left alone.
+              Build seven days plus a shopping list. Existing logged days are left alone.
             </Text>
             <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
@@ -687,7 +673,7 @@ export default function MealPlanScreen({ navigation }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? 'Review and add today' : 'Review and add week'}</Text>
+                <Text style={styles.planActionTitle}>{isDayPlan ? 'Ready to add today' : 'Ready to add the week'}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
                     ? 'Check the meals above, swap anything you want, then add them to today.'
@@ -903,27 +889,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
-  planExplainer: {
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  planExplainerStep: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 108,
-    minHeight: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-  },
-  planExplainerText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   planOption: {
     alignSelf: 'stretch',
     gap: spacing.sm,

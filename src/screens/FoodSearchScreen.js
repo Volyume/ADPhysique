@@ -981,7 +981,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           results. */}
       {query.trim().length < 2 ? (
         <Text style={styles.provenanceNote}>
-          UK food database on your device. gov.uk CoFID generics plus UK branded products. Works offline.
+          UK foods saved on this phone, with trusted generics and UK branded products. Search works offline.
         </Text>
       ) : null}
 
@@ -1007,7 +1007,7 @@ export default function FoodSearchScreen({ navigation, route }) {
               accessibilityLabel="Create a custom food"
             >
               <Ionicons name="add" size={18} color={colors.primary} />
-              <Text style={styles.footerBtnText}>Create a custom food</Text>
+              <Text style={styles.footerBtnText}>Add custom food</Text>
             </TouchableOpacity>
           ) : null
         }

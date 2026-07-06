@@ -46,6 +46,7 @@ import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTe
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
 import { calculatePlates, DEFAULT_BAR_KG } from '../lib/plateMath';
 import { warmupRamp } from '../lib/warmupRamp';
+import { shareSessionName } from '../lib/sessionShareData';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
@@ -1679,9 +1680,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 allSets = snapshotExercises.flatMap(e => e.sets);
               }
               const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
-              const sessionName = snapshotExercises.length > 0
-                ? snapshotExercises.slice(0, 2).map(e => e.exercise?.name?.split(' ')[0]).filter(Boolean).join(' & ')
-                : null;
+              const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
+              const sessionName = shareSessionName(null, exerciseNames);
               await updateWorkout(activeWorkout.id, {
                 endedAt: Date.now(),
                 durationMinutes: Math.round(snapshotElapsed / 60),
@@ -1767,7 +1767,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setCount: totalSets,
                 workingSetCount,
                 tonnage,
-                exerciseNames: snapshotExercises.map(e => e.exercise?.name).filter(Boolean),
+                exerciseNames,
                 detectedPRs,
                 exerciseData: snapshotExercises.map(e => ({
                   exerciseId: e.exercise?.id,
@@ -1932,15 +1932,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             )}
           </View>
           <View style={styles.headerSideRight}>
-            <TouchableOpacity
-              onPress={handleFinishWorkout}
-              style={styles.headerTapTarget}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Finish workout"
-            >
-              <Text style={styles.finishBtn}>Finish workout</Text>
-            </TouchableOpacity>
+            {targetComplete && !extraSetArmed && isLastExercise ? (
+              <View style={styles.headerTapTarget} />
+            ) : (
+              <TouchableOpacity
+                onPress={handleFinishWorkout}
+                style={styles.headerTapTarget}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Finish workout"
+              >
+                <Text style={styles.finishBtn}>Finish workout</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 

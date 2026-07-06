@@ -13,7 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
 import Button from '../Button';
 
-export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food or plan meals from your targets.';
+export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food, or let Volyume plan a day from your targets.';
 
 export default function EmptyDiary({
   onAdd,
@@ -33,14 +33,14 @@ export default function EmptyDiary({
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="Plan meals: build a day or week, review it, then add it to your diary"
+          accessibilityLabel="Plan meals: choose today or the week, review the meals, then add them to your diary"
         >
           <View style={styles.planIcon}>
             <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.planCopy}>
             <Text style={styles.planTitle}>Plan meals</Text>
-            <Text style={styles.planText}>Build a day or week from your targets, then add it when ready.</Text>
+            <Text style={styles.planText}>Choose today or the week. Nothing is added until you confirm.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
