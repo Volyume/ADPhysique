@@ -63,36 +63,7 @@ import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
-import { buildDiaryDaySummary, formatDiaryDaySummary } from '../lib/food/diaryDaySummary';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-
-function DiaryDaySummaryCard({ summary, onPress }) {
-  if (!summary) return null;
-  return (
-    <Card
-      style={styles.daySummaryCard}
-      onPress={onPress}
-      accessibilityLabel={onPress ? 'Open day macro and meal breakdown' : undefined}
-    >
-      <View style={styles.daySummaryHead}>
-        <View style={styles.daySummaryCopy}>
-          <Text style={styles.daySummaryEyebrow}>{summary.title}</Text>
-          <Text style={styles.daySummaryPrimary}>{summary.primary}</Text>
-          <Text style={styles.daySummarySecondary}>{summary.secondary}</Text>
-        </View>
-        <Ionicons name="nutrition-outline" size={22} color={colors.primary} />
-      </View>
-      <View style={styles.daySummaryChips}>
-        {summary.chips.map((chip) => (
-          <View key={chip.key} style={styles.daySummaryChip}>
-            <Text style={styles.daySummaryChipLabel}>{chip.label}</Text>
-            <Text style={styles.daySummaryChipValue}>{chip.value}</Text>
-          </View>
-        ))}
-      </View>
-    </Card>
-  );
-}
 
 export default function DiaryScreen({ navigation }) {
   const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
@@ -371,16 +342,6 @@ export default function DiaryScreen({ navigation }) {
   );
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
-  const diarySummary = useMemo(
-    () => formatDiaryDaySummary(buildDiaryDaySummary({
-      rollup,
-      targets: effectiveTargets,
-      planned: plannedTotals,
-      entriesCount: viewEntries.length,
-      dayTypeLabel: dayTypeChip,
-    }), energyUnit),
-    [rollup, effectiveTargets, plannedTotals, viewEntries.length, dayTypeChip, energyUnit],
-  );
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
@@ -1025,6 +986,19 @@ export default function DiaryScreen({ navigation }) {
     setCopyDays(days || []);
   }, [userId, selectedDate]);
 
+  const openDiaryActions = useCallback(() => {
+    if (readOnly) return;
+    appAlert(
+      'Diary options',
+      friendlyDate(selectedDate),
+      [
+        { text: 'Copy previous day', onPress: openCopyPicker },
+        { text: 'Insights and export', onPress: () => navigation.navigate('FoodInsights') },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, [navigation, openCopyPicker, readOnly, selectedDate]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* C5: GestureDetector wraps the day content so a horizontal swipe
@@ -1039,62 +1013,66 @@ export default function DiaryScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader title="Nutrition" />
+        <ScreenHeader
+          title="Nutrition"
+          right={(
+            <View style={styles.headerNutritionIcon}>
+              <Ionicons name="nutrition-outline" size={20} color={colors.primary} />
+            </View>
+          )}
+        />
 
-        {/* Day pager + insights icon. Sits under the standard
+        {/* Day pager + compact options. Sits under the standard
             ScreenHeader so the Nutrition tab now matches Today, Train,
             Progress and You at the top, with day navigation as a
             secondary row rather than the whole header bar. */}
-        <View style={styles.dayPagerRow}>
-          <View style={styles.dayPagerSide}>
-            {selectedDate !== isoDate(new Date()) ? (
-              <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
-                <Text style={styles.todayPillText}>Today</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <View style={styles.dateGroup}>
-            <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous day">
-              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+        <View style={styles.dayPagerCard}>
+          <TouchableOpacity
+            onPress={gotoYesterday}
+            hitSlop={12}
+            style={styles.dayPagerNav}
+            accessibilityRole="button"
+            accessibilityLabel="Previous day"
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          {/* NAV-3: the date itself is the jump-to-date affordance, opening
+              the native date picker so any day is reachable directly. */}
+          <TouchableOpacity
+            onPress={openDatePicker}
+            hitSlop={12}
+            style={styles.dateButton}
+            accessibilityRole="button"
+            accessibilityLabel={`${friendlyDate(selectedDate)}. Jump to a date`}
+          >
+            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+            <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={gotoTomorrow}
+            hitSlop={12}
+            style={styles.dayPagerNav}
+            accessibilityRole="button"
+            accessibilityLabel="Next day"
+          >
+            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          {selectedDate !== isoDate(new Date()) ? (
+            <TouchableOpacity onPress={gotoToday} hitSlop={10} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
+              <Text style={styles.todayPillText}>Today</Text>
             </TouchableOpacity>
-            {/* NAV-3: the date itself is the jump-to-date affordance, opening
-                the native date picker so any day is reachable directly. */}
+          ) : null}
+          {!readOnly ? (
             <TouchableOpacity
-              onPress={openDatePicker}
+              onPress={openDiaryActions}
               hitSlop={12}
+              style={styles.dayPagerMore}
               accessibilityRole="button"
-              accessibilityLabel={`${friendlyDate(selectedDate)}. Jump to a date`}
+              accessibilityLabel="Open diary options"
             >
-              <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next day">
-              <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.dayPagerSide, styles.dayPagerSideRight]}>
-            {/* E10 read-only: copying a day is a write, and FoodInsights is a
-                hard-locked Pro route; both icons would be dead ends here. */}
-            {!readOnly ? (
-              <>
-                <TouchableOpacity
-                  onPress={openCopyPicker}
-                  hitSlop={12}
-                  accessibilityRole="button"
-                  accessibilityLabel="Copy a previous day into this day"
-                >
-                  <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('FoodInsights')}
-                  hitSlop={12}
-                  accessibilityRole="button"
-                  accessibilityLabel="View 7-day insights and export diary"
-                >
-                  <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </>
-            ) : null}
-          </View>
+          ) : null}
         </View>
 
         {/* E10 read-only lapse views: say plainly what this state is, and keep
@@ -1124,10 +1102,6 @@ export default function DiaryScreen({ navigation }) {
             targets={effectiveTargets}
             planned={plannedTotals}
             dayTypeLabel={dayTypeChip}
-            onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
-          />
-          <DiaryDaySummaryCard
-            summary={diarySummary}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
@@ -1702,53 +1676,64 @@ const styles = StyleSheet.create({
   saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   saveMealBtnText: { ...type.body, color: colors.textPrimary },
   saveMealBtnTextPrimary: { ...type.label, color: colors.onPrimary },
-  dayPagerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+  headerNutritionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: circle(34),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  dayPagerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.xs,
     marginBottom: spacing.md,
   },
-  dayPagerSide: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    minWidth: 72,
+  dayPagerNav: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
   },
-  dayPagerSideRight: { justifyContent: 'flex-end' },
-  dateGroup: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  dateButton: {
+    flex: 1,
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
   },
-  dateLabel: { ...type.title, color: colors.textPrimary, minWidth: 96, textAlign: 'center' },
+  dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
   todayPill: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
   },
-  todayPillText: { ...type.label, color: colors.textPrimary },
+  todayPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  dayPagerMore: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
-  daySummaryCard: {
-    marginTop: spacing.md,
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  daySummaryHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
-  daySummaryCopy: { flex: 1, gap: spacing.xxs },
-  daySummaryEyebrow: {
-    ...type.caption,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-  },
-  daySummaryPrimary: { ...type.title, color: colors.textPrimary },
-  daySummarySecondary: { ...type.bodySm, color: colors.textMuted },
-  daySummaryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  daySummaryChip: {
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    maxWidth: '100%',
-  },
-  daySummaryChipLabel: { ...type.caption, color: colors.textMuted },
-  daySummaryChipValue: { ...type.label, color: colors.textPrimary },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,
