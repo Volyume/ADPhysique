@@ -151,3 +151,23 @@ export function validateShareWinDraft(draft) {
   if (shareWinDraftHasForbiddenFields(draft)) return false;
   return draft.defaultConsent === SHARE_WIN_POLICY.defaultState;
 }
+
+export function buildShareWinExampleDrafts() {
+  return Object.freeze([
+    buildShareWinDraft('workout_summary', {
+      workoutName: 'Upper body session',
+      completedAt: 'chosen date',
+    }),
+    buildShareWinDraft('personal_record', {
+      liftName: 'Bench press',
+      recordLabel: 'New rep best',
+    }),
+    buildShareWinDraft('block_milestone', {
+      blockName: 'Strength block',
+      milestone: 'Block complete',
+    }),
+    buildShareWinDraft('progress_card', {
+      label: 'Private progress card',
+    }),
+  ].filter(Boolean));
+}

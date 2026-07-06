@@ -400,6 +400,7 @@ Status: release decision.
 - Partner active cards now include a `Support snapshot` so connected users see what is shared, what remains private, and the current week state without adding chat, feeds, rankings, or photo sharing.
 - Partner active cards now include a `Share wins` consent surface and review sheet that defines the only eligible future share categories: workout summary, personal record, block milestone and progress card.
 - Partner shareable wins now have a pure draft contract that builds narrow future cards and strips/forbids raw sets, reps, loads, food, coach notes, body metrics, scan scores and private photo paths.
+- Partner `Share wins` review now shows safe example card shapes so users can see the exact kind of object that may cross later, with consent still `Ask every time`.
 - Safety/privacy gates remain intact: no exact body-fat claim, suppression hides high-risk compare/share entries, and photos remain device-local unless shared/exported by the user.
 
 ### Partner Optional Sharing Direction
@@ -408,6 +409,7 @@ Status: release decision.
 - It should not become blanket partner access to workout history, food, bodyweight, coach notes, body metrics, private notes or progress photos.
 - The app now has the first `Share wins` policy surface: default `Ask every time`, no passive feed, no leaderboard, no workout history browsing, no food diary, no coach notes, no body metrics and no automatic photo sharing.
 - The app now also has the pure future-card draft contract: one card, one moment, one partner, no raw workout/body/food/coach/photo fields.
+- The review sheet now renders safe example cards from that same contract, making the future sharing shape visible without sending anything yet.
 - Remaining implementation work: real event-card creation UI, delivery, revocation/delete handling, ED/calm suppression for body/progress cards, and partner acknowledgement only through curated responses.
 
 ## Product And UX Notes
