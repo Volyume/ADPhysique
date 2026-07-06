@@ -73,7 +73,7 @@ function pair(overrides = {}) {
     rowState: 'active', myWeek: { done: 2, planned: 4 },
     partnerWeek: { done: 3, planned: 4, weekMet: false },
     sharedStreak: { run: 5, status: 'counting' },
-    cheerEnabled: true, lastReceived: null, sharedBlock: null, pairedAt: 1,
+    cheerEnabled: true, lastReceived: null, sharedBlock: null, winCards: [], pairedAt: 1,
     ...overrides,
   };
 }
@@ -90,6 +90,8 @@ function base(overrides = {}) {
     block: jest.fn(async () => ({ ok: true })),
     proposeBlock: jest.fn(), adoptBlock: jest.fn(), leaveBlock: jest.fn(),
     setIntention: jest.fn(async () => ({ ok: true })),
+    shareWin: jest.fn(async () => ({ ok: true })),
+    revokeWin: jest.fn(async () => ({ ok: true })),
     reload: jest.fn(),
     ...overrides,
   };
@@ -163,7 +165,7 @@ describe('connected state: isolated pair cards', () => {
   test('active pairs show a support snapshot with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('Support snapshot');
+    expect(text).toContain('What Sam can see');
     expect(text).toContain('Shared');
     expect(text).toContain('Weekly training against your own plan');
     expect(text).toContain('Your chosen weekly aim');
@@ -197,15 +199,15 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     let text = allText(tree).join(' ');
     expect(text).toContain('Share wins');
-    expect(text).toContain('Ask every time. Preview one card first. Nothing becomes a feed.');
-    expect(text).toContain('Nothing becomes a feed.');
+    expect(text).toContain('Ask each time. Review one card, then send it to Sam only. No feed.');
+    expect(text).toContain('No feed.');
 
     await press(tree, 'Review shareable wins');
     text = allText(tree).join(' ');
     expect(text).toContain('Shareable wins');
     expect(text).toContain('Partner wins are off by default.');
     expect(text).toContain('Default: Ask every time.');
-    expect(text).toContain('Preview the exact card first. Nothing is sent from this sheet.');
+    expect(text).toContain('Review the exact card first, then send it to Sam only.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
@@ -220,11 +222,11 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Preview exact card');
     expect(text).toContain('Confirm one partner');
     expect(text).toContain('Keep control');
-    expect(text).toContain('Future send controls must show the partner name, card type and exact card copy on one screen.');
+    expect(text).toContain('Send controls show the partner name, card type and exact card copy on one screen.');
     expect(text).toContain('Hard boundaries');
     expect(text).toContain('Ask every time before a card is sent.');
     expect(text).toContain('One card, one moment, one partner.');
-    expect(text).toContain('Future delivery must support revoke and delete.');
+    expect(text).toContain('A sent card can be deleted by the sender.');
     expect(text).toContain('Eligible cards');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
@@ -236,6 +238,37 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Block milestone');
     expect(text).toContain('Progress card');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+  });
+
+  test('sends the selected win card to the current partner only', async () => {
+    const hook = base({ pairs: [pair()] });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Review shareable wins');
+    await press(tree, 'Send workout complete to Sam');
+    expect(hook.shareWin).toHaveBeenCalledWith('p1', expect.objectContaining({ type: 'workout_summary' }));
+  });
+
+  test('renders sent win cards with sender delete control', async () => {
+    const hook = base({
+      pairs: [pair({
+        winCards: [{
+          id: 'win1',
+          senderId: 'u1',
+          cardType: 'personal_record',
+          title: 'Personal record',
+          summary: 'Bench press: New rep best.',
+          detail: 'Only this chosen record is shared. Wider lift history stays private.',
+          createdAt: Date.UTC(2026, 6, 6),
+        }],
+      })],
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    expect(allText(tree)).toContain('Shared wins');
+    expect(allText(tree)).toContain('Bench press: New rep best.');
+    await press(tree, 'Delete shared win Personal record');
+    expect(hook.revokeWin).toHaveBeenCalledWith('win1');
   });
 
   test('progress-card share preview can use a sanitized exported-card payload', async () => {

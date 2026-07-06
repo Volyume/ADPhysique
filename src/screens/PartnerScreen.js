@@ -82,6 +82,11 @@ function spellNumber(n) {
   return NUM_WORDS[i] ?? String(i);
 }
 
+function initialForName(name) {
+  const text = typeof name === 'string' ? name.trim() : '';
+  return (text[0] || 'P').toUpperCase();
+}
+
 // One person's calm week line. Resting reads exactly "resting this week" and
 // never as a fail; a counted week reuses ticksLabel ("3 of 4").
 function weekPhrase(name, week, resting) {
@@ -228,7 +233,7 @@ function PartnerSupportSnapshot({ pair, name }) {
     <View style={styles.supportSnapshot}>
       <View style={styles.supportHead}>
         <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.supportTitle}>Support snapshot</Text>
+        <Text style={styles.supportTitle}>What {name} can see</Text>
       </View>
       <View style={styles.supportGrid}>
         <View style={styles.supportCell}>
@@ -297,7 +302,8 @@ function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) 
   );
 }
 
-function PartnerShareWinsCard({ onOpen }) {
+function PartnerShareWinsCard({ onOpen, partnerName }) {
+  const name = partnerName || 'your partner';
   return (
     <TouchableOpacity
       onPress={onOpen}
@@ -313,11 +319,54 @@ function PartnerShareWinsCard({ onOpen }) {
       <View style={styles.shareWinsRowCopy}>
         <Text style={styles.shareWinsTitle}>Share wins</Text>
         <Text style={styles.shareWinsText}>
-          {SHARE_WIN_POLICY.defaultState}. Preview one card first. Nothing becomes a feed.
+          Ask each time. Review one card, then send it to {name} only. No feed.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
     </TouchableOpacity>
+  );
+}
+
+function formatWinCardDate(ms) {
+  if (!ms) return '';
+  try {
+    return new Date(Number(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch (_) {
+    return '';
+  }
+}
+
+function PartnerWinCards({ cards = [], userId, onRevoke }) {
+  const visible = (cards || []).filter((card) => !card.revokedAt).slice(0, 3);
+  if (!visible.length) return null;
+  return (
+    <View style={styles.partnerWins}>
+      <Text style={styles.partnerWinsTitle}>Shared wins</Text>
+      {visible.map((card) => {
+        const mine = card.senderId === userId;
+        const date = formatWinCardDate(card.createdAt);
+        return (
+          <View key={card.id} style={styles.partnerWinCard}>
+            <View style={styles.partnerWinTop}>
+              <Text style={styles.partnerWinMeta}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
+              {mine ? (
+                <TouchableOpacity
+                  onPress={() => onRevoke(card)}
+                  hitSlop={hitSlop}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete shared win ${card.title}`}
+                >
+                  <Text style={styles.partnerWinDelete}>Delete</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <Text style={styles.partnerWinTitle}>{card.title}</Text>
+            <Text style={styles.partnerWinSummary}>{card.summary}</Text>
+            <Text style={styles.partnerWinDetail}>{card.detail}</Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -375,7 +424,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
 
 function PairCard({
   pair, moment, onCheer, onManage, onOpenBlock, onSetAim, onReconnect,
-  reconnectDismissed, onDismissReconnect, onOpenShareWins, userId,
+  reconnectDismissed, onDismissReconnect, onOpenShareWins, onRevokeWin, userId,
 }) {
   const name = pair.partnerFirstName || 'Your partner';
   const run = pair.sharedStreak?.run ?? 0;
@@ -387,9 +436,17 @@ function PairCard({
   const showReconnect = pair.sharedStreak?.status === 'archived' && !reconnectDismissed;
 
   return (
-    <Card style={styles.pairCard}>
+    <Card style={styles.pairCard} tone="primary">
       <View style={styles.pairHead}>
-        <Text style={styles.pairName} numberOfLines={1}>{name}</Text>
+        <View style={styles.partnerIdentity}>
+          <View style={styles.partnerAvatar}>
+            <Text style={styles.partnerAvatarText}>{initialForName(name)}</Text>
+          </View>
+          <View style={styles.partnerNameBlock}>
+            <Text style={styles.pairName} numberOfLines={1}>{name}</Text>
+            <Text style={styles.pairKicker}>Private partner space</Text>
+          </View>
+        </View>
         <TouchableOpacity
           onPress={() => onManage(pair)}
           style={styles.ellipsis}
@@ -401,35 +458,37 @@ function PairCard({
         </TouchableOpacity>
       </View>
 
-      {showHero ? (
-        <View style={styles.hero}>
-          <View style={styles.heroRow}>
-            <RollingNumber
-              value={run}
-              grouped={false}
-              style={styles.heroNum}
-              accessibilityLabel={`${run} weeks running together`}
-            />
-            <Text style={styles.heroWord}>weeks running, together</Text>
+      <View style={styles.partnerStatusBand}>
+        {showHero ? (
+          <View style={styles.hero}>
+            <View style={styles.heroRow}>
+              <RollingNumber
+                value={run}
+                grouped={false}
+                style={styles.heroNum}
+                accessibilityLabel={`${run} weeks running together`}
+              />
+              <Text style={styles.heroWord}>weeks running, together</Text>
+            </View>
+            <Text style={styles.heroSub}>
+              Counted in weeks you both trained against your own plans. Resting never breaks it.
+            </Text>
           </View>
-          <Text style={styles.heroSub}>
-            Counted in weeks you both trained against your own plans. Resting never breaks it.
-          </Text>
+        ) : (
+          <Text style={styles.heroFirst}>Your first shared week is under way.</Text>
+        )}
+
+        <View style={styles.people}>
+          <PersonRow phrase={weekPhrase('You', pair.myWeek, myResting)} resting={myResting} />
+          <PersonRow phrase={weekPhrase(name, pair.partnerWeek, partnerResting)} resting={partnerResting} />
         </View>
-      ) : (
-        <Text style={styles.heroFirst}>Your first shared week is under way.</Text>
-      )}
+
+        <IntentionBlock pair={pair} onSetAim={onSetAim} />
+      </View>
 
       {showReconnect ? (
         <ReconnectCard onReconnect={() => onReconnect(pair)} onDismiss={() => onDismissReconnect(pair)} />
       ) : null}
-
-      <View style={styles.people}>
-        <PersonRow phrase={weekPhrase('You', pair.myWeek, myResting)} resting={myResting} />
-        <PersonRow phrase={weekPhrase(name, pair.partnerWeek, partnerResting)} resting={partnerResting} />
-      </View>
-
-      <IntentionBlock pair={pair} onSetAim={onSetAim} />
 
       <PartnerSupportPlan
         pair={pair}
@@ -441,7 +500,10 @@ function PairCard({
 
       <PartnerSupportSnapshot pair={pair} name={name} />
 
-      <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} />
+      <View style={styles.partnerShareSection}>
+        <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} partnerName={name} />
+        <PartnerWinCards cards={pair.winCards || []} userId={userId} onRevoke={onRevokeWin} />
+      </View>
 
       {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
@@ -759,6 +821,32 @@ export default function PartnerScreen({ route }) {
     }
   }
 
+  async function handleSendWin(pair, preview) {
+    const r = await p.shareWin(pair.id, preview);
+    if (r?.ok) {
+      toast.show('Win shared with your partner', { variant: 'success' });
+      return r;
+    }
+    if (r?.error === 'win_cards_unavailable') {
+      toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    } else {
+      toast.show('Could not share that win. Check your connection and try again.', { variant: 'error' });
+    }
+    return r;
+  }
+
+  async function handleRevokeWin(card) {
+    if (!card?.id) return;
+    const r = await p.revokeWin(card.id);
+    if (r?.ok) {
+      toast.show('Shared win deleted', { variant: 'success' });
+    } else if (r?.error === 'win_cards_unavailable') {
+      toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    } else {
+      toast.show('Could not delete that win. Check your connection and try again.', { variant: 'error' });
+    }
+  }
+
   // ── Weekly intention (D5-A) ──
   function openAimSheet(pair) {
     // Default to the member's own aim, or their existing weekly planned count,
@@ -931,6 +1019,7 @@ export default function PartnerScreen({ route }) {
                 reconnectDismissed={reconnectDismissed.includes(pair.id)}
                 onDismissReconnect={dismissReconnect}
                 onOpenShareWins={setShareWinsPair}
+                onRevokeWin={handleRevokeWin}
                 userId={user?.id}
               />
             ))}
@@ -1093,9 +1182,11 @@ export default function PartnerScreen({ route }) {
       <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins" scroll>
         {shareWinsPair ? (
           <ShareWinsSheetBody
+            pair={shareWinsPair}
             initialType={route?.params?.shareWinType}
             shareWinPayload={route?.params?.shareWinPayload}
             progressCardPayload={route?.params?.progressCardSharePayload}
+            onSend={(preview) => handleSendWin(shareWinsPair, preview)}
           />
         ) : null}
       </BottomSheet>
@@ -1168,7 +1259,7 @@ function AckSheetBody({ pair, onSend }) {
   );
 }
 
-function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload }) {
+function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPayload, onSend }) {
   const previewPayloads = {};
   if (initialType && shareWinPayload && typeof shareWinPayload === 'object') {
     previewPayloads[initialType] = shareWinPayload;
@@ -1177,8 +1268,18 @@ function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload 
   const examplePreviews = buildShareWinExamplePreviews(previewPayloads);
   const initialPreview = examplePreviews.find((preview) => preview.type === initialType) || examplePreviews[0];
   const [selectedType, setSelectedType] = useState(initialPreview?.type || 'workout_summary');
+  const [sending, setSending] = useState(false);
+  const [sentType, setSentType] = useState(null);
   const selectedPreview = examplePreviews.find((preview) => preview.type === selectedType) || examplePreviews[0];
   const receipt = selectedPreview ? buildShareWinReviewReceipt(selectedPreview) : null;
+  const partnerName = pair?.partnerFirstName || 'your partner';
+  async function sendSelected() {
+    if (!selectedPreview || sending || sentType === selectedPreview.type) return;
+    setSending(true);
+    const r = await onSend?.(selectedPreview);
+    if (r?.ok) setSentType(selectedPreview.type);
+    setSending(false);
+  }
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Shareable wins</Text>
@@ -1187,7 +1288,7 @@ function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload 
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Preview the exact card first. Nothing is sent from this sheet.
+          Review the exact card first, then send it to {partnerName} only.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1230,6 +1331,13 @@ function ShareWinsSheetBody({ initialType, shareWinPayload, progressCardPayload 
             </View>
           </View>
           <Text style={styles.shareWinExampleConsent}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
+          <Button
+            title={sentType === selectedPreview.type ? 'Sent' : `Send to ${partnerName}`}
+            onPress={sendSelected}
+            disabled={sending || sentType === selectedPreview.type}
+            loading={sending}
+            accessibilityLabel={`Send ${selectedPreview.draft.title.toLowerCase()} to ${partnerName}`}
+          />
         </View>
       ) : null}
       {receipt ? (
@@ -1477,9 +1585,29 @@ const styles = StyleSheet.create({
   // ── PairCard ──
   pairCard: { gap: spacing.lg },
   pairHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  partnerIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 },
+  partnerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+  },
+  partnerAvatarText: { ...type.label, color: colors.primary },
+  partnerNameBlock: { flex: 1, minWidth: 0, gap: 2 },
   pairName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
+  pairKicker: { ...type.caption, color: colors.textSecondary },
   ellipsis: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 
+  partnerStatusBand: {
+    gap: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
   hero: { gap: spacing.xs },
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: spacing.sm },
   heroNum: { ...type.display, color: colors.textPrimary },
@@ -1487,7 +1615,12 @@ const styles = StyleSheet.create({
   heroSub: { ...type.caption, color: colors.textSecondary },
   heroFirst: { ...type.body, color: colors.textPrimary },
 
-  people: { gap: spacing.sm },
+  people: {
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: spacing.sm, height: spacing.sm, borderRadius: circle(spacing.sm) },
   dotActive: { backgroundColor: colors.primary },
@@ -1514,7 +1647,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.surface,
+    backgroundColor: withAlpha(colors.primary, alpha.tint),
     padding: spacing.md,
   },
   supportPlanHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -1584,9 +1717,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.edge),
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
     padding: spacing.md,
     minHeight: 72,
   },
@@ -1602,6 +1735,23 @@ const styles = StyleSheet.create({
   shareWinsRowCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   shareWinsTitle: { ...type.label, color: colors.textPrimary },
   shareWinsText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
+  partnerShareSection: { gap: spacing.sm },
+  partnerWins: { gap: spacing.sm },
+  partnerWinsTitle: { ...type.label, color: colors.textPrimary },
+  partnerWinCard: {
+    gap: spacing.xxs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  partnerWinTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  partnerWinMeta: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  partnerWinDelete: { ...type.label, color: colors.primary },
+  partnerWinTitle: { ...type.label, color: colors.textPrimary },
+  partnerWinSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
+  partnerWinDetail: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
 
   // D5-B3 reconnection surface
   reconnect: {

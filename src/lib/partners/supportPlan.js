@@ -16,8 +16,8 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const myAimSet = hasAim(pair.myAim);
   const partnerAimSet = hasAim(pair.partnerAim);
   const cheerAvailable = pair.cheerEnabled !== false;
-  let headline = 'Keep it simple: each person trains their own plan, then chooses what to share.';
-  let primaryAction = { key: 'share_wins', label: 'Preview wins', accessibilityLabel: 'Review shareable wins' };
+  let headline = 'A private partner space for encouragement, not comparison.';
+  let primaryAction = { key: 'share_wins', label: 'Share a win', accessibilityLabel: 'Review shareable wins' };
 
   if (!myAimSet) {
     headline = 'Set how many sessions you plan to do this week. Your partner sees the number, not your workout details.';
@@ -50,7 +50,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
       Object.freeze({
         key: 'week',
         label: 'Week view',
-        state: 'own_plan',
+        state: 'own plan',
         copy: `Your week row reads ${ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })} against your own plan.`,
       }),
       Object.freeze({

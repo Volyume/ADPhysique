@@ -61,6 +61,12 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   // never compared across people (partnerComparison.guard.test.js). Members
   // write only their own row (RLS + this allowlist key).
   'weekly_aim',
+  // Partner win cards: explicit, one-card shares chosen by the sender. These
+  // are sanitized display strings, not raw workout sets/reps/load, body data,
+  // food, coach notes, photos or scan internals. revoked_at hides the card on
+  // both devices while keeping the sync row auditable.
+  'sender_id', 'card_type', 'title', 'summary', 'detail',
+  'visible_to_partner', 'remains_private', 'revoked_at',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the
