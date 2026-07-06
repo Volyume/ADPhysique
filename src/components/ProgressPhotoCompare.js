@@ -29,7 +29,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView,
 } from 'react-native';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
@@ -489,123 +489,132 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
         </TouchableOpacity>
       </View>
 
-      <Segmented
-        options={POSES}
-        value={poseFilter}
-        onChange={setPoseFilter}
-        groupLabel="Filter by pose"
-      />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+        testID="progress-photo-compare-scroll"
+      >
+        <Segmented
+          options={POSES}
+          value={poseFilter}
+          onChange={setPoseFilter}
+          groupLabel="Filter by pose"
+        />
 
-      <View style={styles.quickRow}>
-        <TouchableOpacity
-          style={styles.quick}
-          onPress={pickEarliestLatest}
-          disabled={scoped.length < 2}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: scoped.length < 2 }}
-          accessibilityLabel="Earliest and latest"
-        >
-          <Text style={styles.quickText}>Earliest and latest</Text>
-        </TouchableOpacity>
-        {weeksBack ? (
+        <View style={styles.quickRow}>
           <TouchableOpacity
             style={styles.quick}
-            onPress={pickWeeksBack}
+            onPress={pickEarliestLatest}
+            disabled={scoped.length < 2}
             accessibilityRole="button"
-            accessibilityLabel={`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
+            accessibilityState={{ disabled: scoped.length < 2 }}
+            accessibilityLabel="Earliest and latest"
           >
-            <Text style={styles.quickText}>
-              {`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
-            </Text>
+            <Text style={styles.quickText}>Earliest and latest</Text>
           </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {!ready ? (
-        <View style={styles.placeholder}>
-          <Ionicons name="images-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Two photos are needed to compare.</Text>
-        </View>
-      ) : (
-        <View style={styles.body}>
-          {setupStatus ? (
-            <View
-              style={styles.setupStatus}
-              accessibilityLabel={`Compare setup status: ${setupStatus.title}. ${setupStatus.body}`}
-            >
-              <Ionicons name={setupStatus.icon} size={iconSize.sm} color={colors.primary} />
-              <View style={styles.setupStatusCopy}>
-                <Text style={styles.setupStatusTitle}>{setupStatus.title}</Text>
-                <Text style={styles.setupStatusBody}>{setupStatus.body}</Text>
-              </View>
-            </View>
-          ) : null}
-
-          {mode === 'sideBySide' ? (
-            <View style={styles.panes}>
-              <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} />
-              <Pane item={later} role="Later" w={paneW} h={paneH} failed={!!failed[later.name]} onError={() => onImageError(later)} />
-            </View>
-          ) : null}
-
-          {mode === 'slider' ? (
-            <CompareSlider
-              key={`${earlier.name}-${later.name}`}
-              earlier={earlier}
-              later={later}
-              w={frameW}
-              h={frameH}
-              reduceMotion={!!reduceMotion}
-              failed={{ earlier: !!failed[earlier.name], later: !!failed[later.name] }}
-              onError={onImageError}
-            />
-          ) : null}
-
-          {mode === 'overlay' ? (
-            <CompareOverlay
-              key={`${earlier.name}-${later.name}`}
-              earlier={earlier}
-              later={later}
-              w={frameW}
-              h={frameH}
-            />
-          ) : null}
-        </View>
-      )}
-
-      <View style={styles.modeBar}>
-        <Segmented options={MODES} value={mode} onChange={setMode} groupLabel="Comparison style" />
-      </View>
-
-      {/* Dated thumbnail ribbon. Tapping fills the two slots; a third tap
-          replaces the earlier choice so a tap always responds. */}
-      <View style={styles.ribbon}>
-        {scoped.map((item) => {
-          const isChosen = selected.includes(item.name);
-          return (
+          {weeksBack ? (
             <TouchableOpacity
-              key={item.name}
-              onPress={() => toggleSelect(item.name)}
+              style={styles.quick}
+              onPress={pickWeeksBack}
               accessibilityRole="button"
-              accessibilityState={{ selected: isChosen }}
-              accessibilityLabel={`Photo from ${formatProgressPhotoDay(item.takenAt)}`}
+              accessibilityLabel={`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
             >
-              <Image
-                source={{ uri: item.uri }}
-                style={[styles.thumb, isChosen && styles.thumbChosen]}
-                resizeMode="cover"
-                resizeMethod="resize"
-              />
+              <Text style={styles.quickText}>
+                {`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
+              </Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
+          ) : null}
+        </View>
+
+        {!ready ? (
+          <View style={styles.placeholder}>
+            <Ionicons name="images-outline" size={32} color={colors.textMuted} />
+            <Text style={styles.placeholderText}>Two photos are needed to compare.</Text>
+          </View>
+        ) : (
+          <View style={styles.body}>
+            {setupStatus ? (
+              <View
+                style={styles.setupStatus}
+                accessibilityLabel={`Compare setup status: ${setupStatus.title}. ${setupStatus.body}`}
+              >
+                <Ionicons name={setupStatus.icon} size={iconSize.sm} color={colors.primary} />
+                <View style={styles.setupStatusCopy}>
+                  <Text style={styles.setupStatusTitle}>{setupStatus.title}</Text>
+                  <Text style={styles.setupStatusBody}>{setupStatus.body}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {mode === 'sideBySide' ? (
+              <View style={styles.panes}>
+                <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} />
+                <Pane item={later} role="Later" w={paneW} h={paneH} failed={!!failed[later.name]} onError={() => onImageError(later)} />
+              </View>
+            ) : null}
+
+            {mode === 'slider' ? (
+              <CompareSlider
+                key={`${earlier.name}-${later.name}`}
+                earlier={earlier}
+                later={later}
+                w={frameW}
+                h={frameH}
+                reduceMotion={!!reduceMotion}
+                failed={{ earlier: !!failed[earlier.name], later: !!failed[later.name] }}
+                onError={onImageError}
+              />
+            ) : null}
+
+            {mode === 'overlay' ? (
+              <CompareOverlay
+                key={`${earlier.name}-${later.name}`}
+                earlier={earlier}
+                later={later}
+                w={frameW}
+                h={frameH}
+              />
+            ) : null}
+          </View>
+        )}
+
+        <View style={styles.modeBar}>
+          <Segmented options={MODES} value={mode} onChange={setMode} groupLabel="Comparison style" />
+        </View>
+
+        {/* Dated thumbnail ribbon. Tapping fills the two slots; a third tap
+            replaces the earlier choice so a tap always responds. */}
+        <View style={styles.ribbon}>
+          {scoped.map((item) => {
+            const isChosen = selected.includes(item.name);
+            return (
+              <TouchableOpacity
+                key={item.name}
+                onPress={() => toggleSelect(item.name)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isChosen }}
+                accessibilityLabel={`Photo from ${formatProgressPhotoDay(item.takenAt)}`}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={[styles.thumb, isChosen && styles.thumbChosen]}
+                  resizeMode="cover"
+                  resizeMethod="resize"
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: spacing.xxxl },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     gap: spacing.md,
