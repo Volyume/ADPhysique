@@ -23,6 +23,7 @@ import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
+import { formatLoggedSet } from '../lib/workoutHelpers';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -40,8 +41,41 @@ const FILTERS = [
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+function hasSetValue(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
+function formatLoadValue(value, units = 'kg') {
+  return `${value}${units}`;
+}
+
+export function formatHistoryExerciseSummary(sets = [], exerciseType = 'weight_reps', units = 'kg') {
+  const workingSets = sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
+  if (workingSets.length === 0) {
+    return `${sets.length} set${sets.length !== 1 ? 's' : ''} (warmup only)`;
+  }
+  if (exerciseType === 'duration' || exerciseType === 'distance' || exerciseType === 'reps_only') {
+    const details = workingSets
+      .map(s => formatLoggedSet(s, units, exerciseType).text)
+      .filter(Boolean)
+      .join(', ');
+    return `${workingSets.length} working set${workingSets.length !== 1 ? 's' : ''}${details ? ` - ${details}` : ''}`;
+  }
+  const repsStr = workingSets
+    .map(s => s.actualReps ?? s.actual_reps ?? s.reps)
+    .filter(hasSetValue)
+    .join(', ');
+  const weights = [...new Set(workingSets.map(s => s.weight).filter(hasSetValue))];
+  const weightStr = weights.length === 0
+    ? 'bodyweight'
+    : weights.length === 1
+      ? formatLoadValue(weights[0], units)
+      : weights.map(w => formatLoadValue(w, units)).join('/');
+  return `${workingSets.length} × ${weightStr} × ${repsStr || 'reps not logged'}`;
+}
+
 export default function WorkoutHistoryScreen({ navigation }) {
-  const { user, startWorkout, session } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout, session: s.session })));
+  const { user, startWorkout, session, units = 'kg' } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout, session: s.session, units: s.units })));
   const toast = useToast();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,7 +252,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const groups = {};
       for (const s of sets) {
         if (!groups[s.exerciseId]) {
-          groups[s.exerciseId] = { name: exerciseMap[s.exerciseId]?.name || 'Unknown', sets: [] };
+          groups[s.exerciseId] = {
+            name: exerciseMap[s.exerciseId]?.name || 'Unknown',
+            exerciseType: exerciseMap[s.exerciseId]?.exerciseType || exerciseMap[s.exerciseId]?.exercise_type || 'weight_reps',
+            sets: [],
+          };
           order.push(s.exerciseId);
         }
         groups[s.exerciseId].sets.push(s);
@@ -226,24 +264,16 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
       const grouped = order.map(id => {
         const g = groups[id];
-        const workingSets = g.sets.filter(s => s.setType !== 'warmup');
-        // Build a concise set summary: weight × reps list for working sets.
-        // Rows come back camelCased so the field is `actualReps`; the
-        // previous read of `s.reps` produced empty strings in every summary.
-        const repsStr = workingSets.map(s => s.actualReps ?? s.reps ?? '').filter(Boolean).join(', ');
-        const weights = [...new Set(workingSets.map(s => s.weight).filter(Boolean))];
-        const weightStr = weights.length === 1 ? `${weights[0]}kg` : weights.map(w => `${w}kg`).join('/');
-        const summary = workingSets.length > 0
-          ? `${workingSets.length} × ${weightStr} × ${repsStr}`
-          : `${g.sets.length} set${g.sets.length !== 1 ? 's' : ''} (warmup only)`;
-        return { exerciseId: id, name: g.name, summary, workingSetCount: workingSets.length };
+        const workingSetCount = g.sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup').length;
+        const summary = formatHistoryExerciseSummary(g.sets, g.exerciseType, units || 'kg');
+        return { exerciseId: id, name: g.name, summary, workingSetCount };
       });
 
       setExpandedSets(prev => ({ ...prev, [workoutId]: grouped }));
     } catch (_) {
       // silently fail, expanded view just won't show exercise breakdown
     }
-  }, [expandedId, expandedSets]);
+  }, [expandedId, expandedSets, units]);
 
   // ─── Filtering logic ────────────────────────────────────────────────────────
   const filteredWorkouts = useMemo(() => {
@@ -328,7 +358,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
         <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
           style={styles.cardHeaderTouchable}
-          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}`}
+          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}, ${isExpanded ? 'expanded' : 'collapsed'}`}
+          accessibilityHint="Double-tap to show or hide the exercise breakdown"
+          accessibilityState={{ expanded: isExpanded }}
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -411,7 +443,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
             )}
 
-            {/* View full summary */}
+            {/* View summary */}
             <TouchableOpacity
               style={styles.fullSummaryBtn}
               onPress={() =>
@@ -429,9 +461,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel="View full summary"
+              accessibilityLabel="View summary"
             >
-              <Text style={styles.fullSummaryBtnText}>View full summary</Text>
+              <Text style={styles.fullSummaryBtnText}>View summary</Text>
               <Ionicons name="arrow-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -457,9 +489,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel="View details"
+              accessibilityLabel="View summary"
             >
-              <Text style={styles.viewBtnText}>View Details</Text>
+              <Text style={styles.viewBtnText}>View summary</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity

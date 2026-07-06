@@ -39,6 +39,7 @@ import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib
 import { workoutDayMs } from '../lib/workoutDate';
 import { localWeekStartMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import { logError } from '../lib/errorLog';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -59,6 +60,11 @@ function formatPartnerWinDate(value) {
 function partnerRecordLabel(pr = {}) {
   if (pr.type === 'heaviest_weight') return 'New heaviest weight';
   return 'New rep best';
+}
+
+function partnerCheerFailureMessage(error) {
+  if (error === 'not_active') return 'That partnership is no longer active. Refresh Partners and try again.';
+  return 'Could not send that cheer. Check your connection and try again.';
 }
 
 function RatingRow({ label, field, value, max, onChange }) {
@@ -703,6 +709,27 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     });
   }
 
+  async function handlePostWorkoutCheer() {
+    if (!partners?.cheerEnabled) return;
+    if (!partners.partnership?.id) {
+      toast.show('Refresh Partners and try again.', { variant: 'error' });
+      return;
+    }
+    const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
+    const result = await partners.cheer(partners.partnership.id, undefined, !!reciprocal);
+    if (result?.ok || result?.error === 'already_cheered') {
+      if (partnerMoment?.id) {
+        markMomentSeen(partnerMoment.id).catch(() => {});
+        partnerMomentRef.current = null;
+        setPartnerMoment(null);
+      }
+      toast.show(result?.error === 'already_cheered' ? 'Cheer already sent today' : 'Cheer sent', { variant: 'success' });
+      return;
+    }
+    logError('WorkoutSummaryScreen.postWorkoutCheer', new Error(result?.error || 'unknown'), { userId: user?.id });
+    toast.show(partnerCheerFailureMessage(result?.error), { variant: 'error' });
+  }
+
   // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
   // milestone, reusing ShareCard's generic milestone layout. No Pro gate.
   function handleShareMilestone() {
@@ -929,18 +956,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
-                  onPress={() => {
-                    const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
-                    // The post-workout beat stays a single-tap cheer; it sends the
-                    // quiet default acknowledgement (D5-B1). The picker lives on the
-                    // PartnerScreen PairCard.
-                    partners.cheer(partners.partnership.id, undefined, !!reciprocal);
-                    if (partnerMoment?.id) {
-                      markMomentSeen(partnerMoment.id).catch(() => {});
-                      partnerMomentRef.current = null;
-                      setPartnerMoment(null);
-                    }
-                  }}
+                  onPress={handlePostWorkoutCheer}
                   disabled={!partners.cheerEnabled}
                   accessibilityRole="button"
                   accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}

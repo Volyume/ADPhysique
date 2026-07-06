@@ -90,9 +90,14 @@ jest.mock('../../lib/database', () => ({
 jest.mock('../../lib/syncQueue', () => ({ enqueueSyncOp: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
-import WorkoutHistoryScreen from '../WorkoutHistoryScreen';
+import WorkoutHistoryScreen, { formatHistoryExerciseSummary } from '../WorkoutHistoryScreen';
 import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises } from '../../lib/database';
 import { logError } from '../../lib/errorLog';
+
+const WORKOUT_HISTORY_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../WorkoutHistoryScreen.js'),
+  'utf8',
+);
 
 function flattenText(node) {
   if (node == null) return '';
@@ -252,5 +257,39 @@ describe('WorkoutHistoryScreen load states', () => {
 
     expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledTimes(1);
     expect(getWorkoutSetsForWorkoutIds).toHaveBeenCalledWith(['new']);
+  });
+});
+
+describe('WorkoutHistoryScreen summary polish', () => {
+  test('expanded exercise summaries keep zero-load and bodyweight working sets readable', () => {
+    expect(formatHistoryExerciseSummary([
+      { setType: 'straight', weight: 0, actualReps: 10 },
+      { setType: 'straight', weight: 0, actualReps: 8 },
+    ])).toBe('2 × 0kg × 10, 8');
+
+    expect(formatHistoryExerciseSummary([
+      { setType: 'straight', weight: '', actualReps: 12 },
+      { setType: 'straight', weight: null, actual_reps: 10 },
+    ])).toBe('2 × bodyweight × 12, 10');
+  });
+
+  test('exercise-type summaries do not read distance or reps-only sets as kg lifts', () => {
+    expect(formatHistoryExerciseSummary([
+      { setType: 'straight', weight: 400, actualReps: 90 },
+    ], 'distance')).toBe('1 working set - 400m · 1:30');
+
+    expect(formatHistoryExerciseSummary([
+      { setType: 'straight', weight: 0, actualReps: 12 },
+    ], 'reps_only')).toBe('1 working set - 12 reps');
+  });
+
+  test('history cards expose expansion state and use one summary action label', () => {
+    expect(WORKOUT_HISTORY_SOURCE).toContain('accessibilityState={{ expanded: isExpanded }}');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('Double-tap to show or hide the exercise breakdown');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('accessibilityLabel="View summary"');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('<Text style={styles.viewBtnText}>View summary</Text>');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('<Text style={styles.fullSummaryBtnText}>View summary</Text>');
+    expect(WORKOUT_HISTORY_SOURCE).not.toContain('View Details');
+    expect(WORKOUT_HISTORY_SOURCE).not.toContain('View full summary');
   });
 });

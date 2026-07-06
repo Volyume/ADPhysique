@@ -43,6 +43,14 @@ describe('WorkoutSummaryScreen partner-beat moment wiring', () => {
     expect(src).toMatch(/markMomentSeen\(partnerMomentRef\.current\.id\)/);
   });
 
+  test('post-workout cheer waits for the partner call and reports failures', () => {
+    expect(src).toMatch(/async function handlePostWorkoutCheer/);
+    expect(src).toMatch(/const result = await partners\.cheer\(partners\.partnership\.id, undefined, !!reciprocal\)/);
+    expect(src).toMatch(/result\?\.ok \|\| result\?\.error === 'already_cheered'/);
+    expect(src).toMatch(/WorkoutSummaryScreen\.postWorkoutCheer/);
+    expect(src).toMatch(/partnerCheerFailureMessage\(result\?\.error\)/);
+  });
+
   test('the beat keeps its existing gating (no new beat for unpaired users)', () => {
     expect(src).toMatch(/!readOnly\s*&&\s*!calmSuppressed\s*&&\s*tier === 'pro'/);
     expect(src).toMatch(/partners\.rowState === 'active'\s*\|\|\s*partners\.rowState === 'resting'/);
