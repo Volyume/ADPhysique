@@ -424,7 +424,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Compare Check-Ins</Text>
-            <Text style={styles.subtitle}>Pose-matched, device-local viewing.</Text>
+            <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
@@ -452,7 +452,7 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Compare Check-Ins</Text>
-          <Text style={styles.subtitle}>Pose-matched, device-local viewing.</Text>
+          <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
         </View>
         <TouchableOpacity
           onPress={onClose}
@@ -570,11 +570,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   title: { ...type.h3, color: colors.textPrimary },
-  headerCopy: { flex: 1, gap: spacing.xxs },
-  subtitle: { ...type.caption, color: colors.textMuted },
+  headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
 
   segmented: {
     flexDirection: 'row', gap: spacing.xs,
@@ -582,23 +583,23 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm,
+    flex: 1, minWidth: 0, paddingVertical: spacing.sm, borderRadius: radius.sm,
     backgroundColor: colors.surface2,
   },
   segmentActive: { backgroundColor: colors.primaryFill },
-  segmentText: { ...type.label, color: colors.textMuted },
+  segmentText: { ...type.label, color: colors.textMuted, textAlign: 'center', flexShrink: 1 },
   segmentTextActive: { color: colors.onPrimary },
 
   quickRow: {
-    flexDirection: 'row', gap: spacing.sm,
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
   quick: {
-    flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    flex: 1, minWidth: 132, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderSubtle,
     alignItems: 'center',
   },
-  quickText: { ...type.label, color: colors.textPrimary },
+  quickText: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
 
   body: { paddingHorizontal: spacing.lg },
   panes: { flexDirection: 'row', gap: spacing.sm },
