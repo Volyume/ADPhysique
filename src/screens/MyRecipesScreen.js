@@ -3,8 +3,8 @@
  *
  * List of the user's own composed recipes. Lives under the Diary
  * tab; reached from the Search modal's "My Recipes" entry. Tap a
- * row to log it as one diary line (one serving); the pencil edits;
- * long-press deletes; the header plus builds a new one.
+ * row to choose servings and log it; visible row actions edit or delete;
+ * the header plus builds a new one.
  *
  * Data: listRecipes(userId) from src/lib/food/db.js. The cloud
  * sync layer keeps the table in step with the cloud
@@ -16,16 +16,18 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import Stepper from '../components/Stepper';
+import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
@@ -142,17 +144,16 @@ export default function MyRecipesScreen({ navigation, route }) {
       <TouchableOpacity
         style={styles.row}
         onPress={() => onLog(item)}
-        onLongPress={() => onDelete(item)}
         disabled={!!loggingId}
         accessibilityRole="button"
         accessibilityLabel={`Log ${item.name}`}
-        accessibilityHint="Long press to delete"
+        accessibilityHint="Choose servings before adding it to your diary"
       >
-        <View style={{ flex: 1 }}>
+        <View style={styles.rowText}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.meta}>
             {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
-            {item.notes ? ` · ${item.notes}` : ''}
+            {item.notes ? ` - ${item.notes}` : ''}
           </Text>
         </View>
         <TouchableOpacity
@@ -164,6 +165,16 @@ export default function MyRecipesScreen({ navigation, route }) {
           style={styles.editBtn}
         >
           <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onDelete(item)}
+          disabled={!!loggingId}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${item.name}`}
+          style={styles.iconBtn}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.error} />
         </TouchableOpacity>
         {busy
           ? <ActivityIndicator size="small" color={colors.primary} />
@@ -214,44 +225,35 @@ export default function MyRecipesScreen({ navigation, route }) {
         />
       )}
 
-      <Modal
+      <BottomSheet
         visible={!!servePrompt}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { if (!loggingId) setServePrompt(null); }}
+        onClose={() => { if (!loggingId) setServePrompt(null); }}
+        accessibilityLabel="Choose recipe servings"
+        sheetStyle={styles.servingsSheet}
       >
-        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => { if (!loggingId) setServePrompt(null); }}>
-          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
-            <Text style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
-            <Text style={styles.sheetSub}>How many servings?</Text>
-            <Stepper
-              value={servings}
-              onChange={setServings}
-              min={0.5}
-              max={20}
-              step={0.5}
-              label="servings"
-              formatValue={fmtServings}
-              valueLabel={`${fmtServings(servings)} servings`}
-              decreaseLabel="Fewer servings"
-              increaseLabel="More servings"
-              hitSlop={8}
-              style={styles.servingsStepper}
-            />
-            <TouchableOpacity
-              style={styles.logBtn}
-              onPress={confirmLog}
-              disabled={!!loggingId}
-              accessibilityRole="button"
-              accessibilityLabel={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
-            >
-              {loggingId
-                ? <ActivityIndicator color={colors.onPrimary} />
-                : <Text style={styles.logBtnText}>Log {fmtServings(servings)} {servings === 1 ? 'serving' : 'servings'}</Text>}
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Text style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
+        <Text style={styles.sheetSub}>How many servings did you eat?</Text>
+        <Stepper
+          value={servings}
+          onChange={setServings}
+          min={0.5}
+          max={20}
+          step={0.5}
+          label="servings"
+          formatValue={fmtServings}
+          valueLabel={`${fmtServings(servings)} servings`}
+          decreaseLabel="Fewer servings"
+          increaseLabel="More servings"
+          hitSlop={8}
+          style={styles.servingsStepper}
+        />
+        <Button
+          title={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
+          onPress={confirmLog}
+          loading={!!loggingId}
+          accessibilityLabel={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
+        />
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -264,6 +266,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
     minHeight: 64,
   },
+  rowText: { flex: 1, paddingRight: spacing.sm },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   editBtn: {
@@ -271,23 +274,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginRight: spacing.xs,
   },
-  // Servings picker modal (food audit F-4)
-  backdrop: {
-    flex: 1, backgroundColor: colors.scrim,
-    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+  iconBtn: {
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: spacing.xs,
   },
-  sheet: {
-    width: '100%', maxWidth: 360,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, gap: spacing.md, alignItems: 'center',
-  },
+  // Servings picker bottom sheet (food audit F-4)
+  servingsSheet: { alignItems: 'center' },
   sheetTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
-  servingsStepper: { justifyContent: 'center' },
-  logBtn: {
-    alignSelf: 'stretch', alignItems: 'center',
-    paddingVertical: spacing.md, borderRadius: radius.md,
-    backgroundColor: colors.primary, minHeight: 48, justifyContent: 'center',
-  },
-  logBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  servingsStepper: { justifyContent: 'center', alignSelf: 'center' },
 });

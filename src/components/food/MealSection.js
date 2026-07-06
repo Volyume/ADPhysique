@@ -39,15 +39,15 @@ export default function MealSection({
       <View style={styles.header}>
         <Text style={styles.mealName}>{slot.label}</Text>
         {hasEntries ? (
-          <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
+          <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
         ) : null}
       </View>
       {showEmptyActions ? (
         <View style={styles.emptySlot}>
           <Text style={styles.emptySlotText}>
             {showUsuals
-              ? 'Use a usual, search, scan, pick a saved meal, or quick add an estimate.'
-              : 'Search, scan, pick a saved meal, or quick add an estimate for this slot.'}
+              ? 'Usual foods are ready below. Add something else if this meal was different.'
+              : 'Nothing logged yet.'}
           </Text>
         </View>
       ) : null}
@@ -102,7 +102,7 @@ export default function MealSection({
             accessibilityLabel={`Add food to ${slot.label}`}
           >
             <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
-            <Text style={styles.actionButtonPrimaryText}>Search foods</Text>
+            <Text style={styles.actionButtonPrimaryText}>Add food</Text>
           </TouchableOpacity>
           {onSavedMeals ? (
             <TouchableOpacity
@@ -112,7 +112,7 @@ export default function MealSection({
               accessibilityLabel={`Add saved meal to ${slot.label}`}
             >
               <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.actionButtonText}>Saved meals</Text>
+              <Text style={styles.actionButtonText}>Saved</Text>
             </TouchableOpacity>
           ) : null}
           {onScan ? (
@@ -123,7 +123,7 @@ export default function MealSection({
               accessibilityLabel={`Scan barcode for ${slot.label}`}
             >
               <Ionicons name="barcode-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.actionButtonText}>Scan</Text>
+              <Text style={styles.actionButtonText}>Barcode</Text>
             </TouchableOpacity>
           ) : null}
           {onQuickAdd ? (
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flexGrow: 1,
     minHeight: 44,
-    minWidth: 132,
+    minWidth: 104,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
