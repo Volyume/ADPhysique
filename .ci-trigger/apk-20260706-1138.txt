@@ -1,0 +1,4 @@
+Trigger Android APK workflow for Partners sharing sheet checkpoint.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Source commit: fc99fea7
