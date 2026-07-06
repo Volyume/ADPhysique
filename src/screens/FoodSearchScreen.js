@@ -890,6 +890,16 @@ export default function FoodSearchScreen({ navigation, route }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add to {mealSlotLabel(mealSlot)}</Text>
         <View style={styles.headerActions}>
+          {!isRecipePick ? (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MyMeals', { mealSlot, entryDate })}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Add a saved meal"
+            >
+              <Ionicons name="bookmark-outline" size={23} color={colors.primary} />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             onPress={() => { quickSavedRef.current = false; setShowQuickAdd(true); }}
             hitSlop={12}

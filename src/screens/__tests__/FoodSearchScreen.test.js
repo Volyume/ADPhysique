@@ -156,6 +156,13 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/useSafeAreaInsets/);
     expect(SCREEN_SOURCE).not.toMatch(/plateModalBackdrop/);
   });
+
+  test('keeps saved meals as a first-class header action outside recipe-pick mode', () => {
+    expect(SCREEN_SOURCE).toMatch(/!isRecipePick \? \(/);
+    expect(SCREEN_SOURCE).toMatch(/navigation\.navigate\('MyMeals', \{ mealSlot, entryDate \}\)/);
+    expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Add a saved meal"/);
+    expect(SCREEN_SOURCE).toMatch(/name="bookmark-outline"/);
+  });
 });
 
 describe('FoodSearchScreen confirmLog (A2)', () => {
