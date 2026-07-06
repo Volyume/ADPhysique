@@ -63,7 +63,32 @@ import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
+import { buildDiaryDaySummary, formatDiaryDaySummary } from '../lib/food/diaryDaySummary';
 import { toEnergy, energyUnitLabel } from '../lib/format';
+
+function DiaryDaySummaryCard({ summary }) {
+  if (!summary) return null;
+  return (
+    <Card style={styles.daySummaryCard}>
+      <View style={styles.daySummaryHead}>
+        <View style={styles.daySummaryCopy}>
+          <Text style={styles.daySummaryEyebrow}>{summary.title}</Text>
+          <Text style={styles.daySummaryPrimary}>{summary.primary}</Text>
+          <Text style={styles.daySummarySecondary}>{summary.secondary}</Text>
+        </View>
+        <Ionicons name="nutrition-outline" size={22} color={colors.primary} />
+      </View>
+      <View style={styles.daySummaryChips}>
+        {summary.chips.map((chip) => (
+          <View key={chip.key} style={styles.daySummaryChip}>
+            <Text style={styles.daySummaryChipLabel}>{chip.label}</Text>
+            <Text style={styles.daySummaryChipValue}>{chip.value}</Text>
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
 
 export default function DiaryScreen({ navigation }) {
   const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
@@ -342,6 +367,16 @@ export default function DiaryScreen({ navigation }) {
   );
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
+  const diarySummary = useMemo(
+    () => formatDiaryDaySummary(buildDiaryDaySummary({
+      rollup,
+      targets: effectiveTargets,
+      planned: plannedTotals,
+      entriesCount: viewEntries.length,
+      dayTypeLabel: dayTypeChip,
+    }), energyUnit),
+    [rollup, effectiveTargets, plannedTotals, viewEntries.length, dayTypeChip, energyUnit],
+  );
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
@@ -1073,6 +1108,7 @@ export default function DiaryScreen({ navigation }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
+          <DiaryDaySummaryCard summary={diarySummary} />
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
               row each; the confirm dialogs own the consequence copy. */}
           {!readOnly && macroCycle ? (
@@ -1668,6 +1704,31 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
+  daySummaryCard: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  daySummaryHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  daySummaryCopy: { flex: 1, gap: spacing.xxs },
+  daySummaryEyebrow: {
+    ...type.caption,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  daySummaryPrimary: { ...type.title, color: colors.textPrimary },
+  daySummarySecondary: { ...type.bodySm, color: colors.textMuted },
+  daySummaryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  daySummaryChip: {
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    maxWidth: '100%',
+  },
+  daySummaryChipLabel: { ...type.caption, color: colors.textMuted },
+  daySummaryChipValue: { ...type.label, color: colors.textPrimary },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,

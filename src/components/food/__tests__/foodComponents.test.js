@@ -258,11 +258,13 @@ describe('MealSection', () => {
 
   test('an empty section shows the name and Add food, no zero subtotal', () => {
     const tree = create(
-      <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+      <MealSection slot={slot} entries={[]} onAdd={() => {}} onQuickAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Breakfast');
-    expect(txt).toContain('Add food');
+    expect(txt).toContain('Search foods');
+    expect(txt).toContain('Quick add');
+    expect(txt).toContain('Search foods or quick add an estimate for this slot.');
     expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
   });
 
@@ -271,6 +273,24 @@ describe('MealSection', () => {
       <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     expect(JSON.stringify(tree)).toContain('Add food to Breakfast');
+  });
+
+  test('empty slots with usuals explain every fast path', () => {
+    const tree = create(
+      <MealSection
+        slot={slot}
+        entries={[]}
+        usuals={[{ food_ref: 'off:9', name: 'Eggs' }]}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onLogUsual={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Eggs');
+    expect(txt).toContain('Use a usual, search foods, or quick add an estimate.');
   });
 });
 
