@@ -158,11 +158,11 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       )}
       <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]} numberOfLines={2}>
         {fmt.text}
-        {perSide ? ` · ${perSide}` : ''}
-        {isWarmup ? ' · Warm-up' : ''}
+        {perSide ? ` - ${perSide}` : ''}
+        {isWarmup ? ' - Warm-up' : ''}
       </Text>
       {!isWarmup && est1RM > 0 && (
-        <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
+        <Text style={styles.loggedEst1RM}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
       <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
     </TouchableOpacity>
@@ -1209,7 +1209,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: setData.actualReps,
           value: setData.weight,
           previousValue: null,
-          label: `${setData.weight}${units} × ${setData.actualReps} logged as your starting point`,
+          label: `${setData.weight}${units} x ${setData.actualReps} logged as your starting point`,
           exerciseName: exercise.name,
         });
       } else if (prs.length > 0) {
@@ -1821,14 +1821,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // line opens the set-type picker (it replaced SetEntry's card-foot row).
   const orientationLabel = (() => {
     if (currentSet.setType === 'warmup') {
-      return `Warm-up · Set W${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
+      return `Warm-up - Set W${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
     }
-    if (isDeloadWeek) return `Light set ${workingLogged + 1} · Easy`;
+    if (isDeloadWeek) return `Light set ${workingLogged + 1} - Easy`;
     const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
       : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
-    return `${pos} · ${mode}`;
+    return `${pos} - ${mode}`;
   })();
 
   // Stalled-progress nudge: same weight & reps across the last 3 sessions
@@ -1939,7 +1939,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Finish workout"
             >
-              <Text style={styles.finishBtn}>Finish</Text>
+              <Text style={styles.finishBtn}>Finish workout</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2057,7 +2057,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View key="superset" style={styles.supersetChip}>
                   <Ionicons name="link" size={11} color={colors.primary} />
                   <Text style={styles.supersetChipText}>
-                    Superset {currentSGI} · alternates with {pairedExerciseName}
+                    Superset {currentSGI} - alternates with {pairedExerciseName}
                   </Text>
                 </View>
               );
@@ -2088,7 +2088,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
                     <View>
                       <Text style={styles.deloadBannerTitle}>Recovery week</Text>
-                      <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
+                      <Text style={styles.deloadBannerSub}>Light loads - full recovery - no PRs</Text>
                     </View>
                   </View>
                   <TouchableOpacity
@@ -2148,7 +2148,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
-                <Text style={styles.warmupBannerText}>Warm-up · not counted in your totals</Text>
+                <Text style={styles.warmupBannerText}>Warm-up - not counted in your totals</Text>
               </View>
             )}
             {currentSet.setType === 'warmup' && !warmupHintSeenRef.current && (
@@ -2184,7 +2184,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.targetRow}>
                 <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
                 <Text style={styles.targetText} numberOfLines={2}>
-                  Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                  Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets - {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                 </Text>
               </View>
             )}
@@ -2219,18 +2219,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityLabel={`Recovery week: ${target.weight} ${units} times ${target.repsMin}. Tap to apply.`}
                   >
                     <Text style={styles.beatLineLabel} numberOfLines={2}>
-                      Recovery week  ·  <Text style={styles.beatLineValue}>{target.weight}{units} × {target.repsMin}</Text>
+                      Recovery week - <Text style={styles.beatLineValue}>{target.weight}{units} x {target.repsMin}</Text>
                       <Text style={styles.beatLineHint}>  Tap to use</Text>
                     </Text>
                   </TouchableOpacity>
                 );
               }
               const range = target
-                ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}–${target.repsMax}`)
+                ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}-${target.repsMax}`)
                 : (routineExercise?.recommendedRepsMin != null
-                  ? `${routineExercise.recommendedRepsMin}–${routineExercise.recommendedRepsMax}`
+                  ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                   : null);
-              const glyph = target?.action === 'increase' ? '↑' : target?.action === 'decrease' ? '↓' : null;
+              const glyph = target?.action === 'increase' ? '+' : target?.action === 'decrease' ? '-' : null;
               if (prev) {
                 return (
                   <TouchableOpacity
@@ -2250,8 +2250,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityLabel={`Last session: ${prev.weight} ${units} times ${prev.actualReps} reps.${range ? ` Target ${range}.` : ''} Tap to apply.`}
                   >
                     <Text style={styles.beatLineLabel} numberOfLines={2}>
-                      Last: <Text style={styles.beatLineValue}>{prev.weight}{units} × {prev.actualReps}</Text>
-                      {range ? '  ·  Target ' : ''}
+                      Last: <Text style={styles.beatLineValue}>{prev.weight}{units} x {prev.actualReps}</Text>
+                      {range ? ' - Target ' : ''}
                       {range ? <Text style={styles.beatLineValue}>{range}</Text> : null}
                       {glyph ? <Text style={styles.beatLineGlyph}> {glyph}</Text> : null}
                       <Text style={styles.beatLineHint}>  Tap to use</Text>
@@ -2267,7 +2267,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel={`First time on this exercise. Target ${range} reps.`}
                 >
                   <Text style={styles.beatLineLabel} numberOfLines={2}>
-                    First time  ·  Target <Text style={styles.beatLineValue}>{range}</Text>
+                    First time - Target <Text style={styles.beatLineValue}>{range}</Text>
                   </Text>
                 </View>
               );
@@ -2302,7 +2302,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     : readinessLine
                       ? readinessLine
                       : stalledAdvice
-                        ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
+                        ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
                         : targetReason}
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
@@ -2337,7 +2337,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.noteInput}
                 value={noteText}
                 onChangeText={setNoteText}
-                placeholder="Add a note…"
+                placeholder="Add a note..."
                 placeholderTextColor={colors.textMuted}
                 accessibilityLabel="Add a note"
                 multiline
@@ -2426,7 +2426,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
             <View style={styles.autoAdvanceRow}>
               <Text style={styles.autoAdvanceRowText}>Next exercise in a moment</Text>
-              <Text style={styles.autoAdvanceRowDot}> · </Text>
+              <Text style={styles.autoAdvanceRowDot}> - </Text>
               <TouchableOpacity
                 onPress={cancelAutoAdvance}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -2836,7 +2836,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       >
                         <View style={styles.overflowOptionRow}>
                           <Ionicons name="flame-outline" size={16} color={colors.warning} />
-                          <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} × ${row.reps}`}</Text>
+                          <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} x ${row.reps}`}</Text>
                         </View>
                         {row.isBar ? <Text style={styles.rampBarTag}>Empty bar</Text> : null}
                       </TouchableOpacity>
@@ -2923,7 +2923,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         {calc.perSide.map(({ plate, count }) => (
                           <View key={plate} style={styles.plateRow} accessible accessibilityLabel={`${count} of ${plate} ${units} each side`}>
                             <View style={[styles.plateDot, { backgroundColor: PLATE_COLOURS[plate] || colors.textMuted }]} />
-                            <Text style={styles.plateRowText}>{`${count} × ${plate} ${units}`}</Text>
+                            <Text style={styles.plateRowText}>{`${count} x ${plate} ${units}`}</Text>
                           </View>
                         ))}
                       </>
@@ -3124,14 +3124,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {exercise?.primaryMuscle ? (
                 <Text style={styles.infoMuscle}>
                   {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
-                  {exercise.equipment ? ` · ${exercise.equipment}` : ''}
+                  {exercise.equipment ? ` - ${exercise.equipment}` : ''}
                 </Text>
               ) : null}
               {routineExercise?.recommendedSets ? (
                 <View style={styles.infoTargetRow}>
                   <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
                   <Text style={styles.infoTarget}>
-                    {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                    {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                   </Text>
                 </View>
               ) : null}
@@ -3368,7 +3368,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         </TouchableOpacity>
         <Text style={styles.timerText}>{elapsed}</Text>
         <TouchableOpacity onPress={onFinish} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
-          <Text style={styles.finishBtn}>Finish</Text>
+          <Text style={styles.finishBtn}>Finish workout</Text>
         </TouchableOpacity>
       </View>
 
@@ -3405,12 +3405,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerSide: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
+  headerSide: { width: 104, alignItems: 'flex-start', justifyContent: 'center' },
   // CL-6.2: a real 44pt frame under the top-corner controls (plus hitSlop);
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerSideRight: { width: 64, alignItems: 'flex-end', justifyContent: 'center' },
-  finishBtn: { ...type.bodyStrong, color: colors.primary, paddingVertical: spacing.xs },
+  headerSideRight: { width: 104, alignItems: 'flex-end', justifyContent: 'center' },
+  finishBtn: { ...type.label, color: colors.primary, paddingVertical: spacing.xs, textAlign: 'right' },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   starterBanner: {
@@ -3465,7 +3465,7 @@ const styles = StyleSheet.create({
   // 700 ms flash, just the colour swaps.
   setEntryCardFlash: { borderColor: colors.primary },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },
+  warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0 },
   warmupOneTimeHint: {
     ...type.bodySm, color: colors.textMuted, paddingTop: spacing.xs,
   },
@@ -3488,7 +3488,7 @@ const styles = StyleSheet.create({
   // secondary via the tinted-outline override below.
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.onPrimary, letterSpacing: 0.6 },
+  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.onPrimary, letterSpacing: 0 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
@@ -3503,7 +3503,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
   },
-  extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0.6 },
+  extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0 },
   // C3: quiet inline row for the auto-advance countdown, sits under the
   // "Log another set" button so it reads as one calm sentence with a
   // tappable ending, not another banner competing for attention.
@@ -3527,7 +3527,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
-  clusterTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
+  clusterTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0 },
   clusterReps: { ...type.bodyStrong, color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   clusterInput: {
@@ -3557,7 +3557,7 @@ const styles = StyleSheet.create({
   },
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   loggedSection: { gap: spacing.sm },
-  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
+  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
@@ -3585,7 +3585,7 @@ const styles = StyleSheet.create({
   plateInputGroup: { flex: 1, gap: spacing.xxs },
   plateInputLabel: { ...type.caption, color: colors.textMuted },
   plateInput: { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
-  plateSectionLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs },
+  plateSectionLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs },
   plateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   plateDot: { width: 18, height: 18, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
   plateRowText: { ...type.bodyStrong, color: colors.textPrimary },
@@ -3597,7 +3597,7 @@ const styles = StyleSheet.create({
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   infoTarget: { ...type.label, color: colors.primary },
   infoMuscle: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
-  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs, marginTop: spacing.sm },
+  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs, marginTop: spacing.sm },
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   // COMP-015 "Adjusted today" section in the info sheet
   adjustedSection: {
@@ -3611,7 +3611,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   adjustedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0.5 },
+  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0 },
   adjustedReason: { ...type.bodySm, color: colors.textPrimary },
   adjustedSignal: { ...type.caption, color: colors.textMuted },
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },

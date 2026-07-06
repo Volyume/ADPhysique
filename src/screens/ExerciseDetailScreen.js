@@ -35,6 +35,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 // Loose date parser, accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
 // Returns unix timestamp (ms) for the 1st of the parsed month, or null.
@@ -527,7 +528,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
             <View style={styles.sfrDivider} />
             <View style={styles.sfrItem}>
-              <Text style={styles.sfrValue}>{exercise.defaultRepMin || 6}–{exercise.defaultRepMax || 12}</Text>
+              <Text style={styles.sfrValue}>{exercise.defaultRepMin || 6}-{exercise.defaultRepMax || 12}</Text>
               <Text style={styles.sfrLabel}>Rep range</Text>
             </View>
           </View>
@@ -561,7 +562,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prHeavy && displayPR !== prHeavy && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered]}>
                     <Text style={styles.prHighlightStatValue}>
-                      {prHeavy.value}{units} × {prHeavy.reps}
+                      {prHeavy.value}{units} x {prHeavy.reps}
                     </Text>
                     <Text style={styles.prHighlightStatLabel}>Best set</Text>
                   </View>
@@ -569,7 +570,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prReps && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered]}>
                     <Text style={styles.prHighlightStatValue}>
-                      {prReps.value}{units} × {prReps.reps}
+                      {prReps.value}{units} x {prReps.reps}
                     </Text>
                     <Text style={styles.prHighlightStatLabel}>Most reps</Text>
                   </View>
@@ -621,7 +622,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   {goal.targetWeight}{units}
                 </Text>
                 <Text style={styles.goalWeightLabel}>
-                  Target{goal.targetDate ? ` · by ${format(new Date(goal.targetDate), 'MMM yyyy')}` : ''}
+                  Target{goal.targetDate ? ` - by ${format(new Date(goal.targetDate), 'MMM yyyy')}` : ''}
                 </Text>
               </View>
             </View>
@@ -725,14 +726,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   <View style={styles.historySets}>
                     {sessionSets.map((s, j) => (
                       <Text key={j} style={styles.historySetText}>
-                        {s.weight}{units} × {s.actualReps}
-                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' · Warm-up' : ''}
-                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' · Drop Set' : ''}
+                        {s.weight}{units} x {s.actualReps}
+                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
+                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop Set' : ''}
                       </Text>
                     ))}
                   </View>
                   {sessionEst1RM > 0 && (
-                    <Text style={styles.historyEst}>Est. max: ≈{sessionEst1RM.toFixed(0)}{units}</Text>
+                    <Text style={styles.historyEst}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
                   )}
                 </View>
               );
@@ -747,6 +748,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Text style={styles.historyEmptyText}>
               You haven't logged this exercise yet. Add it to a session to start tracking your progress.
             </Text>
+            <TouchableOpacity
+              style={styles.historyEmptyAction}
+              onPress={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+              accessibilityRole="button"
+              accessibilityLabel="Start a workout"
+            >
+              <Text style={styles.historyEmptyActionText}>Start workout</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -767,7 +776,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   </Text>
                   <Text style={styles.prValue}>
                     {pr.record_type === '1rm_estimate' ? `${parseFloat(pr.value).toFixed(1)}${units}` :
-                     `${pr.value}${units} × ${pr.reps} reps`}
+                     `${pr.value}${units} x ${pr.reps} reps`}
                   </Text>
                 </View>
                 <Text style={styles.prDate}>{format(new Date(pr.achieved_date), 'MMM d yyyy')}</Text>
@@ -971,7 +980,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
@@ -1018,13 +1027,27 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   historyEmpty: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   historyEmptyText: {
     ...type.bodySm,
-    flex: 1, color: colors.textMuted,
+    flex: 1,
+    minWidth: 180,
+    color: colors.textMuted,
+  },
+  historyEmptyAction: {
+    minHeight: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyEmptyActionText: {
+    ...type.label,
+    color: colors.primary,
   },
   section: { gap: spacing.md },
   historyCard: {
@@ -1102,7 +1125,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   prHighlightRow: {
@@ -1219,7 +1242,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   goalWeightRow: {

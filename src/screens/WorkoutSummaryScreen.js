@@ -994,13 +994,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                       <View style={styles.exerciseSetsList}>
                         {workingSets.map((s, si) => (
                           <Text key={si} style={styles.exerciseSetChip}>
-                            {s.weight > 0 ? `${s.weight}${units}` : 'BW'} × {s.reps}
+                            {s.weight > 0 ? `${s.weight}${units}` : 'BW'} x {s.reps}
                           </Text>
                         ))}
                       </View>
                     ) : (
                       <Text style={styles.exerciseListMeta}>
-                        {ex.recommendedSets} × {ex.repsMin}–{ex.repsMax}
+                        {ex.recommendedSets} x {ex.repsMin}-{ex.repsMax}
                       </Text>
                     )}
                   </View>
@@ -1016,7 +1016,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Ionicons name="trophy-outline" size={18} color={colors.warning} />
             <Text style={styles.prRowText}>
               {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
-              {prExerciseNames ? ` · ${prExerciseNames}` : ''}
+              {prExerciseNames ? ` - ${prExerciseNames}` : ''}
             </Text>
           </View>
           </RevealSection>
@@ -1184,7 +1184,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={styles.adjustedSummaryText}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
-                ).join(' · ')}
+                ).join(' - ')}
               </Text>
             </View>
           </RevealSection>
@@ -1234,7 +1234,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   inputStyle={styles.notesInput}
                   value={notes}
                   onChangeText={setNotes}
-                  placeholder="Anything notable from this session…"
+                  placeholder="Anything notable from this session..."
                   placeholderTextColor={colors.textMuted}
                   multiline
                 />
@@ -1247,7 +1247,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               inputStyle={styles.nextTimeNoteInput}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
-              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume…"
+              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume..."
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -1293,12 +1293,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
           {!readOnly && (
             <Button
-              title=""
+              title="Share"
               variant="outline"
               size="lg"
               icon="share-social-outline"
               fullWidth={false}
               style={styles.shareFooterBtn}
+              textStyle={styles.shareFooterBtnText}
               onPress={handleShareCard}
               accessibilityLabel="Share session card"
             />
@@ -1722,16 +1723,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   shareFooterBtn: {
-    width: 52,
-    height: 52,
+    flex: 1,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  shareFooterBtnText: {
+    ...type.title,
+    color: colors.primary,
   },
   exerciseList: {
     backgroundColor: colors.surface,

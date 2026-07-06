@@ -112,7 +112,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   async function handleStartTraining() {
     if (exercises.length === 0) {
-      toast.show('Add at least one exercise, or tap Skip setup to start empty', { variant: 'warning' });
+      toast.show('Add at least one exercise, or start empty from the footer.', { variant: 'warning' });
       return;
     }
     setStarting(true);
@@ -141,6 +141,7 @@ export default function BuildWorkoutScreen({ navigation }) {
   }
 
   async function handleSkip() {
+    setStarting(true);
     try {
       const workout = await createWorkout(user.id);
       startWorkout(workout, []);
@@ -148,6 +149,8 @@ export default function BuildWorkoutScreen({ navigation }) {
     } catch (e) {
       logError('BuildWorkoutScreen.handleSkip', e, { userId: user?.id });
       toast.show("Couldn't start workout, try again", { variant: 'error' });
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -199,15 +202,9 @@ export default function BuildWorkoutScreen({ navigation }) {
     return s === 0 ? `${m}m` : `${m}m ${s}s`;
   }
 
-  const skipSetupButton = (
-    <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Skip setup and start an empty session">
-      <Text style={styles.skipText}>Skip setup</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Build workout" right={skipSetupButton} />
+      <BackHeader title="Build workout" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
@@ -231,7 +228,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                   {MUSCLE_DISPLAY_NAMES[item.exercise.primaryMuscle] ||
                     (item.exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                     (item.exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
-                  {item.exercise.equipment ? ` · ${item.exercise.equipment}` : ''}
+                  {item.exercise.equipment ? ` - ${item.exercise.equipment}` : ''}
                 </Text>
               </View>
               <TouchableOpacity
@@ -276,7 +273,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                     maxLength={3}
                     accessibilityLabel="Minimum reps"
                   />
-                  <Text style={styles.repSep}>–</Text>
+                  <Text style={styles.repSep}>-</Text>
                   <TextField
                     containerStyle={styles.repFieldContainer}
                     fieldStyle={styles.repField}
@@ -347,6 +344,18 @@ export default function BuildWorkoutScreen({ navigation }) {
           disabled={exercises.length === 0}
           onPress={handleStartTraining}
         />
+        {exercises.length === 0 ? (
+          <Button
+            testID="volyume-btn-start-empty"
+            title="Start empty"
+            icon="play-skip-forward-outline"
+            variant="secondary"
+            size="lg"
+            loading={starting}
+            onPress={handleSkip}
+            accessibilityLabel="Start an empty workout"
+          />
+        ) : null}
       </View>
 
       {/* Travel Mode equipment picker */}
@@ -419,13 +428,28 @@ export default function BuildWorkoutScreen({ navigation }) {
                   <Text style={styles.pickerItemName}>{item.name}</Text>
                   <Text style={styles.pickerItemMuscle}>
                     {(item.primaryMuscle || '').charAt(0).toUpperCase() + (item.primaryMuscle || '').slice(1)}
-                    {item.equipment ? ` · ${item.equipment}` : ''}
+                    {item.equipment ? ` - ${item.equipment}` : ''}
                   </Text>
                 </View>
                 <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
+            ListEmptyComponent={query.trim() ? (
+              <View style={styles.pickerEmpty}>
+                <Ionicons name="search-outline" size={24} color={colors.textMuted} />
+                <Text style={styles.pickerEmptyTitle}>No matching exercises</Text>
+                <Text style={styles.pickerEmptyText}>Try a shorter search, or clear it and browse the full library.</Text>
+                <TouchableOpacity
+                  style={styles.pickerEmptyBtn}
+                  onPress={() => setQuery('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear exercise search"
+                >
+                  <Text style={styles.pickerEmptyBtnText}>Clear search</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             ListFooterComponent={filteredTruncated ? (
               <View style={styles.pickerHint}>
                 <Ionicons name="search-outline" size={16} color={colors.textMuted} />
@@ -442,10 +466,6 @@ export default function BuildWorkoutScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  skipText: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.md },
   subtitle: {
@@ -564,6 +584,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.sm,
   },
   pickerSafe: { flex: 1, backgroundColor: colors.background },
   pickerHeader: {
@@ -593,6 +614,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   pickerHintText: { fontSize: fontSize.sm, color: colors.textMuted, flex: 1 },
+  pickerEmpty: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxxl,
+  },
+  pickerEmptyTitle: { ...type.bodyStrong, color: colors.textPrimary, textAlign: 'center' },
+  pickerEmptyText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
+  pickerEmptyBtn: {
+    marginTop: spacing.xs,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerEmptyBtnText: { ...type.label, color: colors.primary },
 
   // Travel mode chip + modal
   travelChip: {
