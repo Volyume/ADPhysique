@@ -4,7 +4,9 @@
  * Type-47 history records are stored on the band and replayed during sync. Public
  * reverse-engineering in NOOP maps two layouts that matter for sleep backfill:
  * v18 carries per-second HR/R-R directly, while v26 carries a 24 Hz PPG waveform
- * that can be converted into per-second HR by autocorrelation.
+ * that can be converted into per-second HR by autocorrelation. Captures from
+ * this WHOOP 5 also show v20/v21 raw sensor history blocks; they have valid
+ * timestamps but should not be promoted to HR samples.
  */
 
 import { crc16modbus, crc32 } from './crc';
@@ -35,7 +37,10 @@ export type HistoricalDecodeResult = {
   rejectedRecords: number;
   droppedImplausibleTs: number;
   v18Records: number;
+  v20Records: number;
+  v21Records: number;
   v26Records: number;
+  rawSensorRecords: number;
   versions: number[];
 };
 
@@ -55,7 +60,10 @@ export function decodeWhoop5HistoryFrames(
   let rejectedRecords = 0;
   let droppedImplausibleTs = 0;
   let v18Records = 0;
+  let v20Records = 0;
+  let v21Records = 0;
   let v26Records = 0;
+  let rawSensorRecords = 0;
 
   for (const frame of frames) {
     if (!isHistoryFrame(frame)) continue;
@@ -105,6 +113,24 @@ export function decodeWhoop5HistoryFrames(
       continue;
     }
 
+    if (version === 20 || version === 21) {
+      const rec = decodeRawSensorHistory(frame);
+      if (!rec) {
+        rejectedRecords += 1;
+        continue;
+      }
+      const ts = plausibleUnix(rec.unix, wallNowSec);
+      if (ts == null) {
+        droppedImplausibleTs += 1;
+        continue;
+      }
+      decodedRecords += 1;
+      rawSensorRecords += 1;
+      if (version === 20) v20Records += 1;
+      else v21Records += 1;
+      continue;
+    }
+
     rejectedRecords += 1;
   }
 
@@ -128,7 +154,10 @@ export function decodeWhoop5HistoryFrames(
     rejectedRecords,
     droppedImplausibleTs,
     v18Records,
+    v20Records,
+    v21Records,
     v26Records,
+    rawSensorRecords,
     versions: [...versions].sort((a, b) => a - b),
   };
 }
@@ -182,6 +211,11 @@ function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | nul
     samples.push(v);
   }
   return samples.length ? { unix, samples } : null;
+}
+
+function decodeRawSensorHistory(frame: Uint8Array): { unix: number } | null {
+  const unix = u32(frame, 15);
+  return unix == null ? null : { unix };
 }
 
 function plausibleUnix(ts: number, wallNowSec: number): number | null {

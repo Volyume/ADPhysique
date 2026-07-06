@@ -158,6 +158,7 @@ export type AppState = {
     hrSamples: number;
     rrSamples: number;
     stepSamples: number;
+    rawSensorRecords: number;
     rejectedRecords: number;
     droppedImplausibleTs: number;
     versions: number[];
@@ -502,6 +503,7 @@ class AppStore extends Store<AppState> {
               hrSamples: 0,
               rrSamples: 0,
               stepSamples: 0,
+              rawSensorRecords: 0,
               rejectedRecords: 0,
               droppedImplausibleTs: 0,
               versions: [],
@@ -580,6 +582,7 @@ class AppStore extends Store<AppState> {
         hrSamples: stats.hr.length,
         rrSamples: stats.hr.reduce((a, s) => a + s.rr.length, 0),
         stepSamples: stats.steps.length,
+        rawSensorRecords: stats.rawSensorRecords,
         rejectedRecords: stats.rejectedRecords,
         droppedImplausibleTs: stats.droppedImplausibleTs,
         versions: stats.versions,
@@ -632,6 +635,7 @@ class AppStore extends Store<AppState> {
         hrSamples: 0,
         rrSamples: 0,
         stepSamples: 0,
+        rawSensorRecords: 0,
         rejectedRecords: 0,
         droppedImplausibleTs: 0,
         versions: [],
@@ -1341,7 +1345,10 @@ function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: Historical
     rejectedRecords: prev.rejectedRecords + next.rejectedRecords,
     droppedImplausibleTs: prev.droppedImplausibleTs + next.droppedImplausibleTs,
     v18Records: prev.v18Records + next.v18Records,
+    v20Records: prev.v20Records + next.v20Records,
+    v21Records: prev.v21Records + next.v21Records,
     v26Records: prev.v26Records + next.v26Records,
+    rawSensorRecords: prev.rawSensorRecords + next.rawSensorRecords,
     versions: [...versions].sort((a, b) => a - b),
   };
 }

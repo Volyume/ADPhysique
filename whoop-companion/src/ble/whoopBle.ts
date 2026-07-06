@@ -35,14 +35,10 @@ import {
 import { base64ToBytes, bytesToBase64, bytesToHex } from './bytes';
 import { decodeHeartRate, HeartRateSample } from './heartRate';
 import {
-  cmdEnableHrBroadcast,
   cmdGetHello,
   cmdGetHelloHarvard,
   cmdLinkValid,
   cmdSetClock,
-  cmdToggleRealtimeHr,
-  cmdToggleImuMode,
-  cmdStartRawData,
 } from '../whoop/commands';
 
 export type WhoopStatus =
@@ -83,7 +79,9 @@ export class WhoopBle {
   private manager: BleManager;
   private events: WhoopEvents;
   private device: Device | null = null;
+  private lastDeviceId: string | null = null;
   private subscriptions: Subscription[] = [];
+  private disconnectSub: Subscription | null = null;
   private scanning = false;
   private writeService: string | null = null;
   private writeChar: string | null = null;
@@ -205,10 +203,16 @@ export class WhoopBle {
   private async connect(device: Device): Promise<void> {
     try {
       this.setStatus('connecting', device.name ?? device.id);
+      this.lastDeviceId = device.id;
       this.events.onDevice?.({ id: device.id, name: device.name ?? device.localName ?? 'WHOOP' });
       const connected = await device.connect({ requestMTU: 247 });
       await this.afterConnect(connected);
     } catch (e) {
+      this.clearKeepalive();
+      this.clearSubscriptions();
+      this.device = null;
+      this.writeService = null;
+      this.writeChar = null;
       this.setStatus('disconnected', `Connect failed: ${String(e)}`);
       if (this.wantConnected) this.scheduleReconnect();
     }
@@ -216,10 +220,21 @@ export class WhoopBle {
 
   /** Post-connect bring-up — shared by first connect and auto-reconnect. */
   private async afterConnect(connected: Device): Promise<void> {
+    this.clearKeepalive();
+    this.clearSubscriptions();
+    if (this.disconnectSub) {
+      this.disconnectSub.remove();
+      this.disconnectSub = null;
+    }
     this.device = connected;
-    connected.onDisconnected(() => {
+    this.lastDeviceId = connected.id;
+    this.disconnectSub = connected.onDisconnected((error) => {
       this.clearKeepalive();
-      this.setStatus('disconnected');
+      this.clearSubscriptions();
+      this.device = null;
+      this.writeService = null;
+      this.writeChar = null;
+      this.setStatus('disconnected', error?.message ?? connected.name ?? connected.id);
       // Auto-reconnect: the whole point of "catch up after a drop". When we
       // reconnect, the store re-runs the history drain (see onStatus 'connected').
       if (this.wantConnected) this.scheduleReconnect();
@@ -229,12 +244,10 @@ export class WhoopBle {
     await connected.discoverAllServicesAndCharacteristics();
     await this.locateWriteChar(connected);
     await this.subscribeAll(connected);
-    await this.startStreaming();
-    await delay(900);
-    await connected.discoverAllServicesAndCharacteristics();
     this.subscribeStandardHr(connected);
     this.reconnectAttempts = 0; // healthy connection — reset backoff
     this.setStatus('connected', connected.name ?? connected.id);
+    this.startLinkMaintenance();
   }
 
   /** Schedule a reconnect attempt with exponential backoff (2s → 60s cap). */
@@ -251,10 +264,10 @@ export class WhoopBle {
   private async attemptReconnect(): Promise<void> {
     if (!this.wantConnected) return;
     // Fast path: reconnect to the known device by id; fall back to a fresh scan.
-    if (this.device) {
+    if (this.lastDeviceId) {
       try {
         this.setStatus('connecting', 'reconnecting…');
-        const reconnected = await this.manager.connectToDevice(this.device.id, { requestMTU: 247 });
+        const reconnected = await this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 });
         await this.afterConnect(reconnected);
         return;
       } catch {
@@ -283,34 +296,43 @@ export class WhoopBle {
     }
   }
 
-  /**
-   * Self-start the live HR stream (no official WHOOP app): say hello, enable the
-   * standard 0x2A37 HR broadcast + proprietary realtime HR, then keep the link
-   * alive with LINK_VALID every 10 s.
-   */
-  private async startStreaming(): Promise<void> {
+  /** Keep the command link alive without starting live-only streams. */
+  private startLinkMaintenance(): void {
     if (!this.canSendCommands) return;
-    try {
-      await this.writeCommand(cmdGetHelloHarvard()); // GET_HELLO_HARVARD (35)
-      await this.writeCommand(cmdGetHello()); // GET_HELLO (145)
-      await this.writeCommand(cmdSetClock()); // SET_CLOCK (10)
-      await this.writeCommand(cmdEnableHrBroadcast(true)); // 14 -> standard 0x2A37
-      await this.writeCommand(cmdToggleRealtimeHr(true)); // 3 -> proprietary HR
-      await this.writeCommand(cmdToggleImuMode(true)); // 106 -> IMU/accel stream (band steps)
-      await this.writeCommand(cmdStartRawData()); // 81 -> raw accel (fallback motion source)
-    } catch {
-      // best-effort; live HR may still arrive once the keepalive holds the link
-    }
     this.clearKeepalive();
+    void this.runGentleHandshake();
     // LINK_VALID keepalive every 2s — the strap drops the link without it
     // (whoop-vault LINK_VALID_INTERVAL_S = 2.0).
+    let failures = 0;
     this.keepalive = setInterval(() => {
-      this.writeCommand(cmdLinkValid()).catch(() => {});
-    }, 2000);
-    // Re-arm the realtime HR stream periodically to sustain proprietary samples.
-    this.reArm = setInterval(() => {
-      this.writeCommand(cmdToggleRealtimeHr(true)).catch(() => {});
-    }, 6000);
+      this.writeCommand(cmdLinkValid())
+        .then(() => {
+          failures = 0;
+        })
+        .catch(() => {
+          failures += 1;
+          if (failures >= 3) this.clearKeepalive();
+        });
+    }, 4000);
+  }
+
+  private async runGentleHandshake(): Promise<void> {
+    await delay(750);
+    await this.safeWriteCommand(cmdGetHelloHarvard());
+    await delay(150);
+    await this.safeWriteCommand(cmdGetHello());
+    await delay(150);
+    await this.safeWriteCommand(cmdSetClock());
+  }
+
+  private async safeWriteCommand(bytes: Uint8Array): Promise<boolean> {
+    if (!this.canSendCommands) return false;
+    try {
+      await this.writeCommand(bytes);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private subscribeStandardHr(device: Device): void {
@@ -329,6 +351,17 @@ export class WhoopBle {
       clearInterval(this.reArm);
       this.reArm = null;
     }
+  }
+
+  private clearSubscriptions(): void {
+    for (const sub of this.subscriptions) {
+      try {
+        sub.remove();
+      } catch {
+        // ignore stale native subscriptions during reconnect/teardown
+      }
+    }
+    this.subscriptions = [];
   }
 
   private async subscribeAll(device: Device): Promise<void> {
@@ -443,14 +476,11 @@ export class WhoopBle {
     }
     this.reconnectAttempts = 0;
     this.clearKeepalive();
-    for (const sub of this.subscriptions) {
-      try {
-        sub.remove();
-      } catch {
-        // ignore
-      }
+    this.clearSubscriptions();
+    if (this.disconnectSub) {
+      this.disconnectSub.remove();
+      this.disconnectSub = null;
     }
-    this.subscriptions = [];
     if (this.scanning) {
       this.manager.stopDeviceScan();
       this.scanning = false;
@@ -463,6 +493,8 @@ export class WhoopBle {
       }
       this.device = null;
     }
+    this.writeService = null;
+    this.writeChar = null;
     this.setStatus('idle');
   }
 

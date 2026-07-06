@@ -156,6 +156,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>HR samples backfilled: {historySync?.hrSamples ?? 0}</Text>
         <Text style={styles.diagText}>R-R intervals backfilled: {historySync?.rrSamples ?? 0}</Text>
         <Text style={styles.diagText}>Band step counters: {historySync?.stepSamples ?? 0}</Text>
+        <Text style={styles.diagText}>Raw sensor records: {historySync?.rawSensorRecords ?? 0}</Text>
         <Text style={styles.diagText}>
           History layouts: {historySync?.versions.length ? historySync.versions.join(', ') : 'none yet'}
         </Text>
@@ -167,7 +168,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         />
         <Text style={styles.hint}>
           The strap records to its own memory. On every reconnect this app requests stored history, decodes v18
-          HR/R-R records and v26 PPG-derived HR, then backfills sleep from those rows.
+          HR/R-R records, recognises v20/v21 raw sensor records, and backfills sleep from confirmed HR rows.
         </Text>
       </Card>
 
