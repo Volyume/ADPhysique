@@ -12,9 +12,9 @@ import AnimatedRow from '../AnimatedRow';
 // food" box). The card owns the border and rounded corners; items are flush
 // in-card rows; the header carries the per-meal subtotal (calories AND protein,
 // the number a training user defends); the add affordance is a quiet in-card
-// row, not a dashed placeholder box.
+// hub, not a dashed placeholder box.
 export default function MealSection({
-  slot, entries, onAdd, onQuickAdd, onEdit, onDelete,
+  slot, entries, onAdd, onQuickAdd, onSavedMeals, onScan, onEdit, onDelete,
   usuals = null, onLogUsual,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
   readOnly = false,
@@ -29,6 +29,7 @@ export default function MealSection({
   // a write.
   const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
   const showEmptyActions = !hasEntries && !selectionMode && !readOnly;
+  const showActionHub = !selectionMode && !readOnly;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
   // the day, carry its free additions into the diary too. Only shows when the
   // slot's foods resolve to a real curated meal; null (hidden) otherwise.
@@ -45,8 +46,8 @@ export default function MealSection({
         <View style={styles.emptySlot}>
           <Text style={styles.emptySlotText}>
             {showUsuals
-              ? 'Use a usual, search foods, or quick add an estimate.'
-              : 'Search foods or quick add an estimate for this slot.'}
+              ? 'Use a usual, search, scan, pick a saved meal, or quick add an estimate.'
+              : 'Search, scan, pick a saved meal, or quick add an estimate for this slot.'}
           </Text>
         </View>
       ) : null}
@@ -92,54 +93,51 @@ export default function MealSection({
         </View>
       ) : null}
       {/* E10 read-only lapse views: no add affordances on a view-only diary. */}
-      {showEmptyActions ? (
-        <View style={styles.emptyActionRow}>
+      {showActionHub ? (
+        <View style={[styles.actionHub, hasEntries && styles.actionHubDivided]}>
           <TouchableOpacity
-            style={[styles.emptyAction, styles.emptyActionPrimary]}
+            style={[styles.actionButton, styles.actionButtonPrimary]}
             onPress={onAdd}
             accessibilityRole="button"
             accessibilityLabel={`Add food to ${slot.label}`}
           >
             <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
-            <Text style={styles.emptyActionPrimaryText}>Search foods</Text>
+            <Text style={styles.actionButtonPrimaryText}>Search foods</Text>
           </TouchableOpacity>
+          {onSavedMeals ? (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={onSavedMeals}
+              accessibilityRole="button"
+              accessibilityLabel={`Add saved meal to ${slot.label}`}
+            >
+              <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.actionButtonText}>Saved meals</Text>
+            </TouchableOpacity>
+          ) : null}
+          {onScan ? (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={onScan}
+              accessibilityRole="button"
+              accessibilityLabel={`Scan barcode for ${slot.label}`}
+            >
+              <Ionicons name="barcode-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.actionButtonText}>Scan</Text>
+            </TouchableOpacity>
+          ) : null}
           {onQuickAdd ? (
             <TouchableOpacity
-              style={styles.emptyAction}
+              style={styles.actionButton}
               onPress={onQuickAdd}
               accessibilityRole="button"
               accessibilityLabel={`Quick add to ${slot.label}`}
             >
               <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.emptyActionText}>Quick add</Text>
+              <Text style={styles.actionButtonText}>Quick add</Text>
             </TouchableOpacity>
           ) : null}
         </View>
-      ) : null}
-      {!readOnly && hasEntries ? (
-        <TouchableOpacity
-          style={[styles.addRow, hasEntries && styles.addRowDivided]}
-          onPress={onAdd}
-          accessibilityRole="button"
-          accessibilityLabel={`Add food to ${slot.label}`}
-        >
-          <Ionicons name="add" size={18} color={colors.primary} />
-          <Text style={styles.addLabel}>Add food</Text>
-        </TouchableOpacity>
-      ) : null}
-      {/* Escape hatch for meals that aren't worth a lookup (restaurant,
-          estimate, retro-logging). Secondary to search by design: quieter
-          colour, below the primary row. */}
-      {!readOnly && hasEntries && onQuickAdd ? (
-        <TouchableOpacity
-          style={[styles.addRow, styles.addRowDivided]}
-          onPress={onQuickAdd}
-          accessibilityRole="button"
-          accessibilityLabel={`Quick add to ${slot.label}`}
-        >
-          <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />
-          <Text style={styles.quickAddLabel}>Quick add</Text>
-        </TouchableOpacity>
       ) : null}
     </View>
   );
@@ -177,14 +175,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   emptySlotText: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
-  emptyActionRow: {
+  actionHub: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  emptyAction: {
+  actionHubDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -196,24 +199,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
   },
-  emptyActionPrimary: { backgroundColor: colors.primary },
-  emptyActionText: { ...type.label, color: colors.textSecondary },
-  emptyActionPrimaryText: { ...type.label, color: colors.onPrimary },
-  addRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  // When the card has items, the add row sits below them with a hairline
-  // divider. On an empty section it sits directly under the header with no
-  // divider, so the card reads as one clean block, not a placeholder.
-  addRowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  actionButtonPrimary: { backgroundColor: colors.primary },
+  actionButtonText: { ...type.label, color: colors.textSecondary },
+  actionButtonPrimaryText: { ...type.label, color: colors.onPrimary },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
   seasonText: { ...type.bodySm, color: colors.textSecondary },
   seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
-  addLabel: { ...type.body, color: colors.primary, marginLeft: spacing.xs },
-  quickAddLabel: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.xs },
 });

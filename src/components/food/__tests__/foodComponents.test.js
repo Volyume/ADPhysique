@@ -258,13 +258,24 @@ describe('MealSection', () => {
 
   test('an empty section shows the name and Add food, no zero subtotal', () => {
     const tree = create(
-      <MealSection slot={slot} entries={[]} onAdd={() => {}} onQuickAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+      <MealSection
+        slot={slot}
+        entries={[]}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Breakfast');
     expect(txt).toContain('Search foods');
+    expect(txt).toContain('Saved meals');
+    expect(txt).toContain('Scan');
     expect(txt).toContain('Quick add');
-    expect(txt).toContain('Search foods or quick add an estimate for this slot.');
+    expect(txt).toContain('Search, scan, pick a saved meal, or quick add an estimate for this slot.');
     expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
   });
 
@@ -283,6 +294,8 @@ describe('MealSection', () => {
         usuals={[{ food_ref: 'off:9', name: 'Eggs' }]}
         onAdd={() => {}}
         onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
         onLogUsual={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
@@ -290,7 +303,32 @@ describe('MealSection', () => {
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Eggs');
-    expect(txt).toContain('Use a usual, search foods, or quick add an estimate.');
+    expect(txt).toContain('Use a usual, search, scan, pick a saved meal, or quick add an estimate.');
+  });
+
+  test('meal action hub exposes saved meals and scan as slot-scoped actions', () => {
+    const onSavedMeals = jest.fn();
+    const onScan = jest.fn();
+    const tree = create(
+      <MealSection
+        slot={slot}
+        entries={entries}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={onSavedMeals}
+        onScan={onScan}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+    const saved = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add saved meal to Breakfast')[0];
+    const scan = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Scan barcode for Breakfast')[0];
+    expect(saved).toBeDefined();
+    expect(scan).toBeDefined();
+    actRender(() => saved.props.onPress());
+    actRender(() => scan.props.onPress());
+    expect(onSavedMeals).toHaveBeenCalledTimes(1);
+    expect(onScan).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -315,18 +353,20 @@ describe('read-only diary components (E10 lapse views)', () => {
     expect(txt).toContain('200');
   });
 
-  test('MealSection readOnly renders NO add, quick add or usuals affordance', () => {
+  test('MealSection readOnly renders NO add, quick add, saved, scan or usuals affordance', () => {
     const usuals = [{ food_ref: 'off:9', name: 'Eggs' }];
     const tree = create(
       <MealSection
         slot={slot} entries={[]} usuals={usuals}
-        onAdd={() => {}} onQuickAdd={() => {}} onLogUsual={() => {}}
+        onAdd={() => {}} onQuickAdd={() => {}} onSavedMeals={() => {}} onScan={() => {}} onLogUsual={() => {}}
         onEdit={() => {}} onDelete={() => {}} readOnly
       />
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).not.toContain('Add food');
     expect(txt).not.toContain('Quick add');
+    expect(txt).not.toContain('Saved meals');
+    expect(txt).not.toContain('Scan');
     expect(txt).not.toContain('Eggs'); // usuals are one-tap writes
   });
 
@@ -351,10 +391,21 @@ describe('read-only diary components (E10 lapse views)', () => {
 
   test('without readOnly the write affordances stay (the Pro diary is unchanged)', () => {
     const tree = create(
-      <MealSection slot={slot} entries={entries} onAdd={() => {}} onQuickAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+      <MealSection
+        slot={slot}
+        entries={entries}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Add food');
+    expect(txt).toContain('Search foods');
+    expect(txt).toContain('Saved meals');
+    expect(txt).toContain('Scan');
     expect(txt).toContain('Quick add');
   });
 });
