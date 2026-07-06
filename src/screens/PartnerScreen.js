@@ -528,8 +528,11 @@ export default function PartnerScreen({ route }) {
   const seenRef = useRef(new Set());
 
   const source = route?.params?.source;
+  const incomingShareWinType = route?.params?.shareWinType;
+  const incomingProgressCardPayload = route?.params?.progressCardSharePayload;
   const incomingCode = route?.params?.code ? parseInviteCode(route.params.code) : null;
   const handledCodeRef = useRef(null);
+  const shareWinsRouteHandledRef = useRef(null);
 
   // Surface-view telemetry, once on mount.
   useEffect(() => {
@@ -602,6 +605,22 @@ export default function PartnerScreen({ route }) {
     if (p.canAdd) handleRedeem(incomingCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingCode, p.loading, p.canAdd]);
+
+  useEffect(() => {
+    if (!incomingShareWinType || p.loading) return;
+    const firstPair = (p.pairs || [])[0];
+    if (!firstPair) return;
+    const marker = [
+      incomingShareWinType,
+      incomingProgressCardPayload?.dateRange || '',
+      incomingProgressCardPayload?.format || '',
+      incomingProgressCardPayload?.includesWeight === true ? 'weight' : 'no-weight',
+      incomingProgressCardPayload?.includesScanScore === true ? 'scan' : 'no-scan',
+    ].join('|');
+    if (shareWinsRouteHandledRef.current === marker) return;
+    shareWinsRouteHandledRef.current = marker;
+    setShareWinsPair(firstPair);
+  }, [incomingShareWinType, incomingProgressCardPayload, p.loading, p.pairs]);
 
   // ── Invite journey ──
   function openJourney() {

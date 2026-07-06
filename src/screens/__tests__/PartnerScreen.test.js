@@ -263,6 +263,25 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('file:///private-card.png');
   });
 
+  test('incoming progress-card route opens the share preview directly', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount({
+      shareWinType: 'progress_card',
+      progressCardSharePayload: {
+        label: 'Progress Photos card',
+        dateRange: '5 Jan 2026 to 20 Jun 2026',
+        format: 'Square',
+        includesWeight: false,
+        includesScanScore: true,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Shareable wins');
+    expect(text).toContain('Progress Photos card, 5 Jan 2026 to 20 Jun 2026.');
+    expect(text).toContain('The visible scan score is part of that export.');
+    expect(text).toContain('Weight is off for this export.');
+  });
+
   test('pro under the cap offers "Invite another partner"', async () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();
