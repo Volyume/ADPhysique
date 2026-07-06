@@ -657,10 +657,10 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function deleteScanEntry(scan) {
     if (!userId || !scan?.id || readOnly) return;
-    appAlert('Delete scan?', 'This removes the scan photos and stored scan analysis from this device.', [
+    appAlert('Delete photo set?', 'This removes every photo in this set, plus its saved Physique Score, from this device.', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Delete set',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -870,18 +870,18 @@ export default function ProgressPhotosScreen({ navigation }) {
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
-        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat percentage.`
+        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat estimate.`
       : latestScan?.copySummary || (latestPhoto
-        ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add or import a front and back photo set. When the set is clear enough, Volyume saves the date, bodyweight snapshot and Physique Score together.');
+        ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
+        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and Physique Score together.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
-      ? 'For the clearest comparison, use the same angle, full-body framing and lighting each time. Photos stay on this phone unless you share or export them.'
-      : 'Use front, side and back photos under the same lighting. Photos stay on this phone unless you share or export them.';
+      ? 'Use the same full-body frame each time. Photos stay on this phone unless you share or export them.'
+      : 'Front and back are enough for a score. Side is optional, but helpful for shape and posture.';
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
-    { key: 'next', icon: 'time-outline', label: 'Suggested gap', value: nextCheckInLabel },
+    { key: 'next', icon: 'time-outline', label: 'Next useful set', value: nextCheckInLabel },
     { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
   ];
   const nextAction = useMemo(
@@ -1027,39 +1027,32 @@ export default function ProgressPhotosScreen({ navigation }) {
   function renderStudioHeader() {
     return (
       <>
+        <View style={styles.privacyBanner}>
+          <View style={styles.privacyNoticeIcon}>
+            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+          </View>
+          <Text style={styles.privacyNoticeText}>
+            Private on this device. Your photos and scores are not visible to partners, staff or anyone else unless you choose to share or export them.
+          </Text>
+        </View>
+
         <Card padding="none" style={styles.studioHero}>
-          {latestPhoto ? (
-            <View style={styles.heroImageFrame}>
-              <Image source={{ uri: latestPhoto.uri }} style={styles.heroImage} resizeMode="cover" />
-              <View style={styles.heroScrim} />
-              <View style={styles.heroCopy}>
-                <Text style={styles.heroEyebrow}>Progress Photos</Text>
-                <Text style={styles.heroTitle}>Your progress photos</Text>
-                <Text style={styles.heroSubtitle}>
-                  Build a private, dated photo record. Add new photos or import older ones; Volyume scores the set only when it is clear enough to be useful.
-                </Text>
+          <View style={styles.heroTextHeader}>
+            <View style={styles.heroTitleRow}>
+              <View style={styles.heroIcon}>
+                <Ionicons name="images-outline" size={iconSize.md} color={colors.primary} />
+              </View>
+              <View style={styles.heroTitleCopy}>
+                <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
+                <Text style={styles.heroTextTitle}>Your private physique record</Text>
               </View>
             </View>
-          ) : (
-            <View style={styles.heroTextHeader}>
-              <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
-              <Text style={styles.heroTextTitle}>Your progress photos</Text>
-              <Text style={styles.heroTextSubtitle}>
-                Build a private, dated photo record. Add new photos or import older ones; Volyume scores the set only when it is clear enough to be useful.
-              </Text>
-            </View>
-          )}
+            <Text style={styles.heroTextSubtitle}>
+              Take or import front and back photos, keep them in date order, and let Volyume score the set only when the images are clear enough to compare fairly.
+            </Text>
+          </View>
 
           <View style={styles.studioPanel}>
-            <View style={styles.privacyNotice}>
-              <View style={styles.privacyNoticeIcon}>
-                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-              </View>
-              <Text style={styles.privacyNoticeText}>
-                Private on this phone. Photos and scores are not shown to partners or staff, and nothing leaves the device unless you share or export it.
-              </Text>
-            </View>
-
             <View style={styles.studioMetricsGrid}>
               {studioStats.map((stat) => (
                 <View key={stat.key} style={styles.studioMetricCard}>
@@ -1078,16 +1071,16 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.scoreGuideTitle}>What Volyume measures</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Volyume Physique Score is our own visual progress measure. It is designed to show whether your physique record is moving, not to guess an exact body-fat percentage.
+                Volyume Physique Score is our own visual progress measure. It is designed to show whether your physique record is moving, not to guess body fat.
               </Text>
               <View style={styles.scoreGuideRows}>
                 <View style={styles.scoreGuideRow}>
                   <Text style={styles.scoreGuideRowTitle}>A useful set</Text>
-                  <Text style={styles.scoreGuideRowBody}>Front and back relaxed photos are required. Side is optional and helps comparisons.</Text>
+                  <Text style={styles.scoreGuideRowBody}>Front and back relaxed photos are required. Side is optional and helps shape comparisons.</Text>
                 </View>
                 <View style={styles.scoreGuideRow}>
                   <Text style={styles.scoreGuideRowTitle}>A fair read</Text>
-                  <Text style={styles.scoreGuideRowBody}>You get a score, leanness band, confidence and progress signal only when the photos are reliable enough.</Text>
+                  <Text style={styles.scoreGuideRowBody}>You only get a score, band, confidence and progress signal when the photos are reliable enough.</Text>
                 </View>
               </View>
               <View style={styles.setupStandardGrid}>
@@ -1155,7 +1148,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         {!loading && photoSetAction ? (
           <Card style={styles.nextActionCard}>
             <View style={styles.nextActionCopy}>
-              <Text style={styles.nextActionEyebrow}>Finish this photo set</Text>
+              <Text style={styles.nextActionEyebrow}>Latest set needs another angle</Text>
               <Text style={styles.nextActionTitle}>{photoSetAction.title}</Text>
               <Text style={styles.nextActionBody}>{photoSetAction.body}</Text>
               {photoSetAction.reason ? (
@@ -1181,7 +1174,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               variant="secondary"
               fullWidth={false}
               onPress={() => onNextActionPress(photoSetAction)}
-              accessibilityLabel={`Finish this photo set: ${photoSetAction.cta}`}
+              accessibilityLabel={`Add missing photo: ${photoSetAction.cta}`}
             />
           </Card>
         ) : null}
@@ -1480,8 +1473,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                 </View>
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
-                    ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. You can finish that set, start a new one, or import older photos.`
-                    : 'Take a new set or import one you already have. Both end up in the same dated library and only get a Physique Score when the front and back photos are usable.'}
+                    ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it to that date, or start a new set if this is a different day.`
+                    : 'Take new photos or import ones you already have. Both routes save to the same private library and only get a Physique Score when the front and back photos are usable.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1610,54 +1603,48 @@ const styles = StyleSheet.create({
   studioHero: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     overflow: 'hidden',
   },
-  heroImageFrame: {
-    minHeight: 220,
-    backgroundColor: colors.surface2,
+  privacyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primaryBg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
   },
-  heroImage: {
-    width: '100%',
-    height: 220,
-    backgroundColor: colors.surface2,
-  },
-  heroScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.scrim,
-    opacity: 0.45,
-  },
-  heroCopy: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.lg,
-    gap: spacing.xs,
-  },
-  heroEyebrow: { ...type.caption, color: colors.appleBtnText, opacity: 0.82 },
-  heroTitle: { ...type.h2, color: colors.appleBtnText },
-  heroSubtitle: { ...type.bodySm, color: colors.appleBtnText, opacity: 0.88 },
   heroTextHeader: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  heroTextEyebrow: { ...type.caption, color: colors.primary },
-  heroTextTitle: { ...type.h3, color: colors.textPrimary },
-  heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  studioPanel: { padding: spacing.lg, gap: spacing.lg },
-  privacyNotice: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primaryBg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
   },
+  heroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    flexShrink: 0,
+  },
+  heroTitleCopy: { flex: 1, minWidth: 0 },
+  heroTextEyebrow: { ...type.caption, color: colors.primary },
+  heroTextTitle: { ...type.title, color: colors.textPrimary },
+  heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  studioPanel: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.lg },
   privacyNoticeIcon: {
     width: 30,
     height: 30,

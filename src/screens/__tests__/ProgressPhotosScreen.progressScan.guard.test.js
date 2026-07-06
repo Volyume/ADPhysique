@@ -96,8 +96,20 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
+    expect(SCREEN).toMatch(/Your private physique record/);
+    expect(SCREEN).toMatch(/Private on this device/);
+    expect(SCREEN).toMatch(/not visible to partners, staff or anyone else/);
     expect(SCREEN).not.toMatch(/heroPlaceholder/);
+    expect(SCREEN).not.toMatch(/heroImageFrame/);
+    expect(SCREEN).not.toMatch(/heroScrim/);
     expect(SCREEN).not.toMatch(/name="body-outline"/);
+  });
+
+  test('destructive scan copy says a set delete removes the full scored set', () => {
+    expect(SCREEN).toMatch(/Delete photo set\?/);
+    expect(SCREEN).toMatch(/This removes every photo in this set/);
+    expect(SCREEN).toMatch(/text: 'Delete set'/);
+    expect(SCREEN).toMatch(/deleteProgressScanSession\(userId, scan\.id, \{ deleteFiles: true \}\)/);
   });
 
   test('camera fallback keeps the active scan pose instead of discarding the draft', () => {

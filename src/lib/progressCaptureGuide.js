@@ -8,7 +8,7 @@ export const PROGRESS_STUDIO_SETUP_STEPS = Object.freeze([
   Object.freeze({
     key: 'frame',
     title: 'Frame',
-    copy: 'Head, feet, waist and shoulders visible. Leave a little space around your body.',
+    copy: 'Keep your head, feet, waist and shoulders visible, with a little space around you.',
     icon: 'scan-outline',
   }),
   Object.freeze({
@@ -20,7 +20,7 @@ export const PROGRESS_STUDIO_SETUP_STEPS = Object.freeze([
   Object.freeze({
     key: 'repeat',
     title: 'Repeat',
-    copy: 'Use the same room, distance, camera height and relaxed pose each time.',
+    copy: 'Use the same room, distance, camera height and relaxed stance each time.',
     icon: 'repeat-outline',
   }),
 ]);
@@ -92,7 +92,7 @@ export function getPoseCaptureGuidance(pose) {
 export function buildProgressStudioCapturePromptCopy() {
   return [
     'Add a photo set by taking new photos or importing existing ones. The aim is not a perfect pose. It is a clear record you can compare later.',
-    'Volyume Physique Score is our own visual progress measure. It reads front and back relaxed photos for a leanness band, progress signal and confidence. It is not an exact body-fat percentage.',
+    'Volyume Physique Score is our own visual progress measure. It reads clear front and back relaxed photos for a leanness band, progress signal and confidence. It is not a body-fat estimate.',
     'A side photo is optional, but it helps you compare shape and posture over time.',
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
     QUALITY_FIRST_CAPTURE_NOTE,
@@ -115,10 +115,10 @@ export function buildProgressStudioCaptureRoutes({
     routes.push({
       key: 'complete_latest',
       icon: 'checkmark-circle-outline',
-      eyebrow: 'Finish latest set',
+      eyebrow: 'Latest set',
       title: `Add the ${missingPoseLabel.toLowerCase()} photo`,
       body: `Your latest photo set is missing the ${missingPoseLabel.toLowerCase()} photo. Add it to keep that date together before starting another set.`,
-      bestFor: 'Completing the set you already started.',
+      bestFor: 'Keeping one date together.',
       steps: Object.freeze([
         `Take the ${missingPoseLabel.toLowerCase()} relaxed photo`,
         'Use the same room, distance and camera height',
@@ -234,7 +234,7 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Volyume Physique Score is our own visual progress measure. It can show a leanness band, progress signal, how confident the scan is, and why that confidence changed. It is not a body-fat percentage.',
+    'Volyume Physique Score is our own visual progress measure. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body-fat estimate.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',

@@ -259,9 +259,9 @@ describe('ProgressPhotosScreen timeline', () => {
   test('partial-set prompt guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Finish this photo set');
+    expect(text).toContain('Latest set needs another angle');
     expect(text).toContain('Add front photo');
-    await press(tree, 'Finish this photo set: Add Front photo');
+    await press(tree, 'Add missing photo: Add Front photo');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
     expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
   });
@@ -270,8 +270,8 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Private on this phone');
-    expect(text).toContain('not shown to partners');
+    expect(text).toContain('Private on this device');
+    expect(text).toContain('not visible to partners');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photo set');
     expect(text).toContain('Your first set can be new photos or older photos from your phone.');
@@ -429,7 +429,7 @@ describe('ProgressPhotosScreen compare entry', () => {
     const text = flattenText(tree.toJSON());
 
     expect(findPressable(tree, 'Compare two Physique Score entries')).toBeDefined();
-    expect(text).not.toContain('Finish this photo set');
+    expect(text).not.toContain('Latest set needs another angle');
     expect(text).not.toContain('Compare Physique Scores');
   });
 
@@ -498,7 +498,8 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Photos stay on this phone unless you share or export them.');
+    expect(text).toContain('Private on this device');
+    expect(text).toContain('not visible to partners, staff or anyone else');
     expect(text).not.toContain('Not synced, not shared');
   });
 });
