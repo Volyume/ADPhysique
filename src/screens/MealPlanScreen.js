@@ -479,32 +479,31 @@ export default function MealPlanScreen({ navigation }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Build meals to your targets</Text>
+          <Text style={styles.emptyTitle}>Build meals for your diary</Text>
           <Text style={styles.emptyBody}>
-            Choose today or the week ahead. Volyume uses your calories and macros, then lets you
-            swap anything before food is added to your diary.
+            Choose today or the week ahead. Nothing is added until you review the meals and press Add.
           </Text>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
               <Ionicons name="today-outline" size={18} color={colors.primary} />
-              <Text style={styles.planOptionTitle}>Plan my day</Text>
+              <Text style={styles.planOptionTitle}>Today</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              One day for today. Swap anything you do not fancy, then add the plan to today's diary.
+              A single day for the diary you are working on.
             </Text>
-            <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Build today's plan" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
               <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-              <Text style={styles.planOptionTitle}>Plan my week</Text>
+              <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Seven days plus a shopping list. Add the week in one go; days with food logged are left alone.
+              Seven days plus a shopping list. Logged days are left alone.
             </Text>
-            <Button title="Plan my week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Build weekly plan" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </View>
       ) : (
@@ -572,59 +571,6 @@ export default function MealPlanScreen({ navigation }) {
             </Text>
           ) : null}
           {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
-
-          <View style={styles.planActionPanel}>
-            <View style={styles.planActionHead}>
-              <View style={styles.planActionIcon}>
-                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
-              </View>
-              <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? "Today's plan" : 'Week plan'}</Text>
-                <Text style={styles.planActionSub}>
-                  {isDayPlan
-                    ? 'Add this day to your diary when you are happy with the meals.'
-                    : 'Add the week from today onwards. Logged days are left alone.'}
-                </Text>
-              </View>
-            </View>
-            {isDayPlan ? (
-              <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
-            ) : (
-              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
-            )}
-            <View style={styles.planQuickActions}>
-              <TouchableOpacity
-                style={styles.planQuickAction}
-                onPress={handleRegenerate}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Refresh meals"
-              >
-                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Refresh</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.planQuickAction}
-                onPress={() => setGrocerySheet(buildGroceryList(plan))}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Shopping list"
-              >
-                <Ionicons name="basket-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Shopping list</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.planQuickAction}
-                onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
-              >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
@@ -716,6 +662,59 @@ export default function MealPlanScreen({ navigation }) {
               </Text>
             </View>
           ) : null}
+
+          <View style={styles.planActionPanel}>
+            <View style={styles.planActionHead}>
+              <View style={styles.planActionIcon}>
+                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
+              </View>
+              <View style={styles.planActionCopy}>
+                <Text style={styles.planActionTitle}>{isDayPlan ? "Today's plan" : 'Week plan'}</Text>
+                <Text style={styles.planActionSub}>
+                  {isDayPlan
+                    ? 'Review the meals above, swap anything you want, then add this day to your diary.'
+                    : 'Review the week, swap anything you want, then add it from today onwards. Logged days are left alone.'}
+                </Text>
+              </View>
+            </View>
+            {isDayPlan ? (
+              <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
+            ) : (
+              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
+            )}
+            <View style={styles.planQuickActions}>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={handleRegenerate}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Refresh meals"
+              >
+                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>Refresh</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={() => setGrocerySheet(buildGroceryList(plan))}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Shopping list"
+              >
+                <Ionicons name="basket-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>Shopping list</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
+              >
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Preferences (Eddie's controls; Besa never needs to open it) */}
           <TouchableOpacity

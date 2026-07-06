@@ -83,5 +83,5 @@ export function formatDiaryDaySummary(model, energyUnit = 'kcal') {
     safe.dayTypeLabel ? { key: 'dayType', label: 'Day', value: safe.dayTypeLabel } : null,
   ].filter(Boolean);
 
-  return { title: 'Today at a glance', primary, secondary, chips };
+  return { title: 'Nutrition summary', primary, secondary, chips };
 }

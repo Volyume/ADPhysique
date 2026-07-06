@@ -710,6 +710,7 @@ export default function DiaryScreen({ navigation }) {
     if (Number.isFinite(y)) scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
   }, []);
   const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
+  const [diaryToolsOpen, setDiaryToolsOpen] = useState(false);
 
   // Hostile review (E10 #1): the write SURFACES render on their own state, so
   // one already open when the tier flips pro-to-free would stay live for a
@@ -724,6 +725,7 @@ export default function DiaryScreen({ navigation }) {
     setMovePickerVisible(false);
     setSaveMealItems(null);
     setCopyDays(null);
+    setDiaryToolsOpen(false);
     setBankSheetVisible(false);
   }, [readOnly]);
 
@@ -1002,16 +1004,13 @@ export default function DiaryScreen({ navigation }) {
 
   const openDiaryActions = useCallback(() => {
     if (readOnly) return;
-    appAlert(
-      'Diary options',
-      friendlyDate(selectedDate),
-      [
-        { text: 'Copy previous day', onPress: openCopyPicker },
-        { text: 'Insights and export', onPress: () => navigation.navigate('FoodInsights') },
-        { text: 'Cancel', style: 'cancel' },
-      ],
-    );
-  }, [navigation, openCopyPicker, readOnly, selectedDate]);
+    setDiaryToolsOpen(true);
+  }, [readOnly]);
+
+  const todayIso = isoDate(new Date());
+  const isViewingToday = selectedDate === todayIso;
+  const dateHeading = isViewingToday ? 'Today' : friendlyDate(selectedDate);
+  const dateSubCopy = isViewingToday ? friendlyDate(selectedDate) : selectedDateDetail;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1057,12 +1056,12 @@ export default function DiaryScreen({ navigation }) {
             hitSlop={12}
             style={styles.dateButton}
             accessibilityRole="button"
-            accessibilityLabel={`${friendlyDate(selectedDate)}. Jump to a date`}
+            accessibilityLabel={`${dateHeading}, ${dateSubCopy}. Jump to a date`}
           >
             <Ionicons name="calendar-outline" size={16} color={colors.primary} />
             <View style={styles.dateCopy}>
-              <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
-              <Text style={styles.dateSubLabel}>{selectedDateDetail}</Text>
+              <Text style={styles.dateLabel}>{dateHeading}</Text>
+              <Text style={styles.dateSubLabel}>{dateSubCopy}</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1074,7 +1073,7 @@ export default function DiaryScreen({ navigation }) {
           >
             <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          {selectedDate !== isoDate(new Date()) ? (
+          {!isViewingToday ? (
             <TouchableOpacity onPress={gotoToday} hitSlop={10} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
               <Text style={styles.todayPillText}>Today</Text>
             </TouchableOpacity>
@@ -1085,9 +1084,9 @@ export default function DiaryScreen({ navigation }) {
               hitSlop={12}
               style={styles.dayPagerMore}
               accessibilityRole="button"
-              accessibilityLabel="Open diary options"
+              accessibilityLabel="Open diary tools"
             >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
+              <Ionicons name="options-outline" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -1521,11 +1520,52 @@ export default function DiaryScreen({ navigation }) {
       </BottomSheet>
 
       <BottomSheet
+        visible={diaryToolsOpen && !readOnly}
+        onClose={() => setDiaryToolsOpen(false)}
+        accessibilityLabel="Diary tools"
+      >
+        <Text style={styles.moveTitle}>Diary tools</Text>
+        <Text style={styles.saveMealHint}>
+          Copy food from a logged day, or open your nutrition insights and export.
+        </Text>
+        <TouchableOpacity
+          style={styles.diaryToolRow}
+          onPress={() => { setDiaryToolsOpen(false); openCopyPicker(); }}
+          accessibilityRole="button"
+          accessibilityLabel="Copy food from a logged day"
+        >
+          <View style={styles.diaryToolIcon}>
+            <Ionicons name="copy-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.diaryToolCopy}>
+            <Text style={styles.diaryToolTitle}>Copy a logged day</Text>
+            <Text style={styles.diaryToolText}>Choose from your recent days with food logged.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.diaryToolRow}
+          onPress={() => { setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
+          accessibilityRole="button"
+          accessibilityLabel="Open nutrition insights and export"
+        >
+          <View style={styles.diaryToolIcon}>
+            <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.diaryToolCopy}>
+            <Text style={styles.diaryToolTitle}>Insights and export</Text>
+            <Text style={styles.diaryToolText}>Review trends and export your food data.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </BottomSheet>
+
+      <BottomSheet
         visible={copyDays != null && !readOnly}
         onClose={() => setCopyDays(null)}
-        accessibilityLabel="Copy previous day"
+        accessibilityLabel="Copy a logged day"
       >
-        <Text style={styles.moveTitle}>Copy a previous day</Text>
+        <Text style={styles.moveTitle}>Copy a logged day</Text>
         {copyDays && copyDays.length === 0 ? (
           <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
         ) : (
@@ -1695,6 +1735,26 @@ const styles = StyleSheet.create({
   },
   moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   copyRowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  diaryToolRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+  },
+  diaryToolIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+  },
+  diaryToolCopy: { flex: 1, minWidth: 0 },
+  diaryToolTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  diaryToolText: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
   saveMealHint: {
     color: colors.textMuted, fontSize: fontSize.sm,
     paddingHorizontal: spacing.sm, paddingBottom: spacing.md,
