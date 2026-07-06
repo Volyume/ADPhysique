@@ -225,9 +225,8 @@ describe('connected state: isolated pair cards', () => {
     await press(tree, 'Share a win');
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
-    expect(text).toContain('Choose a win to share');
-    expect(text).toContain('Choose one card. Your partner sees only that card.');
-    expect(text).toContain('Check what Sam will see before you send anything.');
+    expect(text).toContain('Share a win');
+    expect(text).toContain('Pick one card. You review exactly what Sam sees before sending.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
@@ -237,7 +236,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
     expect(text).toContain('Not sent until you choose one partner and approve this exact card.');
     expect(text).not.toContain('What stays off limits');
-    expect(text).toContain('Workout history, food diary, coach notes, body metrics and photos stay closed.');
+    expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
     expect(text).toContain('Bench press: New rep best.');
@@ -247,7 +246,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Personal record');
     expect(text).toContain('Block milestone');
     expect(text).toContain('Progress card');
-    expect(text).not.toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+    expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
   });
 
   test('sends the selected win card to the current partner only', async () => {
@@ -423,14 +422,14 @@ describe('cheer affordance', () => {
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
   });
 
-  test('support card owns the cheer action once planned sessions are set', async () => {
+  test('weekly sessions do not create a second cheer surface', async () => {
     const hook = base({ pairs: [pair({ myAim: 4, cheerEnabled: true })] });
     mockHook.value = hook;
     const tree = await mount();
-    expect(allText(tree)).toContain('Choose a cheer');
-    expect(findPress(tree, 'Send a cheer')).toHaveLength(0);
+    expect(allText(tree)).not.toContain('Choose a cheer');
+    expect(allText(tree).filter((text) => text === 'Send a cheer')).toHaveLength(1);
 
-    await press(tree, 'Choose a cheer for today');
+    await press(tree, 'Send a cheer');
     expect(allText(tree)).toContain('Here with you.');
   });
 
@@ -697,8 +696,8 @@ describe('manage sheet: block confirm', () => {
 
     await press(tree, 'Manage partnership with Sam');
 
-    expect(allText(tree)).toContain('Optional: share block name');
-    expect(findPress(tree, 'Optional: share block name').length).toBeGreaterThan(0);
+    expect(allText(tree)).toContain('Share a block name');
+    expect(findPress(tree, 'Share a block name').length).toBeGreaterThan(0);
   });
 
   test('block wires the real block + unpair primitives with the exact copy', async () => {

@@ -44,9 +44,7 @@ import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
 import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
-import { buildPartnerSupportPlan } from '../lib/partners/supportPlan';
 import {
-  SHARE_WIN_CARD_RULES,
   SHARE_WIN_POLICY,
   buildShareWinExamplePreviews,
   buildShareWinReviewReceipt,
@@ -286,39 +284,6 @@ function PartnerSupportSnapshot({ pair, name }) {
   );
 }
 
-function PartnerSupportPlan({ pair, name, onSetAim, onCheer, onOpenShareWins }) {
-  const plan = buildPartnerSupportPlan(pair, name);
-  if (plan.primaryAction.key === 'share_wins' || plan.primaryAction.key === 'set_aim') return null;
-  const onPrimary = () => {
-    if (plan.primaryAction.key === 'set_aim') onSetAim(pair);
-    else if (plan.primaryAction.key === 'cheer') onCheer(pair);
-    else onOpenShareWins(pair);
-  };
-  return (
-    <View style={styles.partnerWeekPanel}>
-      <View style={styles.supportPlanHead}>
-        <Ionicons name="sparkles-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.supportPlanTitle}>{plan.title}</Text>
-      </View>
-      <Text style={styles.supportPlanHeadline}>{plan.headline}</Text>
-      <View style={styles.supportPlanPrivacyRow}>
-        <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.supportPlanPrivacy}>{plan.privacyLine}</Text>
-      </View>
-      <TouchableOpacity
-        onPress={onPrimary}
-        style={styles.supportPlanButton}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel={plan.primaryAction.accessibilityLabel}
-      >
-        <Text style={styles.supportPlanButtonText}>{plan.primaryAction.label}</Text>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 function PartnerShareWinsCard({ onOpen, partnerName }) {
   const name = partnerName || 'your partner';
   return (
@@ -451,9 +416,6 @@ function PairCard({
   const block = pair.sharedBlock;
   const hasChip = block && (block.status === 'active' || block.status === 'proposed');
   const showReconnect = pair.sharedStreak?.status === 'archived' && !reconnectDismissed;
-  const myAimSet = Math.round(Number(pair.myAim) || 0) > 0;
-  const supportPlanOwnsCheer = !moment && myAimSet && pair.cheerEnabled;
-  const supportPlanPair = moment ? { ...pair, cheerEnabled: false } : pair;
 
   return (
     <Card style={styles.pairCard} tone="primary">
@@ -509,14 +471,6 @@ function PairCard({
         <ReconnectCard onReconnect={() => onReconnect(pair)} onDismiss={() => onDismissReconnect(pair)} />
       ) : null}
 
-      <PartnerSupportPlan
-        pair={supportPlanPair}
-        name={name}
-        onSetAim={onSetAim}
-        onCheer={onCheer}
-        onOpenShareWins={onOpenShareWins}
-      />
-
       <PartnerSupportSnapshot pair={pair} name={name} />
 
       <View style={styles.partnerShareSection}>
@@ -542,7 +496,7 @@ function PairCard({
       {/* The moment IS that day's cheer surface (it carries its own pill), so
           the standing cheer row is hidden while a moment shows; it returns as
           the pair's cheer affordance when no moment is visible. */}
-      {moment || supportPlanOwnsCheer ? null : (
+      {moment ? null : (
         <CheerPill enabled={pair.cheerEnabled} onPress={() => onCheer(pair)} style={styles.cheerRowAlign} />
       )}
     </Card>
@@ -1175,7 +1129,7 @@ export default function PartnerScreen({ route }) {
           <View style={styles.sheetBody}>
             <SheetRow
               icon="barbell-outline"
-              label="Optional: share block name"
+              label="Share a block name"
               onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
             />
             <SheetRow
@@ -1329,12 +1283,11 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   }
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Choose a win to share</Text>
-      <Text style={styles.blockPitch}>{SHARE_WIN_POLICY.summary}</Text>
+      <Text style={styles.sheetHeading}>Share a win</Text>
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Check what {partnerName} will see before you send anything.
+          Pick one card. You review exactly what {partnerName} sees before sending.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1352,7 +1305,6 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
               <Text style={[styles.shareWinChoiceTitle, active && styles.shareWinChoiceTitleActive]}>
                 {preview.draft.title}
               </Text>
-              <Text style={styles.shareWinChoiceSummary} numberOfLines={2}>{preview.draft.summary}</Text>
             </TouchableOpacity>
           );
         })}
@@ -1388,7 +1340,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       ) : null}
       <View style={styles.shareWinRules}>
         <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.shareWinRuleText}>{SHARE_WIN_CARD_RULES[2]}</Text>
+        <Text style={styles.shareWinRuleText}>{SHARE_WIN_POLICY.excluded}</Text>
       </View>
     </View>
   );
@@ -1596,9 +1548,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block name only</Text>
+      <Text style={styles.sheetHeading}>Share a block name</Text>
       <Text style={styles.blockPitch}>
-        Optional. Most users can ignore this. It shares the block name only, and does not sync workouts or change anything the Coach has set.
+        Only useful if you and {name} are deliberately running the same block. It shares the name only. Workouts and Coach changes stay private.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1709,35 +1661,6 @@ const styles = StyleSheet.create({
   },
   intentionSetLargeText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
-
-  partnerWeekPanel: {
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
-    padding: spacing.md,
-  },
-  supportPlanHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  supportPlanTitle: { ...type.label, color: colors.textPrimary },
-  supportPlanHeadline: { ...type.body, color: colors.textPrimary, lineHeight: 22 },
-  supportPlanPrivacyRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: spacing.sm,
-  },
-  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
-  supportPlanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 44,
-  },
-  supportPlanButtonText: { ...type.label, color: colors.primary },
 
   // Active-pair trust snapshot
   supportSnapshot: {
@@ -1875,8 +1798,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '48%',
     minWidth: 132,
-    minHeight: 78,
-    gap: spacing.xxs,
+    minHeight: 52,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -1889,7 +1811,6 @@ const styles = StyleSheet.create({
   },
   shareWinChoiceTitle: { ...type.label, color: colors.textPrimary },
   shareWinChoiceTitleActive: { color: colors.primary },
-  shareWinChoiceSummary: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinPreviewCard: {
     gap: spacing.xs,
     borderWidth: 1,
