@@ -91,6 +91,16 @@ async function optionalPartnerRead(read, fallback) {
   }
 }
 
+async function readPartnershipsWithCloudRepair(userId) {
+  try {
+    return await getPartnershipsLocal(userId);
+  } catch (e) {
+    const pulled = await pullPartnerMirrorNow(userId);
+    if (!pulled) throw e;
+    return getPartnershipsLocal(userId);
+  }
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -125,8 +135,23 @@ async function mirrorAcceptedPartnershipLocally(userId, data = {}) {
     accepted_at: now,
     updated_at: now,
   } : null);
-  if (!row?.id) return;
-  try { await upsertPartnershipFromCloud(row); } catch (_) { /* pull heals */ }
+  if (!row?.id) return false;
+  try {
+    await upsertPartnershipFromCloud(row);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function isAcceptedPartnershipVisible(userId, data = {}) {
+  const expectedId = data?.partnership?.id || data?.partnershipId || null;
+  try {
+    const rows = await getPartnershipsLocal(userId);
+    return rows.some((p) => p.status === 'active' && (!expectedId || p.id === expectedId));
+  } catch (_) {
+    return false;
+  }
 }
 
 // Enrich one active partnership with its OWN derived view: both sides' week
@@ -208,7 +233,7 @@ export default function usePartners(userId, tier) {
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
     setState(prev => ({ ...prev, loading: true, error: false, reload: load }));
     try {
-      let partnerships = await getPartnershipsLocal(userId);
+      let partnerships = await readPartnershipsWithCloudRepair(userId);
       if (!isCurrentRequest()) return;
       let activeCount = await getActivePartnerCount(userId);
       if (!isCurrentRequest()) return;
@@ -346,8 +371,13 @@ export default function usePartners(userId, tier) {
     if (r.ok) {
       clearCachedInvite();
       await clearPendingPartnerCode();
-      await mirrorAcceptedPartnershipLocally(userId, r.data);
+      const mirrored = await mirrorAcceptedPartnershipLocally(userId, r.data);
       await pullPartnerMirrorNow(userId);
+      const visible = mirrored || await isAcceptedPartnershipVisible(userId, r.data);
+      if (!visible) {
+        await load();
+        return { ok: false, error: 'local_mirror_pending' };
+      }
       await load();
     }
     return r;

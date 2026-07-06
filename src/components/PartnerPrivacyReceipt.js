@@ -23,17 +23,17 @@ import {
 // only with a version bump.
 const CROSSES = [
   'Your first name',
-  'Whether you trained this week, against your own plan',
-  'Your shared streak, counted in weeks',
-  'A resting week, shown simply as resting',
-  'One cheer a day, if you send it',
-  'The name of a block you choose to share',
+  'Whether you trained this week',
+  'Your shared streak in weeks',
+  'Rest weeks shown as resting',
+  'One fixed cheer a day',
+  'A block name you choose to share',
 ];
 const NEVER = [
-  'Your weights, sets or reps',
-  'Your body weight or measurements',
-  'Your food or diary',
-  'Anything you tell the coach',
+  'Your sets, reps or loads',
+  'Your body metrics or photos',
+  'Your food diary',
+  'Coach notes or check-ins',
   'Your location',
 ];
 
@@ -49,7 +49,7 @@ export default function PartnerPrivacyReceipt() {
 
   const body = (
     <>
-      <Text style={styles.heading}>What crosses, and what never does</Text>
+      <Text style={styles.heading}>What your partner can see</Text>
 
       <View style={[styles.columns, stack && styles.columnsStack]}>
         <View style={styles.col}>
@@ -78,7 +78,7 @@ export default function PartnerPrivacyReceipt() {
       </View>
 
       <Text style={styles.footer}>
-        Either of you can end this at any time. Everything shared is deleted.
+        Either of you can end this at any time. Shared partner data is deleted.
       </Text>
     </>
   );

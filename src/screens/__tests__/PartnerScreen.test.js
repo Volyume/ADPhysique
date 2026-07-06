@@ -141,8 +141,8 @@ describe('load error state', () => {
     mockHook.value = base({ error: true, reload });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain("Couldn't refresh partners");
-    expect(text).toContain('We could not read your partner connection right now.');
+    expect(text).toContain("Couldn't load Partners");
+    expect(text).toContain('We could not load your partner details right now.');
     expect(text).not.toContain('Train with a partner');
     await press(tree, 'Try again');
     expect(reload).toHaveBeenCalledTimes(1);
@@ -185,8 +185,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('What Sam can see');
     expect(text).toContain('Shared');
     expect(text).toContain('This week\'s training status');
-    expect(text).toContain('This week\'s session target');
-    expect(text).toContain('One fixed cheer a day');
+    expect(text).toContain('Weekly sessions number');
+    expect(text).toContain('One cheer a day');
     expect(text).toContain('Chosen wins you approve');
     expect(text).toContain('Shared block name');
     expect(text).toContain('Private');
@@ -204,12 +204,12 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     const text = allText(tree).join(' ');
     expect(text).toContain('This week with Sam');
-    expect(text).toContain('Set how many sessions you plan to train this week. Sam sees only that number, not your plan.');
-    expect(text).toContain('Nothing else is shared unless you choose a card.');
+    expect(text).toContain('Choose your weekly sessions. Sam sees the number only, never your plan.');
+    expect(text).toContain('Only this weekly number, training status, cheers and chosen cards are shared.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('You have logged 2 of 4.');
     await press(tree, "Set this week's sessions");
-    expect(allText(tree)).toContain("This week's sessions");
+    expect(allText(tree)).toContain('Weekly sessions');
     expect(findPress(tree, 'Decrease sessions').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Increase sessions').length).toBeGreaterThan(0);
   });
@@ -225,8 +225,8 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Choose a win to share');
-    expect(text).toContain('Nothing is shared automatically.');
-    expect(text).toContain('Choose one card, check exactly what Sam will see, then send it.');
+    expect(text).toContain('Choose one card. Your partner sees only that card.');
+    expect(text).toContain('Check what Sam will see before you send anything.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
@@ -235,10 +235,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Stays private');
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
     expect(text).toContain('Not sent until you choose one partner and approve this exact card.');
-    expect(text).toContain('What stays off limits');
-    expect(text).toContain('Ask every time before a card is sent.');
-    expect(text).toContain('One card, one moment, one partner.');
-    expect(text).toContain('The card never opens workout history, food diary, coach notes, body metrics or photos.');
+    expect(text).not.toContain('What stays off limits');
+    expect(text).toContain('Workout history, food diary, coach notes, body metrics and photos stay closed.');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
     expect(text).toContain('Bench press: New rep best.');
@@ -540,27 +538,27 @@ describe('empty state', () => {
   test('renders the privacy receipt with the exact copy of both columns', async () => {
     mockHook.value = base({ pairs: [] });
     const text = allText(await mount());
-    expect(text).toContain('What crosses, and what never does');
+    expect(text).toContain('What your partner can see');
     expect(text).toContain('THEY WILL SEE');
     expect(text).toContain('THEY NEVER SEE');
     // Left column (crosses), first line is the newly added first-name line.
     for (const line of [
       'Your first name',
-      'Whether you trained this week, against your own plan',
-      'Your shared streak, counted in weeks',
-      'A resting week, shown simply as resting',
-      'One cheer a day, if you send it',
-      'The name of a block you choose to share',
+      'Whether you trained this week',
+      'Your shared streak in weeks',
+      'Rest weeks shown as resting',
+      'One fixed cheer a day',
+      'A block name you choose to share',
     ]) expect(text).toContain(line);
     // Right column (never).
     for (const line of [
-      'Your weights, sets or reps',
-      'Your body weight or measurements',
-      'Your food or diary',
-      'Anything you tell the coach',
+      'Your sets, reps or loads',
+      'Your body metrics or photos',
+      'Your food diary',
+      'Coach notes or check-ins',
       'Your location',
     ]) expect(text).toContain(line);
-    expect(text).toContain('Either of you can end this at any time. Everything shared is deleted.');
+    expect(text).toContain('Either of you can end this at any time. Shared partner data is deleted.');
   });
 });
 
@@ -641,6 +639,29 @@ describe('invite journey', () => {
     await act(async () => { field.props.onChangeText('https://volyume.app/partner/abcd1234?ref=sms'); });
     await press(tree, 'Join with code');
     expect(hook.redeem).toHaveBeenCalledWith('ABCD1234');
+  });
+
+  test('manual code entry warns when the invite was accepted but the device mirror is still refreshing', async () => {
+    const refresh = jest.fn(async () => ({ ok: true }));
+    const hook = base({
+      pairs: [],
+      pendingInvite: null,
+      refresh,
+      redeem: jest.fn(async () => ({ ok: false, error: 'local_mirror_pending' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'I have a code');
+    const field = tree.root.findAll((n) => n.props.accessibilityLabel === 'Invite code')[0];
+    await act(async () => { field.props.onChangeText('abcd1234'); });
+    await press(tree, 'Join with code');
+    expect(hook.redeem).toHaveBeenCalledWith('ABCD1234');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Invite accepted. Volyume is refreshing this device now.',
+      { variant: 'warning' },
+    );
+    expect(mockToastShow).not.toHaveBeenCalledWith('Partner connected', expect.anything());
   });
 
   test('deep-linked invite redemption waits until partner capacity has loaded', async () => {

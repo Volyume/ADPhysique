@@ -31,7 +31,10 @@ jest.mock('../../lib/database', () => ({
 
 jest.mock('../../lib/partners/service', () => ({
   createPartnerInvite: jest.fn(),
-  redeemPartnerInvite: jest.fn(async () => ({ ok: true })),
+  redeemPartnerInvite: jest.fn(async () => ({
+    ok: true,
+    data: { partnershipId: 'p-default', partnerFirstName: 'Sam' },
+  })),
   sendCheer: jest.fn(),
   unpairPartner: jest.fn(),
   blockPartner: jest.fn(),
@@ -137,6 +140,19 @@ describe('usePartners redeem enforces the partner cap', () => {
       status: 'active',
       partner_first_name: 'Sam',
     }));
+  });
+
+  test('successful cloud redeem reports mirror pending if this device cannot show the pair yet', async () => {
+    db.getActivePartnerCount.mockResolvedValue(0);
+    db.upsertPartnershipFromCloud.mockRejectedValueOnce(new Error('local mirror write failed'));
+    service.redeemPartnerInvite.mockResolvedValueOnce({
+      ok: true,
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+    });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.redeem('CODE1234'); });
+    expect(r).toEqual({ ok: false, error: 'local_mirror_pending' });
   });
 
   test('creating an invite seeds the pending local row before background sync', async () => {

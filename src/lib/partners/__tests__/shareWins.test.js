@@ -34,8 +34,8 @@ describe('partner shareable wins policy', () => {
 
   test('keeps partner wins consent-gated and narrow', () => {
     expect(SHARE_WIN_POLICY.defaultState).toBe('Ask every time');
-    expect(SHARE_WIN_POLICY.summary).toContain('Nothing is shared automatically');
-    expect(SHARE_WIN_POLICY.summary).toContain('only sees the win card you choose to send');
+    expect(SHARE_WIN_POLICY.summary).toContain('Choose one card');
+    expect(SHARE_WIN_POLICY.summary).toContain('sees only that card');
     expect(SHARE_WIN_POLICY.excluded).toContain('No passive feed');
     expect(SHARE_WIN_POLICY.excluded).toContain('workout history browsing');
     expect(SHARE_WIN_POLICY.excluded).toContain('food diary');
@@ -43,6 +43,7 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_POLICY.excluded).toContain('body metrics');
     expect(SHARE_WIN_POLICY.excluded).toContain('automatic photo sharing');
     expect(SHARE_WIN_CARD_RULES).toContain('Ask every time before a card is sent.');
+    expect(SHARE_WIN_CARD_RULES).toContain('Workout history, food diary, coach notes, body metrics and photos stay closed.');
     expect(SHARE_WIN_CARD_RULES).toContain('A sent card can be deleted by the sender.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact card before sending.');
     expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one card only. No background feed is created.');
