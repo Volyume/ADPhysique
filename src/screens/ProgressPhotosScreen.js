@@ -46,6 +46,7 @@ import {
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
+  buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
   buildPhysiqueStudioNextAction,
   enrichProgressPhotos,
@@ -398,7 +399,11 @@ export default function ProgressPhotosScreen({ navigation }) {
       const pool = seedPose ? enriched.filter((p) => p.pose === seedPose) : enriched;
       ref = [...(pool.length ? pool : enriched)].sort((a, b) => b.takenAt - a.takenAt)[0] || null;
     }
-    setCaptureReference(ref ? { uri: ref.uri } : null);
+    setCaptureReference(ref ? {
+      uri: ref.uri,
+      label: formatProgressPhotoDay(ref.takenAt),
+      poseLabel: ref.pose ? POSE_LABEL[ref.pose] : 'Photo',
+    } : null);
     setCapturePose(seedPose ?? null);
     setCaptureOpen(true);
   }
@@ -665,7 +670,11 @@ export default function ProgressPhotosScreen({ navigation }) {
   function openCheckInPoseCapture(item, pose) {
     if (!canWrite() || !item?.cover?.uri || !pose) return;
     setScanFlow(null);
-    setCaptureReference({ uri: item.cover.uri });
+    setCaptureReference({
+      uri: item.cover.uri,
+      label: item.label || formatProgressPhotoDay(item.takenAt),
+      poseLabel: item.cover.pose ? POSE_LABEL[item.cover.pose] : 'Current Check-In',
+    });
     setCapturePose(pose);
     setCaptureOpen(true);
   }
@@ -764,6 +773,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
+    const completeness = buildCheckInCompletenessModel(item);
     const missingPoses = CORE_POSES.filter((pose) => !item.poses.includes(pose));
     const nextMissingPose = missingPoses[0] || null;
     const poseSummary = missingPoses.length === 0
@@ -818,6 +828,18 @@ export default function ProgressPhotosScreen({ navigation }) {
                 {item.setupQuality?.label || 'Setup saved'}
               </Text>
             </View>
+          </View>
+          <View style={styles.checkInCompleteness}>
+            <View style={styles.checkInCompletenessTop}>
+              <Text style={styles.checkInCompletenessLabel}>{completeness.label}</Text>
+              <Text style={styles.checkInCompletenessPct}>{completeness.percent}%</Text>
+            </View>
+            <View style={styles.checkInProgressTrack} accessibilityElementsHidden>
+              <View style={[styles.checkInProgressFill, { width: `${completeness.percent}%` }]} />
+            </View>
+            <Text style={styles.checkInCompletenessDetail} numberOfLines={2}>
+              {completeness.detail}
+            </Text>
           </View>
           <View style={styles.checkInPoseRow}>
             {CORE_POSES.map((pose) => {
@@ -989,6 +1011,22 @@ export default function ProgressPhotosScreen({ navigation }) {
             <Text style={styles.nextActionEyebrow}>Next best action</Text>
             <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
             <Text style={styles.nextActionBody}>{nextAction.body}</Text>
+            {nextAction.reason ? (
+              <View style={styles.nextActionReason}>
+                <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.nextActionReasonText}>{nextAction.reason}</Text>
+              </View>
+            ) : null}
+            {nextAction.detailItems?.length ? (
+              <View style={styles.nextActionDetails}>
+                {nextAction.detailItems.map((detail) => (
+                  <View key={detail} style={styles.nextActionDetailRow}>
+                    <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
+                    <Text style={styles.nextActionDetailText}>{detail}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
           <Button
             title={nextAction.cta}
@@ -1361,6 +1399,18 @@ const styles = StyleSheet.create({
   },
   nextActionTitle: { ...type.label, color: colors.textPrimary },
   nextActionBody: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
+  nextActionReason: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+  },
+  nextActionReasonText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  nextActionDetails: { gap: spacing.xs },
+  nextActionDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
+  nextActionDetailText: { ...type.caption, color: colors.textMuted, lineHeight: 18, flex: 1 },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
@@ -1454,6 +1504,27 @@ const styles = StyleSheet.create({
   setupQualityPillStrong: { backgroundColor: colors.primaryBg },
   setupQualityText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   setupQualityTextStrong: { color: colors.primary },
+  checkInCompleteness: { gap: spacing.xs },
+  checkInCompletenessTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  checkInCompletenessLabel: { ...type.caption, color: colors.textPrimary, flexShrink: 1 },
+  checkInCompletenessPct: { ...type.caption, color: colors.primary, fontVariant: ['tabular-nums'] },
+  checkInProgressTrack: {
+    height: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    overflow: 'hidden',
+  },
+  checkInProgressFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+  },
+  checkInCompletenessDetail: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
     borderWidth: 1,
