@@ -11,7 +11,9 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/not body fat/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
-    expect(source).toMatch(/<StatTile label=\{focusTile\.label\} value=\{focusTile\.value\} sub=\{focusTile\.sub\} \/>/);
+    expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{1\}>\{focusTile\.label\}: \{focusTile\.value\}<\/Text>/);
+    expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
+    expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
   });
 });

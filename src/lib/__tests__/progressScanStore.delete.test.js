@@ -219,7 +219,7 @@ describe('finishProgressScanSession estimator persistence', () => {
       physiqueScoreVersion: 'volyume_physique_scan_score_v1',
       physiqueAssessment: {
         analysisType: 'visual_physique_score',
-        visualLeannessScore: 67,
+        visualLeannessScore: 68,
         leannessBandLabel: 'Lean',
         scanConfidenceTier: 'moderate',
       },

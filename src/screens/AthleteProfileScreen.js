@@ -91,6 +91,35 @@ function currentFocusTile(profile = {}) {
   };
 }
 
+function profileStatusTile(freshness) {
+  const states = [
+    freshness?.bodyMetrics?.state,
+    freshness?.progressScan?.state,
+    freshness?.lifts?.state,
+  ];
+  const attention = states.filter((state) => state === 'missing' || state === 'due').length;
+  const soon = states.filter((state) => state === 'soon').length;
+  if (attention > 0) {
+    return {
+      label: 'Profile status',
+      value: 'Needs data',
+      sub: `${attention} item${attention === 1 ? '' : 's'} need${attention === 1 ? 's' : ''} an update`,
+    };
+  }
+  if (soon > 0) {
+    return {
+      label: 'Profile status',
+      value: 'Update soon',
+      sub: `${soon} item${soon === 1 ? '' : 's'} coming due`,
+    };
+  }
+  return {
+    label: 'Profile status',
+    value: 'Ready',
+    sub: 'Weight, photos and lifts are current',
+  };
+}
+
 function Row({ icon, label, sub, onPress, pro, status = null }) {
   const statusLabel = profileRowStatusLabel(status);
   const accessibility = buildProfileRowAccessibility({ label, sub, status, pro });
@@ -149,6 +178,7 @@ export default function AthleteProfileScreen({ navigation }) {
     || 'Athlete';
   const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
+  const avatarPreset = userProfile?.avatarPreset || null;
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -201,7 +231,7 @@ export default function AthleteProfileScreen({ navigation }) {
       });
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const uri = await saveAvatarPhoto(user.id, result.assets[0].uri, avatarUri);
-      await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: uri });
+      await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: uri, avatarPreset: null });
       toast.show('Profile photo updated', { variant: 'success' });
     } catch (e) {
       logError('AthleteProfile.pickAvatar', e, { userId: user?.id });
@@ -209,31 +239,45 @@ export default function AthleteProfileScreen({ navigation }) {
     }
   }
 
+  async function applyGeneratedAvatar() {
+    if (!user?.id) return;
+    try {
+      if (avatarUri) await deleteAvatarPhoto(avatarUri);
+      await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: 'volyume_lift' });
+      toast.show('Volyume avatar set', { variant: 'success' });
+    } catch (e) {
+      logError('AthleteProfile.applyGeneratedAvatar', e, { userId: user?.id });
+      toast.show("Couldn't update avatar", { variant: 'error' });
+    }
+  }
+
   function removeAvatar() {
-    if (!avatarUri || !user?.id) return;
+    if ((!avatarUri && !avatarPreset) || !user?.id) return;
     appAlert('Remove profile photo?', 'This only removes the local profile photo on this device.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          await deleteAvatarPhoto(avatarUri);
-          await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null });
+          if (avatarUri) await deleteAvatarPhoto(avatarUri);
+          await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: null });
         },
       },
     ]);
   }
 
   function onAvatarPress() {
-    if (!avatarUri) {
-      pickAvatar();
-      return;
+    const actions = [
+      { text: avatarUri ? 'Change photo' : 'Choose photo', onPress: pickAvatar },
+      { text: 'Use Volyume avatar', onPress: applyGeneratedAvatar },
+    ];
+    if (avatarUri || avatarPreset) {
+      actions.push({ text: 'Remove profile photo', style: 'destructive', onPress: removeAvatar });
     }
-    appAlert('Profile photo', 'Choose a new photo or remove the one saved on this device.', [
-      { text: 'Change photo', onPress: pickAvatar },
-      { text: 'Remove photo', style: 'destructive', onPress: removeAvatar },
+    actions.push(
       { text: 'Cancel', style: 'cancel' },
-    ]);
+    );
+    appAlert('Profile photo', 'Choose a photo or use a simple Volyume avatar.', actions);
   }
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
@@ -258,6 +302,7 @@ export default function AthleteProfileScreen({ navigation }) {
     latestWorkoutAt: summary.latestWorkoutAt,
     keyLiftCount: summary.keyLifts.length,
   });
+  const statusTile = profileStatusTile(freshness);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -268,10 +313,15 @@ export default function AthleteProfileScreen({ navigation }) {
             style={styles.avatar}
             onPress={onAvatarPress}
             accessibilityRole="button"
-            accessibilityLabel={avatarUri ? 'Profile photo. Tap to change or remove.' : 'Add profile photo'}
+            accessibilityLabel={avatarUri || avatarPreset ? 'Profile photo. Tap to change or remove.' : 'Add profile photo'}
           >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : avatarPreset ? (
+              <>
+                <Ionicons name="barbell-outline" size={24} color={colors.primary} />
+                <Text style={styles.avatarPresetText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
+              </>
             ) : (
               <>
                 <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
@@ -293,6 +343,7 @@ export default function AthleteProfileScreen({ navigation }) {
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
+            <Text style={styles.heroFocus} numberOfLines={1}>{focusTile.label}: {focusTile.value}</Text>
           </View>
         </Card>
 
@@ -300,7 +351,7 @@ export default function AthleteProfileScreen({ navigation }) {
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
           <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and core lifts'} />
-          <StatTile label={focusTile.label} value={focusTile.value} sub={focusTile.sub} />
+          <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
         </View>
 
         <View style={styles.section}>
@@ -403,6 +454,12 @@ const styles = StyleSheet.create({
   },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.primary },
+  avatarPresetText: {
+    ...type.caption,
+    color: colors.primary,
+    fontWeight: fontWeight.black,
+    marginTop: spacing.xxs,
+  },
   avatarEditBadge: {
     position: 'absolute',
     right: 4,
@@ -420,6 +477,7 @@ const styles = StyleSheet.create({
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
   heroSub: { ...type.num('caption'), color: colors.textSecondary },
+  heroFocus: { ...type.captionTight, color: colors.textMuted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statTile: {
     width: '48%',
