@@ -9,6 +9,8 @@ import {
   explainMeasuredScanDelta,
   estimateBodyFatFromScanAssets,
   measuredSignalsSummaryFromAssets,
+  scanComparability,
+  scanSetupStability,
   uncertaintyMarginPctPoints,
 } from '../progressScanAnalysis';
 
@@ -43,6 +45,35 @@ const modelBackedAssets = [
   { pose: 'front', qualityScore: 0.89, lightingScore: 0.92, blurScore: 0.86, framingScore: 0.88, segmentationConfidence: 0.9, signals: frontSignal },
   { pose: 'back', qualityScore: 0.9, lightingScore: 0.92, blurScore: 0.86, framingScore: 0.88, segmentationConfidence: 0.9, signals: backSignal },
 ];
+
+function comparableScan({ id = 'scan', score = 66, confidence = 'moderate', side = false, lighting = 0.9, framing = 0.88, segmentation = 0.9, tilt = 0, centerX = 0.5, centerY = 0.5, height = 0.78, width = 0.36 } = {}) {
+  const poses = side ? ['front', 'back', 'side'] : ['front', 'back'];
+  return {
+    id,
+    analysisStatus: 'complete',
+    qualityLabel: 'good',
+    signals: {
+      physiqueAssessment: {
+        visualLeannessScore: score,
+        scanConfidenceTier: confidence,
+      },
+      assets: poses.map((pose) => ({
+        pose,
+        quality: {
+          lightingScore: lighting,
+          framingScore: framing,
+          segmentationConfidence: segmentation,
+          cameraTiltDegrees: tilt,
+        },
+        bodyBox: { centerX, centerY, height, width },
+      })),
+      estimatorInputs: {
+        waistToHeight: score >= 65 ? 0.18 : 0.22,
+        waistToShoulder: score >= 65 ? 0.61 : 0.68,
+      },
+    },
+  };
+}
 
 describe('Progress Scan uncertainty and abstention', () => {
   test('bias and lower quality widen any internal uncertainty range instead of hiding uncertainty', () => {
@@ -338,6 +369,39 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.summary).toMatch(/visual physique signal/i);
     expect(out.summary).not.toMatch(/body-fat ranges|midpoint|provisional photo-scan estimate/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
+  });
+
+  test('scan comparability refuses side-pose and setup changes before reporting progress', () => {
+    const previous = comparableScan({ id: 'old', side: true });
+    const withoutSide = comparableScan({ id: 'new', side: false });
+    expect(scanComparability(withoutSide, previous)).toMatchObject({
+      comparable: false,
+      reason: 'The photo setup changed too much for a fair comparison.',
+    });
+    expect(scanSetupStability(withoutSide, previous).issues).toContain('side_pose_set_changed');
+
+    const movedCamera = comparableScan({ id: 'new', side: true, height: 0.62, centerY: 0.32, tilt: 6 });
+    const setup = scanSetupStability(movedCamera, previous);
+    expect(setup.stable).toBe(false);
+    expect(setup.issues).toEqual(expect.arrayContaining([
+      'front_camera_distance_changed',
+      'front_camera_height_changed',
+      'front_camera_angle_changed',
+    ]));
+    expect(scanComparability(movedCamera, previous).comparable).toBe(false);
+  });
+
+  test('comparison progress signal is capped by the weaker scan confidence', () => {
+    const previous = comparableScan({ id: 'old', score: 60, confidence: 'low' });
+    const current = comparableScan({ id: 'new', score: 72, confidence: 'high' });
+
+    const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
+    expect(out.comparisonStatus).toBe('comparable');
+    expect(out.pairConfidenceTier).toBe('low');
+    expect(out.progressDeltaScore).toBe(12);
+    expect(out.progressSignal).toBe('slight_positive');
+    expect(out.visualTrendDirection).toBe('leaner');
+    expect(out.previousLeannessScore).toBe(60);
   });
 
   test('coach summary is suppressed under calm or ED mode', () => {

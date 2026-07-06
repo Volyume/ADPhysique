@@ -75,6 +75,7 @@ import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
+import PhotoDatePicker from '../components/PhotoDatePicker';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -101,6 +102,13 @@ const SORTS = [
   { key: 'newest', label: 'Newest', a11y: 'Sort newest first' },
   { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
 ];
+
+function localDateKey(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n)) return null;
+  const d = new Date(n);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
 
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
@@ -161,6 +169,9 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [scanFlow, setScanFlow] = useState(null);
   const [scans, setScans] = useState([]);
   const [hideExactScans, setHideExactScans] = useState(false);
+  const [scanDateOpen, setScanDateOpen] = useState(false);
+  const [scanDatePickerOpen, setScanDatePickerOpen] = useState(false);
+  const [scanDateMs, setScanDateMs] = useState(Date.now());
 
   // The "Photo details" step (date + pose) shown after an image is obtained and
   // BEFORE it is finalised. A picked camera/library image carries `pendingUri`
@@ -259,9 +270,15 @@ export default function ProgressPhotosScreen({ navigation }) {
         mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
         quality: 0.7,
       });
-      if (result?.canceled) return;
+      if (result?.canceled) {
+        if (flow?.mode === 'library') await discardScanDraft(flow);
+        return;
+      }
       const uri = result?.assets?.[0]?.uri;
-      if (!uri) return;
+      if (!uri) {
+        if (flow?.mode === 'library') await discardScanDraft(flow);
+        return;
+      }
       if (!canWrite()) return;
       const uid = useAppStore.getState().user?.id ?? userId;
       const saved = await saveProgressPhoto(uri, undefined, uid);
@@ -276,7 +293,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         });
         return;
       }
-      await upsertPhotoMeta(uid, saved.name, { pose });
+      const scanTakenAt = Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now());
+      await upsertPhotoMeta(uid, saved.name, { takenAt: scanTakenAt, pose });
       if (!canWrite()) {
         await cleanupUnattachedSavedScanPhoto({
           userId: uid,
@@ -288,7 +306,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         return;
       }
       setBusy(false);
-      await onScanCaptured(saved.name, saved);
+      await onScanCaptured(saved.name, saved, flow, pose);
     } catch (e) {
       logError('ProgressPhotos.scanLibraryPose', e, { userId, pose });
       toast.show('Could not add that scan photo. Please try again.', { variant: 'error' });
@@ -397,7 +415,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     latestPartial: latestPartialCapture,
     canScan: !!userId,
     readOnly,
-    includeScan: false,
+    includeScan: true,
   }), [latestPartialCapture, readOnly, userId]);
   const openPartnerProgressCardPreview = useCallback((progressCardSharePayload) => {
     setShareOpen(false);
@@ -436,12 +454,31 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCaptureOpen(true);
   }
 
-  async function openProgressScan() {
+  function openScanImportDateStep() {
+    if (!canWrite()) return;
+    setScanDateMs(Date.now());
+    setScanDatePickerOpen(false);
+    setScanDateOpen(true);
+  }
+
+  function closeScanImportDateStep() {
+    setScanDateOpen(false);
+    setScanDatePickerOpen(false);
+  }
+
+  async function confirmScanImportDate() {
+    const capturedAt = scanDateMs;
+    closeScanImportDateStep();
+    await openProgressScan('library', { capturedAt });
+  }
+
+  async function openProgressScan(mode = 'guided', opts = {}) {
     if (!canWrite() || !userId) return;
-    const cadence = shouldGateProgressScanStart(scans, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
-    if (cadence.gated) {
-      appAlert('Leave more time between scans', 'Physique Scan works best when scans are spaced at least 2 to 4 weeks apart. You can still add progress photos today without using them for a scan result.', [
-        { text: 'Add progress photos', onPress: openGhostCapture },
+    const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
+    const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
+    if (cadence.gated && !opts.skipCadence) {
+      appAlert('Leave more time between scans', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the scan result may be less useful.', [
+        { text: 'Add photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
       return;
@@ -449,12 +486,17 @@ export default function ProgressPhotosScreen({ navigation }) {
     try {
       const capturePrefs = await getProgressScanCapturePreferences();
       if (!canWrite()) return;
-      const session = await createProgressScanSession(userId, capturePrefs);
+      const session = await createProgressScanSession(userId, { ...capturePrefs, capturedAt });
       if (!session?.id) throw new Error('No scan session');
-      setScanFlow({ scanId: session.id, pose: 'front' });
+      const flow = { scanId: session.id, pose: 'front', mode, capturedAt };
+      setScanFlow(flow);
       setCaptureReference(null);
       setCapturePose('front');
-      setCaptureOpen(true);
+      if (mode === 'library') {
+        await pickScanPoseFromLibrary(flow, 'front');
+      } else {
+        setCaptureOpen(true);
+      }
     } catch (e) {
       logError('ProgressPhotos.startScan', e, { userId });
       toast.show('Could not start the scan. Please try again.', { variant: 'error' });
@@ -507,17 +549,35 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function continueScanAfterPose(flow, pose) {
     if (pose === 'front') {
-      setScanFlow({ scanId: flow.scanId, pose: 'back' });
+      const nextFlow = { ...flow, pose: 'back' };
+      setScanFlow(nextFlow);
       setCapturePose('back');
       appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
-        { text: 'Continue', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setCaptureOpen(true); } },
+        {
+          text: 'Continue',
+          onPress: () => {
+            if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
+            if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'back');
+            else setCaptureOpen(true);
+          },
+        },
       ], { cancelable: false });
       return;
     }
     if (pose === 'back') {
       appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
         { text: 'Finish scan', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
-        { text: 'Take side', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow({ scanId: flow.scanId, pose: 'side' }); setCapturePose('side'); setCaptureOpen(true); } },
+        {
+          text: flow?.mode === 'library' ? 'Import side' : 'Take side',
+          onPress: () => {
+            if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
+            const nextFlow = { ...flow, pose: 'side' };
+            setScanFlow(nextFlow);
+            setCapturePose('side');
+            if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'side');
+            else setCaptureOpen(true);
+          },
+        },
       ], { cancelable: false });
       return;
     }
@@ -535,7 +595,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       pose,
       photoName: name,
       uri: saved.uri,
-      takenAt: saved.ts ?? Date.now(),
+      takenAt: flow?.mode === 'library' && Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now()),
       ...assetFields,
     });
     if (!inserted) {
@@ -564,9 +624,11 @@ export default function ProgressPhotosScreen({ navigation }) {
         deleteProgressPhoto,
         deletePhotoMeta,
       });
-      setScanFlow({ scanId: flow.scanId, pose });
+      const nextFlow = { ...flow, pose };
+      setScanFlow(nextFlow);
       setCapturePose(pose);
-      setCaptureOpen(true);
+      if (flow?.mode === 'library') await pickScanPoseFromLibrary(nextFlow, pose);
+      else setCaptureOpen(true);
     } catch (e) {
       logError('ProgressPhotos.scanRetakeDelete', e, { userId, pose });
       toast.show('Could not remove that photo. Please try again.', { variant: 'error' });
@@ -614,9 +676,9 @@ export default function ProgressPhotosScreen({ navigation }) {
     ]);
   }
 
-  async function onScanCaptured(name, saved) {
-    const flow = scanFlow;
-    const pose = capturePose;
+  async function onScanCaptured(name, saved, flowOverride = null, poseOverride = null) {
+    const flow = flowOverride || scanFlow;
+    const pose = poseOverride || capturePose;
     setCaptureOpen(false);
     if (!flow?.scanId || !pose || !saved?.uri) {
       openDetailsForCaptured(name, pose);
@@ -700,7 +762,11 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     if (route.key === 'scan') {
-      openProgressScan();
+      openProgressScan('guided');
+      return;
+    }
+    if (route.key === 'scan_library') {
+      openScanImportDateStep();
       return;
     }
     if (route.key === 'guided') {
@@ -767,6 +833,15 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!Array.isArray(visibleScans) || visibleScans.length === 0) return null;
     return [...visibleScans].sort((a, b) => (Number(b.capturedAt) || Number(b.captured_at) || 0) - (Number(a.capturedAt) || Number(a.captured_at) || 0))[0] || null;
   }, [visibleScans]);
+  const scanByDateKey = useMemo(() => {
+    const map = new Map();
+    for (const scan of visibleScans || []) {
+      const key = localDateKey(scan?.capturedAt ?? scan?.captured_at);
+      if (!key || map.has(key)) continue;
+      map.set(key, scan);
+    }
+    return map;
+  }, [visibleScans]);
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
   const nextCheckInLabel = progressCheckInCadenceLabel(latestPhoto?.takenAt, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
@@ -776,10 +851,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
-        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is a broad scan result, not a body-fat percentage.`
+        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's visual progress score, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add progress photos to keep a dated private gallery. Start Physique Scan when you want guided front and back photos with a broad scan result.');
+        : 'Add a guided set or import existing photos. Volyume saves the photos by date, adds the bodyweight snapshot, and scores the set when front and back are available.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -822,6 +897,12 @@ export default function ProgressPhotosScreen({ navigation }) {
       ? 'Full set'
       : `${item.poses.length}/${CORE_POSES.length} poses`;
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
+    const scanForDay = scanByDateKey.get(localDateKey(item.takenAt));
+    const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
+    const scoreText = scanScore != null
+      ? (suppressed || hideExactScans ? 'Score hidden' : `Score ${scanScore}/100`)
+      : null;
+    const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
     return (
       <TouchableOpacity
@@ -849,7 +930,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.checkInTitleBlock}>
               <Text style={styles.checkInDate} numberOfLines={1}>{dateLabel}</Text>
               <Text style={styles.checkInMeta} numberOfLines={1}>
-                {poseSummary}{weightText ? ` - ${weightText}` : ''}
+                {metaText}
               </Text>
             </View>
             {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} /> : null}
@@ -940,7 +1021,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.heroEyebrow}>Progress Photos</Text>
               <Text style={styles.heroTitle}>Your progress photos</Text>
               <Text style={styles.heroSubtitle}>
-                Save progress photos by date and angle. Physique Scan is separate: a guided front and back scan with a broad result, not an exact body-fat percentage.
+                Add a guided photo set or import existing photos. Volyume saves the date, bodyweight snapshot and visual physique score together.
               </Text>
             </View>
           </View>
@@ -956,6 +1037,16 @@ export default function ProgressPhotosScreen({ navigation }) {
                   <Text style={styles.studioMetricValue}>{stat.value}</Text>
                 </View>
               ))}
+            </View>
+
+            <View style={styles.setupStandardCard}>
+              <View style={styles.setupStandardHead}>
+                <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.setupStandardTitle}>What Physique Scan tells you</Text>
+              </View>
+              <Text style={styles.setupStandardIntro}>
+                Physique Scan is Volyume's own visual physique progress measure. It reads guided front and back photos, scan quality and setup consistency to show a leanness band, scan confidence and progress signal. A photo cannot truthfully give an exact body-fat number, so Volyume focuses on whether your physique is changing and how reliable that read is.
+              </Text>
             </View>
 
             <View style={styles.setupStandardCard}>
@@ -991,23 +1082,12 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.heroActions}>
               {!readOnly ? (
                 <Button
-                  title="Add progress photos"
+                  title="Add photos"
                   icon="camera-outline"
                   onPress={onAdd}
                   fullWidth={false}
                   style={styles.heroPrimaryAction}
-                  accessibilityLabel="Add progress photos"
-                />
-              ) : null}
-              {!readOnly ? (
-                <Button
-                  title="Start Physique Scan"
-                  icon="scan"
-                  variant="secondary"
-                  onPress={openProgressScan}
-                  fullWidth={false}
-                  style={styles.heroSecondaryAction}
-                  accessibilityLabel="Start guided Physique Scan"
+                  accessibilityLabel="Add photos"
                 />
               ) : null}
               {(canCompareScans || canCompare) ? (
@@ -1174,7 +1254,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add progress photos for your private gallery, or start Physique Scan when you want guided front and back photos with a broad scan result.
+                Add a guided set or import existing photos. Volyume will save the photos by date and scan the set when front and back are available.
               </Text>
             </>
           )}
@@ -1276,6 +1356,62 @@ export default function ProgressPhotosScreen({ navigation }) {
       </Modal>
 
       <Modal
+        visible={scanDateOpen}
+        transparent
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={closeScanImportDateStep}
+      >
+        <TouchableOpacity
+          style={styles.scanDateBackdrop}
+          activeOpacity={1}
+          onPress={closeScanImportDateStep}
+          accessibilityRole="button"
+          accessibilityLabel="Close scan date"
+        >
+          <View style={styles.scanDateSheet} onStartShouldSetResponder={() => true}>
+            <Text style={styles.scanDateTitle}>Date for this scan</Text>
+            <Text style={styles.scanDateIntro}>
+              Pick the day these photos were taken. Volyume uses that date for the library entry and the bodyweight snapshot.
+            </Text>
+            <TouchableOpacity
+              style={styles.scanDateField}
+              onPress={() => setScanDatePickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Change scan date, currently ${formatProgressPhotoDay(scanDateMs)}`}
+            >
+              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
+              <Text style={styles.scanDateValue}>{formatProgressPhotoDay(scanDateMs)}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+            </TouchableOpacity>
+            <View style={styles.scanDateActions}>
+              <Button
+                title="Cancel"
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                onPress={closeScanImportDateStep}
+                accessibilityLabel="Cancel imported scan"
+              />
+              <Button
+                title="Import photos"
+                size="sm"
+                fullWidth={false}
+                onPress={confirmScanImportDate}
+                accessibilityLabel="Import photos for this scan"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+        <PhotoDatePicker
+          visible={scanDatePickerOpen}
+          valueMs={scanDateMs}
+          maxMs={Date.now()}
+          onChange={setScanDateMs}
+          onClose={() => setScanDatePickerOpen(false)}
+        />
+      </Modal>
+
+      <Modal
         visible={captureRouteOpen}
         transparent
         animationType={reduceMotion ? 'none' : 'slide'}
@@ -1294,7 +1430,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <View style={styles.captureRouteSheet}>
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
-                  <Text style={styles.captureRouteTitle}>Add progress photos</Text>
+                  <Text style={styles.captureRouteTitle}>Add photos</Text>
                   <TouchableOpacity
                     onPress={() => setCaptureRouteOpen(false)}
                     hitSlop={10}
@@ -1305,7 +1441,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Choose how to add progress photos. Use Physique Scan from the main screen when you want the guided scan.
+                  Choose guided capture or import existing photos. Both save a dated photo set and run Volyume's scan when front and back are available.
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1866,6 +2002,43 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   captureRouteNoteText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  scanDateBackdrop: {
+    flex: 1,
+    backgroundColor: colors.scrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  scanDateSheet: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surfaceElevated ?? colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  scanDateTitle: { ...type.title, color: colors.textPrimary },
+  scanDateIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  scanDateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  scanDateValue: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  scanDateActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },

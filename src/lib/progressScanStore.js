@@ -314,6 +314,12 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
         progressDeltaScore: deltaExplanation?.comparisonStatus === 'comparable'
           ? (deltaExplanation.progressDeltaScore ?? analysis.physiqueAssessment.progressDeltaScore)
           : null,
+        previousLeannessScore: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.previousLeannessScore ?? analysis.physiqueAssessment.previousLeannessScore)
+          : null,
+        visualTrendDirection: deltaExplanation?.comparisonStatus === 'comparable'
+          ? (deltaExplanation.visualTrendDirection ?? null)
+          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'uncertain'),
       }
     : null;
   const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, {
