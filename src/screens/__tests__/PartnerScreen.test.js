@@ -180,9 +180,9 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Food diary, coach notes and check-ins');
     expect(text).toContain('Body metrics and progress photos');
     expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. No ranking or comparison.');
-    expect(text).toContain('Shared block label');
-    expect(text).toContain('Upper Lower is shared by name only. Workouts, loading and notes stay private.');
-    expect(text).toContain('Manage label');
+    expect(text).toContain('Shared training block name');
+    expect(text).toContain('Upper Lower is visible by name only. Workouts, loading, notes and coach changes stay private.');
+    expect(text).toContain('Manage name');
   });
 
   test('active pairs show a compact support plan with the next safe action', async () => {

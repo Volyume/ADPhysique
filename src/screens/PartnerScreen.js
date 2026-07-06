@@ -175,20 +175,20 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Shared block label',
-      copy: `${block.blockName} is shared by name only. Workouts, loading and notes stay private.`,
+      title: 'Shared training block name',
+      copy: `${block.blockName} is visible by name only. Workouts, loading, notes and coach changes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
     return {
-      title: 'Label suggested',
-      copy: `Waiting for ${name}. Only the block name is visible.`,
+      title: 'Training block name sent',
+      copy: `Waiting for ${name}. Only the name is visible.`,
     };
   }
   if (block.status === 'proposed') {
     return {
-      title: 'Label suggestion',
-      copy: `${name} suggested ${block.blockName}. It will not change your plan.`,
+      title: 'Training block name suggested',
+      copy: `${name} suggested ${block.blockName}. Accepting shares the name only; it will not change your plan.`,
     };
   }
   return null;
@@ -416,7 +416,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       style={styles.blockStatusCard}
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`Shared block label, ${status.title}`}
+      accessibilityLabel={`Training block name, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
@@ -425,7 +425,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-        <Text style={styles.blockStatusActionText}>Manage label</Text>
+        <Text style={styles.blockStatusActionText}>Manage name</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -1535,9 +1535,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Shared block label</Text>
-        <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loading and coach changes stay private.</Text>
-        <SheetRow icon="exit-outline" label="Remove shared label" onPress={() => onLeave(pair)} />
+        <Text style={styles.sheetHeading}>Shared training block name</Text>
+        <Text style={styles.blockPitch}>Only the name is shared. Workouts, exercises, loading, notes and coach changes stay private.</Text>
+        <SheetRow icon="exit-outline" label="Stop sharing name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1545,9 +1545,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Block suggested</Text>
-        <Text style={styles.blockPitch}>You suggested sharing the label {block.blockName}. Waiting for {name}.</Text>
-        <SheetRow icon="close-circle-outline" label="Withdraw label" onPress={() => onLeave(pair)} />
+        <Text style={styles.sheetHeading}>Training block name sent</Text>
+        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. No workouts or coach plan changes are shared.</Text>
+        <SheetRow icon="close-circle-outline" label="Withdraw name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1555,10 +1555,10 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Share a block label</Text>
-        <Text style={styles.blockPitch}>{name} suggested sharing the label {block.blockName}. It will not sync workouts or change your plan.</Text>
-        <SheetRow icon="checkmark-circle-outline" label="Use this label" onPress={() => onAdopt(pair)} />
-        <SheetRow icon="close-circle-outline" label="Decline label" onPress={() => onLeave(pair)} />
+        <Text style={styles.sheetHeading}>Training block name</Text>
+        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares the name only. It will not sync workouts or change your plan.</Text>
+        <SheetRow icon="checkmark-circle-outline" label="Share this name" onPress={() => onAdopt(pair)} />
+        <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1566,14 +1566,14 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block label</Text>
+      <Text style={styles.sheetHeading}>Share a training block name</Text>
       <Text style={styles.blockPitch}>
-        Optional. Use this only if you and {name} want to show that you are following the same named block. It does not alter either plan.
+        Optional. Use this only if you and {name} want the same block name visible in Partners. It does not sync workouts or alter either plan.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
       ) : programmes.length === 0 ? (
-        <Text style={styles.blockEmpty}>No plans yet. Build or pick one in Plans first.</Text>
+        <Text style={styles.blockEmpty}>No training plans yet. Build or pick one in Plans first.</Text>
       ) : (
         programmes.map((prog) => (
           <SheetRow
