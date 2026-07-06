@@ -164,7 +164,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment).toMatchObject({
       source: 'photo_scan',
       analysisType: 'visual_physique_score',
-      visualLeannessScore: 67,
+      visualLeannessScore: 68,
       leannessBandLabel: 'Lean',
       scanConfidenceTier: 'moderate',
       progressSignal: 'baseline',
@@ -172,7 +172,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Volyume Leanness Score 67\/100/i);
+    expect(out.copySummary).toMatch(/Volyume Leanness Score 68\/100/i);
     expect(out.copySummary).toMatch(/not a body-fat percentage/i);
   });
 
@@ -197,7 +197,15 @@ describe('Progress Scan uncertainty and abstention', () => {
       waistToHeight: 0.185,
       bodyAreaRatio: 0.295,
       frontBackWaistSpread: 0.01,
-    })).toBe(67);
+    })).toBe(68);
+    expect(computeVisualLeannessScore({
+      waistToShoulder: 0.63,
+      waistToHip: 0.77,
+      waistToHeight: 0.185,
+      bodyAreaRatio: 0.295,
+      frontBackWaistSpread: 0.01,
+      sideWaistToHeight: 0.34,
+    })).toBeLessThan(68);
   });
 
   test('demographic and physique validation gaps materially widen any future internal range', () => {
@@ -267,7 +275,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.analysisStatus).toBe('complete');
     expect(out.estimate).toBeNull();
     expect(out.range).toBeNull();
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(67);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
   });
 
   test('measured delta explanation never fabricates visual observations', () => {
