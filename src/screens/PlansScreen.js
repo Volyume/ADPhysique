@@ -40,16 +40,16 @@ const ACTION_CARDS_DEFAULT = [
   {
     id: 'library',
     icon: 'library-outline',
-    title: 'Plan Library',
-    description: 'Browse ready-made plans for different splits, experience levels and goals.',
+    title: 'Plan library',
+    description: 'Browse ready-made plans by split, experience level and goal.',
     screen: 'PlanLibrary',
     badge: 'Recommended',
   },
   {
     id: 'manual',
     icon: 'create-outline',
-    title: 'Manual Builder',
-    description: 'Create a custom multi-day plan from scratch. You choose every exercise.',
+    title: 'Manual builder',
+    description: 'Build a custom multi-day plan and choose every exercise yourself.',
     screen: 'ManualBuilder',
   },
 ];
@@ -64,21 +64,21 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'goals',
     icon: 'flag-outline',
     title: 'Update training and rebuild',
-    description: 'Change your weekly schedule, equipment, experience, division or weak points. Your plan rebuilds around the new answers. History and PRs are kept. To change your goal or calorie targets, use Update goal and phase in the Coach tab.',
+    description: 'Change schedule, equipment, experience, division or weak points. Volyume previews the rebuild before it replaces your active plan.',
     screen: 'PlanUpdate',
   },
   {
     id: 'library',
     icon: 'library-outline',
-    title: 'Pick from the Plan Library',
-    description: "Ready-made expert plans. Precision Coaching keeps adjusting whichever plan you're on.",
+    title: 'Pick from the plan library',
+    description: "Choose a ready-made plan. Precision Coaching keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {
     id: 'manual',
     icon: 'create-outline',
     title: 'Build your own',
-    description: 'Hand-pick every exercise and day. Precision Coaching keeps reading your data the same way.',
+    description: 'Hand-pick every exercise and day. Precision Coaching keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -705,7 +705,7 @@ export default function PlansScreen({ navigation }) {
             <Card style={styles.activePlanCard}>
               <View style={styles.activePlanHeader}>
                 <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                  <Text style={styles.activeBadgeText}>Active</Text>
                 </View>
                 <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
                   <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
@@ -724,7 +724,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Precision Coaching™ adjusts this plan as you progress and check in. Change your goals or switch to a different plan from the options below.
+                  Precision Coaching adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>
@@ -735,7 +735,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityLabel="Start next workout"
                 >
                   <Ionicons name="play" size={15} color={colors.onPrimary} />
-                  <Text style={styles.startNextBtnText}>Start Next Workout</Text>
+                  <Text style={styles.startNextBtnText}>Start next workout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.viewPlanBtn}
@@ -743,7 +743,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="View plan"
                 >
-                  <Text style={styles.viewPlanBtnText}>View Plan</Text>
+                  <Text style={styles.viewPlanBtnText}>View plan</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -760,7 +760,7 @@ export default function PlansScreen({ navigation }) {
               <Text style={styles.noPlanCardTitle}>No active plan yet</Text>
             </View>
             <Text style={styles.noPlanCardBody}>
-              Answer three quick questions and we'll set you up with a starter plan,
+              Answer a few quick questions and we'll set you up with a starter plan,
               or browse the library and pick your own.
             </Text>
             <View style={styles.noPlanCardActions}>
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 3,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 0 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
@@ -1202,11 +1202,14 @@ const styles = StyleSheet.create({
   startNextBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+    minHeight: 48,
   },
   startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   viewPlanBtn: {
     paddingHorizontal: spacing.lg, borderRadius: radius.md, paddingVertical: spacing.md,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   viewPlanBtnText: { ...type.label, color: colors.textSecondary },
 
@@ -1247,6 +1250,7 @@ const styles = StyleSheet.create({
   startTemplateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
@@ -1348,16 +1352,20 @@ const styles = StyleSheet.create({
   },
 
   // Block card action buttons
-  blockCardActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  blockCardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
   blockRestartBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+    minWidth: 144,
+    minHeight: 48,
   },
   blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   blockNewBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
     borderWidth: 1, borderColor: colors.border,
+    minWidth: 144,
+    minHeight: 48,
   },
   blockNewBtnText: { ...type.label, color: colors.textSecondary },
   blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },

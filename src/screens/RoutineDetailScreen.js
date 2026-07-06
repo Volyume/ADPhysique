@@ -263,9 +263,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         'No exercises',
         'This routine has no exercises yet.',
         [
-          { text: 'Add Exercise', onPress: () => setShowAddExercise(true) },
+          { text: 'Add exercise', onPress: () => setShowAddExercise(true) },
           {
-            text: 'Start Blank Workout',
+            text: 'Start blank workout',
             onPress: () => navigation.navigate('HomeTab', { screen: 'BuildWorkout', initial: false }),
           },
         ],
@@ -322,7 +322,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         ListHeaderComponent={
           <>
             <Button
-              title="Start This Workout"
+              title="Start this workout"
               icon="play-circle"
               size="lg"
               onPress={handleStartWorkout}
@@ -483,7 +483,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         ListFooterComponent={
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddExercise(true)} accessibilityRole="button" accessibilityLabel="Add exercise">
             <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={styles.addBtnText}>Add Exercise</Text>
+            <Text style={styles.addBtnText}>Add exercise</Text>
           </TouchableOpacity>
         }
         ListEmptyComponent={
@@ -591,7 +591,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       >
         <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
           <View style={styles.swapHeader}>
-            <Text style={styles.swapTitle}>Swap Exercise</Text>
+            <Text style={styles.swapTitle}>Swap exercise</Text>
             <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -623,7 +623,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             )}
             ListEmptyComponent={
               <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                No similar exercises found.
+                No close matches yet.
               </Text>
             }
             ListFooterComponent={

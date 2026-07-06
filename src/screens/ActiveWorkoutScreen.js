@@ -1652,10 +1652,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       loggedSetCount: loggedSets.length,
     });
     appAlert(
-      'Finish Workout?',
+      'Finish workout?',
       `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
       [
-        { text: 'Keep Going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
+        { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         {
           text: 'Finish',
           onPress: async () => {
@@ -1898,7 +1898,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
-          actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
+          actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
         />
       </SafeAreaView>
     );
@@ -2560,7 +2560,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={closeExercisePicker}
           onSelect={handlePickerSelect}
-          actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
+          actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
         />
 
         {/* Superset heads-up modal, appears once per pair when the user
@@ -2677,7 +2677,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.staleResumeText}>Resume</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.staleFinish} onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }} accessibilityRole="button" accessibilityLabel="Finish workout">
-                <Text style={styles.staleFinishText}>Finish Workout</Text>
+                <Text style={styles.staleFinishText}>Finish workout</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
                 appAlert('Discard workout?', 'All logged sets will be lost.', [
@@ -3211,7 +3211,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <SafeAreaProvider>
           <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
             <View style={styles.swapHeader}>
-              <Text style={styles.swapTitle}>Swap Exercise</Text>
+              <Text style={styles.swapTitle}>Swap exercise</Text>
               <TouchableOpacity onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -3219,7 +3219,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Text style={styles.swapSubtitle}>
               Replacing: <Text style={{ color: colors.primary }}>{exercise?.name}</Text>
             </Text>
-            <Text style={styles.swapNote}>Session-only. Your plan is not changed.</Text>
+            <Text style={styles.swapNote}>This changes this workout only. Your plan stays the same.</Text>
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
@@ -3236,7 +3236,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               )}
               ListEmptyComponent={
                 <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                  No similar exercises found.
+                  No close matches yet.
                 </Text>
               }
               ListFooterComponent={
@@ -3289,7 +3289,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   }
                 }}
               >
-                <Text style={styles.discardConfirmBtnText}>Discard Workout</Text>
+                <Text style={styles.discardConfirmBtnText}>Discard workout</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3391,7 +3391,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         <Text style={styles.emptySubtitle}>Search the exercise library to get started</Text>
         <TouchableOpacity style={styles.addFirstBtn} onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add exercise">
           <Ionicons name="add" size={22} color={colors.onPrimary} />
-          <Text style={styles.addFirstBtnText}>Add Exercise</Text>
+          <Text style={styles.addFirstBtnText}>Add exercise</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -827,7 +827,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             </View>
 
             <Button
-              title="Create Plan & Add Workouts"
+              title="Create plan and add workouts"
               icon="add-circle"
               size="lg"
               style={[styles.primaryBtn, creating && styles.btnDisabled]}
@@ -1061,7 +1061,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             {/* Add exercise button */}
             <TouchableOpacity style={styles.addExBtn} onPress={() => openPicker(dayIdx)} accessibilityRole="button" accessibilityLabel="Add exercise">
               <Ionicons name="add" size={16} color={colors.primary} />
-              <Text style={styles.addExText}>Add Exercise</Text>
+              <Text style={styles.addExText}>Add exercise</Text>
             </TouchableOpacity>
           </Card>
         ))}
