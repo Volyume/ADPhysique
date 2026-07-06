@@ -58,7 +58,16 @@ jest.mock('../../lib/partners/pendingInvite', () => ({
   clearPendingPartnerCode: jest.fn(async () => {}),
 }));
 
+jest.mock('../../lib/supabase', () => ({
+  getSupabaseClient: jest.fn(() => ({})),
+}));
+
+jest.mock('../../lib/sync/tables/partners', () => ({
+  pullPartners: jest.fn(async () => ({ errors: 0 })),
+}));
+
 const db = require('../../lib/database');
+const syncPartners = require('../../lib/sync/tables/partners');
 const usePartners = require('../usePartners').default;
 
 async function flush() {
@@ -73,10 +82,13 @@ function deferred() {
 }
 
 describe('usePartners load error state', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    syncPartners.pullPartners.mockResolvedValue({ errors: 0 });
+  });
 
   test('failed local partnership reads surface as error, not empty', async () => {
-    db.getPartnershipsLocal.mockRejectedValueOnce(new Error('offline'));
+    db.getPartnershipsLocal.mockRejectedValue(new Error('offline'));
     const ref = {};
     function Probe() {
       Object.assign(ref, usePartners('me', 'pro'));
@@ -90,6 +102,35 @@ describe('usePartners load error state', () => {
     expect(ref.error).toBe(true);
     expect(ref.rowState).toBe('empty');
     expect(typeof ref.reload).toBe('function');
+  });
+
+  test('a failed first local read tries one cloud mirror repair before showing an error', async () => {
+    db.getPartnershipsLocal
+      .mockRejectedValueOnce(new Error('stale local mirror'))
+      .mockResolvedValueOnce([{
+        id: 'pair1',
+        status: 'active',
+        memberA: 'me',
+        memberB: 'sam',
+        partnerFirstName: 'Sam',
+        streakEnabled: true,
+        acceptedAt: 1,
+      }]);
+    db.getActivePartnerCount.mockResolvedValueOnce(1);
+    const ref = {};
+    function Probe() {
+      Object.assign(ref, usePartners('me', 'pro'));
+      return null;
+    }
+
+    await act(async () => { create(<Probe />); });
+    await flush();
+
+    expect(syncPartners.pullPartners).toHaveBeenCalledWith(expect.any(Object), { userId: 'me' });
+    expect(ref.loading).toBe(false);
+    expect(ref.error).toBe(false);
+    expect(ref.pairs).toHaveLength(1);
+    expect(ref.pairs[0]).toEqual(expect.objectContaining({ id: 'pair1', partnerFirstName: 'Sam' }));
   });
 
   test('optional pair detail read failures do not blank an active partnership', async () => {

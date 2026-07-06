@@ -217,7 +217,7 @@ function IntentionBlock({ pair, onSetAim }) {
       >
         <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.intentionSetText}>
-          {pair.myAim > 0 ? 'Change this week' : 'Set this week'}
+          {pair.myAim > 0 ? 'Change sessions' : 'Set sessions'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -229,8 +229,8 @@ function PartnerSupportSnapshot({ pair, name }) {
   const sharedRows = [
     'Your first name',
     'This week\'s training status',
-    'This week\'s session target',
-    'One fixed cheer a day',
+    'Weekly sessions number',
+    'One cheer a day',
     'Chosen wins you approve',
     hasBlock ? 'Shared block name' : null,
   ].filter(Boolean);
@@ -784,6 +784,11 @@ export default function PartnerScreen({ route }) {
         toast.show('You are at your partner limit.', { variant: 'error' });
       } else if (r.error === 'consent_failed') {
         toast.show('We could not record your agreement to share. Please try again.', { variant: 'error' });
+      } else if (r.error === 'local_mirror_pending') {
+        setCode('');
+        setCodeEntryOpen(false);
+        retryPartners?.();
+        toast.show('Invite accepted. Volyume is refreshing this device now.', { variant: 'warning' });
       } else {
         toast.show('That invite did not work. It may have expired or already been used.', { variant: 'error' });
       }
@@ -991,8 +996,8 @@ export default function PartnerScreen({ route }) {
         <View style={styles.errorWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't refresh partners"
-            text="We could not read your partner connection right now. Try again in a moment."
+            title="Couldn't load Partners"
+            text="We could not load your partner details right now. Check your connection and try again."
             actionLabel="Try again"
             onAction={retryPartners}
           />
@@ -1073,19 +1078,6 @@ export default function PartnerScreen({ route }) {
               </Card>
             ) : null}
 
-            <Card style={styles.howItWorks}>
-              <Text style={styles.howHeader}>HOW IT WORKS</Text>
-              <Text style={styles.howLine}>
-                Once a week, you each see whether the other trained, and nothing else.
-              </Text>
-              <Text style={styles.howLine}>
-                You build a streak of weeks you both showed up. A rest week never breaks it.
-              </Text>
-              <Text style={styles.howLine}>No feed, no followers, no numbers to compare.</Text>
-            </Card>
-
-            <PartnerPrivacyReceipt />
-
             <Button
               title="Invite someone you train with"
               style={styles.primaryBtn}
@@ -1131,6 +1123,19 @@ export default function PartnerScreen({ route }) {
                 />
               </View>
             ) : null}
+
+            <Card style={styles.howItWorks}>
+              <Text style={styles.howHeader}>HOW IT WORKS</Text>
+              <Text style={styles.howLine}>
+                Once a week, you each see whether the other trained, and nothing else.
+              </Text>
+              <Text style={styles.howLine}>
+                You build a streak of weeks you both showed up. A rest week never breaks it.
+              </Text>
+              <Text style={styles.howLine}>No feed, no followers, no numbers to compare.</Text>
+            </Card>
+
+            <PartnerPrivacyReceipt />
           </View>
         )}
       </ScrollView>
@@ -1225,9 +1230,9 @@ function AimSheetBody({ value, onChange, onConfirm }) {
   const v = clampAim(value);
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>This week's sessions</Text>
+      <Text style={styles.sheetHeading}>Weekly sessions</Text>
       <Text style={styles.blockPitch}>
-        Choose the number of sessions you plan to train this week. Your partner sees the number only.
+        Choose how many sessions you expect to train this week. Your partner sees the number only.
       </Text>
       <View style={styles.stepperRow}>
         <TouchableOpacity
@@ -1312,7 +1317,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Choose one card, check exactly what {partnerName} will see, then send it.
+          Check what {partnerName} will see before you send anything.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1365,13 +1370,8 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
         </View>
       ) : null}
       <View style={styles.shareWinRules}>
-        <Text style={styles.shareWinSectionTitle}>What stays off limits</Text>
-        {SHARE_WIN_CARD_RULES.slice(0, 3).map((rule) => (
-          <View key={rule} style={styles.shareWinRuleRow}>
-            <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
-            <Text style={styles.shareWinRuleText}>{rule}</Text>
-          </View>
-        ))}
+        <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.shareWinRuleText}>{SHARE_WIN_CARD_RULES[2]}</Text>
       </View>
     </View>
   );
@@ -1550,7 +1550,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name only</Text>
         <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
-        <SheetRow icon="exit-outline" label="Stop sharing name" onPress={() => onLeave(pair)} />
+        <SheetRow icon="exit-outline" label="Stop sharing this block name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1560,7 +1560,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name sent</Text>
         <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. Training details and Coach changes stay private.</Text>
-        <SheetRow icon="close-circle-outline" label="Withdraw name" onPress={() => onLeave(pair)} />
+        <SheetRow icon="close-circle-outline" label="Withdraw block name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1570,7 +1570,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name suggested</Text>
         <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares only that label and will not change either plan.</Text>
-        <SheetRow icon="checkmark-circle-outline" label="Share this name" onPress={() => onAdopt(pair)} />
+        <SheetRow icon="checkmark-circle-outline" label="Share this block name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1581,12 +1581,12 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Share a block name only</Text>
       <Text style={styles.blockPitch}>
-        Optional. Partners shares the block name only. It does not sync workouts or change anything the Coach has set.
+        Optional. Share the block name only. It does not sync workouts or change anything the Coach has set.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
       ) : programmes.length === 0 ? (
-        <Text style={styles.blockEmpty}>No training plans yet. Build or pick one in Plans first.</Text>
+        <Text style={styles.blockEmpty}>Create or choose a training block in Plans first.</Text>
       ) : (
         programmes.map((prog) => (
           <SheetRow
@@ -1874,14 +1874,15 @@ const styles = StyleSheet.create({
   },
   shareWinBoundaryLabel: { ...type.caption, color: colors.textMuted },
   shareWinBoundaryText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
-  shareWinRules: { gap: spacing.sm },
-  shareWinRuleRow: {
+  shareWinRules: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
   },
   shareWinRuleText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
-  shareWinSectionTitle: { ...type.label, color: colors.textPrimary },
   shareWinReceipt: {
     gap: spacing.sm,
     borderRadius: radius.md,

@@ -14,7 +14,7 @@ const COMPARISON = /\b(ahead|behind|more than|less than|better|worse|beat|beats|
 describe('resolveIntention', () => {
   test('both aims set and equal -> one co-owned line, no per-person lines', () => {
     const r = resolveIntention({ myAim: 4, partnerAim: 4, partnerName: 'Sam' });
-    expect(r.shared).toBe('You both aimed for 4 this week.');
+    expect(r.shared).toBe('You both planned 4 sessions this week.');
     expect(r.mine).toBeNull();
     expect(r.theirs).toBeNull();
   });
@@ -22,16 +22,16 @@ describe('resolveIntention', () => {
   test('aims differ -> each own aim on its own line, no shared line', () => {
     const r = resolveIntention({ myAim: 4, partnerAim: 3, partnerName: 'Sam' });
     expect(r.shared).toBeNull();
-    expect(r.mine).toBe('You aimed for 4 this week.');
-    expect(r.theirs).toBe('Sam set an aim too.'); // ED-safe: partner's differing number withheld
+    expect(r.mine).toBe('You planned 4 sessions this week.');
+    expect(r.theirs).toBe('Sam set weekly sessions too.'); // ED-safe: partner's differing number withheld
   });
 
   test('only one side set -> only that own line', () => {
-    expect(resolveIntention({ myAim: 5, partnerAim: 0 }).mine).toBe('You aimed for 5 this week.');
+    expect(resolveIntention({ myAim: 5, partnerAim: 0 }).mine).toBe('You planned 5 sessions this week.');
     expect(resolveIntention({ myAim: 5, partnerAim: 0 }).theirs).toBeNull();
     const t = resolveIntention({ myAim: 0, partnerAim: 2, partnerName: 'Sam' });
     expect(t.mine).toBeNull();
-    expect(t.theirs).toBe('Sam set an aim too.');
+    expect(t.theirs).toBe('Sam set weekly sessions too.');
   });
 
   test('neither set -> nothing', () => {
@@ -40,7 +40,7 @@ describe('resolveIntention', () => {
   });
 
   test('falls back to a warm partner name', () => {
-    expect(resolveIntention({ myAim: 0, partnerAim: 3 }).theirs).toBe('Your partner set an aim too.');
+    expect(resolveIntention({ myAim: 0, partnerAim: 3 }).theirs).toBe('Your partner set weekly sessions too.');
   });
 
   test('no output line ever compares the two numbers', () => {

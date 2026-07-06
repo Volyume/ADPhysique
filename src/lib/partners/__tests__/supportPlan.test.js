@@ -11,12 +11,12 @@ describe('partner support plan', () => {
   test('starts with a calm aim when the user has not set one', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
     expect(plan.title).toBe('This week with Sam');
-    expect(plan.headline).toBe('Set how many sessions you plan to train this week. Sam sees only that number, not your plan.');
-    expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: "Set this week's sessions" });
+    expect(plan.headline).toBe('Choose your weekly sessions. Sam sees the number only, never your plan.');
+    expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: 'Set weekly sessions' });
     expect(plan.steps.find((step) => step.key === 'aim')).toMatchObject({
       label: 'Your sessions',
       state: 'Not set',
-      copy: 'Choose the number you plan to train. Sam sees only that number.',
+      copy: 'Choose your weekly number. Sam sees only that number.',
     });
     expect(plan.steps.find((step) => step.key === 'partner_aim')).toMatchObject({
       label: "Sam's week",
@@ -31,12 +31,12 @@ describe('partner support plan', () => {
 
   test('routes to cheer when aim is set and the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is a quick acknowledgement, not a chat.');
+    expect(plan.headline).toBe('Send Sam one small cheer for today. It is fixed, private to this partnership, and not a chat.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Choose a cheer' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       label: 'Optional sharing',
       state: 'Optional',
-      copy: 'Cheers are fixed. Wins ask every time before sending.',
+      copy: 'Cheers are fixed. Win cards ask every time.',
     });
   });
 
@@ -45,7 +45,7 @@ describe('partner support plan', () => {
     expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Choose a win' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       state: 'Optional',
-      copy: 'Today\'s cheer is sent. Wins still ask before sending.',
+      copy: 'Today\'s cheer is sent. Win cards still ask before sending.',
     });
   });
 
@@ -56,9 +56,9 @@ describe('partner support plan', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('Share one win with Sam only when you want to. You preview the card before it is sent.');
+    expect(plan.headline).toBe('Share one win with Sam only when you want to. You check the card before it is sent.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Nothing else is shared unless you choose a card.');
+    expect(copy).toContain('Only this weekly number, training status, cheers and chosen cards are shared.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
   });
 });

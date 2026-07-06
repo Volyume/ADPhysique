@@ -27,14 +27,14 @@ export const SHARE_WIN_TYPES = Object.freeze([
 
 export const SHARE_WIN_POLICY = Object.freeze({
   defaultState: 'Ask every time',
-  summary: 'Nothing is shared automatically. Your partner only sees the win card you choose to send.',
+  summary: 'Choose one card. Your partner sees only that card.',
   excluded: 'No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.',
 });
 
 export const SHARE_WIN_CARD_RULES = Object.freeze([
   'Ask every time before a card is sent.',
   'One card, one moment, one partner.',
-  'The card never opens workout history, food diary, coach notes, body metrics or photos.',
+  'Workout history, food diary, coach notes, body metrics and photos stay closed.',
   'A sent card can be deleted by the sender.',
 ]);
 
