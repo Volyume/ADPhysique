@@ -399,6 +399,14 @@ export default function ProgressPhotosScreen({ navigation }) {
     canScan: !!userId,
     readOnly,
   }), [latestPartialCapture, readOnly, userId]);
+  const openPartnerProgressCardPreview = useCallback((progressCardSharePayload) => {
+    setShareOpen(false);
+    navigation?.navigate?.('Partner', {
+      source: 'progress_photos_share',
+      shareWinType: 'progress_card',
+      progressCardSharePayload,
+    });
+  }, [navigation]);
 
   const hasRange = Number.isFinite(rangeFrom) || Number.isFinite(rangeTo);
   // Plain label for the date-range pill; "to" reads calmer than a dash and
@@ -1431,6 +1439,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           onClose={() => setShareOpen(false)}
           photos={scanShareItems.length >= 2 ? scanShareItems : photos}
           hideScanRange={hideExactScans}
+          onPreviewForPartner={openPartnerProgressCardPreview}
         />
       </Modal>
 

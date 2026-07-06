@@ -63,6 +63,29 @@ export {
   orderPair,
 } from '../lib/shareCard/beforeAfterParams';
 
+const SHARE_FORMAT_LABELS = Object.freeze({
+  square: 'Square',
+  portrait: 'Portrait',
+  story: 'Story',
+});
+
+export function buildProgressCardSharePayload(params = {}) {
+  const beforeDate = typeof params?.before?.date === 'string' ? params.before.date.trim() : '';
+  const afterDate = typeof params?.after?.date === 'string' ? params.after.date.trim() : '';
+  const dateRange = beforeDate && afterDate
+    ? (beforeDate === afterDate ? beforeDate : `${beforeDate} to ${afterDate}`)
+    : (beforeDate || afterDate || 'selected dates');
+  const includesWeight = !!(params?.before?.weight || params?.after?.weight);
+  const includesScanScore = !!(params?.before?.scanRange || params?.after?.scanRange);
+  return Object.freeze({
+    label: 'Progress Photos card',
+    dateRange,
+    format: SHARE_FORMAT_LABELS[params?.aspect] || SHARE_FORMAT_LABELS.square,
+    includesWeight,
+    includesScanScore,
+  });
+}
+
 // Optional native modules, guarded so the sheet still mounts (tests, or before a
 // rebuild) without them; generation just can't run until a real build provides
 // Skia + the sharing packages (mirrors ShareCardScreen).
@@ -109,7 +132,7 @@ async function decodePhoto(uri) {
  *                                  swap either.
  */
 export default function BeforeAfterShareSheet({
-  visible, onClose, photos = [], hideScanRange = false,
+  visible, onClose, photos = [], hideScanRange = false, onPreviewForPartner,
 }) {
   const toast = useToast();
   const suppressed = usePhotoSuppression();
@@ -251,6 +274,10 @@ export default function BeforeAfterShareSheet({
       bodyWeightUnits,
     });
   }, [older, newer, metaMap, showWeight, hideScanRange, aspect, bodyWeightUnits]);
+  const partnerPayload = useMemo(
+    () => (pairReady ? buildProgressCardSharePayload(buildParams()) : null),
+    [pairReady, buildParams],
+  );
 
   // ONE renderer for preview + export. Returns a base64 PNG, or null if the
   // card can't be generated (missing Skia/typefaces/images, or a surface fail).
@@ -365,6 +392,11 @@ export default function BeforeAfterShareSheet({
       }
     }));
   }, [ensureConfirmed, withGeneratedFile, toast]);
+
+  const onPartnerPreview = useCallback(() => {
+    if (!pairReady || !partnerPayload || typeof onPreviewForPartner !== 'function') return;
+    onPreviewForPartner(partnerPayload);
+  }, [pairReady, partnerPayload, onPreviewForPartner]);
 
   // Selection: tapping a chosen photo unchooses it; with two chosen, a tap on a
   // third replaces the earliest choice (matches the compare view's semantics).
@@ -520,6 +552,19 @@ export default function BeforeAfterShareSheet({
           size="lg"
         />
 
+        {typeof onPreviewForPartner === 'function' ? (
+          <Button
+            title="Preview for partner"
+            icon="people-outline"
+            onPress={onPartnerPreview}
+            disabled={!pairReady}
+            accessibilityLabel="Preview this progress card for a partner"
+            variant="secondary"
+            size="lg"
+            style={styles.partnerBtn}
+          />
+        ) : null}
+
         {MediaLibrary ? (
           <Button
             title="Save image"
@@ -641,5 +686,6 @@ const styles = StyleSheet.create({
   exportReceiptTitle: { ...type.caption, color: colors.primary },
   exportReceiptLine: { ...type.captionTight, color: colors.textPrimary, lineHeight: 17 },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
+  partnerBtn: { marginTop: spacing.md },
   galleryBtn: { marginTop: spacing.md },
 });

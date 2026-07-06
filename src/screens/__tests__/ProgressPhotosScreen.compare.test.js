@@ -139,7 +139,7 @@ const OLD = mk(2026, 1, 5);
 const MID = mk(2026, 3, 10);
 const NEW = mk(2026, 6, 20);
 
-const nav = { goBack: jest.fn() };
+const nav = { goBack: jest.fn(), navigate: jest.fn() };
 
 function flattenText(node) {
   if (node == null) return '';
@@ -400,6 +400,26 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
     const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
     expect(findPressable(tree, 'Compare two photos')).toBeDefined();
     expect(findPressable(tree, 'Share progress')).toBeDefined();
+  });
+
+  test('share sheet can preview the progress card with Partners', async () => {
+    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
+    await press(tree, 'Share progress');
+    const sheet = hostNode(tree, 'BeforeAfterShareSheet');
+    expect(sheet.props.onPreviewForPartner).toEqual(expect.any(Function));
+    const progressCardSharePayload = {
+      label: 'Progress Photos card',
+      dateRange: '5 Jan 2026 to 20 Jun 2026',
+      format: 'Square',
+      includesWeight: false,
+      includesScanScore: true,
+    };
+    await act(async () => { sheet.props.onPreviewForPartner(progressCardSharePayload); });
+    expect(nav.navigate).toHaveBeenCalledWith('Partner', {
+      source: 'progress_photos_share',
+      shareWinType: 'progress_card',
+      progressCardSharePayload,
+    });
   });
 
   test('Share is Pro-gated: never offered on the free plan even when unsuppressed', async () => {
