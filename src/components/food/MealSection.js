@@ -28,6 +28,7 @@ export default function MealSection({
   // E10 read-only lapse views: never in read-only either, logging a usual is
   // a write.
   const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
+  const showEmptyActions = !hasEntries && !selectionMode && !readOnly;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
   // the day, carry its free additions into the diary too. Only shows when the
   // slot's foods resolve to a real curated meal; null (hidden) otherwise.
@@ -40,6 +41,15 @@ export default function MealSection({
           <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
         ) : null}
       </View>
+      {showEmptyActions ? (
+        <View style={styles.emptySlot}>
+          <Text style={styles.emptySlotText}>
+            {showUsuals
+              ? 'Use a usual, search foods, or quick add an estimate.'
+              : 'Search foods or quick add an estimate for this slot.'}
+          </Text>
+        </View>
+      ) : null}
       {showUsuals ? (
         <View style={styles.usuals}>
           {usuals.map((food) => (
@@ -82,7 +92,31 @@ export default function MealSection({
         </View>
       ) : null}
       {/* E10 read-only lapse views: no add affordances on a view-only diary. */}
-      {!readOnly ? (
+      {showEmptyActions ? (
+        <View style={styles.emptyActionRow}>
+          <TouchableOpacity
+            style={[styles.emptyAction, styles.emptyActionPrimary]}
+            onPress={onAdd}
+            accessibilityRole="button"
+            accessibilityLabel={`Add food to ${slot.label}`}
+          >
+            <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
+            <Text style={styles.emptyActionPrimaryText}>Search foods</Text>
+          </TouchableOpacity>
+          {onQuickAdd ? (
+            <TouchableOpacity
+              style={styles.emptyAction}
+              onPress={onQuickAdd}
+              accessibilityRole="button"
+              accessibilityLabel={`Quick add to ${slot.label}`}
+            >
+              <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.emptyActionText}>Quick add</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+      {!readOnly && hasEntries ? (
         <TouchableOpacity
           style={[styles.addRow, hasEntries && styles.addRowDivided]}
           onPress={onAdd}
@@ -96,7 +130,7 @@ export default function MealSection({
       {/* Escape hatch for meals that aren't worth a lookup (restaurant,
           estimate, retro-logging). Secondary to search by design: quieter
           colour, below the primary row. */}
-      {!readOnly && onQuickAdd ? (
+      {!readOnly && hasEntries && onQuickAdd ? (
         <TouchableOpacity
           style={[styles.addRow, styles.addRowDivided]}
           onPress={onQuickAdd}
@@ -138,6 +172,33 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2,
   },
   usualChipText: { ...type.label, color: colors.textPrimary, marginLeft: 4, flexShrink: 1 },
+  emptySlot: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  emptySlotText: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
+  emptyActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  emptyAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    flexGrow: 1,
+    minHeight: 44,
+    minWidth: 132,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+  },
+  emptyActionPrimary: { backgroundColor: colors.primary },
+  emptyActionText: { ...type.label, color: colors.textSecondary },
+  emptyActionPrimaryText: { ...type.label, color: colors.onPrimary },
   addRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
