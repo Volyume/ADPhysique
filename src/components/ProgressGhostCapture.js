@@ -368,13 +368,9 @@ export default function ProgressGhostCapture({
   const hasReference = !!referencePhoto?.uri;
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Physique Scan' : 'Progress photo';
-  const referenceLine = hasReference
-    ? `Reference: ${referencePhoto.poseLabel || 'previous photo'}${referencePhoto.label ? ` from ${referencePhoto.label}` : ''}.`
-    : null;
-  const liveChecks = [
-    hasReference ? 'Line up with the faint previous photo' : null,
-    ...guidance.checks,
-  ].filter(Boolean).slice(0, 3);
+  const captureInstruction = hasReference
+    ? `Match the faint previous photo. ${subtitle || guidance.line}`
+    : subtitle || guidance.line;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -440,7 +436,7 @@ export default function ProgressGhostCapture({
             {title || guidance.title}
           </Text>
           <Text style={styles.subtitle}>
-            {subtitle || guidance.line}
+            {captureInstruction}
           </Text>
         </View>
         <Pressable
@@ -452,19 +448,6 @@ export default function ProgressGhostCapture({
         >
           <Ionicons name="close" size={iconSize.lg} color={colors.textPrimary} />
         </Pressable>
-      </View>
-
-      <View style={styles.guidanceCard} pointerEvents="none">
-        <Text style={styles.guidanceTitle}>
-          Before you take it
-        </Text>
-        {referenceLine ? <Text style={styles.referenceLine} numberOfLines={1}>{referenceLine}</Text> : null}
-        {liveChecks.map((check) => (
-          <View key={check} style={styles.guidanceRow}>
-            <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
-            <Text style={styles.guidanceText}>{check}</Text>
-          </View>
-        ))}
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
@@ -631,6 +614,11 @@ const styles = StyleSheet.create({
   topCopy: {
     flex: 1,
     gap: spacing.xxs,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: withAlpha(colors.background, 0.62),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.textPrimary, 0.16),
   },
   title: {
     ...type.title,
@@ -644,6 +632,7 @@ const styles = StyleSheet.create({
   subtitle: {
     ...type.bodySm,
     color: withAlpha(colors.textPrimary, 0.85),
+    lineHeight: 20,
   },
   iconBtn: {
     width: 40,
@@ -653,39 +642,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: withAlpha(colors.background, 0.5),
   },
-  guidanceCard: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    top: 152,
-    padding: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: withAlpha(colors.background, 0.56),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.textPrimary, 0.18),
-    gap: spacing.xs,
-  },
-  guidanceTitle: {
-    ...type.caption,
-    color: withAlpha(colors.textPrimary, 0.82),
-    fontWeight: fontWeight.bold,
-  },
-  referenceLine: {
-    ...type.caption,
-    color: withAlpha(colors.textPrimary, 0.86),
-    lineHeight: 18,
-  },
-  guidanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  guidanceText: {
-    ...type.caption,
-    color: withAlpha(colors.textPrimary, 0.9),
-    flex: 1,
-  },
-
   // Bottom controls.
   controls: {
     position: 'absolute',

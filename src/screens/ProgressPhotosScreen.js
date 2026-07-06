@@ -1510,7 +1510,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <ProgressGhostCapture
           referencePhoto={captureReference}
           pose={capturePose}
-          title={scanFlow ? `${POSE_LABEL[capturePose] || 'Progress'} scan` : undefined}
+          title={scanFlow ? (POSE_LABEL[capturePose] || 'Progress photo') : undefined}
           subtitle={scanFlow ? buildScanCaptureSubtitle(capturePose) : undefined}
           onCaptured={(name, saved) => {
             if (scanFlow) onScanCaptured(name, saved);
