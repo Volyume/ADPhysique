@@ -128,3 +128,11 @@ describe('DiaryScreen empty-day add flow', () => {
     expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);
   });
 });
+
+describe('DiaryScreen macro detail entry points', () => {
+  test('the day summary opens the same macro breakdown as the rings when entries exist', () => {
+    expect(SRC).toMatch(/<MacroRings[\s\S]*onPress=\{viewEntries\.length \? \(\) => setBreakdownVisible\(true\) : undefined\}/);
+    expect(SRC).toMatch(/<DiaryDaySummaryCard[\s\S]*onPress=\{viewEntries\.length \? \(\) => setBreakdownVisible\(true\) : undefined\}/);
+    expect(SRC).toMatch(/accessibilityLabel=\{onPress \? 'Open day macro and meal breakdown' : undefined\}/);
+  });
+});

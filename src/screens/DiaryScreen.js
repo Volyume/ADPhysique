@@ -66,10 +66,14 @@ import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { buildDiaryDaySummary, formatDiaryDaySummary } from '../lib/food/diaryDaySummary';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 
-function DiaryDaySummaryCard({ summary }) {
+function DiaryDaySummaryCard({ summary, onPress }) {
   if (!summary) return null;
   return (
-    <Card style={styles.daySummaryCard}>
+    <Card
+      style={styles.daySummaryCard}
+      onPress={onPress}
+      accessibilityLabel={onPress ? 'Open day macro and meal breakdown' : undefined}
+    >
       <View style={styles.daySummaryHead}>
         <View style={styles.daySummaryCopy}>
           <Text style={styles.daySummaryEyebrow}>{summary.title}</Text>
@@ -1122,7 +1126,10 @@ export default function DiaryScreen({ navigation }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
-          <DiaryDaySummaryCard summary={diarySummary} />
+          <DiaryDaySummaryCard
+            summary={diarySummary}
+            onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
+          />
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
               row each; the confirm dialogs own the consequence copy. */}
           {!readOnly && macroCycle ? (
