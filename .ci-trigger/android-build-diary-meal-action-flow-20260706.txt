@@ -1,0 +1,4 @@
+Trigger Android build for diary meal action flow.
+
+Source branch: codex/physique-scan-hardening-20260704-2329
+Commit: a520f18a Improve diary meal action flow
