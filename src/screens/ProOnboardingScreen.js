@@ -54,6 +54,33 @@ const PROTEIN_SHORT = {
 };
 
 const TOTAL_STEPS = 5;
+const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Coaching rhythm'];
+const STEP_OUTCOMES = {
+  1: [
+    { icon: 'shield-checkmark-outline', label: 'Backed-up Pro setup' },
+    { icon: 'sync-outline', label: 'Plan sync' },
+  ],
+  2: [
+    { icon: 'calculator-outline', label: 'Calorie baseline' },
+    { icon: 'barbell-outline', label: 'Protein target' },
+    { icon: 'trending-up-outline', label: 'Weight trend' },
+  ],
+  3: [
+    { icon: 'calendar-outline', label: 'Training split' },
+    { icon: 'time-outline', label: 'Session length' },
+    { icon: 'fitness-outline', label: 'Exercise pool' },
+  ],
+  4: [
+    { icon: 'flag-outline', label: 'Goal phase' },
+    { icon: 'body-outline', label: 'Muscle priorities' },
+    { icon: 'restaurant-outline', label: 'Nutrition target' },
+  ],
+  5: [
+    { icon: 'pulse-outline', label: 'Recovery guardrails' },
+    { icon: 'notifications-outline', label: 'Review rhythm' },
+    { icon: 'heart-outline', label: 'Cardio setting' },
+  ],
+};
 
 // COMP-013 "Building your plan" sequence. Four honest stage lines, each mapped
 // to a real _generatePlanInner phase, displayed for a minimum 800ms dwell while
@@ -895,6 +922,8 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function Header({ title, sub, onBack }) {
+    const stepLabel = STEP_LABELS[step - 1] || 'Setup';
+    const outcomes = STEP_OUTCOMES[step] || [];
     return (
       <View style={styles.headerBlock}>
         <View style={styles.brandRow}>
@@ -915,9 +944,39 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
         </View>
         <ProgressBar />
-        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS}</Text>
+        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
         <Text style={styles.stepTitle}>{title}</Text>
         {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
+        {outcomes.length ? (
+          <View style={styles.outcomeCard}>
+            <Text style={styles.outcomeEyebrow}>This step sets</Text>
+            <View style={styles.outcomeGrid}>
+              {outcomes.map((item) => (
+                <View key={item.label} style={styles.outcomeChip}>
+                  <Ionicons name={item.icon} size={14} color={colors.primary} />
+                  <Text style={styles.outcomeChipText}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  function QuestionGroup({ icon, title, sub, children }) {
+    return (
+      <View style={styles.questionGroup}>
+        <View style={styles.questionGroupHead}>
+          <View style={styles.questionGroupIcon}>
+            <Ionicons name={icon} size={18} color={colors.primary} />
+          </View>
+          <View style={styles.questionGroupCopy}>
+            <Text style={styles.questionGroupTitle}>{title}</Text>
+            {sub ? <Text style={styles.questionGroupSub}>{sub}</Text> : null}
+          </View>
+        </View>
+        {children}
       </View>
     );
   }
@@ -930,26 +989,32 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Create your account or sign in."
-              sub="Pro needs an account so your plan, weight history, and coaching adjustments are backed up and sync across devices."
+              title="Save your Pro setup"
+              sub="Sign in once so your plan, weight history and coaching adjustments can be restored if you change device."
             />
 
-            {/* OAuth only (Apple on iOS, Google on Android). The email +
-                password path was removed (founder 2026-07-01); OAuth needs no
-                verification round-trip and either creates the account or signs
-                into the existing one. handleOAuthOnboarding advances to step 2
-                on success. */}
-            <OAuthButtons
-              onApple={() => handleOAuthOnboarding('apple')}
-              onGoogle={() => handleOAuthOnboarding('google')}
-              disabled={busy}
-            />
+            <QuestionGroup
+              icon="person-circle-outline"
+              title="Your account"
+              sub="This is only for keeping your Pro plan and coaching history tied to you. The training setup starts next."
+            >
+              {/* OAuth only (Apple on iOS, Google on Android). The email +
+                  password path was removed (founder 2026-07-01); OAuth needs no
+                  verification round-trip and either creates the account or signs
+                  into the existing one. handleOAuthOnboarding advances to step 2
+                  on success. */}
+              <OAuthButtons
+                onApple={() => handleOAuthOnboarding('apple')}
+                onGoogle={() => handleOAuthOnboarding('google')}
+                disabled={busy}
+              />
 
-            {busy ? (
-              <View style={styles.oauthBusy}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : null}
+              {busy ? (
+                <View style={styles.oauthBusy}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
+              ) : null}
+            </QuestionGroup>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -983,229 +1048,245 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="About you"
-              sub="About two minutes. Your answers shape the plan the coach builds."
+              title="Set your starting baseline"
+              sub="These details stop the app guessing. They set your first calorie, protein and progress baselines."
             />
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>First name</Text>
-              <TextField accessibilityLabel="First name"
-                ref={nameRef}
-                fieldStyle={styles.inputField}
-                inputStyle={styles.input}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Your name"
-                placeholderTextColor={colors.textDisabled}
-                autoCapitalize="words"
-                autoCorrect={false}
-                autoComplete="off"
-                textContentType="none"
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Biological sex</Text>
-              <Text style={styles.fieldHint}>Used to calculate your calorie and nutrition targets accurately.</Text>
-              <SegmentedControl
-                options={SEX_OPTIONS}
-                value={sex}
-                onChange={setSex}
-                accessibilityLabel="Biological sex"
-              />
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Age</Text>
-              <Text style={styles.fieldHint}>Used with your weight and height to calculate your calorie targets.</Text>
-              <TextField accessibilityLabel="Age"
-                fieldStyle={styles.inputField}
-                inputStyle={styles.input}
-                value={age}
-                onChangeText={setAge}
-                placeholder="e.g. 28"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                maxLength={3}
-                autoComplete="off"
-                textContentType="none"
-              />
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.fieldLabelRow}>
-                <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
-                {/* UI-3: single-select controls carry radio semantics, matching
-                    the shared SegmentedControl. */}
-                <View style={styles.segmentRowSmall} accessibilityRole="radiogroup" accessibilityLabel="Height units">
-                  {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
-                    <TouchableOpacity
-                      key={u.key}
-                      style={[styles.segmentSmall, localHeightUnits === u.key && styles.segmentActive]}
-                      onPress={() => setLocalHeightUnits(u.key)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: localHeightUnits === u.key }}
-                      accessibilityLabel={u.label}
-                    >
-                      <Text style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
-                        {u.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-              <Text style={styles.fieldHint}>Used with your weight and age to calculate your calorie targets.</Text>
-              {localHeightUnits === 'imperial' ? (
-                <View style={styles.heightImperialRow}>
-                  <View style={{ flex: 1 }}>
-                    <TextField accessibilityLabel="Height feet"
-                      fieldStyle={styles.inputField}
-                      inputStyle={styles.input}
-                      value={heightFt}
-                      onChangeText={setHeightFt}
-                      placeholder="5 ft"
-                      placeholderTextColor={colors.textDisabled}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      autoComplete="off"
-                      textContentType="none"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <TextField accessibilityLabel="Height inches"
-                      fieldStyle={styles.inputField}
-                      inputStyle={styles.input}
-                      value={heightIn}
-                      onChangeText={setHeightIn}
-                      placeholder="9 in"
-                      placeholderTextColor={colors.textDisabled}
-                      keyboardType="number-pad"
-                      maxLength={2}
-                      autoComplete="off"
-                      textContentType="none"
-                    />
-                  </View>
-                </View>
-              ) : (
-                <TextField accessibilityLabel="Height in centimetres"
+            <QuestionGroup
+              icon="person-outline"
+              title="Required details"
+              sub="Name, sex, age, height and body weight are the minimum safe inputs for your first targets."
+            >
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>First name</Text>
+                <TextField accessibilityLabel="First name"
+                  ref={nameRef}
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
-                  value={heightCm}
-                  onChangeText={setHeightCm}
-                  placeholder="e.g. 178 cm"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Your name"
+                  placeholderTextColor={colors.textDisabled}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  textContentType="none"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>Biological sex</Text>
+                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. It is not shown publicly.</Text>
+                <SegmentedControl
+                  options={SEX_OPTIONS}
+                  value={sex}
+                  onChange={setSex}
+                  accessibilityLabel="Biological sex"
+                />
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>Age</Text>
+                <Text style={styles.fieldHint}>Used with your height and weight to calculate your calorie targets.</Text>
+                <TextField accessibilityLabel="Age"
+                  fieldStyle={styles.inputField}
+                  inputStyle={styles.input}
+                  value={age}
+                  onChangeText={setAge}
+                  placeholder="e.g. 28"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  autoComplete="off"
+                  textContentType="none"
+                />
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
+                  {/* UI-3: single-select controls carry radio semantics, matching
+                      the shared SegmentedControl. */}
+                  <View style={styles.segmentRowSmall} accessibilityRole="radiogroup" accessibilityLabel="Height units">
+                    {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
+                      <TouchableOpacity
+                        key={u.key}
+                        style={[styles.segmentSmall, localHeightUnits === u.key && styles.segmentActive]}
+                        onPress={() => setLocalHeightUnits(u.key)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: localHeightUnits === u.key }}
+                        accessibilityLabel={u.label}
+                      >
+                        <Text style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
+                          {u.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <Text style={styles.fieldHint}>Used with your weight and age to calculate your calorie targets.</Text>
+                {localHeightUnits === 'imperial' ? (
+                  <View style={styles.heightImperialRow}>
+                    <View style={{ flex: 1 }}>
+                      <TextField accessibilityLabel="Height feet"
+                        fieldStyle={styles.inputField}
+                        inputStyle={styles.input}
+                        value={heightFt}
+                        onChangeText={setHeightFt}
+                        placeholder="5 ft"
+                        placeholderTextColor={colors.textDisabled}
+                        keyboardType="number-pad"
+                        maxLength={1}
+                        autoComplete="off"
+                        textContentType="none"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <TextField accessibilityLabel="Height inches"
+                        fieldStyle={styles.inputField}
+                        inputStyle={styles.input}
+                        value={heightIn}
+                        onChangeText={setHeightIn}
+                        placeholder="9 in"
+                        placeholderTextColor={colors.textDisabled}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        autoComplete="off"
+                        textContentType="none"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <TextField accessibilityLabel="Height in centimetres"
+                    fieldStyle={styles.inputField}
+                    inputStyle={styles.input}
+                    value={heightCm}
+                    onChangeText={setHeightCm}
+                    placeholder="e.g. 178 cm"
+                    placeholderTextColor={colors.textDisabled}
+                    keyboardType="decimal-pad"
+                    autoComplete="off"
+                    textContentType="none"
+                  />
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>Body weight units</Text>
+                <SegmentedControl
+                  options={[
+                    { label: 'Stone+lbs', value: 'st' },
+                    { label: 'kg', value: 'kg' },
+                    { label: 'lbs', value: 'lbs' },
+                  ]}
+                  value={localBWUnits}
+                  onChange={setLocalBWUnits}
+                  accessibilityLabel="Body weight units"
+                />
+              </View>
+
+              <View style={styles.sectionLast}>
+                <Text style={styles.fieldLabel}>Current body weight</Text>
+                <Text style={styles.fieldHint}>
+                  This seeds your weight trend and first calorie target. Update it from Today once the app is set up.
+                </Text>
+                {localBWUnits === 'st' ? (
+                  <View style={styles.heightImperialRow}>
+                    <View style={{ flex: 2 }}>
+                      <TextField accessibilityLabel="Current body weight in stones"
+                        fieldStyle={styles.inputField}
+                        inputStyle={styles.input}
+                        value={bodyWeightSt}
+                        onChangeText={setBodyWeightSt}
+                        placeholder="e.g. 12 st"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="number-pad"
+                        maxLength={3}
+                        autoComplete="off"
+                        textContentType="none"
+                      />
+                    </View>
+                    <View style={{ flex: 3 }}>
+                      <TextField accessibilityLabel="Current body weight remaining pounds"
+                        fieldStyle={styles.inputField}
+                        inputStyle={styles.input}
+                        value={bodyWeightStLbs}
+                        onChangeText={setBodyWeightStLbs}
+                        placeholder="e.g. 0 lbs"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="decimal-pad"
+                        maxLength={4}
+                        autoComplete="off"
+                        textContentType="none"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <TextField accessibilityLabel={`Current body weight in ${localBWUnits}`}
+                    fieldStyle={styles.inputField}
+                    inputStyle={styles.input}
+                    value={bodyWeight}
+                    onChangeText={setBodyWeight}
+                    placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="decimal-pad"
+                    autoComplete="off"
+                    textContentType="none"
+                  />
+                )}
+              </View>
+            </QuestionGroup>
+
+            <QuestionGroup
+              icon="analytics-outline"
+              title="Optional body composition"
+              sub="Only enter body fat if you have a measured figure. If you are unsure, leave it blank."
+            >
+              <View style={styles.sectionLast}>
+                <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
+                <Text style={styles.fieldHint}>
+                  A measured figure can sharpen targets. Progress Photos can track visual change without asking you to guess an exact percentage.
+                </Text>
+                <TextField
+                  fieldStyle={styles.inputField}
+                  inputStyle={styles.input}
+                  value={bodyFat}
+                  onChangeText={setBodyFat}
+                  placeholder="e.g. 15"
                   placeholderTextColor={colors.textDisabled}
                   keyboardType="decimal-pad"
+                  maxLength={4}
                   autoComplete="off"
                   textContentType="none"
+                  accessibilityLabel="Body fat percentage, optional"
                 />
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Body weight units</Text>
-              <SegmentedControl
-                options={[
-                  { label: 'Stone+lbs', value: 'st' },
-                  { label: 'kg', value: 'kg' },
-                  { label: 'lbs', value: 'lbs' },
-                ]}
-                value={localBWUnits}
-                onChange={setLocalBWUnits}
-                accessibilityLabel="Body weight units"
-              />
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Current body weight</Text>
-              <Text style={styles.fieldHint}>
-                Used with your height and age to calculate your calorie targets. Update it daily from the home screen.
-              </Text>
-              {localBWUnits === 'st' ? (
-                <View style={styles.heightImperialRow}>
-                  <View style={{ flex: 2 }}>
-                    <TextField accessibilityLabel="Current body weight in stones"
-                      fieldStyle={styles.inputField}
-                      inputStyle={styles.input}
-                      value={bodyWeightSt}
-                      onChangeText={setBodyWeightSt}
-                      placeholder="e.g. 12 st"
-                      placeholderTextColor={colors.textMuted}
-                      keyboardType="number-pad"
-                      maxLength={3}
-                      autoComplete="off"
-                      textContentType="none"
+                {bodyFat.trim() ? (
+                  <View style={{ marginTop: spacing.sm }}>
+                    {/* U-E-1: gloss the body-fat method abbreviations (BIA/Caliper/DEXA). */}
+                    <View style={styles.measuredRow}>
+                      <Text style={styles.fieldHint}>How was it measured?</Text>
+                      <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
+                    </View>
+                    <SegmentedControl
+                      options={[
+                        { label: 'Visual', value: 'visual' },
+                        { label: 'BIA', value: 'bia' },
+                        { label: 'Caliper', value: 'caliper' },
+                        { label: 'DEXA', value: 'dexa' },
+                      ]}
+                      value={bfSource}
+                      onChange={setBfSource}
+                      accessibilityLabel="Body fat measurement method"
                     />
                   </View>
-                  <View style={{ flex: 3 }}>
-                    <TextField accessibilityLabel="Current body weight remaining pounds"
-                      fieldStyle={styles.inputField}
-                      inputStyle={styles.input}
-                      value={bodyWeightStLbs}
-                      onChangeText={setBodyWeightStLbs}
-                      placeholder="e.g. 0 lbs"
-                      placeholderTextColor={colors.textMuted}
-                      keyboardType="decimal-pad"
-                      maxLength={4}
-                      autoComplete="off"
-                      textContentType="none"
-                    />
-                  </View>
-                </View>
-              ) : (
-                <TextField accessibilityLabel={`Current body weight in ${localBWUnits}`}
-                  fieldStyle={styles.inputField}
-                  inputStyle={styles.input}
-                  value={bodyWeight}
-                  onChangeText={setBodyWeight}
-                  placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="decimal-pad"
-                  autoComplete="off"
-                  textContentType="none"
-                />
-              )}
-            </View>
+                ) : null}
+              </View>
+            </QuestionGroup>
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
-              <Text style={styles.fieldHint}>
-                If you have a measured figure, it sharpens your calorie targets and keeps them matching your Nutrition Targets. Leave blank if unsure.
-              </Text>
-              <TextField
-                fieldStyle={styles.inputField}
-                inputStyle={styles.input}
-                value={bodyFat}
-                onChangeText={setBodyFat}
-                placeholder="e.g. 15"
-                placeholderTextColor={colors.textDisabled}
-                keyboardType="decimal-pad"
-                maxLength={4}
-                autoComplete="off"
-                textContentType="none"
-                accessibilityLabel="Body fat percentage, optional"
-              />
-              {bodyFat.trim() ? (
-                <View style={{ marginTop: spacing.sm }}>
-                  {/* U-E-1: gloss the body-fat method abbreviations (BIA/Caliper/DEXA). */}
-                  <View style={styles.measuredRow}>
-                    <Text style={styles.fieldHint}>How was it measured?</Text>
-                    <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
-                  </View>
-                  <SegmentedControl
-                    options={[
-                      { label: 'Visual', value: 'visual' },
-                      { label: 'BIA', value: 'bia' },
-                      { label: 'Caliper', value: 'caliper' },
-                      { label: 'DEXA', value: 'dexa' },
-                    ]}
-                    value={bfSource}
-                    onChange={setBfSource}
-                    accessibilityLabel="Body fat measurement method"
-                  />
-                </View>
-              ) : null}
-            </View>
+            {!canContinue ? (
+              <Text style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
+            ) : null}
 
             <Button
               title="Continue"
@@ -1232,55 +1313,65 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Your training setup."
-              sub="How your training week looks. About a minute."
+              title="Shape your training week"
+              sub="The plan should fit your real week, not the week you wish you had."
               onBack={goBack}
             />
 
-            <View style={styles.section}>
-              <Dropdown
-                label="Training experience"
-                hint="This sets your starting volume and how complex the exercises are."
-                tip={GLOSSARY.volume}
-                value={experience}
-                options={EXPERIENCE_OPTIONS}
-                onChange={setExperience}
-                placeholder="Select your experience"
-              />
-            </View>
+            <QuestionGroup
+              icon="barbell-outline"
+              title="Plan fit"
+              sub="These answers choose the starting split, exercise pool and weekly workload."
+            >
+              <View style={styles.section}>
+                <Dropdown
+                  label="Training experience"
+                  hint="This sets your starting volume and how complex the exercises are."
+                  tip={GLOSSARY.volume}
+                  value={experience}
+                  options={EXPERIENCE_OPTIONS}
+                  onChange={setExperience}
+                  placeholder="Select your experience"
+                />
+              </View>
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Session length</Text>
-              <Text style={styles.fieldHint}>How long is your typical training session?</Text>
-              <SegmentedControl
-                options={SESSION_LENGTH_OPTIONS}
-                value={sessionLengthMinutes}
-                onChange={setSessionLengthMinutes}
-                accessibilityLabel="Session length"
-              />
-            </View>
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>Session length</Text>
+                <Text style={styles.fieldHint}>Pick the time you can usually complete, including warm-ups.</Text>
+                <SegmentedControl
+                  options={SESSION_LENGTH_OPTIONS}
+                  value={sessionLengthMinutes}
+                  onChange={setSessionLengthMinutes}
+                  accessibilityLabel="Session length"
+                />
+              </View>
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Training days per week</Text>
-              <Text style={styles.fieldHint}>How many days can you train? Your plan is built to fit this many sessions.</Text>
-              <SegmentedControl
-                options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
-                value={daysPerWeek}
-                onChange={setDaysPerWeek}
-                accessibilityLabel="Training days per week"
-              />
-            </View>
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>Training days per week</Text>
+                <Text style={styles.fieldHint}>Choose the number of days you can repeat most weeks.</Text>
+                <SegmentedControl
+                  options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
+                  value={daysPerWeek}
+                  onChange={setDaysPerWeek}
+                  accessibilityLabel="Training days per week"
+                />
+              </View>
 
-            <View style={styles.section}>
-              <Dropdown
-                label="Equipment"
-                hint="What do you have access to?"
-                value={equipment}
-                options={EQUIPMENT_OPTIONS}
-                onChange={setEquipment}
-                placeholder="Select your equipment"
-              />
-            </View>
+              <View style={styles.sectionLast}>
+                <Dropdown
+                  label="Equipment"
+                  hint="Choose what you normally have access to, so swaps and exercise choices make sense."
+                  value={equipment}
+                  options={EQUIPMENT_OPTIONS}
+                  onChange={setEquipment}
+                  placeholder="Select your equipment"
+                />
+              </View>
+            </QuestionGroup>
+
+            {!canContinue ? (
+              <Text style={styles.continueHint}>Choose your experience and equipment to continue.</Text>
+            ) : null}
 
             <Button
               title="Continue"
@@ -1343,71 +1434,76 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="What you're training for."
-              sub="This drives your calorie target and how your plan is built."
+              title="Choose what the plan should serve"
+              sub="Your goal sets the calorie direction, training bias and nutrition target."
               onBack={goBack}
             />
 
             {/* Primary question, single source of truth for what the
                 current block is doing. Drives calories, plan structure,
                 weak-point spec, and strength-size emphasis. */}
-            <View style={styles.section}>
-              <Dropdown
-                label="What are you focused on right now?"
-                hint="This drives your calorie target and how your plan is built."
-                tip={GLOSSARY.phase}
-                value={trainingPhase}
-                options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
-                onChange={setTrainingPhase}
-                placeholder="Choose your focus"
-              />
-              {provisionalKcal ? (
-                <Text style={styles.provisionalKcal}>
-                  Provisionally about {provisionalKcal.toLocaleString('en-GB')} kcal a day for this focus. Your exact targets are set when your plan is built.
-                </Text>
-              ) : null}
-            </View>
-
-            {/* Secondary, optional, only matters for competitive lifters
-                chasing a specific physique category. Defaults to 'general'
-                (balanced volume) for everyone else. */}
-            <Dropdown
-              label="Competing in a category? (optional)"
-              hint="Only if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on."
-              tip={GLOSSARY.division}
-              value={trainingGoal}
-              options={goalOptions}
-              onChange={changeGoal}
-              placeholder="Not competing, General"
-            />
-
-            {/* Weak points, division-scoped. The options shown are the ones
-                this division is judged on (or commonly brings up). Picking none
-                is fine, it just means a balanced plan. */}
-            {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
-              <View style={styles.wpSection}>
-                <Text style={styles.wpLabel}>
-                  Anything to bring up? <Text style={styles.wpOptional}>(optional, up to 3)</Text>
-                </Text>
-                <Text style={styles.wpHint}>
-                  Pick a muscle or two you want to prioritise and your plan puts extra
-                  work into them. Not sure? Leave it blank for a balanced plan; you can
-                  set this later.
-                </Text>
-                <View style={styles.wpGrid}>
-                  {weakPointSetForGoal(trainingGoal).map(muscle => (
-                    <Chip
-                      key={muscle}
-                      label={muscle}
-                      selected={planWeakPoints.includes(muscle)}
-                      onPress={() => toggleWeakPoint(muscle)}
-                    />
-                  ))}
-                </View>
+            <QuestionGroup
+              icon="flag-outline"
+              title="Goal and targets"
+              sub="Start with the broad goal. Competitive category and weak points are optional refinements."
+            >
+              <View style={styles.section}>
+                <Dropdown
+                  label="What are you focused on right now?"
+                  hint="This drives your calorie target and how your plan is built."
+                  tip={GLOSSARY.phase}
+                  value={trainingPhase}
+                  options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
+                  onChange={setTrainingPhase}
+                  placeholder="Choose your focus"
+                />
+                {provisionalKcal ? (
+                  <Text style={styles.provisionalKcal}>
+                    Provisionally about {provisionalKcal.toLocaleString('en-GB')} kcal a day for this focus. Your exact targets are set when your plan is built.
+                  </Text>
+                ) : null}
               </View>
-            )}
 
-            <View style={styles.section}>
+              {/* Secondary, optional, only matters for competitive lifters
+                  chasing a specific physique category. Defaults to 'general'
+                  (balanced volume) for everyone else. */}
+              <View style={styles.section}>
+                <Dropdown
+                  label="Competing in a category? (optional)"
+                  hint="Only if you are chasing a competitive physique. It biases the plan towards the muscles that category is judged on."
+                  tip={GLOSSARY.division}
+                  value={trainingGoal}
+                  options={goalOptions}
+                  onChange={changeGoal}
+                  placeholder="Not competing, General"
+                />
+              </View>
+
+              {/* Weak points, division-scoped. The options shown are the ones
+                  this division is judged on (or commonly brings up). Picking none
+                  is fine, it just means a balanced plan. */}
+              {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
+                <View style={styles.wpSection}>
+                  <Text style={styles.wpLabel}>
+                    Anything to bring up? <Text style={styles.wpOptional}>(optional, up to 3)</Text>
+                  </Text>
+                  <Text style={styles.wpHint}>
+                    Pick one to three muscles you want to prioritise. Not sure? Leave it blank for a balanced plan.
+                  </Text>
+                  <View style={styles.wpGrid}>
+                    {weakPointSetForGoal(trainingGoal).map(muscle => (
+                      <Chip
+                        key={muscle}
+                        label={muscle}
+                        selected={planWeakPoints.includes(muscle)}
+                        onPress={() => toggleWeakPoint(muscle)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.sectionLast}>
               <TouchableOpacity
                 style={styles.proteinHead}
                 onPress={() => setProteinOpen(v => !v)}
@@ -1463,7 +1559,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   })}
                 </View>
               )}
-            </View>
+              </View>
+            </QuestionGroup>
 
             <Button
               title="Continue"
@@ -1492,40 +1589,42 @@ export default function ProOnboardingScreen({ navigation }) {
       const lines = sequenceStages();
       return (
         <SafeAreaView key="step-5-building" style={styles.safe}>
-          <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
-            <View style={styles.brandRow}>
-              <VolyumeIcon size={22} />
-              <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
+          <ScrollView contentContainerStyle={styles.seqScroll} keyboardShouldPersistTaps="handled">
+            <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
+              <View style={styles.brandRow}>
+                <VolyumeIcon size={22} />
+                <View style={styles.proBadge}>
+                  <Text style={styles.proBadgeText}>PRO</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: '100%' }]} />
-            </View>
-            <Text style={styles.seqHeading}>Building your plan</Text>
-            <View style={styles.seqList} accessibilityLiveRegion="polite">
-              {lines.slice(0, sequenceStage).map((line, i) => {
-                const isCurrent = i === sequenceStage - 1;
-                return (
-                  <View key={i} style={styles.seqRow}>
-                    {isCurrent ? (
-                      <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
-                    ) : (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
-                    )}
-                    <Text style={styles.seqLine}>{line}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </Animated.View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: '100%' }]} />
+              </View>
+              <Text style={styles.seqHeading}>Building your plan</Text>
+              <View style={styles.seqList} accessibilityLiveRegion="polite">
+                {lines.slice(0, sequenceStage).map((line, i) => {
+                  const isCurrent = i === sequenceStage - 1;
+                  return (
+                    <View key={i} style={styles.seqRow}>
+                      {isCurrent ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
+                      ) : (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
+                      )}
+                      <Text style={styles.seqLine}>{line}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </Animated.View>
+          </ScrollView>
         </SafeAreaView>
       );
     }
 
     return (
       <SafeAreaView key="step-5" style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Header
             title="Recovery & reminders."
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
@@ -1540,7 +1639,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              You weigh in each morning and check in once a week. Your coach reads the trend and adjusts your calories and training. Logging your food makes each call more accurate, and your weight trend carries the rest.
+              Volyume uses a deterministic, explainable coaching system. Morning weights and weekly check-ins drive the review; food logging makes it sharper, and the app stays cautious when data is missing.
             </Text>
           </View>
 
@@ -1564,7 +1663,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Optional notifications to keep you on track. Change them any time in Settings.</Text>
+            <Text style={styles.fieldHint}>Optional prompts for the habits your weekly review depends on. Change them any time in Settings.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
@@ -1574,7 +1673,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Morning weight reminder</Text>
                   <Text style={styles.notifSub}>
-                    Log your weight first thing. Consistent daily weigh-ins are the most accurate way to track progress.
+                    A quick morning weigh-in gives the coach a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1624,7 +1723,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Weekly check-in reminder</Text>
                   <Text style={styles.notifSub}>
-                    Once a week you review how training went and set next week up. Pick the day that works for you.
+                    Pick the day you are most likely to review training, food and recovery honestly.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1669,7 +1768,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Cardio</Text>
-            <Text style={styles.fieldHint}>Optional cardio logging. The coach only leans on cardio if a cut stalls, never before.</Text>
+            <Text style={styles.fieldHint}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
@@ -1680,7 +1779,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   <Text style={styles.notifTitle}>Cardio</Text>
                   <Text style={styles.notifSub}>
                     {cardioOn
-                      ? 'On. Log any cardio you do, your choice of activity. It is there when you want it, never forced. The coach only suggests cardio if a cut stalls.'
+                      ? 'On. You can log cardio if you do it. The coach only uses it as a lever when it is genuinely needed.'
                       : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
                   </Text>
                 </View>
@@ -1746,9 +1845,34 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
   },
   stepSub: { ...type.bodySm, color: colors.textSecondary },
+  outcomeCard: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  outcomeEyebrow: {
+    ...type.caption,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  outcomeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  outcomeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  outcomeChipText: { ...type.caption, color: colors.textPrimary },
 
   // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
-  seqWrap: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
+  seqScroll: {
+    flexGrow: 1,
+    padding: spacing.xl,
+    justifyContent: 'center',
+  },
+  seqWrap: { width: '100%' },
   seqHeading: {
     fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
     color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.xl,
@@ -1766,6 +1890,40 @@ const styles = StyleSheet.create({
 
   // Sections / inputs
   section: { marginBottom: spacing.xl },
+  sectionLast: { marginBottom: 0 },
+  questionGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  questionGroupHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  questionGroupIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  questionGroupCopy: { flex: 1, minWidth: 0 },
+  questionGroupTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
+  questionGroupSub: { ...type.captionTight, color: colors.textSecondary },
+  continueHint: {
+    ...type.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
