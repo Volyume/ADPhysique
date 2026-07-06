@@ -84,10 +84,10 @@ try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = nu
 // Pose filter chips. 'all' shows every photo; the others narrow to a pose so
 // like compares with like (spec §3.3). Function-neutral labels.
 const POSES = [
-  { key: 'all', label: 'All' },
-  { key: 'front', label: 'Front' },
-  { key: 'side', label: 'Side' },
-  { key: 'back', label: 'Back' },
+  { key: 'all', label: 'All', a11y: 'Show all photo sets' },
+  { key: 'front', label: 'Front', a11y: 'Show front photos' },
+  { key: 'side', label: 'Side', a11y: 'Show side photos' },
+  { key: 'back', label: 'Back', a11y: 'Show back photos' },
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const CORE_POSES = ['front', 'side', 'back'];
@@ -476,8 +476,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the Physique score may be less useful.', [
-        { text: 'Add photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
+      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the Physique Score may be less useful.', [
+        { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
       return;
@@ -852,10 +852,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
-        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's physique score, not a body-fat percentage.`
+        ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's Physique Score, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add a guided photo set or import existing photos. Volyume saves the date, bodyweight snapshot and Physique score together when front and back are usable.');
+        : 'Add a front and back photo set, or import one you already have. Volyume saves the date, bodyweight snapshot and Physique Score together when the set is usable.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -864,7 +864,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'next', icon: 'time-outline', label: 'Suggested gap', value: nextCheckInLabel },
-    { key: 'scan', icon: 'scan', label: 'Physique score', value: scanStatusLabel },
+    { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
   ];
   const nextAction = useMemo(
     () => buildPhysiqueStudioNextAction({
@@ -1022,7 +1022,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.heroEyebrow}>Progress Photos</Text>
               <Text style={styles.heroTitle}>Your progress photos</Text>
               <Text style={styles.heroSubtitle}>
-                Add a guided photo set or import older photos. Volyume keeps the date, bodyweight snapshot and Physique score together.
+                Take a front and back photo set or import one you already have. Volyume stores the date, bodyweight snapshot and Physique Score when the set is clear enough.
               </Text>
             </View>
           </View>
@@ -1043,10 +1043,10 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.setupStandardCard}>
               <View style={styles.setupStandardHead}>
                 <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.setupStandardTitle}>What Physique Scan tells you</Text>
+                <Text style={styles.setupStandardTitle}>How the Physique Score works</Text>
               </View>
               <Text style={styles.setupStandardIntro}>
-                Volyume does not guess an exact body-fat number from a photo. Physique Scan scores a front and back photo set for leanness band, setup quality, confidence and whether your physique appears to be changing.
+                Volyume does not claim an exact body-fat percentage from photos. It reads a front and back set for a leanness band, confidence, setup quality and visible change over time.
               </Text>
             </View>
 
@@ -1076,12 +1076,12 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.heroActions}>
               {!readOnly ? (
                 <Button
-                  title="Add photos"
+                  title="Add photo set"
                   icon="camera-outline"
                   onPress={onAdd}
                   fullWidth={false}
                   style={styles.heroPrimaryAction}
-                  accessibilityLabel="Add photos"
+                  accessibilityLabel="Add photo set"
                 />
               ) : null}
               {(canCompareScans || canCompare) ? (
@@ -1158,13 +1158,13 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved weight, angles and Physique score when available.
+              Each photo set shows its date, saved weight, angles and Physique Score when available.
             </Text>
           </View>
         ) : null}
 
         {!loading && photos.length > 0 ? (
-          <View style={styles.filterRow} accessibilityLabel="Filter by pose">
+          <View style={styles.filterRow}>
             {POSES.map((p) => {
               const active = p.key === poseFilter;
               return (
@@ -1175,7 +1175,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={p.label}
+                  accessibilityLabel={p.a11y}
                 >
                   <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{p.label}</Text>
                 </TouchableOpacity>
@@ -1186,7 +1186,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
         {!loading && photos.length > 0 ? (
           <View style={styles.controlRow}>
-            <View style={styles.sortGroup} accessibilityLabel="Sort order">
+            <View style={styles.sortGroup}>
               {SORTS.map((s) => {
                 const active = s.key === sortOrder;
                 return (
@@ -1257,7 +1257,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add a guided photo set or import existing photos. Volyume saves the date, weight snapshot and Physique score when front and back photos are usable.
+                Your first set can be new photos or older photos from your phone. Front and back are enough to create a Physique Score when the photos are clear.
               </Text>
             </>
           )}
@@ -1281,8 +1281,8 @@ export default function ProgressPhotosScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Standard pushed-screen scaffold (BackHeader), matching Partners and the
-          rest of the app. The write actions live in the hero so Add photos and
-          Physique Scan are not duplicated in the header. */}
+          rest of the app. The write actions live in the hero so capture and
+          scoring are not duplicated in the header. */}
       <BackHeader
         title="Progress Photos"
         onBack={() => navigation.goBack()}
@@ -1427,24 +1427,24 @@ export default function ProgressPhotosScreen({ navigation }) {
               activeOpacity={1}
               onPress={() => setCaptureRouteOpen(false)}
               accessibilityRole="button"
-              accessibilityLabel="Close add photos options"
+              accessibilityLabel="Close photo set options"
             />
             <SafeAreaView edges={['bottom']} style={styles.captureRouteSafe}>
               <View style={styles.captureRouteSheet}>
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
-                  <Text style={styles.captureRouteTitle}>Add photos</Text>
+                  <Text style={styles.captureRouteTitle}>Add photo set</Text>
                   <TouchableOpacity
                     onPress={() => setCaptureRouteOpen(false)}
                     hitSlop={10}
                     accessibilityRole="button"
-                    accessibilityLabel="Close add photos options"
+                    accessibilityLabel="Close photo set options"
                   >
                     <Ionicons name="close" size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Choose a guided photo set or import photos you already have. Both end up in the same dated library and get a Physique score when front and back photos are usable.
+                  Take a new set or import one you already have. Both end up in the same dated library and only get a Physique Score when the front and back photos are usable.
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1491,13 +1491,13 @@ export default function ProgressPhotosScreen({ navigation }) {
                       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </TouchableOpacity>
                   ))}
+                  <View style={styles.captureRouteNote}>
+                    <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+                    <Text style={styles.captureRouteNoteText}>
+                      If the photos are not clear enough, Volyume saves them without forcing a Physique Score. Photos stay on this phone unless you share or export them.
+                    </Text>
+                  </View>
                 </ScrollView>
-                <View style={styles.captureRouteNote}>
-                  <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.captureRouteNoteText}>
-                    If the photos are not clear enough, Volyume saves them without forcing a Physique score. Photos stay on this phone unless you share or export them.
-                  </Text>
-                </View>
               </View>
             </SafeAreaView>
           </View>
@@ -1901,8 +1901,8 @@ const styles = StyleSheet.create({
   },
   captureRouteTitle: { ...type.h3, color: colors.textPrimary, flex: 1 },
   captureRouteIntro: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
-  captureRouteScroll: { flexShrink: 1 },
-  captureRouteList: { gap: spacing.sm, paddingBottom: spacing.xxs },
+  captureRouteScroll: { flexShrink: 1, minHeight: 0 },
+  captureRouteList: { gap: spacing.sm, paddingBottom: spacing.sm },
   captureRouteCard: {
     minHeight: 96,
     flexDirection: 'row',

@@ -23,7 +23,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -96,32 +96,39 @@ export default function PhotoDateRangeSheet({
     >
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Filter by date</Text>
-          <Text style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
-
-          <Text style={styles.sectionLabel}>From</Text>
-          <TouchableOpacity
-            style={styles.dateField}
-            onPress={() => { setToPickerOpen(false); setFromPickerOpen(true); }}
-            accessibilityRole="button"
-            accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollBody}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
-            <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
-          </TouchableOpacity>
+            <Text style={styles.sheetTitle}>Filter by date</Text>
+            <Text style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
 
-          <Text style={styles.sectionLabel}>To</Text>
-          <TouchableOpacity
-            style={styles.dateField}
-            onPress={() => { setFromPickerOpen(false); setToPickerOpen(true); }}
-            accessibilityRole="button"
-            accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
-          >
-            <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
-            <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
-          </TouchableOpacity>
+            <Text style={styles.sectionLabel}>From</Text>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => { setToPickerOpen(false); setFromPickerOpen(true); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
+            >
+              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
+              <Text style={styles.dateText}>{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <Text style={styles.sectionLabel}>To</Text>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => { setFromPickerOpen(false); setToPickerOpen(true); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
+            >
+              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
+              <Text style={styles.dateText}>{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+            </TouchableOpacity>
+          </ScrollView>
 
           <View style={styles.actions}>
             {hasDraft ? (
@@ -180,7 +187,10 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%', maxWidth: 420, backgroundColor: colors.surfaceElevated ?? colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl,
+    maxHeight: '90%',
   },
+  sheetScroll: { flexShrink: 1, minHeight: 0 },
+  sheetScrollBody: { paddingBottom: spacing.xs },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
   helper: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   sectionLabel: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },

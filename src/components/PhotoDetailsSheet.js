@@ -21,7 +21,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable,
+  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -83,54 +83,61 @@ export default function PhotoDetailsSheet({
         accessibilityLabel="Dismiss photo details"
       >
         <View style={styles.sheet} onStartShouldSetResponder={() => true}>
-          <Text style={styles.sheetTitle}>Photo details</Text>
-          <Text style={styles.sheetIntro}>
-            Add the date and pose so Progress Photos can keep this image in the right place.
-          </Text>
-          <View style={styles.contextBox}>
-            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-            <Text style={styles.contextText}>
-              Date and pose make future reviews fairer by grouping photos from the same day together.
-            </Text>
-          </View>
-
-          <Text style={styles.helper}>When was this photo taken?</Text>
-          <TouchableOpacity
-            style={styles.dateField}
-            onPress={() => setPickerOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollBody}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-            <Text style={styles.dateText}>{formatProgressPhotoDay(dateMs)}</Text>
-            <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
-          </TouchableOpacity>
+            <Text style={styles.sheetTitle}>Photo details</Text>
+            <Text style={styles.sheetIntro}>
+              Add the date and pose so Progress Photos can keep this image in the right place.
+            </Text>
+            <View style={styles.contextBox}>
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+              <Text style={styles.contextText}>
+                Date and pose make future reviews fairer by grouping photos from the same day together.
+              </Text>
+            </View>
 
-          <Text style={styles.sectionLabel}>Pose</Text>
-          <View style={styles.poseSelector}>
-            {POSES.map((p) => {
-              const active = pose === p.key;
-              return (
-                <TouchableOpacity
-                  key={p.key}
-                  onPress={() => onSelectPose(p.key)}
-                  style={[styles.poseOption, active && styles.poseOptionActive]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`Set pose to ${p.label}`}
-                >
-                  <Ionicons
-                    name={p.icon}
-                    size={iconSize.sm}
-                    color={active ? colors.primary : colors.textMuted}
-                  />
-                  <Text style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            <Text style={styles.helper}>When was this photo taken?</Text>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => setPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
+            >
+              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
+              <Text style={styles.dateText}>{formatProgressPhotoDay(dateMs)}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <Text style={styles.sectionLabel}>Pose</Text>
+            <View style={styles.poseSelector}>
+              {POSES.map((p) => {
+                const active = pose === p.key;
+                return (
+                  <TouchableOpacity
+                    key={p.key}
+                    onPress={() => onSelectPose(p.key)}
+                    style={[styles.poseOption, active && styles.poseOptionActive]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`Set pose to ${p.label}`}
+                  >
+                    <Ionicons
+                      name={p.icon}
+                      size={iconSize.sm}
+                      color={active ? colors.primary : colors.textMuted}
+                    />
+                    <Text style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
+                      {p.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
 
           <View style={styles.actions}>
             <Button
@@ -171,7 +178,10 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%', maxWidth: 420, backgroundColor: colors.surfaceElevated ?? colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl,
+    maxHeight: '90%',
   },
+  sheetScroll: { flexShrink: 1, minHeight: 0 },
+  sheetScrollBody: { paddingBottom: spacing.xs },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
   sheetIntro: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
   contextBox: {

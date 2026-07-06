@@ -119,7 +119,7 @@ test('renders the camera preview and the ghost overlay when a reference is given
 
 test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/useWindowDimensions/);
-  expect(SOURCE).toMatch(/viewportHeight < 820/);
+  expect(SOURCE).toMatch(/viewportHeight < 900/);
   expect(SOURCE).toMatch(/numberOfLines=\{compactOverlay \? 1 : 2\}/);
   expect(SOURCE).toMatch(/styles\.topBarCompact/);
   expect(SOURCE).toMatch(/styles\.controlsCompact/);
