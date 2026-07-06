@@ -141,7 +141,8 @@ test('capture route sheet distinguishes Physique Scan from single-photo routes',
   expect(copy).toContain('Front relaxed');
   expect(copy).toContain('Back relaxed');
   expect(copy).toContain('Set the real capture date');
-  expect(copy).toContain('Photos stay private unless you choose to share or export.');
+  expect(copy).toContain('Photos are stored on this device and stay private unless you choose to share or export.');
+  expect(copy).toContain('Export anything you want to keep before uninstalling the app');
   expect(hasPressableLabel(tree, 'Start Physique Scan')).toBe(true);
   expect(hasPressableLabel(tree, 'Open guided camera')).toBe(true);
   expect(hasPressableLabel(tree, 'Take photo')).toBe(true);

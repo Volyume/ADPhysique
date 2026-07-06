@@ -143,6 +143,8 @@ test('renders the photo date and pose chip from the metadata', async () => {
   expect(text).toContain('Jul'); // 3 Jul 2026, British format
   expect(text).toContain('Front'); // pose chip + selector label
   expect(text).toContain('Pose');
+  expect(text).toContain('Stored on this device');
+  expect(text).toContain('Export anything you want to keep before uninstalling');
 });
 
 test('shows the bodyweight line when suppression is off', async () => {

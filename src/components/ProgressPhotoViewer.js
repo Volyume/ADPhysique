@@ -60,7 +60,7 @@ import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import PhotoDatePicker from './PhotoDatePicker';
-import { colors, spacing, radius, type, motion } from '../styles/theme';
+import { colors, spacing, radius, type, motion, iconSize } from '../styles/theme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
@@ -375,6 +375,13 @@ export default function ProgressPhotoViewer({
               {showWeight ? <Text style={styles.metaWeight}>{weightLine}</Text> : null}
               {currentMeta.note ? <Text style={styles.metaNote}>{currentMeta.note}</Text> : null}
 
+              <View style={styles.storageNote}>
+                <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.storageNoteText}>
+                  Stored on this device. Export anything you want to keep before uninstalling, clearing app data or changing phones.
+                </Text>
+              </View>
+
               <Text style={styles.sectionLabel}>Pose</Text>
               <View style={styles.poseSelector}>
                 {POSES.map((p) => {
@@ -488,6 +495,18 @@ const styles = StyleSheet.create({
   metaDate: { ...type.bodyStrong, color: colors.textPrimary },
   metaWeight: { ...type.num('body'), color: colors.textSecondary, marginTop: spacing.xxs },
   metaNote: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
+  storageNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  storageNoteText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   sectionLabel: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   poseSelector: {
     flexDirection: 'row', gap: spacing.sm,

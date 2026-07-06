@@ -105,12 +105,22 @@ describe('partner shareable wins policy', () => {
     expect(validateShareWinDraft(pr)).toBe(true);
 
     const progress = buildShareWinDraft('progress_card', {
-      label: '12-week progress card',
+      label: 'Progress photo card',
+      dateRange: '5 Jan to 20 Jun',
+      format: 'Square',
+      includesWeight: false,
+      includesScanScore: true,
       scanScore: 82,
       photoUri: 'file:///private-photo.jpg',
     });
     expect(progress.requiresExport).toBe(true);
+    expect(progress.summary).toBe('Progress photo card, 5 Jan to 20 Jun.');
+    expect(progress.detail).toContain('Only the composed export can be sent');
+    expect(progress.detail).toContain('The visible scan score is part of that export');
+    expect(progress.detail).toContain('Weight is off for this export');
     expect(progress.detail).toContain('body metrics and the photo library stay private');
+    expect(progress.dateRange).toBe('5 Jan to 20 Jun');
+    expect(progress.format).toBe('Square');
     expect(Object.keys(progress)).not.toContain('photoUri');
     expect(Object.keys(progress)).not.toContain('scanScore');
     expect(validateShareWinDraft(progress)).toBe(true);
@@ -121,7 +131,7 @@ describe('partner shareable wins policy', () => {
     expect(shareWinDraftHasForbiddenFields({ type: 'workout_summary', reps: 10 })).toBe(true);
     expect(shareWinDraftHasForbiddenFields({ type: 'progress_card', photoUri: 'file://x' })).toBe(true);
     expect(validateShareWinDraft({ type: 'workout_summary', title: 'x', summary: 'x', detail: 'x', reps: 10 })).toBe(false);
-    for (const key of ['sets', 'reps', 'load', 'food', 'coachNotes', 'bodyMetrics', 'photoUri', 'scanScore']) {
+    for (const key of ['sets', 'reps', 'load', 'food', 'coachNotes', 'bodyMetrics', 'photoUri', 'imageUri', 'imageBase64', 'scanScore']) {
       expect(SHARE_WIN_FORBIDDEN_FIELDS).toContain(key);
     }
   });
@@ -140,6 +150,26 @@ describe('partner shareable wins policy', () => {
       expect(draft.defaultConsent).toBe('Ask every time');
     }
     expect(examples.map((draft) => draft.summary).join(' ')).not.toContain('file://');
+  });
+
+  test('builds progress-card previews from a sanitized exported-card payload', () => {
+    const previews = buildShareWinExamplePreviews({
+      progress_card: {
+        label: 'Progress photo card',
+        dateRange: '1 Jan to 1 Apr',
+        format: 'Portrait',
+        includesWeight: true,
+        includesScanScore: false,
+        imageUri: 'file:///private-export.png',
+      },
+    });
+    const progress = previews.find((preview) => preview.type === 'progress_card');
+    expect(progress.draft.summary).toBe('Progress photo card, 1 Jan to 1 Apr.');
+    expect(progress.draft.detail).toContain('Scan details stay private unless they are visible on that export.');
+    expect(progress.draft.detail).toContain('Weight is included because it was switched on for that export.');
+    expect(progress.draft.format).toBe('Portrait');
+    expect(Object.keys(progress.draft)).not.toContain('imageUri');
+    expect(validateShareWinDraft(progress.draft)).toBe(true);
   });
 
   test('builds explicit preview receipts for one-card partner sharing', () => {
