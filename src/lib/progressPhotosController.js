@@ -115,10 +115,10 @@ export function buildPhysiqueStudioNextAction({
       kind: 'complete_pose',
       title: `Add ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`,
       body: `Your latest date is missing the ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo.`,
-      reason: 'Add it if you want front, side and back photos for the same date.',
+      reason: 'Add it to keep front, side and back together for that date.',
       detailItems: [
         'Use similar lighting, distance and camera height.',
-        'If the photo is not clear enough, save it without using it for a scan.',
+        'If the photo is not clear enough, keep it as a normal progress photo.',
       ],
       cta: `Add ${NEXT_ACTION_POSE_LABEL[pose]} photo`,
       pose,

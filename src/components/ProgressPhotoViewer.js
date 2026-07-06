@@ -310,7 +310,7 @@ export default function ProgressPhotoViewer({
     const deleteCopy = deleteMode === 'scan-set'
       ? {
         buttonTitle: 'Delete set',
-        message: 'Delete this photo set from your device? This removes all photos in the set and its saved Physique Score.',
+        message: 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Physique Score.',
       }
       : {
         buttonTitle: 'Delete',

@@ -102,10 +102,10 @@ describe('progressPhotosController transforms', () => {
       kind: 'complete_pose',
       title: 'Add front photo',
       body: 'Your latest date is missing the front photo.',
-      reason: 'Add it if you want front, side and back photos for the same date.',
+      reason: 'Add it to keep front, side and back together for that date.',
       detailItems: [
         'Use similar lighting, distance and camera height.',
-        'If the photo is not clear enough, save it without using it for a scan.',
+        'If the photo is not clear enough, keep it as a normal progress photo.',
       ],
       cta: 'Add Front photo',
       pose: 'front',

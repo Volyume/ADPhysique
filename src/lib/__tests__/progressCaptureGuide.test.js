@@ -45,7 +45,7 @@ describe('progress capture guide copy', () => {
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
-    expect(prompt).toContain('not an exact body-fat percentage');
+    expect(prompt).toContain('not a body-fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
     expect(how).toContain('Volyume Physique Score is our own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');
@@ -88,6 +88,7 @@ describe('progress capture guide copy', () => {
     expect(routes[0]).toMatchObject({
       title: 'Add the back photo',
       actionLabel: 'Add Back photo',
+      bestFor: 'Keeping one date together.',
       recommended: true,
     });
     expect(routes[1]).toMatchObject({

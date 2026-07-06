@@ -200,7 +200,8 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
   expect(copy).toContain('Add photo set');
-  expect(copy).toContain('Take a new set or import one you already have.');
+  expect(copy).toContain('Take new photos or import ones you already have.');
+  expect(copy).toContain('same private library');
   expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
   expect(copy).toContain('Choose the front relaxed photo');
