@@ -244,3 +244,20 @@ test('a hard-denied permission shows the calm photo-library fallback, no crash',
   act(() => { fallbackBtn.props.onPress(); });
   expect(onFallback).toHaveBeenCalled();
 });
+
+test('an unresolved permission state explains the next step and offers the library fallback', async () => {
+  mockPermission = null;
+  const onFallback = jest.fn();
+  const tree = await render({ referencePhoto: REF, pose: 'front', onFallback });
+
+  const json = JSON.stringify(tree.toJSON());
+  expect(json).toContain('Waiting for camera permission');
+  expect(json).toContain('If the permission prompt does not appear');
+  expect(saveProgressPhoto).not.toHaveBeenCalled();
+
+  const fallbackBtn = tree.root.find(
+    (n) => n.props?.accessibilityLabel === 'Add a photo from your library',
+  );
+  act(() => { fallbackBtn.props.onPress(); });
+  expect(onFallback).toHaveBeenCalled();
+});

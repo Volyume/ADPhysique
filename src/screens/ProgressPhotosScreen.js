@@ -910,17 +910,17 @@ export default function ProgressPhotosScreen({ navigation }) {
         <View style={styles.studioPanel}>
           <View style={styles.statStrip}>
             <View style={styles.statCell}>
-              <Text style={styles.statLabel}>Last</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>Last</Text>
               <Text style={styles.statValue} numberOfLines={1}>{lastCheckInLabel}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCell}>
-              <Text style={styles.statLabel}>Next</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>Next</Text>
               <Text style={styles.statValue} numberOfLines={1}>{nextCheckInLabel}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCell}>
-              <Text style={styles.statLabel}>Scan</Text>
+              <Text style={styles.statLabel} numberOfLines={1}>Scan</Text>
               <Text style={styles.statValue} numberOfLines={1}>{scanStatusLabel}</Text>
             </View>
           </View>
@@ -1095,6 +1095,9 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.emptyHint}>
                 Capture your first private check-in with front, side or back photos.
                 Use the same setup next time so comparisons stay fair.
+              </Text>
+              <Text style={styles.emptySupport}>
+                Start with one full-body front photo, then add side and back when you are ready.
               </Text>
               <Button
                 title="Capture Check-In"
@@ -1301,7 +1304,7 @@ const styles = StyleSheet.create({
   heroEyebrow: { ...type.caption, color: colors.appleBtnText, opacity: 0.82 },
   heroTitle: { ...type.h2, color: colors.appleBtnText },
   heroSubtitle: { ...type.bodySm, color: colors.appleBtnText, opacity: 0.88 },
-  studioPanel: { padding: spacing.lg, gap: spacing.md },
+  studioPanel: { padding: spacing.lg, gap: spacing.lg },
   statStrip: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -1313,24 +1316,30 @@ const styles = StyleSheet.create({
   },
   statCell: {
     flex: 1,
+    minWidth: 0,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
     gap: spacing.xxs,
   },
   statDivider: { width: 1, backgroundColor: colors.border },
   statLabel: { ...type.caption, color: colors.textMuted },
-  statValue: { ...type.label, color: colors.textPrimary },
+  statValue: { ...type.label, color: colors.textPrimary, lineHeight: 18, flexShrink: 1 },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
-  heroPrimaryAction: { flexGrow: 1 },
-  heroSecondaryAction: { flexGrow: 1 },
+  heroPrimaryAction: { flexGrow: 1, flexBasis: '100%' },
+  heroSecondaryAction: { flexGrow: 1, minWidth: 132 },
   signalCard: {
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
-    paddingLeft: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
     gap: spacing.xs,
   },
   signalTitle: { ...type.label, color: colors.textPrimary },
@@ -1341,6 +1350,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   nextActionCopy: { gap: spacing.xs },
   nextActionEyebrow: {
@@ -1418,16 +1429,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   checkInCoverBadgeText: { ...type.caption, color: colors.onPrimary },
-  checkInBody: { flex: 1, gap: spacing.sm, paddingVertical: spacing.xs },
+  checkInBody: { flex: 1, minWidth: 0, gap: spacing.sm, paddingVertical: spacing.xs },
   checkInTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    minWidth: 0,
   },
-  checkInTitleBlock: { flex: 1 },
-  checkInDate: { ...type.label, color: colors.textPrimary },
-  checkInMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  checkInTitleBlock: { flex: 1, minWidth: 0 },
+  checkInDate: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
+  checkInMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs, flexShrink: 1 },
   setupQualityRow: { flexDirection: 'row', alignItems: 'center' },
   setupQualityPill: {
     flexDirection: 'row',
@@ -1437,9 +1449,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
+    maxWidth: '100%',
   },
   setupQualityPillStrong: { backgroundColor: colors.primaryBg },
-  setupQualityText: { ...type.caption, color: colors.textMuted },
+  setupQualityText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   setupQualityTextStrong: { color: colors.primary },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
@@ -1471,5 +1484,6 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   emptyHint: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
+  emptySupport: { ...type.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
   emptyAdd: { marginTop: spacing.md },
 });
