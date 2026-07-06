@@ -476,7 +476,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between scans', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the scan result may be less useful.', [
+      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the Physique score may be less useful.', [
         { text: 'Add photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -846,14 +846,16 @@ export default function ProgressPhotosScreen({ navigation }) {
   const nextCheckInLabel = progressCheckInCadenceLabel(latestPhoto?.takenAt, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
   const scanStatusLabel = suppressed
     ? 'Hidden'
-    : latestAssessment?.scanConfidenceLabel || latestScan?.qualityLabel || (latestScan ? 'Saved' : 'No scan yet');
+    : latestAssessment?.visualLeannessScore != null
+      ? (hideExactScans ? (latestAssessment.leannessBandLabel || 'Saved') : `${Math.round(latestAssessment.visualLeannessScore)}/100`)
+      : (latestScan ? 'Saved' : 'No score yet');
   const currentPhotoText = suppressed
     ? 'Scan details are hidden for now. Your photos are still private on this phone.'
       : latestAssessment?.progressSignalLabel
         ? `${String(latestAssessment.progressSignalLabel).replace(/^Progress Signal is /, 'Change looks ')}. This is Volyume's physique score, not a body-fat percentage.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. Comparisons are clearest when lighting, camera height and angle stay similar.'
-        : 'Add a guided set or import existing photos. Volyume saves the date, bodyweight snapshot and physique score together when front and back are usable.');
+        : 'Add a guided photo set or import existing photos. Volyume saves the date, bodyweight snapshot and Physique score together when front and back are usable.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -862,7 +864,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'next', icon: 'time-outline', label: 'Suggested gap', value: nextCheckInLabel },
-    { key: 'scan', icon: 'scan', label: 'Scan status', value: scanStatusLabel },
+    { key: 'scan', icon: 'scan', label: 'Physique score', value: scanStatusLabel },
   ];
   const nextAction = useMemo(
     () => buildPhysiqueStudioNextAction({
@@ -899,7 +901,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const scanForDay = scanByDateKey.get(localDateKey(item.takenAt));
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
     const scoreText = scanScore != null
-      ? (suppressed || hideExactScans ? 'Score hidden' : `Score ${scanScore}/100`)
+      ? (suppressed || hideExactScans ? 'Score hidden' : `Physique ${scanScore}/100`)
       : null;
     const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
@@ -1020,7 +1022,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <Text style={styles.heroEyebrow}>Progress Photos</Text>
               <Text style={styles.heroTitle}>Your progress photos</Text>
               <Text style={styles.heroSubtitle}>
-                Add guided photos or import older ones. Volyume keeps the date, bodyweight snapshot and physique score together.
+                Add a guided photo set or import older photos. Volyume keeps the date, bodyweight snapshot and Physique score together.
               </Text>
             </View>
           </View>
@@ -1096,7 +1098,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
 
             <View style={styles.signalCard}>
-              <Text style={styles.signalTitle}>Latest read</Text>
+              <Text style={styles.signalTitle}>Latest result</Text>
               <Text style={styles.signalBody}>{currentPhotoText}</Text>
               <Text style={styles.signalSupport}>{currentPhotoSupport}</Text>
             </View>
@@ -1156,7 +1158,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each day shows its date, saved weight, pose set and physique score when a scan result is available.
+              Each photo set shows its date, saved weight, angles and Physique score when available.
             </Text>
           </View>
         ) : null}
@@ -1255,7 +1257,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add a guided set or import existing photos. Volyume will save the photos by date and scan the set when front and back are available.
+                Add a guided photo set or import existing photos. Volyume saves the date, weight snapshot and Physique score when front and back photos are usable.
               </Text>
             </>
           )}
@@ -1442,12 +1444,13 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.captureRouteIntro}>
-                  Choose guided capture or import existing photos. Both create the same dated library entry and scan the set when front and back photos are usable.
+                  Choose a guided photo set or import photos you already have. Both end up in the same dated library and get a Physique score when front and back photos are usable.
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
                   contentContainerStyle={styles.captureRouteList}
                   showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
                 >
                   {captureRoutes.map((route) => (
                     <TouchableOpacity
@@ -1492,7 +1495,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <View style={styles.captureRouteNote}>
                   <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                   <Text style={styles.captureRouteNoteText}>
-                    If the photos are not clear enough, Volyume saves them without forcing a scan result. Photos stay on this phone unless you share or export them.
+                    If the photos are not clear enough, Volyume saves them without forcing a Physique score. Photos stay on this phone unless you share or export them.
                   </Text>
                 </View>
               </View>
@@ -1898,7 +1901,7 @@ const styles = StyleSheet.create({
   },
   captureRouteTitle: { ...type.h3, color: colors.textPrimary, flex: 1 },
   captureRouteIntro: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
-  captureRouteScroll: { maxHeight: 520 },
+  captureRouteScroll: { flexShrink: 1 },
   captureRouteList: { gap: spacing.sm, paddingBottom: spacing.xxs },
   captureRouteCard: {
     minHeight: 96,

@@ -20,9 +20,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/getProgressScanHideExactPreference/);
     expect(SCREEN).toMatch(/setProgressScanHideExactPreference/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*14 \* 86400000/);
-    expect(SCREEN).toMatch(/Leave more time between scans/);
+    expect(SCREEN).toMatch(/Leave more time between photo sets/);
     expect(SCREEN).toMatch(/save photos today/);
-    expect(SCREEN).toMatch(/without forcing a scan result/);
+    expect(SCREEN).toMatch(/Physique score may be less useful/);
+    expect(SCREEN).toMatch(/without forcing a Physique score/);
     expect(SCREEN).toMatch(/progressCheckInCadenceLabel\(latestPhoto\?\.takenAt, Date\.now\(\), PROGRESS_SCAN_MIN_INTERVAL_MS\)/);
     expect(SCREEN).not.toMatch(/at least a week apart/);
   });

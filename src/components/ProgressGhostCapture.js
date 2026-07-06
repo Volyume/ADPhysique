@@ -39,6 +39,7 @@ import {
   PanResponder,
   Platform,
   StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -168,6 +169,7 @@ export default function ProgressGhostCapture({
   const toast = useToast();
   const userId = useAppStore((s) => s.user?.id);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  const { height: viewportHeight } = useWindowDimensions();
 
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -366,6 +368,7 @@ export default function ProgressGhostCapture({
   }
 
   const hasReference = !!referencePhoto?.uri;
+  const compactOverlay = Number.isFinite(viewportHeight) && viewportHeight < 820;
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Physique Scan' : 'Progress photo';
   const captureInstruction = subtitle || guidance.line;
@@ -419,7 +422,7 @@ export default function ProgressGhostCapture({
         ) : null}
 
         {countdown != null ? (
-          <View style={styles.countdownWrap} pointerEvents="none" accessible={false}>
+          <View style={[styles.countdownWrap, compactOverlay && styles.countdownWrapCompact]} pointerEvents="none" accessible={false}>
             <Text style={styles.countdownText}>{countdown}</Text>
             <Text style={styles.countdownHint}>Step into the frame</Text>
           </View>
@@ -427,13 +430,13 @@ export default function ProgressGhostCapture({
       </CameraView>
 
       {/* Top bar: framing copy + close. */}
-      <View style={styles.topBar} pointerEvents="box-none">
-        <View style={styles.topCopy} pointerEvents="none">
+      <View style={[styles.topBar, compactOverlay && styles.topBarCompact]} pointerEvents="box-none">
+        <View style={[styles.topCopy, compactOverlay && styles.topCopyCompact]} pointerEvents="none">
           <Text style={styles.modeChip}>{modeLabel}</Text>
           <Text style={styles.title} numberOfLines={1}>
             {title || guidance.title}
           </Text>
-          <Text style={styles.subtitle} numberOfLines={2}>
+          <Text style={[styles.subtitle, compactOverlay && styles.subtitleCompact]} numberOfLines={compactOverlay ? 1 : 2}>
             {captureInstruction}
           </Text>
         </View>
@@ -449,10 +452,11 @@ export default function ProgressGhostCapture({
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
-      <View style={styles.controls} pointerEvents="box-none">
+      <View style={[styles.controls, compactOverlay && styles.controlsCompact]} pointerEvents="box-none">
         {hasReference ? (
-          <View style={styles.overlayControls}>
+          <View style={[styles.overlayControls, compactOverlay && styles.overlayControlsCompact]}>
             <OpacitySlider value={opacity} onChange={setOpacity} />
+            {!compactOverlay ? (
             <View style={styles.opacityPresetRow} accessibilityLabel="Overlay strength presets">
               {OPACITY_PRESETS.map((preset) => {
                 const active = Math.abs(clampOpacity(opacity) - preset.value) < 0.025;
@@ -474,6 +478,7 @@ export default function ProgressGhostCapture({
                 );
               })}
             </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -582,6 +587,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
   },
+  countdownWrapCompact: {
+    top: '44%',
+  },
   countdownText: {
     ...type.display,
     color: colors.textPrimary,
@@ -608,6 +616,12 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: spacing.xxl,
     gap: spacing.md,
+    zIndex: 4,
+  },
+  topBarCompact: {
+    padding: spacing.md,
+    paddingTop: spacing.lg,
+    gap: spacing.sm,
   },
   topCopy: {
     flex: 1,
@@ -618,6 +632,11 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.background, 0.62),
     borderWidth: 1,
     borderColor: withAlpha(colors.textPrimary, 0.16),
+  },
+  topCopyCompact: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
   },
   title: {
     ...type.bodyStrong,
@@ -632,6 +651,10 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: withAlpha(colors.textPrimary, 0.85),
     lineHeight: 20,
+  },
+  subtitleCompact: {
+    ...type.caption,
+    lineHeight: 17,
   },
   iconBtn: {
     width: 40,
@@ -650,9 +673,18 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
+    zIndex: 3,
+  },
+  controlsCompact: {
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
   overlayControls: {
     gap: spacing.sm,
+  },
+  overlayControlsCompact: {
+    gap: spacing.xs,
   },
   sliderRow: {
     flexDirection: 'row',

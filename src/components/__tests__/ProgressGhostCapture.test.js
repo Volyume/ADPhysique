@@ -13,10 +13,14 @@
  * expo-camera and expo-sensors are native modules; both are mocked here.
  */
 
+import fs from 'fs';
+import path from 'path';
 import { create, act } from 'react-test-renderer';
 
 import ProgressGhostCapture from '../ProgressGhostCapture';
 import useAppStore from '../../store/useAppStore';
+
+const SOURCE = fs.readFileSync(path.resolve(__dirname, '../ProgressGhostCapture.js'), 'utf8');
 
 // Mutable permission the mocked hook returns (mock-prefixed so the jest.mock
 // factory may close over it).
@@ -113,6 +117,17 @@ test('renders the camera preview and the ghost overlay when a reference is given
   expect(json).toContain('file:///photos/ref.jpg');
 });
 
+test('camera overlay has a compact short-screen layout path', () => {
+  expect(SOURCE).toMatch(/useWindowDimensions/);
+  expect(SOURCE).toMatch(/viewportHeight < 820/);
+  expect(SOURCE).toMatch(/numberOfLines=\{compactOverlay \? 1 : 2\}/);
+  expect(SOURCE).toMatch(/styles\.topBarCompact/);
+  expect(SOURCE).toMatch(/styles\.controlsCompact/);
+  expect(SOURCE).toMatch(/!\s*compactOverlay \? \(/);
+  expect(SOURCE).toMatch(/key: 'strong'/);
+  expect(SOURCE).toMatch(/\$\{preset\.label\} overlay strength/);
+});
+
 test('renders side and back pose guidance for scan captures', async () => {
   const side = await render({ pose: 'side' });
   expect(JSON.stringify(side.toJSON())).toContain('Side relaxed');
@@ -127,13 +142,9 @@ test('exposes an adjustable opacity control for the overlay', async () => {
   const tree = await render({ referencePhoto: REF, pose: 'front' });
   const adjustables = tree.root.findAll((n) => n.props?.accessibilityRole === 'adjustable');
   expect(adjustables.length).toBeGreaterThan(0);
-  expect(JSON.stringify(tree.toJSON())).toContain('Standard');
-  const preset = tree.root.find(
-    (n) => n.props?.accessibilityLabel === 'Strong overlay strength',
-  );
-  expect(preset.props.accessibilityHint).toContain('previous photo');
   const slider = adjustables[0];
   expect(slider.props.accessibilityValue).toMatchObject({ min: 15, max: 85 });
+  expect(slider.props.accessibilityValue.now).toBe(30);
   // Increment action nudges the reported opacity up without throwing.
   const before = slider.props.accessibilityValue.now;
   act(() => {

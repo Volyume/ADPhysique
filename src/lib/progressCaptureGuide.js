@@ -40,7 +40,7 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
-  'If the photo is not clear enough, save it as a progress photo instead of using it for a scan result.';
+  'If the photo is not clear enough, save it as a progress photo instead of forcing a Physique score.';
 
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
@@ -115,31 +115,31 @@ export function buildProgressStudioCaptureRoutes({
     routes.push({
       key: 'scan',
       icon: 'scan',
-      eyebrow: 'Guided capture',
-      title: 'Guided physique scan',
-      body: 'Volyume talks you through a fresh front and back photo set, with an optional side photo.',
-      bestFor: 'A new physique score from photos taken in the same setup.',
+      eyebrow: 'Best for a new score',
+      title: 'Guided photo set',
+      body: 'Take front and back photos in one guided flow. If the set is clear enough, Volyume adds a Physique score.',
+      bestFor: 'A new score from photos taken in the same setup.',
       steps: PROGRESS_SCAN_SEQUENCE,
-      actionLabel: 'Start guided scan',
+      actionLabel: 'Start guided set',
       recommended: true,
       disabled: !canScan,
-      disabledReason: 'Sign in to save a guided scan.',
+      disabledReason: 'Sign in to save a guided photo set.',
     });
     routes.push({
       key: 'scan_library',
       icon: 'images-outline',
       eyebrow: 'Import',
-      title: 'Import photos to scan',
-      body: 'Choose existing front and back photos. Volyume saves them to your library and scores the set.',
+      title: 'Import a photo set',
+      body: 'Choose existing front and back photos. Volyume adds them to your library and gives the set a score when the photos are usable.',
       bestFor: 'Scoring older photos you already have, using the real capture date and weight snapshot.',
       steps: Object.freeze([
         'Choose the front relaxed photo',
         'Choose the back relaxed photo',
-        'Add the optional side photo or finish the scan',
+        'Add the optional side photo or finish the set',
       ]),
-      actionLabel: 'Import photos to scan',
+      actionLabel: 'Import photo set',
       disabled: !canScan,
-      disabledReason: 'Sign in to save imported scans.',
+      disabledReason: 'Sign in to save imported photo sets.',
     });
     return routes;
   }
