@@ -18,4 +18,16 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
   });
+
+  test('keeps gym avatar presets behind the tappable profile image', () => {
+    expect(source).toMatch(/const AVATAR_PRESETS = Object\.freeze/);
+    expect(source).toMatch(/key: 'volyume_lift', label: 'Strength avatar'/);
+    expect(source).toMatch(/key: 'volyume_physique', label: 'Physique avatar'/);
+    expect(source).toMatch(/key: 'volyume_consistency', label: 'Consistency avatar'/);
+    expect(source).toMatch(/key: 'volyume_progress', label: 'Progress avatar'/);
+    expect(source).toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
+    expect(source).toMatch(/Add profile photo or avatar/);
+    expect(source).not.toMatch(/title="Change photo"/);
+    expect(source).not.toMatch(/title="Remove profile photo"/);
+  });
 });

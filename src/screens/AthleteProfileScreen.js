@@ -37,6 +37,17 @@ import { logError } from '../lib/errorLog';
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
 
+const AVATAR_PRESETS = Object.freeze([
+  Object.freeze({ key: 'volyume_lift', label: 'Strength avatar', icon: 'barbell-outline' }),
+  Object.freeze({ key: 'volyume_physique', label: 'Physique avatar', icon: 'body-outline' }),
+  Object.freeze({ key: 'volyume_consistency', label: 'Consistency avatar', icon: 'calendar-outline' }),
+  Object.freeze({ key: 'volyume_progress', label: 'Progress avatar', icon: 'trending-up-outline' }),
+]);
+
+function avatarPresetFor(key) {
+  return AVATAR_PRESETS.find((preset) => preset.key === key) || AVATAR_PRESETS[0];
+}
+
 function formatDate(ms) {
   if (!ms) return 'Not logged';
   try {
@@ -254,14 +265,14 @@ export default function AthleteProfileScreen({ navigation }) {
     }
   }
 
-  async function applyGeneratedAvatar() {
+  async function applyAvatarPreset(presetKey) {
     if (!user?.id) return;
     try {
       if (avatarUri) await deleteAvatarPhoto(avatarUri);
-      await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: 'volyume_lift' });
-      toast.show('Volyume avatar set', { variant: 'success' });
+      await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: avatarPresetFor(presetKey).key });
+      toast.show('Profile avatar updated', { variant: 'success' });
     } catch (e) {
-      logError('AthleteProfile.applyGeneratedAvatar', e, { userId: user?.id });
+      logError('AthleteProfile.applyAvatarPreset', e, { userId: user?.id });
       toast.show("Couldn't update avatar", { variant: 'error' });
     }
   }
@@ -284,7 +295,7 @@ export default function AthleteProfileScreen({ navigation }) {
   function onAvatarPress() {
     const actions = [
       { text: avatarUri ? 'Change photo' : 'Choose photo', onPress: pickAvatar },
-      { text: 'Use Volyume avatar', onPress: applyGeneratedAvatar },
+      ...AVATAR_PRESETS.map((preset) => ({ text: preset.label, onPress: () => applyAvatarPreset(preset.key) })),
     ];
     if (avatarUri || avatarPreset) {
       actions.push({ text: 'Remove profile photo', style: 'destructive', onPress: removeAvatar });
@@ -315,6 +326,7 @@ export default function AthleteProfileScreen({ navigation }) {
     sub: summary.bodyFatLoggedAt ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry` : 'Manual entry only',
   };
   const focusTile = currentFocusTile(userProfile);
+  const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;
   const freshness = buildProfileFreshness({
     latestMetricAt: summary.latestMetric?.loggedAt ?? summary.latestMetric?.logged_at ?? summary.bodyFatLoggedAt,
     latestScanAt: summary.scan?.capturedAt ?? summary.scan?.captured_at,
@@ -332,13 +344,17 @@ export default function AthleteProfileScreen({ navigation }) {
             style={styles.avatar}
             onPress={onAvatarPress}
             accessibilityRole="button"
-            accessibilityLabel={avatarUri || avatarPreset ? 'Profile photo. Tap to change or remove.' : 'Add profile photo'}
+            accessibilityLabel={avatarUri
+              ? 'Profile photo. Tap to change or remove.'
+              : avatarPresetConfig
+                ? `${avatarPresetConfig.label}. Tap to change or remove.`
+                : 'Add profile photo or avatar'}
           >
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-            ) : avatarPreset ? (
+            ) : avatarPresetConfig ? (
               <>
-                <Ionicons name="barbell-outline" size={24} color={colors.primary} />
+                <Ionicons name={avatarPresetConfig.icon} size={24} color={colors.primary} />
                 <Text style={styles.avatarPresetText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
               </>
             ) : (
