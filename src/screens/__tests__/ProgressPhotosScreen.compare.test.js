@@ -196,6 +196,19 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(dateText).toBeTruthy();
   });
 
+  test('partial Check-In cards show setup quality and can complete the next missing pose', async () => {
+    const tree = await render([NEW]);
+    const card = checkInFor(tree, NEW);
+    const quality = findElement(card, (n) => n.props && n.props.children === 'Partial setup');
+    const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Complete this Check-In with a Front photo');
+
+    expect(quality).toBeTruthy();
+    expect(complete).toBeTruthy();
+    await act(async () => { complete.props.onPress(); });
+    expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
+    expect(hostNode(tree, 'ProgressGhostCapture').props.pose).toBe('front');
+  });
+
   test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());

@@ -41,6 +41,28 @@ function poseOrder(pose) {
   return 3;
 }
 
+function setupQualityForPoses(poses = []) {
+  if (poses.includes('front') && poses.includes('side') && poses.includes('back')) {
+    return {
+      key: 'complete',
+      label: 'Strong setup',
+      helper: 'Front, side and back are saved for like-for-like comparison.',
+    };
+  }
+  if (poses.length >= 2) {
+    return {
+      key: 'usable',
+      label: 'Usable setup',
+      helper: 'Add the missing pose to make this Check-In stronger.',
+    };
+  }
+  return {
+    key: 'partial',
+    label: 'Partial setup',
+    helper: 'Add the other poses before relying on comparisons.',
+  };
+}
+
 export function buildCheckInTimeline(list = []) {
   const out = [];
   const source = Array.isArray(list) ? list : [];
@@ -55,6 +77,7 @@ export function buildCheckInTimeline(list = []) {
     const poses = [...new Set(sortedPhotos.map((p) => p.pose).filter(Boolean))];
     const note = sortedPhotos.find((p) => p.note)?.note || null;
     const weightKg = sortedPhotos.find((p) => Number.isFinite(p.weightKg))?.weightKg ?? null;
+    const setupQuality = setupQualityForPoses(poses);
     out.push({
       type: 'checkin',
       key: `checkin-${curDayKey}`,
@@ -66,6 +89,7 @@ export function buildCheckInTimeline(list = []) {
       poses,
       note,
       weightKg,
+      setupQuality,
     });
     bucket = [];
   };
