@@ -3,6 +3,7 @@ import {
   SHARE_WIN_FORBIDDEN_FIELDS,
   SHARE_WIN_POLICY,
   SHARE_WIN_TYPES,
+  buildShareWinExampleDrafts,
   buildShareWinDraft,
   isValidShareWinType,
   shareWinDraftHasForbiddenFields,
@@ -104,5 +105,21 @@ describe('partner shareable wins policy', () => {
     for (const key of ['sets', 'reps', 'load', 'food', 'coachNotes', 'bodyMetrics', 'photoUri', 'scanScore']) {
       expect(SHARE_WIN_FORBIDDEN_FIELDS).toContain(key);
     }
+  });
+
+  test('builds safe example cards for the review sheet', () => {
+    const examples = buildShareWinExampleDrafts();
+    expect(examples.map((draft) => draft.type)).toEqual([
+      'workout_summary',
+      'personal_record',
+      'block_milestone',
+      'progress_card',
+    ]);
+    for (const draft of examples) {
+      expect(validateShareWinDraft(draft)).toBe(true);
+      expect(shareWinDraftHasForbiddenFields(draft)).toBe(false);
+      expect(draft.defaultConsent).toBe('Ask every time');
+    }
+    expect(examples.map((draft) => draft.summary).join(' ')).not.toContain('file://');
   });
 });

@@ -44,7 +44,12 @@ import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
 import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
-import { SHARE_WIN_CARD_RULES, SHARE_WIN_POLICY, SHARE_WIN_TYPES } from '../lib/partners/shareWins';
+import {
+  SHARE_WIN_CARD_RULES,
+  SHARE_WIN_POLICY,
+  SHARE_WIN_TYPES,
+  buildShareWinExampleDrafts,
+} from '../lib/partners/shareWins';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
@@ -1009,6 +1014,7 @@ function AckSheetBody({ pair, onSend }) {
 }
 
 function ShareWinsSheetBody() {
+  const exampleDrafts = buildShareWinExampleDrafts();
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Shareable wins</Text>
@@ -1019,6 +1025,17 @@ function ShareWinsSheetBody() {
           <View key={rule} style={styles.shareWinRuleRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
             <Text style={styles.shareWinRuleText}>{rule}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.shareWinExamples}>
+        <Text style={styles.shareWinSectionTitle}>Card examples</Text>
+        {exampleDrafts.map((draft) => (
+          <View key={draft.type} style={styles.shareWinExampleCard}>
+            <Text style={styles.shareWinExampleTitle}>{draft.title}</Text>
+            <Text style={styles.shareWinExampleSummary}>{draft.summary}</Text>
+            <Text style={styles.shareWinExampleDetail}>{draft.detail}</Text>
+            <Text style={styles.shareWinExampleConsent}>Consent: {draft.defaultConsent}.</Text>
           </View>
         ))}
       </View>
@@ -1333,6 +1350,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   shareWinRuleText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  shareWinExamples: { gap: spacing.sm },
+  shareWinSectionTitle: { ...type.label, color: colors.textPrimary },
+  shareWinExampleCard: {
+    gap: spacing.xxs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  shareWinExampleTitle: { ...type.label, color: colors.textPrimary },
+  shareWinExampleSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
+  shareWinExampleDetail: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinExampleConsent: { ...type.caption, color: colors.primary, lineHeight: 18 },
   shareWinType: {
     gap: spacing.xxs,
     borderTopWidth: StyleSheet.hairlineWidth,
