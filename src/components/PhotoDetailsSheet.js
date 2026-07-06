@@ -21,7 +21,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -33,9 +33,9 @@ import {
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
-  { key: 'front', label: 'Front' },
-  { key: 'side', label: 'Side' },
-  { key: 'back', label: 'Back' },
+  { key: 'front', label: 'Front', icon: 'body-outline' },
+  { key: 'side', label: 'Side', icon: 'swap-horizontal-outline' },
+  { key: 'back', label: 'Back', icon: 'walk-outline' },
 ];
 
 /**
@@ -76,12 +76,23 @@ export default function PhotoDetailsSheet({
       animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onCancel}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={onCancel}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss photo details"
+      >
+        <View style={styles.sheet} onStartShouldSetResponder={() => true}>
           <Text style={styles.sheetTitle}>Check-In details</Text>
           <Text style={styles.sheetIntro}>
             Tag the photo so your timeline can group like-for-like check-ins. Keep the setup consistent next time.
           </Text>
+          <View style={styles.contextBox}>
+            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+            <Text style={styles.contextText}>
+              Date and pose keep comparisons honest by placing this photo in the right Check-In.
+            </Text>
+          </View>
 
           <Text style={styles.helper}>When was this check-in taken?</Text>
           <TouchableOpacity
@@ -108,6 +119,11 @@ export default function PhotoDetailsSheet({
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={`Set pose to ${p.label}`}
                 >
+                  <Ionicons
+                    name={p.icon}
+                    size={iconSize.sm}
+                    color={active ? colors.primary : colors.textMuted}
+                  />
                   <Text style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
                     {p.label}
                   </Text>
@@ -134,7 +150,7 @@ export default function PhotoDetailsSheet({
             />
           </View>
         </View>
-      </View>
+      </Pressable>
 
       <PhotoDatePicker
         visible={pickerOpen}
@@ -158,6 +174,16 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
   sheetIntro: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
+  contextBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  contextText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   helper: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   dateField: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -169,7 +195,8 @@ const styles = StyleSheet.create({
   sectionLabel: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   poseSelector: { flexDirection: 'row', gap: spacing.sm },
   poseOption: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
+    flex: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2,
   },

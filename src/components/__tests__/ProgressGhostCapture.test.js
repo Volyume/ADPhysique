@@ -100,7 +100,10 @@ test('renders the camera preview and the ghost overlay when a reference is given
   const json = JSON.stringify(tree.toJSON());
   // Pose-specific studio guidance, no cadence.
   expect(json).toContain('Front relaxed');
+  expect(json).toContain('Check-in capture: Front relaxed');
   expect(json).toContain('Full body visible');
+  expect(json).toContain('Camera at mid-torso height');
+  expect(json).toContain('arms across the body');
   expect(json).toContain('Match your previous setup');
   // The ghost overlay image carries the reference uri.
   expect(json).toContain('file:///photos/ref.jpg');
@@ -120,6 +123,11 @@ test('exposes an adjustable opacity control for the overlay', async () => {
   const tree = await render({ referencePhoto: REF, pose: 'front' });
   const adjustables = tree.root.findAll((n) => n.props?.accessibilityRole === 'adjustable');
   expect(adjustables.length).toBeGreaterThan(0);
+  expect(JSON.stringify(tree.toJSON())).toContain('Standard');
+  const preset = tree.root.find(
+    (n) => n.props?.accessibilityLabel === 'Strong overlay strength',
+  );
+  expect(preset.props.accessibilityHint).toContain('previous photo');
   const slider = adjustables[0];
   expect(slider.props.accessibilityValue).toMatchObject({ min: 15, max: 85 });
   // Increment action nudges the reported opacity up without throwing.

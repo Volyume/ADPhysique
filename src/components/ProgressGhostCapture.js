@@ -51,6 +51,7 @@ import {
   setProgressScanCameraFacingPreference,
   setProgressScanTimerPreference,
 } from '../lib/progressScanPreferences';
+import { getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
 import { useToast } from './Toast';
 import {
   colors,
@@ -87,29 +88,11 @@ const OPACITY_MAX = 0.85;
 const OPACITY_DEFAULT = 0.3;
 const OPACITY_STEP = 0.05;
 
-const POSE_GUIDANCE = {
-  front: {
-    title: 'Front relaxed',
-    line: 'Stand tall, feet planted, arms relaxed by your sides.',
-    checks: ['Full body visible', 'Even light from the front', 'No mirror selfie'],
-  },
-  side: {
-    title: 'Side relaxed',
-    line: 'Turn to your set side and keep your waistline visible.',
-    checks: ['Torso not blocked', 'Same camera height', 'Head-to-foot frame'],
-  },
-  back: {
-    title: 'Back relaxed',
-    line: 'Face away from the camera, stand tall, and keep the full frame visible.',
-    checks: ['Shoulders level', 'Feet in frame', 'Lighting unchanged'],
-  },
-};
-
-const DEFAULT_GUIDANCE = {
-  title: 'Studio setup',
-  line: 'Use the same room, lighting, distance and camera height each time.',
-  checks: ['Full body visible', 'Plain background', 'Repeatable setup'],
-};
+const OPACITY_PRESETS = [
+  { key: 'low', label: 'Low', value: 0.2 },
+  { key: 'standard', label: 'Standard', value: OPACITY_DEFAULT },
+  { key: 'strong', label: 'Strong', value: 0.6 },
+];
 
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;
@@ -360,7 +343,8 @@ export default function ProgressGhostCapture({
   }
 
   const hasReference = !!referencePhoto?.uri;
-  const guidance = POSE_GUIDANCE[pose] || DEFAULT_GUIDANCE;
+  const guidance = getPoseCaptureGuidance(pose);
+  const modeLabel = `${title ? 'Scan capture' : 'Check-in capture'}: ${guidance.title}`;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -421,6 +405,7 @@ export default function ProgressGhostCapture({
       {/* Top bar: framing copy + close. */}
       <View style={styles.topBar} pointerEvents="box-none">
         <View style={styles.topCopy} pointerEvents="none">
+          <Text style={styles.modeChip}>{modeLabel}</Text>
           <Text style={styles.title}>
             {title || guidance.title}
           </Text>
@@ -449,11 +434,41 @@ export default function ProgressGhostCapture({
             <Text style={styles.guidanceText}>{check}</Text>
           </View>
         ))}
+        {guidance.avoid?.length ? (
+          <Text style={styles.guidanceAvoid} numberOfLines={2}>
+            Avoid {guidance.avoid.join(', ')}.
+          </Text>
+        ) : null}
       </View>
 
       {/* Controls: opacity, grid toggle, flip, capture. */}
       <View style={styles.controls} pointerEvents="box-none">
-        {hasReference ? <OpacitySlider value={opacity} onChange={setOpacity} /> : null}
+        {hasReference ? (
+          <View style={styles.overlayControls}>
+            <OpacitySlider value={opacity} onChange={setOpacity} />
+            <View style={styles.opacityPresetRow} accessibilityLabel="Overlay strength presets">
+              {OPACITY_PRESETS.map((preset) => {
+                const active = Math.abs(clampOpacity(opacity) - preset.value) < 0.025;
+                return (
+                  <Pressable
+                    key={preset.key}
+                    style={[styles.opacityPreset, active && styles.opacityPresetActive]}
+                    onPress={() => setOpacity(preset.value)}
+                    hitSlop={hitSlop}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`${preset.label} overlay strength`}
+                    accessibilityHint="Changes how strongly the previous photo appears over the camera preview"
+                  >
+                    <Text style={[styles.opacityPresetText, active && styles.opacityPresetTextActive]}>
+                      {preset.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.timerRow}>
           {[0, 5, 10].map((seconds) => (
@@ -461,9 +476,11 @@ export default function ProgressGhostCapture({
               key={seconds}
               style={[styles.timerChip, timerSeconds === seconds && styles.timerChipActive]}
               onPress={() => chooseTimer(seconds)}
+              hitSlop={hitSlop}
               accessibilityRole="button"
               accessibilityState={{ selected: timerSeconds === seconds }}
               accessibilityLabel={seconds === 0 ? 'Timer off' : `${seconds} second timer`}
+              accessibilityHint="Sets a delay before the photo is taken"
             >
               <Text style={[styles.timerChipText, timerSeconds === seconds && styles.timerChipTextActive]}>
                 {seconds === 0 ? 'Off' : `${seconds}s`}
@@ -480,6 +497,7 @@ export default function ProgressGhostCapture({
             accessibilityRole="button"
             accessibilityState={{ selected: showGrid }}
             accessibilityLabel={showGrid ? 'Hide framing grid' : 'Show framing grid'}
+            accessibilityHint="Turns the camera framing grid on or off"
           >
             <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? colors.primary : colors.textSecondary} />
           </Pressable>
@@ -490,6 +508,7 @@ export default function ProgressGhostCapture({
             disabled={capturing || countdown != null}
             accessibilityRole="button"
             accessibilityLabel={timerSeconds > 0 ? `Start ${timerSeconds} second timer` : 'Take photo'}
+            accessibilityHint="Saves a private progress photo on this device"
             accessibilityState={{ disabled: capturing || countdown != null }}
           >
             <View style={styles.captureInner} />
@@ -501,6 +520,7 @@ export default function ProgressGhostCapture({
             hitSlop={hitSlop}
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
+            accessibilityHint="Switches between the front and rear camera"
           >
             <Ionicons name="camera-reverse-outline" size={iconSize.md} color={colors.textSecondary} />
           </Pressable>
@@ -590,6 +610,11 @@ const styles = StyleSheet.create({
     ...type.title,
     color: colors.textPrimary,
   },
+  modeChip: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.82),
+    fontWeight: fontWeight.bold,
+  },
   subtitle: {
     ...type.bodySm,
     color: withAlpha(colors.textPrimary, 0.85),
@@ -629,6 +654,11 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.textPrimary, 0.9),
     flex: 1,
   },
+  guidanceAvoid: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.76),
+    marginTop: spacing.xxs,
+  },
 
   // Bottom controls.
   controls: {
@@ -639,6 +669,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
+  },
+  overlayControls: {
+    gap: spacing.sm,
   },
   sliderRow: {
     flexDirection: 'row',
@@ -672,6 +705,34 @@ const styles = StyleSheet.create({
     width: 36,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
+  },
+  opacityPresetRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  opacityPreset: {
+    minHeight: 36,
+    minWidth: 76,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: withAlpha(colors.background, 0.46),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.textPrimary, 0.16),
+  },
+  opacityPresetActive: {
+    backgroundColor: colors.primaryFill,
+    borderColor: colors.primary,
+  },
+  opacityPresetText: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.86),
+    fontWeight: fontWeight.bold,
+  },
+  opacityPresetTextActive: {
+    color: colors.onPrimary,
   },
   controlRow: {
     flexDirection: 'row',
