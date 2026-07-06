@@ -47,6 +47,7 @@ import {
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
   buildProgressScanFinishPayload,
+  buildPhysiqueStudioNextAction,
   enrichProgressPhotos,
   progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
@@ -367,6 +368,11 @@ export default function ProgressPhotosScreen({ navigation }) {
   );
 
   const timeline = useMemo(() => buildCheckInTimeline(filtered), [filtered]);
+  const allCheckIns = useMemo(
+    () => buildCheckInTimeline(filterAndSort(enriched, { sortOrder: 'newest' }))
+      .filter((item) => item.type === 'checkin'),
+    [enriched],
+  );
 
   const hasRange = Number.isFinite(rangeFrom) || Number.isFinite(rangeTo);
   // Plain label for the date-range pill; "to" reads calmer than a dash and
@@ -735,6 +741,28 @@ export default function ProgressPhotosScreen({ navigation }) {
     : latestScan
       ? 'Best results come from matched pose, full-body framing and repeatable lighting. Photos stay on this device unless you choose to share or export them.'
       : 'Use front, side and back photos under the same lighting. Photos stay on this device unless you choose to share or export them.';
+  const nextAction = useMemo(
+    () => buildPhysiqueStudioNextAction({
+      checkIns: allCheckIns,
+      scans: visibleScans,
+      suppressed,
+      readOnly,
+    }),
+    [allCheckIns, visibleScans, suppressed, readOnly],
+  );
+
+  function onNextActionPress(action = nextAction) {
+    if (!action) return;
+    if (action.kind === 'complete_pose') {
+      openCheckInPoseCapture(action.checkIn, action.pose);
+    } else if (action.kind === 'compare_scans') {
+      openScanCompare();
+    } else if (action.kind === 'compare_checkins') {
+      openCompare();
+    } else if (action.kind === 'capture') {
+      onAdd();
+    }
+  }
 
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
@@ -955,6 +983,24 @@ export default function ProgressPhotosScreen({ navigation }) {
           onDeleteScan={deleteScanEntry}
           onOpenPhoto={openViewer}
         />
+      ) : null}
+
+      {!loading && nextAction ? (
+        <Card style={styles.nextActionCard}>
+          <View style={styles.nextActionCopy}>
+            <Text style={styles.nextActionEyebrow}>Next best action</Text>
+            <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
+            <Text style={styles.nextActionBody}>{nextAction.body}</Text>
+          </View>
+          <Button
+            title={nextAction.cta}
+            icon={nextAction.kind === 'capture' || nextAction.kind === 'complete_pose' ? 'camera-outline' : 'git-compare-outline'}
+            variant={nextAction.kind === 'capture' ? 'primary' : 'secondary'}
+            fullWidth={false}
+            onPress={() => onNextActionPress(nextAction)}
+            accessibilityLabel={`Next best action: ${nextAction.cta}`}
+          />
+        </Card>
       ) : null}
 
       {!loading && photos.length > 0 && (
@@ -1293,6 +1339,19 @@ const styles = StyleSheet.create({
   signalBody: { ...type.bodySm, color: colors.textSecondary },
   signalSupport: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   readOnlyNote: { ...type.caption, color: colors.textMuted },
+  nextActionCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  nextActionCopy: { gap: spacing.xs },
+  nextActionEyebrow: {
+    ...type.caption,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  nextActionTitle: { ...type.label, color: colors.textPrimary },
+  nextActionBody: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,

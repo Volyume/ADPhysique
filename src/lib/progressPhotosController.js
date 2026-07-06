@@ -60,6 +60,71 @@ export function progressCheckInCadenceLabel(latestTakenAt, nowMs = Date.now(), m
   return `In ${days} days`;
 }
 
+const NEXT_ACTION_POSES = ['front', 'side', 'back'];
+const NEXT_ACTION_POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+
+function checkInIsComplete(checkIn) {
+  const poses = Array.isArray(checkIn?.poses) ? checkIn.poses : [];
+  return NEXT_ACTION_POSES.every((pose) => poses.includes(pose));
+}
+
+export function buildPhysiqueStudioNextAction({
+  checkIns = [],
+  scans = [],
+  suppressed = false,
+  readOnly = false,
+} = {}) {
+  const source = Array.isArray(checkIns) ? checkIns.filter((item) => item?.type === 'checkin') : [];
+  const ordered = [...source].sort((a, b) => (Number(b.takenAt) || 0) - (Number(a.takenAt) || 0));
+  const latest = ordered[0] || null;
+  const completed = ordered.filter(checkInIsComplete);
+  const visibleScans = visibleCompletedScans(scans);
+
+  if (latest && !checkInIsComplete(latest) && !readOnly) {
+    const poses = Array.isArray(latest.poses) ? latest.poses : [];
+    const pose = NEXT_ACTION_POSES.find((p) => !poses.includes(p));
+    return {
+      kind: 'complete_pose',
+      title: 'Complete latest Check-In',
+      body: 'Add the missing pose now so this Check-In is easier to compare later.',
+      cta: `Complete with ${NEXT_ACTION_POSE_LABEL[pose]}`,
+      pose,
+      checkIn: latest,
+    };
+  }
+
+  if (!suppressed && visibleScans.length >= 2) {
+    return {
+      kind: 'compare_scans',
+      title: 'Review scan trend',
+      body: 'Compare two completed Physique Scan entries with pose-matched photos and trend-only privacy controls.',
+      cta: 'Compare scans',
+    };
+  }
+
+  if (!suppressed && completed.length >= 2) {
+    return {
+      kind: 'compare_checkins',
+      title: 'Compare matched Check-Ins',
+      body: 'Use front, side or back photos from complete Check-Ins for a cleaner visual review.',
+      cta: 'Compare Check-Ins',
+    };
+  }
+
+  if (!readOnly) {
+    return {
+      kind: 'capture',
+      title: latest ? 'Keep the setup consistent' : 'Build your baseline',
+      body: latest
+        ? 'Capture your next Check-In with the same room, lighting, distance and poses.'
+        : 'Start with front, side and back photos under repeatable lighting.',
+      cta: 'Capture Check-In',
+    };
+  }
+
+  return null;
+}
+
 export function buildProgressScanFinishPayload(profile = {}, bodyProfile = null, userSex = null) {
   const safeProfile = profile || {};
   const safeBodyProfile = bodyProfile || {};
