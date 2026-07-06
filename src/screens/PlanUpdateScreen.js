@@ -295,7 +295,7 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
         <Text style={styles.sectionSub}>
-          How well you're recovering between sessions. This sets how hard the coach pushes your progress.
+          How well you're recovering between sessions. This sets how cautious Volyume should be with training volume.
         </Text>
         <Dropdown
           value={recoveryRating}
@@ -321,6 +321,8 @@ export default function PlanUpdateScreen({ navigation }) {
         visible={!!diff}
         onClose={() => { if (!saving) { setDiff(null); setStaged(null); } }}
         accessibilityLabel="Plan changes preview"
+        scroll
+        contentContainerStyle={styles.diffSheetContent}
       >
         {diff ? (
           <>
@@ -443,4 +445,5 @@ const styles = StyleSheet.create({
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   diffBackBtn: { marginTop: spacing.sm },
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
+  diffSheetContent: { gap: spacing.md },
 });

@@ -112,7 +112,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   async function handleStartTraining() {
     if (exercises.length === 0) {
-      toast.show('Add at least one exercise, or tap Skip Setup to start empty', { variant: 'warning' });
+      toast.show('Add at least one exercise, or tap Skip setup to start empty', { variant: 'warning' });
       return;
     }
     setStarting(true);
@@ -201,7 +201,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   const skipSetupButton = (
     <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Skip setup and start an empty session">
-      <Text style={styles.skipText}>Skip Setup</Text>
+      <Text style={styles.skipText}>Skip setup</Text>
     </TouchableOpacity>
   );
 
@@ -210,12 +210,12 @@ export default function BuildWorkoutScreen({ navigation }) {
       <BackHeader title="Build workout" right={skipSetupButton} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={styles.subtitle}>Add exercises and set your targets before you start.</Text>
+        <Text style={styles.subtitle}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
         {/* Travel Mode quick-fill */}
         <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
           <Ionicons name="airplane-outline" size={15} color={colors.primary} />
-          <Text style={styles.travelChipText}>Travel / Hotel Gym Mode</Text>
+          <Text style={styles.travelChipText}>Travel / hotel gym</Text>
           <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
         </TouchableOpacity>
 
@@ -311,7 +311,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Starting Weight */}
               <View style={styles.controlGroup}>
-                <Text style={styles.controlLabel}>Start ({units})</Text>
+                <Text style={styles.controlLabel}>Weight ({units})</Text>
                 <TextField
                   containerStyle={styles.weightFieldContainer}
                   fieldStyle={styles.weightField}
@@ -331,7 +331,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
         <TouchableOpacity testID="volyume-btn-add-exercise" style={styles.addBtn} onPress={openPicker} accessibilityRole="button" accessibilityLabel="Add exercise">
           <Ionicons name="add" size={20} color={colors.primary} />
-          <Text style={styles.addBtnText}>Add Exercise</Text>
+          <Text style={styles.addBtnText}>Add exercise</Text>
         </TouchableOpacity>
 
         <View style={{ height: spacing.xxl }} />
@@ -340,7 +340,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       <View style={styles.footer}>
         <Button
           testID="volyume-btn-start-training"
-          title={`Start Training${exercises.length > 0 ? ` (${exercises.length})` : ''}`}
+          title={`Start training${exercises.length > 0 ? ` (${exercises.length})` : ''}`}
           icon="play-circle"
           size="lg"
           loading={starting}
@@ -355,8 +355,8 @@ export default function BuildWorkoutScreen({ navigation }) {
         onClose={() => setShowTravelModal(false)}
         accessibilityLabel="Travel or hotel gym equipment picker"
       >
-        <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
-        <Text style={styles.travelSub}>Choose what equipment you have. The session is full-body, to hold your muscle while you're away from the gym.</Text>
+        <Text style={styles.travelTitle}>Travel / hotel gym</Text>
+        <Text style={styles.travelSub}>Choose the equipment you have today. Volyume builds a full-body session that keeps training moving without changing your plan.</Text>
         <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
           {[
             { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
@@ -383,7 +383,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             accessibilityLabel="Cancel"
           />
           <Button
-            title="Build Session"
+            title="Build session"
             style={styles.travelAction}
             onPress={applyTravelMode}
             accessibilityLabel="Build session"
@@ -402,7 +402,7 @@ export default function BuildWorkoutScreen({ navigation }) {
               style={styles.pickerSearchBar}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search exercises..."
+              placeholder="Search exercises"
               accessibilityLabel="Search exercises"
               autoFocus
             />
@@ -451,6 +451,7 @@ const styles = StyleSheet.create({
   subtitle: {
     ...type.bodySm,
     color: colors.textMuted,
+    lineHeight: 20,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
@@ -598,7 +599,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    backgroundColor: colors.surface, alignSelf: 'flex-start',
+    minHeight: 44,
+    backgroundColor: colors.surface, alignSelf: 'stretch',
   },
   travelChipText: { ...type.label, color: colors.primary, flex: 1 },
   travelTitle: { ...type.title, color: colors.textPrimary },

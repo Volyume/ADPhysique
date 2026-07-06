@@ -488,14 +488,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
             <Card
               style={styles.quizBanner}
               onPress={openQuiz}
-              accessibilityLabel="Not sure where to start? Answer 2 quick questions for a plan suggestion"
+              accessibilityLabel="Not sure where to start? Answer two quick questions for a plan suggestion"
             >
               <View style={styles.quizBannerIcon}>
                 <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quizBannerTitle}>Not sure where to start?</Text>
-                <Text style={styles.quizBannerBody}>Answer 2 quick questions and we'll point you to the right plan.</Text>
+                <Text style={styles.quizBannerBody}>Answer two quick questions and we'll point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Card>
@@ -576,6 +576,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
 
               <View style={styles.planCardFooter}>
                 <TouchableOpacity
+                  style={styles.previewBtn}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
                   accessibilityRole="button"
                   accessibilityLabel={`Preview ${plan.name}`}
@@ -787,7 +788,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   previewText: { ...type.label, color: colors.textSecondary },
-  addBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  previewBtn: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },
+  addBtn: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
   skeletonWrap: { gap: spacing.md },

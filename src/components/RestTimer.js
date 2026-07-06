@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
   rowCompact: { minHeight: 56 },
   // eslint-disable-next-line no-restricted-syntax -- compact hero numeral on short screens
