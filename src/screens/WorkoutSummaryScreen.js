@@ -38,6 +38,7 @@ import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
 import { localWeekStartMs } from '../lib/dayKey';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -48,6 +49,17 @@ const RATING_LABELS = {
   fatigueLevel: ['', 'Fresh', 'Mild', 'Moderate', 'High', 'Exhausted'],
   jointDiscomfort: ['None', 'Slight', 'Moderate', 'Significant'],
 };
+
+function formatPartnerWinDate(value) {
+  const n = Number(value);
+  const date = new Date(Number.isFinite(n) ? n : Date.now());
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function partnerRecordLabel(pr = {}) {
+  if (pr.type === 'heaviest_weight') return 'New heaviest weight';
+  return 'New rep best';
+}
 
 function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
@@ -667,6 +679,30 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigation.navigate('ShareCard', { sessionData, prData, prList: detectedPRs });
   }
 
+  function handlePreviewPartnerWin() {
+    const firstPr = detectedPRs.length > 0 ? detectedPRs[0] : null;
+    const completedAt = formatPartnerWinDate(endedAt || startedAt || Date.now());
+    if (firstPr) {
+      navigateCrossTab(navigation, 'ProgressTab', 'Partner', {
+        source: 'workout_summary_partner_win',
+        shareWinType: 'personal_record',
+        shareWinPayload: {
+          liftName: firstPr.exerciseName || firstPr.exercise || 'A lift',
+          recordLabel: partnerRecordLabel(firstPr),
+        },
+      });
+      return;
+    }
+    navigateCrossTab(navigation, 'ProgressTab', 'Partner', {
+      source: 'workout_summary_partner_win',
+      shareWinType: 'workout_summary',
+      shareWinPayload: {
+        workoutName: shareSessionName(routineName, exerciseNames),
+        completedAt,
+      },
+    });
+  }
+
   // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
   // milestone, reusing ShareCard's generic milestone layout. No Pro gate.
   function handleShareMilestone() {
@@ -871,37 +907,50 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           && (partners.rowState === 'active' || partners.rowState === 'resting') && (
           <RevealSection delay={1130}>
             <View style={styles.partnerBeatRow}>
-              <Ionicons name="people-outline" size={18} color={colors.primary} />
-              <Text style={styles.partnerBeatText}>
-                {partnerMoment
-                  ? partnerMoment.line
-                  : partners.rowState === 'resting'
-                    ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
-                    : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
-              </Text>
-              <TouchableOpacity
-                style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
-                onPress={() => {
-                  const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
-                  // The post-workout beat stays a single-tap cheer; it sends the
-                  // quiet default acknowledgement (D5-B1). The picker lives on the
-                  // PartnerScreen PairCard.
-                  partners.cheer(partners.partnership.id, undefined, !!reciprocal);
-                  if (partnerMoment?.id) {
-                    markMomentSeen(partnerMoment.id).catch(() => {});
-                    partnerMomentRef.current = null;
-                    setPartnerMoment(null);
-                  }
-                }}
-                disabled={!partners.cheerEnabled}
-                accessibilityRole="button"
-                accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
-              >
-                <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
-                  {partners.cheerEnabled ? 'Cheer' : 'Sent'}
+              <View style={styles.partnerBeatTop}>
+                <Ionicons name="people-outline" size={18} color={colors.primary} />
+                <Text style={styles.partnerBeatText}>
+                  {partnerMoment
+                    ? partnerMoment.line
+                    : partners.rowState === 'resting'
+                      ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
+                      : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
                 </Text>
-              </TouchableOpacity>
+              </View>
+              <View style={styles.partnerBeatActions}>
+                <TouchableOpacity
+                  style={styles.partnerWinBtn}
+                  onPress={handlePreviewPartnerWin}
+                  accessibilityRole="button"
+                  accessibilityLabel="Preview this workout win for a partner"
+                >
+                  <Ionicons name="trophy-outline" size={14} color={colors.primary} />
+                  <Text style={styles.partnerCheerText}>Preview win</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
+                  onPress={() => {
+                    const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
+                    // The post-workout beat stays a single-tap cheer; it sends the
+                    // quiet default acknowledgement (D5-B1). The picker lives on the
+                    // PartnerScreen PairCard.
+                    partners.cheer(partners.partnership.id, undefined, !!reciprocal);
+                    if (partnerMoment?.id) {
+                      markMomentSeen(partnerMoment.id).catch(() => {});
+                      partnerMomentRef.current = null;
+                      setPartnerMoment(null);
+                    }
+                  }}
+                  disabled={!partners.cheerEnabled}
+                  accessibilityRole="button"
+                  accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
+                >
+                  <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.primary : colors.textSecondary} />
+                  <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
+                    {partners.cheerEnabled ? 'Cheer' : 'Sent'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </RevealSection>
         )}
@@ -1474,13 +1523,21 @@ const styles = StyleSheet.create({
   },
   // NEW-002 post-workout partner beat
   partnerBeatRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
   },
+  partnerBeatTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   partnerBeatText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
+  partnerBeatActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   // D3: amber tint, not a second amber fill, the hero numeral is this
   // screen's one amber object.
+  partnerWinBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 40,
+  },
   partnerCheerBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
