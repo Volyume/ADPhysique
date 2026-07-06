@@ -163,6 +163,20 @@ describe('ProgressPhotoCompare, calm default', () => {
     }
   });
 
+  test('comparison controls sit inside a vertical scroll surface for constrained heights', async () => {
+    const tree = await render();
+    const scroll = tree.root.findByProps({ testID: 'progress-photo-compare-scroll' });
+    expect(scroll.props.showsVerticalScrollIndicator).toBe(true);
+    const inside = scroll
+      .findAll((n) => typeof n.type === 'string' && n.type === 'Text')
+      .map((t) => flattenText(t.props.children))
+      .join(' ');
+    expect(inside).toContain('Earliest and latest');
+    expect(inside).toContain('Side by side');
+    expect(inside).toContain('Earlier');
+    expect(inside).toContain('Later');
+  });
+
   test('surfaces a neutral setup status for same-pose pairs', async () => {
     getPhotoMetaMap.mockImplementation(async (names) => {
       const map = {};
