@@ -1,4 +1,5 @@
 import {
+  buildCheckInCompletenessModel,
   buildScanPhotoNameSet,
   buildProgressScanFinishPayload,
   buildPhysiqueStudioNextAction,
@@ -83,13 +84,39 @@ describe('progressPhotosController transforms', () => {
     expect(buildPhysiqueStudioNextAction({
       checkIns: [olderComplete, partial],
       scans: [{ id: 's1', status: 'complete', requiredPosesComplete: true }, { id: 's2', status: 'complete', requiredPosesComplete: true }],
-    })).toEqual({
+    })).toMatchObject({
       kind: 'complete_pose',
       title: 'Complete latest Check-In',
       body: 'Add the missing pose now so this Check-In is easier to compare later.',
+      reason: 'Front is missing from the latest Check-In.',
+      detailItems: [
+        'A complete set means front, side and back under the same setup.',
+        'If the setup drifts, save the photo without forcing a scan read.',
+      ],
       cta: 'Complete with Front',
       pose: 'front',
       checkIn: partial,
+    });
+  });
+
+  test('buildCheckInCompletenessModel explains complete and partial check-ins', () => {
+    expect(buildCheckInCompletenessModel({ poses: ['front', 'back'] })).toEqual({
+      complete: false,
+      present: ['front', 'back'],
+      missing: ['side'],
+      percent: 67,
+      label: '2/3 poses captured',
+      detail: 'Missing side for a cleaner comparison.',
+      nextPose: 'side',
+      nextPoseLabel: 'Side',
+    });
+
+    expect(buildCheckInCompletenessModel({ poses: ['front', 'side', 'back'] })).toMatchObject({
+      complete: true,
+      percent: 100,
+      label: 'Complete studio set',
+      detail: 'Front, side and back are ready for like-for-like comparison.',
+      nextPose: null,
     });
   });
 
@@ -102,6 +129,8 @@ describe('progressPhotosController transforms', () => {
     ];
 
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).kind).toBe('compare_scans');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).reason)
+      .toBe('2 completed scans are ready.');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }).kind)
       .toBe('capture');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)

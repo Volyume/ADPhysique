@@ -6,7 +6,7 @@
  * elapsed-time label, older→newer ordering, the default earliest-vs-latest pair,
  * and the params builder — including the two founder-rule invariants that matter
  * for ED-safety:
- *   1. the weight toggle drops the weight when off, and
+ *   1. the weight toggle drops the weight when off and is opt-in in the UI, and
  *   2. the card NEVER carries name/measurements — only date + weight per photo.
  *
  * The component module is import-guarded (Skia/expo modules are lazy try/catch),

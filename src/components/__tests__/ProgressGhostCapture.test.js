@@ -96,7 +96,10 @@ beforeEach(() => {
 });
 
 test('renders the camera preview and the ghost overlay when a reference is given', async () => {
-  const tree = await render({ referencePhoto: REF, pose: 'front' });
+  const tree = await render({
+    referencePhoto: { ...REF, label: '6 Jul 2026', poseLabel: 'Front' },
+    pose: 'front',
+  });
   const json = JSON.stringify(tree.toJSON());
   // Pose-specific studio guidance, no cadence.
   expect(json).toContain('Front relaxed');
@@ -105,6 +108,8 @@ test('renders the camera preview and the ghost overlay when a reference is given
   expect(json).toContain('Camera at mid-torso height');
   expect(json).toContain('arms across the body');
   expect(json).toContain('Match your previous setup');
+  expect(json).toContain('Reference: Front from 6 Jul 2026.');
+  expect(json).toContain('If the setup drifts, save the photo and let the scan read wait.');
   // The ghost overlay image carries the reference uri.
   expect(json).toContain('file:///photos/ref.jpg');
 });

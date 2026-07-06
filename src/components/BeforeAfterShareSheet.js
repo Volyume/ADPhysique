@@ -3,8 +3,8 @@
  * (progress-photos §3.8, S1 execution, S2 single-file mechanism).
  *
  * Picks two progress photos (default earliest vs latest), shows a one-time
- * confirm, then composites BOTH photos + their dates + weights + the elapsed
- * badge + the wordmark into ONE image via the existing Skia `drawShareCard`
+ * confirm, then composites BOTH photos + their dates + optional weights + the
+ * elapsed badge + the wordmark into ONE image via the existing Skia `drawShareCard`
  * pipeline and shares it as a SINGLE local file through `expo-sharing`
  * (`MediaLibrary` for save). Every surface and platform produces the same one
  * composited PNG — never a multi-attach, never a raw file (S2 §1).
@@ -17,8 +17,8 @@
  *   - Pro-gated: generation re-checks tier live (a pro-to-free flip mid-flow
  *     must not generate), and the sheet renders nothing for a non-Pro user.
  *   - Weight-on-card is a FOUNDER-APPROVED override of the locked "share cards
- *     never include bodyweight" rule (DECISIONS #2). It is a user toggle
- *     (default on) and is bounded by the suppression withhold above;
+ *     never include bodyweight" rule (DECISIONS #2). It is an explicit opt-in
+ *     toggle per export and is bounded by the suppression withhold above;
  *     name/measurements/private notes stay banned. The integrator records the
  *     decision and updates the locked-rule note + the screen's privacy line.
  *
@@ -127,7 +127,7 @@ export default function BeforeAfterShareSheet({
 
   const [selected, setSelected] = useState([]); // photo names, resolved older→newer by ts
   const [aspect, setAspect] = useState('square');
-  const [showWeight, setShowWeight] = useState(true);
+  const [showWeight, setShowWeight] = useState(false);
   const [metaMap, setMetaMap] = useState({});
   const [beforeImg, setBeforeImg] = useState(null);
   const [afterImg, setAfterImg] = useState(null);
@@ -474,8 +474,8 @@ export default function BeforeAfterShareSheet({
           </View>
         </View>
 
-        {/* Weight toggle (founder-approved override; default on, bounded by the
-            suppression withhold above). */}
+        {/* Weight toggle: explicit opt-in per export, bounded by the suppression
+            withhold above. */}
         <View style={styles.section}>
           <View style={styles.togglesCard}>
             <View style={[styles.toggleRow, styles.toggleRowLast]}>
@@ -489,7 +489,7 @@ export default function BeforeAfterShareSheet({
             </View>
           </View>
           <Text style={styles.privacyNote}>
-            The exported file is a single composed image. It includes only the two photos, dates, optional scan score, optional weights and elapsed time you chose. Your name, measurements and private notes are never included.
+            The exported file is a single composed image. It includes only the two photos, dates, optional scan score, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
           </Text>
         </View>
 

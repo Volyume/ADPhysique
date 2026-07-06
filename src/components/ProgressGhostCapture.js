@@ -51,7 +51,7 @@ import {
   setProgressScanCameraFacingPreference,
   setProgressScanTimerPreference,
 } from '../lib/progressScanPreferences';
-import { getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
+import { QUALITY_FIRST_CAPTURE_NOTE, getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
 import { useToast } from './Toast';
 import {
   colors,
@@ -368,6 +368,9 @@ export default function ProgressGhostCapture({
   const hasReference = !!referencePhoto?.uri;
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = `${title ? 'Scan capture' : 'Check-in capture'}: ${guidance.title}`;
+  const referenceLine = hasReference
+    ? `Reference: ${referencePhoto.poseLabel || 'previous photo'}${referencePhoto.label ? ` from ${referencePhoto.label}` : ''}.`
+    : null;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -451,12 +454,17 @@ export default function ProgressGhostCapture({
         <Text style={styles.guidanceTitle}>
           {hasReference ? 'Match your previous setup' : 'Capture guidance'}
         </Text>
+        {referenceLine ? <Text style={styles.referenceLine} numberOfLines={1}>{referenceLine}</Text> : null}
         {guidance.checks.map((check) => (
           <View key={check} style={styles.guidanceRow}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.primary} />
             <Text style={styles.guidanceText}>{check}</Text>
           </View>
         ))}
+        <View style={styles.qualityFirstRow}>
+          <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+          <Text style={styles.qualityFirstText} numberOfLines={2}>{QUALITY_FIRST_CAPTURE_NOTE}</Text>
+        </View>
         {guidance.avoid?.length ? (
           <Text style={styles.guidanceAvoid} numberOfLines={2}>
             Avoid {guidance.avoid.join(', ')}.
@@ -667,6 +675,11 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.textPrimary, 0.82),
     fontWeight: fontWeight.bold,
   },
+  referenceLine: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.86),
+    lineHeight: 18,
+  },
   guidanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,6 +688,18 @@ const styles = StyleSheet.create({
   guidanceText: {
     ...type.caption,
     color: withAlpha(colors.textPrimary, 0.9),
+    flex: 1,
+  },
+  qualityFirstRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    paddingTop: spacing.xxs,
+  },
+  qualityFirstText: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.88),
+    lineHeight: 18,
     flex: 1,
   },
   guidanceAvoid: {

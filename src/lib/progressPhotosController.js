@@ -68,6 +68,26 @@ function checkInIsComplete(checkIn) {
   return NEXT_ACTION_POSES.every((pose) => poses.includes(pose));
 }
 
+export function buildCheckInCompletenessModel(checkIn = {}) {
+  const poses = Array.isArray(checkIn?.poses) ? checkIn.poses : [];
+  const present = NEXT_ACTION_POSES.filter((pose) => poses.includes(pose));
+  const missing = NEXT_ACTION_POSES.filter((pose) => !poses.includes(pose));
+  const complete = missing.length === 0;
+  const percent = Math.round((present.length / NEXT_ACTION_POSES.length) * 100);
+  return {
+    complete,
+    present,
+    missing,
+    percent,
+    label: complete ? 'Complete studio set' : `${present.length}/${NEXT_ACTION_POSES.length} poses captured`,
+    detail: complete
+      ? 'Front, side and back are ready for like-for-like comparison.'
+      : `Missing ${missing.map((pose) => NEXT_ACTION_POSE_LABEL[pose].toLowerCase()).join(', ')} for a cleaner comparison.`,
+    nextPose: missing[0] || null,
+    nextPoseLabel: missing[0] ? NEXT_ACTION_POSE_LABEL[missing[0]] : null,
+  };
+}
+
 export function buildPhysiqueStudioNextAction({
   checkIns = [],
   scans = [],
@@ -87,6 +107,11 @@ export function buildPhysiqueStudioNextAction({
       kind: 'complete_pose',
       title: 'Complete latest Check-In',
       body: 'Add the missing pose now so this Check-In is easier to compare later.',
+      reason: `${NEXT_ACTION_POSE_LABEL[pose]} is missing from the latest Check-In.`,
+      detailItems: [
+        'A complete set means front, side and back under the same setup.',
+        'If the setup drifts, save the photo without forcing a scan read.',
+      ],
       cta: `Complete with ${NEXT_ACTION_POSE_LABEL[pose]}`,
       pose,
       checkIn: latest,
@@ -98,6 +123,11 @@ export function buildPhysiqueStudioNextAction({
       kind: 'compare_scans',
       title: 'Review scan trend',
       body: 'Compare two completed Physique Scan entries with pose-matched photos and trend-only privacy controls.',
+      reason: `${visibleScans.length} completed scans are ready.`,
+      detailItems: [
+        'Trend and confidence come first.',
+        'This is not an exact body-fat percentage.',
+      ],
       cta: 'Compare scans',
     };
   }
@@ -107,6 +137,11 @@ export function buildPhysiqueStudioNextAction({
       kind: 'compare_checkins',
       title: 'Compare matched Check-Ins',
       body: 'Use front, side or back photos from complete Check-Ins for a cleaner visual review.',
+      reason: `${completed.length} complete Check-Ins are ready.`,
+      detailItems: [
+        'Matched poses reduce angle and lighting noise.',
+        'Choose the same pose on both dates.',
+      ],
       cta: 'Compare Check-Ins',
     };
   }
@@ -118,6 +153,11 @@ export function buildPhysiqueStudioNextAction({
       body: latest
         ? 'Capture your next Check-In with the same room, lighting, distance and poses.'
         : 'Start with front, side and back photos under repeatable lighting.',
+      reason: latest ? 'Your next review is stronger when the setup matches.' : 'No private visual baseline is saved yet.',
+      detailItems: [
+        'Use the timer and place the phone at mid-torso height.',
+        'Photos stay private unless you export or share.',
+      ],
       cta: 'Capture Check-In',
     };
   }

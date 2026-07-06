@@ -18,6 +18,9 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
   'Optional side relaxed',
 ]);
 
+export const QUALITY_FIRST_CAPTURE_NOTE =
+  'If the setup drifts, save the photo and let the scan read wait.';
+
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
     title: 'Front relaxed',
@@ -71,6 +74,7 @@ export function buildProgressStudioCapturePromptCopy() {
     'Physique Scan is for a front and back relaxed sequence, with an optional side photo. It gives a leanness band, progress signal and confidence, not an exact body-fat percentage.',
     'Single guided photo is best when you are completing a missing pose or matching an older photo.',
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
+    QUALITY_FIRST_CAPTURE_NOTE,
     'Photos stay on this device unless you choose to share or export them.',
   ].join('\n\n');
 }
@@ -90,5 +94,5 @@ export function buildProgressStudioHowItWorksCopy() {
 
 export function buildScanCaptureSubtitle(pose) {
   const guidance = getPoseCaptureGuidance(pose);
-  return `${guidance.title}: set the phone down, use the timer, and match the same frame each time.`;
+  return `${guidance.title}: set the phone down, use the timer, and match the same frame each time. ${QUALITY_FIRST_CAPTURE_NOTE}`;
 }
