@@ -2160,7 +2160,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.planEditHead}>Plan next week&apos;s meals</Text>
           <Text style={styles.planEditBody}>
             A full week built to next week&apos;s targets, with a shopping list.
-            Swap anything, then add it to your diary.
+            Review it, swap meals if needed, then add it to your diary.
           </Text>
           <View style={styles.nextWeekRow}>
             <TouchableOpacity
