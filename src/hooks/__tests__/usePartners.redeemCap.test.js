@@ -26,6 +26,7 @@ jest.mock('../../lib/database', () => ({
   upsertPartnerWinCardFromCloud: jest.fn(async () => {}),
   markLocalPartnerWinCardRevoked: jest.fn(async () => {}),
   setLocalPartnerCheerSent: jest.fn(async () => {}),
+  upsertPartnershipFromCloud: jest.fn(async () => {}),
 }));
 
 jest.mock('../../lib/partners/service', () => ({
@@ -96,5 +97,16 @@ describe('usePartners redeem enforces the partner cap', () => {
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(service.redeemPartnerInvite).toHaveBeenCalledWith('me', 'CODE1234');
     expect(r.ok).toBe(true);
+  });
+
+  test('successful redeem writes returned partnership into the local mirror before reload', async () => {
+    const partnership = { id: 'p1', member_a: 'them', member_b: 'me', status: 'active', partner_first_name: 'Sam' };
+    db.getActivePartnerCount.mockResolvedValue(0);
+    service.redeemPartnerInvite.mockResolvedValueOnce({ ok: true, data: { partnershipId: 'p1', partnership } });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.redeem('CODE1234'); });
+    expect(r.ok).toBe(true);
+    expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(partnership);
   });
 });
