@@ -3,7 +3,7 @@
  * G-b). One plan object, progressive disclosure:
  *
  *  - Besa first: "Here's your day", plates with a single calm line each,
- *    Log this day, Swap on any plate, New meals. Calories lead; macros
+ *    Log this day, Swap on any plate, Refresh. Calories lead; macros
  *    sit behind a tap. No jargon.
  *  - Eddie one tap deeper: per-meal grams + kcal, the day totals row vs
  *    target, the day-type chip (training/rest), and the honest residual
@@ -185,7 +185,7 @@ export default function MealPlanScreen({ navigation }) {
     try {
       await regenerateActiveMealPlan(user.id, userProfile);
       await load();
-      toast.show('New meals. Your targets are unchanged.', { variant: 'success' });
+      toast.show('Meals refreshed. Your targets are unchanged.', { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't refresh the plan. Try again.", { variant: 'error' });
     } finally {
@@ -464,8 +464,8 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Build meals to your targets</Text>
           <Text style={styles.emptyBody}>
-            Choose today or the week ahead. Volyume builds the meals from your calories and macros,
-            then lets you swap anything before it reaches your diary.
+            Choose today or the week ahead. Volyume uses your calories and macros, then lets you
+            swap anything before food is added to your diary.
           </Text>
 
           <Card style={styles.planOption}>
@@ -474,7 +474,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Plan my day</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              One day of meals for today. Swap the plates you do not fancy, then add it straight to today&apos;s diary.
+              One day for today. Swap anything you do not fancy, then add the plan to today&apos;s diary.
             </Text>
             <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
@@ -485,7 +485,7 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Plan my week</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Seven days, plus a shopping list. Add the week in one go; days you have already logged are left alone.
+              Seven days plus a shopping list. Add the week in one go; days with food logged are left alone.
             </Text>
             <Button title="Plan my week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
@@ -581,10 +581,10 @@ export default function MealPlanScreen({ navigation }) {
                 onPress={handleRegenerate}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel="New meals"
+                accessibilityLabel="Refresh meals"
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>New meals</Text>
+                <Text style={styles.planQuickActionText}>Refresh</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.planQuickAction}

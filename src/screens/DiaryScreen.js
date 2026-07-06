@@ -1273,21 +1273,20 @@ export default function DiaryScreen({ navigation }) {
                   <Ionicons name="add" size={18} color={colors.textSecondary} />
                   <Text style={styles.addMealLabel}>Add meal</Text>
                 </TouchableOpacity>
-                {/* Persistent route to the meal plan (and its swap), previously
-                    only reachable from the empty-diary state, so once anything
-                    was logged the plan + swap became unreachable from Today. */}
+                {/* Keep planning reachable after food is logged without adding
+                    another diary summary block above the meals. */}
                 <TouchableOpacity
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Meal plan: build a day or week of meals to your targets, with swaps"
+                  accessibilityLabel="Plan meals: build meals for today or the week, swap anything first, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
-                    <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
+                    <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Meal plan</Text>
-                    <Text style={styles.buildPlanSub}>Build a day or week, then add it to your diary.</Text>
+                    <Text style={styles.buildPlanLabel}>Plan meals</Text>
+                    <Text style={styles.buildPlanSub}>Build today or the week ahead, swap anything, then add it to your diary.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
