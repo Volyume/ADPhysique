@@ -47,6 +47,6 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: 44,\s*height: 44,/);
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
-    expect(ACTIVE_WORKOUT).toContain('`Your set wasn\'t saved. Tap ${retryAction} to retry.');
+    expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to retry/);
   });
 });
