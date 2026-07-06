@@ -999,6 +999,13 @@ export default function ProgressPhotosScreen({ navigation }) {
               </View>
             </View>
 
+            <View style={styles.deviceStorageCard}>
+              <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
+              <Text style={styles.deviceStorageText}>
+                Photos are stored on this device. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
+              </Text>
+            </View>
+
             <View style={styles.heroActions}>
               {!readOnly ? (
                 <Button
@@ -1382,7 +1389,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <View style={styles.captureRouteNote}>
                   <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                   <Text style={styles.captureRouteNoteText}>
-                    {QUALITY_FIRST_CAPTURE_NOTE} Photos stay private unless you choose to share or export.
+                    {QUALITY_FIRST_CAPTURE_NOTE} Photos are stored on this device and stay private unless you choose to share or export. Export anything you want to keep before uninstalling the app, clearing app data or changing phones.
                   </Text>
                 </View>
               </View>
@@ -1579,6 +1586,17 @@ const styles = StyleSheet.create({
   setupStandardCopy: { flex: 1, minWidth: 0, gap: 2 },
   setupStandardStepTitle: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   setupStandardStepBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  deviceStorageCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  deviceStorageText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

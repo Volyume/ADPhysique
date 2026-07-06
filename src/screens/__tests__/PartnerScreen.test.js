@@ -107,9 +107,9 @@ function findPress(tree, label) {
   );
 }
 
-async function mount() {
+async function mount(routeParams = {}) {
   let tree;
-  await act(async () => { tree = create(<PartnerScreen route={{ params: {} }} />); });
+  await act(async () => { tree = create(<PartnerScreen route={{ params: routeParams }} />); });
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
   return tree;
 }
@@ -236,6 +236,31 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Block milestone');
     expect(text).toContain('Progress card');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+  });
+
+  test('progress-card share preview can use a sanitized exported-card payload', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount({
+      shareWinType: 'progress_card',
+      progressCardSharePayload: {
+        label: 'Progress photo card',
+        dateRange: '5 Jan to 20 Jun',
+        format: 'Square',
+        includesWeight: false,
+        includesScanScore: true,
+        imageUri: 'file:///private-card.png',
+      },
+    });
+    await press(tree, 'Review shareable wins');
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Progress card');
+    expect(text).toContain('Progress photo card, 5 Jan to 20 Jun.');
+    expect(text).toContain('The visible scan score is part of that export.');
+    expect(text).toContain('Weight is off for this export.');
+    expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
+    expect(text).toContain('The composed progress card image, with only the details shown in its export receipt.');
+    expect(text).toContain('Raw photos, the photo library, unexported scan details and body metrics stay private.');
+    expect(text).not.toContain('file:///private-card.png');
   });
 
   test('pro under the cap offers "Invite another partner"', async () => {

@@ -1074,7 +1074,12 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Partner shareable wins">
-        {shareWinsPair ? <ShareWinsSheetBody /> : null}
+        {shareWinsPair ? (
+          <ShareWinsSheetBody
+            initialType={route?.params?.shareWinType}
+            progressCardPayload={route?.params?.progressCardSharePayload}
+          />
+        ) : null}
       </BottomSheet>
     </SafeAreaView>
   );
@@ -1145,9 +1150,11 @@ function AckSheetBody({ pair, onSend }) {
   );
 }
 
-function ShareWinsSheetBody() {
-  const examplePreviews = buildShareWinExamplePreviews();
-  const [selectedType, setSelectedType] = useState(examplePreviews[0]?.type || 'workout_summary');
+function ShareWinsSheetBody({ initialType, progressCardPayload }) {
+  const previewPayloads = progressCardPayload ? { progress_card: progressCardPayload } : {};
+  const examplePreviews = buildShareWinExamplePreviews(previewPayloads);
+  const initialPreview = examplePreviews.find((preview) => preview.type === initialType) || examplePreviews[0];
+  const [selectedType, setSelectedType] = useState(initialPreview?.type || 'workout_summary');
   const selectedPreview = examplePreviews.find((preview) => preview.type === selectedType) || examplePreviews[0];
   const receipt = selectedPreview ? buildShareWinReviewReceipt(selectedPreview) : null;
   return (

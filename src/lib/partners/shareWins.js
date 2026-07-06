@@ -20,8 +20,8 @@ export const SHARE_WIN_TYPES = Object.freeze([
   Object.freeze({
     key: 'progress_card',
     title: 'Progress card',
-    shared: 'Only the image or card you deliberately export.',
-    private: 'Progress photos, scan details and body metrics stay private by default.',
+    shared: 'The composed progress card image, with only the details shown in its export receipt.',
+    private: 'Raw photos, the photo library, unexported scan details and body metrics stay private.',
   }),
 ]);
 
@@ -82,6 +82,9 @@ export const SHARE_WIN_FORBIDDEN_FIELDS = Object.freeze([
   'coachNotes',
   'bodyMetrics',
   'photoUri',
+  'rawPhotoUri',
+  'imageUri',
+  'imageBase64',
   'scanScore',
 ]);
 
@@ -101,7 +104,11 @@ const EXAMPLE_PAYLOADS = Object.freeze({
     milestone: 'Block complete',
   }),
   progress_card: Object.freeze({
-    label: 'Private progress card',
+    label: 'Exported Progress Photos card',
+    dateRange: 'selected dates',
+    format: 'chosen export format',
+    includesWeight: false,
+    includesScanScore: true,
   }),
 });
 
@@ -173,13 +180,24 @@ export function buildShareWinDraft(typeKey, payload = {}) {
   }
 
   if (typeKey === 'progress_card') {
-    const label = cleanText(safePayload.label || 'Progress card', 64);
+    const dateRange = cleanText(safePayload.dateRange || safePayload.range || '', 64);
+    const format = cleanText(safePayload.format || safePayload.aspect || '', 32);
+    const label = cleanText(safePayload.label || 'Progress photo card', 64);
+    const includesScanScore = safePayload.includesScanScore === true;
+    const includesWeight = safePayload.includesWeight === true;
+    const summary = dateRange ? `${label}, ${dateRange}.` : `${label}.`;
+    const detail = [
+      'Only the composed export can be sent.',
+      includesScanScore ? 'The visible scan score is part of that export.' : 'Scan details stay private unless they are visible on that export.',
+      includesWeight ? 'Weight is included because it was switched on for that export.' : 'Weight is off for this export.',
+      'Raw photos, body metrics and the photo library stay private.',
+    ].join(' ');
     return baseDraft(
       typeKey,
       'Progress card',
-      label,
-      'Only the deliberately exported card can be sent. Scan details, body metrics and the photo library stay private.',
-      { requiresExport: true },
+      summary,
+      detail,
+      { requiresExport: true, dateRange: dateRange || null, format: format || null },
     );
   }
 
@@ -227,14 +245,20 @@ export function buildShareWinReviewReceipt(preview) {
   });
 }
 
-export function buildShareWinExampleDrafts() {
+function examplePayloadFor(typeKey, overrides = {}) {
+  const override = overrides && typeof overrides === 'object' ? overrides[typeKey] : null;
+  if (override && typeof override === 'object') return override;
+  return EXAMPLE_PAYLOADS[typeKey];
+}
+
+export function buildShareWinExampleDrafts(overrides = {}) {
   return Object.freeze(SHARE_WIN_TYPES
-    .map((type) => buildShareWinDraft(type.key, EXAMPLE_PAYLOADS[type.key]))
+    .map((type) => buildShareWinDraft(type.key, examplePayloadFor(type.key, overrides)))
     .filter(Boolean));
 }
 
-export function buildShareWinExamplePreviews() {
+export function buildShareWinExamplePreviews(overrides = {}) {
   return Object.freeze(SHARE_WIN_TYPES
-    .map((type) => buildShareWinPreview(type.key, EXAMPLE_PAYLOADS[type.key]))
+    .map((type) => buildShareWinPreview(type.key, examplePayloadFor(type.key, overrides)))
     .filter(Boolean));
 }
