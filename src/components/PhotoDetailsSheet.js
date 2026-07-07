@@ -21,7 +21,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView, Image,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -42,11 +42,12 @@ const POSES = [
  * @param {boolean}  props.visible        whether the sheet is shown
  * @param {number}   [props.initialDateMs] the date to seed (default: today)
  * @param {string}   [props.initialPose]   the pose to pre-fill (guided capture)
+ * @param {string}   [props.previewUri]     optional image preview for picker/camera routes
  * @param {Function} props.onConfirm       called with `{ takenAt, pose }`
  * @param {Function} props.onCancel        called to dismiss without saving
  */
 export default function PhotoDetailsSheet({
-  visible, initialDateMs, initialPose = null, onConfirm, onCancel,
+  visible, initialDateMs, initialPose = null, previewUri = null, onConfirm, onCancel,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const [dateMs, setDateMs] = useState(Number.isFinite(initialDateMs) ? initialDateMs : Date.now());
@@ -93,6 +94,17 @@ export default function PhotoDetailsSheet({
             <Text style={styles.sheetIntro}>
               Add the date and pose so Progress Photos can keep this image in the right place.
             </Text>
+            {previewUri ? (
+              <View style={styles.previewWrap}>
+                <Image
+                  source={{ uri: previewUri }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                  accessibilityLabel="Selected progress photo preview"
+                />
+              </View>
+            ) : null}
             <View style={styles.contextBox}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.contextText}>
@@ -186,6 +198,18 @@ const styles = StyleSheet.create({
   sheetScrollBody: { paddingBottom: spacing.xs },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
   sheetIntro: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
+  previewWrap: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    maxHeight: 260,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  previewImage: { width: '100%', height: '100%' },
   contextBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -407,6 +407,12 @@ export default function ProgressGhostCapture({
       safeBottomInset + (compactOverlay ? spacing.md : spacing.lg),
     ),
   };
+  const topInsetStyle = {
+    paddingTop: Math.max(
+      compactOverlay ? spacing.lg : spacing.xxl,
+      (Number(insets?.top) || 0) + (compactOverlay ? spacing.sm : spacing.md),
+    ),
+  };
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Photo set' : 'Progress photo';
   const captureInstruction = subtitle || guidance.line;
@@ -513,7 +519,7 @@ export default function ProgressGhostCapture({
       </CameraView>
 
       {/* Top bar: framing copy + close. */}
-      <View style={[styles.topBar, compactOverlay && styles.topBarCompact]} pointerEvents="box-none">
+      <View style={[styles.topBar, compactOverlay && styles.topBarCompact, topInsetStyle]} pointerEvents="box-none">
         <View style={[styles.topCopy, compactOverlay && styles.topCopyCompact]} pointerEvents="none">
           <Text style={styles.modeChip}>{modeLabel}</Text>
           <Text style={styles.title} numberOfLines={1}>
