@@ -59,6 +59,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 36,\s*height: 36,/);
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');
+    expect(ACTIVE_WORKOUT).toMatch(/exerciseName: \{ flex: 1, fontSize: fontSize\.lg,/);
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.targetText} numberOfLines={1}>');
+    expect(ACTIVE_WORKOUT).toMatch(/targetText: \{ flex: 1, fontSize: fontSize\.xs,/);
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);
     expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: 36/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
