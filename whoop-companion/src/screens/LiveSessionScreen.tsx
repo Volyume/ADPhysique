@@ -209,7 +209,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
         ) : (
           <Text style={styles.hint}>
             {session.kind === 'sleep'
-              ? 'Tracking your sleep. Tap “End & save” when you wake — Pulse scores sleep & recovery from your overnight heart rate.'
+              ? 'Tracking your sleep window. Tap “End & save” when you wake; synced overnight history still drives sleep, stages, vitals and recovery.'
               : 'Tracking your nap. It will count toward today’s sleep need.'}
           </Text>
         )}
