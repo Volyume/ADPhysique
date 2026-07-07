@@ -483,7 +483,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
         keyExtractor={p => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        ItemSeparatorComponent={() => <View style={styles.planSeparator} />}
         ListHeaderComponent={
           showQuizBanner ? (
             <Card
@@ -711,27 +711,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
+    gap: spacing.xs,
   },
   searchRow: {
     margin: 0,
   },
 
-  chipsList: { maxHeight: 38, flexShrink: 0 },
+  chipsList: { maxHeight: 34, flexShrink: 0 },
   chipsContent: {
     paddingVertical: 0,
     gap: spacing.sm, alignItems: 'center',
   },
-  collectionChip: { paddingVertical: 6 },
+  collectionChip: { paddingVertical: 4 },
   collectionChipText: { ...type.label, color: colors.textSecondary },
   collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
   // Division grid
   divisionSection: {
-    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   divisionGroupLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
@@ -758,12 +759,13 @@ const styles = StyleSheet.create({
 
   // Plan list
   listBand: { flex: 1, backgroundColor: colors.surface },
-  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xxl },
+  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  planSeparator: { height: spacing.sm },
 
   // Quiz banner. Card owns background/radius/padding/border here.
   quizBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   quizBannerIcon: {
     width: 40, height: 40, borderRadius: radius.xl,
@@ -777,7 +779,7 @@ const styles = StyleSheet.create({
   planCard: {
     overflow: 'hidden',
   },
-  planCardMain: { padding: spacing.lg, gap: spacing.sm },
+  planCardMain: { padding: spacing.md, gap: spacing.sm },
   planCardTopRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
@@ -797,11 +799,11 @@ const styles = StyleSheet.create({
   planCardFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     borderTopWidth: 1, borderTopColor: colors.border,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   previewText: { ...type.label, color: colors.textSecondary },
-  previewBtn: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },
-  addBtn: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  previewBtn: { minHeight: 40, justifyContent: 'center', paddingRight: spacing.sm },
+  addBtn: { minHeight: 40, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
   skeletonWrap: { gap: spacing.md },

@@ -333,10 +333,11 @@ export default function AthleteProfileScreen({ navigation }) {
             onPress={onAvatarPress}
             accessibilityRole="button"
             accessibilityLabel={avatarUri
-              ? 'Profile picture. Tap to change or remove.'
+              ? 'Profile picture. Tap to update.'
               : avatarPresetConfig
-                ? `${avatarPresetConfig.label}. Tap to change or remove.`
+                ? `${avatarPresetConfig.label} avatar. Tap to update.`
                 : 'Add profile picture or Volyume avatar'}
+            accessibilityHint="Opens photo and avatar choices"
           >
             <ProfileAvatarMark
               avatarUri={avatarUri}
@@ -453,8 +454,22 @@ export default function AthleteProfileScreen({ navigation }) {
         onClose={() => setAvatarSheetOpen(false)}
         accessibilityLabel="Select avatar"
       >
-        <Text style={styles.avatarSheetTitle}>Profile picture</Text>
-        <Text style={styles.avatarSheetIntro}>Use your own photo or choose a Volyume gym avatar.</Text>
+        <View style={styles.avatarSheetHeader}>
+          <View style={styles.avatarSheetCopy}>
+            <Text style={styles.avatarSheetTitle}>Profile picture</Text>
+            <Text style={styles.avatarSheetIntro}>Choose a phone photo or a Volyume gym avatar.</Text>
+          </View>
+          {avatarUri || avatarPreset ? (
+            <TouchableOpacity
+              style={styles.avatarClearButton}
+              onPress={removeAvatar}
+              accessibilityRole="button"
+              accessibilityLabel="Clear current avatar"
+            >
+              <Text style={styles.avatarClearText}>Clear</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <TouchableOpacity
           style={styles.photoOption}
           onPress={pickAvatar}
@@ -465,8 +480,8 @@ export default function AthleteProfileScreen({ navigation }) {
             <Ionicons name="image-outline" size={20} color={colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
-            <Text style={styles.photoOptionTitle}>{avatarUri ? 'Update photo' : 'Choose photo'}</Text>
-            <Text style={styles.photoOptionSub}>Use your own profile picture.</Text>
+            <Text style={styles.photoOptionTitle}>Photo from phone</Text>
+            <Text style={styles.photoOptionSub}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
@@ -486,7 +501,7 @@ export default function AthleteProfileScreen({ navigation }) {
                 <ProfileAvatarMark
                   presetKey={preset.key}
                   displayName={displayName}
-                  size={58}
+                  size={62}
                   selected={selected}
                 />
                 <Text style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
@@ -496,16 +511,6 @@ export default function AthleteProfileScreen({ navigation }) {
             );
           })}
         </View>
-        {avatarUri || avatarPreset ? (
-          <TouchableOpacity
-            style={styles.removeAvatarRow}
-            onPress={removeAvatar}
-            accessibilityRole="button"
-            accessibilityLabel="Remove profile picture"
-          >
-            <Text style={styles.removeAvatarText}>Remove profile picture</Text>
-          </TouchableOpacity>
-        ) : null}
       </BottomSheet>
     </SafeAreaView>
   );
@@ -578,8 +583,25 @@ const styles = StyleSheet.create({
   statusPillText_fresh: { color: colors.success },
   statusPillText_soon: { color: colors.warning },
   statusPillText_attention: { color: colors.error },
+  avatarSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  avatarSheetCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   avatarSheetTitle: { ...type.h3, color: colors.textPrimary },
   avatarSheetIntro: { ...type.bodySm, color: colors.textSecondary },
+  avatarClearButton: {
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  avatarClearText: { ...type.label, color: colors.textSecondary },
   avatarGalleryLabel: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', fontWeight: fontWeight.black },
   photoOption: {
     minHeight: 64,
@@ -610,26 +632,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   avatarPresetOption: {
+    flexGrow: 1,
     flexBasis: '30%',
-    minWidth: 88,
+    minWidth: 92,
     alignItems: 'center',
     gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
   avatarPresetOptionSelected: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryBg,
   },
-  avatarPresetOptionText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary, fontWeight: fontWeight.semibold },
   avatarPresetOptionTextSelected: { color: colors.primary },
-  removeAvatarRow: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  removeAvatarText: { ...type.label, color: colors.error },
 });
