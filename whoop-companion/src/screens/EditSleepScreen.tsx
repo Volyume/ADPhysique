@@ -7,7 +7,7 @@ import { useStoreSelector } from '../state/store';
 import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { startOfDayMs } from '../util/time';
+import { dayKey, startOfDayMs } from '../util/time';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -15,18 +15,33 @@ function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h:
   return { h: d.getHours(), m: d.getMinutes() };
 }
 
-/** Build a timestamp for a bed/wake clock time relative to today. Evening times
- * (>= 12:00) are treated as last night; morning times as today. */
-function tsFor(h: number, m: number, evening: boolean): number {
-  const sod = startOfDayMs(Date.now());
+/** Build a timestamp for a bed/wake clock time relative to the selected sleep day.
+ * Evening times (>= 12:00) are treated as the previous night; morning times as that day. */
+function tsFor(day: string, h: number, m: number, evening: boolean): number {
+  const sod = dayStartFromKey(day);
   const mins = h * 60 + m;
   return evening ? sod - (1440 - mins) * 60000 : sod + mins * 60000;
 }
 
-export function EditSleepScreen({ nav }: { nav: Nav }) {
+function dayStartFromKey(day: string): number {
+  return startOfDayMs(Date.parse(`${day}T00:00:00`));
+}
+
+function formatDayLabel(day: string): string {
+  return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
+  const targetDay = day ?? dayKey(Date.now());
   const today = useStoreSelector(appStore, (s) => s.today);
-  const bedInit = hmFromTs(today?.sleepStart ?? null, 23, 0);
-  const wakeInit = hmFromTs(today?.sleepEnd ?? null, 7, 0);
+  const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const metric = targetDay === today?.day ? today : recentDays.find((d) => d.day === targetDay) ?? null;
+  const bedInit = hmFromTs(metric?.sleepStart ?? null, 23, 0);
+  const wakeInit = hmFromTs(metric?.sleepEnd ?? null, 7, 0);
   const [bed, setBed] = useState(bedInit);
   const [wake, setWake] = useState(wakeInit);
   const [saved, setSaved] = useState(false);
@@ -34,15 +49,15 @@ export function EditSleepScreen({ nav }: { nav: Nav }) {
 
   const save = () => {
     const bedEvening = bed.h >= 12;
-    const startTs = tsFor(bed.h, bed.m, bedEvening);
-    const endTs = tsFor(wake.h, wake.m, false);
+    const startTs = tsFor(targetDay, bed.h, bed.m, bedEvening);
+    const endTs = tsFor(targetDay, wake.h, wake.m, false);
     const durationMin = Math.round((endTs - startTs) / 60000);
     if (durationMin < 20 || durationMin > 18 * 60) {
       setError('Choose a sleep window between 20 minutes and 18 hours, with wake time after bed time.');
       return;
     }
     setError(null);
-    void appStore.setManualSleep(startTs, endTs);
+    void appStore.setManualSleep(startTs, endTs, targetDay);
     setSaved(true);
     setTimeout(() => nav.back(), 700);
   };
@@ -50,6 +65,7 @@ export function EditSleepScreen({ nav }: { nav: Nav }) {
   return (
     <Screen title="Log / Adjust Sleep" onBack={nav.back} tint={colors.sleepTeal}>
       <Card>
+        <Text style={styles.date}>{formatDayLabel(targetDay)}</Text>
         <Text style={styles.intro}>
           Set when you went to bed and woke up. Pulse re-detects your sleep stages and recovery from
           the strap’s heart rate over exactly that window — useful if a night was missed or detected
@@ -57,19 +73,19 @@ export function EditSleepScreen({ nav }: { nav: Nav }) {
         </Text>
       </Card>
 
-      <SectionLabel>Bed time (last night)</SectionLabel>
+      <SectionLabel>Bed time (previous evening)</SectionLabel>
       <Card>
         <TimePicker value={bed} onChange={setBed} />
       </Card>
 
-      <SectionLabel>Wake time (this morning)</SectionLabel>
+      <SectionLabel>Wake time ({formatDayLabel(targetDay)})</SectionLabel>
       <Card>
         <TimePicker value={wake} onChange={setWake} />
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton title={saved ? 'Saved - re-detecting' : 'Save & re-detect'} onPress={save} />
-      <SecondaryButton title="Clear manual override (auto-detect)" onPress={() => { void appStore.clearManualSleep(); nav.back(); }} />
+      <SecondaryButton title="Clear manual override (auto-detect)" onPress={() => { void appStore.clearManualSleep(targetDay); nav.back(); }} />
     </Screen>
   );
 }
@@ -102,6 +118,7 @@ function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => voi
 }
 
 const styles = StyleSheet.create({
+  date: { color: colors.text, fontSize: 18, marginBottom: 6, fontFamily: fonts.textBold },
   intro: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
   picker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   time: { color: colors.text, fontSize: 34, fontFamily: fonts.black },

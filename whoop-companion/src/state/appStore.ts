@@ -1774,14 +1774,14 @@ class AppStore extends Store<AppState> {
   };
 
   // ---- manual / adjusted sleep window ----
-  setManualSleep = async (startTs: number, endTs: number): Promise<void> => {
-    await kvSet(`manualSleep:${dayKey(Date.now())}`, JSON.stringify({ startTs, endTs }));
-    await this.recomputeToday();
+  setManualSleep = async (startTs: number, endTs: number, day = dayKey(Date.now())): Promise<void> => {
+    await kvSet(`manualSleep:${day}`, JSON.stringify({ startTs, endTs }));
+    await this.recomputeDay(day);
   };
 
-  clearManualSleep = async (): Promise<void> => {
-    await kvSet(`manualSleep:${dayKey(Date.now())}`, '');
-    await this.recomputeToday();
+  clearManualSleep = async (day = dayKey(Date.now())): Promise<void> => {
+    await kvSet(`manualSleep:${day}`, '');
+    await this.recomputeDay(day);
   };
 
   private async scoreNapWindow(startTs: number, endTs: number, autoDetected: boolean): Promise<StoredNapDetail | null> {
@@ -2037,6 +2037,18 @@ class AppStore extends Store<AppState> {
   refreshDerived = async (): Promise<void> => {
     await this.recomputeToday();
     this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio(CARDIO_RECENT_LIMIT) });
+  };
+
+  recomputeDay = async (day: string): Promise<void> => {
+    if (day === dayKey(Date.now())) {
+      await this.recomputeToday();
+      return;
+    }
+    await this.backfillDailyMetric(day);
+    this.setState({
+      recentDays: await getRecentDailyMetrics(30),
+      cardio: await listCardio(CARDIO_RECENT_LIMIT),
+    });
   };
 
   recomputeToday = async (): Promise<void> => {

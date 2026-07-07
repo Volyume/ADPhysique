@@ -137,7 +137,7 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
     case 'illness':
       return <IllnessScreen nav={nav} />;
     case 'editSleep':
-      return <EditSleepScreen nav={nav} />;
+      return <EditSleepScreen nav={nav} day={route.day} />;
     case 'sleepTrends':
       return <SleepTrendsScreen nav={nav} />;
     case 'training':

@@ -107,9 +107,25 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <Text style={styles.note}>
                   Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}% / evidence {metric.sleepDetail?.motionMin ?? 0}+{metric.sleepDetail?.sleepStateMin ?? 0} min / {confidenceLabel(metric.sleepDetail?.confidence)} confidence
                 </Text>
+                <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.adjustTitle}>Adjust this sleep</Text>
+                    <Text style={styles.adjustMeta}>Re-detect stages, vitals and recovery for {formatDayLong(day)}</Text>
+                  </View>
+                  <Ionicons name="create" size={18} color={colors.sleepTeal} />
+                </TouchableOpacity>
               </>
             ) : (
-              <Empty text="No sleep block for this day yet." />
+              <>
+                <Empty text="No sleep block for this day yet." />
+                <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.adjustTitle}>Log sleep for this day</Text>
+                    <Text style={styles.adjustMeta}>Use synced strap data inside your bed and wake window</Text>
+                  </View>
+                  <Ionicons name="create" size={18} color={colors.sleepTeal} />
+                </TouchableOpacity>
+              </>
             )}
           </Card>
 
@@ -144,7 +160,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
       <SectionLabel>Timeline</SectionLabel>
       <Card>
         {metric?.sleepStart && metric.sleepEnd ? (
-          <TouchableOpacity style={styles.row} onPress={() => nav.navigate({ name: 'sleep' })}>
+          <TouchableOpacity style={styles.row} onPress={() => nav.navigate({ name: 'editSleep', day })}>
             <View>
               <Text style={styles.rowTitle}>Sleep</Text>
               <Text style={styles.rowMeta}>
@@ -286,6 +302,18 @@ const styles = StyleSheet.create({
   big: { color: colors.text, fontSize: 30, fontFamily: fonts.black },
   sub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
   note: { color: colors.textTertiary, fontSize: 12, marginTop: 12, fontFamily: fonts.text },
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  adjustTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  adjustMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
   grid: { flexDirection: 'row', gap: 12, marginTop: 12 },
   half: { flex: 1, marginTop: 0 },
   row: {
