@@ -392,6 +392,35 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     expect(deleteProgressPhoto).not.toHaveBeenCalled();
     expect(listProgressPhotos).toHaveBeenCalled();
   });
+
+  test('viewer onDelete removes every photo in an ordinary same-day photo set', async () => {
+    const side = { name: `${NEW.ts + 1}.jpg`, uri: `file:///photos/${NEW.ts + 1}.jpg`, ts: NEW.ts + 1 };
+    const back = { name: `${NEW.ts + 2}.jpg`, uri: `file:///photos/${NEW.ts + 2}.jpg`, ts: NEW.ts + 2 };
+    getPhotoMetaMap.mockResolvedValueOnce({
+      [NEW.name]: { name: NEW.name, takenAt: NEW.ts, pose: 'front', weightKg: 82.4, note: null },
+      [side.name]: { name: side.name, takenAt: NEW.ts, pose: 'side', weightKg: 82.4, note: null },
+      [back.name]: { name: back.name, takenAt: NEW.ts, pose: 'back', weightKg: 82.4, note: null },
+    });
+    const tree = await render([NEW, side, back]);
+    await pressCheckIn(tree, NEW);
+    const viewer = hostNode(tree, 'ProgressPhotoViewer');
+    expect(viewer.props.deleteModeForPhoto(NEW.name)).toBe('photo-set');
+
+    listProgressPhotos.mockClear();
+    await act(async () => { await viewer.props.onDelete(NEW.name); });
+
+    expect(deleteProgressScanSession).not.toHaveBeenCalled();
+    expect(mockDetachProgressScanPhoto).toHaveBeenCalledTimes(3);
+    expect(deletePhotoMeta).toHaveBeenCalledTimes(3);
+    expect(deleteProgressPhoto).toHaveBeenCalledTimes(3);
+    expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', NEW.name);
+    expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', side.name);
+    expect(deletePhotoMeta).toHaveBeenCalledWith('u-test', back.name);
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', NEW.uri);
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', side.uri);
+    expect(deleteProgressPhoto).toHaveBeenCalledWith('u-test', back.uri);
+    expect(listProgressPhotos).toHaveBeenCalled();
+  });
 });
 
 describe('ProgressPhotosScreen compare entry', () => {

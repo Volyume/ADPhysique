@@ -882,8 +882,10 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!canWrite()) return;
     const uid = useAppStore.getState().user?.id ?? userId;
     const owningScan = findScanForPhotoName(visibleScans, name);
+    let deletingSet = false;
     try {
       if (owningScan?.id) {
+        deletingSet = true;
         const deleted = await deleteProgressScanSession(uid, owningScan.id, { deleteFiles: true });
         if (!deleted) throw new Error('progress_scan_delete_failed');
         const setNames = new Set((owningScan.assets || []).map((asset) => asset?.photoName).filter(Boolean));
@@ -896,6 +898,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       const checkIn = checkInByPhotoName.get(name);
       const setNames = (checkIn?.photos || []).map((photo) => photo?.name).filter(Boolean);
       if (setNames.length > 1) {
+        deletingSet = true;
         await deleteViewerProgressPhotoSet({
           userId: uid,
           names: setNames,
@@ -918,7 +921,9 @@ export default function ProgressPhotosScreen({ navigation }) {
       }
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
-      toast.show('Could not delete that photo. Please try again.', { variant: 'error' });
+      toast.show(deletingSet
+        ? 'Could not delete that photo set. Please try again.'
+        : 'Could not delete that photo. Please try again.', { variant: 'error' });
       return;
     }
     setViewerOpen(false);
