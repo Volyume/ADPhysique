@@ -19,6 +19,10 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const liveStress = useStoreSelector(appStore, (s) => s.liveStress);
   const status = useStoreSelector(appStore, (s) => s.status);
   const battery = useStoreSelector(appStore, (s) => s.battery);
+  const draining = useStoreSelector(appStore, (s) => s.draining);
+  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
+  const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const sleepCapture = useStoreSelector(appStore, (s) => s.sleepCapture);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const illness = useStoreSelector(appStore, (s) => s.illness);
@@ -51,6 +55,16 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const stressLabel =
     liveStress == null ? '—' : liveStress >= 2 ? 'High' : liveStress >= 1 ? 'Medium' : 'Low';
 
+  const syncLabel = draining
+    ? 'Syncing'
+    : lastSyncTs
+      ? `Synced ${formatSyncAge(lastSyncTs)}`
+      : status === 'connected'
+        ? 'Waiting for sync'
+        : 'Connect strap';
+  const signalMin = sleepCapture?.signalMin ?? 0;
+  const coverage = sleepCapture?.coveragePct ?? 0;
+
   return (
     <View style={{ flex: 1 }}>
       <Screen title="VOLYUME Pulse">
@@ -69,6 +83,21 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             </Card>
           </Pressable>
         ) : null}
+
+        {/* Sync/data trust */}
+        <Card onPress={() => nav.navigate({ name: 'device' })}>
+          <View style={styles.qualityHead}>
+            <View style={[styles.qualityDot, { backgroundColor: qualityColor(coverage, signalMin, draining) }]} />
+            <Text style={styles.qualityTitle}>Data quality</Text>
+            <Text style={styles.qualityStatus}>{syncLabel}</Text>
+          </View>
+          <View style={styles.liveRow}>
+            <Stat label="Sleep signal" value={signalMin || 'â€”'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
+            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : 'â€”'} color={qualityColor(coverage, signalMin, draining)} />
+            <Stat label="History rows" value={historySync?.decodedRecords ?? 'â€”'} />
+          </View>
+          {sleepCapture?.note ? <Text style={styles.qualityNote}>{sleepCapture.note}</Text> : null}
+        </Card>
 
         {/* Three WHOOP dials: Sleep · Recovery · Strain */}
         <Card style={styles.dialCard}>
@@ -262,6 +291,11 @@ const styles = StyleSheet.create({
   illnessSub: { color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: fonts.text },
   recDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.recoveryRed, marginRight: 10 },
   recText: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  qualityHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  qualityDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
+  qualityTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold, flex: 1 },
+  qualityStatus: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
+  qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
 });
 
 function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
@@ -269,4 +303,20 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   if (today) byDay.set(today.day, today);
   for (const d of recent) byDay.set(d.day, d);
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+}
+
+function qualityColor(coverage: number, signalMin: number, syncing: boolean): string {
+  if (syncing) return colors.strainBlue;
+  if (coverage >= 60 && signalMin >= 120) return colors.recoveryGreen;
+  if (signalMin >= 30) return colors.recoveryYellow;
+  return colors.textTertiary;
+}
+
+function formatSyncAge(ts: number): string {
+  const min = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (min < 1) return 'now';
+  if (min < 60) return `${min}m ago`;
+  const hours = Math.round(min / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }

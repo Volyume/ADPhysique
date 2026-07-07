@@ -8,18 +8,27 @@ import { Nav } from '../ui/navigation';
 import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES } from '../data/activities';
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
+const DAYS = [
+  { label: 'Today', offset: 0 },
+  { label: 'Yesterday', offset: 1 },
+  { label: '2 days ago', offset: 2 },
+  { label: '3 days ago', offset: 3 },
+];
 
 export function LogActivityScreen({ nav }: { nav: Nav }) {
   const [activity, setActivity] = useState('Running');
   const [duration, setDuration] = useState(45);
+  const [dayOffset, setDayOffset] = useState(0);
+  const [endTime, setEndTime] = useState(defaultEndTime());
   const [avgHr, setAvgHr] = useState('140');
   const [maxHr, setMaxHr] = useState('');
   const [steps, setSteps] = useState('');
   const [distanceKm, setDistanceKm] = useState('');
+  const [notes, setNotes] = useState('');
   const [done, setDone] = useState(false);
 
   const save = () => {
-    const end = Date.now();
+    const end = endTimeForOffset(dayOffset, endTime) ?? Date.now();
     const start = end - duration * 60000;
     void appStore.addCardio({
       activity,
@@ -30,6 +39,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
       steps: steps ? Number(steps) : null,
       distanceM: distanceKm ? Number(distanceKm) * 1000 : null,
       stepSource: steps ? 'manual' : null,
+      notes: notes.trim() || undefined,
       source: 'manual',
     });
     setDone(true);
@@ -68,6 +78,32 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
               <Text style={[styles.chipText, duration === d && styles.chipTextActive]}>{d} min</Text>
             </Pressable>
           ))}
+        </View>
+      </Card>
+
+      <SectionLabel>When</SectionLabel>
+      <Card>
+        <View style={styles.chips}>
+          {DAYS.map((d) => (
+            <Pressable
+              key={d.offset}
+              onPress={() => setDayOffset(d.offset)}
+              style={[styles.chip, dayOffset === d.offset && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, dayOffset === d.offset && styles.chipTextActive]}>{d.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={styles.detailField}>
+          <Text style={styles.fieldLabel}>Finished at</Text>
+          <TextInput
+            value={endTime}
+            onChangeText={setEndTime}
+            keyboardType="numbers-and-punctuation"
+            style={styles.smallInput}
+            placeholder="18:30"
+            placeholderTextColor={colors.textTertiary}
+          />
         </View>
       </Card>
 
@@ -128,6 +164,16 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
             placeholderTextColor={colors.textTertiary}
           />
         </View>
+        <View style={styles.detailField}>
+          <Text style={styles.fieldLabel}>Notes</Text>
+          <TextInput
+            value={notes}
+            onChangeText={setNotes}
+            style={styles.smallInput}
+            placeholder="optional"
+            placeholderTextColor={colors.textTertiary}
+          />
+        </View>
       </Card>
 
       <PrimaryButton title={done ? 'Saved ✓' : 'Save activity'} onPress={save} />
@@ -151,3 +197,20 @@ const styles = StyleSheet.create({
   smallInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, color: colors.text, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, fontFamily: fonts.text },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });
+
+function defaultEndTime(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function endTimeForOffset(dayOffset: number, value: string): number | null {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const min = Number(match[2]);
+  if (hour < 0 || hour > 23 || min < 0 || min > 59) return null;
+  const d = new Date();
+  d.setDate(d.getDate() - dayOffset);
+  d.setHours(hour, min, 0, 0);
+  return d.getTime();
+}

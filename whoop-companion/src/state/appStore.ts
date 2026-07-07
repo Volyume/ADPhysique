@@ -234,6 +234,7 @@ class AppStore extends Store<AppState> {
   private historyRecords: Uint8Array[] = [];
   private historyCommitQueue: Promise<void> = Promise.resolve();
   private historySessionStats: HistoricalDecodeResult | null = null;
+  private historyDrainMode: 'manual' | 'auto' = 'manual';
   private historyIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private historyStopQueued = false;
   private eventAssemblers = new Map<string, FrameAssembler>();
@@ -261,10 +262,13 @@ class AppStore extends Store<AppState> {
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
     const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
+    const lastSyncRaw = await kvGet('lastSyncTs');
+    const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     this.setState({
       profile,
       sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85,
       backgroundKeepAlive: keepAlive,
+      lastSyncTs: Number.isFinite(lastSyncTs) ? lastSyncTs : null,
     });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
@@ -348,7 +352,7 @@ class AppStore extends Store<AppState> {
       return;
     }
     this.autoDrainedFor = deviceId;
-    this.autoSyncAttempts = 0;
+    this.autoSyncAttempts += 1;
     await this.runHistoryDrain('auto');
   }
 
@@ -356,7 +360,6 @@ class AppStore extends Store<AppState> {
     const deviceId = this.getState().device?.id;
     if (!deviceId || this.autoSyncAttempts >= AUTO_HISTORY_SYNC_MAX_ATTEMPTS) return;
     this.autoDrainedFor = '';
-    this.autoSyncAttempts += 1;
     this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
   }
 
@@ -681,21 +684,29 @@ class AppStore extends Store<AppState> {
   private enqueueHistoryStop(reason: 'complete' | 'timeout' | 'disconnect'): void {
     if (this.historyStopQueued) return;
     this.historyStopQueued = true;
+    const mode = this.historyDrainMode;
     const tail = this.historyRecords;
     this.historyRecords = [];
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
         if (tail.length) await this.persistHistoryFrames(tail);
         await this.backfillHistoryDays(this.historySessionStats);
+        const syncTs = Date.now();
+        await kvSet('lastSyncTs', String(syncTs));
         this.clearHistoryTimeout();
         this.setState((s) => ({
           draining: false,
           capturing: false,
-          lastSyncTs: Date.now(),
+          lastSyncTs: syncTs,
           historySync: s.historySync ? { ...s.historySync, status: historyStopStatus(reason, s.historySync) } : null,
         }));
         await this.refreshBandSteps();
         await this.refreshDerived();
+        const stats = this.historySessionStats;
+        if (mode === 'auto' && reason === 'complete') this.autoSyncAttempts = 0;
+        if (mode === 'auto' && reason === 'timeout' && (!stats || stats.records === 0)) {
+          this.retryAutoHistoryDrain();
+        }
       })
       .catch((e) => {
         this.clearHistoryTimeout();
@@ -951,6 +962,7 @@ class AppStore extends Store<AppState> {
     this.historySessionStats = null;
     this.historyCommitQueue = Promise.resolve();
     this.historyStopQueued = false;
+    this.historyDrainMode = mode;
     this.setState({
       draining: true,
       capturing: mode === 'manual',
