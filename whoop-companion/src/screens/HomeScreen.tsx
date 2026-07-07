@@ -74,6 +74,13 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const confidence = sleepCapture?.confidence ?? null;
   const effectiveSync = historySync ?? lastHistorySync;
   const syncProblem = isRetryableSyncProblem(effectiveSync);
+  const quality = homeSleepQuality({
+    capture: sleepCapture,
+    draining,
+    syncProblem,
+    hasSleep: !!sleep,
+    capped: !!sleepPerformance?.cappedByConfidence,
+  });
   const decodedRange = formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const syncLabel = draining
     ? syncProblem
@@ -81,6 +88,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
       : 'Syncing'
     : syncProblem
       ? 'Retrying sync'
+      : quality.status
+        ? quality.status
       : lastSyncTs
         ? `Synced ${formatSyncAge(lastSyncTs)}`
         : status === 'connected'
@@ -129,13 +138,13 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         {/* Sync/data trust */}
         <Card onPress={() => nav.navigate({ name: 'device' })}>
           <View style={styles.qualityHead}>
-            <View style={[styles.qualityDot, { backgroundColor: qualityColor(coverage, signalMin, draining, syncProblem) }]} />
+            <View style={[styles.qualityDot, { backgroundColor: quality.color }]} />
             <Text style={styles.qualityTitle}>Data quality</Text>
             <Text style={styles.qualityStatus}>{syncLabel}</Text>
           </View>
           <View style={styles.liveRow}>
             <Stat label="Sleep signal" value={signalMin || '-'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
-            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining, syncProblem)} />
+            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={quality.color} />
             <Stat label="Confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
           </View>
           <Text style={styles.qualityMeta}>
@@ -401,6 +410,41 @@ function qualityColor(coverage: number, signalMin: number, syncing: boolean, syn
   return colors.textTertiary;
 }
 
+function homeSleepQuality(input: {
+  capture: ReturnType<typeof appStore.getState>['sleepCapture'];
+  draining: boolean;
+  syncProblem: boolean;
+  hasSleep: boolean;
+  capped: boolean;
+}): { color: string; status: string | null; issue: 'wake' | 'hr_only' | 'partial' | 'sync' | null } {
+  const capture = input.capture;
+  const coverage = capture?.coveragePct ?? 0;
+  const signalMin = capture?.signalMin ?? 0;
+  if (input.draining) return { color: colors.strainBlue, status: 'Syncing', issue: 'sync' };
+  if (input.syncProblem) return { color: colors.recoveryYellow, status: 'Retrying sync', issue: 'sync' };
+  if (sleepStateWakeConflict(capture)) return { color: colors.recoveryRed, status: 'Review sleep', issue: 'wake' };
+  if (capture && longHrOnlyHomeCapture(capture)) {
+    return { color: colors.strainBlue, status: 'Needs proof', issue: 'hr_only' };
+  }
+  if (!input.hasSleep || input.capped || coverage < 60 || signalMin < 150) {
+    return { color: qualityColor(coverage, signalMin, false, false), status: 'Partial sleep', issue: 'partial' };
+  }
+  if (coverage >= 80 && signalMin >= 240) return { color: colors.recoveryGreen, status: null, issue: null };
+  return { color: colors.recoveryYellow, status: 'Usable data', issue: null };
+}
+
+function longHrOnlyHomeCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
+  const stateProof =
+    capture.sleepStateMin >= 30 &&
+    (capture.sleepStateAsleepMin + capture.sleepStateStillMin) / Math.max(1, capture.sleepStateMin) >= 0.25;
+  return (
+    capture.source === 'auto_hr' &&
+    capture.windowMin >= 7 * 60 &&
+    capture.stillMin < Math.max(30, capture.windowMin * 0.18) &&
+    !stateProof
+  );
+}
+
 function energyColor(score: number | null | undefined): string {
   if (score == null) return colors.textSecondary;
   if (score >= 70) return colors.recoveryGreen;
@@ -460,6 +504,16 @@ function dailyFocus(input: {
       action: 'Adjust sleep window',
       color: colors.recoveryRed,
       route: { name: 'editSleep' },
+    };
+  }
+  if (input.sleepCapture && longHrOnlyHomeCapture(input.sleepCapture)) {
+    return {
+      badge: 'PROOF',
+      title: 'Sleep needs corroboration',
+      body: 'A long HR-shaped window is present, but still-worn or decoded sleep-state evidence is sparse. Let sync finish before trusting duration.',
+      action: 'Open Sleep review',
+      color: colors.strainBlue,
+      route: input.sleep ? { name: 'sleep' } : { name: 'device' },
     };
   }
   if (input.draining || input.syncProblem || !input.sleep || coverage < 60 || signalMin < 150 || input.sleepPerformanceCapped) {
