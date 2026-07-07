@@ -19,7 +19,7 @@ const RR_MIN_MS = 300;
 const RR_MAX_MS = 2000;
 const MEDIAN_TOL = 0.25;
 const FS = 4; // resample grid (Hz) — Nyquist 2 Hz, well above the ~0.4 Hz band
-const F_LO = 0.1; // 6 brpm
+const F_LO = 0.15; // 9 brpm; lower estimates from sparse PPG R-R are usually edge locks
 const F_HI = 0.4; // 24 brpm
 const WIN_SEC = 120; // estimate per 2-minute window
 const STEP_SEC = 60; // 50% overlap
@@ -48,7 +48,7 @@ function cleanRr(rr: number[]): number[] {
  */
 export function respiratoryRate(rr: number[]): number | null {
   const clean = cleanRr(rr);
-  if (clean.length < 60) return null; // need ~1 min of beats
+  if (clean.length < 180) return null; // need several minutes of clean beats
 
   // Build the tachogram: time of each beat (s) and its R-R value (ms).
   const t: number[] = [];
@@ -60,7 +60,7 @@ export function respiratoryRate(rr: number[]): number | null {
     v.push(interval);
   }
   const duration = acc;
-  if (duration < WIN_SEC) return null;
+  if (duration < WIN_SEC * 1.5) return null;
 
   // Resample onto a uniform grid by linear interpolation.
   const n = Math.floor(duration * FS);
@@ -85,11 +85,14 @@ export function respiratoryRate(rr: number[]): number | null {
     const peak = peakFreqInBand(seg, FS, F_LO, F_HI);
     if (peak != null) estimates.push(peak * 60);
   }
-  if (estimates.length === 0) {
+  if (estimates.length < 2) {
     const peak = peakFreqInBand(grid.slice(0, Math.min(n, winN)), FS, F_LO, F_HI);
-    return peak != null ? round1(peak * 60) : null;
+    if (peak == null) return null;
+    const rate = round1(peak * 60);
+    return rate >= 9 && rate <= 24 ? rate : null;
   }
-  return round1(median(estimates));
+  const rate = round1(median(estimates));
+  return rate >= 9 && rate <= 24 ? rate : null;
 }
 
 /**

@@ -17,6 +17,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const liveHr = useStoreSelector(appStore, (s) => s.liveHr);
   const liveRmssd = useStoreSelector(appStore, (s) => s.liveRmssd);
   const liveStress = useStoreSelector(appStore, (s) => s.liveStress);
+  const storedStress = useStoreSelector(appStore, (s) => s.storedStress);
   const status = useStoreSelector(appStore, (s) => s.status);
   const battery = useStoreSelector(appStore, (s) => s.battery);
   const draining = useStoreSelector(appStore, (s) => s.draining);
@@ -55,6 +56,10 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const todayCardio = cardio.filter((c) => c.startTs >= new Date().setHours(0, 0, 0, 0));
   const stressLabel =
     liveStress == null ? '—' : liveStress >= 2 ? 'High' : liveStress >= 1 ? 'Medium' : 'Low';
+
+  const stressValue = liveStress ?? storedStress;
+  const stressTileLabel =
+    stressValue == null ? '—' : stressValue >= 2 ? 'High' : stressValue >= 1 ? 'Medium' : 'Low';
 
   const syncLabel = draining
     ? 'Syncing'
@@ -152,8 +157,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             title="Health Monitor"
             icon="pulse"
             color={hm.measuredCount && hm.inRangeCount === hm.measuredCount ? colors.recoveryGreen : colors.recoveryYellow}
-            value={hm.measuredCount > 0 ? `${hm.inRangeCount}/${hm.measuredCount}` : '—'}
-            sub={hm.measuredCount > 0 ? 'within range' : 'needs data'}
+            value={hm.measuredCount > 0 ? `${hm.inRangeCount}/${hm.measuredCount}` : hm.valueCount > 0 ? `${hm.valueCount}` : '—'}
+            sub={hm.measuredCount > 0 ? 'within range' : hm.valueCount > 0 ? 'building ranges' : 'needs full sync'}
             onPress={() => nav.navigate({ name: 'health' })}
             style={styles.half}
           />
@@ -161,8 +166,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             title="Stress Monitor"
             icon="speedometer"
             color={colors.strainBlue}
-            value={liveStress != null ? liveStress.toFixed(1) : '—'}
-            sub={status === 'connected' ? `${stressLabel} · live` : 'not connected'}
+            value={stressValue != null ? stressValue.toFixed(1) : '—'}
+            sub={liveStress != null ? `${stressTileLabel} · live` : storedStress != null ? `${stressTileLabel} · synced` : status === 'connected' ? 'waiting for R-R' : 'needs synced R-R'}
             onPress={() => nav.navigate({ name: 'stress' })}
             style={styles.half}
           />
@@ -174,7 +179,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             icon="shield-half"
             color={colors.recoveryGreen}
             value={resilience ? resilience.tier : '—'}
-            sub={resilience ? `${resilience.days}-day trend` : 'needs ~1 week'}
+            sub={resilience ? `${resilience.days}-day trend` : 'needs recovery nights'}
             onPress={() => nav.navigate({ name: 'resilience' })}
             style={styles.half}
           />

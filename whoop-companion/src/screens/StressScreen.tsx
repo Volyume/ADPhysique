@@ -24,6 +24,7 @@ function stressLabel(score: number | null): string {
 
 export function StressScreen({ nav }: { nav: Nav }) {
   const liveStress = useStoreSelector(appStore, (s) => s.liveStress);
+  const storedStress = useStoreSelector(appStore, (s) => s.storedStress);
   const status = useStoreSelector(appStore, (s) => s.status);
   const [series, setSeries] = useState<Array<{ tsMs: number; score: number }>>([]);
 
@@ -31,20 +32,21 @@ export function StressScreen({ nav }: { nav: Nav }) {
     void appStore.stressSeries().then(setSeries);
   }, []);
 
-  const tint = stressColor(liveStress);
+  const stressValue = liveStress ?? storedStress;
+  const tint = stressColor(stressValue);
 
   return (
     <Screen title="Stress Monitor" onBack={nav.back} tint={tint}>
       <View style={styles.hero}>
         <Ring
-          value={liveStress != null ? liveStress / 3 : 0}
+          value={stressValue != null ? stressValue / 3 : 0}
           size={196}
           color={tint}
           centerTop="STRESS"
-          centerMain={liveStress != null ? liveStress.toFixed(1) : '--'}
-          centerSub={stressLabel(liveStress).toLowerCase()}
+          centerMain={stressValue != null ? stressValue.toFixed(1) : '--'}
+          centerSub={stressLabel(stressValue).toLowerCase()}
         />
-        <Text style={styles.scaleNote}>Scale 0–3 · {status === 'connected' ? 'live' : 'not connected'}</Text>
+        <Text style={styles.scaleNote}>Scale 0-3 · {liveStress != null ? 'live' : storedStress != null ? 'latest synced' : status === 'connected' ? 'waiting for R-R' : 'needs synced R-R'}</Text>
       </View>
 
       <View style={styles.legend}>

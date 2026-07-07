@@ -50,7 +50,9 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         <Text style={styles.summarySub}>
           {hm.measuredCount > 0
             ? 'metrics within your 30-day typical range'
-            : 'Wear your strap overnight to populate your vitals'}
+            : hm.valueCount > 0
+            ? 'overnight values found; personal ranges are still calibrating'
+            : 'Wear your strap overnight and complete a full sync to populate your vitals'}
         </Text>
       </Card>
 

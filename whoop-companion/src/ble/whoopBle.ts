@@ -37,6 +37,7 @@ import { decodeHeartRate, HeartRateSample } from './heartRate';
 import {
   cmdGetHello,
   cmdGetHelloHarvard,
+  cmdEnableHrBroadcast,
   cmdLinkValid,
   cmdSetClock,
 } from '../whoop/commands';
@@ -92,6 +93,7 @@ export class WhoopBle {
   private reconnectAttempts = 0;
 
   constructor(events: WhoopEvents) {
+    this.events = events;
     // restoreStateIdentifier enables iOS CoreBluetooth State Preservation &
     // Restoration: with the `bluetooth-central` background mode, iOS relaunches
     // the app in the background when the strap has data, so overnight HR keeps
@@ -101,12 +103,14 @@ export class WhoopBle {
       restoreStateFunction: (restored) => {
         const peripherals = restored?.connectedPeripherals ?? [];
         if (peripherals.length > 0) {
-          this.device = peripherals[0] ?? null;
-          this.setStatus('connected', this.device?.name ?? this.device?.id);
+          const restoredDevice = peripherals[0] ?? null;
+          if (restoredDevice) {
+            this.wantConnected = true;
+            void this.afterConnect(restoredDevice);
+          }
         }
       },
     });
-    this.events = events;
   }
 
   private setStatus(status: WhoopStatus, detail?: string) {
@@ -142,8 +146,9 @@ export class WhoopBle {
   }
 
   /** Full flow: permissions -> wait for BT on -> scan -> connect -> subscribe. */
-  async start(): Promise<void> {
+  async start(preferredDeviceId?: string | null): Promise<void> {
     this.wantConnected = true;
+    if (preferredDeviceId) this.lastDeviceId = preferredDeviceId;
     const ok = await this.ensurePermissions();
     if (!ok) {
       this.setStatus('unauthorized', 'Bluetooth permission denied');
@@ -161,6 +166,17 @@ export class WhoopBle {
         }
       }, true);
       return;
+    }
+
+    if (this.lastDeviceId) {
+      try {
+        this.setStatus('connecting', 'reconnecting…');
+        const reconnected = await this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 });
+        await this.afterConnect(reconnected);
+        return;
+      } catch {
+        // Known-device reconnect failed; scan below so a changed OS BLE id still works.
+      }
     }
 
     await this.scan();
@@ -324,6 +340,8 @@ export class WhoopBle {
     await this.safeWriteCommand(cmdGetHello());
     await delay(150);
     await this.safeWriteCommand(cmdSetClock());
+    await delay(150);
+    await this.safeWriteCommand(cmdEnableHrBroadcast(true));
   }
 
   private async safeWriteCommand(bytes: Uint8Array): Promise<boolean> {

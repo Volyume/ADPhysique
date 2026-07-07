@@ -21,7 +21,7 @@ export type Resilience = {
 
 export function resilience(recoveries: number[]): Resilience | null {
   const vals = recoveries.filter((v) => Number.isFinite(v));
-  if (vals.length < 7) return null;
+  if (vals.length < 3) return null;
   const window = vals.slice(-14);
   const mean = window.reduce((a, b) => a + b, 0) / window.length;
   const sd = stdev(window);

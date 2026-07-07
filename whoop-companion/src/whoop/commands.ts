@@ -145,15 +145,23 @@ function nextSeq(): number {
 }
 
 export function cmdEnterHighFreqSync(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.ENTER_HIGH_FREQ_SYNC));
+  // Gen5 expects revision 2 + interval/duration (u16 LE). Goose uses the
+  // WHOOP smart-alarm history-sync mode: poll every 180s for a 2h window.
+  const payload = new Uint8Array(5);
+  payload[0] = 2;
+  payload[1] = 180 & 0xff;
+  payload[2] = (180 >> 8) & 0xff;
+  payload[3] = 7200 & 0xff;
+  payload[4] = (7200 >> 8) & 0xff;
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.ENTER_HIGH_FREQ_SYNC, payload));
 }
 
 export function cmdGetDataRange(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_DATA_RANGE, new Uint8Array([0x00])));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_DATA_RANGE));
 }
 
 export function cmdSendHistoricalData(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SEND_HISTORICAL_DATA, new Uint8Array([0x00])));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SEND_HISTORICAL_DATA));
 }
 
 export function cmdHistoricalDataResult(endData: Uint8Array): Uint8Array {

@@ -18,6 +18,7 @@ import { bytesToHex, hexToBytes } from '../ble/bytes';
 import { FrameAssembler, MaverickFrame, PacketType } from '../whoop/maverick';
 import {
   cmdGetDataRange,
+  cmdEnterHighFreqSync,
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
   parseHistoryMetadata,
@@ -27,6 +28,7 @@ import { decodeWhoop5HistoryFrames, HistoricalDecodeResult } from '../whoop/hist
 import {
   CardioRow,
   DailyMetricRow,
+  HrSampleRow,
   SleepDetail,
   getHrSamplesBetween,
   getRecentDailyMetrics,
@@ -136,6 +138,7 @@ export type AppState = {
   liveRr: number[];
   liveRmssd: number | null;
   liveStress: number | null; // 0..3 (Baevsky), from the rolling R-R window
+  storedStress: number | null; // latest stored 5-minute R-R stress point for today
   frameCount: number;
   capturing: boolean;
   draining: boolean;
@@ -189,6 +192,7 @@ const initialState: AppState = {
   liveRr: [],
   liveRmssd: null,
   liveStress: null,
+  storedStress: null,
   frameCount: 0,
   capturing: false,
   draining: false,
@@ -229,10 +233,11 @@ const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // How often to recompute + persist derived metrics from the stored stream while
 // the app is alive, so every screen reflects ongoing data without being opened.
 const RECOMPUTE_INTERVAL_MS = 60 * 1000;
-const HISTORY_IDLE_TIMEOUT_MS = 60 * 1000;
+const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 5000;
 const AUTO_HISTORY_SYNC_MAX_ATTEMPTS = 6;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
+const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -244,9 +249,11 @@ class AppStore extends Store<AppState> {
   private historyDrainMode: 'manual' | 'auto' = 'manual';
   private historyIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private historyStopQueued = false;
+  private historyEndAckSentThisBurst = false;
   private eventAssemblers = new Map<string, FrameAssembler>();
   private gpsActive = false;
   private recomputeTimer: ReturnType<typeof setInterval> | null = null;
+  private connectedSyncTimer: ReturnType<typeof setInterval> | null = null;
   private appStateSub: { remove: () => void } | null = null;
   private stepSub: { remove: () => void } | null = null;
   private autoDrainedFor = ''; // device id we've already auto-drained this connection
@@ -259,6 +266,7 @@ class AppStore extends Store<AppState> {
   private stepLiveOffset = 0;
   private lastLiveStepCount = 0;
   private lastAccelTs = 0;
+  private preferredDeviceId: string | null = null;
 
   constructor() {
     super(initialState);
@@ -272,6 +280,7 @@ class AppStore extends Store<AppState> {
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
+    this.preferredDeviceId = await kvGet(LAST_DEVICE_ID_KEY);
     this.setState({
       profile,
       sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85,
@@ -300,9 +309,12 @@ class AppStore extends Store<AppState> {
     this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
 
     this.setState({ ready: true });
+    setTimeout(() => this.connect(), 750);
   }
 
   private onDevice(device: { id: string; name: string }): void {
+    this.preferredDeviceId = device.id;
+    void kvSet(LAST_DEVICE_ID_KEY, device.id);
     this.setState({ device });
     const state = this.getState();
     if (state.status === 'connected' && this.autoDrainedFor !== device.id) {
@@ -322,9 +334,13 @@ class AppStore extends Store<AppState> {
     if (status === 'connected' && this.getState().backgroundKeepAlive) {
       void startKeepAlive();
     }
+    if (status === 'connected') {
+      this.startConnectedAutoSync();
+    }
     if (status === 'disconnected' || status === 'idle') {
       this.autoDrainedFor = '';
       this.clearAutoSyncTimer();
+      this.stopConnectedAutoSync();
       if (this.getState().draining) this.enqueueHistoryStop('disconnect');
     }
     this.lastStatus = status;
@@ -394,11 +410,37 @@ class AppStore extends Store<AppState> {
     }, RECOMPUTE_INTERVAL_MS);
   }
 
+  private startConnectedAutoSync(): void {
+    if (this.connectedSyncTimer) return;
+    this.connectedSyncTimer = setInterval(() => {
+      const state = this.getState();
+      if (
+        state.status === 'connected' &&
+        state.device &&
+        !state.draining &&
+        (!state.lastSyncTs || Date.now() - state.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS)
+      ) {
+        this.autoDrainedFor = '';
+        this.scheduleAutoHistoryDrain(state.device.id, 1000);
+      }
+    }, AUTO_HISTORY_SYNC_MIN_INTERVAL_MS);
+  }
+
+  private stopConnectedAutoSync(): void {
+    if (this.connectedSyncTimer) {
+      clearInterval(this.connectedSyncTimer);
+      this.connectedSyncTimer = null;
+    }
+  }
+
   private onAppState(s: AppStateStatus): void {
     if (s === 'active') {
       void this.refreshStepCount().catch(() => {});
       void this.refreshDerived().catch(() => {});
       const state = this.getState();
+      if (state.status === 'idle' || state.status === 'disconnected' || state.status === 'error') {
+        this.connect();
+      }
       if (
         state.status === 'connected' &&
         state.device &&
@@ -531,7 +573,7 @@ class AppStore extends Store<AppState> {
 
   connect = (): void => {
     this.setState({ error: null });
-    void this.ble?.start();
+    void this.ble?.start(this.preferredDeviceId);
   };
 
   disconnect = (): void => {
@@ -657,6 +699,7 @@ class AppStore extends Store<AppState> {
     if (meta.kind === 'start') {
       this.historyRecords = [];
       this.historyStopQueued = false;
+      this.historyEndAckSentThisBurst = false;
       this.setState((s) => ({
         historySync: s.historySync
           ? { ...s.historySync, status: 'History started' }
@@ -676,6 +719,21 @@ class AppStore extends Store<AppState> {
     } else if (meta.kind === 'end') {
       const chunk = this.historyRecords;
       this.historyRecords = [];
+      if (this.historyEndAckSentThisBurst) {
+        if (chunk.length) {
+          this.historyCommitQueue = this.historyCommitQueue
+            .then(async () => {
+              await this.persistHistoryFrames(chunk);
+            })
+            .catch((e) => {
+              this.clearHistoryTimeout();
+              this.historyStopQueued = true;
+              this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
+            });
+        }
+        return;
+      }
+      this.historyEndAckSentThisBurst = true;
       this.enqueueHistoryChunk(chunk, meta);
     } else if (meta.kind === 'complete') {
       this.enqueueHistoryStop('complete');
@@ -734,7 +792,7 @@ class AppStore extends Store<AppState> {
         await this.refreshDerived();
         const stats = this.historySessionStats;
         if (mode === 'auto' && reason === 'complete') this.autoSyncAttempts = 0;
-        if (mode === 'auto' && reason === 'timeout' && (!stats || stats.records === 0)) {
+        if (mode === 'auto' && reason === 'timeout') {
           this.retryAutoHistoryDrain();
         }
       })
@@ -832,11 +890,10 @@ class AppStore extends Store<AppState> {
     let resp: number | null = null;
     const scoredNightHr = sleep ? nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs) : [];
     if (sleep) {
-      const rr = scoredNightHr.flatMap((s) => s.rr);
-      rmssd = computeHrv(rr)?.rmssd ?? null;
-      resp = respiratoryRate(rr);
-      const windowMin = perMinuteHr(scoredNightHr);
-      rhr = windowMin.length ? Math.round(Math.min(...windowMin.map((p) => p.hr))) : null;
+      const vitals = computeOvernightVitals(scoredNightHr, sleep);
+      rmssd = vitals.rmssd;
+      rhr = vitals.rhr;
+      resp = vitals.resp;
     }
 
     const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
@@ -921,23 +978,13 @@ class AppStore extends Store<AppState> {
         .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
     const rmssdSamples = toDayValues((d) => d.rmssd);
     const rhrSamples = toDayValues((d) => d.rhr);
-    const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
-    const rhrBaseline = emaBaseline(rhrSamples) ?? null;
-    const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
-    const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
-
-    let recovery: number | null = null;
-    if (rmssd != null && rhr != null && rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
-      recovery = computeRecovery({
-        rmssd,
-        rmssdBaseline: rmssdBaseline ?? rmssd,
-        rmssdSd,
-        restingHr: rhr,
-        rhrBaseline: rhrBaseline ?? rhr,
-        rhrSd,
-        sleepPerformance: sleep?.performance ?? null,
-      }).score;
-    }
+    const recovery = recoveryEstimate({
+      rmssd,
+      rhr,
+      sleepPerformance: sleep?.performance ?? null,
+      rmssdSamples,
+      rhrSamples,
+    }).score;
 
     await upsertDailyMetric({
       day,
@@ -1013,6 +1060,7 @@ class AppStore extends Store<AppState> {
     this.historySessionStats = null;
     this.historyCommitQueue = Promise.resolve();
     this.historyStopQueued = false;
+    this.historyEndAckSentThisBurst = false;
     this.historyDrainMode = mode;
     this.setState({
       draining: true,
@@ -1033,6 +1081,22 @@ class AppStore extends Store<AppState> {
     });
     this.armHistoryTimeout();
     try {
+      try {
+        await this.ble.writeCommand(cmdEnterHighFreqSync());
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: 'High-frequency history sync enabled' }
+            : s.historySync,
+        }));
+        await delay(750);
+      } catch {
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: 'High-frequency sync unavailable; requesting history anyway' }
+            : s.historySync,
+        }));
+        await delay(250);
+      }
       try {
         await this.ble.writeCommand(cmdGetDataRange());
         this.setState((s) => ({
@@ -1330,6 +1394,8 @@ class AppStore extends Store<AppState> {
     // Daytime strain from per-minute HR.
     const dayHr = await getHrSamplesBetween(sod, now);
     const perMin = perMinuteHr(dayHr);
+    const storedStressSeries = stressSeriesFromRows(dayHr);
+    const storedStress = storedStressSeries[storedStressSeries.length - 1]?.score ?? null;
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
@@ -1366,12 +1432,10 @@ class AppStore extends Store<AppState> {
     let resp: number | null = null;
     const scoredNightHr = sleep ? nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs) : [];
     if (sleep) {
-      const inWindow = scoredNightHr;
-      const rr = inWindow.flatMap((s) => s.rr);
-      rmssd = computeHrv(rr)?.rmssd ?? null;
-      resp = respiratoryRate(rr);
-      const windowMin = perMinuteHr(inWindow);
-      rhr = windowMin.length ? Math.round(Math.min(...windowMin.map((p) => p.hr))) : null;
+      const vitals = computeOvernightVitals(scoredNightHr, sleep);
+      rmssd = vitals.rmssd;
+      rhr = vitals.rhr;
+      resp = vitals.resp;
     }
 
     // Baselines from prior days (exclude today).
@@ -1496,19 +1560,15 @@ class AppStore extends Store<AppState> {
 
     let recovery: number | null = null;
     let recoveryParts: AppState['recoveryParts'] = null;
-    if (rmssd != null && rhr != null && rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
-      const r = computeRecovery({
-        rmssd,
-        rmssdBaseline: rmssdBaseline ?? rmssd,
-        rmssdSd,
-        restingHr: rhr,
-        rhrBaseline: rhrBaseline ?? rhr,
-        rhrSd,
-        sleepPerformance: sleep?.performance ?? null,
-      });
-      recovery = r.score;
-      recoveryParts = { hrvSub: r.hrvSub, rhrSub: r.rhrSub, sleepSub: r.sleepSub };
-    }
+    const recoveryResult = recoveryEstimate({
+      rmssd,
+      rhr,
+      sleepPerformance: sleep?.performance ?? null,
+      rmssdSamples,
+      rhrSamples,
+    });
+    recovery = recoveryResult.score;
+    recoveryParts = recoveryResult.parts;
 
     // ---- Oura-style insights (HR/R-R only) ----
     const hrvBal = hrvBalance(rmssdSamples);
@@ -1564,6 +1624,7 @@ class AppStore extends Store<AppState> {
       sleepStress: sleepStressResult,
       sleepPerformance: sleepPerformanceResult,
       sleepCapture,
+      storedStress,
       bandSteps: bandStepsToday ?? this.getState().bandSteps,
       steps: bestSteps,
       stepSource: stepChoice.source ?? this.getState().stepSource,
@@ -1599,20 +1660,7 @@ class AppStore extends Store<AppState> {
   stressSeries = async (): Promise<Array<{ tsMs: number; score: number }>> => {
     const sod = startOfDayMs(Date.now());
     const rows = await getHrSamplesBetween(sod, Date.now());
-    const WIN_MS = 5 * 60 * 1000;
-    const buckets = new Map<number, number[]>();
-    for (const r of rows) {
-      const b = Math.floor(r.ts / WIN_MS);
-      const arr = buckets.get(b) ?? [];
-      arr.push(...r.rr);
-      buckets.set(b, arr);
-    }
-    const out: Array<{ tsMs: number; score: number }> = [];
-    for (const [b, rr] of [...buckets.entries()].sort((a, c) => a[0] - c[0])) {
-      const s = computeStress(rr);
-      if (s) out.push({ tsMs: b * WIN_MS, score: s.score });
-    }
-    return out;
+    return stressSeriesFromRows(rows);
   };
 
   // ---- Trends / history ----
@@ -1742,6 +1790,142 @@ function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr
     .map(([minute, b]) => ({ tsMs: minute * 60000, hr: b.sum / b.n }));
 }
 
+type OvernightVitals = {
+  rmssd: number | null;
+  rhr: number | null;
+  resp: number | null;
+};
+
+const MIN_VITAL_SIGNAL_MIN = 90;
+const MIN_VITAL_COVERAGE_PCT = 55;
+
+function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
+  if (!sleep) return { rmssd: null, rhr: null, resp: null };
+  const coveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+  if (sleep.signalMin < MIN_VITAL_SIGNAL_MIN || coveragePct < MIN_VITAL_COVERAGE_PCT) {
+    return { rmssd: null, rhr: null, resp: null };
+  }
+
+  const rr = samples.flatMap((s) => s.rr);
+  const resp = rr.length >= 300 ? respiratoryRate(rr) : null;
+  return {
+    rmssd: overnightRmssd(samples),
+    rhr: restingHrFromSleep(samples),
+    resp,
+  };
+}
+
+function restingHrFromSleep(samples: HrSampleRow[]): number | null {
+  const mins = perMinuteHr(samples).filter((p) => p.hr >= 30 && p.hr <= 130);
+  if (mins.length < 30) return null;
+
+  const rolling: number[] = [];
+  const window = 10;
+  for (let i = 0; i + window <= mins.length; i += 1) {
+    const slice = mins.slice(i, i + window);
+    const spanMin = ((slice[slice.length - 1]?.tsMs ?? 0) - (slice[0]?.tsMs ?? 0)) / 60000;
+    if (spanMin > 14) continue;
+    rolling.push(slice.reduce((a, p) => a + p.hr, 0) / slice.length);
+  }
+
+  const candidates = rolling.length ? rolling : mins.map((p) => p.hr);
+  const sorted = candidates.slice().sort((a, b) => a - b);
+  const take = Math.max(3, Math.ceil(sorted.length * 0.2));
+  const sustainedLow = sorted.slice(0, take);
+  return Math.round(sustainedLow.reduce((a, b) => a + b, 0) / sustainedLow.length);
+}
+
+function overnightRmssd(samples: HrSampleRow[]): number | null {
+  const buckets = new Map<number, { rr: number[]; hrs: number[] }>();
+  for (const s of samples) {
+    const bucket = Math.floor(s.ts / (5 * 60000));
+    const cur = buckets.get(bucket) ?? { rr: [], hrs: [] };
+    cur.rr.push(...s.rr);
+    cur.hrs.push(s.bpm);
+    buckets.set(bucket, cur);
+  }
+
+  const windows = [...buckets.values()]
+    .map((b) => {
+      const hrv = b.rr.length >= 20 ? computeHrv(b.rr) : null;
+      if (!hrv) return null;
+      return {
+        rmssd: hrv.rmssd,
+        avgHr: b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length,
+      };
+    })
+    .filter((v): v is { rmssd: number; avgHr: number } => v != null);
+
+  if (windows.length < 3) return null;
+  const restful = windows
+    .slice()
+    .sort((a, b) => a.avgHr - b.avgHr)
+    .slice(0, Math.min(6, Math.max(3, Math.ceil(windows.length / 3))))
+    .map((w) => w.rmssd)
+    .sort((a, b) => a - b);
+  return round1(median(restful));
+}
+
+function recoveryEstimate(input: {
+  rmssd: number | null;
+  rhr: number | null;
+  sleepPerformance: number | null;
+  rmssdSamples: Array<{ day: number; value: number }>;
+  rhrSamples: Array<{ day: number; value: number }>;
+}): { score: number | null; parts: AppState['recoveryParts'] } {
+  const { rmssd, rhr, sleepPerformance, rmssdSamples, rhrSamples } = input;
+  if (rmssd == null || rhr == null) return { score: null, parts: null };
+
+  const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
+  const rhrBaseline = emaBaseline(rhrSamples) ?? null;
+  const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
+  const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
+
+  if (rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
+    const r = computeRecovery({
+      rmssd,
+      rmssdBaseline: rmssdBaseline ?? rmssd,
+      rmssdSd,
+      restingHr: rhr,
+      rhrBaseline: rhrBaseline ?? rhr,
+      rhrSd,
+      sleepPerformance,
+    });
+    return { score: r.score, parts: { hrvSub: r.hrvSub, rhrSub: r.rhrSub, sleepSub: r.sleepSub } };
+  }
+
+  const sleepSub = Math.round(Math.max(0, Math.min(100, (sleepPerformance ?? 0.5) * 100)));
+  const score = Math.round(0.5 * 50 + 0.25 * 50 + 0.25 * sleepSub);
+  return { score, parts: { hrvSub: 50, rhrSub: 50, sleepSub } };
+}
+
+function stressSeriesFromRows(rows: HrSampleRow[]): Array<{ tsMs: number; score: number }> {
+  const WIN_MS = 5 * 60 * 1000;
+  const buckets = new Map<number, number[]>();
+  for (const r of rows) {
+    const b = Math.floor(r.ts / WIN_MS);
+    const arr = buckets.get(b) ?? [];
+    arr.push(...r.rr);
+    buckets.set(b, arr);
+  }
+  const out: Array<{ tsMs: number; score: number }> = [];
+  for (const [b, rr] of [...buckets.entries()].sort((a, c) => a[0] - c[0])) {
+    const s = computeStress(rr);
+    if (s) out.push({ tsMs: b * WIN_MS, score: s.score });
+  }
+  return out;
+}
+
+function median(xs: number[]): number {
+  if (!xs.length) return 0;
+  const mid = Math.floor(xs.length / 2);
+  return xs.length % 2 ? (xs[mid] as number) : ((xs[mid - 1] as number) + (xs[mid] as number)) / 2;
+}
+
+function round1(x: number): number {
+  return Math.round(x * 10) / 10;
+}
+
 function dayStartFromKey(day: string): number {
   return new Date(`${day}T00:00:00`).getTime();
 }
@@ -1754,6 +1938,9 @@ function sleepCaptureNote(input: {
 }): string {
   if (input.hasSleep && input.signalMin >= 120 && input.coveragePct >= 60) {
     return 'Strong synced overnight HR coverage.';
+  }
+  if (input.hasSleep && (input.signalMin < MIN_VITAL_SIGNAL_MIN || input.coveragePct < MIN_VITAL_COVERAGE_PCT)) {
+    return 'Partial history only; not enough synced overnight coverage to score vitals or recovery yet.';
   }
   if (input.hasSleep && input.signalMin >= 30) {
     return input.manual
