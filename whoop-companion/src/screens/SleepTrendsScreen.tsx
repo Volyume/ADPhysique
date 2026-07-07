@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -188,9 +188,11 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
       ];
     }
 
-    // Down-sample to ≤30 bars.
+    // Down-sample to <=30 bars.
     const step = Math.max(1, Math.ceil(period.length / 30));
-    const bars = period.filter((_, i) => i % step === 0).map((d) => ({ value: metric.pick(d) }));
+    const bars = period
+      .filter((_, i) => i % step === 0)
+      .map((d) => ({ value: metric.pick(d), day: d.day }));
     return { avg, priorAvg, deltaPct, breakdown, bars };
   }, [history, days, metric]);
 
@@ -254,7 +256,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           </Text>
         ) : null}
         {view.bars.some((b) => b.value != null) ? (
-          <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} />
+          <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} onSelectDay={(day) => nav.navigate({ name: 'day', day })} />
         ) : (
           <Empty text="No data for this metric in the selected range yet." />
         )}
@@ -284,7 +286,17 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
   );
 }
 
-function TrendChart({ bars, avg, hours }: { bars: Array<{ value: number | null }>; avg: number | null; hours: boolean }) {
+function TrendChart({
+  bars,
+  avg,
+  hours,
+  onSelectDay,
+}: {
+  bars: Array<{ value: number | null; day: string }>;
+  avg: number | null;
+  hours: boolean;
+  onSelectDay: (day: string) => void;
+}) {
   const W = 340;
   const H = 170;
   const padB = 6;
@@ -300,7 +312,26 @@ function TrendChart({ bars, avg, hours }: { bars: Array<{ value: number | null }
         if (b.value == null) return null;
         const h = (b.value / max) * (H - padB);
         const x = i * slot + (slot - bw) / 2;
-        return <Rect key={i} x={x} y={H - padB - h} width={bw} height={Math.max(1, h)} rx={2} fill={colors.sleepTeal} opacity={0.85} />;
+        const showLabel = bars.length <= 14 || i === 0 || i === bars.length - 1;
+        return (
+          <Fragment key={b.day}>
+            <Rect
+              x={x}
+              y={H - padB - h}
+              width={bw}
+              height={Math.max(1, h)}
+              rx={2}
+              fill={colors.sleepTeal}
+              opacity={0.85}
+              onPress={() => onSelectDay(b.day)}
+            />
+            {showLabel ? (
+              <SvgText x={x + bw / 2} y={H + 8} fill={colors.textTertiary} fontSize={9} textAnchor="middle">
+                {b.day.slice(8)}
+              </SvgText>
+            ) : null}
+          </Fragment>
+        );
       })}
       {avgY != null ? (
         <>
