@@ -10,23 +10,23 @@ describe('partner accountability copy', () => {
 
   test('starts from Coach-plan status, not a manual session target', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
-    expect(plan.title).toBe('Partner week with Sam');
-    expect(plan.headline).toBe('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
+    expect(plan.title).toBe('What Sam can see');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer' });
     expect(plan.steps.find((step) => step.key === 'you')).toMatchObject({
-      label: 'Your week',
+      label: 'You',
       state: '2 of 4',
-      copy: 'Shown as training status from your Coach-assigned plan.',
+      copy: 'Training status from your assigned plan.',
     });
     expect(plan.steps.find((step) => step.key === 'partner_week')).toMatchObject({
-      label: "Sam's week",
+      label: 'Sam',
       state: '3 of 5',
-      copy: "Sam's exact workouts, loads and notes stay private.",
+      copy: 'Their workout details stay private too.',
     });
     expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
       label: 'Wins',
       state: 'You choose',
-      copy: 'Cheers use fixed lines. Wins ask every time.',
+      copy: 'Wins ask before anything is sent.',
     });
     expect(plan.privacyLine).toBe(PARTNER_SUPPORT_PRIVACY_LINE);
     expect(plan.steps).toHaveLength(3);
@@ -34,12 +34,12 @@ describe('partner accountability copy', () => {
 
   test('routes to cheer when the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer' });
     expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
       label: 'Wins',
       state: 'You choose',
-      copy: 'Cheers use fixed lines. Wins ask every time.',
+      copy: 'Wins ask before anything is sent.',
     });
   });
 
@@ -48,7 +48,7 @@ describe('partner accountability copy', () => {
     expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Share a win' });
     expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
       state: 'You choose',
-      copy: 'Today\'s cheer is sent. Wins still ask before anything is sent.',
+      copy: 'Today\'s cheer is sent. Wins still ask first.',
     });
   });
 
@@ -61,7 +61,7 @@ describe('partner accountability copy', () => {
     }, 'Sam');
     expect(plan.headline).toBe('Share one win with Sam only when you want to. You approve the preview first.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Shared: weekly training status, one fixed cheer a day and wins you approve. Private: workouts, food, Coach, check-ins, body metrics and photos.');
+    expect(copy).toContain('Private: workout details, food, Coach check-ins, body metrics and photos. Shared only when you press a button.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
     expect(copy).not.toMatch(/\bchat\b|chatbot|AI chat/i);
   });

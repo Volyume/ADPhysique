@@ -27,22 +27,22 @@ export const SHARE_WIN_TYPES = Object.freeze([
 
 export const SHARE_WIN_POLICY = Object.freeze({
   defaultState: 'Ask every time',
-  summary: 'Choose one card. Your partner sees only that card.',
+  summary: 'Choose one update. Your partner sees only that update.',
   excluded: 'No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.',
 });
 
 export const SHARE_WIN_CARD_RULES = Object.freeze([
-  'Ask every time before a card is sent.',
-  'One card, one moment, one partner.',
+  'Ask every time before an update is sent.',
+  'One update, one moment, one partner.',
   'Workout history, food diary, coach notes, body metrics and photos stay closed.',
-  'A sent card can be deleted by the sender.',
+  'A sent update can be deleted by the sender.',
 ]);
 
 export const SHARE_WIN_DELIVERY_GUARDRAILS = Object.freeze([
-  'Preview the exact card before sending.',
+  'Preview the exact update before sending.',
   'Confirm the one partner who will receive it.',
-  'Send one card only. No background feed is created.',
-  'Keep the sender delete control attached to the card.',
+  'Send one update only. No background feed is created.',
+  'Keep the sender delete control attached to the update.',
 ]);
 
 export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
@@ -53,7 +53,7 @@ export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
   }),
   Object.freeze({
     key: 'preview',
-    title: 'Preview exact card',
+    title: 'Preview exact update',
     body: 'Show the exact title, summary and privacy receipt before anything leaves the device.',
   }),
   Object.freeze({
@@ -188,7 +188,7 @@ export function buildShareWinDraft(typeKey, payload = {}) {
     const summary = dateRange ? `${label}, ${dateRange}.` : `${label}.`;
     const detail = [
       'Only the composed export can be sent.',
-      includesScanScore ? 'The visible scan index is part of that export.' : 'Scan details stay private unless they are visible on that export.',
+      includesScanScore ? 'The visible Volyume Score is part of that export.' : 'Scan details stay private unless they are visible on that export.',
       includesWeight ? 'Weight is included because it was switched on for that export.' : 'Weight is off for this export.',
       'Raw photos, body metrics and the photo library stay private.',
     ].join(' ');
@@ -227,7 +227,7 @@ export function buildShareWinPreview(typeKey, payload = {}) {
     draft,
     shared: type.shared,
     private: type.private,
-    confirmation: 'Not sent until you choose one partner and approve this exact card.',
+    confirmation: 'Not sent until you choose one partner and approve this exact update.',
     guardrails: SHARE_WIN_DELIVERY_GUARDRAILS,
   });
 }
@@ -241,7 +241,7 @@ export function buildShareWinReviewReceipt(preview) {
     visibleToPartner: preview.shared,
     remainsPrivate: preview.private,
     consentLine: preview.confirmation,
-    finalCheck: 'Send controls show the partner name, card type and exact card copy on one screen.',
+    finalCheck: 'Send controls show the partner name, update type and exact copy on one screen.',
   });
 }
 

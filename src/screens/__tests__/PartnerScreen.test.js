@@ -194,18 +194,14 @@ describe('connected state: isolated pair cards', () => {
   test('active pairs show one guided partner-week card with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('Partner week with Sam');
-    expect(text).toContain('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
-    expect(text).toContain('weekly training status');
-    expect(text).toContain('Your week');
-    expect(text).toContain("Sam's week");
-    expect(text).toContain('Shown as training status from your Coach-assigned plan.');
-    expect(text).toContain("Sam's exact workouts, loads and notes stay private.");
+    expect(text).toContain('What Sam can see');
+    expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
+    expect(text).toContain('Training status from your assigned plan.');
+    expect(text).toContain('Their workout details stay private too.');
     expect(text).toContain('Wins');
     expect(text).toContain('You choose');
-    expect(text).toContain('one fixed cheer a day');
     expect(text).toContain('Private');
-    expect(text).toContain('workouts, food, Coach, check-ins, body metrics and photos');
+    expect(text).toContain('workout details, food, Coach check-ins, body metrics and photos');
     expect(text).not.toContain('Shared with Sam');
     expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
@@ -221,12 +217,11 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('weekly sessions');
     expect(text).not.toContain("Set this week's sessions. Sam sees only the number, not your plan.");
     expect(text).not.toContain("Sam's weekly sessions");
-    expect(text).toContain('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
-    expect(text).toContain('Your week');
-    expect(text).toContain("Sam's week");
+    expect(text).toContain('What Sam can see');
+    expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
-    expect(text).toContain('Shown as training status from your Coach-assigned plan.');
+    expect(text).toContain('Training status from your assigned plan.');
     expect(findPress(tree, "Set this week's sessions")).toHaveLength(0);
     expect(findPress(tree, 'Decrease sessions')).toHaveLength(0);
     expect(findPress(tree, 'Increase sessions')).toHaveLength(0);
@@ -243,11 +238,11 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Share a win');
-    expect(text).toContain('Pick one update. You approve the preview before Sam sees it.');
+    expect(text).toContain('Choose one update. Volyume shows the exact preview before Sam sees it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
-    expect(text).toContain('Sam sees');
+    expect(text).toContain('Sam will see');
     expect(text).toContain('Workout name, date and completed status.');
     expect(text).toContain('Show what stays private');
     expect(text).not.toContain('Stays private');
@@ -256,7 +251,7 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(text).toContain('Stays private');
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
-    expect(text).toContain('Not sent until you choose one partner and approve this exact card.');
+    expect(text).toContain('Not sent until you choose one partner and approve this exact update.');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
@@ -319,7 +314,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Progress card');
     expect(text).toContain('Progress photo card, 5 Jan to 20 Jun.');
-    expect(text).toContain('The visible scan index is part of that export.');
+    expect(text).toContain('The visible Volyume Score is part of that export.');
     expect(text).toContain('Weight is off for this export.');
     expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
     expect(text).toContain('The composed progress card image, with only the details shown in its export receipt.');
@@ -345,7 +340,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
     expect(text).toContain('Progress Photos card, 5 Jan 2026 to 20 Jun 2026.');
-    expect(text).toContain('The visible scan index is part of that export.');
+    expect(text).toContain('The visible Volyume Score is part of that export.');
     expect(text).toContain('Weight is off for this export.');
   });
 
