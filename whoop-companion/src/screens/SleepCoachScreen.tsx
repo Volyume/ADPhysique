@@ -88,6 +88,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     void kvSet('smartWakeWindowMin', String(m));
   };
   const effSamples = recentDays
+    .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
     .map((d) => d.sleepDetail?.efficiency)
     .filter((v): v is number => v != null && v > 0);
   const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
