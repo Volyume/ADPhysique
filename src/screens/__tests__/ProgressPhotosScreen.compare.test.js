@@ -365,7 +365,7 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
   });
 
-  test('viewer onDelete removes the whole visual index photo set in one action', async () => {
+  test('viewer onDelete removes the whole scored photo set in one action', async () => {
     const scan = {
       id: 'scan-1',
       status: 'complete',
@@ -408,7 +408,7 @@ describe('ProgressPhotosScreen compare entry', () => {
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
-  test('visual index comparison stays in the main Compare button instead of a duplicate prompt card', async () => {
+  test('Volyume Score comparison stays in the main Compare button instead of a duplicate prompt card', async () => {
     const newBack = { name: `${NEW.ts + 1}.jpg`, uri: `file:///photos/${NEW.ts + 1}.jpg`, ts: NEW.ts + 1 };
     const newSide = { name: `${NEW.ts + 2}.jpg`, uri: `file:///photos/${NEW.ts + 2}.jpg`, ts: NEW.ts + 2 };
     const oldBack = { name: `${OLD.ts + 1}.jpg`, uri: `file:///photos/${OLD.ts + 1}.jpg`, ts: OLD.ts + 1 };
@@ -428,9 +428,9 @@ describe('ProgressPhotosScreen compare entry', () => {
     const tree = await render([newSide, newBack, NEW, oldSide, oldBack, OLD], { scans });
     const text = flattenText(tree.toJSON());
 
-    expect(findPressable(tree, 'Compare two visual index entries')).toBeDefined();
+    expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeDefined();
     expect(text).not.toContain('Latest set needs another angle');
-    expect(text).not.toContain('Compare visual indexes');
+    expect(text).not.toContain('Compare Volyume Scores');
   });
 
   test('the compare surface honours reduce motion on its wrapping modal', async () => {
@@ -490,7 +490,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Index details are hidden for now');
+    expect(text).toContain('Score details are hidden for now');
     expect(text).toContain('Nothing is uploaded or shared unless you choose it.');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });

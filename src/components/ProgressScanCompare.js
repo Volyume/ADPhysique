@@ -30,7 +30,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
   if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Indexed'} index ${Math.round(Number(assessment.visualLeannessScore))}`;
+    return `${assessment.leannessBandLabel || 'Scored'} score ${Math.round(Number(assessment.visualLeannessScore))}`;
   }
   const reasons = new Set([
     ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
@@ -38,7 +38,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   ]);
   if ([...reasons].some((reason) => /model_|source_unavailable|source_unusable/.test(String(reason)))) return 'Analysis unavailable';
   if (assessment?.scanConfidenceTier === 'not_enough') return 'Not enough confidence';
-  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not indexed';
+  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not scored';
 }
 
 export function scanWeightLabel(scan, { hideExact = false } = {}) {
@@ -108,7 +108,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>Compare scans</Text>
-            <Text style={styles.subtitle}>Compare two photo sets with their visual index, confidence and matched poses. Not body fat.</Text>
+            <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
           </View>
           <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
             <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -116,7 +116,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         </View>
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Visual index comparison is hidden for now.</Text>
+          <Text style={styles.placeholderText}>Volyume Score comparison is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -127,7 +127,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Compare scans</Text>
-          <Text style={styles.subtitle}>Compare two photo sets with their visual index, confidence and matched poses. Not body fat.</Text>
+          <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
           <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -144,7 +144,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 onPress={() => toggleSelect(scan.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={`Visual index from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
+                accessibilityLabel={`Volyume Score from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
                 style={[styles.scanChip, active && styles.scanChipActive]}
               >
                 <Text style={[styles.scanChipDate, active && styles.scanChipDateActive]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
@@ -157,7 +157,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         {!(earlier && later) ? (
           <View style={styles.placeholder}>
             <Ionicons name="scan-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.placeholderText}>Two indexed photo sets are needed.</Text>
+            <Text style={styles.placeholderText}>Two scored photo sets are needed.</Text>
           </View>
         ) : (
           <>

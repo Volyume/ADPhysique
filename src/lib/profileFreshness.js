@@ -57,7 +57,7 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
         },
         (days) => `Last indexed ${days} days ago. Plan your next comparable photos soon.`,
         (days) => `Last indexed ${days} days ago. Retake when light, pose and timing are consistent.`,
-        'No visual index yet. Start with consistent front and back photos. Side is optional.',
+        'No Volyume Score yet. Start with consistent front and back photos. Side is optional.',
       ),
     },
     lifts: {

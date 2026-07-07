@@ -19,21 +19,21 @@ const scoredScan = {
 };
 
 describe('progressScanCopy', () => {
-  test('scanReadCopy explains Volyume visual index without presenting body fat percentage', () => {
+  test('scanReadCopy explains Volyume Score without presenting body fat percentage', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume visual index 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual index for like-for-like progress, not a body fat percentage.',
+      'Volyume Score 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.',
     );
   });
 
-  test('hide-exact keeps the trend and hides the detailed index', () => {
+  test('hide-exact keeps the trend and hides the detailed score', () => {
     expect(scanReadCopy(scoredScan, { hideExact: true })).toBe(
-      'Lean band. Progress Signal: Slight positive trend. Detailed index is hidden. This is not a body fat percentage.',
+      'Lean band. Progress Signal: Slight positive trend. Detailed score is hidden. This is not a body fat percentage.',
     );
   });
 
-  test('suppression hides index details completely', () => {
+  test('suppression hides score details completely', () => {
     expect(scanReadCopy(scoredScan, { suppressed: true })).toBe(
-      'Photo set saved privately. Index details are hidden right now.',
+      'Photo set saved privately. Score details are hidden right now.',
     );
   });
 

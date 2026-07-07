@@ -12,7 +12,7 @@ describe('privacy, consent, export and store-copy truth', () => {
     const source = readRepoFile('src', 'screens', 'Article9ConsentScreen.js');
 
     expect(source).toContain("const CONSENT_VERSION = '2026-07-04'");
-    expect(source).toContain('Physique Scan quality, confidence, leanness band, visual index and progress signal');
+    expect(source).toContain('Physique Scan quality, confidence, leanness band, Volyume Score and progress signal');
     expect(source).toContain('not a medical assessment, DEXA scan, or exact body fat percentage');
     expect(source).toContain('Progress photos and scan image files stay on this device');
   });

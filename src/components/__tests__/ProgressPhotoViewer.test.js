@@ -197,7 +197,7 @@ test('scan-set delete copy explains that the whole photo set is removed', async 
   const [, message, buttons] = mockAppAlert.mock.calls[0];
   expect(message).toContain('Delete this full photo set from your device');
   expect(message).toContain('every photo in the set');
-  expect(message).toContain('saved visual index');
+  expect(message).toContain('saved Volyume Score');
   expect(buttons.find((b) => b.style === 'destructive').text).toBe('Delete set');
   expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
 });

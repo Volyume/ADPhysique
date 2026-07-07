@@ -11,7 +11,7 @@ beforeEach(async () => {
 });
 
 describe('progressScanPreferences', () => {
-  test('new installs default to trend-only visual index details', async () => {
+  test('new installs default to trend-only Volyume Score details', async () => {
     expect(await getProgressScanHideExactPreference()).toBe(true);
   });
 

@@ -12,23 +12,23 @@ export function trendOnlyScanCopy(scan) {
 }
 
 export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Photo set saved privately. Index details are hidden right now.';
+  if (suppressed) return 'Photo set saved privately. Score details are hidden right now.';
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume visual index ${Math.round(Number(assessment.visualLeannessScore))}`;
+    const score = `Volyume Score ${Math.round(Number(assessment.visualLeannessScore))}`;
     const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
     const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
     if (hideExact) {
-      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed index is hidden. This is not a body fat percentage.`;
+      return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden. This is not a body fat percentage.`;
     }
-    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual index for like-for-like progress, not a body fat percentage.']
+    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.']
       .filter(Boolean)
       .join('. ');
   }
   if (scan?.analysisStatus === 'complete' || scan?.analysisStatus === 'measured') {
     return hideExact
       ? trendOnlyScanCopy(scan)
-      : (scan?.copySummary || 'Photo set measured and saved. Volyume could not produce a useful visual index from it yet.');
+      : (scan?.copySummary || 'Photo set measured and saved. Volyume could not produce a useful score from it yet.');
   }
   return scan?.copySummary || 'Saved as a photo set. Analysis is withheld until the photos and profile data are reliable enough.';
 }

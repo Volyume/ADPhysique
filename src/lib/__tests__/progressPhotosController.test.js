@@ -144,9 +144,9 @@ describe('progressPhotosController transforms', () => {
     ];
 
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).kind).toBe('compare_scans');
-    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).title).toBe('Compare visual indexes');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).title).toBe('Compare Volyume Scores');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans }).reason)
-      .toBe('2 indexed photo sets are ready.');
+      .toBe('2 scored photo sets are ready.');
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }))
       .toBeNull();
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)

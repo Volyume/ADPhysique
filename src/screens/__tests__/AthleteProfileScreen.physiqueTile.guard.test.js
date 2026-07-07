@@ -5,14 +5,14 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'AthleteProfileScreen.
 const coachSource = fs.readFileSync(path.join(__dirname, '..', 'YouScreen.js'), 'utf8');
 
 describe('AthleteProfileScreen physique tile', () => {
-  test('uses one adaptive Body fat / visual index tile instead of a permanent Physique Scan stat', () => {
+  test('uses one adaptive Body fat / Volyume Score tile instead of a permanent Physique Scan stat', () => {
     expect(source).toMatch(/function shouldShowPhysiqueScore\(\{ scan, bodyFat, bodyFatLoggedAt \}\)/);
     expect(source).toMatch(/const showPhysiqueScore = shouldShowPhysiqueScore\(\{/);
     expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
-    expect(source).toMatch(/label: 'Visual index'/);
+    expect(source).toMatch(/label: 'Volyume Score'/);
     expect(source).toMatch(/label: 'Body fat'/);
     expect(source).toMatch(/Like-for-like progress, not body fat/);
-    expect(source).toMatch(/first private visual index/);
+    expect(source).toMatch(/first private Volyume Score/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
     expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>\{focusTile\.label\}: \{focusTile\.value\}<\/Text>/);

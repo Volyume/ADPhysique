@@ -77,7 +77,7 @@ describe('ProgressScanCompare helpers', () => {
 
   test('score and weight labels hide exact values on request', () => {
     const s = scan('a', 1, 66);
-    expect(scanRangeLabel(s)).toBe('Lean index 66');
+    expect(scanRangeLabel(s)).toBe('Lean score 66');
     expect(scanRangeLabel(s, { hideExact: true })).toBe('Baseline scan');
     expect(scanWeightLabel(s)).toBe('81 kg');
     expect(scanWeightLabel(s, { hideExact: true })).toBeNull();
@@ -92,9 +92,9 @@ describe('ProgressScanCompare component', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Compare scans');
     expect(text).toContain('Not body fat');
-    expect(text).toContain('Defined index 54');
-    expect(text).toContain('Lean index 66');
-    expect(text).toContain('Volyume visual index is up 12 points');
+    expect(text).toContain('Defined score 54');
+    expect(text).toContain('Lean score 66');
+    expect(text).toContain('Volyume Score is up 12 points');
     expect(text).not.toContain('Stored delta should not render');
     expect(text).not.toMatch(/\d+-\d+%|BF est|body fat range/i);
   });
@@ -114,7 +114,7 @@ describe('ProgressScanCompare component', () => {
     usePhotoSuppression.mockReturnValue(true);
     const tree = await render([scan('new', 20), scan('old', 1)]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Visual index comparison is hidden for now.');
+    expect(text).toContain('Volyume Score comparison is hidden for now.');
     expect(text).not.toContain('66/100');
   });
 });

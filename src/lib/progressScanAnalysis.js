@@ -493,6 +493,52 @@ export function computeVisualLeannessScore(inputs = {}) {
   return rounded0(clamp((weighted / totalWeight) * 100, 0, 100));
 }
 
+function interpolateBodyFatIndex(value, points = []) {
+  const n = finiteNumber(value);
+  if (n == null || points.length === 0) return null;
+  if (n <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i += 1) {
+    const [x, y] = points[i];
+    const [prevX, prevY] = points[i - 1];
+    if (n <= x) {
+      const progress = (n - prevX) / (x - prevX);
+      return prevY + (y - prevY) * progress;
+    }
+  }
+  return points[points.length - 1][1];
+}
+
+function visualIndexFromEstimatedBodyFat(value, sex = null) {
+  const maleCurve = [
+    [6, 96], [8, 90], [10, 84], [12, 78], [15, 72], [17, 68],
+    [20, 58], [25, 40], [30, 24], [40, 5], [55, 0],
+  ];
+  const femaleCurve = [
+    [12, 96], [15, 90], [18, 82], [20, 75], [23, 66], [27, 52],
+    [32, 36], [40, 12], [55, 0],
+  ];
+  const curve = normalisedSex(sex) === 'female' ? femaleCurve : maleCurve;
+  const score = interpolateBodyFatIndex(value, curve);
+  return score == null ? null : rounded0(clamp(score, 0, 100));
+}
+
+function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
+  const silhouetteScore = computeVisualLeannessScore(inputs);
+  const estimateScore = visualIndexFromEstimatedBodyFat(
+    modelEstimateValue(modelEstimate),
+    modelEstimate?.inputs?.sex,
+  );
+  if (silhouetteScore == null) return estimateScore;
+  if (estimateScore == null) return silhouetteScore;
+  const gap = Math.abs(silhouetteScore - estimateScore);
+  const estimateWeight = gap >= 24 ? 0.65 : 0.50;
+  return rounded0(clamp(
+    silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight,
+    0,
+    100,
+  ));
+}
+
 export function leannessBandForScore(score) {
   const n = finiteNumber(score);
   if (n == null) return null;
@@ -539,7 +585,7 @@ export function buildPhysiqueAssessment({
     biasFlags,
     previousScan,
   });
-  const measuredScore = computeVisualLeannessScore(inputs);
+  const measuredScore = blendedVisualLeannessScore(inputs, modelEstimate);
   const measuredScoreReady = measuredScore != null;
   const scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
   const score = measuredScoreReady ? measuredScore : null;
@@ -568,6 +614,13 @@ export function buildPhysiqueAssessment({
     previousLeannessScore: previousScore,
     inputs,
     measuredSignalsUsed,
+    indexInputs: {
+      silhouetteScore: computeVisualLeannessScore(inputs),
+      estimatorAnchorScore: visualIndexFromEstimatedBodyFat(
+        modelEstimateValue(modelEstimate),
+        modelEstimate?.inputs?.sex,
+      ),
+    },
     biasFlags,
     calibrationStatus: 'still_calibrating_for_your_body_type',
     limitations: [
@@ -581,7 +634,7 @@ export function buildPhysiqueAssessment({
 }
 
 function progressScanAssessmentCopy(assessment = null) {
-  if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful scan result.';
+  if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful score.';
   if (assessment.visualLeannessScore == null) {
     return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
@@ -590,9 +643,9 @@ function progressScanAssessmentCopy(assessment = null) {
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
   const prefix = assessment.progressSignal === 'baseline'
-    ? `Baseline visual index ${score}`
-    : `Volyume visual index ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual index for like-for-like progress, not a body fat percentage.`;
+    ? `Baseline Volyume Score ${score}`
+    : `Volyume Score ${score}`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -844,11 +897,11 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
     trendMagnitudePctPoints = progressSignal.signal === 'inconclusive' ? null : Math.abs(delta);
     if (progressSignal.signal === 'holding_steady') {
-      lines.push('Volyume visual index is broadly level against the last like-for-like scan.');
+      lines.push('Volyume Score is broadly level against the last like-for-like scan.');
     } else if (progressSignal.signal === 'inconclusive') {
-      lines.push(`Volyume visual index changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
+      lines.push(`Volyume Score changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
     } else {
-      lines.push(`Volyume visual index is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
+      lines.push(`Volyume Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
       trendVotes.push(delta > 0 ? 'leaner' : 'softer');
     }
   }
@@ -1085,15 +1138,15 @@ export function estimateBodyFatFromScanAssets({ assets = [], sex = null, heightC
 
 function estimatorUnavailableCopy({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
   if (!requiredModelBackedPosesComplete(assets)) {
-    return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful visual index.';
+    return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful score.';
   }
   if (!normalisedSex(sex)) {
-    return 'Scan measured and saved. The visual index can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The Volyume Score can still be used as photo context; body fat percentages are not shown from photos.';
   }
   if (bmiFrom(heightCm, weightKg) == null) {
-    return 'Scan measured and saved. The visual index can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The Volyume Score can still be used as photo context; body fat percentages are not shown from photos.';
   }
-  return 'Scan measured and saved. The measured signals were not complete enough for a useful visual index.';
+  return 'Scan measured and saved. The measured signals were not complete enough for a useful score.';
 }
 
 function modelEstimateValue(modelEstimate) {
