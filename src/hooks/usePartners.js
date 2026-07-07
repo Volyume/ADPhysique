@@ -32,6 +32,7 @@ import {
 import { writeOwnWeekSignals } from '../lib/partners/weekSignalWriter';
 import { getCachedInvite, setCachedInvite, clearCachedInvite } from '../lib/partners/inviteCache';
 import { readPendingPartnerCode, clearPendingPartnerCode } from '../lib/partners/pendingInvite';
+import { logError } from '../lib/errorLog';
 
 const WEEK_MS = 7 * 86400000;
 
@@ -367,8 +368,9 @@ export default function usePartners(userId, tier) {
         cheerEnabled: primaryPair?.cheerEnabled ?? false,
         reload: load,
       });
-    } catch (_) {
+    } catch (e) {
       if (!isCurrentRequest()) return;
+      logError('usePartners.load', e, { userId });
       setState((prev) => {
         const hasUsablePartnerState = (prev.pairs || []).length > 0 || !!prev.pendingInvite || !!prev.partnership;
         if (hasUsablePartnerState) {

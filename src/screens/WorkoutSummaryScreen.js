@@ -71,7 +71,7 @@ function partnerCheerFailureMessage(error) {
     return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not confirm your account for Partners right now. Open Partners again and try once more.';
+    return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
   }
   return 'Could not send that cheer. Open Partners again and try once more.';
 }
