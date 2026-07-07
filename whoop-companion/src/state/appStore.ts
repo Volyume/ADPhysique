@@ -705,7 +705,13 @@ class AppStore extends Store<AppState> {
     if (sessionSource === 'phone' && liveSteps != null && liveSource === 'phone') {
       return { steps: liveSteps, source: 'phone' };
     }
-    if (sessionSource === 'band' && band != null && band > 0 && (liveSteps == null || liveSteps <= 0)) {
+    if (
+      sessionSource === 'band' &&
+      band != null &&
+      band > 0 &&
+      (liveSteps == null || liveSteps <= 0) &&
+      bandStepsAreTrusted(state.bandStepEstimate, state.bandStepDivisor)
+    ) {
       return { steps: band, source: 'band' };
     }
     if (band != null && band > 0) {
