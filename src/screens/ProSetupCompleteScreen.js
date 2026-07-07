@@ -212,7 +212,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.routineTitle}>1. Log your weight</Text>
                 <Text style={styles.routineBody}>
-                  Every morning before food, after the bathroom. Three seconds. Tracks your progress in the background.
+                  Every morning before food, after the bathroom. Three seconds. Feeds your weight trend so Coach can make calmer weekly decisions.
                 </Text>
               </View>
             </View>

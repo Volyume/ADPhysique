@@ -835,7 +835,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!suggestions.length) {
       return (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>No suggestions ready yet. Log a few meals and check back.</Text>
+          <Text style={styles.emptyText}>No suggestions ready for this slot. Try search, or build meals from your targets.</Text>
         </View>
       );
     }
@@ -855,15 +855,15 @@ export default function FoodSearchScreen({ navigation, route }) {
               </Text>
             ) : null}
             {/* Founder 2026-06-30: novices don't realise a suggested meal is a
-                base they can build on (season it, add veg, add basically-free
-                extras), not a fixed prescription. A quiet, pro-food note,
+                base they can build on (season it, add veg, add flavour), not
+                a fixed prescription. A quiet, pro-food note,
                 framed around flavour/enjoyment, never diet-culture restriction,
                 and honest ("most", "basically") since sugar alcohols and trace
                 seasoning calories aren't literally zero. */}
             <View style={styles.suggestNoteRow}>
               <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: spacing.hair }} />
               <Text style={styles.suggestNote}>
-                A starting point, not a rule. Season and tweak to taste: herbs, spices and most sugar-free sweeteners are basically free.
+                A starting point, not a rule. Season and tweak to taste with herbs, spices, citrus or sauces you enjoy.
               </Text>
             </View>
           </View>
@@ -881,10 +881,10 @@ export default function FoodSearchScreen({ navigation, route }) {
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.suggestName}>
-                  {isFood ? `${item.name} · ${item.quantityG}g` : item.name}
+                  {isFood ? `${item.name} - ${item.quantityG}g` : item.name}
                 </Text>
                 <Text style={styles.suggestMacros}>
-                  {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
+                  {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {item.macros.protein}g protein - {item.macros.carbs}g carbs - {item.macros.fat}g fat
                 </Text>
               </View>
               {loggingMealId === busyKey
@@ -920,7 +920,7 @@ export default function FoodSearchScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Add a saved meal"
             >
-              <Ionicons name="bookmark-outline" size={23} color={colors.primary} />
+              <Ionicons name="restaurant-outline" size={23} color={colors.primary} />
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -996,7 +996,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
         ListHeaderComponent={showRelogHint ? (
           <HintCaption
-            text="Hold a food to edit the portion. Hold to select several."
+            text="Hold a food to change the portion."
             onDismiss={dismissFoodHint}
           />
         ) : null}
@@ -1057,7 +1057,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             <View key={it.key} style={styles.plateItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
-                <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                 <Ionicons name="close-circle" size={22} color={colors.textMuted} />

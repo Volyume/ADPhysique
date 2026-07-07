@@ -56,7 +56,7 @@ export function routeForNotificationType(type, data = {}) {
         ? { tab: 'ProgressTab', screen: 'Analytics' }
         : { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     case 'planned_meal_confirm':
-      // F3: tap lands on the Diary, where the "Ate as planned" banner and the
+      // F3: tap lands on the Diary, where the "Mark as eaten" banner and the
       // per-meal confirm live for the day with unconfirmed planned meals.
       return { tab: 'DiaryTab', screen: 'Diary' };
     case 'trial_day3':

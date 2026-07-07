@@ -219,11 +219,11 @@ describe('finishProgressScanSession estimator persistence', () => {
     expect(update.params[7]).toBeNull();
     const signals = JSON.parse(update.params[14]);
     expect(signals).toMatchObject({
-      physiqueScoreVersion: 'volyume_physique_scan_score_v1',
+      physiqueScoreVersion: 'volyume_physique_scan_score_v2',
       physiqueAssessment: {
         analysisType: 'visual_physique_score',
-        visualLeannessScore: 68,
-        leannessBandLabel: 'Lean',
+        visualLeannessScore: 83,
+        leannessBandLabel: 'Defined',
         scanConfidenceTier: 'moderate',
         progressSignal: 'baseline',
       },
@@ -259,7 +259,7 @@ describe('finishProgressScanSession estimator persistence', () => {
 
     const update = mockRunCalls.find((call) => /UPDATE progress_scan_sessions SET/.test(call.sql));
     const signals = JSON.parse(update.params[14]);
-    expect(signals.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(signals.physiqueAssessment.visualLeannessScore).toBe(83);
     expect(signals.physiqueAssessment.progressSignal).toBe('trend_pending');
     expect(signals.physiqueAssessment.progressSignalLabel).toBe('Trend not ready');
     expect(signals.deltaExplanation.comparisonStatus).toBe('not_comparable');

@@ -323,7 +323,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Just add',
+          text: 'Save for later',
           onPress: async () => {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
@@ -336,7 +336,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
           },
         },
         {
-          text: fromFirstRun ? 'Start training' : 'Add and make active',
+          text: fromFirstRun ? 'Start training' : 'Add and start this plan',
           onPress: async () => {
             let copy;
             try {

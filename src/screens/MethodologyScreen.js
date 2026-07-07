@@ -64,7 +64,7 @@ const SECTIONS = [
     body:
       'When the trend is on target, when there is not enough data yet, when ' +
       'recovery is low, or when a safety signal fires, the Coach holds ' +
-      'rather than acts. The held-decision card on your weekly review shows exactly ' +
+      'rather than acts. The held-decision card in your coaching decision shows exactly ' +
       'which of these applied. A held week is the Coach working, not asleep.',
   },
   {

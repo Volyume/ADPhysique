@@ -13,7 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
 import Button from '../Button';
 
-export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food, copy a recent day, or build meals from your targets.';
+export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet.';
 
 export default function EmptyDiary({
   onAdd,

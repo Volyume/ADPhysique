@@ -85,9 +85,9 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
     );
   });
 
-  test('the diary meals caption renders once, combining both diary food hints, gated off in read-only and selection mode', () => {
+  test('the diary meals caption renders once for multi-select, gated off in read-only and selection mode', () => {
     expect(SRC).toMatch(
-      /\{showFoodHint && !readOnly && !selectionMode \? \(\s*<HintCaption\s*text="Hold a food to edit the portion\. Hold to select several\."\s*onDismiss=\{dismissFoodHint\}\s*\/>\s*\) : null\}/,
+      /\{showFoodHint && !readOnly && !selectionMode \? \(\s*<HintCaption\s*text="Hold a food to select several\."\s*onDismiss=\{dismissFoodHint\}\s*\/>\s*\) : null\}/,
     );
   });
 

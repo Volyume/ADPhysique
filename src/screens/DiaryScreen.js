@@ -214,7 +214,7 @@ export default function DiaryScreen({ navigation }) {
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
-  // ate it. "Ate as planned" flips the day's planned meals to actuals; "Clear"
+  // ate it. "Mark as eaten" flips the day's planned meals to actuals; "Clear"
   // discards them. Future days only offer Clear (you can't have eaten yet).
   // Hostile review (E10 #4): in read-only, unconfirmed meal-plan scaffolding
   // (is_planned = 1) must not read as food the user ate, it can never be
@@ -1207,7 +1207,7 @@ export default function DiaryScreen({ navigation }) {
               <View style={styles.plannedBanner}>
                 <Text style={styles.plannedBannerText}>
                   {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
-                  {isFutureDay ? ' Confirm them on the day once eaten.' : " Mark them eaten when you've had them so they count."}
+                  {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
                 </Text>
                 <View style={styles.plannedBannerRow}>
                   {!isFutureDay ? (
@@ -1217,7 +1217,7 @@ export default function DiaryScreen({ navigation }) {
                       accessibilityRole="button"
                       accessibilityLabel="Mark planned meals as eaten"
                     >
-                      <Text style={styles.plannedBtnPrimaryText}>Ate as planned</Text>
+                      <Text style={styles.plannedBtnPrimaryText}>Mark as eaten</Text>
                     </TouchableOpacity>
                   ) : null}
                   <TouchableOpacity onPress={handleClearPlanned} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned meals">
@@ -1233,7 +1233,7 @@ export default function DiaryScreen({ navigation }) {
                 is discovered, or on "Got it". */}
             {showFoodHint && !readOnly && !selectionMode ? (
               <HintCaption
-                text="Hold a food to edit the portion. Hold to select several."
+                text="Hold a food to select several."
                 onDismiss={dismissFoodHint}
               />
             ) : null}

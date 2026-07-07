@@ -187,6 +187,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source).toContain('const [prefsOpen, setPrefsOpen] = useState(false);');
     expect(source).toContain('Changes rebuild the meals around the same targets.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
     expect(source).toContain('Adds these meals to the diary date. Existing logged food is left alone.');
