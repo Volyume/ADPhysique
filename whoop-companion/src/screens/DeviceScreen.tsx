@@ -45,6 +45,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
+  const keepAliveRunning = useStoreSelector(appStore, (s) => s.backgroundKeepAliveRunning);
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
@@ -375,6 +376,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>Raw records archived: {bufferedRecords}</Text>
         <Text style={styles.diagText}>Sync status: {effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
         <Text style={styles.diagText}>Sync mode: {draining ? 'running' : effectiveSync?.mode ?? 'none'}</Text>
+        <Text style={styles.diagText}>
+          Background guard: {keepAlive ? (keepAliveRunning ? 'running' : 'needs permission') : 'off'}
+        </Text>
         <Text style={styles.diagText}>Sync finish: {effectiveSync?.reason ?? 'none yet'}</Text>
         <Text style={styles.diagText}>Decoded range: {historyRangeText}</Text>
         <Text style={styles.diagText}>Decoded records: {effectiveSync?.decodedRecords ?? 0}</Text>
@@ -414,7 +418,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         </View>
         <Text style={styles.hint}>
           On by default for long WHOOP 5 syncs while the phone is locked. Android may ask for location and notification
-          permission so the foreground service can keep Bluetooth alive.
+          permission so the foreground service can keep Bluetooth alive. Device sync shows whether that guard is
+          actually running.
         </Text>
       </Card>
 

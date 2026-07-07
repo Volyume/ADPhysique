@@ -61,7 +61,7 @@ import {
   upsertDailyMetric,
 } from '../db/database';
 import { startBgLocation, stopBgLocation } from '../sensors/bgLocation';
-import { startKeepAlive, stopKeepAlive } from '../sensors/keepAlive';
+import { isKeepAliveRunning, startKeepAlive, stopKeepAlive } from '../sensors/keepAlive';
 import { pedometerAvailable, stepsToday, watchSteps } from '../sensors/steps';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv } from '../metrics/hrv';
@@ -180,6 +180,7 @@ export type AppState = {
   capturing: boolean;
   draining: boolean;
   backgroundKeepAlive: boolean; // Android foreground-service guard for background sync
+  backgroundKeepAliveRunning: boolean;
   today: DailyMetricRow | null;
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
@@ -247,6 +248,7 @@ const initialState: AppState = {
   capturing: false,
   draining: false,
   backgroundKeepAlive: true,
+  backgroundKeepAliveRunning: false,
   today: null,
   recentDays: [],
   lastSleep: null,
@@ -295,6 +297,8 @@ const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
 const HISTORY_RECORD_FLUSH_COUNT = 500;
 const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
+const AUTO_SYNC_SUPERVISOR_INTERVAL_MS = 45 * 1000;
+const KEEP_ALIVE_PERMISSION_RETRY_MS = 10 * 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const BAND_STEP_FRESH_MS = 30 * 60 * 1000;
 const BAND_STEP_UNCALIBRATED_AGREE_RATIO = 1.35;
@@ -331,6 +335,7 @@ class AppStore extends Store<AppState> {
   private gpsActive = false;
   private recomputeTimer: ReturnType<typeof setInterval> | null = null;
   private connectedSyncTimer: ReturnType<typeof setInterval> | null = null;
+  private autoSyncSupervisorTimer: ReturnType<typeof setInterval> | null = null;
   private appStateSub: { remove: () => void } | null = null;
   private stepSub: { remove: () => void } | null = null;
   private autoDrainedFor = ''; // device id we've already auto-drained this connection
@@ -347,6 +352,7 @@ class AppStore extends Store<AppState> {
   private preferredDeviceId: string | null = null;
   private connectInFlight = false;
   private connectStartedAt = 0;
+  private keepAliveRetryAfterTs = 0;
 
   constructor() {
     super(initialState);
@@ -401,6 +407,7 @@ class AppStore extends Store<AppState> {
     // + persist on a steady cadence while the app is alive, and again whenever the
     // app returns to the foreground (so re-opening shows complete, fresh graphs).
     this.startBackgroundRecompute();
+    this.startAutoSyncSupervisor();
     this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
     if (keepAlive) void this.ensureBackgroundSyncKeepAlive('Startup auto-sync');
 
@@ -533,6 +540,44 @@ class AppStore extends Store<AppState> {
         this.scheduleAutoHistoryDrain(state.device.id, 1000);
       }
     }, AUTO_HISTORY_SYNC_MIN_INTERVAL_MS);
+  }
+
+  private startAutoSyncSupervisor(): void {
+    if (this.autoSyncSupervisorTimer) return;
+    this.autoSyncSupervisorTimer = setInterval(() => {
+      void this.superviseAutoSync('supervisor').catch(() => {});
+    }, AUTO_SYNC_SUPERVISOR_INTERVAL_MS);
+    void this.superviseAutoSync('startup').catch(() => {});
+  }
+
+  private async superviseAutoSync(source: string): Promise<void> {
+    const state = this.getState();
+    if (state.backgroundKeepAlive) {
+      const ok = await this.ensureBackgroundSyncKeepAlive(`WHOOP ${source} auto-sync`);
+      if (!ok && state.status === 'connected') {
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: 'Connected, but background keep-alive permission is not active' }
+            : s.historySync,
+        }));
+      }
+    }
+
+    const fresh = this.getState();
+    if (fresh.status === 'idle' || fresh.status === 'disconnected' || fresh.status === 'error') {
+      void this.connectAsync();
+      return;
+    }
+    if (fresh.status === 'connected' && fresh.device) {
+      if (fresh.draining) {
+        this.recoverStaleHistoryDrain(source);
+        return;
+      }
+      if (!fresh.lastSyncTs || Date.now() - fresh.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS) {
+        this.autoDrainedFor = '';
+        this.scheduleAutoHistoryDrain(fresh.device.id, 1000);
+      }
+    }
   }
 
   private stopConnectedAutoSync(): void {
@@ -917,8 +962,17 @@ class AppStore extends Store<AppState> {
 
   /** Start the foreground-service guard used by Android background sync. */
   private async ensureBackgroundSyncKeepAlive(context: string): Promise<boolean> {
-    if (!this.getState().backgroundKeepAlive) return false;
+    if (!this.getState().backgroundKeepAlive) {
+      this.setState({ backgroundKeepAliveRunning: false });
+      return false;
+    }
+    if (!isKeepAliveRunning() && this.keepAliveRetryAfterTs > Date.now()) {
+      this.setState({ backgroundKeepAliveRunning: false });
+      return false;
+    }
     const ok = await startKeepAlive();
+    this.setState({ backgroundKeepAliveRunning: ok || isKeepAliveRunning() });
+    this.keepAliveRetryAfterTs = ok ? 0 : Date.now() + KEEP_ALIVE_PERMISSION_RETRY_MS;
     if (!ok) {
       this.setState({
         error:
@@ -933,6 +987,7 @@ class AppStore extends Store<AppState> {
     this.setState({ backgroundKeepAlive: on });
     await kvSet('backgroundKeepAlive', on ? '1' : '0');
     if (on) {
+      this.keepAliveRetryAfterTs = 0;
       await this.ensureBackgroundSyncKeepAlive('Background auto-sync');
       if (this.getState().status === 'connected') {
         const ok = await startKeepAlive();
@@ -945,6 +1000,7 @@ class AppStore extends Store<AppState> {
       }
     } else {
       await stopKeepAlive();
+      this.setState({ backgroundKeepAliveRunning: false });
     }
   };
 
