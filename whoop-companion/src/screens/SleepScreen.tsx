@@ -138,7 +138,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Stat label="Source" value={sourceLabel(capture.source)} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
-              <Stat label="Motion evidence" value={capture.motionMin} />
+              <Stat label="Still evidence" value={capture.stillMin} />
+              <Stat label="Moving minutes" value={capture.movingMin} />
               <Stat label="Sleep-state evidence" value={capture.sleepStateMin} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>

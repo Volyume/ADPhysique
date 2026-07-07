@@ -121,11 +121,11 @@ const METRICS: TrendMetric[] = [
   },
   {
     key: 'motion_evidence',
-    title: 'Motion Evidence',
+    title: 'Still Evidence',
     hours: false,
     pick: (d) =>
       d.sleepDetail?.inBedMin && d.sleepDetail.motionMin != null
-        ? nullableClampPct(Math.round((d.sleepDetail.motionMin / Math.max(1, d.sleepDetail.inBedMin)) * 100))
+        ? nullableClampPct(Math.round(((d.sleepDetail.stillMin ?? d.sleepDetail.motionMin) / Math.max(1, d.sleepDetail.inBedMin)) * 100))
         : null,
     band: confidenceBand,
     bandLabels: ['High', 'Medium', 'Low'],

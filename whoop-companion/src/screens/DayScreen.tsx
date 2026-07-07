@@ -105,7 +105,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
                 <Text style={styles.note}>
-                  Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}% / evidence {metric.sleepDetail?.motionMin ?? 0}+{metric.sleepDetail?.sleepStateMin ?? 0} min / {confidenceLabel(metric.sleepDetail?.confidence)} confidence
+                  Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}% / still {metric.sleepDetail?.stillMin ?? metric.sleepDetail?.motionMin ?? 0} min / moving {metric.sleepDetail?.movingMin ?? 0} min / {confidenceLabel(metric.sleepDetail?.confidence)} confidence
                 </Text>
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>

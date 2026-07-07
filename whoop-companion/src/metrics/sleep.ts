@@ -40,7 +40,9 @@ export type SleepResult = {
   neededMin: number;
   source: SleepSource;
   signalMin: number; // minutes that had a heart-rate sample
-  motionMin: number; // minutes with movement/activity evidence
+  motionMin: number; // minutes with any step/activity-row evidence
+  stillMin: number; // minutes where the band reports still/low motion
+  movingMin: number; // minutes where the band reports movement/activity
   sleepStateMin: number; // minutes with decoded band sleep-state evidence
 };
 
@@ -351,6 +353,8 @@ export function durationOnlySleep(
     source: 'manual_duration',
     signalMin: 0,
     motionMin: 0,
+    stillMin: 0,
+    movingMin: 0,
     sleepStateMin: 0,
   };
 }
@@ -388,6 +392,8 @@ export function computeSleep(
   if (window.length < 1) return null;
   const hrs = window.map((s) => s.hr).filter((v): v is number => v != null);
   const motionMin = window.filter((s) => s.motion != null).length;
+  const stillMin = window.filter((s) => s.motion != null && s.motion < 0.2).length;
+  const movingMin = window.filter((s) => s.motion != null && s.motion >= 0.4).length;
   const sleepStateMin = window.filter((s) => s.bandSleepState != null).length;
   if (hrs.length === 0) {
     const start = opts.startTs ?? window[0]?.ts ?? 0;
@@ -485,6 +491,8 @@ export function computeSleep(
     source: opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr'),
     signalMin: hrs.length,
     motionMin,
+    stillMin,
+    movingMin,
     sleepStateMin,
   };
 }

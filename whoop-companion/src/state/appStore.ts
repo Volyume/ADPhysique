@@ -193,6 +193,8 @@ export type AppState = {
     windowMin: number;
     signalMin: number;
     motionMin: number;
+    stillMin: number;
+    movingMin: number;
     sleepStateMin: number;
     coveragePct: number;
     rrCount: number;
@@ -1352,6 +1354,8 @@ class AppStore extends Store<AppState> {
         source: sleep.source,
         signalMin: sleep.signalMin,
         motionMin: sleep.motionMin,
+        stillMin: sleep.stillMin,
+        movingMin: sleep.movingMin,
         sleepStateMin: sleep.sleepStateMin,
         coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
         confidence,
@@ -2144,6 +2148,8 @@ class AppStore extends Store<AppState> {
       windowMin: captureSleep?.inBedMin ?? captureWindowMin,
       signalMin: captureSleep?.signalMin ?? nightPerMin.length,
       motionMin: captureSleep?.motionMin ?? 0,
+      stillMin: captureSleep?.stillMin ?? 0,
+      movingMin: captureSleep?.movingMin ?? 0,
       sleepStateMin: captureSleep?.sleepStateMin ?? 0,
       coveragePct: boundedSleepCoveragePct,
       rrCount: captureNightHr.reduce((a, s) => a + s.rr.length, 0),
@@ -2227,6 +2233,8 @@ class AppStore extends Store<AppState> {
         source: sleep.source,
         signalMin: sleep.signalMin,
         motionMin: sleep.motionMin,
+        stillMin: sleep.stillMin,
+        movingMin: sleep.movingMin,
         sleepStateMin: sleep.sleepStateMin,
         coveragePct: boundedSleepCoveragePct,
         confidence,
@@ -2657,6 +2665,10 @@ function sleepCoveragePct(sleep: SleepResult): number {
 function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
   if (!sleep) return false;
   if (manual) return true;
+  if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
+    const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
+    if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
+  }
   return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
 }
 
@@ -2664,7 +2676,7 @@ function sleepConfidence(
   signalMin: number,
   coveragePct: number,
   manual: boolean,
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'sleepStateMin'> | null,
+  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
 ): SleepConfidence {
   const evidencePct = sleepEvidencePct(evidence);
   const corroborated = evidencePct >= 25;
@@ -2677,7 +2689,7 @@ function sleepConfidence(
 function sleepPerformanceCap(
   confidence: SleepConfidence,
   coveragePct: number,
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'sleepStateMin'> | null,
+  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
 ): number {
   if (confidence === 'high') return 100;
   if (confidence === 'medium') {
@@ -2688,9 +2700,10 @@ function sleepPerformanceCap(
   return Math.max(45, Math.min(65, coveragePct + 20));
 }
 
-function sleepEvidencePct(evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'sleepStateMin'> | null): number {
+function sleepEvidencePct(evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null): number {
   if (!evidence?.inBedMin) return 0;
-  const corroboratedMin = evidence.motionMin ?? 0;
+  const stillMin = evidence.stillMin ?? Math.max(0, (evidence.motionMin ?? 0) - (evidence.movingMin ?? 0));
+  const corroboratedMin = stillMin;
   return Math.round((corroboratedMin / Math.max(1, evidence.inBedMin)) * 100);
 }
 
@@ -2878,16 +2891,16 @@ function sleepCaptureNote(input: {
   manual: boolean;
   signalMin: number;
   coveragePct: number;
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'sleepStateMin'> | null;
+  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null;
 }): string {
   const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
   const evidencePct = sleepEvidencePct(input.evidence);
   if (input.hasSleep && confidence === 'high') {
-    return 'High-confidence sleep: HR coverage is strong and corroborated by band movement evidence.';
+    return 'High-confidence sleep: HR coverage is strong and corroborated by still-worn band evidence.';
   }
   if (input.hasSleep && confidence === 'medium') {
     if (evidencePct < 25 && !input.manual) {
-      return 'Medium-confidence HR-only sleep estimate; movement corroboration is sparse, so the score is capped.';
+      return 'Medium-confidence HR-only sleep estimate; still-worn corroboration is sparse, so the score is capped.';
     }
     return 'Medium-confidence sleep estimate; more synced coverage can still refine the score.';
   }
