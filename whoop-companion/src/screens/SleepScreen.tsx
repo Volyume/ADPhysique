@@ -500,6 +500,21 @@ function sleepVerdict(input: {
     };
   }
 
+  if (capture && captureWakeStateConflict(capture)) {
+    return {
+      badge: 'CHECK',
+      title: 'Sleep window needs review',
+      body: 'Decoded strap-state evidence is mostly wake, so this result is capped until the window is reviewed or more history arrives.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Review sleep window',
+      actionValue: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min wake`,
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
+
   if (capture && (capture.coveragePct < 60 || capture.signalMin < 150 || input.perfCapped)) {
     return {
       badge: 'PART',
@@ -589,6 +604,19 @@ function sleepFocus(input: {
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
+    };
+  }
+
+  if (capture && captureWakeStateConflict(capture)) {
+    return {
+      badge: 'CHECK',
+      title: 'Review the sleep window',
+      body: 'The strap-state evidence is mostly wake. Fixing the window first will make sleep, recovery and readiness more trustworthy.',
+      actionLabel: 'Adjust sleep window',
+      actionValue: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min wake`,
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
     };
   }
 
@@ -716,6 +744,16 @@ function sleepScoreDrivers(input: {
   const drivers: SleepDriver[] = [];
   const capture = input.capture;
 
+  if (capture && captureWakeStateConflict(capture)) {
+    drivers.push({
+      tone: 'data',
+      label: 'Strap state',
+      value: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min`,
+      detail: 'Decoded state evidence is mostly wake, so the sleep score stays capped until the window is reviewed or more history arrives.',
+      color: colors.recoveryRed,
+    });
+  }
+
   if (capture && (capture.coveragePct < 80 || capture.signalMin < 240 || input.perf?.cappedByConfidence)) {
     drivers.push({
       tone: 'data',
@@ -827,6 +865,13 @@ function stageQualityCheck(
 ): { label: string; body: string; color: string } | null {
   if (!sleep || !capture) return null;
   const stillPct = Math.round(((capture.stillMin ?? 0) / Math.max(1, capture.windowMin)) * 100);
+  if (captureWakeStateConflict(capture)) {
+    return {
+      label: 'Stage estimate',
+      body: 'decoded strap state is mostly wake; review timing before trusting stages.',
+      color: colors.recoveryRed,
+    };
+  }
   if (capture.confidence === 'low' || capture.coveragePct < 60 || capture.signalMin < 150) {
     return {
       label: 'Stage estimate',
@@ -1053,6 +1098,15 @@ function stateEvidenceColor(
   if (key === 'wake') return wakeLike / capture.sleepStateMin >= 0.85 ? colors.recoveryRed : colors.textSecondary;
   if (key === 'asleep') return capture.sleepStateAsleepMin > 0 ? colors.recoveryGreen : colors.textTertiary;
   return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
+}
+
+function captureWakeStateConflict(
+  capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
+): boolean {
+  if (capture.sleepStateMin < 30) return false;
+  const wakeLike = capture.sleepStateWakeMin + capture.sleepStateUpMin;
+  const sleepLike = capture.sleepStateAsleepMin + capture.sleepStateStillMin;
+  return sleepLike < 10 && wakeLike / Math.max(1, capture.sleepStateMin) >= 0.85;
 }
 
 function sleepCaptureAction(capture: {
