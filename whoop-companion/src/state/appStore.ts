@@ -640,6 +640,7 @@ class AppStore extends Store<AppState> {
     phone?: number | null,
   ): { steps: number | null; source: 'band' | 'phone' | null } {
     const state = this.getState();
+    const phoneForCompare = phone ?? (state.stepSource === 'phone' ? state.steps : null);
     const liveSteps = phone ?? state.steps;
     const liveSource = phone != null ? 'phone' : state.stepSource;
     const sessionSource = state.session?.stepSource;
@@ -652,18 +653,18 @@ class AppStore extends Store<AppState> {
     if (band != null && band > 0) {
       const bandLastTs = state.bandStepEstimate?.lastTs ?? null;
       const bandIsStale = bandLastTs != null && Date.now() - bandLastTs > BAND_STEP_FRESH_MS;
-      if (bandIsStale && phone != null && phone > band) {
-        return { steps: phone, source: 'phone' };
+      if (bandIsStale && phoneForCompare != null && phoneForCompare > band) {
+        return { steps: phoneForCompare, source: 'phone' };
       }
-      if (phone != null && phone >= BAND_STEP_PHONE_COMPARE_MIN) {
+      if (phoneForCompare != null && phoneForCompare >= BAND_STEP_PHONE_COMPARE_MIN) {
         const divisor = state.bandStepDivisor;
         const calibrated = Math.abs(divisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
         const agreeRatio = calibrated ? BAND_STEP_CALIBRATED_AGREE_RATIO : BAND_STEP_UNCALIBRATED_AGREE_RATIO;
-        const high = phone * agreeRatio;
-        const low = phone / agreeRatio;
+        const high = phoneForCompare * agreeRatio;
+        const low = phoneForCompare / agreeRatio;
         const bandConfidence = state.bandStepEstimate?.confidence ?? 'low';
         if (band > high || (!calibrated && band < low) || (!calibrated && bandConfidence === 'low')) {
-          return { steps: phone, source: 'phone' };
+          return { steps: phoneForCompare, source: 'phone' };
         }
       }
       return { steps: band, source: 'band' };
