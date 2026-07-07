@@ -397,6 +397,7 @@ class AppStore extends Store<AppState> {
     // app returns to the foreground (so re-opening shows complete, fresh graphs).
     this.startBackgroundRecompute();
     this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
+    if (keepAlive) void this.ensureBackgroundSyncKeepAlive('Startup auto-sync');
 
     this.setState({ ready: true });
     setTimeout(() => this.connect(), 750);
