@@ -7,12 +7,26 @@
  */
 import { create, act } from 'react-test-renderer';
 
+let mockLocalPartnershipRows = [];
+function mockRowToLocalPartnership(row = {}) {
+  return {
+    id: row.id,
+    status: row.status,
+    memberA: row.member_a ?? null,
+    memberB: row.member_b ?? null,
+    partnerFirstName: row.partner_first_name ?? null,
+    streakEnabled: row.streak_enabled !== false,
+    acceptedAt: row.accepted_at ? new Date(row.accepted_at).getTime() : Date.now(),
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+  };
+}
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(), // no auto-load; tests drive redeem directly
 }));
 
 jest.mock('../../lib/database', () => ({
-  getPartnershipsLocal: jest.fn(async () => []),
+  getPartnershipsLocal: jest.fn(async () => mockLocalPartnershipRows),
   getActivePartnerCount: jest.fn(async () => 0),
   getPartnerWeekSignal: jest.fn(async () => null),
   getPairWeekSignals: jest.fn(async () => []),
@@ -26,7 +40,13 @@ jest.mock('../../lib/database', () => ({
   upsertPartnerWinCardFromCloud: jest.fn(async () => {}),
   markLocalPartnerWinCardRevoked: jest.fn(async () => {}),
   setLocalPartnerCheerSent: jest.fn(async () => {}),
-  upsertPartnershipFromCloud: jest.fn(async () => {}),
+  upsertPartnershipFromCloud: jest.fn(async (row) => {
+    const local = mockRowToLocalPartnership(row);
+    mockLocalPartnershipRows = [
+      local,
+      ...mockLocalPartnershipRows.filter((p) => p.id !== local.id),
+    ];
+  }),
 }));
 
 jest.mock('../../lib/partners/service', () => ({
@@ -74,7 +94,10 @@ function renderHook(tier) {
   return ref;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  mockLocalPartnershipRows = [];
+  jest.clearAllMocks();
+});
 
 describe('usePartners redeem enforces the partner cap', () => {
   test('free at the cap (1 active) refuses without calling the RPC', async () => {
@@ -145,6 +168,19 @@ describe('usePartners redeem enforces the partner cap', () => {
   test('successful cloud redeem reports mirror pending if this device cannot show the pair yet', async () => {
     db.getActivePartnerCount.mockResolvedValue(0);
     db.upsertPartnershipFromCloud.mockRejectedValueOnce(new Error('local mirror write failed'));
+    service.redeemPartnerInvite.mockResolvedValueOnce({
+      ok: true,
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+    });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.redeem('CODE1234'); });
+    expect(r).toEqual({ ok: false, error: 'local_mirror_pending' });
+  });
+
+  test('successful cloud redeem does not treat a blind mirror write as visible', async () => {
+    db.getActivePartnerCount.mockResolvedValue(0);
+    db.upsertPartnershipFromCloud.mockResolvedValueOnce(undefined);
     service.redeemPartnerInvite.mockResolvedValueOnce({
       ok: true,
       data: { partnershipId: 'p1', partnerFirstName: 'Sam' },

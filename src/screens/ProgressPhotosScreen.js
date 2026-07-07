@@ -1551,6 +1551,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       <Modal
         visible={captureOpen}
         animationType={reduceMotion ? 'none' : 'slide'}
+        statusBarTranslucent={false}
+        navigationBarTranslucent={false}
         onRequestClose={() => { setCaptureOpen(false); if (scanFlow) discardScanDraft(scanFlow); }}
       >
         <ProgressGhostCapture

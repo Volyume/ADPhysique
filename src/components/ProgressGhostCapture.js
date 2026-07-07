@@ -95,7 +95,7 @@ const OPACITY_PRESETS = [
   { key: 'standard', label: 'Standard', value: OPACITY_DEFAULT },
   { key: 'strong', label: 'Strong', value: 0.6 },
 ];
-const ANDROID_NAV_BAR_GUARD = 48;
+const ANDROID_NAV_BAR_GUARD = 72;
 
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;

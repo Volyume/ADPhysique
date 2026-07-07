@@ -425,9 +425,9 @@ export default function usePartners(userId, tier) {
     if (r.ok) {
       clearCachedInvite();
       await clearPendingPartnerCode();
-      const mirrored = await mirrorAcceptedPartnershipLocally(userId, r.data);
+      await mirrorAcceptedPartnershipLocally(userId, r.data);
       await pullPartnerMirrorNow(userId);
-      const visible = mirrored || await waitForAcceptedPartnershipVisible(userId, r.data);
+      const visible = await waitForAcceptedPartnershipVisible(userId, r.data);
       if (!visible) {
         await load();
         return { ok: false, error: 'local_mirror_pending' };
