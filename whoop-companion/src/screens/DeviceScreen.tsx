@@ -40,6 +40,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
+  const steps = useStoreSelector(appStore, (s) => s.steps);
+  const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
+  const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
 
   // Frames actually written to the database (what export reads), polled so we can
   // see whether persistence is keeping up with the live (in-memory) counter.
@@ -149,6 +152,19 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </Card>
       ) : null}
+
+      <SectionLabel>Steps</SectionLabel>
+      <Card>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Stat label="Today" value={steps != null ? steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
+          <Stat label="Source" value={stepSource ?? '-'} />
+          <Stat label="Band history" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
+        </View>
+        <Text style={styles.hint}>
+          Synced WHOOP history is preferred for backfilled daily steps and workout step counts. The phone
+          pedometer is used as a live fallback for today and active workouts when band counters are not available yet.
+        </Text>
+      </Card>
 
       <SectionLabel>Sync</SectionLabel>
       <Card>

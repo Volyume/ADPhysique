@@ -25,7 +25,8 @@ export type MetricKey =
   | 'avg_hr'
   | 'max_hr'
   | 'hrv_balance'
-  | 'cardio_age';
+  | 'cardio_age'
+  | 'steps';
 
 export type Route =
   | { name: 'today' }

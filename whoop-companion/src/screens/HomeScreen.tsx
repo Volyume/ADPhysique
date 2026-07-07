@@ -213,7 +213,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             color={colors.recoveryGreen}
             value={steps != null ? steps.toLocaleString() : '—'}
             sub={stepSource === 'band' ? 'WHOOP band' : stepSource === 'phone' ? 'phone pedometer' : 'waiting'}
-            onPress={() => nav.navigate({ name: 'strain' })}
+            onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
             style={styles.half}
           />
         </View>

@@ -36,6 +36,7 @@ const SERIESES: Series[] = [
   },
   { key: 'hrv', title: 'HRV', unit: 'ms', pick: (d) => d.rmssd, color: () => colors.recoveryGreen },
   { key: 'rhr', title: 'RESTING HEART RATE', unit: 'bpm', pick: (d) => d.rhr, color: () => colors.recoveryRed },
+  { key: 'steps', title: 'STEPS', unit: '', pick: (d) => d.steps, color: () => colors.recoveryGreen },
 ];
 
 export function TrendsScreen({ nav }: { nav: Nav }) {

@@ -100,6 +100,15 @@ const DEFS: Record<string, Def> = {
     blurb:
       'Sleep Performance is a composite of four contributors — Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
   },
+  steps: {
+    title: 'Steps',
+    unit: 'steps',
+    color: () => colors.recoveryGreen,
+    pick: (d) => d.steps,
+    measured: true,
+    blurb:
+      'Daily steps come from decoded WHOOP history counters when available, with the phone pedometer as a live fallback for workouts and today. After reconnect, synced band history can backfill earlier daily totals and activity step counts.',
+  },
 };
 
 export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: MetricKey }) {
@@ -264,6 +273,8 @@ function ringFraction(key: MetricKey, value: number | null): number {
       return Math.min(1, value / 100);
     case 'respiratory':
       return Math.min(1, value / 25);
+    case 'steps':
+      return Math.min(1, value / 15000);
     default:
       return Math.min(1, value / 100);
   }
