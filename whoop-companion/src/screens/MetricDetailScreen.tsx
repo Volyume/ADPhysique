@@ -32,11 +32,12 @@ function energyReserveScore(d: DailyMetricRow): number | null {
   const sleepPerformance = nullableClampPct(
     d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
   );
+  const trustedSleepPerformance = sleepTrustTier(d.sleepDetail) === 'low' ? null : sleepPerformance;
   const stress = d.sleepDetail?.stressHigh != null ? (d.sleepDetail.stressHigh / 100) * 3 : null;
   return (
     computeEnergyReserve({
       recovery: d.recovery,
-      sleepPerformance,
+      sleepPerformance: trustedSleepPerformance,
       sleepDebtMin: d.sleepDetail?.debtMin ?? 0,
       hrvBalance: null,
       strain: d.strain,

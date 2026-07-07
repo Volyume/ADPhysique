@@ -2359,6 +2359,7 @@ class AppStore extends Store<AppState> {
 
     // ---- Garmin-style synthesis: Training Readiness (built on Recovery) ----
     const sleepPerfPct = sleepPerformanceResult?.score ?? null;
+    const energySleepPerfPct = sleepTrustTier(sleepDetail) === 'low' ? null : sleepPerfPct;
     const trimps = this.getState().cardio.filter((c) => c.trimp != null).map((c) => ({ ts: c.startTs, trimp: c.trimp as number }));
     const loadStatus = trainingLoad(trimps, now);
     const trainingReadiness = computeTrainingReadiness({
@@ -2373,7 +2374,7 @@ class AppStore extends Store<AppState> {
     });
     const energyReserve = computeEnergyReserve({
       recovery,
-      sleepPerformance: sleepPerfPct,
+      sleepPerformance: energySleepPerfPct,
       sleepDebtMin: need.debtMin,
       hrvBalance: hrvBal?.score ?? null,
       strain,

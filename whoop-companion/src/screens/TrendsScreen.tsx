@@ -8,7 +8,7 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav, MetricKey } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
 import { computeEnergyReserve } from '../metrics/energyReserve';
-import { sleepTrustWeight, sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
+import { sleepTrustTier, sleepTrustWeight, sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
 
 type RangeKey = 'W' | 'M' | '6M' | 'ALL';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -31,11 +31,12 @@ function energyReserveScore(d: DailyMetricRow): number | null {
   const sleepPerformance = nullableClampPct(
     d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
   );
+  const trustedSleepPerformance = sleepTrustTier(d.sleepDetail) === 'low' ? null : sleepPerformance;
   const stress = d.sleepDetail?.stressHigh != null ? (d.sleepDetail.stressHigh / 100) * 3 : null;
   return (
     computeEnergyReserve({
       recovery: d.recovery,
-      sleepPerformance,
+      sleepPerformance: trustedSleepPerformance,
       sleepDebtMin: d.sleepDetail?.debtMin ?? 0,
       hrvBalance: null,
       strain: d.strain,

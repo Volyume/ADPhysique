@@ -8,6 +8,7 @@ import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { computeEnergyReserve, EnergyReserveEffect } from '../metrics/energyReserve';
 import { clampPct, nullableClampPct } from '../util/number';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 function energyColor(score: number | null | undefined): string {
   if (score == null) return colors.textTertiary;
@@ -32,11 +33,12 @@ function scoreFromDay(d: DailyMetricRow): number | null {
   const sleepPerformance = nullableClampPct(
     d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
   );
+  const trustedSleepPerformance = sleepTrustTier(d.sleepDetail) === 'low' ? null : sleepPerformance;
   const stress = d.sleepDetail?.stressHigh != null ? (d.sleepDetail.stressHigh / 100) * 3 : null;
   return (
     computeEnergyReserve({
       recovery: d.recovery,
-      sleepPerformance,
+      sleepPerformance: trustedSleepPerformance,
       sleepDebtMin: d.sleepDetail?.debtMin ?? 0,
       hrvBalance: null,
       strain: d.strain,
@@ -85,6 +87,8 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
   const todaySleepPerf = nullableClampPct(
     today?.sleepDetail?.performance ?? (today?.sleepPerf != null ? Math.round(today.sleepPerf * 100) : null),
   );
+  const todaySleepTrust = sleepTrustTier(today?.sleepDetail);
+  const trustedTodaySleepPerf = todaySleepTrust === 'low' ? null : todaySleepPerf;
   const bars = trendDays.map((d) => {
     const score = scoreFromDay(d);
     return {
@@ -95,7 +99,9 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
     };
   });
   const recoveryState = inputState(today?.recovery != null);
-  const sleepState = inputState(todaySleepPerf != null);
+  const sleepState = todaySleepPerf != null && todaySleepTrust === 'low'
+    ? { value: 'Low trust', color: colors.recoveryYellow }
+    : inputState(trustedTodaySleepPerf != null);
   const stressState = inputState(stress != null);
   const strainState = inputState(today?.strain != null);
   const mainDriver = energyReserve ? energyDriverInsight(energyReserve.contributors, energyReserve.score) : null;
@@ -142,7 +148,7 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
         <Text style={styles.note}>
           {energyQualityNote({
             recovery: today?.recovery ?? null,
-            sleep: todaySleepPerf,
+            sleep: trustedTodaySleepPerf,
             stress,
             strain: today?.strain ?? null,
             debtMin: sleepNeed?.debtMin ?? null,
@@ -211,7 +217,11 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={styles.stats}>
           <Stat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={energyColor(today?.recovery)} />
-          <Stat label="Sleep" value={todaySleepPerf != null ? `${clampPct(todaySleepPerf)}%` : '-'} color={colors.sleepTeal} />
+          <Stat
+            label="Sleep"
+            value={trustedTodaySleepPerf != null ? `${clampPct(trustedTodaySleepPerf)}%` : todaySleepPerf != null ? 'Low trust' : '-'}
+            color={trustedTodaySleepPerf != null ? colors.sleepTeal : colors.recoveryYellow}
+          />
           <Stat label="Strain" value={today?.strain != null ? today.strain.toFixed(1) : '-'} color={colors.strainBlue} />
         </View>
       </Card>
