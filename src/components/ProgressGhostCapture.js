@@ -95,6 +95,7 @@ const OPACITY_PRESETS = [
   { key: 'standard', label: 'Standard', value: OPACITY_DEFAULT },
   { key: 'strong', label: 'Strong', value: 0.6 },
 ];
+const ANDROID_NAV_BAR_GUARD = 48;
 
 function clampOpacity(v) {
   if (!Number.isFinite(v)) return OPACITY_DEFAULT;
@@ -243,7 +244,7 @@ export default function ProgressGhostCapture({
     if (!cam?.takePictureAsync) return;
     setCapturing(true);
     try {
-      const pic = await cam.takePictureAsync({ quality: 0.7 });
+      const pic = await cam.takePictureAsync({ quality: 0.92 });
       if (!pic?.uri) return;
       if (useAppStore.getState().tier !== 'pro') return;
       setPendingCaptureUri(pic.uri);
@@ -398,10 +399,12 @@ export default function ProgressGhostCapture({
 
   const hasReference = !!referencePhoto?.uri;
   const compactOverlay = Number.isFinite(viewportHeight) && viewportHeight < 900;
+  const bottomInset = Number(insets?.bottom) || 0;
+  const safeBottomInset = Math.max(bottomInset, Platform.OS === 'android' ? ANDROID_NAV_BAR_GUARD : 0);
   const controlsInsetStyle = {
     paddingBottom: Math.max(
       compactOverlay ? spacing.lg : spacing.xxl,
-      (Number(insets?.bottom) || 0) + (compactOverlay ? spacing.md : spacing.lg),
+      safeBottomInset + (compactOverlay ? spacing.md : spacing.lg),
     ),
   };
   const guidance = getPoseCaptureGuidance(pose);
@@ -432,7 +435,7 @@ export default function ProgressGhostCapture({
             </Text>
           </View>
         </View>
-        <View style={[styles.previewActions, { paddingBottom: Math.max(spacing.xl, (Number(insets?.bottom) || 0) + spacing.md) }]}>
+        <View style={[styles.previewActions, { paddingBottom: Math.max(spacing.xl, safeBottomInset + spacing.md) }]}>
           <Pressable
             style={[styles.previewButton, styles.previewSecondary]}
             onPress={retakeCapturedPhoto}

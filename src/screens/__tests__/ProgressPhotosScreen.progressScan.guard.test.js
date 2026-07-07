@@ -94,6 +94,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(CONTROLLER).toMatch(/trainingGoal: safeProfile\.trainingGoal \?\? safeBodyProfile\.primaryGoal \?\? null/);
   });
 
+  test('scan imports preserve high image quality before analysis', () => {
+    expect(SCREEN).toMatch(/PROGRESS_SCAN_IMAGE_QUALITY\s*=\s*0\.92/);
+    expect(SCREEN).toMatch(/launchImageLibraryAsync\(\{[\s\S]*quality: PROGRESS_SCAN_IMAGE_QUALITY/);
+  });
+
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Your private physique record/);

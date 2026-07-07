@@ -93,6 +93,7 @@ const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const CORE_POSES = ['front', 'side', 'back'];
 const PROGRESS_SCAN_MIN_INTERVAL_MS = 14 * 86400000;
 const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
+const PROGRESS_SCAN_IMAGE_QUALITY = 0.92;
 
 // Timeline sort. Newest-first is the unchanged default; oldest-first lets
 // someone read forwards from their first photo. Neutral temporal wording only,
@@ -304,7 +305,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
-        quality: 0.7,
+        quality: PROGRESS_SCAN_IMAGE_QUALITY,
       });
       if (result?.canceled) {
         await abandonLapsedScanFlow(flow);

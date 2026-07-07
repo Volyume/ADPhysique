@@ -1,5 +1,6 @@
 const mockRows = [];
 const mockRunCalls = [];
+let mockPreviousScanRows = [];
 let mockMetaMap = {};
 let mockSession = null;
 
@@ -7,6 +8,7 @@ jest.mock('../database', () => ({
   db: jest.fn(async () => ({
     getAllAsync: async (sql) => {
       if (/FROM progress_scan_assets/.test(sql)) return mockRows;
+      if (/FROM progress_scan_sessions/.test(sql) && /status = 'complete'/.test(sql)) return mockPreviousScanRows;
       return [];
     },
     getFirstAsync: async (sql) => {
@@ -57,6 +59,7 @@ function seedAsset() {
 beforeEach(() => {
   mockRows.length = 0;
   mockRunCalls.length = 0;
+  mockPreviousScanRows = [];
   mockMetaMap = {};
   mockSession = null;
   deleteProgressPhoto.mockClear();
@@ -225,6 +228,40 @@ describe('finishProgressScanSession estimator persistence', () => {
       },
     });
     expect(JSON.stringify(signals)).not.toMatch(/estimateBodyFatPercent|estimateRangeLow|estimateRangeHigh/);
+  });
+
+  test('keeps the score visible when the previous scan cannot be used for a trend', async () => {
+    seedCompletedSessionAssets();
+    mockPreviousScanRows = [{
+      id: 'previous-scan',
+      user_id: 'user-1',
+      captured_at: 500,
+      status: 'complete',
+      analysis_status: 'complete',
+      required_poses_complete: 1,
+      quality_label: 'good',
+      signals_json: JSON.stringify({
+        physiqueAssessment: {
+          visualLeannessScore: 60,
+          scanConfidenceTier: 'moderate',
+        },
+        assets: [{ pose: 'front' }, { pose: 'back' }],
+      }),
+    }];
+
+    await finishProgressScanSession('user-1', 'scan-1', {
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+    });
+
+    const update = mockRunCalls.find((call) => /UPDATE progress_scan_sessions SET/.test(call.sql));
+    const signals = JSON.parse(update.params[14]);
+    expect(signals.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(signals.physiqueAssessment.progressSignal).toBe('trend_pending');
+    expect(signals.physiqueAssessment.progressSignalLabel).toBe('Trend not ready');
+    expect(signals.deltaExplanation.comparisonStatus).toBe('not_comparable');
+    expect(signals.deltaExplanation.summary).toMatch(/not comparing it yet/i);
   });
 
   test('prefers the scan-day weight snapshot over stale profile weight', async () => {

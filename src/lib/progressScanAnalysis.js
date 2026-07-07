@@ -37,6 +37,7 @@ const PROGRESS_SIGNAL_COPY = {
   holding_steady: 'Holding steady',
   slight_drift: 'Slight drift',
   clear_drift: 'Clear drift',
+  trend_pending: 'Trend not ready',
   inconclusive: 'Inconclusive',
 };
 
@@ -640,14 +641,8 @@ export function scanSetupStability(currentScan = null, previousScan = null) {
   if (!currentScan || !previousScan) {
     return { stable: false, issues: ['missing_scan'], comparedSignalCount: 0 };
   }
-  const currentPoses = scanPoseSet(currentScan);
-  const previousPoses = scanPoseSet(previousScan);
   const issues = [];
   let comparedSignalCount = 0;
-
-  if (currentPoses.has('side') !== previousPoses.has('side')) {
-    issues.push('side_pose_set_changed');
-  }
 
   for (const pose of REQUIRED_SCAN_POSES) {
     const current = scanAssetForPose(currentScan, pose);
