@@ -2,12 +2,9 @@
  * MealPlanScreen, the generated meal plan (deep-audit Theme G, surface
  * G-b). One plan object, progressive disclosure:
  *
- *  - Besa first: "Here's your day", plates with a single calm line each,
- *    Log this day, Swap on any plate, Rebuild. Calories lead; macros
- *    sit behind a tap. No jargon.
- *  - Eddie one tap deeper: per-meal grams + kcal, the day totals row vs
- *    target, the day-type chip (training/rest), and the honest residual
- *    line when a constrained day could not be hit exactly.
+ *  - The first read is the day itself: plates, calories, and simple actions.
+ *  - The detail read is the food list, macros, day total, settings, and honest
+ *    note when a constrained day cannot be hit exactly.
  *
  * The screen NEVER computes nutrition: it renders what the engine
  * assembled and persists edits through the service. Pro surface (lives
@@ -467,6 +464,16 @@ export default function MealPlanScreen({ navigation, route }) {
   // the spoken a11y word convert (energyWord) at the point of display.
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const prefs = plan?.prefs || {};
+  const prefSummary = useMemo(() => {
+    const meals = prefs.mealsPerDay ?? 4;
+    const variety = userProfile?.mealPlanVariety === 1
+      ? 'varied'
+      : userProfile?.mealPlanVariety === 0.5
+        ? 'mixed'
+        : 'repeat-friendly';
+    const workoutMeals = prefs.periWorkoutSlots ? 'workout meals on' : 'workout meals off';
+    return `${meals} meals, ${variety}, ${workoutMeals}`;
+  }, [prefs.mealsPerDay, prefs.periWorkoutSlots, userProfile?.mealPlanVariety]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
@@ -482,7 +489,7 @@ export default function MealPlanScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={!plan ? 'Meal plan' : isDayPlan ? 'Day meal plan' : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Day meal plan' : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
@@ -500,9 +507,9 @@ export default function MealPlanScreen({ navigation, route }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Meal plan</Text>
+          <Text style={styles.emptyTitle}>Build meals</Text>
           <Text style={styles.emptyBody}>
-            Build meals from your targets for {planStartLabel} or the week from that date. You review everything before it is added to your diary.
+            Choose one day or a week. Volyume uses your targets and preferences, then you review every meal before it touches your diary.
           </Text>
 
           <Card style={styles.planOption}>
@@ -596,6 +603,53 @@ export default function MealPlanScreen({ navigation, route }) {
           ) : null}
           {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
 
+          <TouchableOpacity
+            style={styles.prefsToggle}
+            onPress={() => setPrefsOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: prefsOpen }}
+            accessibilityLabel={`Plan settings, ${prefSummary}`}
+          >
+            <Ionicons name="options-outline" size={18} color={colors.primary} />
+            <View style={styles.prefsToggleCopy}>
+              <Text style={styles.prefsToggleText}>Plan settings</Text>
+              <Text style={styles.prefsToggleSub}>{prefSummary}</Text>
+            </View>
+            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {prefsOpen ? (
+            <View style={styles.prefsPanel}>
+              <PrefRow
+                label="Meals a day"
+                options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+                value={prefs.mealsPerDay ?? 4}
+                onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Variety"
+                options={[
+                  { value: 0, label: 'Repeat' },
+                  { value: 0.5, label: 'Mixed' },
+                  { value: 1, label: 'Varied' },
+                ]}
+                value={userProfile?.mealPlanVariety ?? 0}
+                onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Workout meals"
+                options={[
+                  { value: false, label: 'Off' },
+                  { value: true, label: 'Pre / post' },
+                ]}
+                value={!!prefs.periWorkoutSlots}
+                onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
+                busy={busy}
+              />
+            </View>
+          ) : null}
+
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
               build on). British English, flavour-first, honest ("basically free"). */}
@@ -677,59 +731,13 @@ export default function MealPlanScreen({ navigation, route }) {
             );
           })}
 
-          {/* Day totals (Eddie's row) */}
+          {/* Day totals */}
           {day ? (
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Day total</Text>
               <Text style={styles.totalsText}>
                 {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} g - C ${formatNumber(day.totals.carbs)} g - F ${formatNumber(day.totals.fat)} g`}
               </Text>
-            </View>
-          ) : null}
-
-          {/* Preferences sit before the final add action so the user sees the
-              controls that shape the plan before committing it to the diary. */}
-          <TouchableOpacity
-            style={styles.prefsToggle}
-            onPress={() => setPrefsOpen((o) => !o)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: prefsOpen }}
-            accessibilityLabel="Plan preferences"
-          >
-            <Ionicons name="options-outline" size={18} color={colors.primary} />
-            <Text style={styles.prefsToggleText}>Plan preferences</Text>
-            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.primary} />
-          </TouchableOpacity>
-          {prefsOpen ? (
-            <View style={styles.prefsPanel}>
-              <PrefRow
-                label="Meals a day"
-                options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
-                value={prefs.mealsPerDay ?? 4}
-                onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
-                busy={busy}
-              />
-              <PrefRow
-                label="Variety"
-                options={[
-                  { value: 0, label: 'Repeat' },
-                  { value: 0.5, label: 'Mixed' },
-                  { value: 1, label: 'Varied' },
-                ]}
-                value={userProfile?.mealPlanVariety ?? 0}
-                onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
-                busy={busy}
-              />
-              <PrefRow
-                label="Workout meals"
-                options={[
-                  { value: false, label: 'Off' },
-                  { value: true, label: 'Pre / post' },
-                ]}
-                value={!!prefs.periWorkoutSlots}
-                onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
-                busy={busy}
-              />
             </View>
           ) : null}
 
@@ -998,17 +1006,19 @@ const styles = StyleSheet.create({
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 1 },
   footNote: { ...type.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 17 },
-  // Prominent so people find it: a bordered card with a primary accent, not a
-  // faint text row (founder 2026-06-16: the prefs were too hidden, people miss them).
+  // Prominent, but not shouty: the settings row sits before the meal list so
+  // people see the controls that shape the plan before they review the meals.
   prefsToggle: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     minHeight: 48, marginVertical: spacing.sm,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
   },
-  prefsToggleText: { ...type.bodyStrong, flex: 1, color: colors.primary },
-  prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
+  prefsToggleCopy: { flex: 1, minWidth: 0 },
+  prefsToggleText: { ...type.bodyStrong, color: colors.textPrimary },
+  prefsToggleSub: { ...type.caption, color: colors.textSecondary, marginTop: 1 },
+  prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm, marginTop: -spacing.xs },
   prefRow: { gap: spacing.xs },
   prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

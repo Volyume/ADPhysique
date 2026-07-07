@@ -54,8 +54,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
-    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 92,\s*flexShrink: 0,\s*gap: 2,/);
+    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 92,\s*flexShrink: 0,\s*gap: 1,/);
     expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 44,\s*height: 44,/);
+    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.sm[\s\S]*gap: spacing\.xs/);
+    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 32/);
   });
 
   test('distance time input is announced as time, not duration', () => {

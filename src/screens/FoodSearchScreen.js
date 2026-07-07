@@ -1077,7 +1077,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
           >
-            <Text style={styles.plateLogText}>Log {plate.length} to {mealSlotLabel(mealSlot)}</Text>
+            <Text style={styles.plateLogText}>Log selected</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>

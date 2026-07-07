@@ -155,10 +155,10 @@ describe('DiaryScreen diary tools', () => {
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
-    expect(SRC).toMatch(/accessibilityLabel="Meal plan: choose this day or the week, review the meals, then add them to your diary"/);
+    expect(SRC).toMatch(/accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal plan<\/Text>/);
-    expect(SRC).toMatch(/Plan this day or the week from your targets\. You review it before anything is added\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Build meals<\/Text>/);
+    expect(SRC).toMatch(/Create meals from your targets for this date or the week\. Nothing is logged until you add it\./);
   });
 });
 
@@ -167,7 +167,8 @@ describe('DiaryScreen date navigation polish', () => {
     expect(SRC).toMatch(/<View style=\{styles\.dateCluster\}>/);
     expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
     expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
-    expect(SRC).toMatch(/dateCluster: \{[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toMatch(/dateCluster: \{[\s\S]*backgroundColor: colors\.surface/);
+    expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: colors\.surface2/);
   });
 });
 

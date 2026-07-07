@@ -475,8 +475,9 @@ export default function PlanLibraryScreen({ navigation, route }) {
         />
       )}
 
-      {/* Plans list */}
-      <FlashList
+      <View style={styles.listBand}>
+        {/* Plans list */}
+        <FlashList
         ref={listRef}
         data={filtered}
         keyExtractor={p => p.id}
@@ -596,7 +597,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
             </Card>
           );
         }}
-      />
+        />
+      </View>
 
       {/* Quiz modal */}
       <Modal
@@ -755,6 +757,7 @@ const styles = StyleSheet.create({
   divisionDescText: { ...type.bodySm, color: colors.textSecondary },
 
   // Plan list
+  listBand: { flex: 1, backgroundColor: colors.surface },
   listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xxl },
 
   // Quiz banner. Card owns background/radius/padding/border here.

@@ -21,4 +21,9 @@ describe('PlanLibraryScreen shared empty states', () => {
     expect(source).toMatch(/chipsList: \{ maxHeight: 38, flexShrink: 0 \}/);
     expect(source).not.toMatch(/chipsList: \{ height: 52/);
   });
+
+  test('the plan list sits on a surface band instead of leaving a raw black void', () => {
+    expect(source).toMatch(/<View style=\{styles\.listBand\}>[\s\S]*<FlashList/);
+    expect(source).toMatch(/listBand: \{ flex: 1, backgroundColor: colors\.surface \}/);
+  });
 });

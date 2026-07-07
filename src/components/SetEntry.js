@@ -382,12 +382,12 @@ export default memo(SetEntry);
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   fieldLabelRow: {
     width: 90,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   fieldLabelWrap: {
     width: 92,
     flexShrink: 0,
-    gap: 2,
+    gap: 1,
   },
   e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   e1rmHint: {
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
     fontVariant: ['tabular-nums'],
   },
   valueInputGhost: {

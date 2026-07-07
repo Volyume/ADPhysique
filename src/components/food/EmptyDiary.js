@@ -13,7 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
 import Button from '../Button';
 
-export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food, or plan meals from your targets.';
+export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet. Add food, copy a recent day, or build meals from your targets.';
 
 export default function EmptyDiary({
   onAdd,
@@ -33,14 +33,14 @@ export default function EmptyDiary({
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="Meal plan: choose this day or the week, review the meals, then add them to your diary"
+          accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"
         >
           <View style={styles.planIcon}>
-            <Ionicons name="sparkles-outline" size={18} color={colors.primary} />
+            <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.planCopy}>
-            <Text style={styles.planTitle}>Meal plan</Text>
-            <Text style={styles.planText}>Plan this day or the week. You review it before anything is added.</Text>
+            <Text style={styles.planTitle}>Build meals</Text>
+            <Text style={styles.planText}>Create a day or week from your targets. Nothing is logged until you add it.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
