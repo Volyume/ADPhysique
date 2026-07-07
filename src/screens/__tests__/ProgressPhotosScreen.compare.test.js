@@ -125,6 +125,7 @@ import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { listProgressPhotos, deleteProgressPhoto } from '../../lib/progressPhotos';
 import { deletePhotoMeta, getPhotoMetaMap } from '../../lib/progressPhotoMeta';
 import { deleteProgressScanSession, listProgressScanEntries } from '../../lib/progressScanStore';
+import { PROGRESS_SCAN_HIDE_EXACT_KEY } from '../../lib/progressScanPreferences';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
 import ProgressPhotosScreen, { filterAndSort } from '../ProgressPhotosScreen';
 import PhotoDateRangeSheet from '../../components/PhotoDateRangeSheet';
@@ -160,6 +161,7 @@ async function render(photos = [NEW, MID, OLD], {
   useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
   usePhotoSuppression.mockReturnValue(suppressed);
   await AsyncStorage.setItem(WELLBEING_KEY, mode);
+  await AsyncStorage.setItem(PROGRESS_SCAN_HIDE_EXACT_KEY, 'false');
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
   listProgressScanEntries.mockResolvedValue(scans);
   let tree;
@@ -463,6 +465,25 @@ describe('ProgressPhotosScreen compare entry', () => {
     expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeDefined();
     expect(text).not.toContain('Latest set needs another angle');
     expect(text).not.toContain('Compare Volyume Scores');
+  });
+
+  test('same-day photo sets show the score from the scan that owns the cover photo', async () => {
+    const day = new Date(2026, 5, 20).getTime();
+    const early = { name: `${day + 3600000}.jpg`, uri: `file:///photos/${day + 3600000}.jpg`, ts: day + 3600000 };
+    const late = { name: `${day + 7200000}.jpg`, uri: `file:///photos/${day + 7200000}.jpg`, ts: day + 7200000 };
+    getPhotoMetaMap.mockResolvedValueOnce({
+      [early.name]: { name: early.name, takenAt: early.ts, pose: 'front', weightKg: null, note: null },
+      [late.name]: { name: late.name, takenAt: late.ts, pose: 'front', weightKg: null, note: null },
+    });
+    const scans = [
+      { id: 'scan-early', status: 'complete', requiredPosesComplete: true, capturedAt: early.ts, signals: { physiqueAssessment: { visualLeannessScore: 22 } }, assets: [{ id: 'early-front', pose: 'front', photoName: early.name, uri: early.uri, takenAt: early.ts }] },
+      { id: 'scan-late', status: 'complete', requiredPosesComplete: true, capturedAt: late.ts, signals: { physiqueAssessment: { visualLeannessScore: 88 } }, assets: [{ id: 'late-front', pose: 'front', photoName: late.name, uri: late.uri, takenAt: late.ts }] },
+    ];
+    const tree = await render([late, early], { scans });
+    const cardText = JSON.stringify(checkInFor(tree, late));
+
+    expect(cardText).toContain('Score 88');
+    expect(cardText).not.toContain('Score 22');
   });
 
   test('withheld-score photo sets fall back to normal photo comparison', async () => {
