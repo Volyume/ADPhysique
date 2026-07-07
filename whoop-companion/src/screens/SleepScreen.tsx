@@ -63,6 +63,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
+  const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
   const tonightFocus = sleepFocus({
     sleep,
     capture,
@@ -105,6 +106,32 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             Score capped at {perf.confidenceCapPct}% until overnight coverage/confidence improves.
           </Text>
         ) : null}
+      </Card>
+
+      <SectionLabel>Result check</SectionLabel>
+      <Card>
+        <View style={styles.verdictHead}>
+          <View style={[styles.verdictBadge, { backgroundColor: verdict.color }]}>
+            <Text style={styles.verdictBadgeText}>{verdict.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.verdictTitle}>{verdict.title}</Text>
+            <Text style={styles.verdictBody}>{verdict.body}</Text>
+          </View>
+        </View>
+        <View style={styles.verdictStats}>
+          <Stat label="Window" value={sleep ? formatDuration(sleep.inBedMin) : '-'} />
+          <Stat label="Asleep" value={sleep ? formatDuration(sleep.asleepMin) : '-'} color={colors.sleepTeal} />
+          <Stat label="Vitals" value={verdict.vitalsLabel} color={verdict.vitalsColor} />
+        </View>
+        <NavRow
+          label={verdict.actionLabel}
+          icon={verdict.icon}
+          iconColor={verdict.color}
+          value={verdict.actionValue}
+          onPress={() => nav.navigate(verdict.route)}
+          last
+        />
       </Card>
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
@@ -386,6 +413,107 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   if (today) byDay.set(today.day, today);
   for (const d of recent) byDay.set(d.day, d);
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+}
+
+function sleepVerdict(input: {
+  sleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  capture: ReturnType<typeof appStore.getState>['sleepCapture'];
+  perfCapped: boolean;
+  rmssd: number | null;
+  rhr: number | null;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  vitalsLabel: string;
+  vitalsColor: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  const { sleep, capture } = input;
+  const vitalsReady = input.rmssd != null && input.rhr != null;
+  const vitalsLabel = vitalsReady ? 'ready' : 'limited';
+  const vitalsColor = vitalsReady ? colors.recoveryGreen : colors.recoveryYellow;
+
+  if (!sleep) {
+    return {
+      badge: 'WAIT',
+      title: 'Sleep is not scored yet',
+      body: capture
+        ? 'The app has seen some overnight evidence, but not enough reliable signal to close a sleep result.'
+        : 'Reconnect the strap and let stored history finish syncing before judging recovery.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Sync stored history',
+      actionValue: capture ? `${capture.coveragePct}% coverage` : 'device',
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
+  if (capture && (capture.coveragePct < 60 || capture.signalMin < 150 || input.perfCapped)) {
+    return {
+      badge: 'PART',
+      title: 'Treat this as partial',
+      body: 'The sleep window exists, but the score is still data-limited. Let auto-sync continue or review the window if the timing looks wrong.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: capture.coveragePct < 60 || capture.signalMin < 150 ? 'Sync more data' : 'Review window',
+      actionValue: `${capture.coveragePct}% coverage`,
+      icon: capture.coveragePct < 60 || capture.signalMin < 150 ? 'sync' : 'create',
+      color: colors.recoveryYellow,
+      route: capture.coveragePct < 60 || capture.signalMin < 150 ? { name: 'device' } : { name: 'editSleep' },
+    };
+  }
+
+  const longAutoWindow = sleep.source === 'auto_hr' && sleep.inBedMin >= 10 * 60 && sleep.efficiency >= 0.92;
+  const littleMotionEvidence = capture ? capture.sleepStateMin < 30 && capture.stillMin < 45 : true;
+  if (longAutoWindow && littleMotionEvidence) {
+    return {
+      badge: 'CHECK',
+      title: 'Window may be too generous',
+      body: 'This was a long, high-efficiency auto window with limited still-state evidence. If you were awake in bed, trim it once and the score will recompute.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Adjust sleep window',
+      actionValue: formatDuration(sleep.inBedMin),
+      icon: 'create',
+      color: colors.sleepTeal,
+      route: { name: 'editSleep' },
+    };
+  }
+
+  if (!vitalsReady) {
+    return {
+      badge: 'VITAL',
+      title: 'Sleep scored, vitals limited',
+      body: 'Duration and stages are usable, but recovery will improve once enough clean overnight R-R and heart-rate samples are available.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Open device sync',
+      actionValue: capture ? `${capture.signalMin} min signal` : 'sync',
+      icon: 'sync',
+      color: colors.recoveryYellow,
+      route: { name: 'device' },
+    };
+  }
+
+  return {
+    badge: 'GOOD',
+    title: 'Result looks usable',
+    body: 'Sleep, capture quality and recovery vitals are aligned enough to use today. Keep auto-sync running so trends stay complete.',
+    vitalsLabel,
+    vitalsColor,
+    actionLabel: 'View trends',
+    actionValue: 'sleep',
+    icon: 'trending-up',
+    color: colors.recoveryGreen,
+    route: { name: 'sleepTrends' },
+  };
 }
 
 function sleepFocus(input: {
@@ -672,6 +800,12 @@ const styles = StyleSheet.create({
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
   surplusNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
+  verdictHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  verdictBadge: { width: 52, height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  verdictBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  verdictTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  verdictBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
+  verdictStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   focusHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   focusIcon: { width: 46, height: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   focusIconText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
