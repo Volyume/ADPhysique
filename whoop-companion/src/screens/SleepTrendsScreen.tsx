@@ -418,7 +418,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           value,
           day: d.day,
           color: value != null && metric.band ? bandColors[metric.band(value)] : colors.sleepTeal,
-          opacity: metric.key === 'performance' && lowConfidence ? 0.45 : 0.88,
+          opacity: lowConfidence ? 0.45 : 0.88,
         };
       });
     const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
@@ -491,7 +491,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         {view.bars.some((b) => b.value != null) ? (
           <>
             <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} onSelectDay={(day) => nav.navigate({ name: 'day', day })} />
-            {metric.key === 'performance' ? (
+            {view.quality.low > 0 ? (
               <Text style={styles.chartHint}>Dim bars are low-confidence nights; tap any bar to review the day.</Text>
             ) : null}
           </>
