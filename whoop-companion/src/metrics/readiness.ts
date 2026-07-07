@@ -5,7 +5,13 @@
  * debt and training load.
  */
 
-import { sleepTrustTier } from './sleepTrustWeight';
+import {
+  SLEEP_TRUST_LOW_COVERAGE_PCT,
+  SLEEP_TRUST_LOW_SIGNAL_MIN,
+  SLEEP_TRUST_MEDIUM_COVERAGE_PCT,
+  SLEEP_TRUST_MEDIUM_SIGNAL_MIN,
+  sleepTrustTier,
+} from './sleepTrustWeight';
 
 export type Readiness = {
   score: number; // 0..100
@@ -87,10 +93,10 @@ export function computeTrainingReadiness(input: {
   if (sleepConfidence === 'medium') confidencePct -= 12;
   if (sleepConfidence === 'low') confidencePct -= 30;
   if (sleepPerformance != null && sleepConfidence == null) confidencePct -= 12;
-  if (sleepCoveragePct != null && sleepCoveragePct < 60) confidencePct -= 20;
-  else if (sleepCoveragePct != null && sleepCoveragePct < 80) confidencePct -= 8;
-  if (sleepSignalMin != null && sleepSignalMin < 150) confidencePct -= 20;
-  else if (sleepSignalMin != null && sleepSignalMin < 240) confidencePct -= 8;
+  if (sleepCoveragePct != null && sleepCoveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT) confidencePct -= 20;
+  else if (sleepCoveragePct != null && sleepCoveragePct < SLEEP_TRUST_MEDIUM_COVERAGE_PCT) confidencePct -= 8;
+  if (sleepSignalMin != null && sleepSignalMin < SLEEP_TRUST_LOW_SIGNAL_MIN) confidencePct -= 20;
+  else if (sleepSignalMin != null && sleepSignalMin < SLEEP_TRUST_MEDIUM_SIGNAL_MIN) confidencePct -= 8;
   confidencePct = Math.max(20, Math.min(100, Math.round(confidencePct)));
 
   const confidence = confidencePct >= 80 ? 'high' : confidencePct >= 55 ? 'medium' : 'low';

@@ -8,12 +8,17 @@ export type SleepTrustSource = {
   signalMin?: number | null;
 };
 
+export const SLEEP_TRUST_LOW_COVERAGE_PCT = 60;
+export const SLEEP_TRUST_LOW_SIGNAL_MIN = 150;
+export const SLEEP_TRUST_MEDIUM_COVERAGE_PCT = 80;
+export const SLEEP_TRUST_MEDIUM_SIGNAL_MIN = 240;
+
 export function sleepTrustTier(source: SleepTrustSource | null | undefined): SleepTrustTier {
   if (!source) return 'none';
   const coveragePct = source.coveragePct ?? 100;
   const signalMin = source.signalMin ?? 999;
-  if (source.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 'low';
-  if (source.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 'medium';
+  if (source.confidence === 'low' || coveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT || signalMin < SLEEP_TRUST_LOW_SIGNAL_MIN) return 'low';
+  if (source.confidence === 'medium' || coveragePct < SLEEP_TRUST_MEDIUM_COVERAGE_PCT || signalMin < SLEEP_TRUST_MEDIUM_SIGNAL_MIN) return 'medium';
   return 'high';
 }
 
