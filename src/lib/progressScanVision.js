@@ -537,13 +537,13 @@ export function measureMaskSignals(mask, opts = {}) {
   const blurScore = finiteNumber(opts.blurScore);
 
   const reasons = [];
-  if (lightingScore != null && lightingScore < 0.3) reasons.push('too_dark');
-  if (blurScore != null && blurScore < 0.3) reasons.push('too_blurry');
-  if (framingScore < 0.32) reasons.push('whole_body_not_visible');
-  if (segmentationConfidence < 0.38) reasons.push('segmentation_low_confidence');
-  if (separation < 0.28) reasons.push('clothing_or_background_uncertain');
-  if (poseConfidence < 0.28) reasons.push('pose_not_clear');
-  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 16) reasons.push('camera_tilted');
+  if (lightingScore != null && lightingScore < 0.25) reasons.push('too_dark');
+  if (blurScore != null && blurScore < 0.18) reasons.push('too_blurry');
+  if (framingScore < 0.25) reasons.push('whole_body_not_visible');
+  if (segmentationConfidence < 0.30) reasons.push('segmentation_low_confidence');
+  if (separation < 0.20) reasons.push('clothing_or_background_uncertain');
+  if (poseConfidence < 0.22) reasons.push('pose_not_clear');
+  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 20) reasons.push('camera_tilted');
   if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people');
 
   return {
