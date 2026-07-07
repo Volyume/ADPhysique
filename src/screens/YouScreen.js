@@ -25,6 +25,7 @@ import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { logError } from '../lib/errorLog';
+import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -55,6 +56,18 @@ function NavRow({ icon, label, sub, onPress, pro }) {
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </Card>
   );
+}
+
+function profileFocusLine(profile = {}) {
+  const safeProfile = profile || {};
+  const phase = PHASE_LABELS[safeProfile.trainingPhase] || null;
+  const goal = GOAL_LABELS[safeProfile.trainingGoal] || null;
+  const days = Number(safeProfile.daysPerWeek);
+  return [
+    phase,
+    goal && goal !== 'Not competing' ? goal : null,
+    Number.isFinite(days) && days > 0 ? `${days} days/week` : null,
+  ].filter(Boolean).join(' - ');
 }
 
 export default function YouScreen({ navigation }) {
@@ -117,6 +130,7 @@ export default function YouScreen({ navigation }) {
   const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
   const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
+  const profileFocus = profileFocusLine(userProfile);
 
   const partners = usePartners(isPro ? user?.id : null, tier);
   const partnersSub = isPro
@@ -174,6 +188,7 @@ export default function YouScreen({ navigation }) {
             ) : user?.id ? (
               <Skeleton width={110} height={12} />
             ) : null}
+            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={1}>{profileFocus}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </Card>
@@ -242,8 +257,9 @@ export default function YouScreen({ navigation }) {
             <SectionLabel>Coach actions</SectionLabel>
             <NavRow
               icon="sparkles-outline"
-              label="Go Pro"
+              label="Upgrade to Pro"
               sub="Weekly coaching, nutrition targets, body metrics and progress photos."
+              pro={!isPro}
               onPress={() => navigation.navigate('ProUpgrade')}
             />
             {hasCoachHistory ? (
@@ -317,6 +333,7 @@ const styles = StyleSheet.create({
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   profileName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
   profileStat: { ...type.num('caption'), color: colors.textSecondary },
+  profileFocus: { ...type.captionTight, color: colors.textMuted },
   loadErrorCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -14,6 +14,8 @@
  * element that carries its props, so its onChange/maximumDate are driven here.
  */
 import { create, act } from 'react-test-renderer';
+const fs = require('fs');
+const path = require('path');
 
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
@@ -32,6 +34,12 @@ jest.mock('expo-haptics', () => ({
 import PhotoDetailsSheet from '../PhotoDetailsSheet';
 
 const DAY = 86400000;
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDetailsSheet.js'), 'utf8');
+
+test('date field copy is narrow-screen safe', () => {
+  expect(SOURCE).toMatch(/<Text style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+  expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
+});
 
 function baseProps(overrides = {}) {
   return {

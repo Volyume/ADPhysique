@@ -191,8 +191,8 @@ export default function LogCardioScreen({ navigation, route }) {
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card onPress={() => setActivity(null)} surface="surface2" radius="md" padding="md" style={styles.chosenRow} accessibilityLabel="Change activity">
-            <View style={{ flex: 1 }}>
-              <Text style={styles.chosenName}>{activity.displayName}</Text>
+            <View style={styles.chosenCopy}>
+              <Text style={styles.chosenName} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
               <Text style={styles.chosenMeta}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
             </View>
             <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
@@ -252,7 +252,7 @@ function ActivityList({ items, onPick }) {
       {items.map((a) => (
         <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
           <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={colors.primary} style={styles.activityIcon} />
-          <Text style={styles.activityName}>{a.displayName}</Text>
+          <Text style={styles.activityName} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       ))}
@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
   },
   activityIcon: { marginRight: spacing.sm },
   activityName: { ...type.body, color: colors.textPrimary, flex: 1 },
+  chosenCopy: { flex: 1, minWidth: 0 },
   chosenRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },

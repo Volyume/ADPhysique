@@ -3,6 +3,7 @@ const path = require('path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'AthleteProfileScreen.js'), 'utf8');
 const coachSource = fs.readFileSync(path.join(__dirname, '..', 'YouScreen.js'), 'utf8');
+const settingsProfileSource = fs.readFileSync(path.join(__dirname, '..', 'SettingsProfileScreen.js'), 'utf8');
 
 describe('AthleteProfileScreen physique tile', () => {
   test('uses one adaptive progress-photo / Body fat / Volyume Score tile instead of a permanent Physique Scan stat', () => {
@@ -20,6 +21,9 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);
     expect(source).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
+    expect(source).toMatch(/weightLoggedAt/);
+    expect(source).toMatch(/Open Progress to add body weight/);
+    expect(source).not.toMatch(/Add in Progress/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
     expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>Current focus: \{focusTile\.value\}<\/Text>/);
     expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
@@ -50,5 +54,14 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).not.toMatch(/<Text style=\{styles\.removeAvatarText\}>Remove profile picture<\/Text>/);
     expect(coachSource).toMatch(/import ProfileAvatarMark from '\.\.\/components\/ProfileAvatarMark';/);
     expect(coachSource).toMatch(/presetKey=\{userProfile\?\.avatarPreset\}/);
+  });
+
+  test('Coach and profile settings use product wording, not internal coach-run language', () => {
+    expect(settingsProfileSource).toContain('next weekly check-in');
+    expect(settingsProfileSource).not.toMatch(/weekly coach run/);
+    expect(coachSource).toMatch(/function profileFocusLine\(profile = \{\}\)/);
+    expect(coachSource).toMatch(/<Text style=\{styles\.profileFocus\} numberOfLines=\{1\}>\{profileFocus\}<\/Text>/);
+    expect(coachSource).toMatch(/label="Upgrade to Pro"/);
+    expect(coachSource).toMatch(/pro=\{!isPro\}/);
   });
 });

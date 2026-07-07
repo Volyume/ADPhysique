@@ -113,7 +113,7 @@ export default function PhotoDateRangeSheet({
               accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText}>{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
+              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
 
@@ -125,7 +125,7 @@ export default function PhotoDateRangeSheet({
               accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText}>{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
+              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           </ScrollView>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   sheetScroll: { flexShrink: 1, minHeight: 0 },
   sheetScrollBody: { paddingBottom: spacing.xs },
-  sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
+  sheetTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.md },
   helper: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   sectionLabel: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   dateField: {

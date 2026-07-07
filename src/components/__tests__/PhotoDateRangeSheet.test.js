@@ -13,6 +13,8 @@
  * forcing. The native date picker is stubbed via moduleNameMapper.
  */
 import { create, act } from 'react-test-renderer';
+const fs = require('fs');
+const path = require('path');
 
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
@@ -33,6 +35,12 @@ import PhotoDateRangeSheet from '../PhotoDateRangeSheet';
 const startOfDay = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const endOfDay = (ms) => { const d = new Date(ms); d.setHours(23, 59, 59, 999); return d.getTime(); };
 const day = (y, m, d) => new Date(y, m - 1, d).getTime();
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDateRangeSheet.js'), 'utf8');
+
+test('date range fields are narrow-screen safe', () => {
+  expect(SOURCE.match(/<Text style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
+  expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
+});
 
 function baseProps(overrides = {}) {
   return {

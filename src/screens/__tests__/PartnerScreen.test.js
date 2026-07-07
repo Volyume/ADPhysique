@@ -199,6 +199,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('weekly training status');
     expect(text).toContain('Your weekly sessions');
     expect(text).toContain("Sam's weekly sessions");
+    expect(text).toContain('You have logged 2 of 4.');
+    expect(text).toContain('Choose the number for this week. Sam sees only that number.');
     expect(text).toContain('one fixed cheer a day');
     expect(text).toContain('Private');
     expect(text).toContain('workouts, food, Coach, check-ins, body metrics and photos');
@@ -220,7 +222,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Set');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
-    expect(text).not.toContain('You have logged 2 of 4.');
+    expect(text).toContain('You have logged 2 of 4.');
     await press(tree, "Set this week's sessions");
     expect(allText(tree)).toContain('Weekly sessions');
     expect(findPress(tree, 'Decrease sessions').length).toBeGreaterThan(0);

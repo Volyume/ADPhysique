@@ -1002,7 +1002,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ) : null}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
-          query.trim().length >= 2 && results.length > 0 ? (
+          activeTab !== 'custom' && query.trim().length >= 2 && results.length > 0 ? (
             <TouchableOpacity
               style={styles.footerBtn}
               onPress={gotoCustomReplace}

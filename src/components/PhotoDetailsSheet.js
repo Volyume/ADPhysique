@@ -120,7 +120,7 @@ export default function PhotoDetailsSheet({
               accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText}>{formatProgressPhotoDay(dateMs)}</Text>
+              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
 
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   sheetScroll: { flexShrink: 1, minHeight: 0 },
   sheetScrollBody: { paddingBottom: spacing.xs },
-  sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
+  sheetTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.md },
   sheetIntro: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
   previewWrap: {
     width: '100%',

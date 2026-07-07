@@ -19,4 +19,10 @@ describe('LogCardioScreen duration stepper', () => {
     expect(source).not.toMatch(/styles\.step(?:per|Btn|BtnText|Value)/);
     expect(source).not.toMatch(/accessibilityLabel="(?:Less|More) time"/);
   });
+
+  test('long activity names truncate instead of pushing controls around', () => {
+    expect(source).toMatch(/<Text style=\{styles\.activityName\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(source).toMatch(/<Text style=\{styles\.chosenName\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(source).toMatch(/chosenCopy: \{ flex: 1, minWidth: 0 \}/);
+  });
 });

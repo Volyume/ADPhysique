@@ -91,7 +91,7 @@ describe('progress capture guide copy', () => {
       actionLabel: 'Add missing photo: Add Back photo',
       bestFor: 'Adds to the existing date.',
       recommended: true,
-      recommendationLabel: 'Finish set',
+      recommendationLabel: 'Add missing angle',
     });
     expect(routes[1]).toMatchObject({
       key: 'scan',

@@ -51,6 +51,7 @@ export function buildAthleteProfileSummary({
   return {
     sessions: completedWorkoutRows(workouts).length,
     weight: bwKg,
+    weightLoggedAt: latestWeight?.loggedAt ?? latestWeight?.logged_at ?? null,
     bodyFat: bodyComp?.bodyFatPercent ?? null,
     bodyFatLoggedAt: bodyComp?.loggedAt ?? null,
     latestMetric: metrics?.[0] ?? null,

@@ -196,6 +196,7 @@ export default function AthleteProfileScreen({ navigation }) {
   const [summary, setSummary] = useState({
     sessions: null,
     weight: null,
+    weightLoggedAt: null,
     bodyFat: null,
     bodyFatLoggedAt: null,
     latestMetric: null,
@@ -326,6 +327,9 @@ export default function AthleteProfileScreen({ navigation }) {
   }
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
+  const weightTileSub = summary.weight
+    ? (summary.weightLoggedAt ? `${formatDate(summary.weightLoggedAt)} - latest logged` : 'Profile body weight')
+    : 'Open Progress to add body weight';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
   const showPhysiqueScore = shouldShowPhysiqueScore({
     scan: summary.scan,
@@ -413,7 +417,7 @@ export default function AthleteProfileScreen({ navigation }) {
         ) : null}
 
         <View style={styles.grid}>
-          <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
+          <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
           <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and main lifts'} />
           <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />

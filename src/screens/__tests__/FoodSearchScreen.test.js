@@ -173,6 +173,12 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.plateLogText\}>Log \{plate\.length\} to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
   });
 
+  test('does not duplicate the custom-food CTA while already on the custom tab', () => {
+    expect(SCREEN_SOURCE).toMatch(/if \(activeTab === 'custom'\) \{/);
+    expect(SCREEN_SOURCE).toMatch(/label: 'New custom food'/);
+    expect(SCREEN_SOURCE).toMatch(/activeTab !== 'custom' && query\.trim\(\)\.length >= 2 && results\.length > 0/);
+  });
+
   test('the no-target suggested state can open Nutrition Targets across tabs', () => {
     expect(SCREEN_SOURCE).toMatch(/import \{ navigateCrossTab \} from '\.\.\/navigation\/navigateCrossTab';/);
     expect(SCREEN_SOURCE).toMatch(/Set your targets first and Volyume can suggest meals that fit them\./);

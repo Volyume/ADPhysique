@@ -119,7 +119,7 @@ export function buildProgressStudioCaptureRoutes({
       bestFor: 'Adds to the existing date.',
       actionLabel: `Add missing photo: Add ${missingPoseLabel} photo`,
       recommended: true,
-      recommendationLabel: 'Finish set',
+      recommendationLabel: 'Add missing angle',
     });
   }
 
@@ -166,7 +166,7 @@ export function buildProgressStudioCaptureRoutes({
       ]),
       actionLabel: `Add ${missingPoseLabel} photo`,
       recommended: true,
-      recommendationLabel: 'Finish set',
+      recommendationLabel: 'Add missing angle',
     });
   }
 

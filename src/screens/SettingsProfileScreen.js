@@ -40,7 +40,7 @@ export default function SettingsProfileScreen() {
   // (for sync via users_profile) and the body profile (the engine's source),
   // merging into the existing body-profile row so height/DOB are preserved
   // (saveUserBodyProfile writes the whole row). Targets are not recomputed here:
-  // per founder direction the next weekly coach run picks up the new sex.
+  // per founder direction the next weekly check-in picks up the new sex.
   async function changeSex(value) {
     if (!user?.id || (value !== 'male' && value !== 'female')) return;
     const previous = sex;
@@ -60,7 +60,7 @@ export default function SettingsProfileScreen() {
     const label = SEX_OPTIONS.find((opt) => opt.value === value)?.label || value;
     appAlert(
       'Change biological sex?',
-      `Set biological sex to ${label}. This affects BMR, calorie floors and future nutrition targets. Your current targets are not recalculated until the next weekly coach run.`,
+      `Set biological sex to ${label}. This affects BMR, calorie floors and future nutrition targets. Your current targets are not recalculated until the next weekly check-in.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Update', onPress: () => changeSex(value) },
@@ -103,7 +103,7 @@ export default function SettingsProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={settingsStyles.settingLabel}>Biological sex</Text>
-              <Text style={settingsStyles.settingSub}>Used for calorie floors and nutrition targets. Changes apply on your next weekly coach run.</Text>
+              <Text style={settingsStyles.settingSub}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
