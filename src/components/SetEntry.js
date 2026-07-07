@@ -7,7 +7,7 @@ import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
-const STEPPER_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };
+const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
