@@ -830,15 +830,15 @@ class AppStore extends Store<AppState> {
           );
           return;
         }
-        await ble.writeCommand(cmdSetAlarmTime(alarm.wakeTs));
+        await withTimeout(ble.writeCommand(cmdSetAlarmTime(alarm.wakeTs)), 8000, 'Queued wake alarm');
         await this.saveStrapAlarm(
           { enabled: true, wakeTs: alarm.wakeTs, updatedAt: Date.now(), pendingWrite: null },
           `Queued wake alarm sent on ${context}`,
         );
         return;
       }
-      await ble.writeCommand(cmdDisableAlarm());
-      await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+      await withTimeout(ble.writeCommand(cmdDisableAlarm()), 8000, 'Queued wake alarm disable');
+      await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics').catch(() => {});
       await this.saveStrapAlarm(
         { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null },
         `Queued wake alarm disable sent on ${context}`,
@@ -861,7 +861,7 @@ class AppStore extends Store<AppState> {
       return 'queued';
     }
     try {
-      await ble.writeCommand(cmdSetAlarmTime(wakeTs));
+      await withTimeout(ble.writeCommand(cmdSetAlarmTime(wakeTs)), 8000, 'Wake alarm');
       await this.saveStrapAlarm(alarm, 'Wake alarm set on strap');
       return 'sent';
     } catch {
@@ -882,8 +882,8 @@ class AppStore extends Store<AppState> {
       return 'queued';
     }
     try {
-      await ble.writeCommand(cmdDisableAlarm());
-      await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+      await withTimeout(ble.writeCommand(cmdDisableAlarm()), 8000, 'Wake alarm disable');
+      await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics').catch(() => {});
       await this.saveStrapAlarm(alarm, 'Wake alarm disabled on strap');
       return 'sent';
     } catch {
@@ -896,15 +896,15 @@ class AppStore extends Store<AppState> {
 
   stopStrapHaptics = async (): Promise<void> => {
     const ble = await this.requireCommandChannel('Stop haptics');
-    await ble.writeCommand(cmdStopHaptics());
+    await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics');
     this.setState({ error: null, statusDetail: 'Stop haptics command sent' });
   };
 
   testStrapAlarm = async (): Promise<void> => {
     const ble = await this.requireCommandChannel('Test alarm');
-    await ble.writeCommand(cmdRunAlarm());
+    await withTimeout(ble.writeCommand(cmdRunAlarm()), 8000, 'Test alarm');
     await delay(1200);
-    await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+    await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics').catch(() => {});
     this.setState({ error: null, statusDetail: 'Test alarm buzz sent' });
   };
 
@@ -1691,7 +1691,7 @@ class AppStore extends Store<AppState> {
         await delay(250);
       }
       try {
-        await ble.writeCommand(cmdGetDataRange());
+        await withTimeout(ble.writeCommand(cmdGetDataRange()), 8000, 'History range request');
         this.setState((s) => ({
           historySync: s.historySync
             ? { ...s.historySync, status: 'Data range requested; starting history transfer' }
