@@ -648,17 +648,26 @@ export function WeeklyBars({
       {data.map((d, i) => (
         <View key={i} style={weeklyStyles.col}>
           <Text style={weeklyStyles.val}>{d.display ?? (d.value != null ? `${d.value}` : '')}</Text>
-          <View
-            style={[
-              weeklyStyles.bar,
-              { height: Math.max(2, ((d.value ?? 0) / max) * barArea), backgroundColor: d.color ?? colors.strainBlue },
-            ]}
-          />
+          <AnimatedWeeklyBar height={Math.max(2, ((d.value ?? 0) / max) * barArea)} color={d.color ?? colors.strainBlue} delay={i * 35} />
           <Text style={weeklyStyles.day}>{d.label}</Text>
         </View>
       ))}
     </View>
   );
+}
+
+function AnimatedWeeklyBar({ height, color, delay }: { height: number; color: string; delay: number }) {
+  const animated = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(animated, {
+      toValue: height,
+      duration: 650,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [animated, delay, height]);
+  return <Animated.View style={[weeklyStyles.bar, { height: animated, backgroundColor: color }]} />;
 }
 
 /** A tappable navigation row: icon + label, optional value, chevron. */
