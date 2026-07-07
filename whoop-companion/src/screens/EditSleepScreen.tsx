@@ -52,6 +52,13 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
   const currentConfidence = metric?.sleepDetail?.confidence ?? null;
   const currentCoverage = metric?.sleepDetail?.coveragePct ?? null;
   const currentSignalMin = metric?.sleepDetail?.signalMin ?? null;
+  const previewVerdict = sleepWindowPreview({
+    durationMin: previewDurationMin,
+    hasDetail: !!metric?.sleepDetail,
+    confidence: currentConfidence,
+    coveragePct: currentCoverage,
+    signalMin: currentSignalMin,
+  });
 
   const save = () => {
     const bedEvening = bed.h >= 12;
@@ -104,6 +111,15 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
         <Text style={styles.previewMeta}>
           {new Date(previewStart).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} - {new Date(previewEnd).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
         </Text>
+        <View style={[styles.verdictBox, { borderColor: previewVerdict.color, backgroundColor: previewVerdict.tint }]}>
+          <View style={[styles.verdictBadge, { backgroundColor: previewVerdict.color }]}>
+            <Text style={styles.verdictBadgeText}>{previewVerdict.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.verdictTitle}>{previewVerdict.title}</Text>
+            <Text style={styles.verdictBody}>{previewVerdict.body}</Text>
+          </View>
+        </View>
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -111,6 +127,67 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
       <SecondaryButton title="Clear manual override (auto-detect)" onPress={() => { void appStore.clearManualSleep(targetDay); nav.back(); }} />
     </Screen>
   );
+}
+
+function sleepWindowPreview(input: {
+  durationMin: number;
+  hasDetail: boolean;
+  confidence: 'high' | 'medium' | 'low' | null;
+  coveragePct: number | null;
+  signalMin: number | null;
+}): { badge: string; title: string; body: string; color: string; tint: string } {
+  if (input.durationMin <= 0) {
+    return {
+      badge: 'TIME',
+      title: 'Wake time must follow bed time',
+      body: 'Choose a wake time on the selected morning after the previous-evening bedtime.',
+      color: colors.recoveryRed,
+      tint: `${colors.recoveryRed}12`,
+    };
+  }
+  if (input.durationMin < 180) {
+    return {
+      badge: 'SHORT',
+      title: 'Very short sleep window',
+      body: 'This may be a nap or missed partial sleep. It can be saved, but recovery may stay limited.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+    };
+  }
+  if (input.durationMin > 11 * 60) {
+    return {
+      badge: 'LONG',
+      title: 'Window may include awake time',
+      body: 'Long windows can inflate sleep duration. Trim bed or wake time if you were awake in bed.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+    };
+  }
+  if (!input.hasDetail) {
+    return {
+      badge: 'DATA',
+      title: 'Timing will save before detailed confidence exists',
+      body: 'The app will rescore using whatever strap history is available for this window.',
+      color: colors.strainBlue,
+      tint: `${colors.strainBlue}16`,
+    };
+  }
+  if (input.confidence === 'low' || (input.coveragePct ?? 0) < 60 || (input.signalMin ?? 0) < 150) {
+    return {
+      badge: 'SYNC',
+      title: 'Data confidence is still limited',
+      body: 'Adjusting the window can fix timing, but more synced history is still needed before trusting recovery.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+    };
+  }
+  return {
+    badge: 'GOOD',
+    title: 'Window looks reasonable',
+    body: 'Saving will rescore stages, sleep performance and recovery using this exact window.',
+    color: colors.recoveryGreen,
+    tint: `${colors.recoveryGreen}12`,
+  };
 }
 
 function TimePicker({ value, onChange }: { value: { h: number; m: number }; onChange: (v: { h: number; m: number }) => void }) {
@@ -174,6 +251,11 @@ const styles = StyleSheet.create({
   previewLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4, fontFamily: fonts.textBold },
   previewValue: { fontSize: 28, fontFamily: fonts.black },
   previewMeta: { color: colors.textSecondary, fontSize: 13, marginTop: 3, fontFamily: fonts.text },
+  verdictBox: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 14 },
+  verdictBadge: { width: 48, height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  verdictBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  verdictTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  verdictBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
   stepperWrap: { alignItems: 'center' },
   stepperLabel: { color: colors.textTertiary, fontSize: 11, marginBottom: 6, fontFamily: fonts.text },
   stepperRow: { flexDirection: 'row', gap: 8 },
