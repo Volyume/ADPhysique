@@ -1143,7 +1143,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Keep dated front and back photos in one private library. Clear photo sets can receive a 0-100 Volyume Score, leanness band and progress signal. It tracks visible change over time; it is not a body fat estimate.
+              Keep dated front and back photos in one private library. Clear photo sets can receive a Volyume Score index, leanness band and progress signal. The first score is a baseline; the useful read is how repeatable photos change over time.
             </Text>
           </View>
 
@@ -1166,7 +1166,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.scoreGuideTitle}>What the Volyume Score means</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Volyume compares outline signals from your own clear front and back photos. It gives you a consistent progress marker when the setup is trustworthy, and withholds the score when the photos are not fair to judge.
+                Volyume compares outline signals from your own clear front and back photos. The number is a private progress index, not a body fat percentage or a rating of your physique. Use it with the band, confidence and same-setup comparisons.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
@@ -1229,7 +1229,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved bodyweight, angles and Volyume Score when available.
+              Each photo set shows its date, saved bodyweight, angles and Volyume Score index when available.
             </Text>
           </View>
         ) : null}

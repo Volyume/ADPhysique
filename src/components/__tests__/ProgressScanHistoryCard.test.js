@@ -52,18 +52,18 @@ describe('ProgressScanHistoryCard', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Volyume Score results');
-    expect(text).toContain('private 0-100 physique progress score');
+    expect(text).toContain('private photo progress index');
     expect(text).toContain('not body fat percentage');
     expect(text).toContain('Score for this set');
     expect(text).toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
-    expect(text).toContain('Volyume Score');
+    expect(text).toContain('Score index');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72');
     expect(text).toContain('Show details');
-    expect(text).toContain('Volyume Score 72');
-    expect(text).toContain('visual progress score for photos taken in similar conditions');
+    expect(text).toContain('Volyume Score index 72');
+    expect(text).toContain('private visual progress index for repeatable photos');
     expect(text).toContain('82.5 kg weight snapshot');
 
     const buttons = tree.root.findAllByType(TouchableOpacity);
@@ -80,7 +80,7 @@ describe('ProgressScanHistoryCard', () => {
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
     expect(hiddenText).toContain('Lean band');
-    expect(hiddenText).toContain('Volyume ScoreTrend only');
+    expect(hiddenText).toContain('Score indexTrend only');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
@@ -124,7 +124,7 @@ describe('ProgressScanHistoryCard', () => {
     });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Confidence: Analysis unavailable');
-    expect(text).toContain('Volyume ScoreNot scored');
+    expect(text).toContain('Score indexNot scored');
     expect(text).not.toContain('Confidence: Low');
   });
 
@@ -151,7 +151,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('Confidence: Measured only');
     expect(text).toContain('Leanness bandMeasured only');
     expect(text).toContain('SignalMeasured only');
-    expect(text).toContain('Volyume ScoreNot scored');
+    expect(text).toContain('Score indexNot scored');
     expect(text).not.toContain('Leanness bandBaseline');
     expect(text).not.toContain('Baseline scan');
   });

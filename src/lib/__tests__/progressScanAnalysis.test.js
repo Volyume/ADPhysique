@@ -228,7 +228,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toEqual([]);
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
 
     const summary = measuredSignalsSummaryFromAssets(assets, null, {
       physiqueAssessment: out.physiqueAssessment,
@@ -302,7 +302,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
     expect(out.physiqueAssessment.progressSignal).toBe('baseline');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
   });
 
   test('soft vision warnings lower confidence without erasing a complete measured score', () => {
@@ -362,7 +362,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     ]));
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
@@ -409,7 +409,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
     expect(out.copySummary).toMatch(/not a body fat percentage/i);
   });
 
@@ -650,7 +650,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
     expect(out.comparisonStatus).toBe('not_comparable');
     expect(out.trendDirection).toBe('uncertain');
-    expect(out.summary).toMatch(/not enough measured scan signals/i);
+    expect(out.summary).toMatch(/not enough measured signals/i);
   });
 
   test('legacy estimate fields do not leak into delta explanation copy', () => {
@@ -706,7 +706,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const withoutSide = comparableScan({ id: 'new', side: false });
     expect(scanComparability(withoutSide, previous)).toMatchObject({
       comparable: true,
-      reason: 'Like-for-like front and back scan.',
+      reason: 'Comparable front and back photo set.',
     });
     expect(scanSetupStability(withoutSide, previous).issues).not.toContain('side_pose_set_changed');
 
