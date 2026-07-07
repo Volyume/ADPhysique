@@ -3055,9 +3055,14 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
     });
 
   if (windows.length < 3) return null;
-  const rmssd = windows.map((w) => w.rmssd).sort((a, b) => a - b);
-  const p90 = rmssd[Math.min(rmssd.length - 1, Math.floor((rmssd.length - 1) * 0.9))] ?? 180;
-  const filtered = rmssd.filter((v) => v <= Math.max(40, p90));
+  const restingWindows = rhr == null ? windows : windows.filter((w) => w.avgHr <= rhr + 10);
+  const source = restingWindows.length >= 3 ? restingWindows : windows;
+  const rmssd = source.map((w) => w.rmssd).sort((a, b) => a - b);
+  const med = median(rmssd);
+  const deviations = rmssd.map((v) => Math.abs(v - med)).sort((a, b) => a - b);
+  const mad = median(deviations);
+  const upper = Math.min(160, med + Math.max(18, mad * 3));
+  const filtered = rmssd.filter((v) => v <= upper);
   return round1(median((filtered.length >= 3 ? filtered : rmssd).sort((a, b) => a - b)));
 }
 
