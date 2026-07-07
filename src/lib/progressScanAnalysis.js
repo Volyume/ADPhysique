@@ -37,12 +37,12 @@ const SCORE_WITHHOLD_REASONS = new Set([
 ]);
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
-  { key: 'foundation', label: 'Foundation', min: 0, max: 54 },
-  { key: 'active', label: 'Active', min: 55, max: 64 },
-  { key: 'athletic', label: 'Athletic', min: 65, max: 74 },
-  { key: 'defined', label: 'Defined', min: 75, max: 84 },
-  { key: 'lean', label: 'Lean', min: 85, max: 91 },
-  { key: 'very_lean', label: 'Very Lean', min: 92, max: 96 },
+  { key: 'foundation', label: 'Foundation', min: 0, max: 49 },
+  { key: 'active', label: 'Active', min: 50, max: 59 },
+  { key: 'athletic', label: 'Athletic', min: 60, max: 69 },
+  { key: 'defined', label: 'Defined', min: 70, max: 79 },
+  { key: 'lean', label: 'Lean', min: 80, max: 89 },
+  { key: 'very_lean', label: 'Very Lean', min: 90, max: 96 },
   { key: 'peak_condition', label: 'Peak Condition', min: 97, max: 100 },
 ];
 

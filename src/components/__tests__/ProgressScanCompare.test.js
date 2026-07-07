@@ -122,7 +122,7 @@ describe('ProgressScanCompare component', () => {
     const legacy = scan('legacy', 1, 37);
     legacy.signals.physiqueAssessment.assessmentVersion = 'volyume_physique_scan_score_v1';
     legacy.signals.physiqueAssessment.leannessBandLabel = 'Athletic';
-    expect(scanRangeLabel(legacy)).toBe('Athletic index 71');
+    expect(scanRangeLabel(legacy)).toBe('Defined index 71');
     expect(scanRangeLabel(legacy)).not.toContain('37');
   });
 });
