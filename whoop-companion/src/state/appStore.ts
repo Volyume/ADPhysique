@@ -2816,10 +2816,7 @@ function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is S
   if (!sleep) return false;
   if (manual) return true;
   if (sleepStateWakeConflict(sleep)) return false;
-  if (longAutoSleepNeedsCorroboration(sleep, manual)) {
-    const coveragePct = sleepCoveragePct(sleep);
-    if (sleep.signalMin < 420 || coveragePct < 85) return false;
-  }
+  if (longAutoSleepNeedsCorroboration(sleep, manual)) return false;
   if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
     const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
     if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
@@ -2839,7 +2836,7 @@ function sleepConfidence(
   const longUncorroboratedAuto = longAutoSleepNeedsCorroboration(evidence, manual);
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
-  if (longUncorroboratedAuto && (signalMin < 420 || coveragePct < 85)) return 'low';
+  if (longUncorroboratedAuto) return 'low';
   if (signalMin >= 150 && coveragePct >= 55) return 'medium';
   if (manual && signalMin >= 60 && coveragePct >= 35) return 'medium';
   return 'low';

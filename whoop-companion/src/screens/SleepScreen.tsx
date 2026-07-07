@@ -837,7 +837,7 @@ function sleepScoreDrivers(input: {
       tone: 'data',
       label: 'Corroboration',
       value: `${capture.stillMin} still min`,
-      detail: 'A long HR-only window needs stronger coverage or still-state evidence before it should count as final sleep.',
+      detail: 'A long HR-only window needs still-worn or decoded sleep-state evidence before it should count as final sleep.',
       color: colors.strainBlue,
     });
   }
