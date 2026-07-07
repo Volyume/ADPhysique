@@ -29,6 +29,8 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class ProgressScanImageModule : Module() {
+  private val bundledModelMinimumBytes = 100_000L
+
   private data class DecodedBitmap(
     val bitmap: Bitmap,
     val originalWidth: Int,
@@ -71,15 +73,60 @@ class ProgressScanImageModule : Module() {
         val targetDir = File(context.cacheDir, "progress_scan_models")
         if (!targetDir.exists()) targetDir.mkdirs()
         val target = File(targetDir, safeName)
-        if (!target.exists() || target.length() <= 0L) {
+        if (!target.exists() || target.length() < bundledModelMinimumBytes) {
+          try { target.delete() } catch (_: Throwable) { /* recopy below */ }
           if (!copyFirstBundledModelAsset(context, safeName, target)) {
             promise.resolve(null)
             return@AsyncFunction
           }
         }
-        promise.resolve(if (target.exists() && target.length() > 0L) Uri.fromFile(target).toString() else null)
+        promise.resolve(if (target.exists() && target.length() >= bundledModelMinimumBytes) Uri.fromFile(target).toString() else null)
       } catch (_: Throwable) {
         promise.resolve(null)
+      }
+    }
+
+    AsyncFunction("diagnoseBundledModel") { fileName: String, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(mapOf("errorCode" to "context_unavailable"))
+          return@AsyncFunction
+        }
+        val safeName = File(fileName).name
+        if (safeName.isBlank()) {
+          promise.resolve(mapOf("errorCode" to "blank_file_name"))
+          return@AsyncFunction
+        }
+        val target = File(File(context.cacheDir, "progress_scan_models"), safeName)
+        val declaredCandidates = bundledModelAssetCandidates(safeName)
+        val discoveredCandidates = discoveredBundledModelAssetCandidates(context, safeName)
+        var firstOpenable: String? = null
+        var firstOpenableBytes: Int? = null
+        for (candidate in (declaredCandidates + discoveredCandidates).distinct()) {
+          try {
+            context.assets.open(candidate).use { input ->
+              firstOpenable = candidate
+              firstOpenableBytes = input.available()
+            }
+            break
+          } catch (_: Throwable) {
+            // keep looking
+          }
+        }
+        promise.resolve(
+          mapOf(
+            "safeName" to safeName,
+            "targetExists" to target.exists(),
+            "targetBytes" to if (target.exists()) target.length() else 0L,
+            "candidateCount" to (declaredCandidates + discoveredCandidates).distinct().size,
+            "discoveredCount" to discoveredCandidates.size,
+            "firstOpenableCandidate" to firstOpenable,
+            "firstOpenableBytes" to firstOpenableBytes,
+          ),
+        )
+      } catch (_: Throwable) {
+        promise.resolve(mapOf("errorCode" to "diagnostic_failed"))
       }
     }
 
@@ -227,10 +274,20 @@ class ProgressScanImageModule : Module() {
           }
           .addOnFailureListener {
             prepared.bitmap.recycle()
-            promise.resolve(null)
+            promise.resolve(
+              mapOf(
+                "engine" to "mlkit_selfie_segmentation",
+                "errorCode" to "mlkit_segmentation_failed",
+              ),
+            )
           }
       } catch (_: Throwable) {
-        promise.resolve(null)
+        promise.resolve(
+          mapOf(
+            "engine" to "mlkit_selfie_segmentation",
+            "errorCode" to "mlkit_segmentation_exception",
+          ),
+        )
       }
     }
   }
@@ -389,7 +446,7 @@ class ProgressScanImageModule : Module() {
             input.copyTo(output)
           }
         }
-        if (target.exists() && target.length() > 0L) return true
+        if (target.exists() && target.length() >= bundledModelMinimumBytes) return true
       } catch (_: Throwable) {
         try { target.delete() } catch (_: Throwable) { /* keep looking */ }
       }

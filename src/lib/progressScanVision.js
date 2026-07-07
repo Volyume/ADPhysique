@@ -42,6 +42,20 @@ function sourceProtocolForLog(source) {
   return match ? match[1].toLowerCase() : 'none';
 }
 
+function safeModelDiagnosticForLog(diagnostic = null) {
+  if (!diagnostic || typeof diagnostic !== 'object') return null;
+  return {
+    safeName: diagnostic.safeName || null,
+    targetExists: diagnostic.targetExists === true,
+    targetBytes: diagnosticNumber(diagnostic.targetBytes, 0),
+    candidateCount: diagnosticNumber(diagnostic.candidateCount, 0),
+    discoveredCount: diagnosticNumber(diagnostic.discoveredCount, 0),
+    firstOpenableCandidate: String(diagnostic.firstOpenableCandidate || '').slice(0, 80) || null,
+    firstOpenableBytes: diagnosticNumber(diagnostic.firstOpenableBytes, 0),
+    errorCode: diagnostic.errorCode || null,
+  };
+}
+
 function diagnosticNumber(value, places = 3) {
   const n = finiteNumber(value);
   return n == null ? null : round(n, places);
@@ -106,9 +120,15 @@ export async function resolveProgressScanModelSource() {
     const nativeUri = await imageModule.resolveBundledModel?.(MODEL_FILE_NAME);
     const normalisedNativeUri = normaliseFastTfliteUri(nativeUri);
     if (normalisedNativeUri) return { url: normalisedNativeUri };
+    const nativeDiagnostic = await imageModule.diagnoseBundledModel?.(MODEL_FILE_NAME).catch(() => null);
     if (nativeUri) {
       logWarn('progressScanVision.nativeModelSourceRejected', 'progress_scan_native_model_source_unusable', {
         modelSourceUrlProtocol: sourceProtocolForLog({ url: nativeUri }),
+        nativeModelDiagnostic: safeModelDiagnosticForLog(nativeDiagnostic),
+      });
+    } else if (nativeDiagnostic) {
+      logWarn('progressScanVision.nativeModelSourceMissing', 'progress_scan_native_model_source_missing', {
+        nativeModelDiagnostic: safeModelDiagnosticForLog(nativeDiagnostic),
       });
     }
   } catch (_) { /* fall through to Expo Asset resolution */ }
@@ -655,6 +675,30 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       contentRect: extracted.contentRect,
       pose,
     };
+
+    const model = await loadProgressScanModel();
+    if (model) {
+      let mask;
+      try {
+        const input = rgbBytesToFloat32(rgb);
+        const outputs = await model.run([exactBuffer(input)]);
+        mask = outputToFloat32Array(outputs);
+      } catch (_) {
+        modelUnavailableReason = 'model_run_failed';
+        const result = unavailableVisionResult('model_run_failed');
+        logVisionDiagnosticIfNeeded('progressScanVision.modelRunFailed', { ...result, pose });
+      }
+      if (mask) {
+        const result = measureMaskSignals(mask, {
+          ...common,
+          modelBacked: true,
+          engine: 'fast_tflite',
+        });
+        logVisionDiagnosticIfNeeded('progressScanVision.fastTflite', result);
+        if (result?.modelBacked || !result?.abstentionReasons?.includes('no_person_detected')) return result;
+      }
+    }
+
     const nativeSegmentation = await imageModule.segmentPersonMask?.(
       uri,
       PROGRESS_SCAN_MODEL_INPUT_SIZE,
@@ -674,29 +718,20 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       logVisionDiagnosticIfNeeded('progressScanVision.nativeSegmentation', result);
       return result;
     }
-    const model = await loadProgressScanModel();
+    if (nativeSegmentation?.errorCode) {
+      logWarn('progressScanVision.nativeSegmentationUnavailable', 'progress_scan_native_segmentation_unavailable', {
+        pose,
+        engine: nativeSegmentation.engine || 'mlkit_selfie_segmentation',
+        errorCode: nativeSegmentation.errorCode,
+      });
+    }
     if (!model) {
       const result = unavailableVisionResult(modelUnavailableReason || 'model_unavailable');
       logVisionDiagnosticIfNeeded('progressScanVision.modelUnavailable', { ...result, pose });
       return result;
     }
-    let mask;
-    try {
-      const input = rgbBytesToFloat32(rgb);
-      const outputs = await model.run([exactBuffer(input)]);
-      mask = outputToFloat32Array(outputs);
-    } catch (_) {
-      modelUnavailableReason = 'model_run_failed';
-      const result = unavailableVisionResult('model_run_failed');
-      logVisionDiagnosticIfNeeded('progressScanVision.modelRunFailed', { ...result, pose });
-      return result;
-    }
-    const result = measureMaskSignals(mask, {
-      ...common,
-      modelBacked: true,
-      engine: 'fast_tflite',
-    });
-    logVisionDiagnosticIfNeeded('progressScanVision.fastTflite', result);
+    const result = unavailableVisionResult(modelUnavailableReason || 'mask_shape_unusable');
+    logVisionDiagnosticIfNeeded('progressScanVision.modelMaskUnavailable', { ...result, pose });
     return result;
   } catch (e) {
     logError('progressScanVision.analysePhoto', e, { pose });

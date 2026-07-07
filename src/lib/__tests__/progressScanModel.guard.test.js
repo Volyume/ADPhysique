@@ -41,6 +41,7 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(vision).toMatch(/Asset\.fromModule\(source\)/);
     expect(vision).toMatch(/normaliseFastTfliteUri/);
     expect(vision).toMatch(/resolveBundledModel\?\.\(MODEL_FILE_NAME\)/);
+    expect(vision).toMatch(/diagnoseBundledModel\?\.\(MODEL_FILE_NAME\)/);
     expect(vision).toMatch(/let modelSource = null/);
     expect(vision).toMatch(/modelSource = await resolveProgressScanModelSource\(\)/);
     expect(vision).toMatch(/if \(!modelSource\)/);
@@ -56,12 +57,16 @@ describe('Progress Scan on-device TFLite model guard', () => {
     const androidModule = read('modules/progress-scan-image/android/src/main/java/expo/modules/progressscanimage/ProgressScanImageModule.kt');
     const iosModule = read('modules/progress-scan-image/ios/ProgressScanImageModule.swift');
     expect(androidModule).toMatch(/AsyncFunction\("resolveBundledModel"\)/);
+    expect(androidModule).toMatch(/AsyncFunction\("diagnoseBundledModel"\)/);
+    expect(androidModule).toMatch(/bundledModelMinimumBytes = 100_000L/);
     expect(androidModule).toMatch(/copyFirstBundledModelAsset/);
     expect(androidModule).toMatch(/assets_ml_\$base/);
     expect(androidModule).toMatch(/discoveredBundledModelAssetCandidates/);
     expect(androidModule).toMatch(/context\.assets\.list/);
     expect(androidModule).toMatch(/Uri\.fromFile\(target\)\.toString\(\)/);
     expect(iosModule).toMatch(/AsyncFunction\("resolveBundledModel"\)/);
+    expect(iosModule).toMatch(/AsyncFunction\("diagnoseBundledModel"\)/);
+    expect(iosModule).toMatch(/bundledModelMinimumBytes = 100_000/);
     expect(iosModule).toMatch(/progress_scan_models/);
     expect(iosModule).toMatch(/assets_ml_\\\(base\)_\\\(ext\)/);
     expect(iosModule).toMatch(/urls\(forResourcesWithExtension: nil/);
