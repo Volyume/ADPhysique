@@ -2699,7 +2699,13 @@ function sleepConfidence(
 ): SleepConfidence {
   const evidencePct = sleepEvidencePct(evidence);
   const corroborated = evidencePct >= 25;
+  const longUncorroboratedAuto =
+    !manual &&
+    (evidence?.inBedMin ?? 0) >= 9 * 60 &&
+    evidencePct < 10 &&
+    (evidence?.sleepStateMin ?? 0) < 30;
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
+  if (longUncorroboratedAuto && (signalMin < 420 || coveragePct < 85)) return 'low';
   if (signalMin >= 150 && coveragePct >= 55) return 'medium';
   if (manual && signalMin >= 60 && coveragePct >= 35) return 'medium';
   return 'low';
