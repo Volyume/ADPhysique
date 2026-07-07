@@ -42,7 +42,7 @@ import { getAllProgrammes } from '../lib/database';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
-import { KEPT_LINE, clampAim } from '../lib/partners/intention';
+import { KEPT_LINE } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
 import {
   SHARE_WIN_POLICY,
@@ -71,6 +71,7 @@ try {
 } catch (_) { /* lands with C3; until then, no moments */ }
 
 const PRO_MAX_PAIRS = 3;
+const REDEEM_SYNC_POLL_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 // Persisted dismissal of the archived-streak reconnection surface, so it never
 // nags: once dismissed for a pair it stays hidden across launches (D5-B3).
 const RECONNECT_DISMISS_KEY = '@volyume_partner_reconnect_dismissed_v1';
@@ -96,6 +97,9 @@ function weekPhrase(name, week, resting) {
 function cheerFailureMessage(error) {
   if (error === 'not_active') {
     return 'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.';
+  }
+  if (error === 'partner_syncing') {
+    return 'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
@@ -203,20 +207,17 @@ function blockStatusCopy(block, partnerName, userId) {
 }
 
 function PartnerGuidedWeekCard({
-  pair, name, plan, onSetAim, onCheer, onShareWins, suppressCheerAction = false,
+  pair, name, plan, onCheer, onShareWins, suppressCheerAction = false,
 }) {
   const supportPlan = plan || buildPartnerSupportPlan(pair, name);
   const action = supportPlan.primaryAction;
   const showAction = action && !(suppressCheerAction && action.key === 'cheer');
-  const actionIcon = action?.key === 'set_aim'
-    ? 'calendar-outline'
-    : action?.key === 'cheer'
-      ? 'hand-left-outline'
-      : 'trophy-outline';
-  const steps = (supportPlan.steps || []).filter((step) => step.key !== 'share').slice(0, 3);
+  const actionIcon = action?.key === 'cheer'
+    ? 'hand-left-outline'
+    : 'trophy-outline';
+  const steps = (supportPlan.steps || []).slice(0, 3);
   function pressAction() {
-    if (action?.key === 'set_aim') onSetAim(pair);
-    else if (action?.key === 'cheer') onCheer(pair);
+    if (action?.key === 'cheer') onCheer(pair);
     else onShareWins(pair);
   }
   return (
@@ -393,7 +394,7 @@ function LocalReadNotice({ onRefresh }) {
 }
 
 function PairCard({
-  pair, moment, onCheer, onManage, onOpenBlock, onSetAim, onReconnect,
+  pair, moment, onCheer, onManage, onOpenBlock, onReconnect,
   reconnectDismissed, onDismissReconnect, onOpenShareWins, onRevokeWin, userId,
 }) {
   const name = pair.partnerFirstName || 'Your partner';
@@ -463,7 +464,6 @@ function PairCard({
         pair={pair}
         name={name}
         plan={supportPlan}
-        onSetAim={onSetAim}
         onCheer={onCheer}
         onShareWins={onOpenShareWins}
         suppressCheerAction={!!moment}
@@ -548,11 +548,9 @@ export default function PartnerScreen({ route }) {
   const [blockSheetPair, setBlockSheetPair] = useState(null);
   const [programmes, setProgrammes] = useState(null);
 
-  // D5-A weekly intention sheet (a stepper) + D5-B1 acknowledgement picker, each
-  // scoped to one pair. reconnectDismissed is the persisted set of pairs whose
-  // archived-streak reconnection surface has been dismissed (D5-B3).
-  const [aimSheetPair, setAimSheetPair] = useState(null);
-  const [aimValue, setAimValue] = useState(1);
+  // D5-B1 acknowledgement picker, scoped to one pair. reconnectDismissed is the
+  // persisted set of pairs whose archived-streak reconnection surface has been
+  // dismissed (D5-B3).
   const [ackSheetPair, setAckSheetPair] = useState(null);
   const [ackSendingKey, setAckSendingKey] = useState(null);
   const [shareWinsPair, setShareWinsPair] = useState(null);
@@ -648,6 +646,13 @@ export default function PartnerScreen({ route }) {
   useEffect(() => {
     if (redeemSyncing && (p.pairs || []).length > 0) setRedeemSyncing(false);
   }, [redeemSyncing, p.pairs]);
+
+  useEffect(() => {
+    if (!REDEEM_SYNC_POLL_ENABLED) return undefined;
+    if (!redeemSyncing || typeof retryPartners !== 'function') return undefined;
+    const id = setInterval(() => { retryPartners({ silent: true }); }, 2000);
+    return () => clearInterval(id);
+  }, [redeemSyncing, retryPartners]);
 
   useEffect(() => {
     if (!incomingShareWinType || p.loading) return;
@@ -810,7 +815,7 @@ export default function PartnerScreen({ route }) {
     }
     if (!r?.ok && r?.error !== 'already_cheered') {
       logError('PartnerScreen.handleSendAck', new Error(r?.error || 'unknown'), { userId: user?.id });
-      toast.show(cheerFailureMessage(r?.error), { variant: 'error' });
+      toast.show(cheerFailureMessage(r?.error), { variant: r?.error === 'partner_syncing' ? 'warning' : 'error' });
     }
   }
 
@@ -837,25 +842,6 @@ export default function PartnerScreen({ route }) {
       toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
     } else {
       toast.show('Could not delete that win right now. Open Partners again and try once more.', { variant: 'error' });
-    }
-  }
-
-  // ── Weekly intention (D5-A) ──
-  function openAimSheet(pair) {
-    // Default to the member's own aim, or their existing weekly planned count,
-    // clamped to a sane 1..14. Confirming is a one-tap "aim", not an obligation.
-    const planned = Number(pair.myWeek?.plannedCount) || Number(pair.myWeek?.planned) || 0;
-    setAimValue(clampAim(pair.myAim > 0 ? pair.myAim : (planned || 3)));
-    setAimSheetPair(pair);
-  }
-
-  async function confirmAim(pair) {
-    const aim = clampAim(aimValue);
-    setAimSheetPair(null);
-    const r = await p.setIntention(pair.id, aim);
-    if (!r?.ok) {
-      logError('PartnerScreen.confirmAim', new Error(r?.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not save your weekly sessions right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
 
@@ -1012,7 +998,6 @@ export default function PartnerScreen({ route }) {
                 onCheer={openAckSheet}
                 onManage={setManagePair}
                 onOpenBlock={openBlockSheet}
-                onSetAim={openAimSheet}
                 onReconnect={openAckSheet}
                 reconnectDismissed={reconnectDismissed.includes(pair.id)}
                 onDismissReconnect={dismissReconnect}
@@ -1023,15 +1008,15 @@ export default function PartnerScreen({ route }) {
             ))}
 
             {canInviteAnother ? (
-              <TouchableOpacity
-                style={styles.inviteAnother}
+              <Button
+                title="Invite another partner"
+                variant="outline"
+                icon="person-add-outline"
+                fullWidth
+                style={styles.inviteAnotherButton}
                 onPress={openJourney}
-                accessibilityRole="button"
                 accessibilityLabel="Invite another partner"
-              >
-                <Text style={styles.inviteAnotherText}>Invite another partner</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
-              </TouchableOpacity>
+              />
             ) : null}
 
             {pending ? (
@@ -1072,14 +1057,15 @@ export default function PartnerScreen({ route }) {
               accessibilityLabel="Invite someone you train with"
             />
 
-            <TouchableOpacity
-              style={styles.textRow}
+            <Button
+              title={codeEntryOpen ? 'Hide code entry' : 'I have a code'}
+              variant="outline"
+              icon="key-outline"
+              fullWidth
+              style={styles.secondaryFullButton}
               onPress={() => setCodeEntryOpen((v) => !v)}
-              accessibilityRole="button"
               accessibilityLabel="I have a code"
-            >
-              <Text style={styles.textRowText}>I have a code</Text>
-            </TouchableOpacity>
+            />
 
             {codeEntryOpen ? (
               <View style={styles.codeRow}>
@@ -1189,17 +1175,6 @@ export default function PartnerScreen({ route }) {
         ) : null}
       </BottomSheet>
 
-      {/* ── Weekly-aim sheet (D5-A) ── */}
-      <BottomSheet visible={!!aimSheetPair} onClose={() => setAimSheetPair(null)} accessibilityLabel="This week's sessions" scroll>
-        {aimSheetPair ? (
-          <AimSheetBody
-            value={aimValue}
-            onChange={setAimValue}
-            onConfirm={() => confirmAim(aimSheetPair)}
-          />
-        ) : null}
-      </BottomSheet>
-
       {/* ── Acknowledgement picker (D5-B1) ── */}
       <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send a cheer" scroll>
         {ackSheetPair ? (
@@ -1219,50 +1194,6 @@ export default function PartnerScreen({ route }) {
         ) : null}
       </BottomSheet>
     </SafeAreaView>
-  );
-}
-
-// D5-A: the weekly-aim stepper. Intention, not obligation — a calm "aim" you
-// confirm, never a target you must hit. Numerals, no guilt copy.
-function AimSheetBody({ value, onChange, onConfirm }) {
-  const v = clampAim(value);
-  return (
-    <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Weekly sessions</Text>
-      <Text style={styles.blockPitch}>
-        Pick the number of workouts you expect this week. Your partner sees the number only. This is not a Coach target and it does not change your plan.
-      </Text>
-      <View style={styles.stepperRow}>
-        <TouchableOpacity
-          style={styles.stepperBtn}
-          onPress={() => onChange(clampAim(v - 1))}
-          disabled={v <= 1}
-          hitSlop={hitSlop}
-          accessibilityRole="button"
-          accessibilityLabel="Decrease sessions"
-        >
-          <Ionicons name="remove" size={iconSize.md} color={v <= 1 ? colors.textMuted : colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.stepperValue} accessibilityLabel={`${v} sessions this week`}>{v}</Text>
-        <TouchableOpacity
-          style={styles.stepperBtn}
-          onPress={() => onChange(clampAim(v + 1))}
-          disabled={v >= 14}
-          hitSlop={hitSlop}
-          accessibilityRole="button"
-          accessibilityLabel="Increase sessions"
-        >
-          <Ionicons name="add" size={iconSize.md} color={v >= 14 ? colors.textMuted : colors.primary} />
-        </TouchableOpacity>
-      </View>
-      <Button
-        title="Save"
-        style={styles.primaryBtn}
-        textStyle={styles.primaryBtnText}
-        onPress={onConfirm}
-        accessibilityLabel="Save this week's sessions"
-      />
-    </View>
   );
 }
 
@@ -1823,24 +1754,7 @@ const styles = StyleSheet.create({
   reconnectDismiss: { paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
   reconnectDismissText: { ...type.label, color: colors.textSecondary },
 
-  // D5-A aim stepper + D5-B1 acknowledgement rows
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  stepperBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: { ...type.display, color: colors.textPrimary, minWidth: 56, textAlign: 'center' },
+  // D5-B1 acknowledgement rows
   ackRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2003,16 +1917,7 @@ const styles = StyleSheet.create({
   cheerPillText: { ...type.label, color: colors.onPrimary },
   cheerPillTextDone: { color: colors.textSecondary },
 
-  // Invite-another text row
-  inviteAnother: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    minHeight: 44,
-  },
-  inviteAnotherText: { ...type.body, color: colors.primary },
+  inviteAnotherButton: { marginTop: spacing.xs },
 
   // Pending card
   pendingCard: {
@@ -2077,7 +1982,7 @@ const styles = StyleSheet.create({
   },
   howLine: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20, flex: 1 },
   textRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, minHeight: 44 },
-  textRowText: { ...type.body, color: colors.primary },
+  secondaryFullButton: { marginTop: spacing.xs },
 
   // Code entry
   codeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },

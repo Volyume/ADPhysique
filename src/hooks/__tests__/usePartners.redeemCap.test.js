@@ -97,6 +97,8 @@ function renderHook(tier) {
 beforeEach(() => {
   mockLocalPartnershipRows = [];
   jest.clearAllMocks();
+  db.getPartnershipsLocal.mockImplementation(async () => mockLocalPartnershipRows);
+  db.getActivePartnerCount.mockResolvedValue(0);
 });
 
 describe('usePartners redeem enforces the partner cap', () => {
@@ -331,6 +333,17 @@ describe('usePartners redeem enforces the partner cap', () => {
       sentOn: expect.any(String),
       kind: 'proud',
     });
+  });
+
+  test('cheer reports syncing instead of a hard failure when the accepted pair is not visible yet', async () => {
+    service.sendCheer
+      .mockResolvedValueOnce({ ok: false, error: 'not_active' });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.cheer('p1', 'proud', true); });
+    expect(r).toEqual({ ok: false, error: 'partner_syncing' });
+    expect(service.sendCheer).toHaveBeenCalledTimes(1);
+    expect(db.setLocalPartnerCheerSent).not.toHaveBeenCalled();
   });
 
   test('share win retries after a stale partnership response once the pair is visible', async () => {

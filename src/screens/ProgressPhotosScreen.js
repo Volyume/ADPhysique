@@ -69,12 +69,12 @@ import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
 import ProgressScanCompare from '../components/ProgressScanCompare';
-import ProgressScanHistoryCard from '../components/ProgressScanHistoryCard';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
+import { progressScanAssessmentForDisplay, progressScanScoreForDisplay } from '../lib/progressScanDisplay';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -750,28 +750,6 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
   }
 
-  async function deleteScanEntry(scan) {
-    if (!userId || !scan?.id || readOnly) return;
-    appAlert('Delete photo set?', 'This removes every photo in this set, plus its saved Volyume Score, from this device.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete set',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const deleted = await deleteProgressScanSession(userId, scan.id, { deleteFiles: true });
-            if (!deleted) throw new Error('progress_scan_delete_failed');
-            await refresh();
-            toast.show('Photo set deleted.', { variant: 'success' });
-          } catch (e) {
-            logError('ProgressPhotos.deleteScan', e, { userId, scanId: scan.id });
-            toast.show('Could not delete that photo set. Please try again.', { variant: 'error' });
-          }
-        },
-      },
-    ]);
-  }
-
   async function onScanCaptured(name, saved, flowOverride = null, poseOverride = null) {
     const flow = flowOverride || scanFlow;
     const pose = poseOverride || capturePose;
@@ -1031,6 +1009,21 @@ export default function ProgressPhotosScreen({ navigation }) {
     { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
   ];
   const showStudioStats = !!latestPhoto || !!latestScan;
+  function libraryScanSummary(scan) {
+    if (!scan) return null;
+    const assessment = progressScanAssessmentForDisplay(scan);
+    const score = progressScanScoreForDisplay(scan);
+    const scoreValue = suppressed || hideExactScans ? 'Hidden' : (score != null ? String(score) : 'Not scored');
+    const bandValue = assessment?.leannessBandLabel || (score == null ? 'Not scored' : 'Baseline');
+    const signalValue = suppressed
+      ? 'Hidden'
+      : (assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || (score == null ? 'Not scored' : 'Baseline'));
+    return [
+      { label: 'Score', value: scoreValue },
+      { label: 'Leanness', value: bandValue },
+      { label: 'Signal', value: signalValue },
+    ];
+  }
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
     const completeness = buildCheckInCompletenessModel(item);
@@ -1041,12 +1034,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       : `${item.poses.length}/${CORE_POSES.length} poses`;
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
     const scanForDay = scanForCheckIn(item);
-    const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
-    const roundedScanScore = roundedScore(scanScore);
-    const scoreText = roundedScanScore != null
-      ? (suppressed || hideExactScans ? 'Index hidden' : `Index ${roundedScanScore}`)
-      : null;
-    const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
+    const scanSummary = libraryScanSummary(scanForDay);
+    const metaText = [weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
     return (
       <TouchableOpacity
@@ -1096,6 +1085,16 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
           </View>
+          {scanSummary ? (
+            <View style={styles.libraryScoreRow}>
+              {scanSummary.map((part) => (
+                <View key={part.label} style={styles.libraryScoreCell}>
+                  <Text style={styles.libraryScoreLabel}>{part.label}</Text>
+                  <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
           <View style={styles.checkInCompleteness}>
             <View style={styles.checkInCompletenessTop}>
               <Text style={styles.checkInCompletenessLabel}>{completeness.label}</Text>
@@ -1169,7 +1168,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Add dated front, side and back photos. Clear front and back photos can receive a Volyume Score: a private progress index for like-for-like comparisons, not body fat.
+              Add 2-3 clear photos. Volyume scans them and gives you a private score to compare change over time.
             </Text>
           </View>
 
@@ -1195,7 +1194,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   icon="camera-outline"
                   onPress={onAdd}
                   fullWidth={false}
-                  style={styles.heroPrimaryAction}
+                  style={styles.heroActionButton}
                   accessibilityLabel="Add photo set"
                 />
               ) : null}
@@ -1203,10 +1202,10 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Button
                   title={compareButtonTitle}
                   icon="git-compare-outline"
-                  variant="tertiary"
+                  variant="outline"
                   onPress={canCompareScans ? openScanCompare : openCompare}
                   fullWidth={false}
-                  style={styles.heroSecondaryAction}
+                  style={styles.heroActionButton}
                   accessibilityLabel={canCompareScans ? 'Compare two Volyume Score entries' : 'Compare two photos'}
                 />
               ) : null}
@@ -1239,24 +1238,22 @@ export default function ProgressPhotosScreen({ navigation }) {
           </Card>
         ) : null}
 
-        {!loading && visibleScans.length > 0 ? (
-          <ProgressScanHistoryCard
-            scans={visibleScans}
-            hideExact={hideExactScans}
-            suppressed={suppressed}
-            readOnly={readOnly}
-            onToggleHideExact={toggleHideExactScans}
-            onDeleteScan={deleteScanEntry}
-            onOpenPhoto={openViewer}
-          />
-        ) : null}
-
         {!loading && photos.length > 0 ? (
           <View style={styles.libraryHeader}>
-            <Text style={styles.libraryTitle}>Photo library</Text>
-            <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved bodyweight, angles and Volyume Score when available.
-            </Text>
+            <Text style={styles.libraryTitle}>Progress library</Text>
+            {visibleScans.length > 0 ? (
+              <TouchableOpacity
+                onPress={toggleHideExactScans}
+                hitSlop={8}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: hideExactScans }}
+                accessibilityLabel={hideExactScans ? 'Show score values' : 'Hide score values'}
+                style={styles.libraryScoreToggle}
+              >
+                <Ionicons name={hideExactScans ? 'eye-off-outline' : 'eye-outline'} size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.libraryScoreToggleText}>{hideExactScans ? 'Show score' : 'Hide score'}</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ) : null}
 
@@ -1330,10 +1327,11 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.actionRow}>
             <Button
               title={scanShareItems.length >= 2 ? 'Share progress card' : 'Share photos'}
-              variant="tertiary"
+              variant="outline"
               size="sm"
               fullWidth={false}
               icon="share-outline"
+              style={styles.shareActionButton}
               onPress={openShare}
               accessibilityLabel="Share progress"
             />
@@ -1859,14 +1857,12 @@ const styles = StyleSheet.create({
   studioMetricValue: { ...type.label, color: colors.textPrimary, lineHeight: 20 },
   heroActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  heroPrimaryAction: { flexGrow: 1, flexBasis: '100%' },
-  heroSecondaryAction: { flexGrow: 1, minWidth: 132 },
+  heroActionButton: { flex: 1 },
   loadErrorCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
@@ -1883,13 +1879,25 @@ const styles = StyleSheet.create({
   loadErrorButton: { alignSelf: 'flex-start' },
   readOnlyNote: { ...type.caption, color: colors.textMuted },
   libraryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  libraryTitle: { ...type.title, color: colors.textPrimary },
-  librarySubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  libraryTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
+  libraryScoreToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  libraryScoreToggleText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
@@ -1939,6 +1947,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
+  shareActionButton: { flex: 1 },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   loadingIndicator: { marginVertical: spacing.xxl },
   monthHeader: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
@@ -1998,6 +2007,22 @@ const styles = StyleSheet.create({
   setupQualityPillStrong: { backgroundColor: colors.primaryBg },
   setupQualityText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   setupQualityTextStrong: { color: colors.primary },
+  libraryScoreRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  libraryScoreCell: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  libraryScoreLabel: { ...type.caption, color: colors.textMuted },
+  libraryScoreValue: { ...type.label, color: colors.textPrimary, lineHeight: 18 },
   checkInCompleteness: { gap: spacing.xs },
   checkInCompletenessTop: {
     flexDirection: 'row',

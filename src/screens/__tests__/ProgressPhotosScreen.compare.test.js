@@ -274,7 +274,7 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(text).toContain('Progress Photos');
     expect(text).toContain('Private by default');
     expect(text).toContain('Nothing is shared or exported unless you choose it.');
-    expect(text).toContain('private progress index for like-for-like comparisons');
+    expect(text).toContain('private score to compare change over time');
     expect(text).not.toContain('Latest result');
     expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');
@@ -482,9 +482,9 @@ describe('ProgressPhotosScreen compare entry', () => {
     const tree = await render([late, early], { scans });
     const cardText = JSON.stringify(checkInFor(tree, late));
 
-    expect(cardText).toContain('Index 88');
-    expect(cardText).not.toContain('Index 22');
-    expect(cardText).not.toContain('Score 88');
+    expect(cardText).toContain('"children":"Score"');
+    expect(cardText).toContain('"children":"88"');
+    expect(cardText).not.toContain('"children":"22"');
   });
 
   test('withheld-score photo sets fall back to normal photo comparison', async () => {

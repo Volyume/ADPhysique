@@ -4,7 +4,6 @@ const path = require('path');
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
 const SCAN_COPY = fs.readFileSync(path.resolve(__dirname, '../../lib/progressScanCopy.js'), 'utf8');
 const CONTROLLER = fs.readFileSync(path.resolve(__dirname, '../../lib/progressPhotosController.js'), 'utf8');
-const SCAN_HISTORY = fs.readFileSync(path.resolve(__dirname, '../../components/ProgressScanHistoryCard.js'), 'utf8');
 
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
@@ -15,9 +14,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/`index \$\{score\}`/);
     expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
     expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
-    expect(SCAN_HISTORY).toMatch(/Volyume Score results/);
-    expect(SCAN_HISTORY).toMatch(/Score for this set/);
-    expect(SCAN_HISTORY).toMatch(/front\/back outline signals plus scan quality/);
+    expect(SCREEN).toMatch(/function libraryScanSummary\(scan\)/);
+    expect(SCREEN).toMatch(/label: 'Score'/);
+    expect(SCREEN).toMatch(/label: 'Leanness'/);
+    expect(SCREEN).toMatch(/label: 'Signal'/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -33,12 +33,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('scan entries expose stored poses/photos through the existing full-size viewer', () => {
-    expect(SCREEN).toMatch(/<ProgressScanHistoryCard/);
-    expect(SCREEN).toMatch(/onOpenPhoto=\{openViewer\}/);
-    expect(SCAN_HISTORY).toMatch(/scan\.assets\.map/);
-    expect(SCAN_HISTORY).toMatch(/onOpenPhoto\?\.\(asset\.photoName\)/);
-    expect(SCAN_HISTORY).not.toMatch(/scanStatsCopy/);
-    expect(SCAN_HISTORY).not.toMatch(/scanReadCopy/);
+    expect(SCREEN).not.toMatch(/<ProgressScanHistoryCard/);
+    expect(SCREEN).toMatch(/const scanSummary = libraryScanSummary\(scanForDay\);/);
+    expect(SCREEN).toMatch(/scanSummary\.map/);
+    expect(SCREEN).toMatch(/onPress=\{readOnly \? undefined : \(\) => openViewer\(cover\.name\)\}/);
   });
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
@@ -52,10 +50,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Score detail is hidden right now/);
-    expect(SCAN_HISTORY).toMatch(/if \(hideExact && scan\?\.deltaExplanation\?\.trendSummary\)/);
-    expect(SCAN_HISTORY).toMatch(/whyLabel\(scan, \{ suppressed, hideExact \}\)/);
-    expect(SCAN_HISTORY).toMatch(/weightLabel\(scan, \{ suppressed, hideExact \}\)/);
+    expect(SCREEN).toMatch(/const scoreValue = suppressed \|\| hideExactScans \? 'Hidden'/);
+    expect(SCREEN).toMatch(/assessment\?\.progressSignalLabel \|\| scan\?\.deltaExplanation\?\.trendSummary/);
     expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
 
@@ -71,7 +67,6 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/if \(!deleted\) throw new Error\('progress_scan_discard_failed'\)/);
     expect(SCREEN).toMatch(/cleanupRetakenScanPose/);
     expect(SCREEN).toMatch(/cleanupUnattachedSavedScanPhoto/);
-    expect(SCREEN).toMatch(/deleteScanEntry/);
     expect(SCREEN).toMatch(/deleteViewerProgressPhoto/);
     expect(SCREEN).toMatch(/progress_scan_asset_save_failed/);
     expect(SCREEN).toMatch(/const scanSaveInFlightRef = useRef\(new Set\(\)\);/);
@@ -113,7 +108,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Your private physique record/);
     expect(SCREEN).toMatch(/Private by default/);
     expect(SCREEN).toMatch(/Nothing is shared or exported unless you choose it/);
-    expect(SCREEN).toMatch(/private progress index for like-for-like comparisons, not body fat/);
+    expect(SCREEN).toMatch(/Volyume scans them and gives you a private score to compare change over time/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);
@@ -137,11 +132,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('destructive scan copy says a set delete removes the full scored set', () => {
-    expect(SCREEN).toMatch(/Delete photo set\?/);
-    expect(SCREEN).toMatch(/This removes every photo in this set/);
-    expect(SCREEN).toMatch(/text: 'Delete set'/);
-    expect(SCREEN).toMatch(/Photo set deleted\./);
-    expect(SCREEN).toMatch(/deleteProgressScanSession\(userId, scan\.id, \{ deleteFiles: true \}\)/);
+    expect(SCREEN).toMatch(/const owningScan = findScanForPhotoName\(visibleScans, name\);/);
+    expect(SCREEN).toMatch(/deleteProgressScanSession\(uid, owningScan\.id, \{ deleteFiles: true \}\)/);
+    expect(SCREEN).toMatch(/setViewerOpen\(false\);/);
   });
 
   test('camera fallback keeps the active scan pose instead of discarding the draft', () => {
