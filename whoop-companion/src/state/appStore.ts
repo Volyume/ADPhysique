@@ -2770,7 +2770,13 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
   if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
   const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.25)));
-  return Math.round(Math.max(artifactFloor, sorted[idx] as number));
+  const cleanMinuteHrs = mins
+    .map((p) => p.hr)
+    .filter((hr) => hr >= artifactFloor && hr <= artifactCeiling)
+    .sort((a, b) => a - b);
+  const p20Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.2)));
+  const distributionFloor = cleanMinuteHrs[p20Idx] ?? artifactFloor;
+  return Math.round(Math.max(artifactFloor, distributionFloor, sorted[idx] as number));
 }
 
 function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | null {
@@ -2812,7 +2818,8 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
     .map((w) => w.rmssd)
     .sort((a, b) => a - b);
   const restfulMedian = median(restful);
-  return round1(Math.min(restfulMedian, overnightMedian * 1.25));
+  const blended = overnightMedian * 0.75 + restfulMedian * 0.25;
+  return round1(Math.min(blended, overnightMedian * 1.12));
 }
 
 function cleanSampleRr(sample: HrSampleRow): number[] {

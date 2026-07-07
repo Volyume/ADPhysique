@@ -237,7 +237,7 @@ function findSleepWindow(
   const activeMin = samples.filter((s) => s.motion != null && s.motion >= 0.35).length;
   const activeRatio = activeMin / Math.max(1, samples.length);
   if (spanMin >= opts.minWindowMin && spanMin <= opts.maxWindowMin && p50 <= 85 && p80 - p20 <= 25 && activeRatio <= 0.08) {
-    return { start: 0, end: samples.length };
+    return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? { start: 0, end: samples.length };
   }
 
   return null;
