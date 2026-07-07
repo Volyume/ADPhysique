@@ -2666,13 +2666,15 @@ function splitContiguousMinutes(
 
 function napIsReliable(nap: SleepResult): boolean {
   const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
+  const stillPct = Math.round(((nap.stillMin ?? 0) / Math.max(1, nap.inBedMin)) * 100);
   return (
     nap.inBedMin >= 20 &&
     nap.inBedMin <= 180 &&
     nap.asleepMin >= 15 &&
-    nap.signalMin >= 15 &&
-    coveragePct >= 50 &&
-    nap.efficiency >= 0.55
+    nap.signalMin >= 20 &&
+    coveragePct >= 60 &&
+    stillPct >= 20 &&
+    nap.efficiency >= 0.6
   );
 }
 
