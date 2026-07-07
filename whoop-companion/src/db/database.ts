@@ -44,6 +44,8 @@ export type SleepDetail = {
   stressLow: number | null;
   source?: string | null; // auto_hr | manual_hr | manual_duration
   signalMin?: number | null; // minutes with HR samples in the scored window
+  motionMin?: number | null; // minutes with step/activity evidence in the scored window
+  sleepStateMin?: number | null; // minutes with decoded band sleep-state evidence
   coveragePct?: number | null; // HR sample coverage across the scored window
   confidence?: 'high' | 'medium' | 'low' | null;
 };
@@ -386,6 +388,8 @@ function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail |
     stressMed: cleanPct(detail.stressMed),
     stressLow: cleanPct(detail.stressLow),
     signalMin: cleanNonNegative(detail.signalMin),
+    motionMin: cleanNonNegative(detail.motionMin),
+    sleepStateMin: cleanNonNegative(detail.sleepStateMin),
     coveragePct: cleanPct(detail.coveragePct),
     confidence,
   };

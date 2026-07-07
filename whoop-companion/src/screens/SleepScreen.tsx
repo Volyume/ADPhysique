@@ -80,10 +80,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           centerMain={perf ? `${perf.score}%` : '—'}
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
-        {perf ? <Text style={styles.estimate}>composite estimate · contributors are exact</Text> : null}
+        {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
       </Card>
 
-      {/* The four WHOOP contributors with Poor / Sufficient / Optimal bands */}
+      {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
       <Card>
         {perf ? (
           perf.contributors.map((c) => (
@@ -105,20 +105,16 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         </View>
       </Card>
 
-      <SectionLabel>Sleep quality</SectionLabel>
+      <SectionLabel>Quality factors</SectionLabel>
       <Card>
         {sleepScore ? (
           <>
-            <View style={styles.scoreHead}>
-              <Text style={[styles.scoreValue, { color: sleepQualityColor(sleepScore.score) }]}>{sleepScore.score}</Text>
-              <Text style={styles.scoreLabel}>Oura-style quality score</Text>
-            </View>
             {sleepScore.contributors.map((c) => (
               <ScoreRow key={c.key} label={c.label} value={c.score} detail={c.detail} />
             ))}
           </>
         ) : (
-          <Empty text="Sleep Quality appears after a scored sleep." />
+          <Empty text="Quality factors appear after a scored sleep." />
         )}
       </Card>
 
@@ -140,6 +136,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Stat label="Signal minutes" value={capture.signalMin} />
               <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
               <Stat label="Source" value={sourceLabel(capture.source)} />
+            </View>
+            <View style={[styles.grid, { marginTop: 12 }]}>
+              <Stat label="Motion evidence" value={capture.motionMin} />
+              <Stat label="Sleep-state evidence" value={capture.sleepStateMin} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
@@ -439,9 +439,6 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
 
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
-  scoreHead: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 },
-  scoreValue: { fontSize: 44, fontFamily: fonts.black, marginRight: 10 },
-  scoreLabel: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.textSemibold },
   scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },

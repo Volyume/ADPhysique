@@ -40,6 +40,8 @@ export type SleepResult = {
   neededMin: number;
   source: SleepSource;
   signalMin: number; // minutes that had a heart-rate sample
+  motionMin: number; // minutes with movement/activity evidence
+  sleepStateMin: number; // minutes with decoded band sleep-state evidence
 };
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
@@ -348,6 +350,8 @@ export function durationOnlySleep(
     neededMin,
     source: 'manual_duration',
     signalMin: 0,
+    motionMin: 0,
+    sleepStateMin: 0,
   };
 }
 
@@ -383,6 +387,8 @@ export function computeSleep(
   const window = expandToMinutes(rawWindow, opts.startTs, opts.endTs);
   if (window.length < 1) return null;
   const hrs = window.map((s) => s.hr).filter((v): v is number => v != null);
+  const motionMin = window.filter((s) => s.motion != null).length;
+  const sleepStateMin = window.filter((s) => s.bandSleepState != null).length;
   if (hrs.length === 0) {
     const start = opts.startTs ?? window[0]?.ts ?? 0;
     const end = opts.endTs ?? ((window[window.length - 1]?.ts ?? start) + 60000);
@@ -478,5 +484,7 @@ export function computeSleep(
     neededMin,
     source: opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr'),
     signalMin: hrs.length,
+    motionMin,
+    sleepStateMin,
   };
 }

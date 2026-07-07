@@ -128,6 +128,13 @@ function main() {
       `  ${hint.day}: rows=${hint.rows} wake=${hint.counts[0] ?? 0} still=${hint.counts[1] ?? 0} asleep=${hint.counts[2] ?? 0} up=${hint.counts[3] ?? 0}`,
     );
   }
+  const motionHints = findSleepMotionHints(decoded.steps);
+  console.log('sleep_motion_hints:');
+  for (const hint of motionHints) {
+    console.log(
+      `  ${hint.day}: rows=${hint.rows} evidence_min=${hint.evidenceMin} moving_min=${hint.movingMin} still_min=${hint.stillMin}`,
+    );
+  }
 }
 
 function hexToBytes(hex) {
@@ -725,6 +732,76 @@ function findSleepStateHints(sleepStates) {
   return [...byAnchor.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([day, rows]) => ({ day, rows: rows.length, counts: countSleepStates(rows) }));
+}
+
+function findSleepMotionHints(steps) {
+  if (!steps.length) return [];
+  const byAnchor = new Map();
+  for (const s of steps) {
+    const d = new Date(s.ts);
+    const hour = d.getHours() + d.getMinutes() / 60;
+    if (hour < 20 && hour >= 12) continue;
+    const anchor = new Date(s.ts);
+    if (hour >= 20) anchor.setDate(anchor.getDate() + 1);
+    anchor.setHours(0, 0, 0, 0);
+    const day = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}-${String(anchor.getDate()).padStart(2, '0')}`;
+    const list = byAnchor.get(day) ?? [];
+    list.push(s);
+    byAnchor.set(day, list);
+  }
+  return [...byAnchor.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([day, rows]) => {
+      const motion = sleepMotionByMinute(rows);
+      const values = [...motion.values()];
+      return {
+        day,
+        rows: rows.length,
+        evidenceMin: values.length,
+        movingMin: values.filter((v) => v > 0.4).length,
+        stillMin: values.filter((v) => v <= 0.4).length,
+      };
+    });
+}
+
+function sleepMotionByMinute(rows) {
+  const out = new Map();
+  const mark = (minute, motion) => {
+    out.set(minute, Math.max(out.get(minute) ?? 0, motion));
+  };
+
+  const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
+  for (const row of sorted) {
+    const minute = Math.floor(row.ts / 60000);
+    if (row.activityClass === 0) mark(minute, 0);
+    else if (row.activityClass === 1 || row.activityClass === 2) mark(minute, 1);
+  }
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    const gapMin = Math.max(1, Math.round((cur.ts - prev.ts) / 60000));
+    if (gapMin > 30) continue;
+
+    let delta = cur.counter - prev.counter;
+    if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) delta += 65_536;
+    if (delta <= 0) continue;
+
+    const stepRate = delta / gapMin;
+    if (stepRate < 1 && !(delta >= 10 && gapMin <= 15)) continue;
+
+    const motion = stepRate >= 8 ? 1 : 0.55;
+    const startMinute = Math.floor(prev.ts / 60000) + 1;
+    const endMinute = Math.floor(cur.ts / 60000);
+    const fillInterval = gapMin <= 8 || stepRate >= 5;
+    if (fillInterval) {
+      for (let minute = startMinute; minute <= endMinute; minute += 1) mark(minute, motion);
+    } else {
+      mark(endMinute, motion);
+    }
+  }
+
+  return out;
 }
 
 function countSleepStates(rows) {

@@ -103,6 +103,33 @@ const METRICS: TrendMetric[] = [
     hours: true,
     pick: (d) => (d.sleepDetail?.restorativeMin != null ? d.sleepDetail.restorativeMin / 60 : null),
   },
+  {
+    key: 'confidence',
+    title: 'Capture Confidence',
+    hours: false,
+    pick: (d) => confidenceScore(d.sleepDetail?.confidence),
+    band: confidenceBand,
+    bandLabels: ['High', 'Medium', 'Low'],
+  },
+  {
+    key: 'coverage',
+    title: 'HR Coverage',
+    hours: false,
+    pick: (d) => nullableClampPct(d.sleepDetail?.coveragePct),
+    band: confidenceBand,
+    bandLabels: ['High', 'Medium', 'Low'],
+  },
+  {
+    key: 'motion_evidence',
+    title: 'Motion Evidence',
+    hours: false,
+    pick: (d) =>
+      d.sleepDetail?.inBedMin && d.sleepDetail.motionMin != null
+        ? nullableClampPct(Math.round((d.sleepDetail.motionMin / Math.max(1, d.sleepDetail.inBedMin)) * 100))
+        : null,
+    band: confidenceBand,
+    bandLabels: ['High', 'Medium', 'Low'],
+  },
 ];
 
 function fmtHM(h: number): string {
@@ -111,6 +138,19 @@ function fmtHM(h: number): string {
 }
 function fmtVal(v: number, hours: boolean): string {
   return hours ? `${fmtHM(v)} hr` : `${Math.round(v)}%`;
+}
+
+function confidenceScore(confidence: 'high' | 'medium' | 'low' | null | undefined): number | null {
+  if (confidence === 'high') return 100;
+  if (confidence === 'medium') return 70;
+  if (confidence === 'low') return 40;
+  return null;
+}
+
+function confidenceBand(v: number): Band {
+  if (v >= 85) return 'optimal';
+  if (v >= 60) return 'sufficient';
+  return 'poor';
 }
 
 export function SleepTrendsScreen({ nav }: { nav: Nav }) {
