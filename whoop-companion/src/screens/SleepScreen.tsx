@@ -484,6 +484,23 @@ function sleepVerdict(input: {
   const vitalsLabel = vitalsReady ? 'ready' : 'limited';
   const vitalsColor = vitalsReady ? colors.recoveryGreen : colors.recoveryYellow;
 
+  if (capture && sleepStateWakeConflict(capture)) {
+    return {
+      badge: 'CHECK',
+      title: sleep ? 'Sleep window needs review' : 'Sleep candidate rejected',
+      body: sleep
+        ? 'Decoded strap-state evidence is mostly wake, so this result is capped until the window is reviewed or more history arrives.'
+        : 'Decoded strap-state evidence is mostly wake, so Pulse is not treating the HR window as sleep automatically.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Review sleep window',
+      actionValue: sleepStateWakeDisplay(capture),
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
+
   if (!sleep) {
     return {
       badge: 'WAIT',
@@ -498,21 +515,6 @@ function sleepVerdict(input: {
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
-    };
-  }
-
-  if (capture && sleepStateWakeConflict(capture)) {
-    return {
-      badge: 'CHECK',
-      title: 'Sleep window needs review',
-      body: 'Decoded strap-state evidence is mostly wake, so this result is capped until the window is reviewed or more history arrives.',
-      vitalsLabel,
-      vitalsColor,
-      actionLabel: 'Review sleep window',
-      actionValue: sleepStateWakeDisplay(capture),
-      icon: 'create',
-      color: colors.recoveryRed,
-      route: { name: 'editSleep' },
     };
   }
 
@@ -595,6 +597,18 @@ function sleepFocus(input: {
   route: Parameters<Nav['navigate']>[0];
 } {
   const capture = input.capture;
+  if (capture && sleepStateWakeConflict(capture)) {
+    return {
+      badge: 'CHECK',
+      title: 'Review the sleep window',
+      body: 'Decoded strap-state evidence is mostly wake. Let sync finish, then adjust the window if you know you were asleep.',
+      actionLabel: 'Adjust sleep window',
+      actionValue: sleepStateWakeDisplay(capture),
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
   if (!input.sleep) {
     return {
       badge: 'SYNC',

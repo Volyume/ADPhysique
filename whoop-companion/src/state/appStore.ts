@@ -2802,6 +2802,7 @@ function sleepCoveragePct(sleep: SleepResult): number {
 function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
   if (!sleep) return false;
   if (manual) return true;
+  if (sleepStateWakeConflict(sleep)) return false;
   if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
     const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
     if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
@@ -3089,6 +3090,9 @@ function sleepCaptureNote(input: {
       return 'Medium-confidence HR-only sleep estimate; still-worn corroboration is sparse, so the score is capped.';
     }
     return 'Medium-confidence sleep estimate; more synced coverage can still refine the score.';
+  }
+  if (!input.hasSleep && input.hasCandidate && sleepStateWakeConflict(input.evidence) && !input.manual) {
+    return 'A possible sleep window was rejected because decoded strap-state evidence is mostly wake. Review the window or let auto sync finish before trusting it.';
   }
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
