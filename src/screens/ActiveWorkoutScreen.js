@@ -1997,7 +1997,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseNameRow}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>
               <TouchableOpacity
                 style={styles.swapBtn}
                 onPress={handleOpenSwap}
@@ -2186,8 +2186,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 orientation/beat lines. */}
             {routineExercise && (
               <View style={styles.targetRow}>
-                <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.targetText} numberOfLines={2}>
+                <Ionicons name="flag-outline" size={12} color={colors.textMuted} />
+                <Text style={styles.targetText} numberOfLines={1}>
                   Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets - {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                 </Text>
               </View>
@@ -3447,7 +3447,7 @@ const styles = StyleSheet.create({
   notesExpanded: { gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  exerciseName: { flex: 1, fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  exerciseName: { flex: 1, fontSize: fontSize.lg, lineHeight: 23, fontWeight: fontWeight.black, color: colors.textPrimary },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
@@ -3460,8 +3460,8 @@ const styles = StyleSheet.create({
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  targetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
-  targetText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 20 },
+  targetText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, fontWeight: fontWeight.semibold },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs2, borderWidth: 1, borderColor: colors.border, gap: spacing.xxs },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
