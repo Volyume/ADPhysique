@@ -75,7 +75,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         </View>
         <View style={styles.sourceRow}>
           <Stat label="Recovery vitals" value={`${readiness.trustedReady}/3`} color={readiness.trustedReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
-          <Stat label="Raw candidates" value={`${readiness.candidatesReady}/2`} color={readiness.candidatesReady > 0 ? colors.sleepTeal : colors.textTertiary} />
+          <Stat label="Raw candidates" value={`${readiness.candidatesReady}/2`} color={readiness.rawColor} />
           <Stat label="Raw rows" value={effectiveSync?.rawVitalSamples ?? '-'} />
         </View>
         <NavRow
@@ -128,10 +128,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.footnote}>
-        Blood Oxygen and Skin Temperature are experimental raw WHOOP 5 history candidates. They are
-        displayed only when enough valid candidates land inside confirmed sleep, and they do not count
-        in the headline range score until the decode is confirmed against more captures. The heart
-        rhythm screen is a wellness feature, not an ECG or a medical diagnosis.
+        Blood Oxygen, Skin Temperature and rhythm screening are wellness signals. They are not medical diagnostics.
       </Text>
     </Screen>
   );
@@ -183,9 +180,10 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
       badge: 'SYNC',
       color: colors.strainBlue,
       title: 'Recovery vitals need a fuller night',
-      body: 'RHR, HRV and respiratory rate need enough clean overnight heart-rate and R-R signal before recovery can be trusted.',
+      body: 'RHR, HRV and respiratory rate need more clean overnight heart-rate and R-R signal.',
       trustedReady,
       candidatesReady,
+      rawColor: colors.textTertiary,
       actionLabel: 'Sync overnight history',
       actionValue: `${trustedReady}/3 ready`,
       icon: 'sync',
@@ -198,9 +196,10 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
       badge: 'RAW',
       color: colors.recoveryYellow,
       title: 'Raw sensor candidates are missing',
-      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature appear only after a confirmed sleep window has enough valid raw vital candidates.',
+      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature need valid raw candidates inside confirmed sleep.',
       trustedReady,
       candidatesReady,
+      rawColor: hasRawRows ? colors.recoveryYellow : colors.textTertiary,
       actionLabel: 'Check device sync',
       actionValue: hasRawRows ? `${candidatesReady}/2 candidates` : 'no raw rows',
       icon: 'sync',
@@ -213,9 +212,10 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
       badge: 'PART',
       color: colors.sleepTeal,
       title: 'Raw vitals partially decoded',
-      body: 'One raw sensor candidate has enough sleep-window samples. Keep syncing future nights before treating these experimental fields as trendable.',
+      body: 'One raw candidate has enough sleep-window samples. Future nights will tell whether it is trendable.',
       trustedReady,
       candidatesReady,
+      rawColor: colors.recoveryYellow,
       actionLabel: 'Review metric detail',
       actionValue: `${candidatesReady}/2 candidates`,
       icon: 'analytics',
@@ -227,9 +227,10 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
     badge: 'GOOD',
     color: colors.recoveryGreen,
     title: 'Health data is ready',
-    body: 'Trusted recovery vitals are populated and raw sensor candidates have enough sleep-window samples for review.',
+    body: 'Trusted recovery vitals and raw sleep-window candidates are available for review.',
     trustedReady,
     candidatesReady,
+    rawColor: colors.recoveryGreen,
     actionLabel: 'Open trends',
     actionValue: 'health',
     icon: 'trending-up',
