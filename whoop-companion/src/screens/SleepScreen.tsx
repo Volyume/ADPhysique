@@ -61,6 +61,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
   const captureAction = capture ? sleepCaptureAction(capture) : null;
+  const perfScore = perf ? displayPct(perf.score) : null;
+  const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
@@ -76,10 +78,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       {/* Sleep Performance composite ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
-          value={perf ? perf.score / 100 : 0}
+          value={perfScore != null ? perfScore / 100 : 0}
           color={colors.sleepTeal}
           centerTop="Sleep Performance"
-          centerMain={perf ? `${perf.score}%` : '—'}
+          centerMain={perfScore != null ? `${perfScore}%` : '—'}
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
         {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
@@ -100,15 +102,22 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
       <Card>
         {perf ? (
-          perf.contributors.map((c) => (
-            <ContribBand
-              key={c.key}
-              label={c.label}
-              value={c.value}
-              band={c.band}
-              suffix={c.key === 'highStress' ? '%' : '%'}
-            />
-          ))
+          <>
+            {perf.contributors.map((c) => (
+              <ContribBand
+                key={c.key}
+                label={c.label}
+                value={c.value}
+                band={c.band}
+                suffix={c.key === 'highStress' ? '%' : '%'}
+              />
+            ))}
+            {surplusSleepMin > 0 ? (
+              <Text style={styles.surplusNote}>
+                You slept {formatDuration(surplusSleepMin)} beyond today's calculated need; Sleep Performance is capped at 100%.
+              </Text>
+            ) : null}
+          </>
         ) : (
           <Empty text="Your Sleep Performance and its four contributors appear after a night with the strap." />
         )}
@@ -453,6 +462,11 @@ function sleepQualityColor(score: number): string {
   return colors.recoveryRed;
 }
 
+function displayPct(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 function fmtMin(minOfDay: number): string {
   const h = Math.floor(minOfDay / 60) % 24;
   const m = Math.round(minOfDay % 60);
@@ -519,6 +533,7 @@ const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
+  surplusNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
