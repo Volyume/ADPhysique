@@ -34,6 +34,7 @@ const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
   { key: 0.85, name: 'Perform', pct: '85%', desc: 'Balance sleep with performance' },
   { key: 1.0, name: 'Peak', pct: '100%', desc: 'Fully optimise recovery' },
 ];
+const SMART_WINDOWS = [0, 15, 30, 45] as const;
 
 export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const need = useStoreSelector(appStore, (s) => s.sleepNeed);
@@ -51,10 +52,15 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   // hit your goal accounts for your typical sleep efficiency; the suggested
   // bedtime is your wake time minus that. Wake time is user-set and persisted.
   const [wakeMin, setWakeMin] = useState(7 * 60); // default 07:00
+  const [smartWindowMin, setSmartWindowMin] = useState(30);
   useEffect(() => {
     void kvGet('wakeTime').then((v) => {
       const n = v ? Number(v) : NaN;
       if (Number.isFinite(n)) setWakeMin(n);
+    });
+    void kvGet('smartWakeWindowMin').then((v) => {
+      const n = v ? Number(v) : NaN;
+      if (SMART_WINDOWS.includes(n as (typeof SMART_WINDOWS)[number])) setSmartWindowMin(n);
     });
   }, []);
   const setWake = (m: number) => {
@@ -62,12 +68,17 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     setWakeMin(next);
     void kvSet('wakeTime', String(next));
   };
+  const setSmartWindow = (m: number) => {
+    setSmartWindowMin(m);
+    void kvSet('smartWakeWindowMin', String(m));
+  };
   const effSamples = recentDays
     .map((d) => d.sleepDetail?.efficiency)
     .filter((v): v is number => v != null && v > 0);
   const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
   const tibNeededMin = Math.round(targetMin / Math.max(0.5, expectedEff));
   const bedMin = wakeMin - tibNeededMin;
+  const smartStartMin = wakeMin - smartWindowMin;
   const nextWakeTs = nextWakeTimestamp(wakeMin);
   const connected = status === 'connected';
   const alarmMeta =
@@ -190,13 +201,27 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={styles.alarmRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.alarmTitle}>Strap haptic alarm</Text>
+            <Text style={styles.alarmTitle}>Wake window</Text>
             <Text style={styles.alarmMeta}>{alarmMeta}</Text>
           </View>
           <Text style={styles.alarmTime}>{fmtClock(wakeMin)}</Text>
         </View>
+        <View style={styles.smartSummary}>
+          <Text style={styles.smartText}>
+            {smartWindowMin > 0
+              ? `${fmtClock(smartStartMin)}-${fmtClock(wakeMin)} window; strap fallback at latest wake time.`
+              : `Fixed wake alarm at ${fmtClock(wakeMin)}.`}
+          </Text>
+        </View>
+        <View style={styles.windowChips}>
+          {SMART_WINDOWS.map((m) => (
+            <Pressable key={m} onPress={() => setSmartWindow(m)} style={[styles.windowChip, smartWindowMin === m && styles.windowChipOn]}>
+              <Text style={[styles.windowText, smartWindowMin === m && styles.windowTextOn]}>{m === 0 ? 'Fixed' : `${m}m`}</Text>
+            </Pressable>
+          ))}
+        </View>
         <PrimaryButton
-          title={alarmBusy === 'set' ? (connected ? 'Setting...' : 'Queueing...') : `${connected ? 'Set' : 'Queue'} strap alarm for ${fmtClock(wakeMin)}`}
+          title={alarmBusy === 'set' ? (connected ? 'Setting...' : 'Queueing...') : `${connected ? 'Set' : 'Queue'} latest alarm for ${fmtClock(wakeMin)}`}
           onPress={() => void setWakeAlarm()}
           disabled={!!alarmBusy}
         />
@@ -206,8 +231,8 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           disabled={!!alarmBusy}
         />
         <Text style={styles.planNote}>
-          The alarm uses the wake-up time above. If the strap is disconnected, Pulse queues it and writes it
-          automatically on the next command-channel connection.
+          Pulse stores the wake window locally and arms the strap at the latest wake time so you still have a
+          reliable haptic fallback if the phone is asleep or disconnected.
         </Text>
       </Card>
 
@@ -261,7 +286,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
       ) : null}
 
       <Text style={styles.alarmNote}>
-        Smart-window alarms are not enabled yet; this sets a fixed haptic wake alarm at your planned wake time.
+        Keep background sync protection on for the best chance of updating the strap before your wake window.
       </Text>
     </Screen>
   );
@@ -303,4 +328,11 @@ const styles = StyleSheet.create({
   alarmMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   alarmTime: { color: colors.sleepTeal, fontSize: 24, fontFamily: fonts.black },
   planNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
+  smartSummary: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginBottom: 12 },
+  smartText: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, fontFamily: fonts.textSemibold },
+  windowChips: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  windowChip: { flex: 1, borderRadius: 8, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.surface },
+  windowChipOn: { backgroundColor: colors.white, borderColor: colors.white },
+  windowText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.textBold },
+  windowTextOn: { color: '#000' },
 });
