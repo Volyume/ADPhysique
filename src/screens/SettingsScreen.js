@@ -101,7 +101,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
-          sub="Coach tone, steps and cardio"
+          sub="Coach tone, cardio and weekly check-ins"
           onPress={() => navigation.navigate('SettingsCoaching')}
         />
         {tier === 'pro' ? (
@@ -164,7 +164,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="heart-outline"
             label={getHealthProviderLabel()}
-            sub="Weight, steps and workouts"
+            sub="Weight and workouts"
             onPress={() => navigation.navigate('SettingsHealth')}
           />
         )}

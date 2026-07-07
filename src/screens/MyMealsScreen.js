@@ -178,7 +178,7 @@ export default function MyMealsScreen({ navigation, route }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.meta}>
-            {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} · {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.totals.protein}g protein
+            {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} | {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {item.totals.protein}g protein
           </Text>
         </View>
         <View style={styles.rowActions}>

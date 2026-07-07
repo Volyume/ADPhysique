@@ -186,11 +186,11 @@ export default function Article9ConsentScreen({ navigation }) {
           'Everything you log to your food diary',
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
-          'Progress photos you choose to take, plus Physique Scan quality, confidence, leanness band, Volyume Score and progress signal when you use that feature',
+          'Progress photos you choose to take, plus photo quality, confidence, leanness band, Volyume Score and progress signal when you use photo analysis',
         ]} />
 
         <Text style={styles.body}>
-          Physique Scan is a visual progress tool, not a medical assessment, DEXA scan, or exact body fat percentage. It may abstain or ask for a retake when photo quality is poor.
+          Volyume Score is a visual progress tool, not a medical assessment, DEXA scan, or exact body fat percentage. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
         <Text style={styles.subhead}>An automated safety check:</Text>
@@ -202,12 +202,12 @@ export default function Article9ConsentScreen({ navigation }) {
         <BulletList items={[
           'Never sell it',
           'Never share it with advertisers',
-          'Never use it to train a public AI model',
+          'Never use your photos or health data for advertising or third-party model training',
         ]} />
 
         <Text style={styles.subhead}>Where it lives:</Text>
         <BulletList items={[
-          'On your phone, in encrypted local storage. Progress photos and scan image files stay on this device unless you choose to share or export them',
+          'On your phone, in encrypted local storage. Progress photo image files stay on this device unless you choose to share or export them',
           'In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it',
           'If you delete your account, cloud removal starts immediately, this device is wiped, and backup copies are purged within 30 days',
         ]} />

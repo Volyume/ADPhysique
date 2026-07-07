@@ -10,8 +10,8 @@ const scan = {
   qualityLabel: 'good',
   deltaExplanation: {
     comparisonStatus: 'comparable',
-    summary: 'Volyume Score is down 4 points against the last like-for-like scan.',
-    trendSummary: 'Progress Signal is positive against the last like-for-like scan.',
+    summary: 'Volyume Score is down 4 points against the last comparable photo set.',
+    trendSummary: 'Progress Signal is positive against the last comparable photo set.',
   },
   trendDirection: 'down',
   stats: { photoCount: 2, weightKg: 82.5, poses: ['front', 'back'] },
@@ -63,7 +63,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('72');
     expect(text).toContain('Show details');
     expect(text).toContain('Volyume Score 72');
-    expect(text).toContain('visual progress score for like-for-like progress');
+    expect(text).toContain('visual progress score for photos taken in similar conditions');
     expect(text).toContain('82.5 kg weight snapshot');
 
     const buttons = tree.root.findAllByType(TouchableOpacity);

@@ -71,14 +71,14 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the plan library',
-    description: "Choose a ready-made plan. Precision Coaching keeps adjusting whichever plan you're on.",
+    description: "Choose a ready-made plan. The Coach keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {
     id: 'manual',
     icon: 'create-outline',
     title: 'Build your own',
-    description: 'Hand-pick every exercise and day. Precision Coaching keeps reading your training the same way.',
+    description: 'Hand-pick every exercise and day. The Coach keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -724,7 +724,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Precision Coaching adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
+                  The Coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>

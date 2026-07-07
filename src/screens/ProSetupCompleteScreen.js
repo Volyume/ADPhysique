@@ -397,8 +397,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={styles.routineTitle}>4. Check in once a week</Text>
                 <Text style={styles.routineBody}>
                   {firstReviewLabel
-                    ? `Keep logging your morning weight. Your first review lands on ${firstReviewLabel} and takes about two minutes. Precision Coaching then explains any calorie or training change before you apply it.`
-                    : 'At the end of your training week, review how it went. Precision Coaching then explains any calorie or training change before you apply it.'}
+                    ? `Keep logging your morning weight. Your first coaching decision lands on ${firstReviewLabel} and takes about two minutes. The Coach then explains any calorie or training change before you apply it.`
+                    : 'At the end of your training week, review how it went. The Coach then explains any calorie or training change before you apply it.'}
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}
@@ -416,10 +416,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
               onPress={() => navigation.navigate('Methodology', { source: 'setup_complete' })}
               activeOpacity={0.7}
               accessibilityRole="link"
-              accessibilityLabel="How Precision Coaching works"
+                accessibilityLabel="How the Coach works"
             >
               <Ionicons name="bulb-outline" size={14} color={colors.primary} />
-              <Text style={styles.eduLearnText}>How Precision Coaching works</Text>
+              <Text style={styles.eduLearnText}>How the Coach works</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
           </Card>

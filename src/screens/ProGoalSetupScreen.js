@@ -592,8 +592,8 @@ export default function ProGoalSetupScreen({ navigation }) {
                 future event. Same prefs source the check-in screen reads. */}
             Changing your goals updates your plan targets immediately.
             {nextCheckinLabel
-              ? ` Precision Coaching adjusts at your next check-in on ${nextCheckinLabel}.`
-              : ' Precision Coaching adjusts at the next check-in.'}
+              ? ` The Coach adjusts at your next check-in on ${nextCheckinLabel}.`
+              : ' The Coach adjusts at the next check-in.'}
           </Text>
         </View>
 

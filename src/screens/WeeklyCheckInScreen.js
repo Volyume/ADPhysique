@@ -1309,13 +1309,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <Text style={styles.gateTitle}>First check-in needs more data</Text>
           {hasStartedBaseline ? (
             <Text style={styles.gateBody}>
-              Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
+              The Coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
               Volyume waits for the first {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in is {firstCheckinLabel || `your next ${scheduledDayName}`}.
             </Text>
           ) : (
             <Text style={styles.gateBody}>
-              Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
+              The Coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
               {'\n\n'}
               Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
             </Text>

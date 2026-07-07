@@ -158,7 +158,7 @@ export default function SettingsDataScreen({ navigation }) {
       const { bytes } = await exportBackup();
       appAlert(
         'Backup created',
-        `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes database records such as workouts, nutrition logs, body metrics, progress photo metadata and Physique Scan metadata. Private photo image files are not bundled. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
+        `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes database records such as workouts, nutrition logs, body metrics, progress photo metadata and progress photo analysis metadata. Private photo image files are not bundled. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
       appAlert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');

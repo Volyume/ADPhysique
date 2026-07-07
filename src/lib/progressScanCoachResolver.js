@@ -24,12 +24,12 @@ function clean(str) {
 
 function trendOnlyLabel(scan) {
   const direction = scan?.trendDirection || 'uncertain';
-  if (scan?.comparisonStatus === 'not_comparable') return 'Your latest Physique Scan is saved, but I am not comparing it because the setup was not like-for-like.';
-  if (scan?.comparisonStatus !== 'comparable') return 'Your latest Physique Scan is saved as a baseline until there is another like-for-like scan.';
-  if (direction === 'down') return 'Your latest Physique Scan has a positive visual progress signal against the last like-for-like scan.';
-  if (direction === 'up') return 'Your latest Physique Scan shows a visual drift to watch against the last like-for-like scan.';
-  if (direction === 'steady') return 'Your latest Physique Scan is holding steady against the last like-for-like scan.';
-  return 'Your latest Physique Scan is saved as a baseline until there is another like-for-like scan.';
+  if (scan?.comparisonStatus === 'not_comparable') return 'Your latest progress photos are saved, but I am not comparing them because the setup changed too much.';
+  if (scan?.comparisonStatus !== 'comparable') return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
+  if (direction === 'down') return 'Your latest progress photos have a positive visual progress signal against the last comparable photo set.';
+  if (direction === 'up') return 'Your latest progress photos show a visual drift to watch against the last comparable photo set.';
+  if (direction === 'steady') return 'Your latest progress photos are holding steady against the last comparable photo set.';
+  return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
 }
 
 function scanLabel(scan) {
@@ -47,36 +47,36 @@ function trendLine(scan, label, trendOnly = false) {
   if (trendOnly || !label) return trendOnlyLabel(scan);
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') {
-    return `Your latest Physique Scan is ${label}, but I am not comparing it because the setup was not like-for-like.`;
+    return `Your latest progress photos are ${label}, but I am not comparing them because the setup changed too much.`;
   }
   if (scan?.comparisonStatus !== 'comparable') {
-    return `Your latest Physique Scan is ${label}. This is a baseline until there is another comparable scan.`;
+    return `Your latest progress photos are ${label}. This is a baseline until there is another comparable photo set.`;
   }
   if (direction === 'down') {
-    return `Your latest Physique Scan is ${label}, with a positive visual progress signal against the last comparable scan.`;
+    return `Your latest progress photos are ${label}, with a positive visual progress signal against the last comparable photo set.`;
   }
   if (direction === 'up') {
-    return `Your latest Physique Scan is ${label}, with a visual drift to watch against the last comparable scan.`;
+    return `Your latest progress photos are ${label}, with a visual drift to watch against the last comparable photo set.`;
   }
   if (direction === 'steady') {
-    return `Your latest Physique Scan is ${label}. I am reading it as holding steady.`;
+    return `Your latest progress photos are ${label}. I am reading them as holding steady.`;
   }
-  return `Your latest Physique Scan is ${label}. This is a baseline until there is another comparable scan.`;
+  return `Your latest progress photos are ${label}. This is a baseline until there is another comparable photo set.`;
 }
 
 function coachLine(scan, label, trendOnly = false) {
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') {
-    return 'Physique Scan is saved, but I am not using it as a comparison because the setup was not like-for-like.';
+    return 'Progress photos are saved, but I am not using them as a comparison because the setup changed too much.';
   }
   if (scan?.comparisonStatus !== 'comparable') {
-    return 'Physique Scan is now saved as a baseline. I will compare future scans only when the photos are like-for-like.';
+    return 'Progress photos are now saved as a baseline. I will compare future photo sets only when the setup is comparable.';
   }
   const context = label && !trendOnly ? label : 'visual scan signals';
-  if (direction === 'down') return `Physique Scan also has a positive signal from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
-  if (direction === 'up') return `Physique Scan shows a drift to watch from ${context}. I am treating that as a check on consistency, not as a calorie trigger.`;
-  if (direction === 'steady') return `Physique Scan is steady from ${context}. That supports holding the read calm unless your logged trend says otherwise.`;
-  return `Physique Scan is now saved as a baseline from ${context}. I will compare future scans only when the photos are like-for-like.`;
+  if (direction === 'down') return `Progress photos also have a positive signal from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
+  if (direction === 'up') return `Progress photos show a drift to watch from ${context}. I am treating that as a check on consistency, not as a calorie trigger.`;
+  if (direction === 'steady') return `Progress photos are steady from ${context}. That supports holding the read calm unless your logged trend says otherwise.`;
+  return `Progress photos are now saved as a baseline from ${context}. I will compare future photo sets only when the setup is comparable.`;
 }
 
 function decisionLine(output) {
@@ -110,7 +110,7 @@ export function resolveProgressScanCoachNote({
 
   return {
     source: PHOTO_SCAN_SOURCE,
-    title: 'Physique Scan context',
+    title: 'Progress photo context',
     body,
     coachLine: clean(coachLine(scan, label, trendOnly)),
     trendDirection: scan.trendDirection || 'uncertain',

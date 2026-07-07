@@ -1240,13 +1240,13 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <QuestionGroup
               icon="analytics-outline"
-              title="Optional body composition"
-              sub="Only enter body fat if you have a measured figure. Leave it blank if you are unsure."
+              title="Measured body composition"
+              sub="Leave this blank unless you have a recent measured figure. Volyume Score handles visual progress later from your progress photos."
             >
               <View style={styles.sectionLast}>
-                <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
+                <Text style={styles.fieldLabel}>Measured body fat % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  A measured figure can sharpen targets. Progress Photos can create a Volyume Score for progress without asking you to estimate exact body fat.
+                  A measured value can sharpen calorie targets. Do not guess: Progress Photos can create a Volyume Score for progress without asking you to estimate exact body fat.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}
@@ -1259,13 +1259,13 @@ export default function ProOnboardingScreen({ navigation }) {
                   maxLength={4}
                   autoComplete="off"
                   textContentType="none"
-                  accessibilityLabel="Body fat percentage, optional"
+                  accessibilityLabel="Measured body fat percentage, optional"
                 />
                 {bodyFat.trim() ? (
                   <View style={{ marginTop: spacing.sm }}>
                     {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
                     <View style={styles.measuredRow}>
-                      <Text style={styles.fieldHint}>How was it measured?</Text>
+                      <Text style={styles.fieldHint}>Measurement method</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
                     <SegmentedControl

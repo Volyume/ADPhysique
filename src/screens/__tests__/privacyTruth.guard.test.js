@@ -8,13 +8,14 @@ function readRepoFile(...parts) {
 }
 
 describe('privacy, consent, export and store-copy truth', () => {
-  test('Article 9 consent names Physique Scan data and its limits', () => {
+  test('Article 9 consent names Volyume Score data and its limits', () => {
     const source = readRepoFile('src', 'screens', 'Article9ConsentScreen.js');
 
     expect(source).toContain("const CONSENT_VERSION = '2026-07-04'");
-    expect(source).toContain('Physique Scan quality, confidence, leanness band, Volyume Score and progress signal');
+    expect(source).toContain('photo quality, confidence, leanness band, Volyume Score and progress signal');
     expect(source).toContain('not a medical assessment, DEXA scan, or exact body fat percentage');
-    expect(source).toContain('Progress photos and scan image files stay on this device');
+    expect(source).toContain('Progress photo image files stay on this device');
+    expect(source).toContain('Never use your photos or health data for advertising or third-party model training');
   });
 
   test('in-app privacy policy and data tools describe the real export/delete surface', () => {
@@ -22,9 +23,9 @@ describe('privacy, consent, export and store-copy truth', () => {
     const data = readRepoFile('src', 'screens', 'SettingsDataScreen.js');
 
     expect(privacy).toContain("LAST_UPDATED = '4 July 2026'");
-    expect(privacy).toMatch(/Physique Scan is a visual\s+progress feature/);
+    expect(privacy).toMatch(/Volyume Score is a visual\s+progress feature/);
     expect(privacy).toContain('not an exact body fat percentage');
-    expect(privacy).toContain('progress photo metadata and Physique Scan metadata');
+    expect(privacy).toContain('progress photo metadata and analysis metadata');
     expect(privacy).toContain('private photo image files');
     expect(data).toContain('Back up app data (JSON)');
     expect(data).toContain('photo image files stay on this device');

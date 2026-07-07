@@ -21,7 +21,7 @@ const scoredScan = {
 describe('progressScanCopy', () => {
   test('scanReadCopy explains Volyume Score without presenting body fat percentage', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Score 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.',
+      'Volyume Score 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a 0-100 visual progress score for photos taken in similar conditions, not a body fat percentage.',
     );
   });
 
@@ -47,7 +47,7 @@ describe('progressScanCopy', () => {
 
   test('trendOnlyScanCopy handles not-comparable and baseline states', () => {
     expect(trendOnlyScanCopy({ deltaExplanation: { comparisonStatus: 'not_comparable' } })).toBe(
-      'Trend context: saved, but not compared because the setup was not like-for-like.',
+      'Trend context: saved, but not compared because the setup changed too much.',
     );
     expect(trendOnlyScanCopy({})).toBe('Trend context: baseline photo set saved.');
   });

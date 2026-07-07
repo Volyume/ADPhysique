@@ -202,7 +202,7 @@ export default function MealPlanScreen({ navigation, route }) {
   }, [user?.id, userProfile, busy, load, toast, navigation]);
 
   const handleGenerateDay = useCallback(() => runGenerate(generateAndSaveDayPlan, 'Your day is ready.'), [runGenerate]);
-  const handleGenerateWeek = useCallback(() => runGenerate(generateAndSaveMealPlan, 'Your week is ready.'), [runGenerate]);
+  const handleGenerateWeek = useCallback(() => runGenerate(generateAndSaveMealPlan, 'Weekly meal plan is ready.'), [runGenerate]);
 
   const handleRegenerate = useCallback(async () => {
     if (!user?.id || busy) return;
@@ -553,25 +553,30 @@ export default function MealPlanScreen({ navigation, route }) {
           {/* Day picker, only for a multi-day (week) plan; a "Plan my day"
               plan is a single day with no picker. */}
           {!isDayPlan ? (
-          <View style={styles.dayRow} accessibilityRole="tablist">
-            {plan.schedule.map((variant, i) => {
-              const selected = i === dayIndex;
-              return (
-                <TouchableOpacity
-                  key={`${variant}-${i}`}
-                  style={[styles.dayBtn, selected && styles.dayBtnOn]}
-                  onPress={() => setDayIndex(i)}
-                  hitSlop={hitSlop}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={cycleOn ? `${dayLabels[i]?.accessibility}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]?.accessibility}
-                >
-                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
-                  <View style={[styles.dayDot, variant === 'training' && cycleOn && styles.dayDotTrain]} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dayRow}
+              accessibilityRole="tablist"
+            >
+              {plan.schedule.map((variant, i) => {
+                const selected = i === dayIndex;
+                return (
+                  <TouchableOpacity
+                    key={`${variant}-${i}`}
+                    style={[styles.dayBtn, selected && styles.dayBtnOn]}
+                    onPress={() => setDayIndex(i)}
+                    hitSlop={hitSlop}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={cycleOn ? `${dayLabels[i]?.accessibility}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]?.accessibility}
+                  >
+                    <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
+                    <View style={[styles.dayDot, variant === 'training' && cycleOn && styles.dayDotTrain]} />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           ) : null}
 
           {/* Day header: type chip + totals. The training/rest chip only
@@ -639,7 +644,7 @@ export default function MealPlanScreen({ navigation, route }) {
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
               <PrefRow
-                label="Meals a day"
+                label="Meals per day"
                 options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
                 value={prefs.mealsPerDay ?? 4}
                 onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
@@ -657,10 +662,10 @@ export default function MealPlanScreen({ navigation, route }) {
                 busy={busy}
               />
               <PrefRow
-                label="Workout meals"
+                label="Around training"
                 options={[
                   { value: false, label: 'Off' },
-                  { value: true, label: 'Pre / post' },
+                  { value: true, label: 'Pre and post' },
                 ]}
                 value={!!prefs.periWorkoutSlots}
                 onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
@@ -963,8 +968,8 @@ const styles = StyleSheet.create({
   planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   planOptionDesc: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xs },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  dayRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayBtn: { alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, minWidth: 36 },
+  dayRow: { flexDirection: 'row', gap: spacing.xs, paddingRight: spacing.md },
+  dayBtn: { alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, minWidth: 44 },
   dayBtnOn: { backgroundColor: colors.surface },
   dayLetter: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   dayLetterOn: { color: colors.textPrimary },

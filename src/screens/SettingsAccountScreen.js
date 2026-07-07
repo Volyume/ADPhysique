@@ -33,7 +33,7 @@ export default function SettingsAccountScreen({ navigation }) {
           <SettingRow
             icon="sparkles"
             label="Go Pro"
-            sub="Precision Coaching and weekly check-ins"
+            sub="Coach decisions and weekly check-ins"
             onPress={() => navigation.navigate('ProUpgrade')}
           />
         )}
@@ -44,7 +44,7 @@ export default function SettingsAccountScreen({ navigation }) {
             onPress={() =>
               appAlert(
                 'Switch to Free?',
-                'Everything you\'ve logged stays. Past coach outputs, check-ins, training blocks and PRs remain readable. You just won\'t get new Precision Coaching adjustments until you re-enable Pro.',
+                'Everything you\'ve logged stays. Past coach decisions, check-ins, training blocks and PRs remain readable. You just won\'t get new weekly coaching adjustments until you re-enable Pro.',
                 [
                   { text: 'Keep Pro', style: 'cancel' },
                   {

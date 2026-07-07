@@ -883,7 +883,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             hero
             value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
             label="Total lifted"
-            tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
           {/* 4-week comparison verdict, fused into the hero so "your number"
               and "how it compares" read as one statement. Only when we have
@@ -905,7 +905,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               accent = colors.textSecondary;
             } else {
               headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
-              sub = `Within ±10% of your 4-week average. Consistency is the goal.`;
+              sub = 'Within about 10% of your 4-week average. Consistency is the goal.';
               // Neutral, not amber: the hero numeral is this screen's one
               // amber object (design audit 03 amber-inflation rule).
               accent = colors.textPrimary;

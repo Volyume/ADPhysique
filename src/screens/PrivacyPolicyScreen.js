@@ -21,9 +21,9 @@ export default function PrivacyPolicyScreen() {
             and nutrition guidance.
           </Body>
           <Body>
-            If you use Progress Photos or Physique Scan, the photo files stay on this device unless you choose
-            to share or export them. The app may store local metadata and scan outputs such as photo quality,
-            scan confidence, leanness band, Volyume Score and progress signal. Physique Scan is a visual
+            If you use Progress Photos or Volyume Score analysis, the photo files stay on this device unless you choose
+            to share or export them. The app may store local metadata and analysis outputs such as photo quality,
+            confidence, leanness band, Volyume Score and progress signal. Volyume Score is a visual
             progress feature, not an exact body fat percentage, DEXA scan, diagnosis, or medical assessment.
           </Body>
           <Body>
@@ -38,7 +38,7 @@ export default function PrivacyPolicyScreen() {
             tokens are stored in your device's secure encrypted storage.
           </Body>
           <Body>
-            Progress photo and scan image files are device-local. Cloud-backed account data is protected with
+            Progress photo image files are device-local. Cloud-backed account data is protected with
             row-level security so only you, and the team supporting your account when needed, can see it.
           </Body>
         </Section>
@@ -55,8 +55,8 @@ export default function PrivacyPolicyScreen() {
         <Section title="Body metrics and sensitive data">
           <Body>
             Body weight, measurements, food logs, check-ins, eating-habits screening, progress photos and
-            Physique Scan outputs are treated as sensitive health data. They are never sold, never shared for
-            advertising, and never used to train a public AI model.
+            progress photo analysis outputs are treated as sensitive health data. They are never sold, never shared for
+            advertising, and never used for third-party model training.
           </Body>
         </Section>
 
@@ -82,7 +82,7 @@ export default function PrivacyPolicyScreen() {
           <Body>
             You can export your workout sets as CSV from Settings &gt; Your data &gt; Export workout log.
             You can also create a JSON backup of app database records, including workout, nutrition, body
-            metric, progress photo metadata and Physique Scan metadata. The JSON backup does not bundle
+            metric, progress photo metadata and analysis metadata. The JSON backup does not bundle
             private photo image files.
           </Body>
           <Body>

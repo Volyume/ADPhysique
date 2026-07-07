@@ -102,7 +102,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
       {maintenance && (
         maintenance.building ? (
           <Text style={styles.maintenanceBuilding}>
-            Precision Coaching is building your estimate. Keep logging and it appears in about a week.
+            The Coach is building your estimate. Keep logging and it appears in about a week.
           </Text>
         ) : (
           <View style={styles.maintenanceBlock}>

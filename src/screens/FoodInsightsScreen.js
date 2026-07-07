@@ -411,7 +411,7 @@ export default function FoodInsightsScreen({ navigation }) {
               <Text style={styles.cardFootnote}>
                 {targets?.targetKcal
                   ? `Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`
-                  : 'Each point is a logged day. Set a calorie target in Precision Coaching to see the target line.'}
+                  : 'Each point is a logged day. Set a calorie target in Coach to see the target line.'}
               </Text>
             </>
           ) : (
@@ -453,7 +453,7 @@ export default function FoodInsightsScreen({ navigation }) {
             </Text>
           ) : (
             <Text style={styles.cardFootnote}>
-              Set your calorie target in Precision Coaching to see target colours.
+              Set your calorie target in Coach to see target colours.
             </Text>
           )}
         </Card>

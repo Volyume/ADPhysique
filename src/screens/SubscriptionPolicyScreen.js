@@ -56,7 +56,7 @@ export default function SubscriptionPolicyScreen() {
           <Body>
             Pro is the coach who writes back. Everything in Free stays; Pro adds a layer on top that adjusts your training each week based on how you're going.
           </Body>
-          <Bullet>Precision Coaching that nudges your training as your body responds.</Bullet>
+          <Bullet>Coach decisions that nudge your training as your body responds.</Bullet>
           <Bullet>Personalised calorie and protein targets, updated as your goals change.</Bullet>
           <Bullet>Weekly check-ins with a written reason for every change, including what we held the same.</Bullet>
           <Bullet>Nutrition guidance tied to what you're working on right now.</Bullet>
