@@ -2858,8 +2858,8 @@ function buildSleepDetail(input: {
 
 function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
   if (!sleep) return false;
-  if (manual) return true;
   if (sleepStateWakeConflict(sleep)) return false;
+  if (manual) return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
   if (longAutoSleepNeedsCorroboration(sleep, manual)) return false;
   if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
     const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
@@ -3204,6 +3204,9 @@ function sleepCaptureNote(input: {
   }
   if (!input.hasSleep && input.hasCandidate && longAutoSleepNeedsCorroboration(input.evidence, input.manual)) {
     return 'A long HR-only sleep window was found, but it needs still-worn or decoded band-state corroboration before Pulse scores it as sleep.';
+  }
+  if (!input.hasSleep && input.hasCandidate && input.manual) {
+    return 'Manual sleep window saved, but HR coverage is too sparse to score sleep, stages, vitals or recovery yet.';
   }
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
