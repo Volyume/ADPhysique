@@ -171,6 +171,80 @@ describe('Progress Scan uncertainty and abstention', () => {
       { pose: 'back', qualityScore: 0.4, lightingScore: 0.4, blurScore: 0.4, framingScore: 0.4, segmentationConfidence: 0.42, signals: { ...usableSignal, silhouetteRatios: backSignal.silhouetteRatios } },
     ];
     expect(abstentionReasonsForAssets(usableAssets)).toEqual([]);
+    const out = analyseProgressScan({ assets: usableAssets, modelEstimate: null });
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
+  });
+
+  test('borderline but model-measured required poses keep a low-confidence Physique Score', () => {
+    const borderlineFront = {
+      ...frontSignal,
+      engine: 'mlkit_selfie_segmentation',
+      quality: {
+        segmentationConfidence: 0.52,
+        framingScore: 0.52,
+        blurScore: 0.52,
+        lightingScore: 0.52,
+        poseConfidence: 0.52,
+        backgroundSeparation: 0.5,
+        foregroundThreshold: 0.36,
+        componentDominance: 0.9,
+      },
+      mask: {
+        foregroundRatio: 0.31,
+        foregroundMeanProbability: 0.44,
+        backgroundMeanProbability: 0.08,
+      },
+    };
+    const borderlineBack = {
+      ...borderlineFront,
+      silhouetteRatios: backSignal.silhouetteRatios,
+    };
+    const assets = [
+      {
+        pose: 'front',
+        qualityScore: 0.52,
+        lightingScore: 0.52,
+        blurScore: 0.52,
+        framingScore: 0.52,
+        segmentationConfidence: 0.52,
+        signals: borderlineFront,
+      },
+      {
+        pose: 'back',
+        qualityScore: 0.52,
+        lightingScore: 0.52,
+        blurScore: 0.52,
+        framingScore: 0.52,
+        segmentationConfidence: 0.52,
+        signals: borderlineBack,
+      },
+    ];
+
+    const out = analyseProgressScan({ assets, modelEstimate: null });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.abstentionReasons).toEqual([]);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
+    expect(out.copySummary).toMatch(/Volyume Physique Score 68\/100/i);
+
+    const summary = measuredSignalsSummaryFromAssets(assets, null, {
+      physiqueAssessment: out.physiqueAssessment,
+    });
+    expect(summary.assets[0]).toMatchObject({
+      engine: 'mlkit_selfie_segmentation',
+      quality: {
+        foregroundThreshold: 0.36,
+        componentDominance: 0.9,
+      },
+      mask: {
+        foregroundRatio: 0.31,
+        foregroundMeanProbability: 0.44,
+        backgroundMeanProbability: 0.08,
+      },
+    });
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {

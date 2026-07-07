@@ -381,7 +381,7 @@ function confidenceTier(score) {
   if (n == null) return 'unknown';
   if (n >= 0.85) return 'high';
   if (n >= 0.70) return 'moderate';
-  if (n >= 0.55) return 'low';
+  if (n >= 0.40) return 'low';
   return 'not_enough';
 }
 
@@ -520,7 +520,8 @@ export function buildPhysiqueAssessment({
     previousScan,
   });
   const scanConfidenceTier = confidenceTier(scanConfidenceScore);
-  const score = scanConfidenceTier === 'not_enough' ? null : computeVisualLeannessScore(inputs);
+  const measuredScore = computeVisualLeannessScore(inputs);
+  const score = scanConfidenceTier === 'not_enough' ? null : measuredScore;
   const band = leannessBandForScore(score);
   const previousAssessment = previousPhysiqueAssessment(previousScan);
   const previousScore = finiteNumber(previousAssessment?.visualLeannessScore);
@@ -1103,8 +1104,20 @@ export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, e
         lightingScore: a.lightingScore ?? signals?.quality?.lightingScore ?? null,
         cameraTiltDegrees: a.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees ?? null,
         bodyBox: signals?.bodyBox ?? null,
+        engine: signals?.engine ?? null,
+        modelVersion: signals?.modelVersion ?? null,
+        unavailableReason: signals?.unavailableReason ?? signals?.fallbackReason ?? null,
+        quality: signals?.quality ? {
+          foregroundThreshold: signals.quality.foregroundThreshold ?? null,
+          poseConfidence: signals.quality.poseConfidence ?? null,
+          backgroundSeparation: signals.quality.backgroundSeparation ?? null,
+          componentDominance: signals.quality.componentDominance ?? null,
+          connectedComponents: signals.quality.connectedComponents ?? null,
+        } : null,
         mask: signals?.mask ? {
           foregroundRatio: signals.mask.foregroundRatio ?? null,
+          foregroundMeanProbability: signals.mask.foregroundMeanProbability ?? null,
+          backgroundMeanProbability: signals.mask.backgroundMeanProbability ?? null,
         } : null,
         silhouetteRatios: signals?.silhouetteRatios ?? null,
         abstentionReasons: signals?.abstentionReasons ?? [],
