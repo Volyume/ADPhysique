@@ -1108,7 +1108,7 @@ class AppStore extends Store<AppState> {
         if (!ble) return;
         const commandReady = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
         if (commandReady) {
-          await ble.writeCommand(cmdHistoricalDataResult(meta.endData));
+          await withTimeout(ble.writeCommand(cmdHistoricalDataResult(meta.endData)), 8000, 'History acknowledgement');
         }
       })
       .catch((e) => {
@@ -1520,7 +1520,7 @@ class AppStore extends Store<AppState> {
         this.enqueueHistoryStop('timeout');
         return;
       }
-      await ble.writeCommand(cmdSendHistoricalData());
+      await withTimeout(ble.writeCommand(cmdSendHistoricalData()), 8000, 'History nudge');
       this.historyLastActivityTs = Date.now();
       this.armHistoryTimeout();
       this.setState((s) => ({
@@ -1556,7 +1556,7 @@ class AppStore extends Store<AppState> {
     }));
     for (const command of commands) {
       try {
-        await ble.writeCommand(command);
+        await withTimeout(ble.writeCommand(command), 8000, 'Deep history prep');
         sent += 1;
         await delay(65);
       } catch (e) {
@@ -1585,10 +1585,10 @@ class AppStore extends Store<AppState> {
     const ready = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
     if (!ready) return;
     if (reason !== 'complete') {
-      await ble.writeCommand(cmdAbortHistoricalTransmits()).catch(() => {});
+      await withTimeout(ble.writeCommand(cmdAbortHistoricalTransmits()), 8000, 'History abort').catch(() => {});
       await delay(80);
     }
-    await ble.writeCommand(cmdExitHighFreqSync()).catch(() => {});
+    await withTimeout(ble.writeCommand(cmdExitHighFreqSync()), 8000, 'Exit history sync').catch(() => {});
   }
 
   private clearHistoryTimeout(): void {
@@ -1664,7 +1664,7 @@ class AppStore extends Store<AppState> {
     try {
       await this.prepareDeepHistoryStreams(mode);
       try {
-        await ble.writeCommand(cmdEnterHighFreqSync());
+        await withTimeout(ble.writeCommand(cmdEnterHighFreqSync()), 8000, 'Enter history sync');
         this.setState((s) => ({
           historySync: s.historySync
             ? { ...s.historySync, status: 'High-frequency history sync enabled' }
@@ -1695,7 +1695,7 @@ class AppStore extends Store<AppState> {
         }));
         await delay(250);
       }
-      await ble.writeCommand(cmdSendHistoricalData());
+      await withTimeout(ble.writeCommand(cmdSendHistoricalData()), 8000, 'History request');
       this.setState((s) => ({
         historySync: s.historySync
           ? { ...s.historySync, status: mode === 'auto' ? 'Auto sync: waiting for stored history' : 'Waiting for stored history' }
@@ -3116,6 +3116,16 @@ function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: Historical
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 export const appStore = new AppStore();
