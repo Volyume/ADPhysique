@@ -1825,7 +1825,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
-    backgroundColor: colors.surface2,
+    backgroundColor: 'transparent',
   },
   dateButton: {
     flex: 1,
@@ -1836,7 +1836,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.surface2,
+    backgroundColor: 'transparent',
   },
   dateCopy: { alignItems: 'center', justifyContent: 'center', minWidth: 0 },
   dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
