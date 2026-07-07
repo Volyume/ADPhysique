@@ -352,6 +352,14 @@ class AppStore extends Store<AppState> {
     await this.runHistoryDrain('auto');
   }
 
+  private retryAutoHistoryDrain(): void {
+    const deviceId = this.getState().device?.id;
+    if (!deviceId || this.autoSyncAttempts >= AUTO_HISTORY_SYNC_MAX_ATTEMPTS) return;
+    this.autoDrainedFor = '';
+    this.autoSyncAttempts += 1;
+    this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+  }
+
   private clearAutoSyncTimer(): void {
     if (this.autoSyncTimer) {
       clearTimeout(this.autoSyncTimer);
@@ -945,7 +953,7 @@ class AppStore extends Store<AppState> {
     this.historyStopQueued = false;
     this.setState({
       draining: true,
-      capturing: true,
+      capturing: mode === 'manual',
       error: null,
       historySync: {
         status: mode === 'auto' ? 'Auto sync: requesting stored history' : 'Requesting stored history',
@@ -989,6 +997,7 @@ class AppStore extends Store<AppState> {
       this.clearHistoryTimeout();
       this.historyStopQueued = true;
       this.setState({ draining: false, capturing: false, error: `History drain failed: ${String(e)}` });
+      if (mode === 'auto') this.retryAutoHistoryDrain();
     }
   };
 

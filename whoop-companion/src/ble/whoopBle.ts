@@ -228,6 +228,7 @@ export class WhoopBle {
     }
     this.device = connected;
     this.lastDeviceId = connected.id;
+    this.events.onDevice?.({ id: connected.id, name: connected.name ?? connected.localName ?? 'WHOOP' });
     this.disconnectSub = connected.onDisconnected((error) => {
       this.clearKeepalive();
       this.clearSubscriptions();
