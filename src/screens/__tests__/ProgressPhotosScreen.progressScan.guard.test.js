@@ -21,10 +21,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
-  test('has trend-only display preference and 14-day scan cadence', () => {
+  test('has trend-only display preference and one-week scan cadence', () => {
     expect(SCREEN).toMatch(/getProgressScanHideExactPreference/);
     expect(SCREEN).toMatch(/setProgressScanHideExactPreference/);
-    expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*14 \* 86400000/);
+    expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*7 \* 86400000/);
     expect(SCREEN).toMatch(/Leave more time between photo sets/);
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/Volyume Score may be less useful/);

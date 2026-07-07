@@ -272,9 +272,9 @@ describe('MealSection', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Breakfast');
     expect(txt).toContain('Add food');
-    expect(txt).toContain('Add saved meal to Breakfast');
-    expect(txt).toContain('Scan barcode for Breakfast');
-    expect(txt).toContain('Quick add to Breakfast');
+    expect(txt).not.toContain('Add saved meal to Breakfast');
+    expect(txt).not.toContain('Scan barcode for Breakfast');
+    expect(txt).not.toContain('Quick add to Breakfast');
     expect(txt).not.toContain('Nothing logged yet.');
     expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
   });
@@ -306,29 +306,20 @@ describe('MealSection', () => {
     expect(txt).toContain('Usual foods are ready below. Add something else if this meal was different.');
   });
 
-  test('meal action hub exposes saved meals and scan as slot-scoped actions', () => {
-    const onSavedMeals = jest.fn();
-    const onScan = jest.fn();
+  test('meal action hub stays focused on the single add-food action', () => {
     const tree = create(
       <MealSection
         slot={slot}
         entries={entries}
         onAdd={() => {}}
-        onQuickAdd={() => {}}
-        onSavedMeals={onSavedMeals}
-        onScan={onScan}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
     );
-    const saved = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add saved meal to Breakfast')[0];
-    const scan = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Scan barcode for Breakfast')[0];
-    expect(saved).toBeDefined();
-    expect(scan).toBeDefined();
-    actRender(() => saved.props.onPress());
-    actRender(() => scan.props.onPress());
-    expect(onSavedMeals).toHaveBeenCalledTimes(1);
-    expect(onScan).toHaveBeenCalledTimes(1);
+    const add = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add food to Breakfast')[0];
+    expect(add).toBeDefined();
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add saved meal to Breakfast')).toHaveLength(0);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Scan barcode for Breakfast')).toHaveLength(0);
   });
 });
 
@@ -404,9 +395,9 @@ describe('read-only diary components (E10 lapse views)', () => {
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Add food');
-    expect(txt).toContain('Add saved meal to Breakfast');
-    expect(txt).toContain('Scan barcode for Breakfast');
-    expect(txt).toContain('Quick add to Breakfast');
+    expect(txt).not.toContain('Add saved meal to Breakfast');
+    expect(txt).not.toContain('Scan barcode for Breakfast');
+    expect(txt).not.toContain('Quick add to Breakfast');
   });
 });
 

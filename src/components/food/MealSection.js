@@ -14,7 +14,7 @@ import AnimatedRow from '../AnimatedRow';
 // the number a training user defends); the add affordance is a quiet in-card
 // hub, not a dashed placeholder box.
 export default function MealSection({
-  slot, entries, onAdd, onQuickAdd, onSavedMeals, onScan, onEdit, onDelete,
+  slot, entries, onAdd, onEdit, onDelete,
   usuals = null, onLogUsual,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
   readOnly = false,
@@ -102,36 +102,6 @@ export default function MealSection({
             <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
             <Text style={styles.addFoodText}>Add food</Text>
           </TouchableOpacity>
-          {onSavedMeals ? (
-            <TouchableOpacity
-              style={styles.shortcutButton}
-              onPress={onSavedMeals}
-              accessibilityRole="button"
-              accessibilityLabel={`Add saved meal to ${slot.label}`}
-            >
-              <Ionicons name="restaurant-outline" size={17} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
-          {onScan ? (
-            <TouchableOpacity
-              style={styles.shortcutButton}
-              onPress={onScan}
-              accessibilityRole="button"
-              accessibilityLabel={`Scan barcode for ${slot.label}`}
-            >
-              <Ionicons name="barcode-outline" size={17} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
-          {onQuickAdd ? (
-            <TouchableOpacity
-              style={styles.shortcutButton}
-              onPress={onQuickAdd}
-              accessibilityRole="button"
-              accessibilityLabel={`Quick add to ${slot.label}`}
-            >
-              <Ionicons name="flash-outline" size={17} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
         </View>
       ) : null}
     </View>
@@ -192,16 +162,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
-  },
-  shortcutButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   addFoodText: { ...type.label, color: colors.onPrimary },
   seasonRow: {

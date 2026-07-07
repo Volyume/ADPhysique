@@ -18,14 +18,13 @@ import { getMealAdditions, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib
  * Props:
  *   visible    show / hide
  *   meal       the suggested meal: { id, name, macros: { kcal, protein, carbs, fat } }
- *   slotLabel  human meal-slot label (e.g. "Lunch") for the subtitle
  *   logging    true while the meal is being written (disables the button)
  *   energyUnit 'kcal' | 'kj' display unit
  *   onLog      () => void   add the meal to the diary
  *   onClose    () => void
  */
 export default function CuratedMealSheet({
-  visible, meal, slotLabel, logging = false, energyUnit = 'kcal', onLog, onClose,
+  visible, meal, logging = false, energyUnit = 'kcal', onLog, onClose,
 }) {
   // Resolve the meal's component items from its id (the ranked suggestion only
   // carries macros, not the item list). Additions fall back to a safe generic
@@ -42,7 +41,7 @@ export default function CuratedMealSheet({
           <Text style={styles.title}>{meal.name}</Text>
           {macros ? (
             <Text style={styles.subtitle}>
-              {slotLabel ? `Adds to ${slotLabel} - ` : 'Adds to diary - '}
+              {'Adds to your diary - '}
               {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {Math.round(macros.protein)}g protein - {Math.round(macros.carbs)}g carbs - {Math.round(macros.fat)}g fat
             </Text>
           ) : null}
@@ -92,7 +91,7 @@ export default function CuratedMealSheet({
               disabled={logging}
               style={({ pressed }) => [styles.logBtn, logging && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
-              accessibilityLabel={`Add ${meal.name} to ${slotLabel || 'diary'}`}
+              accessibilityLabel={`Add ${meal.name} to diary`}
             >
               {logging
                 ? <ActivityIndicator color={colors.onPrimary} size="small" />

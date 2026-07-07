@@ -691,6 +691,10 @@ export default function FoodSearchScreen({ navigation, route }) {
     const out = [];
     if (activeTab === 'custom') {
       out.push({ type: 'cta', key: 'cta-new-custom', label: 'New custom food', icon: 'add-circle-outline', action: 'custom' });
+      if (!isRecipePick) {
+        out.push({ type: 'cta', key: 'cta-scan-barcode', label: 'Scan barcode', icon: 'barcode-outline', action: 'scan' });
+        out.push({ type: 'cta', key: 'cta-quick-add', label: 'Quick add calories', icon: 'flash-outline', action: 'quick' });
+      }
       if (route?.params?.pickMode !== 'recipe') {
         out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', action: 'recipes' });
         out.push({ type: 'cta', key: 'cta-my-meals', label: 'My meals', icon: 'fast-food-outline', action: 'meals' });
@@ -698,7 +702,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     }
     for (const f of tabRows) out.push({ type: 'row', key: `${activeTab}-${f.food_ref}`, food: f });
     return out;
-  }, [activeTab, tabRows, route?.params?.pickMode]);
+  }, [activeTab, tabRows, route?.params?.pickMode, isRecipePick]);
 
   function renderItem({ item }) {
     if (item.type === 'cta') {
@@ -707,6 +711,8 @@ export default function FoodSearchScreen({ navigation, route }) {
           style={styles.ctaRow}
           onPress={() => {
             if (item.action === 'custom') return newCustomFood();
+            if (item.action === 'scan') return navigation.navigate('ScanBarcode', { mealSlot, entryDate });
+            if (item.action === 'quick') { quickSavedRef.current = false; setShowQuickAdd(true); return null; }
             if (item.action === 'meals') return navigation.navigate('MyMeals', { mealSlot, entryDate });
             return navigation.navigate('MyRecipes', { mealSlot, entryDate });
           }}
@@ -900,46 +906,21 @@ export default function FoodSearchScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerSide}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            style={styles.headerButton}
+          >
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>Add food</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>to {mealSlotLabel(mealSlot)}</Text>
         </View>
-        <View style={styles.headerActions}>
-          {!isRecipePick ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('MyMeals', { mealSlot, entryDate })}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Add a saved meal"
-            >
-              <Ionicons name="restaurant-outline" size={23} color={colors.primary} />
-            </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            onPress={() => { quickSavedRef.current = false; setShowQuickAdd(true); }}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Quick add calories"
-          >
-            <Ionicons name="flash-outline" size={23} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ScanBarcode', { mealSlot, entryDate })}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Scan a barcode"
-          >
-            <Ionicons name="barcode-outline" size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <View style={styles.headerSide} />
       </View>
 
       <ScrollView
@@ -1113,7 +1094,6 @@ export default function FoodSearchScreen({ navigation, route }) {
       <CuratedMealSheet
         visible={!!mealSheet}
         meal={mealSheet}
-        slotLabel={mealSlotLabel(mealSlot)}
         logging={!!mealSheet && loggingMealId === mealSheet.id}
         energyUnit={energyUnit}
         onLog={() => mealSheet && logCuratedMeal(mealSheet)}
@@ -1127,9 +1107,20 @@ export default function FoodSearchScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  headerSide: {
+    width: 48,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleBlock: {
     flex: 1,
@@ -1138,8 +1129,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
-  headerSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -2, textAlign: 'center' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
 
   tabBar: {
     // flexShrink: 0 so the strip keeps its intrinsic height and never gets
