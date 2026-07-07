@@ -6,6 +6,7 @@ import { Card, Empty, NavRow, Ring, Screen, SectionLabel, Stat } from '../ui/com
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
 
 function readyColor(score: number): string {
   if (score >= 70) return colors.recoveryGreen;
@@ -19,13 +20,6 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
   return colors.recoveryRed;
 }
 
-function readinessSleepNeedsSync(
-  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
-): boolean {
-  if (!sleepDetail) return true;
-  return (sleepDetail.coveragePct ?? 100) < 60 || (sleepDetail.signalMin ?? 999) < 150;
-}
-
 export function ReadinessScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -33,7 +27,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
   const sleepStateConflict = sleepStateWakeConflict(sleepDetail);
   const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
   const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
-  const sleepNeedsSync = readinessSleepNeedsSync(sleepDetail);
+  const sleepNeedsSync = sleepNeedsMoreSync(sleepDetail);
   const qualityAction =
     !readiness
       ? null
@@ -49,7 +43,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
           sleepNeedsSync
         ? {
             label: 'Sync overnight data',
-            value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'needs sync',
+            value: sleepSyncActionValue(sleepDetail),
             route: { name: 'device' } as const,
             icon: 'sync',
           }
@@ -245,7 +239,7 @@ function readinessLimiter(
   }
 
   if (readiness.confidence === 'low' || readiness.confidencePct < 55) {
-    const needsSync = readinessSleepNeedsSync(sleepDetail);
+    const needsSync = sleepNeedsMoreSync(sleepDetail);
     return {
       badge: 'DATA',
       title: 'Confidence is the limiter',
@@ -278,7 +272,7 @@ function readinessLimiter(
 
   const weakContributor = readiness.contributors.find((c) => c.good === false);
   if (weakContributor) {
-    const sleepTrustNeedsSync = readinessSleepNeedsSync(sleepDetail);
+    const sleepTrustNeedsSync = sleepNeedsMoreSync(sleepDetail);
     const route =
       weakContributor.key === 'sleep_trust'
         ? (sleepTrustNeedsSync ? ({ name: 'device' } as const) : ({ name: 'editSleep' } as const))
@@ -359,8 +353,8 @@ function readinessCall(
     };
   }
 
-  if (readiness.confidence === 'low' || readinessSleepNeedsSync(sleepDetail)) {
-    const needsSync = readinessSleepNeedsSync(sleepDetail);
+  if (readiness.confidence === 'low' || sleepNeedsMoreSync(sleepDetail)) {
+    const needsSync = sleepNeedsMoreSync(sleepDetail);
     return {
       badge: 'DATA',
       title: needsSync ? 'Trust the signal before the session' : 'Review sleep before the session',
@@ -369,7 +363,7 @@ function readinessCall(
         : 'Readiness is currently limited by low sleep confidence despite usable signal. Review the sleep window before choosing a hard workout.',
       targetStrain: 'hold',
       actionLabel: needsSync ? 'Sync overnight data' : 'Review sleep window',
-      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'needs sync',
+      actionValue: sleepSyncActionValue(sleepDetail),
       icon: needsSync ? 'sync' : 'create',
       color: colors.strainBlue,
       route: needsSync ? { name: 'device' } : { name: 'editSleep' },

@@ -11,6 +11,7 @@ import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepE
 import { illnessTint } from './IllnessScreen';
 import { DayRail } from './DayScreen';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null);
@@ -40,11 +41,6 @@ function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null
   if (sleepDetail.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 66;
   if (sleepDetail.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 85;
   return null;
-}
-
-function recoverySleepNeedsSync(sleepDetail: DailyMetricRow['sleepDetail'] | null): boolean {
-  if (!sleepDetail) return true;
-  return (sleepDetail.coveragePct ?? 100) < 60 || (sleepDetail.signalMin ?? 999) < 150;
 }
 
 function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
@@ -89,7 +85,7 @@ function recoveryGuidanceForDetail(
   if (sleepStateWakeConflict(sleepDetail)) {
     return 'Recovery is capped because the sleep window conflicts with decoded strap-state evidence. Review the window before trusting today\'s training signal.';
   }
-  if (cap != null && !recoverySleepNeedsSync(sleepDetail)) {
+  if (cap != null && !sleepNeedsMoreSync(sleepDetail)) {
     return 'Recovery is capped because sleep confidence is low despite usable signal. Review the sleep window before trusting today\'s training signal.';
   }
   return recoveryGuidance(recovery, cap);
@@ -108,7 +104,7 @@ function recoveryQualityNote(
   ].filter((v): v is string => v != null);
   if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
   if (sleepStateWakeConflict(day.sleepDetail)) return 'Recovery is capped because decoded strap-state evidence is mostly wake.';
-  if (cap != null && !recoverySleepNeedsSync(day.sleepDetail)) return `Recovery is capped at ${cap}% until the sleep window is reviewed or corroborated.`;
+  if (cap != null && !sleepNeedsMoreSync(day.sleepDetail)) return `Recovery is capped at ${cap}% until the sleep window is reviewed or corroborated.`;
   if (cap != null) return `Recovery is capped at ${cap}% until sleep confidence improves.`;
   if (confidence === 'high') return 'Recovery is backed by strong overnight coverage and still-worn evidence.';
   if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more synced data can refine it.';
@@ -456,7 +452,7 @@ function recoveryDriverInsight(
     };
   }
   if (confidenceCap != null) {
-    const needsMoreSync = recoverySleepNeedsSync(sleepDetail);
+    const needsMoreSync = sleepNeedsMoreSync(sleepDetail);
     return {
       badge: 'DATA',
       title: confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',

@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import type { DailyMetricRow } from '../db/database';
 import { Card, Empty, NavRow, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
 import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
+import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
@@ -421,13 +421,13 @@ type SleepReadinessFix = {
   route: Parameters<Nav['navigate']>[0];
 };
 
-function trainingSleepFix(sleepDetail: DailyMetricRow['sleepDetail'] | null): SleepReadinessFix {
-  const coverage = sleepDetail?.coveragePct ?? null;
-  const signal = sleepDetail?.signalMin ?? null;
-  const needsSync = !sleepDetail || (coverage ?? 100) < 60 || (signal ?? 999) < 150;
+function trainingSleepFix(
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+): SleepReadinessFix {
+  const needsSync = sleepNeedsMoreSync(sleepDetail);
   return {
     needsSync,
-    actionValue: needsSync ? (coverage != null ? `${coverage}% coverage` : 'needs sync') : 'review window',
+    actionValue: needsSync ? sleepSyncActionValue(sleepDetail) : 'review window',
     route: needsSync ? { name: 'device' } : { name: 'readiness' },
   };
 }
