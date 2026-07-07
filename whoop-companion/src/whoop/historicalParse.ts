@@ -31,7 +31,7 @@ export type HistoricalStepSample = {
 
 export type HistoricalSleepStateSample = {
   ts: number; // epoch milliseconds
-  state: number; // v18 @81 high nibble: 0 wake, 1 still, 2 asleep, 3 up
+  state: number; // v18 @81 high nibble candidate: 0 wake-like, 1 still, 2 sleep-like, 3 up-like
 };
 
 export type HistoricalRawVitalSample = {

@@ -62,6 +62,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
   const captureAction = capture ? sleepCaptureAction(capture) : null;
+  const captureSummary = capture ? sleepEvidenceSummary(capture) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
   const scoreDrivers = useMemo(
@@ -236,6 +237,38 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <Card>
         {capture ? (
           <>
+            {captureSummary ? (
+              <View style={[styles.evidencePanel, { borderColor: captureSummary.color }]}>
+                <View style={styles.evidenceHeader}>
+                  <View style={[styles.evidenceBadge, { backgroundColor: captureSummary.color }]}>
+                    <Text style={styles.evidenceBadgeText}>{captureSummary.badge}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.evidenceTitle}>{captureSummary.title}</Text>
+                    <Text style={styles.evidenceBody}>{captureSummary.body}</Text>
+                  </View>
+                </View>
+                <EvidenceMeter
+                  label="HR coverage"
+                  value={capture.coveragePct}
+                  detail={`${capture.signalMin}/${capture.windowMin} min`}
+                  color={coverageColor(capture.coveragePct)}
+                />
+                <EvidenceMeter
+                  label="Still corroboration"
+                  value={Math.round((capture.stillMin / Math.max(1, capture.windowMin)) * 100)}
+                  detail={`${capture.stillMin} still min`}
+                  color={capture.stillMin >= Math.max(45, capture.windowMin * 0.2) ? colors.recoveryGreen : colors.recoveryYellow}
+                />
+                <EvidenceMeter
+                  label="Decoded state"
+                  value={capture.sleepStateMin > 0 ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
+                  detail={capture.sleepStateMin > 0 ? sleepStateWakeDisplay(capture) : 'no state rows'}
+                  color={sleepStateWakeConflict(capture) ? colors.recoveryRed : capture.sleepStateMin > 0 ? colors.recoveryGreen : colors.textTertiary}
+                  inverse
+                />
+              </View>
+            ) : null}
             <View style={styles.grid}>
               <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={coverageColor(capture.coveragePct)} />
               <Stat label="R-R beats" value={capture.rrCount} />
@@ -1028,6 +1061,44 @@ function StressBar({ label, color, pct, minutes }: { label: string; color: strin
   );
 }
 
+function EvidenceMeter({
+  label,
+  value,
+  detail,
+  color,
+  inverse,
+}: {
+  label: string;
+  value: number;
+  detail: string;
+  color: string;
+  inverse?: boolean;
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <View style={styles.evidenceMeter}>
+      <View style={styles.evidenceMeterHead}>
+        <Text style={styles.evidenceMeterLabel}>{label}</Text>
+        <Text style={[styles.evidenceMeterValue, { color }]}>
+          {pct}% <Text style={styles.evidenceMeterDetail}>{detail}</Text>
+        </Text>
+      </View>
+      <View style={styles.evidenceTrack}>
+        <View
+          style={[
+            styles.evidenceFill,
+            {
+              width: `${Math.max(2, pct)}%`,
+              backgroundColor: color,
+              opacity: inverse ? 0.55 : 1,
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
 function NeedRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <View style={styles.needRow}>
@@ -1115,6 +1186,44 @@ function stateEvidenceColor(
   return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
 }
 
+function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): {
+  badge: string;
+  title: string;
+  body: string;
+  color: string;
+} {
+  if (sleepStateWakeConflict(capture)) {
+    return {
+      badge: 'CHECK',
+      title: 'Sleep evidence conflicts',
+      body: `The decoded strap-state stream is mostly wake (${sleepStateWakeDisplay(capture)}). Pulse should not treat this as final sleep until sync completes or the window is reviewed.`,
+      color: colors.recoveryRed,
+    };
+  }
+  if (capture.confidence === 'high') {
+    return {
+      badge: 'GOOD',
+      title: 'Evidence supports the result',
+      body: 'HR coverage, R-R signal and still-worn corroboration are aligned enough for sleep, recovery and readiness.',
+      color: colors.recoveryGreen,
+    };
+  }
+  if (capture.coveragePct < 60 || capture.signalMin < 150) {
+    return {
+      badge: 'SYNC',
+      title: 'Evidence is still partial',
+      body: 'The strap has not backfilled enough unique overnight minutes yet. Keep auto-sync running before judging the score.',
+      color: colors.strainBlue,
+    };
+  }
+  return {
+    badge: 'WATCH',
+    title: 'Evidence is usable but limited',
+    body: 'The result can guide the day, but more coverage or a reviewed window can still move stages, vitals and readiness.',
+    color: colors.recoveryYellow,
+  };
+}
+
 function sleepCaptureAction(capture: {
   confidence: 'high' | 'medium' | 'low';
   coveragePct: number;
@@ -1191,6 +1300,19 @@ const styles = StyleSheet.create({
   scheduleValue: { color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   captureSource: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   captureNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
+  evidencePanel: { borderWidth: 1, borderRadius: 8, padding: 12, backgroundColor: colors.surface, marginBottom: 14 },
+  evidenceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  evidenceBadge: { width: 48, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  evidenceBadgeText: { color: '#000', fontSize: 9, fontFamily: fonts.black },
+  evidenceTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  evidenceBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  evidenceMeter: { marginTop: 9 },
+  evidenceMeterHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 4 },
+  evidenceMeterLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.textSemibold },
+  evidenceMeterValue: { fontSize: 12, fontFamily: fonts.bold },
+  evidenceMeterDetail: { color: colors.textTertiary, fontSize: 11, fontFamily: fonts.text },
+  evidenceTrack: { height: 7, borderRadius: 4, backgroundColor: colors.card, overflow: 'hidden' },
+  evidenceFill: { height: 7, borderRadius: 4 },
   trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },

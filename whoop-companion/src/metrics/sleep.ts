@@ -18,7 +18,7 @@ export type SleepMinute = {
   hr: number | null;
   motion: number | null; // arbitrary units; higher = more movement
   rmssd?: number | null;
-  bandSleepState?: number | null; // WHOOP 5 v18 @81: 0 wake, 1 still, 2 asleep, 3 up
+  bandSleepState?: number | null; // WHOOP 5 v18 @81 candidate: 0 wake-like, 1 still, 2 sleep-like, 3 up-like
 };
 
 export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
