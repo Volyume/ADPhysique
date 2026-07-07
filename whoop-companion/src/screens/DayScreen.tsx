@@ -294,6 +294,9 @@ function sleepTrustNote(metric: DailyMetricRow): string {
   }
   if (detail.confidence === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
   if (detail.confidence === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
+  if ((detail.coveragePct ?? 0) >= 60 && (detail.signalMin ?? 0) >= 150) {
+    return `Low-confidence sleep: coverage is present, but still-worn or decoded sleep-state corroboration is weak. Review the window before trusting score/recovery.`;
+  }
   return `Low-confidence sleep: ${detail.coveragePct}% coverage with ${detail.signalMin} signal minutes. Sync more data or adjust the window before trusting score/recovery.`;
 }
 
@@ -325,11 +328,25 @@ function daySleepReview(metric: DailyMetricRow): {
   const efficiency = detail.efficiency ?? (inBed > 0 ? Math.round((metric.sleepMin / inBed) * 100) : null);
   const hasCoreVitals = metric.rmssd != null && metric.rhr != null && metric.resp != null;
 
+  if (sleepStateWakeConflict(detail)) {
+    return {
+      label: 'WAKE',
+      title: 'Sleep window conflicts with strap state',
+      body: `Decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(detail)}). Review the window before trusting sleep, recovery or readiness for this day.`,
+      color: colors.recoveryRed,
+      tint: `${colors.recoveryRed}12`,
+      textColor: colors.white,
+    };
+  }
+
   if (detail.confidence === 'low' || coverage < 60 || signal < 150) {
     return {
-      label: 'SYNC',
-      title: 'Partial overnight capture',
-      body: `Only ${coverage}% coverage and ${signal} signal minutes are available. Keep the strap connected and let auto sync backfill before trusting sleep or recovery.`,
+      label: coverage >= 60 && signal >= 150 ? 'CHECK' : 'SYNC',
+      title: coverage >= 60 && signal >= 150 ? 'Sleep candidate needs corroboration' : 'Partial overnight capture',
+      body:
+        coverage >= 60 && signal >= 150
+          ? 'The HR window has enough signal, but still-worn or decoded sleep-state evidence is weak. Review the window if the timing looks wrong.'
+          : `Only ${coverage}% coverage and ${signal} signal minutes are available. Keep the strap connected and let auto sync backfill before trusting sleep or recovery.`,
       color: colors.recoveryRed,
       tint: `${colors.recoveryRed}12`,
       textColor: colors.white,
@@ -410,6 +427,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
   ].filter(Boolean) as string[];
   const sleepCoverage = metric.sleepDetail?.coveragePct ?? null;
   const lowSleepCoverage = sleepCoverage != null && sleepCoverage < 60;
+  const sleepTrustBlocked = metric.sleepDetail?.confidence === 'low' || lowSleepCoverage || (metric.sleepDetail?.signalMin ?? 999) < 150;
   const hasSteps = metric.steps != null;
   const facts = [
     coreMissing.length === 0 ? 'Core vitals ready' : `${coreMissing.join(', ')} missing`,
@@ -417,12 +435,14 @@ function dayVitalsReview(metric: DailyMetricRow): {
     hasSteps ? 'Steps captured' : 'Steps missing',
   ];
 
-  if (coreMissing.length >= 2 || lowSleepCoverage) {
+  if (coreMissing.length >= 2 || sleepTrustBlocked) {
     return {
       label: 'SYNC',
-      title: 'Recovery inputs need more data',
-      body: lowSleepCoverage
-        ? `Sleep coverage is ${sleepCoverage}%, so overnight vitals and recovery should be treated as partial until auto sync backfills more history.`
+      title: sleepTrustBlocked && !lowSleepCoverage ? 'Recovery inputs need trusted sleep' : 'Recovery inputs need more data',
+      body: sleepTrustBlocked
+        ? lowSleepCoverage
+          ? `Sleep coverage is ${sleepCoverage}%, so overnight vitals and recovery should be treated as partial until auto sync backfills more history.`
+          : 'Sleep has enough raw signal to inspect, but confidence is low. Review the sleep window before trusting recovery or overnight health metrics.'
         : `Missing ${coreMissing.join(', ')} from the overnight window. Recovery, stress and health monitor panels will stay limited until those inputs are captured.`,
       facts,
       color: colors.recoveryRed,
