@@ -287,6 +287,7 @@ const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const HISTORY_STALL_TIMEOUT_MS = 45 * 1000;
 const HISTORY_STALL_NUDGE_LIMIT = 2;
 const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
+const HISTORY_RECORD_FLUSH_COUNT = 500;
 const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
@@ -1047,6 +1048,11 @@ class AppStore extends Store<AppState> {
             }
           : s.historySync,
       }));
+      if (this.historyRecords.length >= HISTORY_RECORD_FLUSH_COUNT) {
+        const chunk = this.historyRecords;
+        this.historyRecords = [];
+        this.enqueueHistoryPersistChunk(chunk);
+      }
       return;
     }
 
@@ -1079,16 +1085,7 @@ class AppStore extends Store<AppState> {
       this.historyRecords = [];
       if (this.historyEndAckSentThisBurst) {
         if (chunk.length) {
-          this.historyCommitQueue = this.historyCommitQueue
-            .then(async () => {
-              await this.persistHistoryFrames(chunk);
-            })
-            .catch((e) => {
-              this.clearHistoryTimeout();
-              this.stopHistoryWatchdog();
-              this.historyStopQueued = true;
-              this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
-            });
+          this.enqueueHistoryPersistChunk(chunk);
         }
         return;
       }
@@ -1097,6 +1094,20 @@ class AppStore extends Store<AppState> {
     } else if (meta.kind === 'complete') {
       this.enqueueHistoryStop('complete');
     }
+  }
+
+  private enqueueHistoryPersistChunk(frames: Uint8Array[]): void {
+    if (!frames.length || this.historyStopQueued) return;
+    this.historyCommitQueue = this.historyCommitQueue
+      .then(async () => {
+        await this.persistHistoryFrames(frames);
+      })
+      .catch((e) => {
+        this.clearHistoryTimeout();
+        this.stopHistoryWatchdog();
+        this.historyStopQueued = true;
+        this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
+      });
   }
 
   private enqueueHistoryChunk(frames: Uint8Array[], meta: Extract<HistoryMetadata, { kind: 'end' }>): void {
