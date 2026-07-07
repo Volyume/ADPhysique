@@ -536,6 +536,21 @@ function sleepVerdict(input: {
     };
   }
 
+  if (!sleep && capture && longHrOnlyCapture(capture)) {
+    return {
+      badge: 'WAIT',
+      title: 'Sleep candidate needs corroboration',
+      body: 'Pulse found a long HR-shaped overnight window, but it is not scoring it as sleep until coverage is stronger or band still-state evidence appears.',
+      vitalsLabel,
+      vitalsColor,
+      actionLabel: 'Sync stored history',
+      actionValue: `${capture.coveragePct}% coverage`,
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
   if (!sleep) {
     return {
       badge: 'WAIT',
@@ -801,6 +816,16 @@ function sleepScoreDrivers(input: {
       value: sleepStateWakeDisplay(capture, 'min'),
       detail: 'Decoded state evidence is mostly wake, so the sleep score stays capped until the window is reviewed or more history arrives.',
       color: colors.recoveryRed,
+    });
+  }
+
+  if (capture && longHrOnlyCapture(capture)) {
+    drivers.push({
+      tone: 'data',
+      label: 'Corroboration',
+      value: `${capture.stillMin} still min`,
+      detail: 'A long HR-only window needs stronger coverage or still-state evidence before it should count as final sleep.',
+      color: colors.strainBlue,
     });
   }
 
@@ -1114,6 +1139,14 @@ function stateEvidenceColor(
   return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
 }
 
+function longHrOnlyCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
+  return capture.source === 'auto_hr' &&
+    capture.windowMin >= 7 * 60 &&
+    capture.stillMin < Math.max(30, capture.windowMin * 0.1) &&
+    capture.sleepStateMin < 30 &&
+    (capture.signalMin < 420 || capture.coveragePct < 85);
+}
+
 function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): {
   badge: string;
   title: string;
@@ -1126,6 +1159,14 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
       title: 'Sleep evidence conflicts',
       body: `The decoded strap-state stream is mostly wake (${sleepStateWakeDisplay(capture)}). Pulse should not treat this as final sleep until sync completes or the window is reviewed.`,
       color: colors.recoveryRed,
+    };
+  }
+  if (longHrOnlyCapture(capture)) {
+    return {
+      badge: 'SYNC',
+      title: 'HR-only candidate needs more proof',
+      body: 'A long overnight HR window is present, but still-state corroboration is sparse. Keep auto-sync connected or review the window before trusting duration.',
+      color: colors.strainBlue,
     };
   }
   if (capture.confidence === 'high') {
@@ -1152,11 +1193,7 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
   };
 }
 
-function sleepCaptureAction(capture: {
-  confidence: 'high' | 'medium' | 'low';
-  coveragePct: number;
-  signalMin: number;
-}): {
+function sleepCaptureAction(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): {
   label: string;
   value: string;
   icon: string;
@@ -1164,6 +1201,15 @@ function sleepCaptureAction(capture: {
   route: Parameters<Nav['navigate']>[0];
 } | null {
   if (capture.confidence === 'high') return null;
+  if (longHrOnlyCapture(capture)) {
+    return {
+      label: 'Sync more overnight data',
+      value: `${capture.coveragePct}% coverage`,
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
   if (capture.coveragePct < 60 || capture.signalMin < 150) {
     return {
       label: 'Sync more overnight data',
