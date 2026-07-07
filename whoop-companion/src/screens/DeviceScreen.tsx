@@ -52,7 +52,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
   const [actualSteps, setActualSteps] = useState('');
   const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
-  const [alarmBusy, setAlarmBusy] = useState<'disable' | 'stop' | null>(null);
+  const [alarmBusy, setAlarmBusy] = useState<'disable' | 'stop' | 'test' | null>(null);
 
   // Frames actually written to the database (what export reads), polled so we can
   // see whether persistence is keeping up with the live (in-memory) counter.
@@ -78,6 +78,14 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastSyncText = effectiveSyncTs
     ? new Date(effectiveSyncTs).toLocaleString()
     : 'Not yet - connect to sync';
+  const strapAlarmText =
+    strapAlarm.pendingWrite === 'set'
+      ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
+      : strapAlarm.pendingWrite === 'disable'
+        ? 'disable queued for next connection'
+        : strapAlarm.enabled
+          ? `set for ${formatAlarmDate(strapAlarm.wakeTs)}`
+          : 'off in Pulse';
 
   const applyStepCalibration = async () => {
     const actual = Number(actualSteps.replace(/,/g, '').trim());
@@ -104,8 +112,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     if (alarmBusy) return;
     setAlarmBusy('disable');
     try {
-      await appStore.disableStrapAlarm();
-      Alert.alert('Wake alarm disabled', 'Sent the WHOOP disable-alarm command to the strap. This should clear the stored haptic alarm.');
+      const result = await appStore.disableStrapAlarm();
+      Alert.alert(
+        result === 'sent' ? 'Wake alarm disabled' : 'Wake alarm queued',
+        result === 'sent'
+          ? 'Sent the WHOOP disable-alarm command to the strap. This should clear the stored haptic alarm.'
+          : 'Pulse will send the disable-alarm command automatically when the strap reconnects.',
+      );
     } catch (e) {
       Alert.alert('Could not disable alarm', String(e));
     } finally {
@@ -121,6 +134,19 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       Alert.alert('Haptics stopped', 'Sent the WHOOP stop-haptics command to the strap.');
     } catch (e) {
       Alert.alert('Could not stop haptics', String(e));
+    } finally {
+      setAlarmBusy(null);
+    }
+  };
+
+  const testWakeAlarm = async () => {
+    if (alarmBusy) return;
+    setAlarmBusy('test');
+    try {
+      await appStore.testStrapAlarm();
+      Alert.alert('Test buzz sent', 'The strap should buzz briefly, then stop.');
+    } catch (e) {
+      Alert.alert('Could not test alarm', String(e));
     } finally {
       setAlarmBusy(null);
     }
@@ -241,22 +267,27 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <SectionLabel>Wake alarm</SectionLabel>
       <Card>
         <Text style={styles.diagText}>
-          Strap alarm: {strapAlarm.enabled ? `set for ${formatAlarmDate(strapAlarm.wakeTs)}` : 'off in Pulse'}
+          Strap alarm: {strapAlarmText}
         </Text>
         <SecondaryButton
-          title={alarmBusy === 'disable' ? 'Disabling...' : 'Disable strap alarm'}
+          title={alarmBusy === 'disable' ? 'Disabling...' : connected ? 'Disable strap alarm' : 'Queue disable alarm'}
           onPress={() => void disableWakeAlarm()}
-          disabled={!connected || !!alarmBusy}
+          disabled={!!alarmBusy}
         />
         <SecondaryButton
           title={alarmBusy === 'stop' ? 'Stopping...' : 'Stop buzzing now'}
           onPress={() => void stopHaptics()}
           disabled={!connected || !!alarmBusy}
         />
+        <SecondaryButton
+          title={alarmBusy === 'test' ? 'Testing...' : 'Test buzz'}
+          onPress={() => void testWakeAlarm()}
+          disabled={!connected || !!alarmBusy}
+        />
         <SecondaryButton title="Open Sleep Coach" onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <Text style={styles.hint}>
-          Sleep Coach can set the strap alarm from your wake target. These controls disable the stored alarm or stop an
-          active buzz immediately.
+          Sleep Coach can set the strap alarm from your wake target. Disable can queue for the next connection; Stop and
+          Test buzz need the strap connected because they act immediately.
         </Text>
       </Card>
 

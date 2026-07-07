@@ -22,6 +22,7 @@ import {
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
   cmdDisableAlarm,
+  cmdRunAlarm,
   cmdSetAlarmTime,
   cmdStopHaptics,
   parseHistoryMetadata,
@@ -150,6 +151,7 @@ export type StrapAlarmState = {
   enabled: boolean;
   wakeTs: number | null;
   updatedAt: number | null;
+  pendingWrite: 'set' | 'disable' | null;
 };
 
 // Phone-GPS gating per activity comes from the unified activity catalogue
@@ -258,7 +260,7 @@ const initialState: AppState = {
   historySync: null,
   lastHistorySync: null,
   lastSyncTs: null,
-  strapAlarm: { enabled: false, wakeTs: null, updatedAt: null },
+  strapAlarm: { enabled: false, wakeTs: null, updatedAt: null, pendingWrite: null },
   profile: DEFAULT_PROFILE,
   error: null,
 };
@@ -385,6 +387,7 @@ class AppStore extends Store<AppState> {
       void this.ensureBackgroundSyncKeepAlive('Background auto-sync');
     }
     if (status === 'connected') {
+      void this.flushPendingStrapAlarm('connection');
       this.startConnectedAutoSync();
     }
     if (status === 'disconnected' || status === 'idle') {
@@ -414,6 +417,7 @@ class AppStore extends Store<AppState> {
     if (!this.ble?.canSendCommands) {
       const commandReady = (await this.ble?.refreshCommandChannel()) === true;
       if (commandReady) {
+        await this.flushPendingStrapAlarm('auto sync');
         this.scheduleAutoHistoryDrain(deviceId, 250);
         return;
       }
@@ -440,6 +444,7 @@ class AppStore extends Store<AppState> {
       return;
     }
     this.commandChannelAttempts = 0;
+    await this.flushPendingStrapAlarm('auto sync');
     this.autoDrainedFor = deviceId;
     this.autoSyncAttempts += 1;
     await this.runHistoryDrain('auto');
@@ -740,30 +745,108 @@ class AppStore extends Store<AppState> {
     return ble;
   }
 
-  setStrapWakeAlarm = async (wakeTs: number): Promise<void> => {
+  private async optionalCommandChannel(): Promise<WhoopBle | null> {
+    const ble = this.ble;
+    if (!ble || !ble.isConnected) return null;
+    const ready = ble.canSendCommands || (await ble.refreshCommandChannel());
+    return ready ? ble : null;
+  }
+
+  private async saveStrapAlarm(alarm: StrapAlarmState, statusDetail: string): Promise<void> {
+    await kvSet(STRAP_ALARM_KEY, JSON.stringify(alarm));
+    this.setState({ strapAlarm: alarm, error: null, statusDetail });
+  }
+
+  private async flushPendingStrapAlarm(context: string): Promise<void> {
+    const alarm = this.getState().strapAlarm;
+    if (!alarm.pendingWrite) return;
+    const ble = await this.optionalCommandChannel();
+    if (!ble) return;
+    try {
+      if (alarm.pendingWrite === 'set') {
+        if (!alarm.wakeTs || alarm.wakeTs <= Date.now() + 30 * 1000) {
+          await this.saveStrapAlarm(
+            { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null },
+            'Queued wake alarm expired before the strap connected',
+          );
+          return;
+        }
+        await ble.writeCommand(cmdSetAlarmTime(alarm.wakeTs));
+        await this.saveStrapAlarm(
+          { enabled: true, wakeTs: alarm.wakeTs, updatedAt: Date.now(), pendingWrite: null },
+          `Queued wake alarm sent on ${context}`,
+        );
+        return;
+      }
+      await ble.writeCommand(cmdDisableAlarm());
+      await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+      await this.saveStrapAlarm(
+        { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null },
+        `Queued wake alarm disable sent on ${context}`,
+      );
+    } catch (e) {
+      this.setState({ error: `Queued wake alarm write failed: ${String(e)}` });
+    }
+  }
+
+  setStrapWakeAlarm = async (wakeTs: number): Promise<'sent' | 'queued'> => {
     if (!Number.isFinite(wakeTs) || wakeTs <= Date.now() + 30 * 1000) {
       throw new Error('Choose a wake time at least 30 seconds in the future.');
     }
-    const ble = await this.requireCommandChannel('Set wake alarm');
-    await ble.writeCommand(cmdSetAlarmTime(wakeTs));
-    const alarm: StrapAlarmState = { enabled: true, wakeTs: Math.round(wakeTs), updatedAt: Date.now() };
-    await kvSet(STRAP_ALARM_KEY, JSON.stringify(alarm));
-    this.setState({ strapAlarm: alarm, error: null, statusDetail: 'Wake alarm set on strap' });
+    const alarm: StrapAlarmState = { enabled: true, wakeTs: Math.round(wakeTs), updatedAt: Date.now(), pendingWrite: null };
+    const ble = await this.optionalCommandChannel();
+    if (!ble) {
+      const queued = { ...alarm, pendingWrite: 'set' as const };
+      await this.saveStrapAlarm(queued, 'Wake alarm queued for next strap connection');
+      this.connect();
+      return 'queued';
+    }
+    try {
+      await ble.writeCommand(cmdSetAlarmTime(wakeTs));
+      await this.saveStrapAlarm(alarm, 'Wake alarm set on strap');
+      return 'sent';
+    } catch {
+      const queued = { ...alarm, pendingWrite: 'set' as const };
+      await this.saveStrapAlarm(queued, 'Wake alarm write failed; queued for next strap connection');
+      this.connect();
+      return 'queued';
+    }
   };
 
-  disableStrapAlarm = async (): Promise<void> => {
-    const ble = await this.requireCommandChannel('Disable alarm');
-    await ble.writeCommand(cmdDisableAlarm());
-    await ble.writeCommand(cmdStopHaptics()).catch(() => {});
-    const alarm: StrapAlarmState = { enabled: false, wakeTs: null, updatedAt: Date.now() };
-    await kvSet(STRAP_ALARM_KEY, JSON.stringify(alarm));
-    this.setState({ strapAlarm: alarm, error: null, statusDetail: 'Wake alarm disabled on strap' });
+  disableStrapAlarm = async (): Promise<'sent' | 'queued'> => {
+    const alarm: StrapAlarmState = { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null };
+    const ble = await this.optionalCommandChannel();
+    if (!ble) {
+      const queued = { ...alarm, pendingWrite: 'disable' as const };
+      await this.saveStrapAlarm(queued, 'Wake alarm disable queued for next strap connection');
+      this.connect();
+      return 'queued';
+    }
+    try {
+      await ble.writeCommand(cmdDisableAlarm());
+      await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+      await this.saveStrapAlarm(alarm, 'Wake alarm disabled on strap');
+      return 'sent';
+    } catch {
+      const queued = { ...alarm, pendingWrite: 'disable' as const };
+      await this.saveStrapAlarm(queued, 'Wake alarm disable failed; queued for next strap connection');
+      this.connect();
+      return 'queued';
+    }
   };
 
   stopStrapHaptics = async (): Promise<void> => {
     const ble = await this.requireCommandChannel('Stop haptics');
     await ble.writeCommand(cmdStopHaptics());
     this.setState({ error: null, statusDetail: 'Stop haptics command sent' });
+  };
+
+  testStrapAlarm = async (): Promise<void> => {
+    const ble = await this.requireCommandChannel('Test alarm');
+    await ble.writeCommand(cmdRunAlarm());
+    await delay(1200);
+    await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+    this.setState({ error: null, statusDetail: 'Test alarm buzz sent' });
   };
 
   /** Start the foreground-service guard used by Android background sync. */
@@ -1365,6 +1448,7 @@ class AppStore extends Store<AppState> {
     if (!ble.canSendCommands) {
       const commandReady = (await ble.refreshCommandChannel()) === true;
       if (commandReady) {
+        await this.flushPendingStrapAlarm(`${mode} sync`);
         this.setState((s) => ({
           historySync: s.historySync
             ? { ...s.historySync, status: 'Command channel rediscovered; starting history transfer' }
@@ -1375,6 +1459,7 @@ class AppStore extends Store<AppState> {
         return;
       }
     }
+    await this.flushPendingStrapAlarm(`${mode} sync`);
     void this.ensureBackgroundSyncKeepAlive(mode === 'auto' ? 'Automatic history sync' : 'Manual history sync').catch(() => {});
     this.clearAutoSyncTimer();
     this.clearHistoryTimeout();
@@ -2645,6 +2730,7 @@ function parseStrapAlarm(raw: string | null): StrapAlarmState {
       enabled: parsed.enabled === true,
       wakeTs: typeof parsed.wakeTs === 'number' && Number.isFinite(parsed.wakeTs) ? Math.round(parsed.wakeTs) : null,
       updatedAt: typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt) ? Math.round(parsed.updatedAt) : null,
+      pendingWrite: parsed.pendingWrite === 'set' || parsed.pendingWrite === 'disable' ? parsed.pendingWrite : null,
     };
   } catch {
     return initialState.strapAlarm;

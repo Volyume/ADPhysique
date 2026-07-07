@@ -111,6 +111,11 @@ export function cmdStopHaptics(): Uint8Array {
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.STOP_HAPTICS));
 }
 
+/** Trigger the strap alarm haptic immediately. Pair with STOP_HAPTICS for tests. */
+export function cmdRunAlarm(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.RUN_ALARM, new Uint8Array([0x01])));
+}
+
 /** Arm the strap's stored wake/haptic alarm at a Unix epoch timestamp. */
 export function cmdSetAlarmTime(wakeTsMs: number): Uint8Array {
   const epoch = Math.floor(wakeTsMs / 1000) >>> 0;

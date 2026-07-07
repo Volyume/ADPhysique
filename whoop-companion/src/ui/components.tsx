@@ -136,7 +136,9 @@ export function PrimaryButton({
       disabled={disabled}
       activeOpacity={0.85}
     >
-      <Text style={styles.primaryBtnText}>{title}</Text>
+      <Text style={styles.primaryBtnText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -157,7 +159,9 @@ export function SecondaryButton({
       disabled={disabled}
       activeOpacity={0.85}
     >
-      <Text style={styles.secondaryBtnText}>{title}</Text>
+      <Text style={styles.secondaryBtnText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.82}>
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -769,7 +773,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.item,
   },
-  primaryBtnText: { color: '#000000', fontSize: 14, fontFamily: fonts.textBold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  primaryBtnText: { color: '#000000', fontSize: 14, fontFamily: fonts.textBold, letterSpacing: 0.5, textAlign: 'center', textTransform: 'uppercase' },
   secondaryBtn: {
     backgroundColor: 'transparent',
     borderRadius: radius.button,
@@ -780,7 +784,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.item,
   },
-  secondaryBtnText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  secondaryBtnText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, letterSpacing: 0.5, textAlign: 'center', textTransform: 'uppercase' },
   btnDisabled: { opacity: 0.4 },
   ringCenter: { position: 'absolute', alignItems: 'center' },
   ringTop: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1.4, textTransform: 'uppercase', fontFamily: fonts.textBold },

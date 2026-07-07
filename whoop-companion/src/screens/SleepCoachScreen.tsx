@@ -70,13 +70,26 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const bedMin = wakeMin - tibNeededMin;
   const nextWakeTs = nextWakeTimestamp(wakeMin);
   const connected = status === 'connected';
+  const alarmMeta =
+    strapAlarm.pendingWrite === 'set'
+      ? `Queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
+      : strapAlarm.pendingWrite === 'disable'
+        ? 'Disable queued for next connection'
+        : strapAlarm.enabled
+          ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}`
+          : 'Off on this app';
 
   const setWakeAlarm = async () => {
     if (alarmBusy) return;
     setAlarmBusy('set');
     try {
-      await appStore.setStrapWakeAlarm(nextWakeTs);
-      Alert.alert('Wake alarm set', `The strap wake alarm is set for ${formatAlarmDate(nextWakeTs)}.`);
+      const result = await appStore.setStrapWakeAlarm(nextWakeTs);
+      Alert.alert(
+        result === 'sent' ? 'Wake alarm set' : 'Wake alarm queued',
+        result === 'sent'
+          ? `The strap wake alarm is set for ${formatAlarmDate(nextWakeTs)}.`
+          : `Pulse will set the strap wake alarm for ${formatAlarmDate(nextWakeTs)} when it reconnects.`,
+      );
     } catch (e) {
       Alert.alert('Could not set wake alarm', String(e));
     } finally {
@@ -88,8 +101,13 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     if (alarmBusy) return;
     setAlarmBusy('disable');
     try {
-      await appStore.disableStrapAlarm();
-      Alert.alert('Wake alarm disabled', 'The strap alarm disable command was sent.');
+      const result = await appStore.disableStrapAlarm();
+      Alert.alert(
+        result === 'sent' ? 'Wake alarm disabled' : 'Wake alarm queued',
+        result === 'sent'
+          ? 'The strap alarm disable command was sent.'
+          : 'Pulse will disable the strap alarm automatically when it reconnects.',
+      );
     } catch (e) {
       Alert.alert('Could not disable wake alarm', String(e));
     } finally {
@@ -173,25 +191,23 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         <View style={styles.alarmRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.alarmTitle}>Strap haptic alarm</Text>
-            <Text style={styles.alarmMeta}>
-              {strapAlarm.enabled ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}` : 'Off on this app'}
-            </Text>
+            <Text style={styles.alarmMeta}>{alarmMeta}</Text>
           </View>
           <Text style={styles.alarmTime}>{fmtClock(wakeMin)}</Text>
         </View>
         <PrimaryButton
-          title={alarmBusy === 'set' ? 'Setting...' : `Set strap alarm for ${fmtClock(wakeMin)}`}
+          title={alarmBusy === 'set' ? (connected ? 'Setting...' : 'Queueing...') : `${connected ? 'Set' : 'Queue'} strap alarm for ${fmtClock(wakeMin)}`}
           onPress={() => void setWakeAlarm()}
-          disabled={!connected || !!alarmBusy}
+          disabled={!!alarmBusy}
         />
         <SecondaryButton
-          title={alarmBusy === 'disable' ? 'Disabling...' : 'Disable strap alarm'}
+          title={alarmBusy === 'disable' ? 'Disabling...' : connected ? 'Disable strap alarm' : 'Queue disable alarm'}
           onPress={() => void disableWakeAlarm()}
-          disabled={!connected || !!alarmBusy}
+          disabled={!!alarmBusy}
         />
         <Text style={styles.planNote}>
-          The alarm writes directly to the WHOOP strap. It will use the wake-up time above; connect the strap first,
-          then keep it nearby until the confirmation appears.
+          The alarm uses the wake-up time above. If the strap is disconnected, Pulse queues it and writes it
+          automatically on the next command-channel connection.
         </Text>
       </Card>
 
