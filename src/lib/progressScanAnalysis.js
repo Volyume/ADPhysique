@@ -6,7 +6,7 @@ export const PHOTO_SCAN_SOURCE = 'photo_scan';
 export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
 export const PROGRESS_SCAN_ESTIMATOR_VERSION = bfEstimatorAsset.id;
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
-export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v1';
+export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v2';
 export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 14 * 86400000;
 
 const REQUIRED_SCORE_RATIO_KEYS = ['waistToShoulder', 'waistToHip', 'waistToHeight', 'bodyAreaRatio'];
@@ -37,13 +37,13 @@ const SCORE_WITHHOLD_REASONS = new Set([
 ]);
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
-  { key: 'foundation', label: 'Foundation', min: 0, max: 19 },
-  { key: 'active', label: 'Active', min: 20, max: 34 },
-  { key: 'athletic', label: 'Athletic', min: 35, max: 49 },
-  { key: 'defined', label: 'Defined', min: 50, max: 64 },
-  { key: 'lean', label: 'Lean', min: 65, max: 79 },
-  { key: 'very_lean', label: 'Very Lean', min: 80, max: 89 },
-  { key: 'peak_condition', label: 'Peak Condition', min: 90, max: 100 },
+  { key: 'foundation', label: 'Foundation', min: 0, max: 54 },
+  { key: 'active', label: 'Active', min: 55, max: 64 },
+  { key: 'athletic', label: 'Athletic', min: 65, max: 74 },
+  { key: 'defined', label: 'Defined', min: 75, max: 84 },
+  { key: 'lean', label: 'Lean', min: 85, max: 91 },
+  { key: 'very_lean', label: 'Very Lean', min: 92, max: 96 },
+  { key: 'peak_condition', label: 'Peak Condition', min: 97, max: 100 },
 ];
 
 const PROGRESS_SIGNAL_COPY = {
@@ -510,20 +510,32 @@ function interpolateBodyFatIndex(value, points = []) {
 
 function visualIndexFromEstimatedBodyFat(value, sex = null) {
   const maleCurve = [
-    [6, 96], [8, 90], [10, 84], [12, 78], [15, 72], [17, 68],
-    [20, 58], [25, 40], [30, 24], [40, 5], [55, 0],
+    [5, 100], [6, 98], [8, 96], [10, 92], [12, 87], [15, 81],
+    [17, 77], [20, 70], [25, 58], [30, 46], [40, 25], [55, 5],
   ];
   const femaleCurve = [
-    [12, 96], [15, 90], [18, 82], [20, 75], [23, 66], [27, 52],
-    [32, 36], [40, 12], [55, 0],
+    [10, 100], [12, 98], [15, 93], [18, 87], [20, 83], [23, 77],
+    [27, 68], [32, 58], [40, 40], [55, 10],
   ];
   const curve = normalisedSex(sex) === 'female' ? femaleCurve : maleCurve;
   const score = interpolateBodyFatIndex(value, curve);
   return score == null ? null : rounded0(clamp(score, 0, 100));
 }
 
+export function calibrateVolyumeScore(rawScore) {
+  const n = finiteNumber(rawScore);
+  if (n == null) return null;
+  const curve = [
+    [0, 40], [10, 50], [20, 60], [30, 66], [35, 70],
+    [45, 77], [55, 82], [65, 87], [75, 92], [85, 96],
+    [92, 98], [100, 100],
+  ];
+  return rounded0(clamp(interpolateBodyFatIndex(n, curve), 0, 100));
+}
+
 function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
-  const silhouetteScore = computeVisualLeannessScore(inputs);
+  const rawSilhouetteScore = computeVisualLeannessScore(inputs);
+  const silhouetteScore = calibrateVolyumeScore(rawSilhouetteScore);
   const estimateScore = visualIndexFromEstimatedBodyFat(
     modelEstimateValue(modelEstimate),
     modelEstimate?.inputs?.sex,
@@ -531,7 +543,7 @@ function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
   if (silhouetteScore == null) return estimateScore;
   if (estimateScore == null) return silhouetteScore;
   const gap = Math.abs(silhouetteScore - estimateScore);
-  const estimateWeight = gap >= 24 ? 0.65 : 0.50;
+  const estimateWeight = estimateScore >= 80 && gap >= 15 ? 0.75 : gap >= 20 ? 0.60 : 0.50;
   return rounded0(clamp(
     silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight,
     0,
@@ -579,6 +591,12 @@ export function buildPhysiqueAssessment({
   previousScan = null,
 } = {}) {
   const inputs = modelEstimate?.inputs ?? physiqueInputsFromAssets(assets);
+  const rawSilhouetteScore = computeVisualLeannessScore(inputs);
+  const calibratedSilhouetteScore = calibrateVolyumeScore(rawSilhouetteScore);
+  const estimatorAnchorScore = visualIndexFromEstimatedBodyFat(
+    modelEstimateValue(modelEstimate),
+    modelEstimate?.inputs?.sex,
+  );
   const scanConfidenceScore = computeScanConfidenceScore({
     assets,
     quality,
@@ -615,11 +633,10 @@ export function buildPhysiqueAssessment({
     inputs,
     measuredSignalsUsed,
     indexInputs: {
-      silhouetteScore: computeVisualLeannessScore(inputs),
-      estimatorAnchorScore: visualIndexFromEstimatedBodyFat(
-        modelEstimateValue(modelEstimate),
-        modelEstimate?.inputs?.sex,
-      ),
+      silhouetteScore: rawSilhouetteScore,
+      rawSilhouetteScore,
+      calibratedSilhouetteScore,
+      estimatorAnchorScore,
     },
     biasFlags,
     calibrationStatus: 'still_calibrating_for_your_body_type',

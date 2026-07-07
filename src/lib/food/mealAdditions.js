@@ -25,11 +25,11 @@ import { CURATED_MEALS } from './curatedMeals';
 
 // A short, honest, pro-food intro shown above the additions in the sheet.
 export const ADDITIONS_INTRO =
-  'A starting point, not a rule. Add any of these to taste, in a normal sprinkle they bring flavour, not calories.';
+  'A starting point, not a rule. Season and tweak to taste with herbs, spices, citrus or sauces you enjoy.';
 
 // An honesty footnote (some sauces do add up in large amounts).
 export const ADDITIONS_FOOTNOTE =
-  'Amounts here are a pinch or a splash. Pile on a sauce and it will start to count, so keep it light.';
+  'Amounts here are a pinch or a splash. If you use a lot of sauce, log it so your diary stays honest.';
 
 const MEAL_ADDITIONS = {
   // ─── OMNIVORE ───────────────────────────────────────────────────────────

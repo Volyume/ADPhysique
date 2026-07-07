@@ -91,7 +91,7 @@ import FoodSearchScreen from '../FoodSearchScreen';
 import HintCaption from '../../components/HintCaption';
 
 const store = { user: { id: 'u1' }, userProfile: {}, accessibility: { energyUnit: 'kcal' } };
-const HINT_TEXT = 'Hold a food to edit the portion. Hold to select several.';
+const HINT_TEXT = 'Hold a food to change the portion.';
 const HINT_KEY = '@volyume_seen_diary_food_hint';
 
 function makeNav() {

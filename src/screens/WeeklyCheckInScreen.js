@@ -49,7 +49,7 @@ import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS, firstReviewUnlockDate } from '..
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// --- Sub-components -----------------------------------------------------------
 
 function StepBar({ current, total }) {
   return (
@@ -123,7 +123,7 @@ function OptionRow({ options, selected, onSelect }) {
 
 const TOTAL_STEPS = 4;
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+// --- Main screen --------------------------------------------------------------
 
 export default function WeeklyCheckInScreen({ navigation }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
@@ -144,7 +144,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // offer, never a cage.
   const [forceFullWizard, setForceFullWizard] = useState(false);
 
-  // ─── Gate state ──────────────────────────────────────────────────────────────
+  // --- Gate state --------------------------------------------------------------
   // 'loading' | 'wrong_day' | 'day_late' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
   const [gateState, setGateState] = useState('loading');
   // OB-7: when the user is exactly one day past their scheduled day, every
@@ -664,7 +664,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     if (go) go();
   }, []);
 
-  // ─── Step views ─────────────────────────────────────────────────────────────
+  // --- Step views -------------------------------------------------------------
 
   function renderStep0() {
     return (
@@ -741,7 +741,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                 <Text style={styles.weightSummaryText}>
                   {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
-                  {trendKg ? ` · trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
+                  {trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
                 </Text>
                 {!alreadyLoggedToday && (
                   <Text style={styles.weightSummaryMissed}>Not yet today</Text>
@@ -1017,7 +1017,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     );
   }
 
-  // ─── Fast Check-In ───────────────────────────────────────────────────────────
+  // --- Fast Check-In -----------------------------------------------------------
   // The condensed card shown when fastEligible holds. The derived facts are
   // read-only confirmations; energy and soreness are the only two inputs. It
   // reuses the same energyScore/sorenessScore state and the same handleSubmit
@@ -1050,7 +1050,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         key: 'weight',
         icon: 'scale-outline',
         label: 'Weight',
-        value: `${weekWeights.length} ${weekWeights.length === 1 ? 'day' : 'days'} logged${trendKg ? ` · trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+        value: `${weekWeights.length} ${weekWeights.length === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
       },
     ].filter(Boolean).filter(r => r.value != null);
 
@@ -1058,7 +1058,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       <>
         <Text style={styles.stepHeading}>Quick check-in</Text>
         <Text style={styles.stepSubtitle}>
-          Volyume has read your week from your logs. Confirm recovery and submit.
+          Volyume has read your week from your logs. Confirm energy and recovery, then submit.
         </Text>
 
         <View style={styles.fastSummaryCard}>
@@ -1081,7 +1081,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               autoDerived.calsMeta
                 ? `from your diary: ${autoDerived.calsMeta.daysLogged} of 7 days logged`
                 : null,
-            ].filter(Boolean).join(' · ') || 'Read from your logs this week.'}
+            ].filter(Boolean).join(' - ') || 'Read from your logs this week.'}
           </Text>
         </View>
 
@@ -1118,7 +1118,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     );
   }
 
-  // ─── Gate screens ──────────────────────────────────────────────────────────
+  // --- Gate screens ----------------------------------------------------------
   if (loading || gateState === 'loading') {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -1311,7 +1311,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     );
   }
 
-  // ─── Main check-in screen ──────────────────────────────────────────────────
+  // --- Main check-in screen --------------------------------------------------
 
   // COPY-002: plain visible header. The Precision Coaching branding stays in
   // the supporting copy (gate and intro text), it does not need to lead here.
@@ -1364,7 +1364,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
-              <Text style={styles.ritualIntroSub}>Four short questions. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
+              <Text style={styles.ritualIntroSub}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
             </View>
           )}
 
@@ -1460,13 +1460,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// --- Styles -------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
 
-  // ── Gate screens ────────────────────────────────────────────────────────────
+  // -- Gate screens ------------------------------------------------------------
   gateHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
@@ -1711,7 +1711,7 @@ const styles = StyleSheet.create({
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
-  // ── COMP-008 Fast Check-In ────────────────────────────────────────────────
+  // -- COMP-008 Fast Check-In ------------------------------------------------
   headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted, letterSpacing: 0.3 },
   fastSummaryCard: {
     backgroundColor: colors.surface,

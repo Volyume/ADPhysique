@@ -508,7 +508,7 @@ export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
       msg = `${muscleName}: recent joint discomfort. Sets held as planned.`;
       break;
     case C.HOLD_STALE_SORENESS:
-      msg = `${muscleName}: soreness looks systemic or stale. Holding sets; the weekly review owns this.`;
+      msg = `${muscleName}: soreness looks systemic or stale. Holding sets; the coaching decision owns this.`;
       break;
     case C.HOLD_USER_PREF:
       msg = `${muscleName}: you have overridden recent adjustments here, so sets stay as planned.`;

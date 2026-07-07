@@ -97,7 +97,7 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     getOpenEdPatternFlag.mockResolvedValue(null);
   });
 
-  test('ED flag read failures keep weekly review copy neutral', async () => {
+  test('ED flag read failures keep coaching decision copy neutral', async () => {
     getOpenEdPatternFlag.mockRejectedValueOnce(new Error('read failed'));
 
     const text = await renderScreen();
@@ -107,7 +107,7 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(text).not.toContain(DATED_COPY);
   });
 
-  test('an open ED flag keeps weekly review copy neutral', async () => {
+  test('an open ED flag keeps coaching decision copy neutral', async () => {
     getOpenEdPatternFlag.mockResolvedValueOnce({ id: 'flag-1' });
 
     const text = await renderScreen();

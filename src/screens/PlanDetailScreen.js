@@ -99,7 +99,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Just add',
+          text: 'Save for later',
           onPress: async () => {
             try {
               await copyPlanFromLibrary(planId, user.id);
@@ -110,7 +110,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           },
         },
         {
-          text: 'Add and make active',
+          text: 'Add and start this plan',
           onPress: async () => {
             let copy;
             try {

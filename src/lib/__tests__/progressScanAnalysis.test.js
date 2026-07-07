@@ -2,6 +2,7 @@ import {
   analyseProgressScan,
   abstentionReasonsForAssets,
   buildEstimateRange,
+  calibrateVolyumeScore,
   computeScanConfidenceScore,
   computeVisualLeannessScore,
   coachSummaryFromScan,
@@ -131,6 +132,19 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.range).toBeNull();
   });
 
+  test('non-model-backed ratio data cannot produce a Volyume Score', () => {
+    const out = analyseProgressScan({
+      assets: [
+        { ...modelBackedAssets[0], signals: { ...frontSignal, modelBacked: false } },
+        { ...modelBackedAssets[1], signals: { ...backSignal, modelBacked: false } },
+      ],
+      modelEstimate: null,
+    });
+    expect(out.analysisStatus).toBe('abstained');
+    expect(out.abstentionReasons).toContain('model_unavailable');
+    expect(out.physiqueAssessment.visualLeannessScore).toBeNull();
+  });
+
   test('model-backed photos with incomplete silhouette ratios do not fabricate a score', () => {
     const incompleteBack = {
       ...modelBackedAssets[1],
@@ -173,7 +187,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(abstentionReasonsForAssets(usableAssets)).toEqual([]);
     const out = analyseProgressScan({ assets: usableAssets, modelEstimate: null });
     expect(out.analysisStatus).toBe('complete');
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
   });
 
@@ -226,9 +240,9 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     expect(out.analysisStatus).toBe('complete');
     expect(out.abstentionReasons).toEqual([]);
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 89/i);
 
     const summary = measuredSignalsSummaryFromAssets(assets, null, {
       physiqueAssessment: out.physiqueAssessment,
@@ -299,10 +313,10 @@ describe('Progress Scan uncertainty and abstention', () => {
     const out = analyseProgressScan({ assets, modelEstimate: null });
 
     expect(out.analysisStatus).toBe('complete');
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
     expect(out.physiqueAssessment.progressSignal).toBe('baseline');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 89/i);
   });
 
   test('soft vision warnings lower confidence without erasing a complete measured score', () => {
@@ -360,9 +374,9 @@ describe('Progress Scan uncertainty and abstention', () => {
       'clothing_or_background_uncertain',
       'camera_tilted',
     ]));
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 89/i);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
@@ -401,15 +415,15 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment).toMatchObject({
       source: 'photo_scan',
       analysisType: 'visual_physique_score',
-      visualLeannessScore: 68,
-      leannessBandLabel: 'Lean',
+      visualLeannessScore: 83,
+      leannessBandLabel: 'Defined',
       scanConfidenceTier: 'moderate',
       progressSignal: 'baseline',
       calibrationStatus: 'still_calibrating_for_your_body_type',
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score index 83/i);
     expect(out.copySummary).toMatch(/not a body fat percentage/i);
   });
 
@@ -443,9 +457,11 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.range).toBeNull();
     expect(out.physiqueAssessment.indexInputs).toMatchObject({
       silhouetteScore: 30,
-      estimatorAnchorScore: 84,
+      rawSilhouetteScore: 30,
+      calibratedSilhouetteScore: 66,
+      estimatorAnchorScore: 92,
     });
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(65);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(86);
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
   });
 
@@ -493,7 +509,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.analysisStatus).toBe('complete');
     expect(out.abstentionReasons).toEqual([]);
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(83);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
     expect(out.copySummary).toMatch(/Baseline Volyume Score/i);
   });
@@ -512,7 +528,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(flagged).toBeLessThan(base);
   });
 
-  test('visual leanness score is deterministic from measured silhouette inputs', () => {
+  test('visual leanness score is deterministic from measured silhouette inputs, then calibrated for display', () => {
     expect(computeVisualLeannessScore({
       waistToShoulder: 0.63,
       waistToHip: 0.77,
@@ -520,6 +536,8 @@ describe('Progress Scan uncertainty and abstention', () => {
       bodyAreaRatio: 0.295,
       frontBackWaistSpread: 0.01,
     })).toBe(68);
+    expect(calibrateVolyumeScore(37)).toBe(71);
+    expect(calibrateVolyumeScore(68)).toBe(89);
     expect(computeVisualLeannessScore({
       waistToShoulder: 0.63,
       waistToHip: 0.77,
@@ -597,7 +615,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.analysisStatus).toBe('complete');
     expect(out.estimate).toBeNull();
     expect(out.range).toBeNull();
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
   });
 
   test('measured delta explanation never fabricates visual observations', () => {

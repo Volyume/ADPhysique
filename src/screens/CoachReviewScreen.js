@@ -19,7 +19,7 @@ import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// --- Helpers -----------------------------------------------------------------
 
 function statusDotColor(status) {
   switch (status) {
@@ -173,7 +173,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   return recs.slice(0, 3);
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// --- Sub-components -----------------------------------------------------------
 
 function SectionHeading({ title }) {
   return <SectionLabel>{title}</SectionLabel>;
@@ -221,7 +221,7 @@ function RecommendationRow({ index, text }) {
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+// --- Main screen --------------------------------------------------------------
 
 export default function CoachReviewScreen() {
   const navigation = useNavigation();
@@ -429,7 +429,7 @@ export default function CoachReviewScreen() {
 
   const dateLabel =
     weekRange.start && weekRange.end
-      ? `${format(weekRange.start, 'd MMM')} – ${format(weekRange.end, 'd MMM yyyy')}`
+      ? `${format(weekRange.start, 'd MMM')} - ${format(weekRange.end, 'd MMM yyyy')}`
       : '';
 
   function retryLoad() {
@@ -438,12 +438,12 @@ export default function CoachReviewScreen() {
     loadData();
   }
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // --- Render -----------------------------------------------------------------
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Weekly review" />
+        <BackHeader title="Training review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <SkeletonCard height={96} />
           <SkeletonCard height={180} />
@@ -458,7 +458,7 @@ export default function CoachReviewScreen() {
   if (loadError) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Weekly review" />
+        <BackHeader title="Training review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <EmptyState
             icon="warning-outline"
@@ -476,21 +476,21 @@ export default function CoachReviewScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Weekly review" />
+      <BackHeader title="Training review" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Date range subline, relocated here now the BackHeader carries the
-            page title (previously duplicated as an in-body "Weekly review"
+            page title (previously duplicated as an in-body "Training review"
             heading, drawing a double header under the native bar). */}
         {dateLabel ? <Text style={styles.headerDate}>{dateLabel}</Text> : null}
 
-        {/* ── No data state ── */}
+        {/* -- No data state -- */}
         {!hasData && (
           <EmptyState
             icon="barbell-outline"
             title="No sessions logged this week"
-            text="Complete a session from Train and this review will turn your logged workouts into useful patterns."
-            actionLabel="Go to Train"
+            text="Complete a session from Train and this training review will turn your workouts into useful patterns."
+            actionLabel="Start a workout"
             onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
             compact
           />
@@ -498,7 +498,7 @@ export default function CoachReviewScreen() {
 
         {hasData && (
           <>
-            {/* ── Sessions this week ── */}
+            {/* -- Sessions this week -- */}
             <Card>
               <Text style={styles.cardTitle}>Sessions this week</Text>
               <View style={styles.statsRow}>
@@ -523,7 +523,7 @@ export default function CoachReviewScreen() {
               </View>
             </Card>
 
-            {/* ── Volume status ── */}
+            {/* -- Volume status -- */}
             {trainedMuscles.length > 0 && (
               <View style={styles.section}>
                 <SectionHeading title="Volume this week" />
@@ -546,7 +546,7 @@ export default function CoachReviewScreen() {
               </View>
             )}
 
-            {/* ── What went well ── */}
+            {/* -- What went well -- */}
             <View style={styles.section}>
               <SectionHeading title="What went well" />
               {optimalMuscles.length === 0 && progressionWins.length === 0 ? (
@@ -579,7 +579,7 @@ export default function CoachReviewScreen() {
               )}
             </View>
 
-            {/* ── What to watch ── */}
+            {/* -- What to watch -- */}
             <View style={styles.section}>
               <SectionHeading title="What to watch" />
               {watchMuscles.length === 0 && !deloadResult?.deload && !jointFlag ? (
@@ -646,7 +646,7 @@ export default function CoachReviewScreen() {
               )}
             </View>
 
-            {/* ── What to focus on next week ── */}
+            {/* -- What to focus on next week -- */}
             <View style={styles.section}>
               <SectionHeading title="What to focus on next week" />
               <Card style={styles.insightCard}>
@@ -664,7 +664,7 @@ export default function CoachReviewScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// --- Styles -------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   safe: {

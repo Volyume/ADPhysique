@@ -449,7 +449,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             <MacroPill label="F" value={`${macros.perServing.fat}g`} />
           </View>
           <Text style={styles.macrosSub}>
-            Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · P {macros.total.protein}g · C {macros.total.carbs}g · F {macros.total.fat}g
+            Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
           </Text>
         </View>
       </ScrollView>

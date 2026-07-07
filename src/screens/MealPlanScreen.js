@@ -181,7 +181,7 @@ export default function MealPlanScreen({ navigation, route }) {
   // macros) is the plan's most useful surface, so every meal shows it unless the
   // user collapses it. Absent key === open; only an explicit false collapses.
   const [expanded, setExpanded] = useState({});
-  const [prefsOpen, setPrefsOpen] = useState(true);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   // The meal-swap sheet: a generous, style-diverse list of alternatives for
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
@@ -729,7 +729,7 @@ export default function MealPlanScreen({ navigation, route }) {
 
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
-              build on). British English, flavour-first, honest ("basically free"). */}
+              build on). British English and flavour-first. */}
           <Text style={styles.seasonIntro}>{ADDITIONS_INTRO}</Text>
 
           {/* Meals */}

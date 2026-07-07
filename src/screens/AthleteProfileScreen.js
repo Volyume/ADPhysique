@@ -119,20 +119,20 @@ function profileStatusTile(freshness) {
   const soon = states.filter((state) => state === 'soon').length;
   if (attention > 0) {
     return {
-      label: 'Profile status',
-      value: 'Needs data',
+      label: 'Profile readiness',
+      value: 'Needs updates',
       sub: `${attention} item${attention === 1 ? '' : 's'} need${attention === 1 ? 's' : ''} an update`,
     };
   }
   if (soon > 0) {
     return {
-      label: 'Profile status',
+      label: 'Profile readiness',
       value: 'Update soon',
       sub: `${soon} item${soon === 1 ? '' : 's'} coming due`,
     };
   }
   return {
-    label: 'Profile status',
+    label: 'Profile readiness',
     value: 'Ready',
     sub: 'Weight, photos and lifts are current',
   };
@@ -346,7 +346,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Profile" />
+      <BackHeader title="Athlete profile" />
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.hero}>
           <TouchableOpacity
@@ -380,7 +380,7 @@ export default function AthleteProfileScreen({ navigation }) {
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text style={styles.heroFocus} numberOfLines={2}>{focusTile.label}: {focusTile.value}</Text>
+            <Text style={styles.heroFocus} numberOfLines={2}>Current focus: {focusTile.value}</Text>
           </View>
         </Card>
 
@@ -404,7 +404,7 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
-          <StatTile label="Strength" value={summary.strength?.overallLabel || 'Building'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and main lifts'} />
+          <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and main lifts'} />
           <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
         </View>
 

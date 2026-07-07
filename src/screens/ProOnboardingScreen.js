@@ -54,11 +54,11 @@ const PROTEIN_SHORT = {
 };
 
 const TOTAL_STEPS = 5;
-const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Coaching rhythm'];
+const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
-    { icon: 'shield-checkmark-outline', label: 'Cloud backup' },
-    { icon: 'cloud-done-outline', label: 'Plan backed up' },
+    { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
+    { icon: 'cloud-done-outline', label: 'Account recovery' },
   ],
   2: [
     { icon: 'calculator-outline', label: 'Calorie baseline' },
@@ -77,7 +77,7 @@ const STEP_OUTCOMES = {
   ],
   5: [
     { icon: 'pulse-outline', label: 'Recovery guardrails' },
-    { icon: 'notifications-outline', label: 'Review rhythm' },
+    { icon: 'notifications-outline', label: 'Check-in rhythm' },
     { icon: 'heart-outline', label: 'Cardio setting' },
   ],
 };
@@ -1651,7 +1651,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Volyume uses a rule-based coaching system. Morning weights and weekly check-ins drive the review; food logging sharpens it, and the app stays cautious when data is missing.
+              Volyume uses a rule-based coaching system. Morning weights and your weekly check-in drive the coaching decision; food logging sharpens it, and the app stays cautious when data is missing.
             </Text>
           </View>
 
@@ -1675,7 +1675,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Optional prompts for the habits your weekly review depends on. Change them any time in Settings.</Text>
+            <Text style={styles.fieldHint}>Optional prompts for the habits your weekly check-in depends on. Change them any time in Settings.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
