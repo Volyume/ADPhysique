@@ -153,6 +153,35 @@ function confidenceBand(v: number): Band {
   return 'poor';
 }
 
+function trendDeltaMeta(metric: TrendMetric, avg: number | null, priorAvg: number | null): {
+  pct: number | null;
+  improved: boolean | null;
+  label: 'higher' | 'lower' | 'unchanged' | null;
+} {
+  if (avg == null || priorAvg == null || priorAvg === 0) return { pct: null, improved: null, label: null };
+  const delta = avg - priorAvg;
+  const pct = Math.round((delta / priorAvg) * 100);
+  if (Math.abs(pct) < 1) return { pct: 0, improved: null, label: 'unchanged' };
+  const lowerIsBetter = metric.key === 'debt';
+  return {
+    pct,
+    improved: lowerIsBetter ? delta < 0 : delta > 0,
+    label: delta > 0 ? 'higher' : 'lower',
+  };
+}
+
+function trendDeltaColor(improved: boolean | null): string {
+  if (improved === false) return '#ffa722';
+  if (improved === null) return colors.sleepTeal;
+  return colors.recoveryGreen;
+}
+
+function trendDeltaBg(improved: boolean | null): string {
+  if (improved === false) return '#3b2a0c';
+  if (improved === null) return '#0b3131';
+  return '#0c3b2e';
+}
+
 function QualityStat({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <View style={styles.qualityStat}>
@@ -343,7 +372,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     const priorVals = prior.map(metric.pick).filter((v): v is number => v != null);
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     const priorAvg = priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null;
-    const deltaPct = avg != null && priorAvg != null && priorAvg !== 0 ? Math.round(((avg - priorAvg) / priorAvg) * 100) : null;
+    const delta = trendDeltaMeta(metric, avg, priorAvg);
 
     // Breakdown counts by band (only for banded metrics).
     let breakdown: Array<{ label: string; count: number; color: string }> | null = null;
@@ -393,7 +422,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         };
       });
     const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
-    return { avg, priorAvg, deltaPct, breakdown, quality, bars, insight };
+    return { avg, priorAvg, delta, breakdown, quality, bars, insight };
   }, [history, days, metric]);
 
   const periodWord = range === 'W' ? 'week' : range === 'M' ? 'month' : '6 months';
@@ -440,11 +469,15 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         <Text style={styles.avgLabel}>AVERAGE</Text>
         <View style={styles.avgRow}>
           <Text style={styles.avgValue}>{view.avg != null ? fmtVal(view.avg, metric.hours) : '—'}</Text>
-          {view.deltaPct != null ? (
-            <View style={[styles.delta, { backgroundColor: view.deltaPct >= 0 ? '#0c3b2e' : '#3b2a0c' }]}>
-              <Ionicons name={view.deltaPct >= 0 ? 'caret-up' : 'caret-down'} size={12} color={view.deltaPct >= 0 ? colors.recoveryGreen : '#ffa722'} />
-              <Text style={[styles.deltaText, { color: view.deltaPct >= 0 ? colors.recoveryGreen : '#ffa722' }]}>
-                {Math.abs(view.deltaPct)}% vs prior {periodWord}
+          {view.delta.pct != null ? (
+            <View style={[styles.delta, { backgroundColor: trendDeltaBg(view.delta.improved) }]}>
+              <Ionicons
+                name={view.delta.label === 'lower' ? 'caret-down' : view.delta.label === 'higher' ? 'caret-up' : 'remove'}
+                size={12}
+                color={trendDeltaColor(view.delta.improved)}
+              />
+              <Text style={[styles.deltaText, { color: trendDeltaColor(view.delta.improved) }]}>
+                {Math.abs(view.delta.pct)}% {view.delta.label ?? ''} vs prior {periodWord}
               </Text>
             </View>
           ) : null}
@@ -452,7 +485,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         {view.avg != null && view.priorAvg != null ? (
           <Text style={styles.sentence}>
             Your average {metric.title.toLowerCase()} this {periodWord} ({fmtVal(view.avg, metric.hours)}) was{' '}
-            {view.avg >= view.priorAvg ? 'above' : 'below'} your previous average of {fmtVal(view.priorAvg, metric.hours)}.
+            {view.delta.label === 'unchanged' ? 'in line with' : view.delta.label === 'higher' ? 'higher than' : 'lower than'} your previous average of {fmtVal(view.priorAvg, metric.hours)}.
           </Text>
         ) : null}
         {view.bars.some((b) => b.value != null) ? (
