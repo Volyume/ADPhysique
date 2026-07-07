@@ -43,6 +43,7 @@ export type SleepResult = {
 };
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
+const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
 
 /**
  * WHOOP-style Sleep Need breakdown (HOW SLEEP NEED IS CALCULATED): a personal
@@ -96,6 +97,14 @@ function percentile(values: number[], pct: number): number {
   return sorted[idx] ?? sorted[0] ?? 0;
 }
 
+function smoothedHr(samples: SleepMinute[], index: number): number | null {
+  const cur = samples[index]?.hr;
+  if (cur == null) return null;
+  const prev = samples[index - 1]?.hr ?? cur;
+  const next = samples[index + 1]?.hr ?? cur;
+  return (prev + cur + next) / 3;
+}
+
 /** Fill minute gaps inside a detected/manual window so durations stay honest. */
 function expandToMinutes(
   samples: SleepMinute[],
@@ -141,21 +150,17 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
     const band = s.bandSleepState;
     if (bandStateActive && (band === 0 || band === 3)) return false;
     if (s.hr == null) return band === 2;
-    const prev = samples[i - 1]?.hr ?? s.hr;
-    const next = samples[i + 1]?.hr ?? s.hr;
-    const smoothedHr = (prev + s.hr + next) / 3;
-    const lowHr = smoothedHr <= sleepishThreshold;
+    const smooth = smoothedHr(samples, i) ?? s.hr;
+    const lowHr = smooth <= sleepishThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.2 : true;
-    return (band === 2 ? smoothedHr <= bridgeThreshold : lowHr) && lowMotion;
+    return (band === 2 ? smooth <= bridgeThreshold : lowHr) && lowMotion;
   });
   const bridgeFlag = samples.map((s, i) => {
     const band = s.bandSleepState;
     if (bandStateActive && (band === 0 || band === 3)) return false;
     if (s.hr == null) return band === 2;
-    const prev = samples[i - 1]?.hr ?? s.hr;
-    const next = samples[i + 1]?.hr ?? s.hr;
-    const smoothedHr = (prev + s.hr + next) / 3;
-    const quietEnough = smoothedHr <= bridgeThreshold;
+    const smooth = smoothedHr(samples, i) ?? s.hr;
+    const quietEnough = smooth <= bridgeThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.35 : true;
     return (band === 2 || quietEnough) && lowMotion;
   });
@@ -207,7 +212,9 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   if (runStart >= 0) {
     closeRun(asleepFlag.length - gap);
   }
-  if (bestElapsed >= 90) return { start: bestStart, end: bestEnd };
+  if (bestElapsed >= 90) {
+    return trimSleepWindow(samples, bestStart, bestEnd, p20, spread);
+  }
 
   // If the app was opened only for a sleep session, the whole capture may be a
   // low-variance sleeping HR stream. Treat that as a valid main sleep instead of
@@ -220,6 +227,88 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   }
 
   return null;
+}
+
+function trimSleepWindow(
+  samples: SleepMinute[],
+  start: number,
+  end: number,
+  p20: number,
+  spread: number,
+): { start: number; end: number } | null {
+  if (end - start < 90) return null;
+  const coreThreshold = p20 + spread * 0.4;
+  const core = (index: number): boolean => {
+    const s = samples[index];
+    if (!s) return false;
+    if (s.bandSleepState === 2) return true;
+    const hr = smoothedHr(samples, index);
+    if (hr == null) return false;
+    const still = s.motion == null || s.motion < 0.2;
+    return still && hr <= coreThreshold;
+  };
+  const sustainedCore = (from: number, to: number): boolean => {
+    let n = 0;
+    for (let i = from; i < to; i += 1) {
+      if (core(i)) n += 1;
+    }
+    return n >= Math.max(8, Math.ceil((to - from) * 0.45));
+  };
+
+  let trimmedStart = start;
+  for (let i = start; i < Math.min(end, start + 180); i += 1) {
+    const to = Math.min(end, i + 20);
+    if (to - i >= 12 && sustainedCore(i, to)) {
+      trimmedStart = Math.max(start, i - 8);
+      break;
+    }
+  }
+
+  let trimmedEnd = end;
+  for (let i = end - 1; i >= Math.max(trimmedStart, end - 180); i -= 1) {
+    const from = Math.max(trimmedStart, i - 19);
+    if (i - from + 1 >= 12 && sustainedCore(from, i + 1)) {
+      trimmedEnd = Math.min(end, i + 9);
+      break;
+    }
+  }
+
+  if (trimmedEnd - trimmedStart < 90) return { start, end };
+  if (trimmedEnd - trimmedStart > MAX_AUTO_SLEEP_WINDOW_MIN) {
+    return lowestHrSubwindow(samples, trimmedStart, trimmedEnd, MAX_AUTO_SLEEP_WINDOW_MIN);
+  }
+  return { start: trimmedStart, end: trimmedEnd };
+}
+
+function lowestHrSubwindow(
+  samples: SleepMinute[],
+  start: number,
+  end: number,
+  sizeMin: number,
+): { start: number; end: number } {
+  let bestStart = start;
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (let i = start; i + sizeMin <= end; i += 5) {
+    let hrSum = 0;
+    let hrCount = 0;
+    let active = 0;
+    for (let j = i; j < i + sizeMin; j += 1) {
+      const s = samples[j];
+      if (!s) continue;
+      if (s.motion != null && s.motion >= 0.35) active += 1;
+      if (s.hr != null) {
+        hrSum += s.hr;
+        hrCount += 1;
+      }
+    }
+    if (hrCount < sizeMin * 0.35) continue;
+    const score = hrSum / hrCount + active * 0.25;
+    if (score < bestScore) {
+      bestScore = score;
+      bestStart = i;
+    }
+  }
+  return { start: bestStart, end: Math.min(end, bestStart + sizeMin) };
 }
 
 export function durationOnlySleep(

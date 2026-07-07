@@ -113,6 +113,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="Signal minutes" value={capture.signalMin} />
+              <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
               <Stat label="Source" value={sourceLabel(capture.source)} />
             </View>
             <Text style={styles.captureNote}>{capture.note}</Text>
@@ -339,6 +340,18 @@ function sourceLabel(source: 'auto_hr' | 'manual_hr' | 'manual_duration' | null)
   if (source === 'manual_hr') return 'Manual HR';
   if (source === 'manual_duration') return 'Manual';
   return 'None';
+}
+
+function confidenceLabel(confidence: 'high' | 'medium' | 'low'): string {
+  if (confidence === 'high') return 'High';
+  if (confidence === 'medium') return 'Medium';
+  return 'Low';
+}
+
+function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
+  if (confidence === 'high') return colors.recoveryGreen;
+  if (confidence === 'medium') return colors.recoveryYellow;
+  return colors.textTertiary;
 }
 
 const styles = StyleSheet.create({

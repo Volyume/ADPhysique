@@ -12,6 +12,7 @@ import { formatDistance, formatPace } from '../sensors/location';
 import { strainCategory, strainCoachText } from '../metrics/strainCoach';
 import { kcalPerMinute } from '../metrics/calories';
 import { STEP_META, stepAt, totalDurationSec } from '../data/structuredWorkouts';
+import { activityUsesSteps } from '../data/activities';
 
 function fmt(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -68,8 +69,10 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const isWorkout = session.kind === 'workout';
   const plan = session.plan;
   const planState = plan ? stepAt(plan, elapsed) : null;
+  const activityLabel = session.plan?.activity ?? session.label;
   const tint = session.kind === 'sleep' ? colors.sleepTeal : session.kind === 'nap' ? colors.recoveryYellow : colors.strainBlue;
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
+  const usesSteps = session.kind === 'workout' && activityUsesSteps(activityLabel);
   const stepSource =
     stats?.stepSource === 'band' ? 'band est.' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
 
@@ -119,6 +122,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
 
         {isWorkout ? (
           <>
+            {usesSteps ? (
             <View style={styles.statRow}>
               <Stat
                 label="Steps"
@@ -132,6 +136,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
               />
               <Stat label="Step source" value={stepSource} />
             </View>
+            ) : null}
 
             <View style={styles.statRow}>
               <Stat label="Activity strain" value={stats?.strain != null ? stats.strain.toFixed(1) : '—'} color={colors.strainBlue} />
@@ -144,7 +149,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
             </View>
 
             {stats?.strain != null ? (
-              <Text style={styles.coach}>{strainCoachText(stats.strain, strainCategory(session.label))}</Text>
+              <Text style={styles.coach}>{strainCoachText(stats.strain, strainCategory(activityLabel))}</Text>
             ) : null}
 
             {session.hasGps ? (

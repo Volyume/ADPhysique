@@ -86,7 +86,7 @@ import {
   normaliseStepDivisor,
   WHOOP5_STEP_TICKS_PER_STEP,
 } from '../metrics/bandSteps';
-import { activityGps } from '../data/activities';
+import { activityGps, activityUsesSteps } from '../data/activities';
 import { StructuredWorkout } from '../data/structuredWorkouts';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 import { clampPct } from '../util/number';
@@ -117,6 +117,10 @@ export type SessionStats = {
   zones: ReturnType<typeof hrZones>;
   beats: number;
 };
+
+function sessionUsesSteps(session: Pick<LiveSession, 'kind' | 'label' | 'plan'>): boolean {
+  return session.kind === 'workout' && activityUsesSteps(session.plan?.activity ?? session.label);
+}
 
 export type HistorySyncReport = {
   status: string;
@@ -167,6 +171,7 @@ export type AppState = {
     signalMin: number;
     coveragePct: number;
     rrCount: number;
+    confidence: SleepConfidence;
     source: SleepResult['source'] | null;
     note: string;
   } | null;
@@ -608,6 +613,7 @@ class AppStore extends Store<AppState> {
     session: LiveSession,
     now = Date.now(),
   ): Pick<SessionStats, 'steps' | 'cadenceSpm' | 'stepSource'> {
+    if (!sessionUsesSteps(session)) return { steps: null, cadenceSpm: null, stepSource: null };
     const current = this.currentStepSnapshot();
     let startSteps = session.startSteps;
     let source = session.stepSource;
@@ -661,6 +667,7 @@ class AppStore extends Store<AppState> {
     this.connectInFlight = true;
     this.connectStartedAt = Date.now();
     try {
+      await this.ensureBackgroundSyncKeepAlive('WHOOP auto-connect');
       await this.ble?.start(this.preferredDeviceId);
     } catch (e) {
       this.setState({ status: 'error', statusDetail: 'Connect failed', error: String(e) });
@@ -1119,6 +1126,7 @@ class AppStore extends Store<AppState> {
       priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
       const consistency = sleepConsistency(priorWindows);
       const sleepCoveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+      const confidence = sleepConfidence(sleep.signalMin, sleepCoveragePct, !!manual);
       const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
       const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
       const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
@@ -1127,6 +1135,7 @@ class AppStore extends Store<AppState> {
         efficiencyPct,
         consistencyPct: consistency?.score ?? null,
         highStressPct: sleepStressResult?.highPct ?? 0,
+        confidenceCapPct: sleepPerformanceCap(confidence, sleepCoveragePct),
       });
       sleepDetail = {
         performance: sleepPerformanceResult.score,
@@ -1149,6 +1158,7 @@ class AppStore extends Store<AppState> {
         source: sleep.source,
         signalMin: sleep.signalMin,
         coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
+        confidence,
       };
     }
 
@@ -1163,7 +1173,7 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
-      sleepPerformance: sleep?.performance ?? null,
+      sleepPerformance: sleepDetail?.performance != null ? sleepDetail.performance / 100 : (sleep?.performance ?? null),
       rmssdSamples,
       rhrSamples,
       respSamples,
@@ -1176,7 +1186,7 @@ class AppStore extends Store<AppState> {
       rhr,
       resp,
       sleepMin: sleep?.asleepMin ?? null,
-      sleepPerf: sleep?.performance ?? null,
+      sleepPerf: sleepDetail?.performance != null ? sleepDetail.performance / 100 : (sleep?.performance ?? null),
       strain,
       steps,
       sleepStart: sleep?.startTs ?? null,
@@ -1469,7 +1479,8 @@ class AppStore extends Store<AppState> {
 
   // ---- live session (start / track / log) ----
   startSession = (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): void => {
-    const stepSnapshot = this.currentStepSnapshot();
+    const tracksSteps = kind === 'workout' && activityUsesSteps(plan?.activity ?? label);
+    const stepSnapshot = tracksSteps ? this.currentStepSnapshot() : { steps: null, source: null };
     this.setState({
       session: {
         kind,
@@ -1598,6 +1609,7 @@ class AppStore extends Store<AppState> {
       await this.setManualSleep(s.startTs, endTs);
       return;
     }
+    const usesSteps = sessionUsesSteps(s);
     await this.addCardio({
       activity: s.label,
       startTs: s.startTs,
@@ -1606,9 +1618,9 @@ class AppStore extends Store<AppState> {
       maxHr: stats?.maxHr ?? s.maxHr ?? null,
       distanceM: gpsDistance,
       route: s.route.length ? s.route : null,
-      steps: stats?.steps ?? null,
-      cadenceSpm: stats?.cadenceSpm ?? null,
-      stepSource: stats?.stepSource ?? null,
+      steps: usesSteps ? stats?.steps ?? null : null,
+      cadenceSpm: usesSteps ? stats?.cadenceSpm ?? null : null,
+      stepSource: usesSteps ? stats?.stepSource ?? null : null,
       lapCount: s.laps.length,
       source: s.kind === 'nap' ? 'nap' : 'live',
     });
@@ -1705,19 +1717,22 @@ class AppStore extends Store<AppState> {
     const sleepCoveragePct = captureSleep
       ? Math.round((captureSleep.signalMin / Math.max(1, captureSleep.inBedMin)) * 100)
       : Math.round((nightPerMin.length / captureWindowMin) * 100);
+    const boundedSleepCoveragePct = Math.max(0, Math.min(100, sleepCoveragePct));
     const captureNightHr = captureSleep ? nightHr.filter((s) => s.ts >= captureSleep.startTs && s.ts < captureSleep.endTs) : nightHr;
+    const captureConfidence = sleepConfidence(captureSleep?.signalMin ?? nightPerMin.length, boundedSleepCoveragePct, !!manual);
     const sleepCapture: AppState['sleepCapture'] = {
       windowMin: captureSleep?.inBedMin ?? captureWindowMin,
       signalMin: captureSleep?.signalMin ?? nightPerMin.length,
-      coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
+      coveragePct: boundedSleepCoveragePct,
       rrCount: captureNightHr.reduce((a, s) => a + s.rr.length, 0),
+      confidence: captureConfidence,
       source: captureSleep?.source ?? null,
       note: sleepCaptureNote({
         hasSleep: !!sleep,
         hasCandidate: !!candidateSleep,
         manual: !!manual,
         signalMin: captureSleep?.signalMin ?? nightPerMin.length,
-        coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
+        coveragePct: boundedSleepCoveragePct,
       }),
     };
     const sleepScoreResult = sleep ? computeSleepScore(sleep) : null;
@@ -1755,6 +1770,7 @@ class AppStore extends Store<AppState> {
     let sleepPerformanceResult: SleepPerformance | null = null;
     let sleepDetail: SleepDetail | null = null;
     if (sleep) {
+      const confidence = sleepConfidence(sleep.signalMin, boundedSleepCoveragePct, !!manual);
       const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
       const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
       const restorativePct =
@@ -1765,6 +1781,7 @@ class AppStore extends Store<AppState> {
         efficiencyPct,
         consistencyPct: consistency?.score ?? null,
         highStressPct,
+        confidenceCapPct: sleepPerformanceCap(confidence, boundedSleepCoveragePct),
       });
       sleepDetail = {
         performance: sleepPerformanceResult.score,
@@ -1786,7 +1803,8 @@ class AppStore extends Store<AppState> {
         stressLow: sleepStressResult?.lowPct ?? null,
         source: sleep.source,
         signalMin: sleep.signalMin,
-        coveragePct: sleepCoveragePct,
+        coveragePct: boundedSleepCoveragePct,
+        confidence,
       };
     }
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
@@ -1811,7 +1829,7 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
-      sleepPerformance: sleep?.performance ?? null,
+      sleepPerformance: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       rmssdSamples,
       rhrSamples,
       respSamples,
@@ -1850,7 +1868,7 @@ class AppStore extends Store<AppState> {
       rhr,
       resp,
       sleepMin: sleep?.asleepMin ?? null,
-      sleepPerf: sleep?.performance ?? null,
+      sleepPerf: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       strain,
       steps: bestSteps,
       sleepStart: sleep?.startTs ?? null,
@@ -2102,10 +2120,12 @@ type OvernightVitals = {
   resp: number | null;
 };
 
+type SleepConfidence = 'high' | 'medium' | 'low';
+
 const MIN_VITAL_SIGNAL_MIN = 90;
 const MIN_VITAL_COVERAGE_PCT = 55;
-const MIN_SLEEP_SCORE_SIGNAL_MIN = 120;
-const MIN_SLEEP_SCORE_COVERAGE_PCT = 45;
+const MIN_SLEEP_SCORE_SIGNAL_MIN = 150;
+const MIN_SLEEP_SCORE_COVERAGE_PCT = 50;
 
 function sleepCoveragePct(sleep: SleepResult): number {
   return Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
@@ -2115,6 +2135,19 @@ function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is S
   if (!sleep) return false;
   if (manual) return true;
   return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
+}
+
+function sleepConfidence(signalMin: number, coveragePct: number, manual: boolean): SleepConfidence {
+  if (signalMin >= 300 && coveragePct >= 85) return 'high';
+  if (signalMin >= 150 && coveragePct >= 55) return 'medium';
+  if (manual && signalMin >= 60 && coveragePct >= 35) return 'medium';
+  return 'low';
+}
+
+function sleepPerformanceCap(confidence: SleepConfidence, coveragePct: number): number {
+  if (confidence === 'high') return 100;
+  if (confidence === 'medium') return Math.max(70, Math.min(92, coveragePct + 15));
+  return Math.max(45, Math.min(65, coveragePct + 20));
 }
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
@@ -2274,8 +2307,12 @@ function sleepCaptureNote(input: {
   signalMin: number;
   coveragePct: number;
 }): string {
-  if (input.hasSleep && input.signalMin >= 120 && input.coveragePct >= 60) {
-    return 'Strong synced overnight HR coverage.';
+  const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual);
+  if (input.hasSleep && confidence === 'high') {
+    return 'High-confidence synced overnight HR coverage.';
+  }
+  if (input.hasSleep && confidence === 'medium') {
+    return 'Medium-confidence sleep estimate; more synced coverage can still refine the score.';
   }
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';

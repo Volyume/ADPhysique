@@ -43,6 +43,7 @@ export function computeSleepPerformance(input: {
   efficiencyPct: number;
   consistencyPct: number | null;
   highStressPct: number;
+  confidenceCapPct?: number | null;
 }): SleepPerformance {
   const hoursVsNeededPct = clampPct(input.hoursVsNeededPct);
   const efficiencyPct = clampPct(input.efficiencyPct);
@@ -58,7 +59,9 @@ export function computeSleepPerformance(input: {
   ];
   if (consistencyPct != null) terms.push([0.2, consistencyPct]);
   const wSum = terms.reduce((a, [w]) => a + w, 0);
-  const score = clampPct(Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum));
+  const blended = Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum);
+  const confidenceCapPct = input.confidenceCapPct == null ? null : clampPct(input.confidenceCapPct);
+  const score = clampPct(Math.min(blended, confidenceCapPct ?? 100));
 
   const contributors: SleepContributor[] = [
     { key: 'hoursVsNeeded', label: 'Hours vs Needed', value: Math.round(hoursVsNeededPct), band: hoursVsNeededBand(hoursVsNeededPct), inverse: false },

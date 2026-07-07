@@ -44,6 +44,7 @@ export type SleepDetail = {
   source?: string | null; // auto_hr | manual_hr | manual_duration
   signalMin?: number | null; // minutes with HR samples in the scored window
   coveragePct?: number | null; // HR sample coverage across the scored window
+  confidence?: 'high' | 'medium' | 'low' | null;
 };
 export type DailyMetricRow = {
   day: string; // YYYY-MM-DD (local)
@@ -318,6 +319,10 @@ function cleanSleepFraction(value: number | null | undefined): number | null {
 
 function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail | null {
   if (!detail) return null;
+  const confidence =
+    detail.confidence === 'high' || detail.confidence === 'medium' || detail.confidence === 'low'
+      ? detail.confidence
+      : null;
   return {
     ...detail,
     performance: cleanPct(detail.performance),
@@ -339,6 +344,7 @@ function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail |
     stressLow: cleanPct(detail.stressLow),
     signalMin: cleanNonNegative(detail.signalMin),
     coveragePct: cleanPct(detail.coveragePct),
+    confidence,
   };
 }
 

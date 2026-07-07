@@ -105,7 +105,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
                 <Text style={styles.note}>
-                  Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}%
+                  Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}% / {confidenceLabel(metric.sleepDetail?.confidence)} confidence
                 </Text>
               </>
             ) : (
@@ -224,6 +224,12 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
 function dayForTs(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
+  if (confidence === 'high') return 'high';
+  if (confidence === 'medium') return 'medium';
+  return 'low';
 }
 
 function formatDayLong(day: string): string {

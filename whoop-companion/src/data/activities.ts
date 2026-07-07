@@ -125,6 +125,14 @@ export function activityGps(name: string): boolean {
   return false;
 }
 
+export function activityUsesSteps(name: string): boolean {
+  const l = name.toLowerCase();
+  if (/(cycl|bike|spin|swim|row|kayak|paddle|surf|yoga|pilates|stretch|meditat|breath|strength|lift|barbell|boxing|martial)/.test(l)) {
+    return false;
+  }
+  return /(run|walk|hik|ruck|golf|football|soccer|rugby|basketball|tennis|padel|squash|badminton|pickleball|volleyball|hockey|skating|ski)/.test(l);
+}
+
 export function activityStrainCategory(name: string): StrainCategory {
   const a = findActivity(name);
   if (a) return a.strain;

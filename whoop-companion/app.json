@@ -21,7 +21,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "VOLYUME Pulse uses your location while you record a workout to measure distance, pace and your route. Location is only used during an activity and stays on your device.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "VOLYUME Pulse keeps tracking your route while a workout is recording even if your phone is pocketed or the screen is off, so distance and pace are accurate. Location is only used during an activity and stays on your device.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "VOLYUME Pulse keeps workout GPS and WHOOP background sync running while your phone is pocketed or the screen is off. Location data stays on your device.",
         "NSMotionUsageDescription": "VOLYUME Pulse uses motion data to count your steps. Nothing leaves your device.",
         "UIBackgroundModes": [
           "bluetooth-central",
@@ -74,7 +74,7 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "VOLYUME Pulse uses your location while you record a workout to measure distance, pace and your route.",
-          "locationAlwaysAndWhenInUsePermission": "VOLYUME Pulse keeps tracking your route while a workout is recording even if your phone is pocketed or the screen is off.",
+          "locationAlwaysAndWhenInUsePermission": "VOLYUME Pulse keeps workout GPS and WHOOP background sync running while your phone is pocketed or the screen is off.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
