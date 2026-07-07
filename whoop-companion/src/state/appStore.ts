@@ -195,6 +195,10 @@ export type AppState = {
     stillMin: number;
     movingMin: number;
     sleepStateMin: number;
+    sleepStateWakeMin: number;
+    sleepStateStillMin: number;
+    sleepStateAsleepMin: number;
+    sleepStateUpMin: number;
     coveragePct: number;
     rrCount: number;
     confidence: SleepConfidence;
@@ -1396,6 +1400,10 @@ class AppStore extends Store<AppState> {
         stillMin: sleep.stillMin,
         movingMin: sleep.movingMin,
         sleepStateMin: sleep.sleepStateMin,
+        sleepStateWakeMin: sleep.sleepStateWakeMin,
+        sleepStateStillMin: sleep.sleepStateStillMin,
+        sleepStateAsleepMin: sleep.sleepStateAsleepMin,
+        sleepStateUpMin: sleep.sleepStateUpMin,
         coveragePct: boundedSleepCoveragePct,
         confidence,
       };
@@ -2196,6 +2204,10 @@ class AppStore extends Store<AppState> {
       stillMin: captureSleep?.stillMin ?? 0,
       movingMin: captureSleep?.movingMin ?? 0,
       sleepStateMin: captureSleep?.sleepStateMin ?? 0,
+      sleepStateWakeMin: captureSleep?.sleepStateWakeMin ?? 0,
+      sleepStateStillMin: captureSleep?.sleepStateStillMin ?? 0,
+      sleepStateAsleepMin: captureSleep?.sleepStateAsleepMin ?? 0,
+      sleepStateUpMin: captureSleep?.sleepStateUpMin ?? 0,
       coveragePct: boundedSleepCoveragePct,
       rrCount: captureNightHr.reduce((a, s) => a + s.rr.length, 0),
       confidence: captureConfidence,
@@ -2284,6 +2296,10 @@ class AppStore extends Store<AppState> {
         stillMin: sleep.stillMin,
         movingMin: sleep.movingMin,
         sleepStateMin: sleep.sleepStateMin,
+        sleepStateWakeMin: sleep.sleepStateWakeMin,
+        sleepStateStillMin: sleep.sleepStateStillMin,
+        sleepStateAsleepMin: sleep.sleepStateAsleepMin,
+        sleepStateUpMin: sleep.sleepStateUpMin,
         coveragePct: boundedSleepCoveragePct,
         confidence,
       };

@@ -249,6 +249,13 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Stat label="Moving minutes" value={capture.movingMin} />
               <Stat label="Sleep-state evidence" value={capture.sleepStateMin} />
             </View>
+            {capture.sleepStateMin > 0 ? (
+              <View style={[styles.grid, { marginTop: 12 }]}>
+                <Stat label="State wake" value={capture.sleepStateWakeMin} color={stateEvidenceColor(capture, 'wake')} />
+                <Stat label="State still" value={capture.sleepStateStillMin} color={stateEvidenceColor(capture, 'still')} />
+                <Stat label="State asleep" value={capture.sleepStateAsleepMin} color={stateEvidenceColor(capture, 'asleep')} />
+              </View>
+            ) : null}
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
               <Stat label="Raw vitals" value={effectiveSync?.rawVitalSamples ?? '-'} />
@@ -1035,6 +1042,17 @@ function coverageColor(coveragePct: number): string {
   if (coveragePct >= 80) return colors.recoveryGreen;
   if (coveragePct >= 60) return colors.recoveryYellow;
   return colors.recoveryRed;
+}
+
+function stateEvidenceColor(
+  capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
+  key: 'wake' | 'still' | 'asleep',
+): string {
+  if (capture.sleepStateMin <= 0) return colors.textTertiary;
+  const wakeLike = capture.sleepStateWakeMin + capture.sleepStateUpMin;
+  if (key === 'wake') return wakeLike / capture.sleepStateMin >= 0.85 ? colors.recoveryRed : colors.textSecondary;
+  if (key === 'asleep') return capture.sleepStateAsleepMin > 0 ? colors.recoveryGreen : colors.textTertiary;
+  return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
 }
 
 function sleepCaptureAction(capture: {

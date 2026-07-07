@@ -48,6 +48,10 @@ export type SleepDetail = {
   stillMin?: number | null; // minutes with still/low-motion evidence in the scored window
   movingMin?: number | null; // minutes with moving/activity evidence in the scored window
   sleepStateMin?: number | null; // minutes with decoded band sleep-state evidence
+  sleepStateWakeMin?: number | null; // decoded state 0
+  sleepStateStillMin?: number | null; // decoded state 1
+  sleepStateAsleepMin?: number | null; // decoded state 2
+  sleepStateUpMin?: number | null; // decoded state 3
   coveragePct?: number | null; // HR sample coverage across the scored window
   confidence?: 'high' | 'medium' | 'low' | null;
 };
@@ -394,6 +398,10 @@ function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail |
     stillMin: cleanNonNegative(detail.stillMin),
     movingMin: cleanNonNegative(detail.movingMin),
     sleepStateMin: cleanNonNegative(detail.sleepStateMin),
+    sleepStateWakeMin: cleanNonNegative(detail.sleepStateWakeMin),
+    sleepStateStillMin: cleanNonNegative(detail.sleepStateStillMin),
+    sleepStateAsleepMin: cleanNonNegative(detail.sleepStateAsleepMin),
+    sleepStateUpMin: cleanNonNegative(detail.sleepStateUpMin),
     coveragePct: cleanPct(detail.coveragePct),
     confidence,
   };
