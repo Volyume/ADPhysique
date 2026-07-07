@@ -1358,7 +1358,8 @@ class AppStore extends Store<AppState> {
       priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
       const consistency = sleepConsistency(priorWindows);
       const sleepCoveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
-      const confidence = sleepConfidence(sleep.signalMin, sleepCoveragePct, !!manual, sleep);
+      const boundedSleepCoveragePct = Math.max(0, Math.min(100, sleepCoveragePct));
+      const confidence = sleepConfidence(sleep.signalMin, boundedSleepCoveragePct, !!manual, sleep);
       const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
       const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
       const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
@@ -1367,7 +1368,7 @@ class AppStore extends Store<AppState> {
         efficiencyPct,
         consistencyPct: consistency?.score ?? null,
         highStressPct: sleepStressResult?.highPct ?? 0,
-        confidenceCapPct: sleepPerformanceCap(confidence, sleepCoveragePct, sleep),
+        confidenceCapPct: sleepPerformanceCap(confidence, boundedSleepCoveragePct, sleep),
       });
       sleepDetail = {
         performance: sleepPerformanceResult.score,
@@ -1393,7 +1394,7 @@ class AppStore extends Store<AppState> {
         stillMin: sleep.stillMin,
         movingMin: sleep.movingMin,
         sleepStateMin: sleep.sleepStateMin,
-        coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
+        coveragePct: boundedSleepCoveragePct,
         confidence,
       };
     }
