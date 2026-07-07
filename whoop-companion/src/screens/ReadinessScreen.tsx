@@ -5,6 +5,7 @@ import { useStoreSelector } from '../state/store';
 import { Card, Empty, NavRow, Ring, Screen, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
+import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 
 function readyColor(score: number): string {
   if (score >= 70) return colors.recoveryGreen;
@@ -22,7 +23,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
   const sleepDetail = today?.sleepDetail ?? null;
-  const sleepStateConflict = hasWakeStateConflict(sleepDetail);
+  const sleepStateConflict = sleepStateWakeConflict(sleepDetail);
   const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
   const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
   const qualityAction =
@@ -31,7 +32,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
       : sleepStateConflict
         ? {
             label: 'Review sleep window',
-            value: `${(sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0)}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+            value: sleepStateWakeDisplay(sleepDetail),
             route: { name: 'editSleep' } as const,
             icon: 'create',
           }
@@ -213,14 +214,13 @@ function readinessLimiter(
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
-  if (hasWakeStateConflict(sleepDetail)) {
-    const wakeMin = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+  if (sleepStateWakeConflict(sleepDetail)) {
     return {
       badge: 'DATA',
       title: 'Sleep window is the limiter',
       body: 'Decoded strap-state evidence is mostly wake, so readiness should stay conservative until the sleep window is reviewed.',
       metric: 'Sleep state',
-      value: `${wakeMin}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+      value: sleepStateWakeDisplay(sleepDetail),
       actionLabel: 'Review sleep window',
       actionValue: 'state evidence',
       icon: 'create',
@@ -321,15 +321,14 @@ function readinessCall(
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
-  if (hasWakeStateConflict(sleepDetail)) {
-    const wakeMin = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+  if (sleepStateWakeConflict(sleepDetail)) {
     return {
       badge: 'CHECK',
       title: 'Review sleep before training',
       body: 'The sleep window conflicts with strap-state evidence. Keep training easy until the window is fixed or more history arrives.',
       targetStrain: 'hold',
       actionLabel: 'Adjust sleep window',
-      actionValue: `${wakeMin}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+      actionValue: sleepStateWakeDisplay(sleepDetail),
       icon: 'create',
       color: colors.recoveryRed,
       route: { name: 'editSleep' },
@@ -417,16 +416,6 @@ function readinessCall(
     color: colors.recoveryRed,
     route: { name: 'sleepCoach' },
   };
-}
-
-function hasWakeStateConflict(
-  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
-): boolean {
-  const stateMin = sleepDetail?.sleepStateMin ?? 0;
-  if (stateMin < 30) return false;
-  const wakeLike = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
-  const sleepLike = (sleepDetail?.sleepStateAsleepMin ?? 0) + (sleepDetail?.sleepStateStillMin ?? 0);
-  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 const styles = StyleSheet.create({

@@ -7,6 +7,7 @@ import type { DailyMetricRow } from '../db/database';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { fourTier } from '../metrics/bands';
+import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { illnessTint } from './IllnessScreen';
 import { DayRail } from './DayScreen';
 
@@ -61,14 +62,6 @@ function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null
   return null;
 }
 
-function hasWakeStateConflict(sleepDetail: DailyMetricRow['sleepDetail'] | null): boolean {
-  const stateMin = sleepDetail?.sleepStateMin ?? 0;
-  if (stateMin < 30) return false;
-  const wakeLike = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
-  const sleepLike = (sleepDetail?.sleepStateAsleepMin ?? 0) + (sleepDetail?.sleepStateStillMin ?? 0);
-  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
-}
-
 function recoveryStatusLabel(recovery: number | null, cap: number | null): string {
   if (recovery == null) return 'needs data';
   if (cap != null) return recovery >= cap ? `capped ${cap}%` : `cap ${cap}%`;
@@ -91,7 +84,7 @@ function recoveryGuidanceForDetail(
   cap: number | null,
   sleepDetail: DailyMetricRow['sleepDetail'] | null,
 ): string {
-  if (hasWakeStateConflict(sleepDetail)) {
+  if (sleepStateWakeConflict(sleepDetail)) {
     return 'Recovery is capped because the sleep window conflicts with decoded strap-state evidence. Review the window before trusting today\'s training signal.';
   }
   return recoveryGuidance(recovery, cap);
@@ -109,7 +102,7 @@ function recoveryQualityNote(
     day.resp == null ? 'respiratory rate' : null,
   ].filter((v): v is string => v != null);
   if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
-  if (hasWakeStateConflict(day.sleepDetail)) return 'Recovery is capped because decoded strap-state evidence is mostly wake.';
+  if (sleepStateWakeConflict(day.sleepDetail)) return 'Recovery is capped because decoded strap-state evidence is mostly wake.';
   if (cap != null) return `Recovery is capped at ${cap}% until sleep confidence improves.`;
   if (confidence === 'high') return 'Recovery is backed by strong overnight coverage and still-worn evidence.';
   if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more synced data can refine it.';
@@ -131,11 +124,10 @@ function recoveryQualityAction(input: {
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } | null {
-  if (hasWakeStateConflict(input.sleepDetail)) {
-    const wakeMin = (input.sleepDetail?.sleepStateWakeMin ?? 0) + (input.sleepDetail?.sleepStateUpMin ?? 0);
+  if (sleepStateWakeConflict(input.sleepDetail)) {
     return {
       label: 'Review sleep window',
-      value: `${wakeMin}/${input.sleepDetail?.sleepStateMin ?? 0} min wake`,
+      value: sleepStateWakeDisplay(input.sleepDetail),
       icon: 'create',
       color: colors.recoveryRed,
       route: { name: 'editSleep' },
@@ -432,14 +424,13 @@ function recoveryDriverInsight(
   route: Parameters<Nav['navigate']>[0];
 } | null {
   if (!parts) return null;
-  if (hasWakeStateConflict(sleepDetail)) {
-    const wakeMin = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+  if (sleepStateWakeConflict(sleepDetail)) {
     return {
       badge: 'DATA',
       title: 'Sleep window is limiting recovery',
       body: 'Decoded strap-state evidence is mostly wake, so recovery stays capped until the sleep window is reviewed or more history arrives.',
       metric: 'Sleep state',
-      value: `${wakeMin}/${sleepDetail?.sleepStateMin ?? 0} min`,
+      value: sleepStateWakeDisplay(sleepDetail, 'min'),
       actionLabel: 'Review sleep window',
       actionValue: 'state evidence',
       icon: 'create',

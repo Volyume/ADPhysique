@@ -74,6 +74,7 @@ import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency'
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
+import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
@@ -2833,14 +2834,6 @@ function sleepEvidencePct(evidence?: SleepEvidence | null): number {
   );
   const corroboratedMin = stillMin;
   return Math.round((corroboratedMin / Math.max(1, evidence.inBedMin)) * 100);
-}
-
-function sleepStateWakeConflict(evidence?: SleepEvidence | null): boolean {
-  if (!evidence?.inBedMin || (evidence.sleepStateMin ?? 0) < 30) return false;
-  const stateMin = evidence.sleepStateMin ?? 0;
-  const wakeLike = (evidence.sleepStateWakeMin ?? 0) + (evidence.sleepStateUpMin ?? 0);
-  const sleepLike = (evidence.sleepStateAsleepMin ?? 0) + (evidence.sleepStateStillMin ?? 0);
-  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {

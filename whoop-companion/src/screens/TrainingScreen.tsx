@@ -8,6 +8,7 @@ import { Card, Empty, NavRow, Screen, SectionLabel, Stat, WeeklyBars } from '../
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
+import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
@@ -44,7 +45,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   const load = trainingLoad(trimps, now);
   const statusColor = STATUS_COLOR[load.status] ?? colors.textSecondary;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
-  const sleepStateConflict = hasWakeStateConflict(today?.sleepDetail ?? null);
+  const sleepStateConflict = sleepStateWakeConflict(today?.sleepDetail ?? null);
 
   // Weekly training load for the last 6 weeks.
   const DAY = 86400000;
@@ -536,16 +537,6 @@ function trainingPlan(input: {
     color: colors.recoveryGreen,
     route: { name: 'startMenu' },
   };
-}
-
-function hasWakeStateConflict(
-  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
-): boolean {
-  const stateMin = sleepDetail?.sleepStateMin ?? 0;
-  if (stateMin < 30) return false;
-  const wakeLike = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
-  const sleepLike = (sleepDetail?.sleepStateAsleepMin ?? 0) + (sleepDetail?.sleepStateStillMin ?? 0);
-  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 const styles = StyleSheet.create({

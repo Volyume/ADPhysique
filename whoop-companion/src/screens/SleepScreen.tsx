@@ -17,6 +17,7 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
+import { sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -500,7 +501,7 @@ function sleepVerdict(input: {
     };
   }
 
-  if (capture && captureWakeStateConflict(capture)) {
+  if (capture && sleepStateWakeConflict(capture)) {
     return {
       badge: 'CHECK',
       title: 'Sleep window needs review',
@@ -508,7 +509,7 @@ function sleepVerdict(input: {
       vitalsLabel,
       vitalsColor,
       actionLabel: 'Review sleep window',
-      actionValue: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min wake`,
+      actionValue: sleepStateWakeDisplay(capture),
       icon: 'create',
       color: colors.recoveryRed,
       route: { name: 'editSleep' },
@@ -607,13 +608,13 @@ function sleepFocus(input: {
     };
   }
 
-  if (capture && captureWakeStateConflict(capture)) {
+  if (capture && sleepStateWakeConflict(capture)) {
     return {
       badge: 'CHECK',
       title: 'Review the sleep window',
       body: 'The strap-state evidence is mostly wake. Fixing the window first will make sleep, recovery and readiness more trustworthy.',
       actionLabel: 'Adjust sleep window',
-      actionValue: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min wake`,
+      actionValue: sleepStateWakeDisplay(capture),
       icon: 'create',
       color: colors.recoveryRed,
       route: { name: 'editSleep' },
@@ -744,11 +745,11 @@ function sleepScoreDrivers(input: {
   const drivers: SleepDriver[] = [];
   const capture = input.capture;
 
-  if (capture && captureWakeStateConflict(capture)) {
+  if (capture && sleepStateWakeConflict(capture)) {
     drivers.push({
       tone: 'data',
       label: 'Strap state',
-      value: `${capture.sleepStateWakeMin + capture.sleepStateUpMin}/${capture.sleepStateMin} min`,
+      value: sleepStateWakeDisplay(capture, 'min'),
       detail: 'Decoded state evidence is mostly wake, so the sleep score stays capped until the window is reviewed or more history arrives.',
       color: colors.recoveryRed,
     });
@@ -865,7 +866,7 @@ function stageQualityCheck(
 ): { label: string; body: string; color: string } | null {
   if (!sleep || !capture) return null;
   const stillPct = Math.round(((capture.stillMin ?? 0) / Math.max(1, capture.windowMin)) * 100);
-  if (captureWakeStateConflict(capture)) {
+  if (sleepStateWakeConflict(capture)) {
     return {
       label: 'Stage estimate',
       body: 'decoded strap state is mostly wake; review timing before trusting stages.',
@@ -1094,19 +1095,10 @@ function stateEvidenceColor(
   key: 'wake' | 'still' | 'asleep',
 ): string {
   if (capture.sleepStateMin <= 0) return colors.textTertiary;
-  const wakeLike = capture.sleepStateWakeMin + capture.sleepStateUpMin;
+  const wakeLike = sleepStateWakeLikeMin(capture);
   if (key === 'wake') return wakeLike / capture.sleepStateMin >= 0.85 ? colors.recoveryRed : colors.textSecondary;
   if (key === 'asleep') return capture.sleepStateAsleepMin > 0 ? colors.recoveryGreen : colors.textTertiary;
   return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
-}
-
-function captureWakeStateConflict(
-  capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
-): boolean {
-  if (capture.sleepStateMin < 30) return false;
-  const wakeLike = capture.sleepStateWakeMin + capture.sleepStateUpMin;
-  const sleepLike = capture.sleepStateAsleepMin + capture.sleepStateStillMin;
-  return sleepLike < 10 && wakeLike / Math.max(1, capture.sleepStateMin) >= 0.85;
 }
 
 function sleepCaptureAction(capture: {

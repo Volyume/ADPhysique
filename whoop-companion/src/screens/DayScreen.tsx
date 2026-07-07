@@ -10,6 +10,7 @@ import type { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { activitySummary } from '../ui/activityFormat';
+import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 
 export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -305,11 +306,8 @@ function sleepTrustNote(metric: DailyMetricRow): string {
   if (!detail) return 'No capture detail is available for this sleep yet.';
   const still = detail.stillMin ?? detail.motionMin ?? 0;
   const moving = detail.movingMin ?? 0;
-  const stateMin = detail.sleepStateMin ?? 0;
-  const wakeLike = (detail.sleepStateWakeMin ?? 0) + (detail.sleepStateUpMin ?? 0);
-  const sleepLike = (detail.sleepStateAsleepMin ?? 0) + (detail.sleepStateStillMin ?? 0);
-  if (stateMin >= 30 && sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85) {
-    return `Low-confidence sleep: decoded strap-state evidence is mostly wake (${wakeLike}/${stateMin} min). Review the window after sync finishes.`;
+  if (sleepStateWakeConflict(detail)) {
+    return `Low-confidence sleep: decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(detail)}). Review the window after sync finishes.`;
   }
   if (detail.confidence === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
   if (detail.confidence === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
