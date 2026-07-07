@@ -37,6 +37,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const perf = useStoreSelector(appStore, (s) => s.sleepPerformance);
   const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
+  const regularity = useStoreSelector(appStore, (s) => s.sleepReg);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
   const capture = useStoreSelector(appStore, (s) => s.sleepCapture);
@@ -299,6 +300,17 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         )}
       </Card>
 
+      {regularity ? (
+        <>
+          <SectionLabel>Schedule regularity</SectionLabel>
+          <Card>
+            <ScheduleRow label="14-night regularity" value={`${regularity.score}%`} detail={`${regularity.nights} nights`} />
+            <ScheduleRow label="Bedtime spread" value={formatDuration(regularity.bedSdMin)} detail="lower is better" />
+            <ScheduleRow label="Wake spread" value={formatDuration(regularity.wakeSdMin)} detail="lower is better" last />
+          </Card>
+        </>
+      ) : null}
+
       <Empty text="Sleep stages, stress and the composite Sleep Performance are inferred on-device from overnight heart rate and HRV (approximate — WHOOP also uses motion and raw optical data, and computes the composite on its servers)." />
     </Screen>
   );
@@ -410,6 +422,18 @@ function ScoreRow({ label, value, detail }: { label: string; value: number; deta
   );
 }
 
+function ScheduleRow({ label, value, detail, last }: { label: string; value: string; detail: string; last?: boolean }) {
+  return (
+    <View style={[styles.scheduleRow, last && styles.scheduleRowLast]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.scheduleLabel}>{label}</Text>
+        <Text style={styles.scheduleDetail}>{detail}</Text>
+      </View>
+      <Text style={styles.scheduleValue}>{value}</Text>
+    </View>
+  );
+}
+
 function sleepQualityColor(score: number): string {
   if (score >= 85) return colors.recoveryGreen;
   if (score >= 70) return colors.sleepTeal;
@@ -485,6 +509,11 @@ const styles = StyleSheet.create({
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   scoreRowValue: { fontSize: 18, fontFamily: fonts.bold },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  scheduleRowLast: { borderBottomWidth: 0 },
+  scheduleLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
+  scheduleDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+  scheduleValue: { color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   captureSource: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   captureNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
