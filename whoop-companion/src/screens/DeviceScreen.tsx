@@ -82,6 +82,16 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     : 'Not yet - connect to sync';
   const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const stepRangeText = formatStepRange(bandStepEstimate?.firstTs, bandStepEstimate?.lastTs);
+  const syncVerdict = getSyncVerdict({
+    connected,
+    draining,
+    keepAlive,
+    keepAliveRunning,
+    syncStatus: effectiveSync?.status,
+    rawRecords: effectiveSync?.rawRecords ?? 0,
+    hrSamples: effectiveSync?.hrSamples ?? 0,
+    lastSyncTs: effectiveSyncTs ?? null,
+  });
   const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
   const stepTrust = stepCalibrated
     ? 'calibrated'
@@ -370,6 +380,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
 
       <SectionLabel>Sync</SectionLabel>
       <Card>
+        <View style={[styles.syncBanner, { borderColor: syncVerdict.color }]}>
+          <View style={[styles.syncDot, { backgroundColor: syncVerdict.color }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.syncTitle}>{syncVerdict.title}</Text>
+            <Text style={styles.syncBody}>{syncVerdict.body}</Text>
+          </View>
+        </View>
         <Text style={styles.diagText}>Last sync: {lastSyncText}</Text>
         <Text style={styles.diagText}>Raw records archived: {bufferedRecords}</Text>
         <Text style={styles.diagText}>Sync status: {effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
@@ -464,7 +481,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <SecondaryButton title="Clear captured frames" onPress={() => void confirmClearFrames()} />
         <Text style={styles.hint}>
           Capturing the strap's proprietary frames lets the history / sleep decoder be finalised. Export and share them
-          to have them decoded.
+          to have them decoded. Very large exports are saved to the phone and not opened in Android's share sheet, which
+          avoids the memory crash from handing huge text files to another app.
         </Text>
       </Card>
     </Screen>
@@ -583,6 +601,51 @@ function formatStepRange(firstTs?: number, lastTs?: number): string {
   return `${range} (${Math.round(lastAgeMin / 60)}h old)`;
 }
 
+function getSyncVerdict(input: {
+  connected: boolean;
+  draining: boolean;
+  keepAlive: boolean;
+  keepAliveRunning: boolean;
+  syncStatus?: string;
+  rawRecords: number;
+  hrSamples: number;
+  lastSyncTs: number | null;
+}): { title: string; body: string; color: string } {
+  if (input.draining) {
+    return {
+      title: 'Sync is running',
+      body: input.rawRecords > 0 ? `${input.rawRecords} raw records received so far; keep the app near the strap.` : 'Waiting for stored history from the strap.',
+      color: colors.strainBlue,
+    };
+  }
+  if (input.keepAlive && !input.keepAliveRunning) {
+    return {
+      title: 'Background sync needs permission',
+      body: 'Open settings or retry the guard so long drains can continue when the phone locks.',
+      color: colors.recoveryYellow,
+    };
+  }
+  if (!input.connected) {
+    return {
+      title: 'Waiting for strap',
+      body: input.lastSyncTs ? `Last completed sync was ${formatHistoryRange(input.lastSyncTs, input.lastSyncTs)}.` : 'Connect once and Pulse will start auto-sync without pressing Sync now.',
+      color: colors.textTertiary,
+    };
+  }
+  if (input.hrSamples > 0) {
+    return {
+      title: 'Backfill available',
+      body: `${input.hrSamples} HR samples decoded from stored history. Sleep and recovery will recompute from that coverage.`,
+      color: colors.recoveryGreen,
+    };
+  }
+  return {
+    title: 'Connected and listening',
+    body: input.syncStatus ?? 'Pulse will request stored history automatically while the strap remains connected.',
+    color: colors.sleepTeal,
+  };
+}
+
 const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
@@ -591,6 +654,10 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginTop: 6 },
   hint: { color: colors.textTertiary, fontSize: 12, marginTop: 10, lineHeight: 17 },
   diagText: { color: colors.text, fontSize: 14, marginBottom: 8 },
+  syncBanner: { flexDirection: 'row', gap: 10, borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 12, backgroundColor: colors.surface },
+  syncDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  syncTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  syncBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleLabel: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 12 },
   calibrationRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-end', marginTop: 12 },

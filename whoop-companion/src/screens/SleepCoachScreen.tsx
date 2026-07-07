@@ -55,6 +55,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const status = useStoreSelector(appStore, (s) => s.status);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
+  const keepAliveRunning = useStoreSelector(appStore, (s) => s.backgroundKeepAliveRunning);
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
 
@@ -130,6 +131,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const checklist = tonightChecklist({
     connected,
     keepAlive,
+    keepAliveRunning,
     alarmArmed,
     alarmMatchesWakeTarget,
     wakeMin,
@@ -452,6 +454,7 @@ type ChecklistItem = {
 function tonightChecklist(input: {
   connected: boolean;
   keepAlive: boolean;
+  keepAliveRunning: boolean;
   alarmArmed: boolean;
   alarmMatchesWakeTarget: boolean;
   wakeMin: number;
@@ -473,12 +476,14 @@ function tonightChecklist(input: {
     },
     {
       label: 'Background sync',
-      detail: input.keepAlive
-        ? 'Protection is on for long history drains.'
-        : 'Turn this on if overnight syncs stall when the phone sleeps.',
-      state: input.keepAlive ? 'On' : 'Off',
-      icon: input.keepAlive ? 'shield-checkmark' : 'shield-outline',
-      color: input.keepAlive ? colors.recoveryGreen : colors.recoveryYellow,
+      detail: input.keepAliveRunning
+        ? 'Protection service is running for long history drains.'
+        : input.keepAlive
+          ? 'Protection is enabled but needs Android permission before it can keep syncing.'
+          : 'Turn this on if overnight syncs stall when the phone sleeps.',
+      state: input.keepAliveRunning ? 'Running' : input.keepAlive ? 'Permit' : 'Off',
+      icon: input.keepAliveRunning ? 'shield-checkmark' : 'shield-outline',
+      color: input.keepAliveRunning ? colors.recoveryGreen : colors.recoveryYellow,
       route: { name: 'device' },
     },
     {
