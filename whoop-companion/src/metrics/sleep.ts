@@ -150,8 +150,8 @@ function findSleepWindow(
   const p50 = percentile(hrs, 0.5);
   const p80 = percentile(hrs, 0.8);
   const spread = Math.max(6, p80 - p20);
-  const sleepishThreshold = p20 + spread * 0.55;
-  const bridgeThreshold = p20 + spread * 0.95;
+  const sleepishThreshold = p20 + spread * 0.75;
+  const bridgeThreshold = p20 + spread * 1.15;
   const bandStateActive = samples.some((s) => s.bandSleepState === 2);
 
   const asleepFlag = samples.map((s, i) => {
@@ -206,7 +206,7 @@ function findSleepWindow(
       gap = 0;
     } else if (runStart >= 0 && bridgeFlag[i]) {
       gap += 1;
-      if (gap > 25) {
+      if (gap > 45) {
         closeRun(i - gap);
         runStart = -1;
         gap = 0;
@@ -230,7 +230,9 @@ function findSleepWindow(
   const firstTs = samples[0]?.ts ?? 0;
   const lastTs = samples[samples.length - 1]?.ts ?? firstTs;
   const spanMin = Math.round((lastTs - firstTs) / 60000) + 1;
-  if (spanMin >= opts.minWindowMin && spanMin <= opts.maxWindowMin && p50 <= 85 && p80 - p20 <= 25) {
+  const activeMin = samples.filter((s) => s.motion != null && s.motion >= 0.35).length;
+  const activeRatio = activeMin / Math.max(1, samples.length);
+  if (spanMin >= opts.minWindowMin && spanMin <= opts.maxWindowMin && p50 <= 85 && p80 - p20 <= 25 && activeRatio <= 0.08) {
     return { start: 0, end: samples.length };
   }
 
@@ -246,7 +248,7 @@ function trimSleepWindow(
   opts: SleepWindowOptions,
 ): { start: number; end: number } | null {
   if (end - start < opts.minWindowMin) return null;
-  const coreThreshold = p20 + spread * 0.4;
+  const coreThreshold = p20 + spread * 0.65;
   const core = (index: number): boolean => {
     const s = samples[index];
     if (!s) return false;
@@ -387,6 +389,11 @@ export function computeSleep(
     return durationOnlySleep(start, end, neededMin);
   }
   const meanHr = hrs.reduce((a, b) => a + b, 0) / hrs.length;
+  const p20 = percentile(hrs, 0.2);
+  const p50 = percentile(hrs, 0.5);
+  const p80 = percentile(hrs, 0.8);
+  const spread = Math.max(6, p80 - p20);
+  const sustainedWakeHr = Math.min(meanHr * 1.08, Math.max(p50 + 6, p20 + spread * 0.85));
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
   const bandStateActive = window.some((s) => s.bandSleepState === 2);
@@ -409,7 +416,7 @@ export function computeSleep(
     // over BLE), so awake/REM are detected from heart-rate arousal relative to
     // the night's sleeping mean, with motion used as an extra signal when present.
     if (bandStateActive && (s.bandSleepState === 0 || s.bandSleepState === 3)) stage = 'awake';
-    else if ((hasMotion && motion > 0.4) || hr >= meanHr * 1.08) stage = 'awake';
+    else if ((hasMotion && motion > 0.4) || hr >= sustainedWakeHr) stage = 'awake';
     else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
     else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && (!hasMotion || motion < 0.2))
       stage = 'rem';

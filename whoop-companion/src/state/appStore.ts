@@ -2493,24 +2493,29 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
 
   const hrValues = mins.map((p) => p.hr).sort((a, b) => a - b);
   const medianHr = median(hrValues);
-  const artifactFloor = Math.max(38, medianHr - Math.max(12, medianHr * 0.22));
+  const artifactFloor = Math.max(42, medianHr - Math.max(8, medianHr * 0.16));
+  const artifactCeiling = medianHr + Math.max(12, medianHr * 0.2);
   const rolling: number[] = [];
-  const window = 5;
+  const window = 10;
   for (let i = 0; i + window <= mins.length; i += 1) {
     const slice = mins.slice(i, i + window);
     const spanMin = ((slice[slice.length - 1]?.tsMs ?? 0) - (slice[0]?.tsMs ?? 0)) / 60000;
-    if (spanMin > 8) continue;
-    const meanHr = slice.reduce((a, p) => a + p.hr, 0) / slice.length;
-    if (meanHr < artifactFloor || meanHr > 120) continue;
+    if (spanMin > 14) continue;
+    const cleanSlice = slice.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
+    if (cleanSlice.length < 8) continue;
+    const meanHr = cleanSlice.reduce((a, hr) => a + hr, 0) / cleanSlice.length;
+    if (meanHr < artifactFloor || meanHr > artifactCeiling) continue;
     rolling.push(meanHr);
   }
 
-  const candidates = rolling.length >= 3 ? rolling : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor);
+  const candidates =
+    rolling.length >= 3
+      ? rolling
+      : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
   if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
-  const take = Math.max(3, Math.ceil(sorted.length * 0.2));
-  const sustainedLow = sorted.slice(0, take);
-  return Math.round(sustainedLow.reduce((a, b) => a + b, 0) / sustainedLow.length);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.25)));
+  return Math.round(Math.max(artifactFloor, sorted[idx] as number));
 }
 
 function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | null {
@@ -2562,9 +2567,12 @@ function cleanSampleRr(sample: HrSampleRow): number[] {
     return Math.abs(beatHr - sample.bpm) <= Math.max(10, sample.bpm * 0.18);
   });
   if (!clean.length) return [];
-  const meanRr = clean.reduce((a, b) => a + b, 0) / clean.length;
+  const medRr = median(clean.slice().sort((a, b) => a - b));
+  const robust = clean.filter((rr) => Math.abs(rr - medRr) <= Math.max(180, medRr * 0.22));
+  if (!robust.length) return [];
+  const meanRr = robust.reduce((a, b) => a + b, 0) / robust.length;
   if (Math.abs(meanRr - expectedRr) > Math.max(140, expectedRr * 0.22)) return [];
-  return clean;
+  return robust;
 }
 
 function recoveryEstimate(input: {
