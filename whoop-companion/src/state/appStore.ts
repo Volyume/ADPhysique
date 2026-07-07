@@ -2998,14 +2998,50 @@ function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | nul
     return { rmssd: null, rhr: null, resp: null };
   }
 
-  const rr = samples.flatMap(cleanSampleRr);
-  const resp = rr.length >= 300 ? respiratoryRate(rr) : null;
+  const resp = overnightRespiratoryRate(samples);
   const rhr = restingHrFromSleep(samples);
   return {
     rmssd: overnightRmssd(samples, rhr),
     rhr,
     resp,
   };
+}
+
+function overnightRespiratoryRate(samples: HrSampleRow[]): number | null {
+  type Segment = { rr: number[]; startTs: number; endTs: number };
+  const segments: Segment[] = [];
+  let current: Segment | null = null;
+  let lastTs: number | null = null;
+
+  const close = () => {
+    if (current && current.rr.length >= 300) segments.push(current);
+    current = null;
+  };
+
+  for (const sample of samples) {
+    const rr = cleanSampleRr(sample);
+    if (!rr.length) continue;
+    if (lastTs != null && sample.ts - lastTs > 15 * 1000) close();
+    if (!current) current = { rr: [], startTs: sample.ts, endTs: sample.ts };
+    current.rr.push(...rr);
+    current.endTs = sample.ts;
+    lastTs = sample.ts;
+  }
+  close();
+
+  const estimates = segments
+    .filter((seg) => rrCoverageRatio(seg) >= 0.6)
+    .map((seg) => respiratoryRate(seg.rr))
+    .filter((v): v is number => v != null && v >= 9 && v <= 24);
+
+  if (estimates.length === 0) return null;
+  return round1(median(estimates));
+}
+
+function rrCoverageRatio(segment: { rr: number[]; startTs: number; endTs: number }): number {
+  const rrMs = segment.rr.reduce((a, v) => a + v, 0);
+  const wallMs = Math.max(1, segment.endTs - segment.startTs + 60000);
+  return rrMs / wallMs;
 }
 
 function restingHrFromSleep(samples: HrSampleRow[]): number | null {
