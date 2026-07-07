@@ -2392,7 +2392,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityState={{ disabled: saving }}
                 accessibilityLabel="Finish cluster and log the set"
               >
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Ionicons name="checkmark-circle" size={20} color={colors.onPrimary} />
                 <Text style={styles.completeBtnText}>Finish cluster</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelCluster} style={styles.clusterCancel} accessibilityLabel="Cancel cluster">

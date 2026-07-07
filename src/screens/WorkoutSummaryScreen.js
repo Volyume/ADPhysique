@@ -69,6 +69,8 @@ function partnerCheerFailureMessage(error) {
 
 function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
+  const firstValue = labels?.[0] ? 0 : 1;
+  const values = Array.from({ length: max - firstValue + 1 }, (_, i) => i + firstValue);
   return (
     <View style={styles.ratingRow}>
       <View style={styles.ratingLabelRow}>
@@ -76,7 +78,7 @@ function RatingRow({ label, field, value, max, onChange }) {
         {labels?.[value] ? <Text style={styles.ratingValueLabel}>{labels[value]}</Text> : null}
       </View>
       <View style={styles.ratingBtns} accessibilityRole="radiogroup" accessibilityLabel={label}>
-        {Array.from({ length: max + 1 }, (_, i) => (
+        {values.map((i) => (
           <TouchableOpacity
             key={i}
             style={[styles.ratingBtn, value === i && styles.ratingBtnActive]}

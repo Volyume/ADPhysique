@@ -41,9 +41,9 @@ describe('EmptyDiary', () => {
   test('can open meal planning from the empty day', () => {
     const onPlanDay = jest.fn();
     const tree = create(<EmptyDiary onPlanDay={onPlanDay} />);
-    expect(text(tree)).toContain('Build Meal Plan');
-    expect(text(tree)).toContain('Create today or the week. You review it before anything is added.');
-    press(tree, 'Build Meal Plan: choose today or the week, review the meals, then add them to your diary');
+    expect(text(tree)).toContain('Meal plan');
+    expect(text(tree)).toContain('Plan this day or the week. You review it before anything is added.');
+    press(tree, 'Meal plan: choose this day or the week, review the meals, then add them to your diary');
     expect(onPlanDay).toHaveBeenCalledTimes(1);
   });
 });

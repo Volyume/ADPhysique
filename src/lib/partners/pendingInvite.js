@@ -19,21 +19,33 @@ const PENDING_KEY = '@volyume_pending_partner_code';
 // that can never redeem, so it is dropped rather than re-surfaced.
 const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
+async function persistPendingPartnerCode(code, { trackPaywall = false } = {}) {
+  const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
+  if (!isValidInviteCode(c)) return { ok: false };
+  try {
+    await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({ code: c, savedAt: Date.now() }));
+    if (trackPaywall) trackInviteDiedAtPaywall();
+    return { ok: true };
+  } catch (_) {
+    return { ok: false };
+  }
+}
+
 /**
  * Persist a pending partner code at the paywall interception. Records the
  * died-at-paywall telemetry (the moment the loop would otherwise have been lost)
  * and stores the code + timestamp for later re-surfacing. Best-effort.
  */
 export async function savePendingPartnerCode(code) {
-  const c = typeof code === 'string' ? code.trim().toUpperCase() : '';
-  if (!isValidInviteCode(c)) return { ok: false };
-  try {
-    await AsyncStorage.setItem(PENDING_KEY, JSON.stringify({ code: c, savedAt: Date.now() }));
-    trackInviteDiedAtPaywall();
-    return { ok: true };
-  } catch (_) {
-    return { ok: false };
-  }
+  return persistPendingPartnerCode(code, { trackPaywall: true });
+}
+
+/**
+ * Persist a pending partner code from a cold-start/link race without implying
+ * the user hit the paywall. The Partner surface clears it once redeemed.
+ */
+export async function rememberPendingPartnerCode(code) {
+  return persistPendingPartnerCode(code, { trackPaywall: false });
 }
 
 /**

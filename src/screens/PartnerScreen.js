@@ -96,7 +96,7 @@ function cheerFailureMessage(error) {
   if (error === 'not_active') {
     return 'That partnership is no longer active. Refresh Partners and try again.';
   }
-  if (error === 'insert_failed' || error === 'server_misconfigured') {
+  if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
   return 'Could not send that cheer. Check your connection and try again.';

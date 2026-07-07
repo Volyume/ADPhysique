@@ -53,12 +53,31 @@ import { logError } from '../lib/errorLog';
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
 // actual weekday rather than an abstract "1..7" (founder 2026-06-16).
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-function next7WeekdayLabels() {
-  const start = parseLocalDay(todayLocalKey());
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+function normaliseDayKey(value) {
+  const text = typeof value === 'string' ? value.slice(0, 10) : '';
+  const parsed = parseLocalDay(text);
+  return Number.isNaN(parsed.getTime()) ? todayLocalKey() : text;
+}
+
+function dateLabelForKey(dayKey) {
+  const d = parseLocalDay(dayKey);
+  if (Number.isNaN(d.getTime())) return 'today';
+  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+}
+
+function next7DayLabels(startKey) {
+  const start = parseLocalDay(startKey);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start.getTime());
     d.setDate(d.getDate() + i);
-    return WEEKDAY_SHORT[d.getDay()];
+    const day = WEEKDAY_SHORT[d.getDay()];
+    const date = `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+    return {
+      tab: `${day} ${d.getDate()}`,
+      date,
+      accessibility: `${day} ${date}`,
+    };
   });
 }
 
@@ -106,7 +125,7 @@ function PrefRow({ label, options, value, onSelect, busy }) {
   );
 }
 
-export default function MealPlanScreen({ navigation }) {
+export default function MealPlanScreen({ navigation, route }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
@@ -135,6 +154,8 @@ export default function MealPlanScreen({ navigation }) {
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
+  const planStartDate = useMemo(() => normaliseDayKey(route?.params?.entryDate), [route?.params?.entryDate]);
+  const planStartLabel = useMemo(() => dateLabelForKey(planStartDate), [planStartDate]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -155,7 +176,7 @@ export default function MealPlanScreen({ navigation }) {
   const plan = record?.plan || null;
   const day = plan?.days?.[dayIndex] || null;
   // Real weekday labels for the week picker (day i is scheduled to today + i).
-  const dayLabels = useMemo(() => next7WeekdayLabels(), []);
+  const dayLabels = useMemo(() => next7DayLabels(planStartDate), [planStartDate]);
 
   // One generator, two modes (Feature A day / Feature B week). Each replaces
   // the active plan with the chosen kind; the user can switch any time.
@@ -200,7 +221,7 @@ export default function MealPlanScreen({ navigation }) {
     }
   }, [user?.id, userProfile, busy, load, toast]);
 
-  // Write the plan day to today. `clearPlannedFirst` discards any existing
+  // Write the plan day to the diary date the user came from. `clearPlannedFirst` discards any existing
   // planned scaffolding for the day first, so a re-plan REPLACES the old plan
   // instead of appending a second copy (the doubling bug). Real eaten food is
   // never touched by clearPlannedDay (it only clears is_planned=1 rows).
@@ -208,9 +229,9 @@ export default function MealPlanScreen({ navigation }) {
     if (!user?.id || !day) return;
     setBusy(true);
     try {
-      if (clearPlannedFirst) await clearPlannedDay(user.id, todayLocalKey());
-      const n = await applyPlanDayToDiary(user.id, day, { entryDate: todayLocalKey() });
-      const verb = clearPlannedFirst ? "replaced today's plan" : 'logged to today';
+      if (clearPlannedFirst) await clearPlannedDay(user.id, planStartDate);
+      const n = await applyPlanDayToDiary(user.id, day, { entryDate: planStartDate });
+      const verb = clearPlannedFirst ? `replaced the plan for ${planStartLabel}` : `added to ${planStartLabel}`;
       toast.show(n > 0 ? `${n} foods ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
@@ -222,13 +243,12 @@ export default function MealPlanScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
-  }, [user?.id, day, toast, navigation]);
+  }, [user?.id, day, planStartDate, planStartLabel, toast, navigation]);
 
   const handleLogDay = useCallback(async () => {
     if (!user?.id || !day || busy) return;
-    const today = todayLocalKey();
     let existing = [];
-    try { existing = (await getFoodEntriesForDay(user.id, today)) || []; } catch (_) { existing = []; }
+    try { existing = (await getFoodEntriesForDay(user.id, planStartDate)) || []; } catch (_) { existing = []; }
     const plannedCount = existing.filter((e) => e.is_planned).length;
     const eatenCount = existing.length - plannedCount;
 
@@ -236,8 +256,8 @@ export default function MealPlanScreen({ navigation }) {
     // warn and REPLACE the existing plan (founder 2026-06-20).
     if (plannedCount > 0 && eatenCount === 0) {
       appAlert(
-        "Replace today's planned day?",
-        'Today already has a planned day. Replacing clears it and adds this one.',
+        'Replace planned meals?',
+        `${planStartLabel} already has planned meals. Replacing clears those planned meals and adds this plan.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Replace', style: 'destructive', onPress: () => writeLogDay(true) },
@@ -249,8 +269,8 @@ export default function MealPlanScreen({ navigation }) {
     // clearing only stale planned scaffolding so the plan can't double up.
     if (eatenCount > 0) {
       appAlert(
-        'Food already logged today',
-        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten today. This won't remove it, the planned meals are added alongside.`,
+        'Food already logged',
+        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten on ${planStartLabel}. This will not remove it; the planned meals are added alongside.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },
@@ -260,7 +280,7 @@ export default function MealPlanScreen({ navigation }) {
     }
     // Clean day: just log it.
     await writeLogDay(false);
-  }, [user?.id, day, busy, writeLogDay]);
+  }, [user?.id, day, busy, planStartDate, planStartLabel, writeLogDay]);
 
   // Feature B: schedule the whole week into the diary (today onward), without
   // overwriting any day that already has food logged.
@@ -268,7 +288,7 @@ export default function MealPlanScreen({ navigation }) {
     if (!user?.id || !plan || busy) return;
     setBusy(true);
     try {
-      const { addedDays, skippedDays } = await applyPlanWeekToDiary(user.id, plan, { startDate: todayLocalKey() });
+      const { addedDays, skippedDays } = await applyPlanWeekToDiary(user.id, plan, { startDate: planStartDate });
       if (addedDays === 0) {
         toast.show('Those days already have food logged, so nothing changed.', { variant: 'info' });
       } else {
@@ -283,7 +303,7 @@ export default function MealPlanScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
-  }, [user?.id, plan, busy, toast, navigation]);
+  }, [user?.id, plan, busy, planStartDate, toast, navigation]);
 
   // "Training today?" on the day in view (rethink §3.2): the day's
   // training/rest variant follows the user's answer, never an asserted
@@ -453,7 +473,7 @@ export default function MealPlanScreen({ navigation }) {
   // Feature A "Plan my day": a single-day plan renders without the week picker
   // and adds to today rather than logging an abstract "Day N".
   const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
-  const activeDayLabel = isDayPlan ? 'Today' : (dayLabels[dayIndex] || `Day ${dayIndex + 1}`);
+  const activeDayLabel = isDayPlan ? (planStartDate === todayLocalKey() ? 'Today' : planStartLabel) : (dayLabels[dayIndex]?.date || `Day ${dayIndex + 1}`);
 
   const honestyLine = useMemo(() => {
     if (!day || day.withinTolerance) return null;
@@ -462,7 +482,7 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={!plan ? 'Build Meal Plan' : isDayPlan ? "Today's meal plan" : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal plan' : isDayPlan ? 'Day meal plan' : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
@@ -480,20 +500,20 @@ export default function MealPlanScreen({ navigation }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Build your meal plan</Text>
+          <Text style={styles.emptyTitle}>Meal plan</Text>
           <Text style={styles.emptyBody}>
-            Volyume builds meals from your targets for today or the week. Review the plan first; nothing is added until you confirm.
+            Build meals from your targets for {planStartLabel} or the week from that date. You review everything before it is added to your diary.
           </Text>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
               <Ionicons name="today-outline" size={18} color={colors.primary} />
-              <Text style={styles.planOptionTitle}>Today</Text>
+              <Text style={styles.planOptionTitle}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={styles.planOptionDesc}>
               Build one day's meals for this diary date. Good when you want a quick structure.
             </Text>
-            <Button title="Build today" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Plan this day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -502,9 +522,9 @@ export default function MealPlanScreen({ navigation }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build seven days plus a shopping list. Existing logged days are left alone.
+              Build seven dated days plus a shopping list. Existing logged days are left alone.
             </Text>
-            <Button title="Build the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </ScrollView>
       ) : (
@@ -523,9 +543,9 @@ export default function MealPlanScreen({ navigation }) {
                   hitSlop={hitSlop}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={cycleOn ? `${dayLabels[i]}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]}
+                  accessibilityLabel={cycleOn ? `${dayLabels[i]?.accessibility}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]?.accessibility}
                 >
-                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{dayLabels[i]}</Text>
+                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
                   <View style={[styles.dayDot, variant === 'training' && cycleOn && styles.dayDotTrain]} />
                 </TouchableOpacity>
               );
@@ -667,60 +687,8 @@ export default function MealPlanScreen({ navigation }) {
             </View>
           ) : null}
 
-          <View style={styles.planActionPanel}>
-            <View style={styles.planActionHead}>
-              <View style={styles.planActionIcon}>
-                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
-              </View>
-              <View style={styles.planActionCopy}>
-                <Text style={styles.planActionTitle}>{isDayPlan ? 'Ready to add today' : 'Ready to add the week'}</Text>
-                <Text style={styles.planActionSub}>
-                  {isDayPlan
-                    ? 'Check the meals above, swap anything you want, then add them to today.'
-                    : 'Check each day, swap anything you want, then add the week from today onwards.'}
-                </Text>
-              </View>
-            </View>
-            {isDayPlan ? (
-              <Button title="Add today to diary" onPress={handleLogDay} loading={busy} fullWidth />
-            ) : (
-              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
-            )}
-            <View style={styles.planQuickActions}>
-              <TouchableOpacity
-                style={styles.planQuickAction}
-                onPress={handleRegenerate}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Rebuild meals"
-              >
-                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Rebuild</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.planQuickAction}
-                onPress={() => setGrocerySheet(buildGroceryList(plan))}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Shopping list"
-              >
-                <Ionicons name="basket-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Shopping list</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.planQuickAction, styles.planQuickActionMode]}
-                onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel={isDayPlan ? 'Switch to a week plan' : 'Switch to a day plan'}
-              >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Switch to week' : 'Switch to day'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Preferences (Eddie's controls; Besa never needs to open it) */}
+          {/* Preferences sit before the final add action so the user sees the
+              controls that shape the plan before committing it to the diary. */}
           <TouchableOpacity
             style={styles.prefsToggle}
             onPress={() => setPrefsOpen((o) => !o)}
@@ -729,7 +697,7 @@ export default function MealPlanScreen({ navigation }) {
             accessibilityLabel="Plan preferences"
           >
             <Ionicons name="options-outline" size={18} color={colors.primary} />
-            <Text style={styles.prefsToggleText}>Preferences</Text>
+            <Text style={styles.prefsToggleText}>Plan preferences</Text>
             <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.primary} />
           </TouchableOpacity>
           {prefsOpen ? (
@@ -764,6 +732,59 @@ export default function MealPlanScreen({ navigation }) {
               />
             </View>
           ) : null}
+
+          <View style={styles.planActionPanel}>
+            <View style={styles.planActionHead}>
+              <View style={styles.planActionIcon}>
+                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={colors.primary} />
+              </View>
+              <View style={styles.planActionCopy}>
+                <Text style={styles.planActionTitle}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
+                <Text style={styles.planActionSub}>
+                  {isDayPlan
+                    ? 'Check the meals above, swap anything you want, then add them to the diary date.'
+                    : 'Check each day, swap anything you want, then add the week from the date shown.'}
+                </Text>
+              </View>
+            </View>
+            {isDayPlan ? (
+              <Button title="Add to diary" onPress={handleLogDay} loading={busy} fullWidth />
+            ) : (
+              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
+            )}
+            <View style={styles.planQuickActions}>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={handleRegenerate}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Rebuild meals"
+              >
+                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>Rebuild</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.planQuickAction}
+                onPress={() => setGrocerySheet(buildGroceryList(plan))}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Shopping list"
+              >
+                <Ionicons name="basket-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>Shopping list</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.planQuickAction, styles.planQuickActionMode]}
+                onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={isDayPlan ? 'Switch to a week plan' : 'Switch to a day plan'}
+              >
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Plan week' : 'Plan one day'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <Text style={styles.footNote}>
             A plan is not logged food until you add it to your diary. Swap any meal you like; the day stays close to your target.

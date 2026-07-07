@@ -1197,7 +1197,7 @@ export default function DiaryScreen({ navigation }) {
               addAccessibilityLabel="Add food"
               onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
               onSuggested={!yesterdayHasFood ? goToSuggested : undefined}
-              onPlanDay={() => navigation.navigate('MealPlan')}
+              onPlanDay={() => navigation.navigate('MealPlan', { entryDate: selectedDate })}
             />
           )
         ) : (
@@ -1277,16 +1277,16 @@ export default function DiaryScreen({ navigation }) {
                     another diary summary block above the meals. */}
                 <TouchableOpacity
                   style={styles.buildPlanBtn}
-                  onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
+                  onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Build Meal Plan: choose today or the week, review the meals, then add them to your diary"
+                  accessibilityLabel="Meal plan: choose this day or the week, review the meals, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Build Meal Plan</Text>
-                    <Text style={styles.buildPlanSub}>Create today or the week from your targets. You review it before anything is added.</Text>
+                    <Text style={styles.buildPlanLabel}>Meal plan</Text>
+                    <Text style={styles.buildPlanSub}>Plan this day or the week from your targets. You review it before anything is added.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>

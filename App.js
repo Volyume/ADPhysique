@@ -12,6 +12,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
+import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
@@ -161,6 +162,7 @@ function notifyAuthLinkFailed() {
 function handlePartnerDeepLink(url) {
   const code = parseInviteCode(url);
   if (!code) return false;
+  rememberPendingPartnerCode(code).catch(() => {});
   let navigationRef;
   try { navigationRef = require('./src/navigation/RootNavigator').navigationRef; } catch (_) { return true; }
   // On a cold start the navigator may not be mounted yet when getInitialURL

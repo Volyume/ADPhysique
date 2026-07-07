@@ -181,12 +181,13 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('Build your meal plan');
-    expect(source).toContain('Volyume builds meals from your targets for today or the week. Review the plan first; nothing is added until you confirm.');
+    expect(source).toContain('<Text style={styles.emptyTitle}>Meal plan</Text>');
+    expect(source).toContain('Build meals from your targets for {planStartLabel} or the week from that date. You review everything before it is added to your diary.');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
-    expect(source).toContain("isDayPlan ? 'Ready to add today' : 'Ready to add the week'");
-    expect(source).toContain('Check the meals above, swap anything you want, then add them to today.');
+    expect(source.indexOf('Plan preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
+    expect(source).toContain('Check the meals above, swap anything you want, then add them to the diary date.');
     expect(source).toContain('accessibilityLabel="Rebuild meals"');
-    expect(source).toContain("isDayPlan ? 'Switch to week' : 'Switch to day'");
+    expect(source).toContain("isDayPlan ? 'Plan week' : 'Plan one day'");
   });
 });

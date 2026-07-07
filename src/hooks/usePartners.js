@@ -220,18 +220,52 @@ async function enrichPair(partnership, userId) {
   };
 }
 
+function minimalActivePair(partnership, userId) {
+  if (!partnership?.id) return null;
+  const partnerId = partnership.memberA === userId ? partnership.memberB : partnership.memberA;
+  return {
+    id: partnership.id,
+    partnership,
+    partnerId,
+    partnerFirstName: partnership.partnerFirstName || null,
+    rowState: partnerRowState({ partnership, partnerWeek: null }),
+    partnerWeek: null,
+    myWeek: null,
+    sharedStreak: null,
+    lastReceived: null,
+    sharedBlock: null,
+    weekStart: String(localWeekStartMs(Date.now())),
+    myAim: 0,
+    partnerAim: 0,
+    weekKept: false,
+    cheerEnabled: false,
+    streakEnabled: !!partnership.streakEnabled,
+    pairedAt: pairedAtMs(partnership),
+    winCards: [],
+  };
+}
+
+async function safeEnrichPair(partnership, userId) {
+  try {
+    return await enrichPair(partnership, userId);
+  } catch (_) {
+    return minimalActivePair(partnership, userId);
+  }
+}
+
 export default function usePartners(userId, tier) {
   const [state, setState] = useState(EMPTY);
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
   const pendingTriedRef = useRef(false);
   const loadRequestRef = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
+    const silent = opts?.silent === true;
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
-    setState(prev => ({ ...prev, loading: true, error: false, reload: load }));
+    setState(prev => ({ ...prev, loading: silent ? prev.loading : true, error: false, reload: load }));
     try {
       let partnerships = await readPartnershipsWithCloudRepair(userId);
       if (!isCurrentRequest()) return;
@@ -285,7 +319,7 @@ export default function usePartners(userId, tier) {
         writeOwnWeekSignals(userId, scoffScore).catch(() => {});
       }
 
-      const pairs = await Promise.all(activeList.map((p) => enrichPair(p, userId)));
+      const pairs = (await Promise.all(activeList.map((p) => safeEnrichPair(p, userId)))).filter(Boolean);
       if (!isCurrentRequest()) return;
       const pendingInvite = partnerships.find((p) => p.status === 'invited') || null;
       const primary = pickPrimary(partnerships);
@@ -329,7 +363,7 @@ export default function usePartners(userId, tier) {
     if (!PASSIVE_PENDING_REFRESH_ENABLED || !userId || !pendingRefreshKey) return undefined;
     let cancelled = false;
     const tick = () => {
-      if (!cancelled) pullPartnerMirrorNow(userId).finally(load);
+      if (!cancelled) pullPartnerMirrorNow(userId).finally(() => load({ silent: true }));
     };
     tick();
     const timer = setInterval(tick, PENDING_INVITE_REFRESH_MS);
