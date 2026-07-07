@@ -41,11 +41,19 @@ const ACTIVITY_OPTIONS = [
 
 
 const BF_SOURCES = [
-  { key: 'visual',  label: 'Visual' },
   { key: 'bia',     label: 'BIA' },
   { key: 'caliper', label: 'Caliper' },
   { key: 'dexa',    label: 'DEXA' },
 ];
+const MEASURED_BF_SOURCE_KEYS = BF_SOURCES.map(source => source.key);
+
+function isMeasuredBodyFatSource(source) {
+  return MEASURED_BF_SOURCE_KEYS.includes(source);
+}
+
+function normaliseMeasuredBodyFatSource(source) {
+  return isMeasuredBodyFatSource(source) ? source : 'bia';
+}
 
 const GOALS = [
   { key: 'lean_gain',        label: 'Build muscle (slow)',   detail: '~+10% surplus' },
@@ -68,7 +76,7 @@ const PHASE_DESCRIPTIONS = {
 const CONFIDENCE_LABELS = {
   high:   'High confidence. Body fat measured by a precise method.',
   medium: 'Medium confidence. Based on a formula estimate.',
-  low:    'Low confidence. Body fat estimated visually.',
+  low:    'Low confidence. Leave body fat blank unless you have a measured value.',
 };
 
 const CONFIDENCE_ICONS = { high: 'checkmark-circle', medium: 'information-circle', low: 'alert-circle' };
@@ -193,7 +201,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [heightIn,       setHeightIn]       = useState('');
   const [weight,         setWeight]         = useState('');
   const [bodyFat,        setBodyFat]        = useState('');
-  const [bfSource,       setBfSource]       = useState('visual');
+  const [bfSource,       setBfSource]       = useState('bia');
   const [activity,       setActivity]       = useState('moderate');
   const [goal,           setGoal]           = useState('lean_gain');
   const [proteinApproach, setProteinApproach] = useState('optimised');
@@ -328,9 +336,9 @@ export default function NutritionTargetsScreen({ navigation }) {
         const comp = await getLatestBodyComposition(user.id).catch(() => null);
         const bf = comp?.bodyFatPercent ?? (typeof userProfile?.bodyFatPct === 'number' ? userProfile.bodyFatPct : null);
         const bfSrc = comp?.bodyFatSource ?? userProfile?.bodyFatSource ?? null;
-        if (typeof bf === 'number' && bf > 0) {
+        if (typeof bf === 'number' && bf > 0 && isMeasuredBodyFatSource(bfSrc)) {
           setBodyFat(String(bf));
-          if (bfSrc && BF_SOURCES.some(s => s.key === bfSrc)) setBfSource(bfSrc);
+          setBfSource(bfSrc);
         }
 
         // Activity should track how often the user actually trains, not a fixed
@@ -370,6 +378,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     // which produced NaN calorie/macro targets that then persisted.
     const bfParsed  = parseFloat(bodyFat);
     const bfNum     = bodyFat.trim() && Number.isFinite(bfParsed) ? bfParsed : null;
+    const measuredBfSource = bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null;
     const ftNum     = parseInt(heightFt, 10) || 0;
     const inNum     = parseFloat(heightIn) || 0;
     const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm
@@ -398,7 +407,7 @@ export default function NutritionTargetsScreen({ navigation }) {
         heightCm:           heightNum,
         weightKg:           weightNum,
         bodyFatPercent:     bfNum,
-        bodyFatSource:      bfNum != null ? bfSource : null,
+        bodyFatSource:      measuredBfSource,
         activityLevel:      activity,
         goal: goalToUse,
         // Scale the surplus by training experience, matching onboarding and the
@@ -445,7 +454,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             logBodyMetric(user.id, {
               weightKg: weightNum,
               bodyFatPercent: bfNum ?? null,
-              bodyFatSource: bfNum != null ? bfSource : null,
+              bodyFatSource: measuredBfSource,
               loggedAt: Date.now(),
             }).catch(() => {});
           }
@@ -735,21 +744,21 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Body fat */}
           <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Body fat % <Text style={styles.optional}>(optional)</Text></Text>
+            <Text style={styles.fieldLabel}>Measured body fat % <Text style={styles.optional}>(optional)</Text></Text>
             <NumericField
               value={bodyFat}
               onChangeText={setBodyFat}
               placeholder="e.g. 15"
               keyboardType="decimal-pad"
               maxLength={4}
-              accessibilityLabel="Body fat percentage"
+              accessibilityLabel="Measured body fat percentage"
             />
           </View>
 
           {/* BF Source, only shown when BF is entered */}
           {bodyFat.trim() ? (
             <View style={styles.formGroup}>
-              <Text style={styles.fieldLabel}>Body fat source</Text>
+              <Text style={styles.fieldLabel}>Measurement method</Text>
               <PillGroup
                 options={BF_SOURCES}
                 selected={bfSource}
