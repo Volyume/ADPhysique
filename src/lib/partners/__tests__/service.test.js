@@ -461,6 +461,25 @@ describe('sendCheer', () => {
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
+  test('normalises edge not_active as stale partnership state, not account auth', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: { ok: false, error: 'not_active' },
+          error: { status: 403, message: 'Edge Function returned a non-2xx status code' },
+        })),
+      },
+      cheerInsertError: {
+        message: 'new row violates row-level security policy for table "partner_cheers"',
+      },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'not_active' });
+    expect(client._calls.cheerRows).toHaveLength(1);
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
+
   test('normalises a misconfigured cheer edge function as backend unavailable', async () => {
     const client = fakeClient({
       functions: {

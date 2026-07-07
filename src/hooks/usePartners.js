@@ -51,6 +51,10 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 }
 
+function shouldRetryCheerAfterMirrorRefresh(error) {
+  return error === 'not_active';
+}
+
 async function pullPartnerMirrorNow(userId) {
   if (!userId) return false;
   try {
@@ -426,8 +430,11 @@ export default function usePartners(userId, tier) {
       clearCachedInvite();
       await clearPendingPartnerCode();
       await mirrorAcceptedPartnershipLocally(userId, r.data);
-      await pullPartnerMirrorNow(userId);
-      const visible = await waitForAcceptedPartnershipVisible(userId, r.data);
+      let visible = await isAcceptedPartnershipVisible(userId, r.data);
+      if (!visible) {
+        await pullPartnerMirrorNow(userId);
+        visible = await waitForAcceptedPartnershipVisible(userId, r.data);
+      }
       if (!visible) {
         await load();
         return { ok: false, error: 'local_mirror_pending' };
@@ -438,7 +445,14 @@ export default function usePartners(userId, tier) {
   }, [userId, tier, load]);
 
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
-    const r = await sendCheer(userId, { pairId, kind, reciprocal });
+    let r = await sendCheer(userId, { pairId, kind, reciprocal });
+    if (!r?.ok && shouldRetryCheerAfterMirrorRefresh(r?.error)) {
+      await pullPartnerMirrorNow(userId);
+      const visible = await isAcceptedPartnershipVisible(userId, { partnershipId: pairId });
+      if (visible) {
+        r = await sendCheer(userId, { pairId, kind, reciprocal });
+      }
+    }
     if (r?.ok || r?.error === 'already_cheered') {
       try {
         await setLocalPartnerCheerSent({ pairId, senderId: userId, sentOn: todayLocalKey(), kind });

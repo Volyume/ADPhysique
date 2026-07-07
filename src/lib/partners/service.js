@@ -28,6 +28,11 @@ function fail(error) {
 
 function cheerFailureCode(error, data) {
   const status = error?.status ?? error?.context?.status ?? error?.context?.response?.status;
+  const dataError = String(data?.error || '').toLowerCase();
+  if (dataError.includes('already_cheered')) return 'already_cheered';
+  if (dataError.includes('not_active')) return 'not_active';
+  if (dataError.includes('insert_failed')) return 'insert_failed';
+  if (dataError.includes('server misconfigured') || dataError.includes('missing env vars')) return 'server_misconfigured';
   const text = [
     data?.error,
     error?.message,
