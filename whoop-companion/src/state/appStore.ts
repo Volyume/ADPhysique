@@ -79,7 +79,13 @@ import { rhythmScreen, RhythmResult } from '../metrics/afib';
 import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
-import { estimateStepsFromBandCounters } from '../metrics/bandSteps';
+import {
+  BandStepEstimate,
+  estimateBandStepsFromCounters,
+  estimateStepsFromBandCounters,
+  normaliseStepDivisor,
+  WHOOP5_STEP_TICKS_PER_STEP,
+} from '../metrics/bandSteps';
 import { activityGps } from '../data/activities';
 import { StructuredWorkout } from '../data/structuredWorkouts';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
@@ -167,7 +173,7 @@ export type AppState = {
   trainingReadiness: Readiness | null; // Garmin-style readiness, built on Recovery
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
-  recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
+  recoveryParts: { hrvSub: number; rhrSub: number; respSub: number | null; sleepSub: number } | null;
   hrvBal: HrvBalance | null;
   illness: IllnessResult | null;
   resilience: Resilience | null;
@@ -177,6 +183,8 @@ export type AppState = {
   steps: number | null; // best available today step count (band when trusted, phone fallback otherwise)
   stepSource: 'band' | 'phone' | null;
   bandSteps: number | null; // steps counted from the strap accelerometer (beta)
+  bandStepEstimate: BandStepEstimate | null;
+  bandStepDivisor: number;
   hbStepRaw: number | null; // candidate heartbeat step byte (diagnostic, unconfirmed)
   bufferedRecords: number; // raw history records drained from the strap buffer
   historySync: HistorySyncReport | null;
@@ -223,6 +231,8 @@ const initialState: AppState = {
   steps: null,
   stepSource: null,
   bandSteps: null,
+  bandStepEstimate: null,
+  bandStepDivisor: WHOOP5_STEP_TICKS_PER_STEP,
   hbStepRaw: null,
   bufferedRecords: 0,
   historySync: null,
@@ -244,6 +254,7 @@ const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
+const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -292,6 +303,8 @@ class AppStore extends Store<AppState> {
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
+    const stepDivisorRaw = await kvGet(STEP_DIVISOR_KEY);
+    const bandStepDivisor = normaliseStepDivisor(stepDivisorRaw ? Number(stepDivisorRaw) : WHOOP5_STEP_TICKS_PER_STEP);
     this.preferredDeviceId = await kvGet(LAST_DEVICE_ID_KEY);
     this.setState({
       profile,
@@ -299,6 +312,7 @@ class AppStore extends Store<AppState> {
       backgroundKeepAlive: keepAlive,
       lastSyncTs: Number.isFinite(lastSyncTs) ? lastSyncTs : null,
       lastHistorySync,
+      bandStepDivisor,
     });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
@@ -531,10 +545,23 @@ class AppStore extends Store<AppState> {
 
   private async refreshBandSteps(): Promise<number | null> {
     const now = Date.now();
-    const band = estimateStepsFromBandCounters(await getStepSamplesBetween(startOfDayMs(now), now));
-    if (band != null) {
+    const estimate = estimateBandStepsFromCounters(
+      await getStepSamplesBetween(startOfDayMs(now), now),
+      this.getState().bandStepDivisor,
+    );
+    const band = estimate?.steps ?? null;
+    if (estimate) {
       const chosen = this.bestStepTotal(band);
-      this.setState({ bandSteps: band, steps: chosen.steps, stepSource: chosen.source });
+      this.setState({ bandStepEstimate: estimate, bandSteps: band, steps: chosen.steps, stepSource: chosen.source });
+    } else {
+      const state = this.getState();
+      const phoneSteps = state.stepSource === 'phone' ? state.steps : null;
+      this.setState({
+        bandStepEstimate: null,
+        bandSteps: null,
+        steps: phoneSteps,
+        stepSource: phoneSteps != null ? 'phone' : null,
+      });
     }
     return band;
   }
@@ -701,6 +728,27 @@ class AppStore extends Store<AppState> {
     } else {
       await stopKeepAlive();
     }
+  };
+
+  setBandStepDivisor = async (value: number): Promise<number> => {
+    const divisor = normaliseStepDivisor(value);
+    await kvSet(STEP_DIVISOR_KEY, String(divisor));
+    this.setState({ bandStepDivisor: divisor });
+    await this.refreshBandSteps();
+    await this.recomputeToday();
+    await this.reestimateRecentBandStepDays();
+    await this.backfillCardioStepsFromHistory();
+    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio() });
+    return divisor;
+  };
+
+  calibrateBandSteps = async (actualSteps: number): Promise<number> => {
+    const actual = Math.max(1, Math.round(actualSteps));
+    const rawTicks = this.getState().bandStepEstimate?.rawTicks ?? null;
+    if (rawTicks == null || rawTicks <= 0) {
+      throw new Error('No WHOOP step ticks are available for today yet. Sync history after a short known walk, then calibrate.');
+    }
+    return this.setBandStepDivisor(rawTicks / actual);
   };
 
   private async onHeartRate(bpm: number, rr: number[]): Promise<void> {
@@ -972,6 +1020,19 @@ class AppStore extends Store<AppState> {
     }
   }
 
+  private async reestimateRecentBandStepDays(days = 14): Promise<void> {
+    const now = Date.now();
+    const today = dayKey(now);
+    for (let i = 1; i <= days; i += 1) {
+      const day = dayKey(addDays(now, -i));
+      if (day === today) continue;
+      const sod = dayStartFromKey(day);
+      const rows = await getStepSamplesBetween(sod, Math.min(sod + 24 * 60 * 60 * 1000, now));
+      if (rows.length < 2) continue;
+      await this.backfillDailyMetric(day);
+    }
+  }
+
   private async backfillDailyMetric(day: string): Promise<void> {
     const profile = this.getState().profile;
     const now = Date.now();
@@ -984,7 +1045,7 @@ class AppStore extends Store<AppState> {
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
-    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(sod, dayEnd));
+    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(sod, dayEnd), this.getState().bandStepDivisor);
 
     const manualRaw = await kvGet(`manualSleep:${day}`);
     const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
@@ -1097,12 +1158,15 @@ class AppStore extends Store<AppState> {
         .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
     const rmssdSamples = toDayValues((d) => d.rmssd);
     const rhrSamples = toDayValues((d) => d.rhr);
+    const respSamples = toDayValues((d) => d.resp);
     const recovery = recoveryEstimate({
       rmssd,
       rhr,
+      resp,
       sleepPerformance: sleep?.performance ?? null,
       rmssdSamples,
       rhrSamples,
+      respSamples,
     }).score;
 
     await upsertDailyMetric({
@@ -1132,7 +1196,10 @@ class AppStore extends Store<AppState> {
     for (const row of rows) {
       if (row.source === 'nap') continue;
       if (row.stepSource === 'manual' || row.stepSource === 'phone') continue;
-      const bandSteps = estimateStepsFromBandCounters(await getStepSamplesBetween(row.startTs, row.endTs));
+      const bandSteps = estimateStepsFromBandCounters(
+        await getStepSamplesBetween(row.startTs, row.endTs),
+        this.getState().bandStepDivisor,
+      );
       if (bandSteps == null || bandSteps <= 0) continue;
       if (row.steps != null && Math.abs(row.steps - bandSteps) <= 1) continue;
       const durationMin = Math.max(1 / 60, (row.endTs - row.startTs) / 60000);
@@ -1352,7 +1419,10 @@ class AppStore extends Store<AppState> {
         : null;
     const bandActivitySteps =
       input.steps == null
-        ? estimateStepsFromBandCounters(await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []))
+        ? estimateStepsFromBandCounters(
+            await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []),
+            this.getState().bandStepDivisor,
+          )
         : null;
     const activitySteps = input.steps ?? bandActivitySteps;
     const stepSource = input.stepSource ?? (bandActivitySteps != null ? 'band' : null);
@@ -1740,9 +1810,11 @@ class AppStore extends Store<AppState> {
     const recoveryResult = recoveryEstimate({
       rmssd,
       rhr,
+      resp,
       sleepPerformance: sleep?.performance ?? null,
       rmssdSamples,
       rhrSamples,
+      respSamples,
     });
     recovery = recoveryResult.score;
     recoveryParts = recoveryResult.parts;
@@ -1879,7 +1951,7 @@ class AppStore extends Store<AppState> {
   };
 
   private async enrichDetectedActivity(d: DetectedActivity): Promise<DetectedActivity> {
-    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(d.startTs, d.endTs));
+    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(d.startTs, d.endTs), this.getState().bandStepDivisor);
     if (steps == null || steps <= 0) return { ...d, label: 'Workout', steps: null, cadenceSpm: null };
     const minutes = Math.max(1 / 60, (d.endTs - d.startTs) / 60000);
     const cadenceSpm = Math.round(steps / minutes);
@@ -2127,17 +2199,21 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
 function recoveryEstimate(input: {
   rmssd: number | null;
   rhr: number | null;
+  resp: number | null;
   sleepPerformance: number | null;
   rmssdSamples: Array<{ day: number; value: number }>;
   rhrSamples: Array<{ day: number; value: number }>;
+  respSamples: Array<{ day: number; value: number }>;
 }): { score: number | null; parts: AppState['recoveryParts'] } {
-  const { rmssd, rhr, sleepPerformance, rmssdSamples, rhrSamples } = input;
+  const { rmssd, rhr, resp, sleepPerformance, rmssdSamples, rhrSamples, respSamples } = input;
   if (rmssd == null || rhr == null) return { score: null, parts: null };
 
   const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
   const rhrBaseline = emaBaseline(rhrSamples) ?? null;
+  const respBaseline = respSamples.length ? respSamples.reduce((a, b) => a + b.value, 0) / respSamples.length : null;
   const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
   const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
+  const respSd = stdev(respSamples.map((s) => s.value)) || 1;
 
   if (rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
     const r = computeRecovery({
@@ -2147,14 +2223,17 @@ function recoveryEstimate(input: {
       restingHr: rhr,
       rhrBaseline: rhrBaseline ?? rhr,
       rhrSd,
+      respiratoryRate: resp,
+      respiratoryBaseline: respBaseline,
+      respiratorySd: respSd,
       sleepPerformance,
     });
-    return { score: r.score, parts: { hrvSub: r.hrvSub, rhrSub: r.rhrSub, sleepSub: r.sleepSub } };
+    return { score: r.score, parts: { hrvSub: r.hrvSub, rhrSub: r.rhrSub, respSub: r.respSub, sleepSub: r.sleepSub } };
   }
 
   const sleepSub = Math.round(Math.max(0, Math.min(100, (sleepPerformance ?? 0.5) * 100)));
   const score = Math.round(0.5 * 50 + 0.25 * 50 + 0.25 * sleepSub);
-  return { score, parts: { hrvSub: 50, rhrSub: 50, sleepSub } };
+  return { score, parts: { hrvSub: 50, rhrSub: 50, respSub: null, sleepSub } };
 }
 
 function stressSeriesFromRows(rows: HrSampleRow[]): Array<{ tsMs: number; score: number }> {

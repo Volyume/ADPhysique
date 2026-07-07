@@ -260,6 +260,9 @@ export async function getSleepStateSamplesBetween(fromTs: number, toTs: number):
 // ---- Daily metrics ----
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const db = await getDb();
+  const resp = cleanRespiratoryRate(m.resp);
+  const sleepPerf = cleanSleepFraction(m.sleepPerf);
+  const sleepDetail = cleanSleepDetail(m.sleepDetail);
   await db.runAsync(
     `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps,
        sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
@@ -277,9 +280,9 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.recovery,
     m.rmssd,
     m.rhr,
-    m.resp,
+    resp,
     m.sleepMin,
-    m.sleepPerf,
+    sleepPerf,
     m.strain,
     m.steps,
     m.sleepStart,
@@ -288,9 +291,55 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.remMin,
     m.lightMin,
     m.awakeMin,
-    m.sleepDetail ? JSON.stringify(m.sleepDetail) : null,
+    sleepDetail ? JSON.stringify(sleepDetail) : null,
     m.updatedAt,
   );
+}
+
+function cleanRespiratoryRate(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 9 && value <= 24 ? value : null;
+}
+
+function cleanPct(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, value));
+}
+
+function cleanNonNegative(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(0, value);
+}
+
+function cleanSleepFraction(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (value > 2) return (cleanPct(value) ?? 0) / 100;
+  return Math.max(0, Math.min(1, value));
+}
+
+function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail | null {
+  if (!detail) return null;
+  return {
+    ...detail,
+    performance: cleanPct(detail.performance),
+    hoursVsNeeded: cleanPct(detail.hoursVsNeeded),
+    needMin: cleanNonNegative(detail.needMin),
+    baselineMin: cleanNonNegative(detail.baselineMin),
+    napMin: cleanNonNegative(detail.napMin),
+    strainMin: cleanNonNegative(detail.strainMin),
+    debtMin: cleanNonNegative(detail.debtMin),
+    efficiency: cleanPct(detail.efficiency),
+    consistency: cleanPct(detail.consistency),
+    restorativeMin: cleanNonNegative(detail.restorativeMin),
+    restorativePct: cleanPct(detail.restorativePct),
+    latencyMin: cleanNonNegative(detail.latencyMin),
+    wakeEvents: cleanNonNegative(detail.wakeEvents),
+    inBedMin: cleanNonNegative(detail.inBedMin),
+    stressHigh: cleanPct(detail.stressHigh),
+    stressMed: cleanPct(detail.stressMed),
+    stressLow: cleanPct(detail.stressLow),
+    signalMin: cleanNonNegative(detail.signalMin),
+    coveragePct: cleanPct(detail.coveragePct),
+  };
 }
 
 function mapDaily(r: {
@@ -325,9 +374,9 @@ function mapDaily(r: {
     recovery: r.recovery,
     rmssd: r.rmssd,
     rhr: r.rhr,
-    resp: r.resp ?? null,
+    resp: cleanRespiratoryRate(r.resp),
     sleepMin: r.sleep_min,
-    sleepPerf: r.sleep_perf,
+    sleepPerf: cleanSleepFraction(r.sleep_perf),
     strain: r.strain,
     steps: r.steps,
     sleepStart: r.sleep_start ?? null,
@@ -336,7 +385,7 @@ function mapDaily(r: {
     remMin: r.rem_min ?? null,
     lightMin: r.light_min ?? null,
     awakeMin: r.awake_min ?? null,
-    sleepDetail,
+    sleepDetail: cleanSleepDetail(sleepDetail),
     updatedAt: r.updated_at,
   };
 }

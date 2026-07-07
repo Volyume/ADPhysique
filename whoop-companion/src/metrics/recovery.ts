@@ -2,10 +2,12 @@
  * Daily recovery score (0–100), WHOOP-style, from published inputs:
  *   - HRV (RMSSD) today vs personal baseline — dominant signal
  *   - Resting HR today vs personal baseline — lower is better
+ *   - Respiratory rate today vs personal baseline (when available)
  *   - Sleep performance (achieved / needed)
  *
  * WHOOP's exact weighting is proprietary; this uses a transparent weighted blend
- * (HRV 0.5, RHR 0.25, sleep 0.25). Output is a labelled approximation.
+ * (HRV-led, with RHR, respiratory and sleep as supporting inputs). Output is a
+ * labelled approximation.
  *
  * Baselines are EMA values (see ema.ts); the SD of recent readings turns a raw
  * delta into a bounded sub-score.
@@ -18,6 +20,9 @@ export type RecoveryInputs = {
   restingHr: number; // today's overnight RHR (bpm)
   rhrBaseline: number;
   rhrSd: number;
+  respiratoryRate?: number | null;
+  respiratoryBaseline?: number | null;
+  respiratorySd?: number | null;
   sleepPerformance: number | null; // 0..1 (achieved/needed), or null if unknown
 };
 
@@ -26,6 +31,7 @@ export type RecoveryResult = {
   band: 'green' | 'yellow' | 'red';
   hrvSub: number;
   rhrSub: number;
+  respSub: number | null;
   sleepSub: number;
 };
 
@@ -47,12 +53,25 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult {
   // Sleep performance maps 0..1 -> 0..100; if unknown, fall back to neutral 60.
   const sleepSub = inp.sleepPerformance === null ? 60 : clamp(inp.sleepPerformance * 100, 0, 100);
 
-  const score = clamp(0.5 * hrvSub + 0.25 * rhrSub + 0.25 * sleepSub, 1, 99);
+  const hasResp =
+    inp.respiratoryRate != null &&
+    inp.respiratoryBaseline != null &&
+    Number.isFinite(inp.respiratoryRate) &&
+    Number.isFinite(inp.respiratoryBaseline);
+  const respSd = inp.respiratorySd && inp.respiratorySd > 0 ? inp.respiratorySd : 1;
+  const respSub = hasResp
+    ? zToScore(((inp.respiratoryBaseline as number) - (inp.respiratoryRate as number)) / respSd, 0.9)
+    : null;
+
+  const score = hasResp
+    ? clamp(0.45 * hrvSub + 0.25 * rhrSub + 0.1 * (respSub as number) + 0.2 * sleepSub, 1, 99)
+    : clamp(0.5 * hrvSub + 0.25 * rhrSub + 0.25 * sleepSub, 1, 99);
   return {
     score: Math.round(score),
     band: score >= 67 ? 'green' : score >= 34 ? 'yellow' : 'red',
     hrvSub: Math.round(hrvSub),
     rhrSub: Math.round(rhrSub),
+    respSub: respSub == null ? null : Math.round(respSub),
     sleepSub: Math.round(sleepSub),
   };
 }

@@ -95,6 +95,15 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               color={fourTier(parts.rhrSub).color}
               onPress={() => nav.navigate({ name: 'metric', key: 'rhr' })}
             />
+            {parts.respSub != null ? (
+              <ContributorRow
+                label="Respiratory rate"
+                percent={parts.respSub}
+                value={fourTier(parts.respSub).label}
+                color={fourTier(parts.respSub).color}
+                onPress={() => nav.navigate({ name: 'metric', key: 'respiratory' })}
+              />
+            ) : null}
             <ContributorRow
               label="Sleep"
               percent={parts.sleepSub}

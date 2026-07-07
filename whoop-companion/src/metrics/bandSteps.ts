@@ -17,6 +17,8 @@ export type BandStepEstimate = {
 // it over-reports literal steps by ~7.5x, so treat it as ticks and calibrate it
 // down instead of displaying raw deltas as steps.
 export const WHOOP5_STEP_TICKS_PER_STEP = 8;
+export const MIN_STEP_TICKS_PER_STEP = 2;
+export const MAX_STEP_TICKS_PER_STEP = 30;
 
 const MAX_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_RAW_DELTA = 512;
@@ -75,6 +77,15 @@ export function estimateBandStepsFromCounters(
   };
 }
 
-export function estimateStepsFromBandCounters(rows: BandStepCounterRow[]): number | null {
-  return estimateBandStepsFromCounters(rows)?.steps ?? null;
+export function estimateStepsFromBandCounters(
+  rows: BandStepCounterRow[],
+  calibrationDivisor = WHOOP5_STEP_TICKS_PER_STEP,
+): number | null {
+  return estimateBandStepsFromCounters(rows, calibrationDivisor)?.steps ?? null;
+}
+
+export function normaliseStepDivisor(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return WHOOP5_STEP_TICKS_PER_STEP;
+  const clamped = Math.max(MIN_STEP_TICKS_PER_STEP, Math.min(MAX_STEP_TICKS_PER_STEP, value));
+  return Math.round(clamped * 10) / 10;
 }

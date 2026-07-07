@@ -10,6 +10,7 @@ import { Card, Empty, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat
 import { colors, radius } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { clearRawFrames, countRawFrames, getRawFramesPage } from '../db/database';
+import { WHOOP5_STEP_TICKS_PER_STEP } from '../metrics/bandSteps';
 import type { UserProfile } from '../metrics/strain';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -46,6 +47,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
   const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
+  const bandStepEstimate = useStoreSelector(appStore, (s) => s.bandStepEstimate);
+  const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
+  const [actualSteps, setActualSteps] = useState('');
 
   // Frames actually written to the database (what export reads), polled so we can
   // see whether persistence is keeping up with the live (in-memory) counter.
@@ -71,6 +75,27 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastSyncText = effectiveSyncTs
     ? new Date(effectiveSyncTs).toLocaleString()
     : 'Not yet - connect to sync';
+
+  const applyStepCalibration = async () => {
+    const actual = Number(actualSteps.replace(/,/g, '').trim());
+    if (!Number.isFinite(actual) || actual <= 0) {
+      Alert.alert('Calibration needs a step count', "Enter today's actual steps for the synced WHOOP ticks.");
+      return;
+    }
+    try {
+      const divisor = await appStore.calibrateBandSteps(actual);
+      setActualSteps('');
+      Alert.alert('Step calibration updated', `${divisor.toFixed(1)} ticks per step`);
+    } catch (e) {
+      Alert.alert('Calibration unavailable', String(e));
+    }
+  };
+
+  const resetStepCalibration = async () => {
+    const divisor = await appStore.setBandStepDivisor(WHOOP5_STEP_TICKS_PER_STEP);
+    setActualSteps('');
+    Alert.alert('Step calibration reset', `${divisor.toFixed(1)} ticks per step`);
+  };
 
   const exportFrames = async () => {
     try {
@@ -184,6 +209,28 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           <Stat label="Today" value={steps != null ? steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
           <Stat label="Source" value={stepSource === 'band' ? 'band est.' : stepSource ?? '-'} />
           <Stat label="Band estimate" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+          <Stat label="Raw ticks" value={bandStepEstimate?.rawTicks ?? '-'} />
+          <Stat label="Ticks/step" value={bandStepDivisor.toFixed(1)} />
+          <Stat label="Confidence" value={bandStepEstimate?.confidence ?? '-'} />
+        </View>
+        <View style={styles.calibrationRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldLabel}>Actual steps</Text>
+            <TextInput
+              style={styles.input}
+              value={actualSteps}
+              onChangeText={setActualSteps}
+              keyboardType="number-pad"
+              placeholder="e.g. 200"
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+          <View style={styles.calibrationActions}>
+            <SecondaryButton title="Apply" onPress={() => void applyStepCalibration()} />
+            <SecondaryButton title="Reset" onPress={() => void resetStepCalibration()} />
+          </View>
         </View>
         <Text style={styles.hint}>
           The phone pedometer is preferred for live/today steps when available. WHOOP history is calibrated from
@@ -360,6 +407,8 @@ const styles = StyleSheet.create({
   diagText: { color: colors.text, fontSize: 14, marginBottom: 8 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleLabel: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 12 },
+  calibrationRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-end', marginTop: 12 },
+  calibrationActions: { width: 118, gap: 8 },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: {
     backgroundColor: colors.surface,
