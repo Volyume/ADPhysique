@@ -73,7 +73,7 @@ function partnerCheerFailureMessage(error) {
   if (error === 'partner_auth_required' || error === 'offline') {
     return 'Volyume could not confirm your account for Partners right now. Open Partners again and try once more.';
   }
-  return 'Could not send that cheer. Check your connection and try again.';
+  return 'Could not send that cheer. Open Partners again and try once more.';
 }
 
 function RatingRow({ label, field, value, max, onChange }) {
