@@ -93,7 +93,7 @@ function RatingRow({ label, field, value, max, onChange }) {
             key={i}
             style={[styles.ratingBtn, value === i && styles.ratingBtnActive]}
             onPress={() => onChange(i)}
-            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityRole="radio"
             accessibilityState={{ selected: value === i }}
             accessibilityLabel={labels?.[i] ? `${i}, ${labels[i]}` : String(i)}
