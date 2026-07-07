@@ -69,6 +69,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const trustStrip = capture ? sleepTrustStrip(capture, !!perf?.cappedByConfidence) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
+  const largeSurplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - Math.round(neededMin * 1.1)) : 0;
   const scoreDrivers = useMemo(
     () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed, stress }),
     [perf, sleepScore, sleep, capture, sleepNeed, stress],
@@ -203,6 +204,11 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             {sleepScore.cappedByConfidence ? (
               <Text style={styles.surplusNote}>
                 Sleep Quality is capped by capture confidence until auto sync fills in stronger overnight coverage.
+              </Text>
+            ) : null}
+            {largeSurplusSleepMin > 0 ? (
+              <Text style={styles.surplusNote}>
+                Sleep Quality tapers very long sleep by {formatDuration(largeSurplusSleepMin)} beyond the normal surplus range, because that can mean awake time was included.
               </Text>
             ) : null}
           </>
