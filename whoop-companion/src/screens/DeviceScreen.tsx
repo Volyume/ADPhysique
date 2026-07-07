@@ -236,6 +236,29 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     }
   };
 
+  const confirmClearFrames = async () => {
+    const totalFrames = await countRawFrames();
+    if (totalFrames === 0) {
+      Alert.alert('No saved frames', 'There are no captured frames saved in the database.');
+      setSavedFrames(0);
+      return;
+    }
+    Alert.alert(
+      'Clear captured frames?',
+      `${totalFrames.toLocaleString()} saved frame${totalFrames === 1 ? '' : 's'} will be deleted. Export first if these are still needed for decoder work.`,
+      [
+        { text: 'Keep frames', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            void clearRawFrames().then(() => setSavedFrames(0));
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Screen title="Device" onBack={nav.canBack ? nav.back : undefined}>
       <Card>
@@ -426,7 +449,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
             Exported {exportProgress.exported.toLocaleString()} / {exportProgress.total.toLocaleString()} frames
           </Text>
         ) : null}
-        <SecondaryButton title="Clear captured frames" onPress={() => void clearRawFrames()} />
+        <SecondaryButton title="Clear captured frames" onPress={() => void confirmClearFrames()} />
         <Text style={styles.hint}>
           Capturing the strap's proprietary frames lets the history / sleep decoder be finalised. Export and share them
           to have them decoded.
