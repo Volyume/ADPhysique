@@ -8,6 +8,7 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { illnessTint } from './IllnessScreen';
 import { formatClock, formatDuration } from '../util/time';
+import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 
@@ -41,7 +42,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   // hours-vs-needed ratio as a fallback for older rows.
   const sleepPerf =
     today?.sleepDetail?.performance != null
-      ? today.sleepDetail.performance / 100
+      ? clampPct(today.sleepDetail.performance) / 100
       : today?.sleepPerf ?? null;
 
   const hm = useMemo(() => appStore.healthMonitor(), [today, recentDays]);

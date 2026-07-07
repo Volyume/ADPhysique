@@ -23,7 +23,9 @@ export type HrvResult = {
 
 const RR_MIN_MS = 300; // 200 bpm
 const RR_MAX_MS = 2000; // 30 bpm
-const MEDIAN_TOL = 0.25; // reject intervals >25% from the local median
+const MEDIAN_TOL = 0.2; // reject intervals >20% from the local median
+const MEDIAN_RADIUS = 2;
+const MIN_CLEAN_INTERVALS = 20;
 
 function median(xs: number[]): number {
   if (xs.length === 0) return 0;
@@ -34,23 +36,29 @@ function median(xs: number[]): number {
 
 /**
  * Validity mask over the raw R-R sequence: in physiological range AND within
- * MEDIAN_TOL of the overall median. Returns same-length boolean array.
+ * MEDIAN_TOL of a short local median. Returns same-length boolean array.
  */
 function validityMask(rr: number[]): boolean[] {
-  const inRange = rr.filter((v) => v >= RR_MIN_MS && v <= RR_MAX_MS);
-  const med = median(inRange) || 0;
-  return rr.map((v) => {
+  return rr.map((v, i) => {
     if (v < RR_MIN_MS || v > RR_MAX_MS) return false;
+    const neighbours: number[] = [];
+    for (let j = Math.max(0, i - MEDIAN_RADIUS); j <= Math.min(rr.length - 1, i + MEDIAN_RADIUS); j += 1) {
+      if (j === i) continue;
+      const candidate = rr[j] as number;
+      if (candidate >= RR_MIN_MS && candidate <= RR_MAX_MS) neighbours.push(candidate);
+    }
+    if (neighbours.length < 2) return true;
+    const med = median(neighbours) || 0;
     if (med > 0 && Math.abs(v - med) > MEDIAN_TOL * med) return false;
     return true;
   });
 }
 
 export function computeHrv(rr: number[]): HrvResult | null {
-  if (rr.length < 3) return null;
+  if (rr.length < MIN_CLEAN_INTERVALS) return null;
   const valid = validityMask(rr);
   const accepted = rr.filter((_, i) => valid[i]);
-  if (accepted.length < 3) return null;
+  if (accepted.length < MIN_CLEAN_INTERVALS) return null;
 
   const n = accepted.length;
   const mean = accepted.reduce((a, b) => a + b, 0) / n;
@@ -66,7 +74,7 @@ export function computeHrv(rr: number[]): HrvResult | null {
     if (Math.abs(d) > 50) nn50 += 1;
     pairs += 1;
   }
-  if (pairs < 2) return null;
+  if (pairs < MIN_CLEAN_INTERVALS - 1) return null;
   const rmssd = Math.sqrt(sumSqDiff / pairs);
 
   let sumVar = 0;

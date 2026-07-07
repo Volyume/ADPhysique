@@ -32,8 +32,10 @@ import {
   SleepDetail,
   getHrSamplesBetween,
   getRecentDailyMetrics,
+  getSleepStateSamplesBetween,
   insertCardio,
   insertHrSample,
+  insertSleepStateSample,
   insertStepSample,
   insertJournal,
   insertRawFrame,
@@ -80,6 +82,7 @@ import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
 import { activityGps } from '../data/activities';
 import { StructuredWorkout } from '../data/structuredWorkouts';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
+import { clampPct } from '../util/number';
 
 export type SessionKind = 'workout' | 'sleep' | 'nap';
 export type LiveSession = {
@@ -236,9 +239,8 @@ const RECOMPUTE_INTERVAL_MS = 60 * 1000;
 const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const HISTORY_STALL_TIMEOUT_MS = 90 * 1000;
 const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
-const AUTO_HISTORY_SYNC_RETRY_MS = 5000;
-const AUTO_HISTORY_SYNC_MAX_ATTEMPTS = 6;
-const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
+const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 
@@ -404,7 +406,7 @@ class AppStore extends Store<AppState> {
 
   private retryAutoHistoryDrain(): void {
     const deviceId = this.getState().device?.id;
-    if (!deviceId || this.autoSyncAttempts >= AUTO_HISTORY_SYNC_MAX_ATTEMPTS) return;
+    if (!deviceId) return;
     this.autoDrainedFor = '';
     this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
   }
@@ -919,12 +921,15 @@ class AppStore extends Store<AppState> {
     for (const sample of decoded.steps) {
       await insertStepSample({ ts: sample.ts, counter: sample.counter, activityClass: sample.activityClass });
     }
+    for (const sample of decoded.sleepStates) {
+      await insertSleepStateSample({ ts: sample.ts, state: sample.state });
+    }
 
     this.historySessionStats = mergeHistoryStats(this.historySessionStats, decoded);
     const stats = this.historySessionStats;
     this.setState({
       historySync: {
-        status: `Stored ${decoded.hr.length} HR samples from ${frames.length} records`,
+        status: `Stored ${decoded.hr.length} HR samples and ${decoded.sleepStates.length} sleep-state hints from ${frames.length} records`,
         rawRecords: stats.records,
         decodedRecords: stats.decodedRecords,
         hrSamples: stats.hr.length,
@@ -952,6 +957,7 @@ class AppStore extends Store<AppState> {
       if (hour < 12) days.add(dayKey(sample.ts));
     }
     for (const sample of stats.steps) days.add(dayKey(sample.ts));
+    for (const sample of stats.sleepStates) days.add(dayKey(sample.ts));
     const ordered = [...days].filter((d) => d !== today).sort((a, b) => a.localeCompare(b));
     for (const day of ordered) {
       await this.backfillDailyMetric(day);
@@ -978,8 +984,8 @@ class AppStore extends Store<AppState> {
     const winEnd = manual ? manual.endTs : Math.min(sod + 12 * 3600 * 1000, now);
     const nightHr = await getHrSamplesBetween(winStart, winEnd);
     const nightPerMin = perMinuteHr(nightHr);
-    const sleepInput: SleepMinute[] = nightPerMin.map((p) => ({ ts: p.tsMs, hr: p.hr, motion: null }));
-    let sleep = manual
+    const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd);
+    let candidateSleep = manual
       ? computeSleep(sleepInput, undefined, {
           forceWindow: true,
           startTs: manual.startTs,
@@ -987,7 +993,8 @@ class AppStore extends Store<AppState> {
           source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
         })
       : computeSleep(sleepInput);
-    if (manual && !sleep) sleep = durationOnlySleep(manual.startTs, manual.endTs);
+    if (manual && !candidateSleep) candidateSleep = durationOnlySleep(manual.startTs, manual.endTs);
+    const sleep = sleepIsReliable(candidateSleep, !!manual) ? candidateSleep : null;
 
     let rmssd: number | null = null;
     let rhr: number | null = null;
@@ -1043,8 +1050,8 @@ class AppStore extends Store<AppState> {
       priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
       const consistency = sleepConsistency(priorWindows);
       const sleepCoveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
-      const hoursVsNeededPct = Math.round((sleep.asleepMin / need.neededMin) * 100);
-      const efficiencyPct = Math.round(sleep.efficiency * 100);
+      const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
+      const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
       const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
       const sleepPerformanceResult = computeSleepPerformance({
         hoursVsNeededPct,
@@ -1571,8 +1578,8 @@ class AppStore extends Store<AppState> {
     const nightHr = await getHrSamplesBetween(winStart, winEnd);
     const nightPerMin = perMinuteHr(nightHr);
     const captureWindowMin = Math.max(1, Math.round((winEnd - winStart) / 60000));
-    const sleepInput: SleepMinute[] = nightPerMin.map((p) => ({ ts: p.tsMs, hr: p.hr, motion: null }));
-    let sleep = manual
+    const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd);
+    let candidateSleep = manual
       ? computeSleep(sleepInput, undefined, {
           forceWindow: true,
           startTs: manual.startTs,
@@ -1580,9 +1587,10 @@ class AppStore extends Store<AppState> {
           source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
         })
       : computeSleep(sleepInput);
-    if (manual && !sleep) {
-      sleep = durationOnlySleep(manual.startTs, manual.endTs);
+    if (manual && !candidateSleep) {
+      candidateSleep = durationOnlySleep(manual.startTs, manual.endTs);
     }
+    const sleep = sleepIsReliable(candidateSleep, !!manual) ? candidateSleep : null;
 
     // Overnight RMSSD + RHR + respiratory rate within the detected sleep window.
     let rmssd: number | null = null;
@@ -1615,19 +1623,22 @@ class AppStore extends Store<AppState> {
       sleep.neededMin = need.neededMin;
       sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
     }
-    const sleepCoveragePct = sleep
-      ? Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100)
+    const captureSleep = candidateSleep ?? sleep;
+    const sleepCoveragePct = captureSleep
+      ? Math.round((captureSleep.signalMin / Math.max(1, captureSleep.inBedMin)) * 100)
       : Math.round((nightPerMin.length / captureWindowMin) * 100);
+    const captureNightHr = captureSleep ? nightHr.filter((s) => s.ts >= captureSleep.startTs && s.ts < captureSleep.endTs) : nightHr;
     const sleepCapture: AppState['sleepCapture'] = {
-      windowMin: sleep?.inBedMin ?? captureWindowMin,
-      signalMin: sleep?.signalMin ?? nightPerMin.length,
+      windowMin: captureSleep?.inBedMin ?? captureWindowMin,
+      signalMin: captureSleep?.signalMin ?? nightPerMin.length,
       coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
-      rrCount: (sleep ? scoredNightHr : nightHr).reduce((a, s) => a + s.rr.length, 0),
-      source: sleep?.source ?? null,
+      rrCount: captureNightHr.reduce((a, s) => a + s.rr.length, 0),
+      source: captureSleep?.source ?? null,
       note: sleepCaptureNote({
         hasSleep: !!sleep,
+        hasCandidate: !!candidateSleep,
         manual: !!manual,
-        signalMin: sleep?.signalMin ?? nightPerMin.length,
+        signalMin: captureSleep?.signalMin ?? nightPerMin.length,
         coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
       }),
     };
@@ -1666,8 +1677,8 @@ class AppStore extends Store<AppState> {
     let sleepPerformanceResult: SleepPerformance | null = null;
     let sleepDetail: SleepDetail | null = null;
     if (sleep) {
-      const hoursVsNeededPct = Math.round((sleep.asleepMin / need.neededMin) * 100);
-      const efficiencyPct = Math.round(sleep.efficiency * 100);
+      const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
+      const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
       const restorativePct =
         sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
       const highStressPct = sleepStressResult?.highPct ?? 0;
@@ -1948,6 +1959,63 @@ function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr
     .map(([minute, b]) => ({ tsMs: minute * 60000, hr: b.sum / b.n }));
 }
 
+async function buildSleepInput(
+  nightPerMin: Array<{ tsMs: number; hr: number }>,
+  winStart: number,
+  winEnd: number,
+): Promise<SleepMinute[]> {
+  const sleepStates = await getSleepStateSamplesBetween(winStart, winEnd).catch(() => []);
+  const stepRows = await getStepSamplesBetween(winStart, winEnd).catch(() => []);
+  const hrByMinute = new Map(nightPerMin.map((p) => [Math.floor(p.tsMs / 60000), p.hr]));
+  const stateByMinute = minuteMode(sleepStates, (s) => s.state);
+  const activityByMinute = minuteMode(
+    stepRows.filter((s) => s.activityClass != null),
+    (s) => s.activityClass as number,
+  );
+  const minutes = new Set<number>([
+    ...hrByMinute.keys(),
+    ...stateByMinute.keys(),
+    ...activityByMinute.keys(),
+  ]);
+
+  return [...minutes]
+    .sort((a, b) => a - b)
+    .map((minute) => {
+      const activity = activityByMinute.get(minute);
+      return {
+        ts: minute * 60000,
+        hr: hrByMinute.get(minute) ?? null,
+        motion: activity == null ? null : activity === 0 ? 0 : 1,
+        bandSleepState: stateByMinute.get(minute) ?? null,
+      };
+    });
+}
+
+function minuteMode<T extends { ts: number }>(rows: T[], pick: (row: T) => number): Map<number, number> {
+  const buckets = new Map<number, Map<number, number>>();
+  for (const row of rows) {
+    const value = pick(row);
+    if (!Number.isFinite(value)) continue;
+    const minute = Math.floor(row.ts / 60000);
+    const counts = buckets.get(minute) ?? new Map<number, number>();
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+    buckets.set(minute, counts);
+  }
+  const out = new Map<number, number>();
+  for (const [minute, counts] of buckets) {
+    let bestValue: number | null = null;
+    let bestCount = -1;
+    for (const [value, count] of counts) {
+      if (count > bestCount) {
+        bestValue = value;
+        bestCount = count;
+      }
+    }
+    if (bestValue != null) out.set(minute, bestValue);
+  }
+  return out;
+}
+
 type OvernightVitals = {
   rmssd: number | null;
   rhr: number | null;
@@ -1956,19 +2024,32 @@ type OvernightVitals = {
 
 const MIN_VITAL_SIGNAL_MIN = 90;
 const MIN_VITAL_COVERAGE_PCT = 55;
+const MIN_SLEEP_SCORE_SIGNAL_MIN = 120;
+const MIN_SLEEP_SCORE_COVERAGE_PCT = 45;
+
+function sleepCoveragePct(sleep: SleepResult): number {
+  return Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+}
+
+function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
+  if (!sleep) return false;
+  if (manual) return true;
+  return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
+}
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
   if (!sleep) return { rmssd: null, rhr: null, resp: null };
-  const coveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+  const coveragePct = sleepCoveragePct(sleep);
   if (sleep.signalMin < MIN_VITAL_SIGNAL_MIN || coveragePct < MIN_VITAL_COVERAGE_PCT) {
     return { rmssd: null, rhr: null, resp: null };
   }
 
   const rr = samples.flatMap((s) => s.rr);
   const resp = rr.length >= 300 ? respiratoryRate(rr) : null;
+  const rhr = restingHrFromSleep(samples);
   return {
-    rmssd: overnightRmssd(samples),
-    rhr: restingHrFromSleep(samples),
+    rmssd: overnightRmssd(samples, rhr),
+    rhr,
     resp,
   };
 }
@@ -1977,23 +2058,29 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
   const mins = perMinuteHr(samples).filter((p) => p.hr >= 30 && p.hr <= 130);
   if (mins.length < 30) return null;
 
+  const hrValues = mins.map((p) => p.hr).sort((a, b) => a - b);
+  const medianHr = median(hrValues);
+  const artifactFloor = Math.max(38, medianHr - 22);
   const rolling: number[] = [];
-  const window = 10;
+  const window = 5;
   for (let i = 0; i + window <= mins.length; i += 1) {
     const slice = mins.slice(i, i + window);
     const spanMin = ((slice[slice.length - 1]?.tsMs ?? 0) - (slice[0]?.tsMs ?? 0)) / 60000;
-    if (spanMin > 14) continue;
-    rolling.push(slice.reduce((a, p) => a + p.hr, 0) / slice.length);
+    if (spanMin > 8) continue;
+    const meanHr = slice.reduce((a, p) => a + p.hr, 0) / slice.length;
+    if (meanHr < artifactFloor || meanHr > 120) continue;
+    rolling.push(meanHr);
   }
 
-  const candidates = rolling.length ? rolling : mins.map((p) => p.hr);
+  const candidates = rolling.length >= 3 ? rolling : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor);
+  if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
   const take = Math.max(3, Math.ceil(sorted.length * 0.2));
   const sustainedLow = sorted.slice(0, take);
   return Math.round(sustainedLow.reduce((a, b) => a + b, 0) / sustainedLow.length);
 }
 
-function overnightRmssd(samples: HrSampleRow[]): number | null {
+function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | null {
   const buckets = new Map<number, { rr: number[]; hrs: number[] }>();
   for (const s of samples) {
     const bucket = Math.floor(s.ts / (5 * 60000));
@@ -2005,14 +2092,19 @@ function overnightRmssd(samples: HrSampleRow[]): number | null {
 
   const windows = [...buckets.values()]
     .map((b) => {
-      const hrv = b.rr.length >= 20 ? computeHrv(b.rr) : null;
+      const hrv = b.rr.length >= 30 ? computeHrv(b.rr) : null;
       if (!hrv) return null;
+      if (hrv.rmssd < 5 || hrv.rmssd > 180) return null;
       return {
         rmssd: hrv.rmssd,
         avgHr: b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length,
+        hrSamples: b.hrs.length,
       };
     })
-    .filter((v): v is { rmssd: number; avgHr: number } => v != null);
+    .filter((v): v is { rmssd: number; avgHr: number; hrSamples: number } => {
+      if (!v || v.hrSamples < 3) return false;
+      return rhr == null || v.avgHr <= rhr + 18;
+    });
 
   if (windows.length < 3) return null;
   const restful = windows
@@ -2090,12 +2182,16 @@ function dayStartFromKey(day: string): number {
 
 function sleepCaptureNote(input: {
   hasSleep: boolean;
+  hasCandidate?: boolean;
   manual: boolean;
   signalMin: number;
   coveragePct: number;
 }): string {
   if (input.hasSleep && input.signalMin >= 120 && input.coveragePct >= 60) {
     return 'Strong synced overnight HR coverage.';
+  }
+  if (!input.hasSleep && input.hasCandidate) {
+    return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
   }
   if (input.hasSleep && (input.signalMin < MIN_VITAL_SIGNAL_MIN || input.coveragePct < MIN_VITAL_COVERAGE_PCT)) {
     return 'Partial history only; not enough synced overnight coverage to score vitals or recovery yet.';
@@ -2168,11 +2264,12 @@ function safeInt(value: unknown): number {
 }
 
 function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: HistoricalDecodeResult): HistoricalDecodeResult {
-  if (!prev) return { ...next, hr: [...next.hr], steps: [...next.steps], versions: [...next.versions] };
+  if (!prev) return { ...next, hr: [...next.hr], steps: [...next.steps], sleepStates: [...next.sleepStates], versions: [...next.versions] };
   const versions = new Set([...prev.versions, ...next.versions]);
   return {
     hr: [...prev.hr, ...next.hr],
     steps: [...prev.steps, ...next.steps],
+    sleepStates: [...prev.sleepStates, ...next.sleepStates],
     records: prev.records + next.records,
     decodedRecords: prev.decodedRecords + next.decodedRecords,
     rejectedRecords: prev.rejectedRecords + next.rejectedRecords,

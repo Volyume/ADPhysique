@@ -49,9 +49,12 @@ function main() {
   const decoded = decodeWhoop5HistoryFrames(historyFrames, Math.floor(Date.now() / 1000));
   const hrDates = summarizeTimed(decoded.hr.map((s) => s.ts));
   const stepDates = summarizeTimed(decoded.steps.map((s) => s.ts));
+  const sleepStateDates = summarizeTimed(decoded.sleepStates.map((s) => s.ts));
   const stepEstimate = estimateStepsFromCounters(decoded.steps);
   const hrByDay = groupByDay(decoded.hr.map((s) => s.ts));
   const stepByDay = groupByDay(decoded.steps.map((s) => s.ts));
+  const sleepStateByDay = groupByDay(decoded.sleepStates.map((s) => s.ts));
+  const sleepStateCounts = countSleepStates(decoded.sleepStates);
   const versions = decoded.versions.join(', ') || 'none';
   const bpm = decoded.hr.map((s) => s.bpm).filter((v) => v > 0);
   const rrCount = decoded.hr.reduce((a, s) => a + s.rr.length, 0);
@@ -69,10 +72,15 @@ function main() {
   );
   console.log(`hr: samples=${decoded.hr.length} rr=${rrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`);
   console.log(`steps: rows=${decoded.steps.length} estimated_total=${stepEstimate ?? 'n/a'} ${formatRange(stepDates)}`);
+  console.log(
+    `sleep_state: rows=${decoded.sleepStates.length} wake=${sleepStateCounts[0] ?? 0} still=${sleepStateCounts[1] ?? 0} asleep=${sleepStateCounts[2] ?? 0} up=${sleepStateCounts[3] ?? 0} ${formatRange(sleepStateDates)}`,
+  );
   console.log('hr_by_day:');
   for (const [day, count] of Object.entries(hrByDay)) console.log(`  ${day}: ${count}`);
   console.log('step_rows_by_day:');
   for (const [day, count] of Object.entries(stepByDay)) console.log(`  ${day}: ${count}`);
+  console.log('sleep_state_by_day:');
+  for (const [day, count] of Object.entries(sleepStateByDay)) console.log(`  ${day}: ${count}`);
 
   const sleepHints = findSleepHints(decoded.hr);
   console.log('sleep_coverage_hints:');
@@ -81,6 +89,13 @@ function main() {
       `  ${hint.day}: ${hint.samples} HR samples between 20:00-12:00, ${Math.round(
         hint.coverageMin,
       )} covered minutes, avg ${Math.round(hint.avgHr)} bpm`,
+    );
+  }
+  const stateHints = findSleepStateHints(decoded.sleepStates);
+  console.log('sleep_state_hints:');
+  for (const hint of stateHints) {
+    console.log(
+      `  ${hint.day}: rows=${hint.rows} wake=${hint.counts[0] ?? 0} still=${hint.counts[1] ?? 0} asleep=${hint.counts[2] ?? 0} up=${hint.counts[3] ?? 0}`,
     );
   }
 }
@@ -136,6 +151,7 @@ class FrameAssembler {
 function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
   const hr = [];
   const steps = [];
+  const sleepStates = [];
   const ppg = [];
   const versions = new Set();
   let records = 0;
@@ -175,6 +191,9 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
       if (rec.bpm > 0) hr.push({ ts: ts * 1000, bpm: rec.bpm, rr: rec.rr, source: 'whoop5_v18' });
       if (rec.stepCounter != null) {
         steps.push({ ts: ts * 1000, counter: rec.stepCounter, activityClass: rec.activityClass });
+      }
+      if (rec.sleepState != null) {
+        sleepStates.push({ ts: ts * 1000, state: rec.sleepState });
       }
       continue;
     }
@@ -223,9 +242,11 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
 
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
+  sleepStates.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
+    sleepStates,
     records,
     decodedRecords,
     rejectedRecords,
@@ -269,7 +290,9 @@ function decodeV18(frame) {
   const stepCounter = u16(frame, 57);
   const act = u8(frame, 63);
   const activityClass = act === 0 || act === 1 || act === 2 ? act : null;
-  return { unix, bpm, rr, stepCounter, activityClass };
+  const sleepStateByte = u8(frame, 81);
+  const sleepState = sleepStateByte == null ? null : (sleepStateByte >> 4) & 0x03;
+  return { unix, bpm, rr, stepCounter, activityClass, sleepState };
 }
 
 function decodeV26(frame) {
@@ -570,6 +593,32 @@ function findSleepHints(hr) {
       const avgHr = samples.reduce((a, s) => a + s.bpm, 0) / samples.length;
       return { day, samples: samples.length, coverageMin: minutes.size, avgHr };
     });
+}
+
+function findSleepStateHints(sleepStates) {
+  if (!sleepStates.length) return [];
+  const byAnchor = new Map();
+  for (const s of sleepStates) {
+    const d = new Date(s.ts);
+    const hour = d.getHours() + d.getMinutes() / 60;
+    if (hour < 20 && hour >= 12) continue;
+    const anchor = new Date(s.ts);
+    if (hour >= 20) anchor.setDate(anchor.getDate() + 1);
+    anchor.setHours(0, 0, 0, 0);
+    const day = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}-${String(anchor.getDate()).padStart(2, '0')}`;
+    const list = byAnchor.get(day) ?? [];
+    list.push(s);
+    byAnchor.set(day, list);
+  }
+  return [...byAnchor.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([day, rows]) => ({ day, rows: rows.length, counts: countSleepStates(rows) }));
+}
+
+function countSleepStates(rows) {
+  const counts = {};
+  for (const row of rows) counts[row.state] = (counts[row.state] ?? 0) + 1;
+  return counts;
 }
 
 function min(values) {

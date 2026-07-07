@@ -29,9 +29,15 @@ export type HistoricalStepSample = {
   activityClass: number | null;
 };
 
+export type HistoricalSleepStateSample = {
+  ts: number; // epoch milliseconds
+  state: number; // v18 @81 high nibble: 0 wake, 1 still, 2 asleep, 3 up
+};
+
 export type HistoricalDecodeResult = {
   hr: HistoricalHrSample[];
   steps: HistoricalStepSample[];
+  sleepStates: HistoricalSleepStateSample[];
   records: number;
   decodedRecords: number;
   rejectedRecords: number;
@@ -53,6 +59,7 @@ export function decodeWhoop5HistoryFrames(
 ): HistoricalDecodeResult {
   const hr: HistoricalHrSample[] = [];
   const steps: HistoricalStepSample[] = [];
+  const sleepStates: HistoricalSleepStateSample[] = [];
   const ppg: PpgSample[] = [];
   const versions = new Set<number>();
   let records = 0;
@@ -92,6 +99,9 @@ export function decodeWhoop5HistoryFrames(
       if (rec.bpm > 0) hr.push({ ts: ts * 1000, bpm: rec.bpm, rr: rec.rr, source: 'whoop5_v18' });
       if (rec.stepCounter != null) {
         steps.push({ ts: ts * 1000, counter: rec.stepCounter, activityClass: rec.activityClass });
+      }
+      if (rec.sleepState != null) {
+        sleepStates.push({ ts: ts * 1000, state: rec.sleepState });
       }
       continue;
     }
@@ -146,9 +156,11 @@ export function decodeWhoop5HistoryFrames(
 
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
+  sleepStates.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
+    sleepStates,
     records,
     decodedRecords,
     rejectedRecords,
@@ -185,6 +197,7 @@ function decodeV18(frame: Uint8Array): {
   rr: number[];
   stepCounter: number | null;
   activityClass: number | null;
+  sleepState: number | null;
 } | null {
   const unix = u32(frame, 15);
   const bpm = u8(frame, 22);
@@ -198,7 +211,9 @@ function decodeV18(frame: Uint8Array): {
   const stepCounter = u16(frame, 57);
   const act = u8(frame, 63);
   const activityClass = act === 0 || act === 1 || act === 2 ? act : null;
-  return { unix, bpm, rr, stepCounter, activityClass };
+  const sleepStateByte = u8(frame, 81);
+  const sleepState = sleepStateByte == null ? null : (sleepStateByte >> 4) & 0x03;
+  return { unix, bpm, rr, stepCounter, activityClass, sleepState };
 }
 
 function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | null {

@@ -9,6 +9,7 @@ import { stdev } from '../metrics/ema';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
+import { nullableClampPct } from '../util/number';
 
 type Def = {
   title: string;
@@ -95,7 +96,7 @@ const DEFS: Record<string, Def> = {
     unit: '%',
     color: () => colors.sleepTeal,
     pick: (d) =>
-      d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+      nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)),
     measured: true,
     blurb:
       'Sleep Performance is a composite of four contributors — Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',

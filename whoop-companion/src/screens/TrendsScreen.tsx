@@ -6,6 +6,7 @@ import { DailyMetricRow } from '../db/database';
 import { Card, Empty, Screen, SectionLabel, WeeklyBars } from '../ui/components';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav, MetricKey } from '../ui/navigation';
+import { nullableClampPct } from '../util/number';
 
 type RangeKey = 'W' | 'M' | '6M' | 'ALL';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -31,7 +32,7 @@ const SERIESES: Series[] = [
     key: 'sleep_performance',
     title: 'SLEEP PERFORMANCE',
     unit: '%',
-    pick: (d) => (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+    pick: (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)),
     color: () => colors.sleepTeal,
   },
   { key: 'hrv', title: 'HRV', unit: 'ms', pick: (d) => d.rmssd, color: () => colors.recoveryGreen },

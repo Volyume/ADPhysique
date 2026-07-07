@@ -9,6 +9,7 @@ import { colors, fonts, recoveryColor, sleepStageColors } from '../ui/theme';
 import type { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
 import { formatDistance } from '../sensors/location';
+import { clampPct } from '../util/number';
 
 export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -20,7 +21,11 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const previous = idx >= 0 ? days[idx + 1] : null;
   const next = idx > 0 ? days[idx - 1] : null;
   const acts = cardio.filter((c) => dayForTs(c.startTs) === day);
-  const sleepPerf = metric?.sleepDetail?.performance ?? (metric?.sleepPerf != null ? Math.round(metric.sleepPerf * 100) : null);
+  const sleepPerf = metric?.sleepDetail?.performance != null
+    ? clampPct(metric.sleepDetail.performance)
+    : metric?.sleepPerf != null
+      ? clampPct(Math.round(metric.sleepPerf * 100))
+      : null;
   const sleepStart = metric?.sleepStart ?? null;
   const sleepEnd = metric?.sleepEnd ?? null;
   const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);

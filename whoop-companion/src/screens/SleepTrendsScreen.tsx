@@ -18,6 +18,7 @@ import {
   performanceBand,
   restorativeBand,
 } from '../metrics/sleepBands';
+import { nullableClampPct } from '../util/number';
 
 type RangeKey = 'W' | 'M' | '6M';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -40,7 +41,7 @@ const METRICS: TrendMetric[] = [
     key: 'performance',
     title: 'Sleep Performance',
     hours: false,
-    pick: (d) => d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+    pick: (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)),
     band: performanceBand,
     bandLabels: ['Optimal', 'Sufficient', 'Poor'],
   },
@@ -48,7 +49,7 @@ const METRICS: TrendMetric[] = [
     key: 'hours_pct',
     title: 'Hours vs Needed (%)',
     hours: false,
-    pick: (d) => d.sleepDetail?.hoursVsNeeded ?? null,
+    pick: (d) => nullableClampPct(d.sleepDetail?.hoursVsNeeded),
     band: hoursVsNeededBand,
     bandLabels: ['Optimal', 'Sufficient', 'Poor'],
   },

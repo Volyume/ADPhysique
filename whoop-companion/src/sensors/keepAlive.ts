@@ -35,6 +35,7 @@ export async function startKeepAlive(): Promise<boolean> {
   try {
     const fg = await Location.requestForegroundPermissionsAsync();
     if (fg.status !== 'granted') return false;
+    const bg = await requestBackgroundPermission();
     await requestNotificationPermission();
     if (await TaskManager.isTaskRegisteredAsync(TASK)) {
       running = true;
@@ -53,9 +54,20 @@ export async function startKeepAlive(): Promise<boolean> {
       },
     });
     running = true;
-    return true;
+    return bg;
   } catch {
     return false;
+  }
+}
+
+async function requestBackgroundPermission(): Promise<boolean> {
+  try {
+    const bg = await Location.requestBackgroundPermissionsAsync();
+    return bg.status === 'granted';
+  } catch {
+    // Some Android builds send users to Settings or reject the prompt. The
+    // foreground service can still protect sync while the app remains foreground.
+    return true;
   }
 }
 

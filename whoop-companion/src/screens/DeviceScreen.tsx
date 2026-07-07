@@ -194,9 +194,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           disabled={!connected || draining}
         />
         <Text style={styles.hint}>
-          The strap records to its own memory. On connect, reconnect and while the background protection service is
-          running, auto sync requests stored history, decodes v18 HR/R-R records, recognises v20/v21/v26 sensor
-          records, backfills previous days, and recomputes sleep from confirmed HR rows. Use Sync now only as a retry.
+          The strap records to its own memory. While connected, auto sync keeps requesting stored history in the
+          background, backfills previous days, and recomputes sleep only from confirmed HR coverage. Use Sync now only
+          as a manual nudge.
         </Text>
       </Card>
 
@@ -214,8 +214,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           />
         </View>
         <Text style={styles.hint}>
-          Optional Android foreground service for long syncs while the phone is locked. Connect normally first;
-          auto sync also runs whenever the app is open and connected.
+          On by default for long WHOOP 5 syncs while the phone is locked. Android may ask for location and notification
+          permission so the foreground service can keep Bluetooth alive.
         </Text>
       </Card>
 

@@ -18,6 +18,7 @@ export type SleepMinute = {
   hr: number | null;
   motion: number | null; // arbitrary units; higher = more movement
   rmssd?: number | null;
+  bandSleepState?: number | null; // WHOOP 5 v18 @81: 0 wake, 1 still, 2 asleep, 3 up
 };
 
 export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
@@ -117,7 +118,7 @@ function expandToMinutes(
   const out: SleepMinute[] = [];
   for (let minute = startMinute; minute < endMinute; minute += 1) {
     const existing = byMinute.get(minute);
-    out.push(existing ?? { ts: minute * 60000, hr: null, motion: null, rmssd: null });
+    out.push(existing ?? { ts: minute * 60000, hr: null, motion: null, rmssd: null, bandSleepState: null });
   }
   return out;
 }
@@ -134,24 +135,29 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   const spread = Math.max(6, p80 - p20);
   const sleepishThreshold = p20 + spread * 0.55;
   const bridgeThreshold = p20 + spread * 0.95;
+  const bandStateActive = samples.some((s) => s.bandSleepState === 2);
 
   const asleepFlag = samples.map((s, i) => {
-    if (s.hr == null) return false;
+    const band = s.bandSleepState;
+    if (bandStateActive && (band === 0 || band === 3)) return false;
+    if (s.hr == null) return band === 2;
     const prev = samples[i - 1]?.hr ?? s.hr;
     const next = samples[i + 1]?.hr ?? s.hr;
     const smoothedHr = (prev + s.hr + next) / 3;
     const lowHr = smoothedHr <= sleepishThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.2 : true;
-    return lowHr && lowMotion;
+    return (band === 2 ? smoothedHr <= bridgeThreshold : lowHr) && lowMotion;
   });
   const bridgeFlag = samples.map((s, i) => {
-    if (s.hr == null) return false;
+    const band = s.bandSleepState;
+    if (bandStateActive && (band === 0 || band === 3)) return false;
+    if (s.hr == null) return band === 2;
     const prev = samples[i - 1]?.hr ?? s.hr;
     const next = samples[i + 1]?.hr ?? s.hr;
     const smoothedHr = (prev + s.hr + next) / 3;
     const quietEnough = smoothedHr <= bridgeThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.35 : true;
-    return quietEnough && lowMotion;
+    return (band === 2 || quietEnough) && lowMotion;
   });
 
   // Longest quiet HR run, tolerating normal awakenings/arousals. The previous
@@ -273,6 +279,7 @@ export function computeSleep(
   const meanHr = hrs.reduce((a, b) => a + b, 0) / hrs.length;
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
+  const bandStateActive = window.some((s) => s.bandSleepState === 2);
 
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepStage[] = [];
@@ -280,8 +287,9 @@ export function computeSleep(
     const hasMotion = s.motion != null;
     const motion = s.motion ?? 0;
     if (s.hr == null) {
-      stages.light += 1;
-      timeline.push('light');
+      const stage: SleepStage = s.bandSleepState === 2 ? 'light' : 'awake';
+      stages[stage] += 1;
+      timeline.push(stage);
       continue;
     }
     const hr = s.hr;
@@ -290,7 +298,8 @@ export function computeSleep(
     // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
     // over BLE), so awake/REM are detected from heart-rate arousal relative to
     // the night's sleeping mean, with motion used as an extra signal when present.
-    if ((hasMotion && motion > 0.4) || hr >= meanHr * 1.08) stage = 'awake';
+    if (bandStateActive && (s.bandSleepState === 0 || s.bandSleepState === 3)) stage = 'awake';
+    else if ((hasMotion && motion > 0.4) || hr >= meanHr * 1.08) stage = 'awake';
     else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
     else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && (!hasMotion || motion < 0.2))
       stage = 'rem';

@@ -21,6 +21,7 @@ import {
   hoursVsNeededBand,
   performanceBand,
 } from './sleepBands';
+import { clampPct } from '../util/number';
 
 export type SleepContributor = {
   key: 'hoursVsNeeded' | 'consistency' | 'efficiency' | 'highStress';
@@ -43,7 +44,10 @@ export function computeSleepPerformance(input: {
   consistencyPct: number | null;
   highStressPct: number;
 }): SleepPerformance {
-  const { hoursVsNeededPct, efficiencyPct, consistencyPct, highStressPct } = input;
+  const hoursVsNeededPct = clampPct(input.hoursVsNeededPct);
+  const efficiencyPct = clampPct(input.efficiencyPct);
+  const consistencyPct = input.consistencyPct == null ? null : clampPct(input.consistencyPct);
+  const highStressPct = clampPct(input.highStressPct);
   const stressGood = 100 - highStressPct;
 
   // Weighted blend; renormalise if consistency is still calibrating.
@@ -54,7 +58,7 @@ export function computeSleepPerformance(input: {
   ];
   if (consistencyPct != null) terms.push([0.2, consistencyPct]);
   const wSum = terms.reduce((a, [w]) => a + w, 0);
-  const score = Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum);
+  const score = clampPct(Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum));
 
   const contributors: SleepContributor[] = [
     { key: 'hoursVsNeeded', label: 'Hours vs Needed', value: Math.round(hoursVsNeededPct), band: hoursVsNeededBand(hoursVsNeededPct), inverse: false },

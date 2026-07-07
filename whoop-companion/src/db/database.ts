@@ -16,6 +16,7 @@ import * as SQLite from 'expo-sqlite';
 
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
+export type SleepStateSampleRow = { ts: number; state: number };
 /**
  * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
  * sub-metrics (Sleep Need breakdown, the four Sleep Performance contributors,
@@ -138,10 +139,15 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           counter INTEGER NOT NULL,
           activity_class INTEGER
         );
+        CREATE TABLE IF NOT EXISTS sleep_state_samples (
+          ts INTEGER PRIMARY KEY,
+          state INTEGER NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
         CREATE INDEX IF NOT EXISTS idx_step_samples_ts ON step_samples(ts);
+        CREATE INDEX IF NOT EXISTS idx_sleep_state_samples_ts ON sleep_state_samples(ts);
       `);
       // Migrations: add columns for DBs created before these features. Each
       // ALTER is independent so a partial upgrade still completes.
@@ -228,6 +234,26 @@ export async function getStepSamplesBetween(fromTs: number, toTs: number): Promi
     toTs,
   );
   return rows.map((r) => ({ ts: r.ts, counter: r.counter, activityClass: r.activity_class }));
+}
+
+// ---- Band sleep-state samples ----
+export async function insertSleepStateSample(s: SleepStateSampleRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
+    s.ts,
+    s.state,
+  );
+}
+
+export async function getSleepStateSamplesBetween(fromTs: number, toTs: number): Promise<SleepStateSampleRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<SleepStateSampleRow>(
+    'SELECT ts, state FROM sleep_state_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    fromTs,
+    toTs,
+  );
+  return rows;
 }
 
 // ---- Daily metrics ----
