@@ -35,7 +35,7 @@ export async function startKeepAlive(): Promise<boolean> {
   try {
     const fg = await Location.requestForegroundPermissionsAsync();
     if (fg.status !== 'granted') return false;
-    const bg = await requestBackgroundPermission();
+    await requestBackgroundPermission();
     await requestNotificationPermission();
     if (await TaskManager.isTaskRegisteredAsync(TASK)) {
       running = true;
@@ -54,7 +54,7 @@ export async function startKeepAlive(): Promise<boolean> {
       },
     });
     running = true;
-    return bg;
+    return true;
   } catch {
     return false;
   }
