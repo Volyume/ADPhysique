@@ -15,4 +15,12 @@ describe('AthleteProfileScreen shared empty state', () => {
     );
     expect(source).not.toMatch(/styles\.empty(?:Card|Title|Text)/);
   });
+
+  test('profile load failures show a retry state instead of silent empty data', () => {
+    expect(source).toMatch(/const \[loadError, setLoadError\] = useState\(false\);/);
+    expect(source).toMatch(/Promise\.allSettled\(/);
+    expect(source).toMatch(/Couldn&apos;t refresh profile data/);
+    expect(source).toMatch(/Tap to try again/);
+    expect(source).toMatch(/setReloadKey\(\(n\) => n \+ 1\)/);
+  });
 });

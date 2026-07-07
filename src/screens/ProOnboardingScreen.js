@@ -698,7 +698,19 @@ export default function ProOnboardingScreen({ navigation }) {
         : (parseFloat(heightCm) || null);
       const ageNum = parseInt(age, 10) || null;
 
-      const safeWeightKg = (!isNaN(bwKg) && bwKg > 0) ? bwKg : 80;
+      if (!ACCEPTED_SEX_VALUES.includes(sex) || !Number.isFinite(bwKg) || bwKg <= 0 || !isValidHeightCm(hcm) || !ageNum || ageNum < 13 || ageNum > 100) {
+        endSequence();
+        setBusy(false);
+        submittingRef.current = false;
+        setStep(2);
+        appAlert(
+          'Baseline needs checking',
+          'Please confirm your sex, body weight, height and age again. Volyume will not build targets from fallback body data.',
+        );
+        return;
+      }
+
+      const safeWeightKg = bwKg;
       // ONBOARD-001: height is gated in step 2 (advanceFrom2 + canContinue both
       // require a realistic height), so hcm is the user's confirmed entry here.
       // No 175cm fallback, a silent default would feed BMR / calorie / FFM as if
@@ -706,7 +718,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // (safeHeight clamp) for the unreachable corrupt-draft edge; the screen
       // never fabricates a plausible height that reads as user data.
       const safeHeightCm = hcm;
-      const safeAge = ageNum || 28;
+      const safeAge = ageNum;
       // Parse body fat the same way NutritionTargetsScreen does, and only treat
       // it as set when it is a sane percentage, so a typo can't poison the calc.
       const bfParsed = parseFloat(bodyFat);

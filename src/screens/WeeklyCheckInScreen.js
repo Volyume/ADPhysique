@@ -285,7 +285,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
           const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
           if (raw) {
             const prefs = JSON.parse(raw);
-            if (prefs.checkinDay !== undefined) scheduledDay = prefs.checkinDay;
+            const parsedCheckinDay = Number(prefs.checkinDay);
+            if (Number.isInteger(parsedCheckinDay) && parsedCheckinDay >= 0 && parsedCheckinDay <= 6) {
+              scheduledDay = parsedCheckinDay;
+            }
           }
         } catch (_) {}
         if (!cancelled) setCheckinDayNum(scheduledDay);
@@ -1295,6 +1298,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   if (gateState === 'too_soon') {
     const { daysToWait, firstCheckinLabel, scheduledDayName, hasStartedBaseline } = tooSoonCtx;
+    const safeFirstCheckinLabel = firstCheckinLabel?.startsWith(scheduledDayName)
+      ? firstCheckinLabel
+      : `your next ${scheduledDayName}`;
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
@@ -1311,7 +1317,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Text style={styles.gateBody}>
               The Coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
-              Volyume waits for the first {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in is {firstCheckinLabel || `your next ${scheduledDayName}`}.
+              Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in opens on {safeFirstCheckinLabel}.
             </Text>
           ) : (
             <Text style={styles.gateBody}>
