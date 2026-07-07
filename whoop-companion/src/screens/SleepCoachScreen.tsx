@@ -9,6 +9,7 @@ import { colors, fonts } from '../ui/theme';
 import { Nav, Route } from '../ui/navigation';
 import { formatDuration } from '../util/time';
 import { kvGet, kvSet } from '../db/database';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 function fmtClock(minOfDay: number): string {
   const m = ((minOfDay % 1440) + 1440) % 1440;
@@ -99,6 +100,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const wakeCountdownMin = relativeMin(nextWakeTs);
   const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
+  const lastSleepTrust = sleepTrustTier(today?.sleepDetail);
   const lastSleepPerformancePct = displayPct(
     sleepPerformance?.score ?? today?.sleepDetail?.performance ?? (lastSleep?.performance != null ? lastSleep.performance * 100 : null),
   );
@@ -113,6 +115,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     recovery: today?.recovery ?? null,
     sleepDebtMin: need?.debtMin ?? 0,
     lastSleep,
+    lastSleepTrusted: lastSleepTrust === 'high' || lastSleepTrust === 'medium',
     currentGoal: goal,
   });
   const alarmMeta =
@@ -210,6 +213,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         <View style={styles.recommendStats}>
           <Stat label="Readiness" value={readiness?.score ?? '-'} color={readyColor(readiness?.score)} />
           <Stat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={readyColor(today?.recovery)} />
+          <Stat label="Sleep trust" value={lastSleepTrust === 'none' ? '-' : lastSleepTrust} color={trustColor(lastSleepTrust)} />
           <Stat label="Debt" value={formatDuration(need?.debtMin ?? 0)} color={(need?.debtMin ?? 0) >= 60 ? colors.recoveryYellow : colors.sleepTeal} />
         </View>
         {recommendation.mode.key !== goal ? (
@@ -396,6 +400,13 @@ function readyColor(value: number | null | undefined): string {
   return colors.recoveryRed;
 }
 
+function trustColor(tier: ReturnType<typeof sleepTrustTier>): string {
+  if (tier === 'high') return colors.recoveryGreen;
+  if (tier === 'medium') return colors.recoveryYellow;
+  if (tier === 'low') return colors.recoveryRed;
+  return colors.textTertiary;
+}
+
 function modeFor(key: number): GoalMode {
   return MODES.find((m) => m.key === key) ?? MODES[1]!;
 }
@@ -405,11 +416,20 @@ function goalRecommendation(input: {
   recovery: number | null;
   sleepDebtMin: number;
   lastSleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  lastSleepTrusted: boolean;
   currentGoal: number;
 }): { mode: GoalMode; reason: string; color: string } {
-  const shortfallMin = input.lastSleep
+  const shortfallMin = input.lastSleep && input.lastSleepTrusted
     ? Math.max(0, (input.lastSleep.neededMin || 480) - input.lastSleep.asleepMin)
     : 0;
+
+  if (input.lastSleep && !input.lastSleepTrusted) {
+    return {
+      mode: modeFor(Math.max(input.currentGoal, 0.85)),
+      reason: 'Last night is low-confidence, so keep a steady target and let auto sync finish before changing the plan from that result.',
+      color: colors.recoveryYellow,
+    };
+  }
 
   if (input.sleepDebtMin >= 90 || shortfallMin >= 90 || (input.recovery != null && input.recovery < 34)) {
     return {
