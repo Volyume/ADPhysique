@@ -93,9 +93,9 @@ export default function AttentionCard({
           onPress={onMethodology}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="link"
-          accessibilityLabel="How Precision Coaching works"
+          accessibilityLabel="How the Coach works"
         >
-          <Text style={styles.trialBannerLink}>How Precision Coaching works</Text>
+          <Text style={styles.trialBannerLink}>How the Coach works</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     );

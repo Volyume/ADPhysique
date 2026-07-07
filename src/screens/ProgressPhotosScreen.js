@@ -126,16 +126,16 @@ function progressSignalSentence(label) {
   if (!clean) return null;
   if (lower.includes('baseline')) return 'This is your baseline photo set for future comparisons.';
   if (lower.includes('inconclusive')) return 'This photo set is saved, but the comparison is not clear enough to judge.';
-  if (lower.includes('holding') || lower.includes('steady')) return 'Your latest like-for-like photo set is holding steady.';
+  if (lower.includes('holding') || lower.includes('steady')) return 'Your latest comparable photo set is holding steady.';
   if (lower.includes('positive')) {
     return lower.includes('slight')
-      ? 'Your latest like-for-like photo set is showing a slight positive trend.'
-      : 'Your latest like-for-like photo set is showing a clear positive trend.';
+      ? 'Your latest comparable photo set is showing a slight positive trend.'
+      : 'Your latest comparable photo set is showing a clear positive trend.';
   }
   if (lower.includes('drift')) {
     return lower.includes('slight')
-      ? 'Your latest like-for-like photo set shows a slight drift to watch.'
-      : 'Your latest like-for-like photo set shows drift to review.';
+      ? 'Your latest comparable photo set shows a slight drift to watch.'
+      : 'Your latest comparable photo set shows drift to review.';
   }
   return `${clean}.`;
 }
@@ -989,7 +989,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     : latestPartialCapture
       ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
       : latestSignalSentence
-        ? `${latestSignalSentence} The Volyume Score is for like-for-like progress, not a body fat estimate.`
+        ? `${latestSignalSentence} The Volyume Score is for progress photos taken in similar conditions, not a body fat estimate.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
         : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and Volyume Score together.');

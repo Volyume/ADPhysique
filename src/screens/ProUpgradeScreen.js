@@ -384,7 +384,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.credentialNote}>
-            Precision Coaching is deterministic and explainable. It uses training research, your recovery, your food, and your progress.
+            The Coach is deterministic and explainable. It uses training research, your recovery, your food, and your progress.
           </Text>
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks

@@ -155,7 +155,7 @@ export default function YouScreen({ navigation }) {
                   ? latestReview
                     ? `Latest coaching decision${reviewDate ? `: ${reviewDate}` : ''}`
                     : 'Ready for your first check-in'
-                  : 'Precision Coaching is available on Pro'}
+                  : 'Coach is available on Pro'}
               </Text>
             </View>
           </View>

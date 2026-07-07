@@ -87,10 +87,10 @@ export default function GoalLockConsentScreen({ navigation, route }) {
             Precision Coaching named as the decider, signals named plainly,
             no vague personification. */}
         <Text style={styles.body}>
-          You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
+          You picked a goal that involves an aggressive cut. The Coach can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, the Coach holds the calorie target so the cut doesn't get sharper.
         </Text>
         <Text style={styles.body}>
-          These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
+          These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, the Coach can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
         </Text>
 
         <Text style={styles.fieldLabel}>Confirm one of these</Text>

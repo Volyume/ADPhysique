@@ -566,9 +566,9 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
               onPress={onLearnMore}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
-              accessibilityLabel="See how Precision Coaching decides"
+              accessibilityLabel="See how the Coach decides"
             >
-              <Text style={styles.heldLearnMoreText}>See how Precision Coaching decides</Text>
+              <Text style={styles.heldLearnMoreText}>See how the Coach decides</Text>
             </TouchableOpacity>
           ) : null}
         </>
@@ -729,7 +729,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         ) : null}
         <Text style={styles.insufficientBody}>
           {receipt?.rule ?? dataNote ??
-            'Precision Coaching reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
+            'The Coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
         {receipt?.unlockLine ? (
           <Text style={styles.receiptUnlock}>{receipt.unlockLine}</Text>
@@ -1666,7 +1666,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Precision Coaching" onBack={handleClose} />
+        <BackHeader title="Coaching decision" onBack={handleClose} />
         <LoadingView />
       </SafeAreaView>
     );
@@ -1676,7 +1676,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (loadError) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Precision Coaching" onBack={handleClose} />
+        <BackHeader title="Coaching decision" onBack={handleClose} />
         <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -1686,7 +1686,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (!output || !output.hasEnoughData) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Precision Coaching" onBack={handleClose} />
+        <BackHeader title="Coaching decision" onBack={handleClose} />
         <InsufficientDataView dataNote={output?.dataNote} receipt={holdReceipt} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -1930,7 +1930,7 @@ export default function CoachOutputScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Precision Coaching" onBack={handleClose} />
+      <BackHeader title="Coaching decision" onBack={handleClose} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -2273,7 +2273,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <Text style={styles.credentialNote}>
-          Precision Coaching™ is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
+          The Coach is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
         </Text>
 
         <Text style={styles.credentialNote}>

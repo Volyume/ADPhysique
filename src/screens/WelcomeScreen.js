@@ -26,7 +26,7 @@ const TRIAL_BULLETS = [
   'A plan built around your schedule, goals, and experience level.',
   'Your training and nutrition adjust as your body responds.',
   'Personalised calorie and protein targets, updated as your goals change.',
-  'Precision Coaching explains what changed, what stayed the same, and why.',
+  'The Coach explains what changed, what stayed the same, and why.',
 ];
 
 const AFTER_TRIAL_BULLETS = [
@@ -101,8 +101,8 @@ export default function WelcomeScreen({ navigation }) {
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
                   <Text style={styles.bulletText}>{b}</Text>
-                  {/* U-E-1: inline gloss for the brand term on first appearance. */}
-                  {b.includes('Precision Coaching') && (
+                  {/* U-E-1: inline gloss for the coach term on first appearance. */}
+                  {b.includes('Coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
                   )}
                 </View>

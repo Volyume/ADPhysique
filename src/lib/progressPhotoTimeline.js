@@ -46,7 +46,7 @@ function setupQualityForPoses(poses = []) {
     return {
       key: 'complete',
       label: 'Strong setup',
-      helper: 'Front, side and back are saved for like-for-like comparison.',
+      helper: 'Front, side and back are saved for comparable progress checks.',
     };
   }
   if (poses.length >= 2) {

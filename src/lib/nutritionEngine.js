@@ -399,7 +399,7 @@ export function computeAdaptiveTDEEAdjustment({
       // Clamp the cut. Increases are never clamped.
       floorHeld = true;
       finalAdjustmentKcal = 0;
-      finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`;
+      finalInsight = `The Coach has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`;
     }
   }
 

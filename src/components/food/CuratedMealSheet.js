@@ -42,8 +42,8 @@ export default function CuratedMealSheet({
           <Text style={styles.title}>{meal.name}</Text>
           {macros ? (
             <Text style={styles.subtitle}>
-              {slotLabel ? `${slotLabel} · ` : ''}
-              {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {Math.round(macros.protein)}g protein · {Math.round(macros.carbs)}g carbs · {Math.round(macros.fat)}g fat
+              {slotLabel ? `${slotLabel} | ` : ''}
+              {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {Math.round(macros.protein)}g protein | {Math.round(macros.carbs)}g carbs | {Math.round(macros.fat)}g fat
             </Text>
           ) : null}
 
@@ -55,7 +55,7 @@ export default function CuratedMealSheet({
                   <View key={it.foodRef} style={styles.itemRow}>
                     <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
                     <Text style={styles.itemMeta}>
-                      {Math.round(it.quantityG)}g · {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
+                      {Math.round(it.quantityG)}g | {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                   </View>
                 ))}

@@ -634,9 +634,9 @@ export function buildPhysiqueAssessment({
 }
 
 function progressScanAssessmentCopy(assessment = null) {
-  if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful score.';
+  if (!assessment) return 'Progress photos saved. I could not read enough from the photos for a useful score.';
   if (assessment.visualLeannessScore == null) {
-    return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
+    return 'Progress photos saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
   const score = `${assessment.visualLeannessScore}`;
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
@@ -645,7 +645,7 @@ function progressScanAssessmentCopy(assessment = null) {
   const prefix = assessment.progressSignal === 'baseline'
     ? `Baseline Volyume Score ${score}`
     : `Volyume Score ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a 0-100 visual progress score for photos taken in similar conditions, not a body fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -807,7 +807,7 @@ export function scanComparability(currentScan = null, previousScan = null) {
   const currentQuality = currentScan.qualityLabel ?? 'unknown';
   const previousQuality = previousScan.qualityLabel ?? 'unknown';
   if (['poor', 'unknown'].includes(currentQuality) || ['poor', 'unknown'].includes(previousQuality)) {
-    return { comparable: false, status: 'not_comparable', reason: 'Scan quality was not strong enough for a like-for-like comparison.', comparableCount: 0 };
+    return { comparable: false, status: 'not_comparable', reason: 'Scan quality was not strong enough for a fair comparison.', comparableCount: 0 };
   }
   const currentConfidence = scanComparisonConfidenceTier(currentScan);
   const previousConfidence = scanComparisonConfidenceTier(previousScan);
@@ -828,7 +828,7 @@ export function scanComparability(currentScan = null, previousScan = null) {
   return {
     comparable: true,
     status: 'comparable',
-    reason: 'Like-for-like front and back scan.',
+    reason: 'Comparable front and back photo set.',
     comparableCount: REQUIRED_SCAN_POSES.length,
     scanConfidenceTier: lowerConfidenceTier(currentConfidence, previousConfidence),
     setupComparedSignalCount: setup.comparedSignalCount,
@@ -861,7 +861,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       lines: ['This is your baseline scan.'],
       summary: 'This is your baseline scan. Future scans will compare only measured changes from stored scan signals.',
       trendSummary: 'Baseline scan saved.',
-      coachSummary: 'Physique Scan has a baseline saved, but no like-for-like trend yet.',
+      coachSummary: 'Progress photos have a baseline saved, but no comparable trend yet.',
     };
   }
   if (!comparability.comparable) {
@@ -872,8 +872,8 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       trendDirection: 'uncertain',
       lines: [comparability.reason],
       summary: `This scan is saved, but I am not comparing it yet. ${comparability.reason}`,
-      trendSummary: 'Not enough like-for-like scan data yet.',
-      coachSummary: 'Physique Scan is saved, but I am not using it as a comparison because the scan setup was not like-for-like.',
+      trendSummary: 'Not enough comparable photo data yet.',
+      coachSummary: 'Progress photos are saved, but I am not using them as a comparison because the setup changed too much.',
     };
   }
 
@@ -897,11 +897,11 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
     trendMagnitudePctPoints = progressSignal.signal === 'inconclusive' ? null : Math.abs(delta);
     if (progressSignal.signal === 'holding_steady') {
-      lines.push('Volyume Score is broadly level against the last like-for-like scan.');
+      lines.push('Volyume Score is broadly level against the last comparable photo set.');
     } else if (progressSignal.signal === 'inconclusive') {
       lines.push(`Volyume Score changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
     } else {
-      lines.push(`Volyume Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
+      lines.push(`Volyume Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last comparable photo set.`);
       trendVotes.push(delta > 0 ? 'leaner' : 'softer');
     }
   }
@@ -957,9 +957,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       comparableCount: 0,
       trendDirection: 'uncertain',
       lines: ['There are not enough measured scan signals to compare these photos yet.'],
-      summary: 'This scan is saved, but I am not comparing it yet. There are not enough measured scan signals to make a like-for-like comparison.',
+      summary: 'This photo set is saved, but I am not comparing it yet. There are not enough measured signals to make a fair comparison.',
       trendSummary: 'Not enough measured scan data yet.',
-      coachSummary: 'Physique Scan is saved, but I am not using it as a comparison because the measured scan signals are incomplete.',
+      coachSummary: 'Progress photos are saved, but I am not using them as a comparison because the measured signals are incomplete.',
     };
   }
 
@@ -979,12 +979,12 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
         ? 'uncertain'
         : 'steady';
   const trendSummary = !canCallPairTrend
-    ? 'Like-for-like scan saved. Scan confidence is low, so Volyume is not calling progress from this pair yet.'
+    ? 'Comparable photo set saved. Scan confidence is low, so Volyume is not calling progress from this pair yet.'
     : visualTrendDirection === 'leaner'
-      ? 'Visual progress signal is positive against the last like-for-like scan.'
+      ? 'Visual progress signal is positive against the last comparable photo set.'
       : visualTrendDirection === 'softer'
-        ? 'Visual progress signal shows a drift to watch against the last like-for-like scan.'
-        : 'Visual progress signal is holding steady against the last like-for-like scan.';
+        ? 'Visual progress signal shows a drift to watch against the last comparable photo set.'
+        : 'Visual progress signal is holding steady against the last comparable photo set.';
 
   return {
     measuredSignalsOnly: true,
@@ -1276,7 +1276,7 @@ export function analyseProgressScan({
         modelEstimate: null,
         physiqueAssessment,
         trend: previousScan
-          ? { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This scan needs a like-for-like previous scan before a trend is shown.' }
+          ? { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This scan needs a comparable previous photo set before a trend is shown.' }
           : { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This is your baseline scan.' },
         abstentionReasons: [],
         qualityWarnings: softQualityWarnings,

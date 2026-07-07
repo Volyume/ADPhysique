@@ -305,13 +305,15 @@ export default function AthleteProfileScreen({ navigation }) {
       summary.scan?.leannessBandLabel || null,
       summary.scan?.progressSignal === 'baseline' ? 'baseline' : `${Math.round(summary.scan.visualLeannessScore)}`,
     ].filter(Boolean).join(' - '),
-    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Like-for-like progress, not body fat.`,
-  } : {
+    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Comparable progress, not body fat.`,
+  } : summary.bodyFatLoggedAt ? {
     label: 'Body fat',
     value: bodyFatText,
-    sub: summary.bodyFatLoggedAt
-      ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry`
-      : 'Shown until your first private Volyume Score.',
+    sub: `${formatDate(summary.bodyFatLoggedAt)} - manual entry`,
+  } : {
+    label: 'Progress photos',
+    value: 'Not scored yet',
+    sub: 'Add front and back photos to create your private Volyume Score.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;

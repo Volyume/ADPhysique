@@ -24,7 +24,7 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 const COMPARISON_ROWS = [
   { free: 'Workout logging',      pro: 'Food diary, macros & barcode' },
   { free: 'Build your own plans', pro: 'Division-specific plans' },
-  { free: 'Progress stats',       pro: 'Weekly Precision Coaching™' },
+  { free: 'Progress stats',       pro: 'Weekly Coach decisions' },
 ];
 
 export default function TierComparisonStrip({

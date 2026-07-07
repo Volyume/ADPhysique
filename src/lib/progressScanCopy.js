@@ -4,9 +4,9 @@ export function trendOnlyScanCopy(scan) {
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.progressSignalLabel) return `Progress Signal: ${assessment.progressSignalLabel}.`;
   const direction = scan?.trendDirection || 'uncertain';
-  if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup was not like-for-like.';
-  if (direction === 'down') return 'Progress Signal: positive against the last like-for-like scan.';
-  if (direction === 'up') return 'Progress Signal: drift to watch against the last like-for-like scan.';
+  if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup changed too much.';
+  if (direction === 'down') return 'Progress Signal: positive against the last comparable photo set.';
+  if (direction === 'up') return 'Progress Signal: drift to watch against the last comparable photo set.';
   if (direction === 'steady') return 'Progress Signal: holding steady.';
   return 'Trend context: baseline photo set saved.';
 }
@@ -21,7 +21,7 @@ export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {
     if (hideExact) {
       return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden. This is not a body fat percentage.`;
     }
-    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a 0-100 visual progress score for like-for-like progress, not a body fat percentage.']
+    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a 0-100 visual progress score for photos taken in similar conditions, not a body fat percentage.']
       .filter(Boolean)
       .join('. ');
   }

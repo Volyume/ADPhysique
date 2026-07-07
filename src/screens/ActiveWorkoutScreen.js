@@ -3061,12 +3061,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); handleTimeCrunch(); }}
                 accessibilityRole="button"
-                accessibilityLabel="Time crunch today"
+                accessibilityLabel="Shorten session"
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="timer-outline" size={18} color={colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Time crunch today</Text>
+                    <Text style={styles.sheetOptionLabel}>Shorten session</Text>
                     <Text style={styles.sheetOptionDesc}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
                   </View>
                 </View>
@@ -3077,12 +3077,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); handleRevertTimeCrunch(); }}
                 accessibilityRole="button"
-                accessibilityLabel="Revert time crunch"
+                accessibilityLabel="Undo shortening"
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Revert time crunch</Text>
+                    <Text style={styles.sheetOptionLabel}>Undo shortening</Text>
                     {!!timeCrunchMsg && <Text style={styles.sheetOptionDesc}>{timeCrunchMsg}</Text>}
                   </View>
                 </View>
