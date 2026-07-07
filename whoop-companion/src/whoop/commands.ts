@@ -26,6 +26,7 @@ export enum Command {
   TOGGLE_REALTIME_HR = 3, // realtime HR over proprietary fd4b stream
   SET_CLOCK = 10, // epoch_u32_LE + tz byte (0=UTC); part of bring-up
   TOGGLE_GENERIC_HR_PROFILE = 14, // makes the strap broadcast standard GATT 0x2A37
+  ABORT_HISTORICAL_TRANSMITS = 20,
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
   GET_DATA_RANGE = 34,
@@ -93,6 +94,11 @@ export function cmdGetHelloHarvard(): Uint8Array {
 export function cmdEnableHrBroadcast(on = true): Uint8Array {
   const payload = new Uint8Array([on ? 1 : 0]);
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.TOGGLE_GENERIC_HR_PROFILE, payload));
+}
+
+/** Abort any in-flight historical replay before/after a stalled transfer. */
+export function cmdAbortHistoricalTransmits(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.ABORT_HISTORICAL_TRANSMITS));
 }
 
 /** Enable realtime HR over the proprietary channel (fd4b0003). */
@@ -188,6 +194,10 @@ export function cmdEnterHighFreqSync(): Uint8Array {
   payload[3] = 7200 & 0xff;
   payload[4] = (7200 >> 8) & 0xff;
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.ENTER_HIGH_FREQ_SYNC, payload));
+}
+
+export function cmdExitHighFreqSync(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.EXIT_HIGH_FREQ_SYNC));
 }
 
 export function cmdGetDataRange(): Uint8Array {

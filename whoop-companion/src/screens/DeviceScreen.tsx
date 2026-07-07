@@ -79,6 +79,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     ? new Date(effectiveSyncTs).toLocaleString()
     : 'Not yet - connect to sync';
   const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
+  const stepRangeText = formatStepRange(bandStepEstimate?.firstTs, bandStepEstimate?.lastTs);
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -304,6 +305,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           <Stat label="Units/step" value={bandStepDivisor.toFixed(1)} />
           <Stat label="Confidence" value={bandStepEstimate?.confidence ?? '-'} />
         </View>
+        <Text style={styles.diagText}>Band counter range: {stepRangeText}</Text>
         <View style={styles.calibrationRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldLabel}>Actual steps</Text>
@@ -521,6 +523,15 @@ function formatHistoryRange(firstTs?: number, lastTs?: number): string {
     minute: '2-digit',
   });
   return `${first} - ${last}`;
+}
+
+function formatStepRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'none today';
+  const lastAgeMin = Math.max(0, Math.round((Date.now() - lastTs) / 60000));
+  const range = formatHistoryRange(firstTs, lastTs);
+  if (lastAgeMin < 1) return `${range} (fresh)`;
+  if (lastAgeMin < 60) return `${range} (${lastAgeMin}m old)`;
+  return `${range} (${Math.round(lastAgeMin / 60)}h old)`;
 }
 
 const styles = StyleSheet.create({

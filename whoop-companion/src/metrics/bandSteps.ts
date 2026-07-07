@@ -11,6 +11,8 @@ export type BandStepEstimate = {
   droppedIntervals: number;
   calibrationDivisor: number;
   confidence: 'low' | 'medium';
+  firstTs: number;
+  lastTs: number;
 };
 
 // WHOOP 5/MG history exposes a cumulative step-like counter. The later capture
@@ -34,6 +36,8 @@ export function estimateBandStepsFromCounters(
 ): BandStepEstimate | null {
   if (rows.length < 2 || calibrationDivisor <= 0) return null;
   const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
+  const firstTs = sorted[0]?.ts ?? 0;
+  const lastTs = sorted[sorted.length - 1]?.ts ?? firstTs;
   let rawTicks = 0;
   let usedIntervals = 0;
   let droppedIntervals = 0;
@@ -78,6 +82,8 @@ export function estimateBandStepsFromCounters(
     droppedIntervals,
     calibrationDivisor,
     confidence: activeIntervals > 0 ? 'medium' : 'low',
+    firstTs,
+    lastTs,
   };
 }
 

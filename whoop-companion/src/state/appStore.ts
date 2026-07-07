@@ -17,8 +17,11 @@ import { WhoopBle, WhoopStatus, RawFrame } from '../ble/whoopBle';
 import { bytesToHex, hexToBytes } from '../ble/bytes';
 import { FrameAssembler, MaverickFrame, PacketType } from '../whoop/maverick';
 import {
+  cmdAbortHistoricalTransmits,
   cmdGetDataRange,
   cmdEnterHighFreqSync,
+  cmdEnableDeepStreamSequence,
+  cmdExitHighFreqSync,
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
   cmdDisableAlarm,
@@ -281,6 +284,7 @@ const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
+const BAND_STEP_FRESH_MS = 30 * 60 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
@@ -301,6 +305,7 @@ class AppStore extends Store<AppState> {
   private historyEndAckSentThisBurst = false;
   private historyStallRecoveries = 0;
   private historyNudgeInFlight = false;
+  private deepHistoryPreparedFor = '';
   private eventAssemblers = new Map<string, FrameAssembler>();
   private gpsActive = false;
   private recomputeTimer: ReturnType<typeof setInterval> | null = null;
@@ -408,6 +413,7 @@ class AppStore extends Store<AppState> {
     }
     if (status === 'disconnected' || status === 'idle') {
       this.autoDrainedFor = '';
+      this.deepHistoryPreparedFor = '';
       this.clearAutoSyncTimer();
       this.stopConnectedAutoSync();
       if (this.getState().draining) this.enqueueHistoryStop('disconnect');
@@ -630,6 +636,11 @@ class AppStore extends Store<AppState> {
       return { steps: band, source: 'band' };
     }
     if (band != null && band > 0) {
+      const bandLastTs = state.bandStepEstimate?.lastTs ?? null;
+      const bandIsStale = bandLastTs != null && Date.now() - bandLastTs > BAND_STEP_FRESH_MS;
+      if (bandIsStale && phone != null && phone > band) {
+        return { steps: phone, source: 'phone' };
+      }
       if (phone != null && phone > 0 && band > phone * 2.25) {
         return { steps: phone, source: 'phone' };
       }
@@ -1086,6 +1097,7 @@ class AppStore extends Store<AppState> {
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
         if (tail.length) await this.persistHistoryFrames(tail);
+        await this.finishHistoryMode(reason);
         await this.backfillHistoryDays(this.historySessionStats);
         await this.backfillCardioStepsFromHistory();
         const syncTs = Date.now();
@@ -1490,6 +1502,57 @@ class AppStore extends Store<AppState> {
     }
   }
 
+  private async prepareDeepHistoryStreams(mode: 'manual' | 'auto'): Promise<void> {
+    const ble = this.ble;
+    const deviceId = this.getState().device?.id ?? '';
+    if (!ble?.isConnected || !deviceId || this.deepHistoryPreparedFor === deviceId) return;
+    const ready = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
+    if (!ready) return;
+
+    const commands = cmdEnableDeepStreamSequence();
+    let sent = 0;
+    this.setState((s) => ({
+      historySync: s.historySync
+        ? { ...s.historySync, status: mode === 'auto' ? 'Auto sync: preparing deep history streams' : 'Preparing deep history streams' }
+        : s.historySync,
+    }));
+    for (const command of commands) {
+      try {
+        await ble.writeCommand(command);
+        sent += 1;
+        await delay(65);
+      } catch (e) {
+        this.deepHistoryPreparedFor = deviceId;
+        await ble.refreshCommandChannel().catch(() => false);
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: `Deep history prep partial (${sent}/${commands.length}); syncing anyway` }
+            : s.historySync,
+        }));
+        return;
+      }
+    }
+
+    this.deepHistoryPreparedFor = deviceId;
+    this.setState((s) => ({
+      historySync: s.historySync
+        ? { ...s.historySync, status: `Deep history streams prepared (${sent}/${commands.length})` }
+        : s.historySync,
+    }));
+  }
+
+  private async finishHistoryMode(reason: 'complete' | 'timeout' | 'disconnect'): Promise<void> {
+    const ble = this.ble;
+    if (!ble?.isConnected) return;
+    const ready = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
+    if (!ready) return;
+    if (reason !== 'complete') {
+      await ble.writeCommand(cmdAbortHistoricalTransmits()).catch(() => {});
+      await delay(80);
+    }
+    await ble.writeCommand(cmdExitHighFreqSync()).catch(() => {});
+  }
+
   private clearHistoryTimeout(): void {
     if (this.historyIdleTimer) {
       clearTimeout(this.historyIdleTimer);
@@ -1561,6 +1624,7 @@ class AppStore extends Store<AppState> {
     this.armHistoryTimeout();
     this.startHistoryWatchdog();
     try {
+      await this.prepareDeepHistoryStreams(mode);
       try {
         await ble.writeCommand(cmdEnterHighFreqSync());
         this.setState((s) => ({
