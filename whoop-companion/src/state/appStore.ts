@@ -234,6 +234,8 @@ const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // the app is alive, so every screen reflects ongoing data without being opened.
 const RECOMPUTE_INTERVAL_MS = 60 * 1000;
 const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
+const HISTORY_STALL_TIMEOUT_MS = 90 * 1000;
+const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 5000;
 const AUTO_HISTORY_SYNC_MAX_ATTEMPTS = 6;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
@@ -249,6 +251,8 @@ class AppStore extends Store<AppState> {
   private historySessionStats: HistoricalDecodeResult | null = null;
   private historyDrainMode: 'manual' | 'auto' = 'manual';
   private historyIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private historyWatchdogTimer: ReturnType<typeof setInterval> | null = null;
+  private historyLastActivityTs = 0;
   private historyStopQueued = false;
   private historyEndAckSentThisBurst = false;
   private eventAssemblers = new Map<string, FrameAssembler>();
@@ -445,6 +449,7 @@ class AppStore extends Store<AppState> {
     if (s === 'active') {
       void this.refreshStepCount().catch(() => {});
       void this.refreshDerived().catch(() => {});
+      this.recoverStaleHistoryDrain('foreground wake');
       const state = this.getState();
       if (state.status === 'idle' || state.status === 'disconnected' || state.status === 'error') {
         this.connect();
@@ -759,7 +764,7 @@ class AppStore extends Store<AppState> {
   }
 
   private handleHistoryFrame(frame: MaverickFrame): void {
-    this.armHistoryTimeout();
+    this.markHistoryActivity();
 
     if (frame.packetType === PacketType.HISTORICAL_DATA) {
       this.historyRecords.push(frame.raw);
@@ -810,6 +815,7 @@ class AppStore extends Store<AppState> {
             })
             .catch((e) => {
               this.clearHistoryTimeout();
+              this.stopHistoryWatchdog();
               this.historyStopQueued = true;
               this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
             });
@@ -837,6 +843,7 @@ class AppStore extends Store<AppState> {
       })
       .catch((e) => {
         this.clearHistoryTimeout();
+        this.stopHistoryWatchdog();
         this.historyStopQueued = true;
         this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
       });
@@ -867,6 +874,7 @@ class AppStore extends Store<AppState> {
           : null;
         if (finalReport) await kvSet('lastHistorySync', JSON.stringify(finalReport));
         this.clearHistoryTimeout();
+        this.stopHistoryWatchdog();
         this.setState({
           draining: false,
           capturing: false,
@@ -878,12 +886,21 @@ class AppStore extends Store<AppState> {
         await this.refreshDerived();
         const stats = this.historySessionStats;
         if (mode === 'auto' && reason === 'complete') this.autoSyncAttempts = 0;
-        if (mode === 'auto' && reason === 'timeout') {
-          this.retryAutoHistoryDrain();
+        if (reason === 'timeout') {
+          if (mode === 'auto') {
+            this.retryAutoHistoryDrain();
+          } else {
+            const deviceId = this.getState().device?.id;
+            if (deviceId && this.getState().status === 'connected') {
+              this.autoDrainedFor = '';
+              this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+            }
+          }
         }
       })
       .catch((e) => {
         this.clearHistoryTimeout();
+        this.stopHistoryWatchdog();
         this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
       });
   }
@@ -1119,6 +1136,42 @@ class AppStore extends Store<AppState> {
     this.historyIdleTimer = setTimeout(() => this.enqueueHistoryStop('timeout'), HISTORY_IDLE_TIMEOUT_MS);
   }
 
+  private markHistoryActivity(): void {
+    this.historyLastActivityTs = Date.now();
+    this.armHistoryTimeout();
+  }
+
+  private startHistoryWatchdog(): void {
+    if (this.historyWatchdogTimer) return;
+    this.historyWatchdogTimer = setInterval(
+      () => this.recoverStaleHistoryDrain('watchdog'),
+      HISTORY_WATCHDOG_INTERVAL_MS,
+    );
+  }
+
+  private stopHistoryWatchdog(): void {
+    if (this.historyWatchdogTimer) {
+      clearInterval(this.historyWatchdogTimer);
+      this.historyWatchdogTimer = null;
+    }
+  }
+
+  private recoverStaleHistoryDrain(source: string): void {
+    const state = this.getState();
+    if (!state.draining || this.historyStopQueued) return;
+    const last = this.historyLastActivityTs || 0;
+    if (!last) return;
+    const stalledMs = Date.now() - last;
+    if (stalledMs < HISTORY_STALL_TIMEOUT_MS) return;
+    const stalledSec = Math.round(stalledMs / 1000);
+    this.setState((s) => ({
+      historySync: s.historySync
+        ? { ...s.historySync, status: `Sync stalled after ${stalledSec}s (${source}); retrying` }
+        : s.historySync,
+    }));
+    this.enqueueHistoryStop('timeout');
+  }
+
   private clearHistoryTimeout(): void {
     if (this.historyIdleTimer) {
       clearTimeout(this.historyIdleTimer);
@@ -1163,6 +1216,7 @@ class AppStore extends Store<AppState> {
     this.historyStopQueued = false;
     this.historyEndAckSentThisBurst = false;
     this.historyDrainMode = mode;
+    this.historyLastActivityTs = Date.now();
     this.setState({
       draining: true,
       capturing: mode === 'manual',
@@ -1181,6 +1235,7 @@ class AppStore extends Store<AppState> {
       },
     });
     this.armHistoryTimeout();
+    this.startHistoryWatchdog();
     try {
       try {
         await ble.writeCommand(cmdEnterHighFreqSync());
@@ -1223,6 +1278,7 @@ class AppStore extends Store<AppState> {
       this.armHistoryTimeout();
     } catch (e) {
       this.clearHistoryTimeout();
+      this.stopHistoryWatchdog();
       this.historyStopQueued = true;
       this.setState({ draining: false, capturing: false, error: `History drain failed: ${String(e)}` });
       if (mode === 'auto') this.retryAutoHistoryDrain();
