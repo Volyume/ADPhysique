@@ -197,7 +197,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <SectionLabel>Profile (for strain &amp; zones)</SectionLabel>
       <ProfileEditor profile={profile} />
 
-      <SectionLabel>Live diagnostics</SectionLabel>
+      <SectionLabel>Background sync</SectionLabel>
       <Card>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Background auto-sync protection</Text>

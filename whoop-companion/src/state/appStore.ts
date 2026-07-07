@@ -259,6 +259,7 @@ class AppStore extends Store<AppState> {
   private autoDrainedFor = ''; // device id we've already auto-drained this connection
   private autoSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSyncAttempts = 0;
+  private commandChannelAttempts = 0;
   private lastStatus: WhoopStatus = 'idle';
   private stepCounter = new StepCounter();
   private stepDay = '';
@@ -267,6 +268,7 @@ class AppStore extends Store<AppState> {
   private lastLiveStepCount = 0;
   private lastAccelTs = 0;
   private preferredDeviceId: string | null = null;
+  private connectInFlight = false;
 
   constructor() {
     super(initialState);
@@ -362,28 +364,33 @@ class AppStore extends Store<AppState> {
       return;
     }
     if (!this.ble?.canSendCommands) {
-      this.autoSyncAttempts += 1;
-      if (this.autoSyncAttempts <= AUTO_HISTORY_SYNC_MAX_ATTEMPTS) {
-        this.setState((s) => ({
-          historySync: s.historySync
-            ? { ...s.historySync, status: `Auto sync waiting for command channel (${this.autoSyncAttempts})` }
-            : {
-                status: `Auto sync waiting for command channel (${this.autoSyncAttempts})`,
-                rawRecords: 0,
-                decodedRecords: 0,
-                hrSamples: 0,
-                rrSamples: 0,
-                stepSamples: 0,
-                rawSensorRecords: 0,
-                rejectedRecords: 0,
-                droppedImplausibleTs: 0,
-                versions: [],
-              },
-        }));
-        this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+      const commandReady = (await this.ble?.refreshCommandChannel()) === true;
+      if (commandReady) {
+        this.scheduleAutoHistoryDrain(deviceId, 250);
+        return;
       }
+      this.commandChannelAttempts += 1;
+      this.setState((s) => ({
+        historySync: s.historySync
+          ? { ...s.historySync, status: `Auto sync waiting for command channel (${this.commandChannelAttempts})` }
+          : {
+              status: `Auto sync waiting for command channel (${this.commandChannelAttempts})`,
+              rawRecords: 0,
+              decodedRecords: 0,
+              hrSamples: 0,
+              rrSamples: 0,
+              stepSamples: 0,
+              rawSensorRecords: 0,
+              rejectedRecords: 0,
+              droppedImplausibleTs: 0,
+              versions: [],
+            },
+      }));
+      const retryMs = Math.min(60 * 1000, AUTO_HISTORY_SYNC_RETRY_MS + this.commandChannelAttempts * 1000);
+      this.scheduleAutoHistoryDrain(deviceId, retryMs);
       return;
     }
+    this.commandChannelAttempts = 0;
     this.autoDrainedFor = deviceId;
     this.autoSyncAttempts += 1;
     await this.runHistoryDrain('auto');
@@ -447,6 +454,21 @@ class AppStore extends Store<AppState> {
         !state.draining &&
         (!state.lastSyncTs || Date.now() - state.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS)
       ) {
+        this.autoDrainedFor = '';
+        this.scheduleAutoHistoryDrain(state.device.id, 1000);
+      }
+      return;
+    }
+
+    if (s === 'background' || s === 'inactive') {
+      const state = this.getState();
+      if (state.backgroundKeepAlive) {
+        void this.ensureBackgroundSyncKeepAlive('Background auto-sync');
+      }
+      if (state.status === 'idle' || state.status === 'disconnected' || state.status === 'error') {
+        void this.connectAsync();
+      }
+      if (state.status === 'connected' && state.device && !state.draining) {
         this.autoDrainedFor = '';
         this.scheduleAutoHistoryDrain(state.device.id, 1000);
       }
@@ -576,9 +598,24 @@ class AppStore extends Store<AppState> {
   };
 
   private async connectAsync(): Promise<void> {
+    const status = this.getState().status;
+    if (this.connectInFlight || status === 'scanning' || status === 'connecting' || status === 'discovering') return;
+    if (status === 'connected') {
+      const deviceId = this.getState().device?.id;
+      if (deviceId) {
+        this.autoDrainedFor = '';
+        this.scheduleAutoHistoryDrain(deviceId, 1000);
+      }
+      return;
+    }
     this.setState({ error: null });
-    await this.ensureBackgroundSyncKeepAlive('Background auto-connect');
-    await this.ble?.start(this.preferredDeviceId);
+    this.connectInFlight = true;
+    try {
+      await this.ensureBackgroundSyncKeepAlive('Background auto-connect');
+      await this.ble?.start(this.preferredDeviceId);
+    } finally {
+      this.connectInFlight = false;
+    }
   };
 
   disconnect = (): void => {
@@ -763,8 +800,11 @@ class AppStore extends Store<AppState> {
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
         await this.persistHistoryFrames(frames);
-        if (this.ble?.canSendCommands) {
-          await this.ble.writeCommand(cmdHistoricalDataResult(meta.endData));
+        const ble = this.ble;
+        if (!ble) return;
+        const commandReady = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
+        if (commandReady) {
+          await ble.writeCommand(cmdHistoricalDataResult(meta.endData));
         }
       })
       .catch((e) => {
@@ -1067,9 +1107,23 @@ class AppStore extends Store<AppState> {
    * the local HR/R-R and step-counter tables.
    */
   runHistoryDrain = async (mode: 'manual' | 'auto' = 'manual'): Promise<void> => {
-    if (!this.ble?.canSendCommands) {
+    const ble = this.ble;
+    if (!ble) {
+      this.setState({ error: 'History drain needs an active WHOOP Bluetooth connection.' });
+      return;
+    }
+    if (!ble.canSendCommands) {
+      const commandReady = (await ble.refreshCommandChannel()) === true;
+      if (commandReady) {
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: 'Command channel rediscovered; starting history transfer' }
+            : s.historySync,
+        }));
+      } else {
       this.setState({ error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.' });
       return;
+      }
     }
     await this.ensureBackgroundSyncKeepAlive(mode === 'auto' ? 'Automatic history sync' : 'Manual history sync');
     this.clearAutoSyncTimer();
@@ -1101,7 +1155,7 @@ class AppStore extends Store<AppState> {
     this.armHistoryTimeout();
     try {
       try {
-        await this.ble.writeCommand(cmdEnterHighFreqSync());
+        await ble.writeCommand(cmdEnterHighFreqSync());
         this.setState((s) => ({
           historySync: s.historySync
             ? { ...s.historySync, status: 'High-frequency history sync enabled' }
@@ -1117,7 +1171,7 @@ class AppStore extends Store<AppState> {
         await delay(250);
       }
       try {
-        await this.ble.writeCommand(cmdGetDataRange());
+        await ble.writeCommand(cmdGetDataRange());
         this.setState((s) => ({
           historySync: s.historySync
             ? { ...s.historySync, status: 'Data range requested; starting history transfer' }
@@ -1132,7 +1186,7 @@ class AppStore extends Store<AppState> {
         }));
         await delay(250);
       }
-      await this.ble.writeCommand(cmdSendHistoricalData());
+      await ble.writeCommand(cmdSendHistoricalData());
       this.setState((s) => ({
         historySync: s.historySync
           ? { ...s.historySync, status: mode === 'auto' ? 'Auto sync: waiting for stored history' : 'Waiting for stored history' }

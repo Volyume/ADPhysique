@@ -28,8 +28,13 @@ import {
   BATTERY_SERVICE,
   HEART_RATE_MEASUREMENT,
   HEART_RATE_SERVICE,
+  WHOOP4_CMD_WRITE,
+  WHOOP4_SERVICE,
+  WHOOP5_CMD_WRITE,
+  WHOOP5_SERVICE,
   WHOOP_CHAR_PREFIX,
   WHOOP_CMD_WRITE_PREFIX,
+  WHOOP_CMD_WRITE_PREFIX_4,
   WHOOP_NAME_PREFIX,
 } from './constants';
 import { base64ToBytes, bytesToBase64, bytesToHex } from './bytes';
@@ -297,19 +302,32 @@ export class WhoopBle {
   /** Scan the GATT table for the proprietary command-write characteristic. */
   private async locateWriteChar(device: Device): Promise<void> {
     const services = await device.services();
+    let knownService: string | null = null;
     for (const service of services) {
+      const serviceUuid = service.uuid.toLowerCase();
+      if (serviceUuid === WHOOP5_SERVICE || serviceUuid === WHOOP4_SERVICE) {
+        knownService = service.uuid;
+      }
       const chars = await service.characteristics();
       for (const ch of chars) {
         const lc = ch.uuid.toLowerCase();
-        if (
-          (ch.isWritableWithResponse || ch.isWritableWithoutResponse) &&
-          lc.startsWith(WHOOP_CMD_WRITE_PREFIX)
-        ) {
+        if (isCommandWriteChar(lc)) {
           this.writeService = service.uuid;
           this.writeChar = ch.uuid;
           return;
         }
       }
+    }
+    // Some Android BLE stacks fail to surface characteristic properties or omit
+    // the command char from the cached characteristic list after bonding. The
+    // WHOOP command UUIDs are stable, so fall back to the known service/char
+    // pair before declaring history sync impossible.
+    if (knownService?.toLowerCase() === WHOOP5_SERVICE) {
+      this.writeService = knownService;
+      this.writeChar = WHOOP5_CMD_WRITE;
+    } else if (knownService?.toLowerCase() === WHOOP4_SERVICE) {
+      this.writeService = knownService;
+      this.writeChar = WHOOP4_CMD_WRITE;
     }
   }
 
@@ -328,7 +346,7 @@ export class WhoopBle {
         })
         .catch(() => {
           failures += 1;
-          if (failures >= 3) this.clearKeepalive();
+          if (failures >= 3) this.recoverStaleLink('Link validation failed - reconnecting...');
         });
     }, 4000);
   }
@@ -418,11 +436,24 @@ export class WhoopBle {
           this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) });
         });
       }
-      // Remember the command-write characteristic (fd4b0002) for the drain.
-      if (dc.writable && lc.startsWith(WHOOP_CMD_WRITE_PREFIX)) {
+      // Remember the command-write characteristic for the drain. Trust the UUID
+      // even if Android's cached properties do not mark it writable.
+      if (isCommandWriteChar(lc)) {
         this.writeService = dc.service;
         this.writeChar = dc.characteristic;
       }
+    }
+  }
+
+  async refreshCommandChannel(): Promise<boolean> {
+    if (!this.device) return false;
+    if (this.canSendCommands) return true;
+    try {
+      await this.device.discoverAllServicesAndCharacteristics();
+      await this.locateWriteChar(this.device);
+      return this.canSendCommands;
+    } catch {
+      return false;
     }
   }
 
@@ -441,11 +472,30 @@ export class WhoopBle {
     if (!this.device || !this.writeService || !this.writeChar) {
       throw new Error('Command-write characteristic not available');
     }
-    await this.device.writeCharacteristicWithResponseForService(
-      this.writeService,
-      this.writeChar,
-      bytesToBase64(bytes),
-    );
+    const payload = bytesToBase64(bytes);
+    try {
+      await this.device.writeCharacteristicWithResponseForService(this.writeService, this.writeChar, payload);
+    } catch (withResponseError) {
+      try {
+        await this.device.writeCharacteristicWithoutResponseForService(this.writeService, this.writeChar, payload);
+      } catch {
+        this.writeService = null;
+        this.writeChar = null;
+        throw withResponseError;
+      }
+    }
+  }
+
+  private recoverStaleLink(detail: string): void {
+    const stale = this.device;
+    this.clearKeepalive();
+    this.clearSubscriptions();
+    this.device = null;
+    this.writeService = null;
+    this.writeChar = null;
+    this.setStatus('disconnected', detail);
+    void stale?.cancelConnection().catch(() => {});
+    if (this.wantConnected) this.scheduleReconnect();
   }
 
   private trySubscribe(
@@ -525,4 +575,8 @@ export class WhoopBle {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isCommandWriteChar(uuid: string): boolean {
+  return uuid.startsWith(WHOOP_CMD_WRITE_PREFIX) || uuid.startsWith(WHOOP_CMD_WRITE_PREFIX_4);
 }
