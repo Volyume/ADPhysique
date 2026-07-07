@@ -23,6 +23,7 @@ const mockFromModule = jest.fn(() => ({
 const mockExtractRgb = jest.fn();
 const mockSegmentPersonMask = jest.fn();
 const mockResolveBundledModel = jest.fn(async () => null);
+const mockDiagnoseBundledModel = jest.fn(async () => null);
 const mockLoadTensorflowModel = jest.fn();
 
 jest.mock('expo-asset', () => ({
@@ -34,6 +35,7 @@ jest.mock('progress-scan-image', () => ({
   extractRgb: (...args) => mockExtractRgb(...args),
   segmentPersonMask: (...args) => mockSegmentPersonMask(...args),
   resolveBundledModel: (...args) => mockResolveBundledModel(...args),
+  diagnoseBundledModel: (...args) => mockDiagnoseBundledModel(...args),
 }));
 jest.mock('react-native-fast-tflite', () => ({
   loadTensorflowModel: (...args) => mockLoadTensorflowModel(...args),
@@ -90,6 +92,8 @@ describe('Progress Scan vision signal extraction', () => {
     mockSegmentPersonMask.mockReset();
     mockResolveBundledModel.mockReset();
     mockResolveBundledModel.mockResolvedValue(null);
+    mockDiagnoseBundledModel.mockReset();
+    mockDiagnoseBundledModel.mockResolvedValue(null);
     mockLoadTensorflowModel.mockReset();
     resetProgressScanModelCacheForTests();
   });
@@ -179,9 +183,42 @@ describe('Progress Scan vision signal extraction', () => {
     expect(model.run).toHaveBeenCalledTimes(1);
   });
 
-  test('uses native ML Kit segmentation masks before direct TFLite loading', async () => {
+  test('uses the bundled TFLite model before falling back to native ML Kit masks', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const mask = syntheticPersonMask();
+    const model = { run: jest.fn(async () => [mask]) };
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockExtractRgb.mockResolvedValueOnce({
+      rgbBase64: bytesToBase64(rgb),
+      lightingScore: 0.9,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+    });
+    mockSegmentPersonMask.mockResolvedValue({
+      width: 256,
+      height: 256,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+      maskBase64: float32ToBase64(mask),
+      engine: 'mlkit_selfie_segmentation',
+    });
+    mockLoadTensorflowModel.mockResolvedValueOnce(model);
+
+    const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
+
+    expect(mockLoadTensorflowModel).toHaveBeenCalledWith({ url: 'file:///cache/selfie_segmentation.tflite' }, []);
+    expect(mockSegmentPersonMask).not.toHaveBeenCalled();
+    expect(result.modelBacked).toBe(true);
+    expect(result.engine).toBe('fast_tflite');
+    expect(result.modelVersion).toBe('mediapipe_selfie_segmentation_general_2021_05_06');
+    expect(result.quality.segmentationConfidence).toBeGreaterThan(0.75);
+    expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
+  });
+
+  test('falls back to native ML Kit when TFLite cannot produce a usable person mask', async () => {
+    const rgb = new Uint8Array(256 * 256 * 3).fill(128);
+    const nativeMask = syntheticPersonMask();
+    const model = { run: jest.fn(async () => [new Float32Array(256 * 256).fill(0.02)]) };
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockLoadTensorflowModel.mockResolvedValueOnce(model);
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(rgb),
       lightingScore: 0.9,
@@ -191,18 +228,18 @@ describe('Progress Scan vision signal extraction', () => {
       width: 256,
       height: 256,
       contentRect: { x: 0, y: 0, width: 256, height: 256 },
-      maskBase64: float32ToBase64(mask),
+      maskBase64: float32ToBase64(nativeMask),
       engine: 'mlkit_selfie_segmentation',
     });
 
     const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
 
+    expect(model.run).toHaveBeenCalledTimes(1);
     expect(mockSegmentPersonMask).toHaveBeenCalledWith('file:///scan.jpg', 256, 256);
-    expect(mockLoadTensorflowModel).not.toHaveBeenCalled();
     expect(result.modelBacked).toBe(true);
+    expect(result.engine).toBe('mlkit_selfie_segmentation');
     expect(result.modelVersion).toBe('mlkit_selfie_segmentation_16.0.0-beta6');
-    expect(result.quality.segmentationConfidence).toBeGreaterThan(0.75);
-    expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
+    expect(result.abstentionReasons).not.toContain('no_person_detected');
   });
 
   test('TFLite mask measurements produce quality and silhouette signals', () => {

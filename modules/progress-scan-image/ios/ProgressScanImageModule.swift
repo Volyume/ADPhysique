@@ -4,6 +4,8 @@ import ImageIO
 import UIKit
 
 public class ProgressScanImageModule: Module {
+  private let bundledModelMinimumBytes = 100_000
+
   public func definition() -> ModuleDefinition {
     Name("ProgressScanImage")
 
@@ -15,7 +17,7 @@ public class ProgressScanImageModule: Module {
       try? FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
       let target = targetDir.appendingPathComponent(safeName)
       if FileManager.default.fileExists(atPath: target.path),
-         ((try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0 {
+         ((try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) >= bundledModelMinimumBytes {
         return target.absoluteString
       }
       guard let source = bundledModelUrl(safeName: safeName) else { return nil }
@@ -23,10 +25,30 @@ public class ProgressScanImageModule: Module {
       do {
         try FileManager.default.copyItem(at: source, to: target)
         let size = (try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        return size > 0 ? target.absoluteString : nil
+        return size >= bundledModelMinimumBytes ? target.absoluteString : nil
       } catch {
         return nil
       }
+    }
+
+    AsyncFunction("diagnoseBundledModel") { (fileName: String) -> [String: Any]? in
+      let safeName = URL(fileURLWithPath: fileName).lastPathComponent
+      guard !safeName.isEmpty else { return ["errorCode": "blank_file_name"] }
+      let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+      let target = caches?
+        .appendingPathComponent("progress_scan_models", isDirectory: true)
+        .appendingPathComponent(safeName)
+      let targetBytes = target.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize } ?? 0
+      let source = bundledModelUrl(safeName: safeName)
+      return [
+        "safeName": safeName,
+        "targetExists": target.map { FileManager.default.fileExists(atPath: $0.path) } ?? false,
+        "targetBytes": targetBytes,
+        "candidateCount": 5,
+        "discoveredCount": Bundle.main.urls(forResourcesWithExtension: nil, subdirectory: nil)?.count ?? 0,
+        "firstOpenableCandidate": source?.lastPathComponent as Any,
+        "firstOpenableBytes": source.flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize } as Any,
+      ]
     }
 
     AsyncFunction("extractRgb") { (uri: String, width: Int, height: Int) -> [String: Any]? in
