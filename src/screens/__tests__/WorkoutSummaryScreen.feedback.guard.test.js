@@ -8,7 +8,18 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain("const values = field === 'jointDiscomfort'");
     expect(SOURCE).toContain('? [0, 1, 2, 3]');
     expect(SOURCE).toContain(': Array.from({ length: max }, (_, i) => i + 1);');
-    expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs \}/);
+    expect(SOURCE).toContain('hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}');
+    expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs2 \}/);
+    expect(SOURCE).toMatch(/ratingBtn: \{\s*width: 36, height: 36,/);
+  });
+
+  test('keeps completed-workout footer compact and stable', () => {
+    expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
+    expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.md }]}>');
+    expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
+    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
+    expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
+    expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);
   });
 
   test('does not delay completed workout controls behind reveal animations', () => {

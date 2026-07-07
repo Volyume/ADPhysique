@@ -54,10 +54,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
-    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 92,\s*flexShrink: 0,\s*gap: 1,/);
-    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 44,\s*height: 44,/);
-    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.sm[\s\S]*gap: spacing\.xs/);
-    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 32/);
+    expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };');
+    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 86,\s*flexShrink: 0,\s*gap: 1,/);
+    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 40,\s*height: 40,/);
+    expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
+    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
+    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);
+    expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: 36/);
+    expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
   });
 
   test('distance time input is announced as time, not duration', () => {

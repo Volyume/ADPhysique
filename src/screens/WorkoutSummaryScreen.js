@@ -93,6 +93,7 @@ function RatingRow({ label, field, value, max, onChange }) {
             key={i}
             style={[styles.ratingBtn, value === i && styles.ratingBtnActive]}
             onPress={() => onChange(i)}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             accessibilityRole="radio"
             accessibilityState={{ selected: value === i }}
             accessibilityLabel={labels?.[i] ? `${i}, ${labels[i]}` : String(i)}
@@ -1304,7 +1305,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           doubled the gap under Close (founder screenshot 2026-07-03). The
           inverse case, ActiveWorkout, where the band hides, is the one
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
-      <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
+      <View style={[styles.stickyFooter, { paddingBottom: spacing.md }]}>
         <View style={styles.footerRow}>
           <Button
             title="Close"
@@ -1650,7 +1651,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  feedbackCard: { gap: spacing.lg, paddingTop: spacing.xs },
+  feedbackCard: { gap: spacing.md, paddingTop: spacing.xs },
   // COMP-015 confirmation row
   adjustedSummaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1668,12 +1669,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   blockRecapText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  ratingRow: { gap: spacing.sm },
+  ratingRow: { gap: spacing.xs2 },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
-  ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   ratingBtn: {
-    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
+    width: 36, height: 36, borderRadius: radius.lg, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   // D3: selected state uses the app-wide chip grammar (tint + amber edge,
@@ -1700,8 +1701,9 @@ const styles = StyleSheet.create({
   stickyFooter: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    minHeight: 68,
     backgroundColor: colors.background,
   },
   footerRow: {
@@ -1717,28 +1719,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   doneBtnText: {
-    ...type.title,
+    ...type.label,
     color: colors.textPrimary,
   },
   shareFooterBtn: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
   },
   shareFooterBtnText: {
-    ...type.title,
+    ...type.label,
     color: colors.primary,
   },
   exerciseList: {
