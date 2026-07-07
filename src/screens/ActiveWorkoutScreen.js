@@ -157,7 +157,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
           <Text style={styles.setNumText} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
         </View>
       )}
-      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]} numberOfLines={2}>
+      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
         {isWarmup ? ' - Warm-up' : ''}
@@ -3462,7 +3462,7 @@ const styles = StyleSheet.create({
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   targetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   targetText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
-  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
+  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs2, borderWidth: 1, borderColor: colors.border, gap: spacing.xxs },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
@@ -3478,7 +3478,7 @@ const styles = StyleSheet.create({
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
   orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  beatLine: { alignSelf: 'stretch', minHeight: 32, justifyContent: 'center', paddingVertical: 0 },
+  beatLine: { alignSelf: 'stretch', minHeight: 28, justifyContent: 'center', paddingVertical: 0 },
   beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
@@ -3560,14 +3560,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  loggedSection: { gap: spacing.sm },
+  loggedSection: { gap: spacing.xs2 },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0 },
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: 36, backgroundColor: colors.surface, borderRadius: radius.xs, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
-  setNumBadge: { width: 24, height: 24, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  setNumBadge: { width: 22, height: 22, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  loggedSetText: { ...type.bodyStrong, flex: 1, color: colors.textPrimary, minWidth: 0 },
+  loggedSetText: { ...type.bodySm, flex: 1, color: colors.textPrimary, minWidth: 0 },
   loggedEst1RM: { ...type.caption, color: colors.textMuted },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl * 2, gap: spacing.lg, paddingHorizontal: spacing.xxl },

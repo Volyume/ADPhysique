@@ -7,6 +7,8 @@ import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
+const STEPPER_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
+
 function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
@@ -107,6 +109,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('weight', -1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
@@ -145,6 +148,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('weight', 1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel={`Increase weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
@@ -170,6 +174,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startSecondsRepeat(-5)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
@@ -194,6 +199,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startSecondsRepeat(5)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
@@ -221,6 +227,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('weight', -1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Decrease distance"
             accessibilityHint="Hold to keep adjusting"
@@ -246,6 +253,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('weight', 1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Increase distance"
             accessibilityHint="Hold to keep adjusting"
@@ -265,6 +273,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startSecondsRepeat(-5)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
@@ -289,6 +298,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startSecondsRepeat(5)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
@@ -322,6 +332,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('reps', -1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
@@ -355,6 +366,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onLongPress={() => startRepeat('reps', 1)}
             onPressOut={stopRepeat}
             delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Increase reps by 1"
             accessibilityHint="Hold to keep adjusting"
@@ -382,12 +394,12 @@ export default memo(SetEntry);
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.xs,
+    gap: spacing.xxs,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.xs2,
   },
   fieldLabelRow: {
     width: 90,
@@ -401,7 +413,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
-    width: 92,
+    width: 86,
     flexShrink: 0,
     gap: 1,
   },
@@ -421,28 +433,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface2,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   stepBtn: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface3,
   },
   stepBtnText: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     color: colors.primary,
     fontWeight: fontWeight.bold,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   valueInput: {
     flex: 1,
     textAlign: 'center',
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     paddingVertical: 2,
