@@ -1433,7 +1433,7 @@ class AppStore extends Store<AppState> {
 
     const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
     const debtNights = recent
-      .filter((d) => d.sleepMin != null)
+      .filter(isUsableDebtNight)
       .slice(0, 14)
       .reverse()
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
@@ -2248,7 +2248,7 @@ class AppStore extends Store<AppState> {
     // Sleep Debt: rolling deficit over the trailing nights (needed − asleep),
     // using each night's stored Sleep Need where available, else the baseline.
     const debtNights = recent
-      .filter((d) => d.sleepMin != null)
+      .filter(isUsableDebtNight)
       .slice(0, 14)
       .reverse() // oldest → newest for the rolling carry
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
@@ -2756,6 +2756,11 @@ const MIN_SLEEP_SCORE_COVERAGE_PCT = 50;
 function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
   sleep.neededMin = need.neededMin;
   sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
+}
+
+function isUsableDebtNight(day: DailyMetricRow): boolean {
+  if (day.sleepMin == null) return false;
+  return sleepTrustTier(day.sleepDetail) !== 'low';
 }
 
 function sleepCoveragePct(sleep: SleepResult): number {
