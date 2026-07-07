@@ -307,10 +307,13 @@ export default function ProgressPhotoViewer({
     if (!current) return;
     const name = current.name;
     const deleteMode = deleteModeForPhoto?.(name);
-    const deleteCopy = deleteMode === 'scan-set'
+    const deletesSet = deleteMode === 'scan-set' || deleteMode === 'photo-set';
+    const deleteCopy = deletesSet
       ? {
         buttonTitle: 'Delete set',
-        message: 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Physique Score.',
+        message: deleteMode === 'scan-set'
+          ? 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Physique Score.'
+          : 'Delete this full photo set from your device? This removes every photo saved for this date.',
       }
       : {
         buttonTitle: 'Delete',
@@ -432,13 +435,13 @@ export default function ProgressPhotoViewer({
                   icon="images-outline" onPress={onPressCompare} accessibilityLabel="Compare from here"
                 />
                 <Button
-                  title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : 'Delete'}
+                  title={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Delete set' : 'Delete'}
                   variant="destructive"
                   size="sm"
                   fullWidth={false}
                   icon="trash-outline"
                   onPress={onPressDelete}
-                  accessibilityLabel={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Remove this photo set' : 'Remove this photo'}
+                  accessibilityLabel={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Remove this photo set' : 'Remove this photo'}
                 />
               </View>
             </>

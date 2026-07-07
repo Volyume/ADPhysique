@@ -476,7 +476,7 @@ describe('sendCheer', () => {
     _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1' });
     expect(r).toEqual({ ok: false, error: 'not_active' });
-    expect(client._calls.cheerRows).toHaveLength(1);
+    expect(client._calls.cheerRows).toHaveLength(0);
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 

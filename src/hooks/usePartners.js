@@ -68,7 +68,7 @@ async function pullPartnerMirrorNow(userId) {
     const client = getSupabaseClient?.();
     if (client && typeof pullPartners === 'function') {
       const result = await pullPartners(client, { userId });
-      return Number(result?.errors || 0) === 0;
+      return Number(result?.errors || 0) === 0 || Number(result?.count || 0) > 0;
     }
     return false;
   } catch (_) {
@@ -267,6 +267,23 @@ function minimalActivePair(partnership, userId) {
   };
 }
 
+function localActivePartnershipFromRedeem(userId, data = {}) {
+  const now = Date.now();
+  const cloud = data?.partnership || null;
+  const id = cloud?.id || data?.partnershipId || null;
+  if (!id) return null;
+  return {
+    id,
+    status: 'active',
+    memberA: cloud?.member_a ?? null,
+    memberB: cloud?.member_b ?? userId,
+    partnerFirstName: cloud?.partner_first_name ?? data?.partnerFirstName ?? null,
+    streakEnabled: cloud?.streak_enabled !== false,
+    acceptedAt: cloud?.accepted_at ? new Date(cloud.accepted_at).getTime() : now,
+    createdAt: cloud?.created_at ? new Date(cloud.created_at).getTime() : now,
+  };
+}
+
 async function safeEnrichPair(partnership, userId) {
   try {
     return await enrichPair(partnership, userId);
@@ -313,7 +330,20 @@ export default function usePartners(userId, tier) {
           await clearPendingPartnerCode();
           if (!isCurrentRequest()) return;
           if (rr.ok) {
+            await mirrorAcceptedPartnershipLocally(userId, rr.data);
+            if (!isCurrentRequest()) return;
+            await pullPartnerMirrorNow(userId);
+            if (!isCurrentRequest()) return;
             partnerships = await getPartnershipsLocal(userId).catch(() => partnerships);
+            if (!partnerships.some((p) => p.status === 'active')) {
+              const optimisticPartnership = localActivePartnershipFromRedeem(userId, rr.data);
+              if (optimisticPartnership) {
+                partnerships = [
+                  optimisticPartnership,
+                  ...partnerships.filter((p) => p.id !== optimisticPartnership.id),
+                ];
+              }
+            }
             if (!isCurrentRequest()) return;
             activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
             if (!isCurrentRequest()) return;
@@ -438,8 +468,35 @@ export default function usePartners(userId, tier) {
         visible = await waitForAcceptedPartnershipVisible(userId, r.data);
       }
       if (!visible) {
-        await load();
-        return { ok: false, error: 'local_mirror_pending' };
+        const optimisticPartnership = localActivePartnershipFromRedeem(userId, r.data);
+        const optimisticPair = minimalActivePair(optimisticPartnership, userId);
+        if (optimisticPair) {
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+            error: false,
+            pairs: [
+              optimisticPair,
+              ...(prev.pairs || []).filter((pair) => pair.id !== optimisticPair.id),
+            ].sort((a, b) => (a.pairedAt || 0) - (b.pairedAt || 0)),
+            pendingInvite: null,
+            partnership: optimisticPartnership,
+            rowState: optimisticPair.rowState,
+            partnerWeek: optimisticPair.partnerWeek,
+            myWeek: optimisticPair.myWeek,
+            sharedStreak: optimisticPair.sharedStreak,
+            lastReceived: optimisticPair.lastReceived,
+            sharedBlock: optimisticPair.sharedBlock,
+            cheerEnabled: optimisticPair.cheerEnabled,
+            canAdd: canAddPartner({ tier, activeCount: activeCount + 1 }),
+            reload: load,
+          }));
+        }
+        pullPartnerMirrorNow(userId)
+          .then(() => isAcceptedPartnershipVisible(userId, r.data))
+          .then((visibleNow) => { if (visibleNow) load({ silent: true }); })
+          .catch(() => {});
+        return { ...r, pendingLocalMirror: true };
       }
       await load();
     }
