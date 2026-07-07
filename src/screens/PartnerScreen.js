@@ -1257,7 +1257,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Pick one update. You approve the preview before {partnerName} sees it.
+          Choose one update. Volyume shows the exact preview before {partnerName} sees it.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1291,7 +1291,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
           <View style={styles.shareWinReceipt}>
             <View style={styles.shareWinReceiptHead}>
               <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
-              <Text style={styles.shareWinReceiptTitle}>{partnerName} sees</Text>
+              <Text style={styles.shareWinReceiptTitle}>{partnerName} will see</Text>
             </View>
             <Text style={styles.shareWinReceiptBody}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
           </View>
@@ -1683,20 +1683,21 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   supportPlanActionText: { ...type.label, color: colors.onPrimary },
-  supportPlanSteps: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  supportPlanSteps: {
+    gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
   supportPlanStep: {
-    flexGrow: 1,
-    flexBasis: '31%',
-    minWidth: 96,
-    gap: 2,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary },
-  supportPlanStepState: { ...type.label, color: colors.textPrimary },
-  supportPlanStepCopy: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
+  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary, width: 62 },
+  supportPlanStepState: { ...type.label, color: colors.textPrimary, width: 58 },
+  supportPlanStepCopy: { ...type.caption, color: colors.textMuted, lineHeight: 17, flex: 1 },
   supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',

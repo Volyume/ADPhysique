@@ -34,19 +34,19 @@ describe('partner shareable wins policy', () => {
 
   test('keeps partner wins consent-gated and narrow', () => {
     expect(SHARE_WIN_POLICY.defaultState).toBe('Ask every time');
-    expect(SHARE_WIN_POLICY.summary).toContain('Choose one card');
-    expect(SHARE_WIN_POLICY.summary).toContain('sees only that card');
+    expect(SHARE_WIN_POLICY.summary).toContain('Choose one update');
+    expect(SHARE_WIN_POLICY.summary).toContain('sees only that update');
     expect(SHARE_WIN_POLICY.excluded).toContain('No passive feed');
     expect(SHARE_WIN_POLICY.excluded).toContain('workout history browsing');
     expect(SHARE_WIN_POLICY.excluded).toContain('food diary');
     expect(SHARE_WIN_POLICY.excluded).toContain('coach notes');
     expect(SHARE_WIN_POLICY.excluded).toContain('body metrics');
     expect(SHARE_WIN_POLICY.excluded).toContain('automatic photo sharing');
-    expect(SHARE_WIN_CARD_RULES).toContain('Ask every time before a card is sent.');
+    expect(SHARE_WIN_CARD_RULES).toContain('Ask every time before an update is sent.');
     expect(SHARE_WIN_CARD_RULES).toContain('Workout history, food diary, coach notes, body metrics and photos stay closed.');
-    expect(SHARE_WIN_CARD_RULES).toContain('A sent card can be deleted by the sender.');
-    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact card before sending.');
-    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one card only. No background feed is created.');
+    expect(SHARE_WIN_CARD_RULES).toContain('A sent update can be deleted by the sender.');
+    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Preview the exact update before sending.');
+    expect(SHARE_WIN_DELIVERY_GUARDRAILS).toContain('Send one update only. No background feed is created.');
     expect(SHARE_WIN_REVIEW_STEPS.map((step) => step.key)).toEqual([
       'choose',
       'preview',
@@ -55,7 +55,7 @@ describe('partner shareable wins policy', () => {
     ]);
     expect(SHARE_WIN_REVIEW_STEPS.map((step) => step.title)).toEqual([
       'Choose the moment',
-      'Preview exact card',
+      'Preview exact update',
       'Confirm one partner',
       'Keep control',
     ]);
@@ -117,7 +117,7 @@ describe('partner shareable wins policy', () => {
     expect(progress.requiresExport).toBe(true);
     expect(progress.summary).toBe('Progress photo card, 5 Jan to 20 Jun.');
     expect(progress.detail).toContain('Only the composed export can be sent');
-    expect(progress.detail).toContain('The visible scan index is part of that export');
+    expect(progress.detail).toContain('The visible Volyume Score is part of that export');
     expect(progress.detail).toContain('Weight is off for this export');
     expect(progress.detail).toContain('body metrics and the photo library stay private');
     expect(progress.dateRange).toBe('5 Jan to 20 Jun');
@@ -184,11 +184,11 @@ describe('partner shareable wins policy', () => {
       status: 'Preview only',
       shared: 'The lift name and the record you choose to celebrate.',
       private: 'Your wider lift history and other records stay private.',
-      confirmation: 'Not sent until you choose one partner and approve this exact card.',
+      confirmation: 'Not sent until you choose one partner and approve this exact update.',
     });
     expect(preview.draft.summary).toBe('Deadlift: New triple best.');
     expect(preview.guardrails).toContain('Confirm the one partner who will receive it.');
-    expect(preview.guardrails).toContain('Keep the sender delete control attached to the card.');
+    expect(preview.guardrails).toContain('Keep the sender delete control attached to the update.');
     expect(Object.keys(preview.draft)).not.toContain('bodyWeight');
     expect(buildShareWinPreview('food_diary', {})).toBeNull();
   });
@@ -204,11 +204,11 @@ describe('partner shareable wins policy', () => {
       status: 'Preview only',
       visibleToPartner: 'Workout name, date and completed status.',
       remainsPrivate: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
-      consentLine: 'Not sent until you choose one partner and approve this exact card.',
+      consentLine: 'Not sent until you choose one partner and approve this exact update.',
     });
     expect(receipt.steps).toBe(SHARE_WIN_REVIEW_STEPS);
     expect(receipt.finalCheck).toContain('partner name');
-    expect(receipt.finalCheck).toContain('exact card copy');
+    expect(receipt.finalCheck).toContain('exact copy');
     expect(buildShareWinReviewReceipt(null)).toBeNull();
   });
 
