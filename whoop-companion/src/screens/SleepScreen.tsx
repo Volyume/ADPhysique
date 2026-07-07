@@ -63,6 +63,14 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
+  const tonightFocus = sleepFocus({
+    sleep,
+    capture,
+    perfCapped: !!perf?.cappedByConfidence,
+    sleepNeed,
+    stress,
+    consistency,
+  });
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
@@ -145,6 +153,27 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <Card style={{ paddingVertical: 2 }}>
         <NavRow label="Sleep Planner" icon="moon" iconColor={colors.sleepTeal} value={`${Math.round(((neededMin * sleepGoal) / 60) * 10) / 10} h goal`} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <NavRow label="Log / adjust sleep" icon="create" onPress={() => nav.navigate({ name: 'editSleep' })} last />
+      </Card>
+
+      <SectionLabel>Tonight focus</SectionLabel>
+      <Card>
+        <View style={styles.focusHead}>
+          <View style={[styles.focusIcon, { backgroundColor: tonightFocus.color }]}>
+            <Text style={styles.focusIconText}>{tonightFocus.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.focusTitle}>{tonightFocus.title}</Text>
+            <Text style={styles.focusBody}>{tonightFocus.body}</Text>
+          </View>
+        </View>
+        <NavRow
+          label={tonightFocus.actionLabel}
+          icon={tonightFocus.icon}
+          iconColor={tonightFocus.color}
+          value={tonightFocus.actionValue}
+          onPress={() => nav.navigate(tonightFocus.route)}
+          last
+        />
       </Card>
 
       <SectionLabel>Capture quality</SectionLabel>
@@ -359,6 +388,115 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
+function sleepFocus(input: {
+  sleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  capture: ReturnType<typeof appStore.getState>['sleepCapture'];
+  perfCapped: boolean;
+  sleepNeed: ReturnType<typeof appStore.getState>['sleepNeed'];
+  stress: ReturnType<typeof appStore.getState>['sleepStress'];
+  consistency: ReturnType<typeof appStore.getState>['sleepConsistency'];
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  const capture = input.capture;
+  if (!input.sleep) {
+    return {
+      badge: 'SYNC',
+      title: 'Get a complete overnight sync',
+      body: 'Sleep scoring starts with stored strap history. Reconnect after waking and let auto-sync finish before judging recovery.',
+      actionLabel: 'Open device sync',
+      actionValue: capture ? `${capture.coveragePct}% coverage` : 'needs data',
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
+  if (capture && (capture.coveragePct < 60 || capture.signalMin < 150 || input.perfCapped)) {
+    return {
+      badge: 'DATA',
+      title: 'Improve capture confidence first',
+      body: 'Tonight’s score is limited by partial overnight signal, so recovery and readiness may move once more history backfills.',
+      actionLabel: capture.coveragePct < 60 || capture.signalMin < 150 ? 'Sync more data' : 'Review sleep window',
+      actionValue: `${capture.coveragePct}% coverage`,
+      icon: capture.coveragePct < 60 || capture.signalMin < 150 ? 'sync' : 'create',
+      color: capture.coveragePct < 60 || capture.signalMin < 150 ? colors.strainBlue : colors.sleepTeal,
+      route: capture.coveragePct < 60 || capture.signalMin < 150 ? { name: 'device' } : { name: 'editSleep' },
+    };
+  }
+
+  const debtMin = input.sleepNeed?.debtMin ?? 0;
+  if (debtMin >= 60) {
+    return {
+      badge: 'DEBT',
+      title: 'Pay down sleep debt',
+      body: `You are carrying ${formatDuration(debtMin)} of debt. The biggest win is shifting bedtime earlier enough to bank real asleep time.`,
+      actionLabel: 'Plan tonight',
+      actionValue: formatDuration(input.sleepNeed?.neededMin ?? BASE_NEED_MIN),
+      icon: 'moon',
+      color: colors.recoveryYellow,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if ((input.stress?.highPct ?? 0) >= 20) {
+    return {
+      badge: 'CALM',
+      title: 'Lower overnight stress',
+      body: `${input.stress?.highPct ?? 0}% of the night was high stress. Prioritise an earlier wind-down, lighter late training and a cooler room.`,
+      actionLabel: 'Open sleep planner',
+      actionValue: 'wind-down',
+      icon: 'moon',
+      color: colors.recoveryYellow,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if (input.consistency && input.consistency.score < 70) {
+    return {
+      badge: 'TIME',
+      title: 'Stabilise your sleep schedule',
+      body: `Your consistency is ${input.consistency.score}%. Keeping bed and wake times tighter is the highest-leverage regularity move.`,
+      actionLabel: 'Set wake target',
+      actionValue: `${input.consistency.score}%`,
+      icon: 'alarm',
+      color: colors.sleepTeal,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if (input.sleep.efficiency < 0.85 || input.sleep.wakeEvents >= 4) {
+    return {
+      badge: 'REST',
+      title: 'Protect sleep continuity',
+      body: `Efficiency was ${Math.round(input.sleep.efficiency * 100)}% with ${input.sleep.wakeEvents} wake events. Review timing and reduce late disruptions.`,
+      actionLabel: 'Review sleep window',
+      actionValue: `${Math.round(input.sleep.efficiency * 100)}% eff.`,
+      icon: 'create',
+      color: colors.sleepTeal,
+      route: { name: 'editSleep' },
+    };
+  }
+
+  return {
+    badge: 'KEEP',
+    title: 'Hold the routine',
+    body: 'The main sleep signals look usable. Keep the same wake target and let the trend view show whether this pattern holds.',
+    actionLabel: 'View sleep trends',
+    actionValue: 'trend',
+    icon: 'trending-up',
+    color: colors.recoveryGreen,
+    route: { name: 'sleepTrends' },
+  };
+}
+
 function ContribBand({ label, value, band, suffix }: { label: string; value: number | null; band: Band | null; suffix: string }) {
   const order: Band[] = ['poor', 'sufficient', 'optimal'];
   return (
@@ -534,6 +672,11 @@ const styles = StyleSheet.create({
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
   surplusNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
+  focusHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  focusIcon: { width: 46, height: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  focusIconText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  focusTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  focusBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
