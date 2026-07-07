@@ -8,6 +8,8 @@ import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES } from '../data/activities';
 
+const QUICK_ACTIVITIES = ['Walking', 'Running', 'Strength Training', 'Cycling', 'Yoga'];
+
 export function StartScreen({ nav }: { nav: Nav }) {
   const [picking, setPicking] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -36,8 +38,25 @@ export function StartScreen({ nav }: { nav: Nav }) {
   };
 
   if (picking) {
+    const quick = QUICK_ACTIVITIES.map((name) => ACTIVITY_CATALOGUE.find((a) => a.name === name)).filter(
+      (a): a is NonNullable<typeof a> => a != null,
+    );
     return (
       <Screen title="Select activity" onBack={() => setPicking(false)} tint={colors.strainBlue}>
+        <SectionLabel>Quick picks</SectionLabel>
+        <Card>
+          <View style={styles.quickGrid}>
+            {quick.map((a) => (
+              <Pressable key={a.name} onPress={() => void startWorkout(a.name)} style={[styles.quickPick, starting && styles.disabled]}>
+                <View style={[styles.quickIcon, { backgroundColor: `${activityColor(a.strain)}22` }]}>
+                  <Ionicons name={a.icon} size={18} color={activityColor(a.strain)} />
+                </View>
+                <Text style={styles.quickText}>{a.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+
         {ACTIVITY_CATEGORIES.map((cat) => (
           <View key={cat}>
             <SectionLabel>{cat}</SectionLabel>
@@ -74,6 +93,12 @@ export function StartScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function activityColor(strain: 'cardio' | 'muscular' | 'noncardio'): string {
+  if (strain === 'muscular') return colors.recoveryYellow;
+  if (strain === 'noncardio') return colors.recoveryGreen;
+  return colors.strainBlue;
+}
+
 function Big({ icon, color, title, sub, onPress, disabled }: { icon: string; color: string; title: string; sub: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Card onPress={disabled ? undefined : onPress}>
@@ -97,6 +122,10 @@ const styles = StyleSheet.create({
   bigTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
   bigSub: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickPick: { width: '30%', minWidth: 96, flexGrow: 1, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, paddingVertical: 12, paddingHorizontal: 8 },
+  quickIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
+  quickText: { color: colors.text, fontSize: 12, textAlign: 'center', fontFamily: fonts.textSemibold },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   disabled: { opacity: 0.55 },
