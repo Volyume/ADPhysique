@@ -1434,15 +1434,15 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         accessibilityLabel="Share invite again"
       >
         {sharing ? (
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size="small" color={colors.onPrimary} />
         ) : (
-          <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
+          <Ionicons name="share-outline" size={iconSize.sm} color={colors.onPrimary} />
         )}
         <Text style={styles.pendingPrimaryText}>{sharing ? 'Opening share...' : 'Share invite again'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={checkConnection}
-        style={[styles.pendingPrimary, checking && styles.pendingPrimaryDisabled]}
+        style={[styles.pendingSecondary, checking && styles.pendingPrimaryDisabled]}
         disabled={checking}
         hitSlop={hitSlop}
         accessibilityRole="button"
@@ -1452,9 +1452,9 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         {checking ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : (
-          <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
+          <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.textSecondary} />
         )}
-        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check status'}</Text>
+        <Text style={styles.pendingSecondaryText}>{checking ? 'Checking...' : 'Check status'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
@@ -1534,7 +1534,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
                 One person can use this code. It expires in {spellNumber(INVITE_EXPIRY_DAYS)} days.
               </Text>
               <View style={styles.channelRow}>
-                <ChannelButton icon="chatbubble-outline" label="Text" onPress={() => onShareVia('sms')} />
+                <ChannelButton icon="chatbubble-outline" label="Text" primary onPress={() => onShareVia('sms')} />
                 <ChannelButton icon="logo-whatsapp" label="WhatsApp" onPress={() => onShareVia('whatsapp')} />
                 <ChannelButton icon="mail-outline" label="Email" onPress={() => onShareVia('email')} />
               </View>
@@ -1555,16 +1555,16 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
   );
 }
 
-function ChannelButton({ icon, label, onPress }) {
+function ChannelButton({ icon, label, onPress, primary = false }) {
   return (
     <TouchableOpacity
-      style={styles.channelBtn}
+      style={[styles.channelBtn, primary && styles.channelBtnPrimary]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Send by ${label}`}
     >
-      <Ionicons name={icon} size={iconSize.md} color={colors.primary} />
-      <Text style={styles.channelBtnText}>{label}</Text>
+      <Ionicons name={icon} size={iconSize.md} color={primary ? colors.onPrimary : colors.primary} />
+      <Text style={[styles.channelBtnText, primary && styles.channelBtnTextPrimary]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -2052,13 +2052,24 @@ const styles = StyleSheet.create({
   pendingPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryFill,
+    paddingHorizontal: spacing.md,
+  },
+  pendingSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
     minHeight: 44,
   },
   pendingPrimaryDisabled: { opacity: 0.68 },
-  pendingPrimaryText: { ...type.label, color: colors.primary },
-  cancelText: { ...type.label, color: colors.primary },
+  pendingPrimaryText: { ...type.label, color: colors.onPrimary },
+  pendingSecondaryText: { ...type.label, color: colors.textSecondary },
+  cancelText: { ...type.label, color: colors.error },
 
   // ── Empty state ──
   empty: { gap: spacing.xl, alignItems: 'stretch' },
@@ -2159,9 +2170,11 @@ const styles = StyleSheet.create({
     letterSpacing: letterSpacing.caption,
   },
   codeSub: { ...type.caption, color: colors.textSecondary, textAlign: 'center' },
-  channelRow: { flexDirection: 'row', gap: spacing.sm },
+  channelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   channelBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 112,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2172,7 +2185,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
+  channelBtnPrimary: {
+    backgroundColor: colors.primaryFill,
+    borderColor: colors.primaryFill,
+  },
   channelBtnText: { ...type.label, color: colors.primary },
+  channelBtnTextPrimary: { color: colors.onPrimary },
   moreOptions: {
     flexDirection: 'row',
     alignItems: 'center',

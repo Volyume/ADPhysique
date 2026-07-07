@@ -1139,11 +1139,11 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.heroPrivacyPill}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.heroPrivacyText}>
-                Private on this device: not visible to partners, staff or anyone else unless you choose to share or export.
+                Private on this device; not visible to partners, staff or anyone else unless you choose to share or export.
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Keep dated front and back photos in one private library. When the photos are clear enough, Volyume adds a 0-100 Volyume Score, leanness band and progress signal. It is a visual progress measure, not a body fat estimate.
+              Keep dated front and back photos in one private library. Clear photo sets can receive a 0-100 Volyume Score, leanness band and progress signal. It tracks visible change over time; it is not a body fat estimate.
             </Text>
           </View>
 
@@ -1163,10 +1163,10 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.scoreGuideCard}>
               <View style={styles.scoreGuideHead}>
                 <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.scoreGuideTitle}>How the Volyume Score works</Text>
+                <Text style={styles.scoreGuideTitle}>What the Volyume Score means</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Volyume looks for repeatable visual changes from clear front and back photos taken in a similar setup. If the read is not reliable enough, the photos are still saved, but the score is withheld rather than guessed.
+                Volyume compares outline signals from your own clear front and back photos. It gives you a consistent progress marker when the setup is trustworthy, and withholds the score when the photos are not fair to judge.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
@@ -1275,16 +1275,19 @@ export default function ProgressPhotosScreen({ navigation }) {
                 );
               })}
             </View>
-            <TouchableOpacity
-              style={[styles.datesChip, hasRange && styles.datesChipActive]}
-              onPress={() => setRangeOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
-            >
-              <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
-              <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+            <View style={styles.datesControl}>
+              <TouchableOpacity
+                style={[styles.datesChip, hasRange && styles.datesChipActive]}
+                onPress={() => setRangeOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
+              >
+                <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
+                <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+              </TouchableOpacity>
               {hasRange ? (
                 <TouchableOpacity
+                  style={styles.dateClearButton}
                   onPress={() => { setRangeFrom(null); setRangeTo(null); }}
                   hitSlop={8}
                   accessibilityRole="button"
@@ -1293,7 +1296,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               ) : null}
-            </TouchableOpacity>
+            </View>
           </View>
         ) : null}
 
@@ -1890,6 +1893,12 @@ const styles = StyleSheet.create({
     minHeight: 44, paddingVertical: spacing.sm,
     borderRadius: radius.sm, backgroundColor: colors.surface2,
   },
+  datesControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    flexShrink: 1,
+  },
   datesChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1,
     minHeight: 44, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
@@ -1898,6 +1907,14 @@ const styles = StyleSheet.create({
   datesChipActive: { backgroundColor: colors.primaryBg },
   datesChipText: { ...type.label, color: colors.textMuted },
   datesChipTextActive: { color: colors.primary },
+  dateClearButton: {
+    width: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
   actionRow: {
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,

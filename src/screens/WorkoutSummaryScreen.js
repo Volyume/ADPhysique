@@ -782,7 +782,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         title: blockStory.name || 'Training block complete',
         heroValue: Number.isFinite(weeks) ? String(weeks) : '',
         heroUnit: Number.isFinite(weeks) ? 'weeks trained' : '',
-        caption: 'A full training block, recovery week and all.',
+        caption: 'A full training block completed.',
         date: Date.now(),
       },
     });
@@ -1185,11 +1185,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               ) : null}
               <Text style={styles.phaseRecap}>
                 {Number.isFinite(mesoWeek?.plannedWeeks)
-                  ? `${mesoWeek.plannedWeeks} weeks done, recovery week and all. A full training block, in the bank.`
-                  : 'A full training block, recovery week and all, in the bank.'}
+                  ? `${mesoWeek.plannedWeeks} weeks completed, including your recovery week.`
+                  : 'A full training block completed.'}
               </Text>
               <Text style={styles.phaseNext}>
-                What's next: a new block, starting a little heavier than the last. That is how progress compounds over months, not just weeks.
+                What's next: start the next block with sensible progressions from this one.
               </Text>
               <View style={styles.phaseActions}>
                 <TouchableOpacity
@@ -1693,7 +1693,7 @@ const styles = StyleSheet.create({
   ratingLabel: { ...type.label, color: colors.textSecondary },
   ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   ratingBtn: {
-    width: 36, height: 36, borderRadius: radius.lg, backgroundColor: colors.surface2,
+    width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   // D3: selected state uses the app-wide chip grammar (tint + amber edge,
