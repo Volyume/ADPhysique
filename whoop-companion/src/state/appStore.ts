@@ -330,6 +330,7 @@ class AppStore extends Store<AppState> {
   private historyEndAckSentThisBurst = false;
   private historyStallRecoveries = 0;
   private historyNudgeInFlight = false;
+  private historyPersisting = false;
   private deepHistoryPreparedFor = '';
   private eventAssemblers = new Map<string, FrameAssembler>();
   private gpsActive = false;
@@ -1255,22 +1256,35 @@ class AppStore extends Store<AppState> {
 
   private async persistHistoryFrames(frames: Uint8Array[]): Promise<HistoricalDecodeResult> {
     const rawTs = Date.now();
-    for (const frame of frames) {
-      await insertHistoryRecord(rawTs, bytesToHex(frame));
-    }
+    this.historyPersisting = true;
+    this.markHistoryActivity();
+    this.setState((s) => ({
+      historySync: s.historySync
+        ? { ...s.historySync, status: `Committing ${frames.length} history records` }
+        : s.historySync,
+    }));
+    let decoded: HistoricalDecodeResult;
+    try {
+      for (const frame of frames) {
+        await insertHistoryRecord(rawTs, bytesToHex(frame));
+      }
 
-    const decoded = decodeWhoop5HistoryFrames(frames);
-    for (const sample of decoded.hr) {
-      await insertHrSample({ ts: sample.ts, bpm: sample.bpm, rr: sample.rr });
-    }
-    for (const sample of decoded.steps) {
-      await insertStepSample({ ts: sample.ts, counter: sample.counter, activityClass: sample.activityClass });
-    }
-    for (const sample of decoded.sleepStates) {
-      await insertSleepStateSample({ ts: sample.ts, state: sample.state });
-    }
-    for (const sample of decoded.rawVitals) {
-      await insertRawVitalSample({ ts: sample.ts, spo2: sample.spo2, skinTempC: sample.skinTempC });
+      decoded = decodeWhoop5HistoryFrames(frames);
+      for (const sample of decoded.hr) {
+        await insertHrSample({ ts: sample.ts, bpm: sample.bpm, rr: sample.rr });
+      }
+      for (const sample of decoded.steps) {
+        await insertStepSample({ ts: sample.ts, counter: sample.counter, activityClass: sample.activityClass });
+      }
+      for (const sample of decoded.sleepStates) {
+        await insertSleepStateSample({ ts: sample.ts, state: sample.state });
+      }
+      for (const sample of decoded.rawVitals) {
+        await insertRawVitalSample({ ts: sample.ts, spo2: sample.spo2, skinTempC: sample.skinTempC });
+      }
+    } finally {
+      this.historyPersisting = false;
+      this.markHistoryActivity();
     }
 
     this.historySessionStats = mergeHistoryStats(this.historySessionStats, decoded);
@@ -1512,6 +1526,16 @@ class AppStore extends Store<AppState> {
   private recoverStaleHistoryDrain(source: string): void {
     const state = this.getState();
     if (!state.draining || this.historyStopQueued) return;
+    if (this.historyPersisting) {
+      this.historyLastActivityTs = Date.now();
+      this.armHistoryTimeout();
+      this.setState((s) => ({
+        historySync: s.historySync
+          ? { ...s.historySync, status: `Committing history records (${source}); sync is still active` }
+          : s.historySync,
+      }));
+      return;
+    }
     const last = this.historyLastActivityTs || 0;
     if (!last) return;
     const stalledMs = Date.now() - last;
@@ -1669,6 +1693,7 @@ class AppStore extends Store<AppState> {
     this.historyEndAckSentThisBurst = false;
     this.historyStallRecoveries = 0;
     this.historyNudgeInFlight = false;
+    this.historyPersisting = false;
     this.historyDrainMode = mode;
     this.historyLastActivityTs = Date.now();
     this.setState({
