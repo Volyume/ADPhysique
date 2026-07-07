@@ -42,7 +42,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
     expect(SCREEN).toMatch(/ProgressScanCompare/);
-    expect(SCREEN).toMatch(/Compare two Volyume Score entries/);
+    expect(SCREEN).toMatch(/Compare two photo sets/);
     expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
     expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
@@ -109,7 +109,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Your private physique record/);
     expect(SCREEN).toMatch(/Private by default/);
     expect(SCREEN).toMatch(/Nothing is shared or exported unless you choose it/);
-    expect(SCREEN).toMatch(/Volyume scans them and gives you a private score to compare change over time/);
+    expect(SCREEN).toMatch(/Volyume scans them into a private Volyume Score for weekly comparison/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);
@@ -121,9 +121,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('compare action copy is specific without adding another prompt card', () => {
-    expect(SCREEN).toMatch(/const compareButtonTitle = canCompareScans \? 'Compare scores' : 'Compare photos';/);
+    expect(SCREEN).toMatch(/const compareButtonTitle = 'Compare photo sets';/);
     expect(SCREEN).toMatch(/title=\{compareButtonTitle\}/);
-    expect(SCREEN).toMatch(/accessibilityLabel=\{canCompareScans \? 'Compare two Volyume Score entries' : 'Compare two photos'\}/);
+    expect(SCREEN).toMatch(/accessibilityLabel="Compare two photo sets"/);
   });
 
   test('photo-set sheets keep titles and date fields narrow-screen safe', () => {

@@ -90,7 +90,7 @@ describe('ProgressScanCompare component', () => {
     usePhotoSuppression.mockReturnValue(false);
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Compare scans');
+    expect(text).toContain('Compare photo sets');
     expect(text).toContain('Not body fat');
     expect(text).toContain('Defined 54/100');
     expect(text).toContain('Lean 66/100');

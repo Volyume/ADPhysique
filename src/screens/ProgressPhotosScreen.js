@@ -955,7 +955,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
   const canCompareScans = !loading && scoredScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
-  const compareButtonTitle = canCompareScans ? 'Compare scores' : 'Compare photos';
+  const compareButtonTitle = 'Compare photo sets';
   const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
   const latestPhoto = useMemo(() => {
@@ -1167,7 +1167,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Add 2-3 clear photos. Volyume scans them and gives you a private score to compare change over time.
+              Add front and back photos. Volyume scans them into a private Volyume Score for weekly comparison.
             </Text>
           </View>
 
@@ -1205,7 +1205,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   onPress={canCompareScans ? openScanCompare : openCompare}
                   fullWidth={false}
                   style={styles.heroActionButton}
-                  accessibilityLabel={canCompareScans ? 'Compare two Volyume Score entries' : 'Compare two photos'}
+                  accessibilityLabel="Compare two photo sets"
                 />
               ) : null}
             </View>
@@ -1372,7 +1372,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Your first set can be new photos or older photos from your phone. Front and back are enough for a Volyume Score when the photos are clear; add side as well for a better visual record.
+                Start with front and back photos. Side is optional and helps the visual record.
               </Text>
             </>
           )}

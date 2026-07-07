@@ -136,14 +136,14 @@ export function buildPhysiqueStudioNextAction({
   if (!suppressed && scoredScans.length >= 2) {
     return {
       kind: 'compare_scans',
-      title: 'Compare Volyume Scores',
+      title: 'Compare photo sets',
       body: 'Compare two scored photo sets using photos taken in the same poses.',
       reason: `${scoredScans.length} scored photo sets are ready.`,
       detailItems: [
         'The Volyume Score shows broad change, not an exact number.',
         'This is not an exact body fat percentage.',
       ],
-      cta: 'Compare scans',
+      cta: 'Compare photo sets',
     };
   }
 
@@ -157,7 +157,7 @@ export function buildPhysiqueStudioNextAction({
         'Matching angles and lighting makes changes easier to see.',
         'Choose the same angle on both dates.',
       ],
-      cta: 'Compare photos',
+      cta: 'Compare photo sets',
     };
   }
 

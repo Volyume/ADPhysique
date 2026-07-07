@@ -196,7 +196,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(await mount()).join(' ');
     expect(text).toContain('What Sam can see');
     expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
-    expect(text).toContain('Training status from your assigned plan.');
+    expect(text).toContain('Training status from your current plan.');
     expect(text).toContain('Their workout details stay private too.');
     expect(text).toContain('Wins');
     expect(text).toContain('You choose');
@@ -221,7 +221,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
-    expect(text).toContain('Training status from your assigned plan.');
+    expect(text).toContain('Training status from your current plan.');
     expect(findPress(tree, "Set this week's sessions")).toHaveLength(0);
     expect(findPress(tree, 'Decrease sessions')).toHaveLength(0);
     expect(findPress(tree, 'Increase sessions')).toHaveLength(0);
@@ -274,6 +274,22 @@ describe('connected state: isolated pair cards', () => {
     expect(hook.shareWin).toHaveBeenCalledWith('p1', expect.objectContaining({ type: 'workout_summary' }));
   });
 
+  test('win sharing cloud-schema failures do not blame the user connection', async () => {
+    const hook = base({
+      pairs: [pair()],
+      shareWin: jest.fn(async () => ({ ok: false, error: 'win_cards_unavailable' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Share a win');
+    await press(tree, 'Send workout complete to Sam');
+    expect(mockToastShow).toHaveBeenCalledWith('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.stringMatching(/connection|internet/i),
+      expect.anything(),
+    );
+  });
+
   test('renders sent win cards with sender delete control', async () => {
     const hook = base({
       pairs: [pair({
@@ -295,6 +311,32 @@ describe('connected state: isolated pair cards', () => {
     expect(allText(tree)).toContain('Bench press: New rep best.');
     await press(tree, 'Delete shared win Personal record');
     expect(hook.revokeWin).toHaveBeenCalledWith('win1', 'p1');
+  });
+
+  test('win delete cloud-schema failures do not blame the user connection', async () => {
+    const hook = base({
+      pairs: [pair({
+        winCards: [{
+          id: 'win1',
+          pairId: 'p1',
+          senderId: 'u1',
+          cardType: 'personal_record',
+          title: 'Personal record',
+          summary: 'Bench press: New rep best.',
+          detail: 'Only this chosen record is shared. Wider lift history stays private.',
+          createdAt: Date.UTC(2026, 6, 6),
+        }],
+      })],
+      revokeWin: jest.fn(async () => ({ ok: false, error: 'win_cards_unavailable' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Delete shared win Personal record');
+    expect(mockToastShow).toHaveBeenCalledWith('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.stringMatching(/connection|internet/i),
+      expect.anything(),
+    );
   });
 
   test('progress-card share preview can use a sanitized exported-card payload', async () => {

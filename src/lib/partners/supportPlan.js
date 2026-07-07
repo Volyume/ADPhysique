@@ -11,7 +11,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const name = safeName(partnerName);
   const cheerAvailable = pair.cheerEnabled !== false;
   let headline = `Share one win with ${name} only when you want to. You approve the preview first.`;
-  let primaryAction = { key: 'share_wins', label: 'Share a win', accessibilityLabel: 'Share a win' };
+  let primaryAction = null;
 
   if (cheerAvailable) {
     headline = `${name} can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.`;
@@ -30,7 +30,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
         key: 'you',
         label: 'You',
         state: ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned }),
-        copy: 'Training status from your assigned plan.',
+        copy: 'Training status from your current plan.',
       }),
       Object.freeze({
         key: 'partner_week',

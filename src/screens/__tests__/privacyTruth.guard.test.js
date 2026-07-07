@@ -25,7 +25,7 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(privacy).toContain("LAST_UPDATED = '4 July 2026'");
     expect(privacy).toMatch(/Volyume Score is a visual\s+progress feature/);
     expect(privacy).toContain('not an exact body fat percentage');
-    expect(privacy).toContain('progress photo metadata and analysis metadata');
+    expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
     expect(privacy).toContain('private photo image files');
     expect(data).toContain('Back up app data (JSON)');
     expect(data).toContain('photo image files stay on this device');
@@ -43,6 +43,8 @@ describe('privacy, consent, export and store-copy truth', () => {
 
     expect(publicFiles).toContain('not an exact body-fat percentage');
     expect(publicFiles).toContain('Settings &rarr; Your data');
+    expect(publicFiles).toContain('Volyume Score analysis metadata');
+    expect(publicFiles).not.toMatch(/Physique Scan metadata/i);
     expect(publicFiles).not.toMatch(/Download my data/i);
     expect(publicFiles).not.toMatch(/we don't track meals/i);
     expect(publicFiles).not.toMatch(/not a diet tracker/i);
