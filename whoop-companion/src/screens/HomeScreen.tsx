@@ -92,6 +92,18 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         : sleep
           ? 'needs confidence'
           : 'awaiting sleep';
+  const todayFocus = dailyFocus({
+    status,
+    draining,
+    syncProblem,
+    sleepCapture,
+    sleep,
+    readiness,
+    recovery,
+    strain,
+    sleepDebtMin: today?.sleepDetail?.debtMin ?? null,
+    sleepPerformanceCapped: !!sleepPerformance?.cappedByConfidence,
+  });
 
   return (
     <View style={{ flex: 1 }}>
@@ -157,6 +169,19 @@ export function HomeScreen({ nav }: { nav: Nav }) {
               onPress={() => nav.navigate({ name: 'strain' })}
             />
           </View>
+        </Card>
+
+        <Card onPress={() => nav.navigate(todayFocus.route)}>
+          <View style={styles.focusHead}>
+            <View style={[styles.focusBadge, { backgroundColor: todayFocus.color }]}>
+              <Text style={styles.focusBadgeText}>{todayFocus.badge}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.focusTitle}>{todayFocus.title}</Text>
+              <Text style={styles.focusBody}>{todayFocus.body}</Text>
+            </View>
+          </View>
+          <Text style={[styles.focusAction, { color: todayFocus.color }]}>{todayFocus.action}</Text>
         </Card>
 
         {/* Illness early-warning banner */}
@@ -344,6 +369,12 @@ const styles = StyleSheet.create({
   qualityStatus: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
   qualityMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
+  focusHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  focusBadge: { width: 48, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  focusBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  focusTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  focusBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
+  focusAction: { fontSize: 12, marginTop: 12, fontFamily: fonts.textBold },
 });
 
 function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
@@ -403,4 +434,92 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
   const first = new Date(firstTs).toLocaleString(undefined, sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return `Decoded ${first}-${last}`;
+}
+
+function dailyFocus(input: {
+  status: string;
+  draining: boolean;
+  syncProblem: boolean;
+  sleepCapture: ReturnType<typeof appStore.getState>['sleepCapture'];
+  sleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  readiness: ReturnType<typeof appStore.getState>['trainingReadiness'];
+  recovery: number | null;
+  strain: number | null;
+  sleepDebtMin: number | null;
+  sleepPerformanceCapped: boolean;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  action: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  const coverage = input.sleepCapture?.coveragePct ?? 0;
+  const signalMin = input.sleepCapture?.signalMin ?? 0;
+  if (input.draining || input.syncProblem || !input.sleep || coverage < 60 || signalMin < 150 || input.sleepPerformanceCapped) {
+    return {
+      badge: input.draining ? 'SYNC' : 'DATA',
+      title: input.draining ? 'Let history finish syncing' : 'Fix sleep data confidence',
+      body: input.draining
+        ? 'The strap is backfilling stored history. Let it finish before trusting sleep, recovery, or readiness.'
+        : `${coverage || 0}% sleep coverage with ${signalMin || 0} signal minutes. More history or a reviewed window will sharpen today’s numbers.`,
+      action: input.status === 'connected' ? 'Open Device sync' : 'Connect strap',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
+  if (input.recovery != null && input.recovery < 34) {
+    return {
+      badge: 'REST',
+      title: 'Protect recovery today',
+      body: `Recovery is ${input.recovery}%. Keep strain low, prioritise hydration and plan an earlier sleep target tonight.`,
+      action: 'Open Recovery',
+      color: colors.recoveryRed,
+      route: { name: 'recovery' },
+    };
+  }
+
+  if (input.readiness && input.readiness.score < 50) {
+    return {
+      badge: 'EASY',
+      title: 'Choose an easier training day',
+      body: `Readiness is ${input.readiness.score}. Use today to maintain, not chase a peak workout.`,
+      action: 'Open Readiness',
+      color: colors.recoveryYellow,
+      route: { name: 'readiness' },
+    };
+  }
+
+  if ((input.sleepDebtMin ?? 0) >= 60) {
+    return {
+      badge: 'SLEEP',
+      title: 'Pay down sleep debt tonight',
+      body: `You are carrying ${formatDuration(input.sleepDebtMin ?? 0)} of sleep debt. Tonight’s plan matters more than another metric check.`,
+      action: 'Open Sleep Coach',
+      color: colors.sleepTeal,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if (input.recovery != null && input.recovery >= 67 && (input.strain ?? 0) < 8) {
+    return {
+      badge: 'PUSH',
+      title: 'Good window to build fitness',
+      body: `Recovery is ${input.recovery}% and strain is still low. Add a purposeful workout if your schedule allows.`,
+      action: 'Start workout',
+      color: colors.recoveryGreen,
+      route: { name: 'startMenu' },
+    };
+  }
+
+  return {
+    badge: 'STEADY',
+    title: 'Keep today steady',
+    body: 'Your core signals are usable. Hold the plan, keep syncing in the background, and let trends guide bigger changes.',
+    action: 'View trends',
+    color: colors.sleepTeal,
+    route: { name: 'trends' },
+  };
 }
