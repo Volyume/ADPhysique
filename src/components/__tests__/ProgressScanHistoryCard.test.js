@@ -51,9 +51,9 @@ describe('ProgressScanHistoryCard', () => {
     const tree = await render({ onToggleHideExact, onDeleteScan, onOpenPhoto });
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Volyume Score results');
-    expect(text).toContain('private progress score');
-    expect(text).toContain('not body fat percentage');
+    expect(text).toContain('Score history');
+    expect(text).toContain('Private Volyume Score trend');
+    expect(text).toContain('Not body fat');
     expect(text).toContain('Score for this set');
     expect(text).not.toContain('Result note');
     expect(text).toContain('Basis: front/back outline signals plus scan quality. No body fat percentage.');
@@ -97,7 +97,7 @@ describe('ProgressScanHistoryCard', () => {
   test('read-only mode hides delete and disables thumbnail opening', async () => {
     const onOpenPhoto = jest.fn();
     const tree = await render({ readOnly: true, onOpenPhoto });
-    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Volyume Score results');
+    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Score history');
     expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete photo set/.test(node.props.accessibilityLabel))).toBe(false);
     const thumb = tree.root.findAllByType(TouchableOpacity).find((node) => /Front photo/.test(node.props.accessibilityLabel));
     expect(thumb.props.disabled).toBe(true);

@@ -16,7 +16,7 @@ describe('partner accountability copy', () => {
     expect(plan.steps.find((step) => step.key === 'you')).toMatchObject({
       label: 'You',
       state: '2 of 4',
-      copy: 'Training status from your assigned plan.',
+      copy: 'Training status from your current plan.',
     });
     expect(plan.steps.find((step) => step.key === 'partner_week')).toMatchObject({
       label: 'Sam',
@@ -43,9 +43,9 @@ describe('partner accountability copy', () => {
     });
   });
 
-  test('falls back to win preview when cheer is already sent', () => {
+  test('leaves win sharing to the stable card when cheer is already sent', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, cheerEnabled: false }, 'Sam');
-    expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Share a win' });
+    expect(plan.primaryAction).toBeNull();
     expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
       state: 'You choose',
       copy: 'Today\'s cheer is sent. Wins still ask first.',

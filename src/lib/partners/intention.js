@@ -1,7 +1,7 @@
 /**
  * Partners D5-A — the mutual weekly intention: pure display + resolution.
  *
- * Each member optionally confirms an integer weekly session AIM against their
+ * Each member optionally confirms an integer training-week AIM against their
  * OWN plan (defaulting to the weekly planned count they already have). This
  * module turns the two aims into calm copy and resolves the shared kept-moment.
  *
@@ -28,27 +28,27 @@ function normAim(v) {
   return n > 0 ? n : 0;
 }
 
-/** Your OWN planned-sessions line, always first person. Your own number, never comparative. */
-function ownAimLine(aim) {
-  return `You planned ${aim} sessions this week.`;
+/** Your OWN training-week line, always first person and never comparative. */
+function ownAimLine() {
+  return `You set your training-week aim.`;
 }
 
 /**
  * Partner-set line when the aims DIFFER: acknowledges that the partner engaged
  * WITHOUT revealing their number, so two differing figures are never placed side
  * by side (the ED-safe default; failing toward less comparison). The equal case
- * still shows the single co-owned "You both planned {n} sessions" line.
+ * still shows one co-owned line without exposing either number.
  */
 function partnerSetLine(name) {
-  return `${name} set weekly sessions too.`;
+  return `${name} set their training-week aim too.`;
 }
 
 /**
  * Resolve the intention copy for a PairCard.
  * @returns {{ shared:string|null, mine:string|null, theirs:string|null }}
  *   - shared : the single co-owned line, shown ONLY when both aims are set AND
- *              equal ("You both planned {n} sessions this week."). Never a comparison.
- *   - mine / theirs : each member's OWN planned-sessions line, shown when the aims differ or
+ *              equal. Never a comparison.
+ *   - mine / theirs : each member's OWN training-week line, shown when the aims differ or
  *              only one side has set an aim. Each is a standalone fact about that
  *              person's own plan; neither is ever framed against the other.
  */
@@ -58,7 +58,7 @@ export function resolveIntention({ myAim, partnerAim, partnerName } = {}) {
   const name = (typeof partnerName === 'string' && partnerName.trim()) ? partnerName.trim() : 'Your partner';
 
   if (a > 0 && b > 0 && a === b) {
-    return { shared: `You both planned ${a} sessions this week.`, mine: null, theirs: null };
+    return { shared: 'You both set training-week aims.', mine: null, theirs: null };
   }
   return {
     shared: null,

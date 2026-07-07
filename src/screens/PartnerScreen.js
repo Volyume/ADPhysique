@@ -470,9 +470,7 @@ function PairCard({
       />
 
       <View style={styles.partnerShareSection}>
-        {supportActionKey === 'share_wins' ? null : (
-          <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} partnerName={name} />
-        )}
+        <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} partnerName={name} />
         <PartnerWinCards cards={pair.winCards || []} userId={userId} onRevoke={onRevokeWin} />
       </View>
 

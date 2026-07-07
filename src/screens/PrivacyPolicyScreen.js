@@ -82,7 +82,7 @@ export default function PrivacyPolicyScreen() {
           <Body>
             You can export your workout sets as CSV from Settings &gt; Your data &gt; Export workout log.
             You can also create a JSON backup of app database records, including workout, nutrition, body
-            metric, progress photo metadata and analysis metadata. The JSON backup does not bundle
+            metric, progress photo metadata and Volyume Score analysis metadata. The JSON backup does not bundle
             private photo image files.
           </Body>
           <Body>

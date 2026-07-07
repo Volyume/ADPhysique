@@ -274,12 +274,12 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(text).toContain('Progress Photos');
     expect(text).toContain('Private by default');
     expect(text).toContain('Nothing is shared or exported unless you choose it.');
-    expect(text).toContain('private score to compare change over time');
+    expect(text).toContain('private Volyume Score for weekly comparison');
     expect(text).not.toContain('Latest result');
     expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photo set');
-    expect(text).toContain('Your first set can be new photos or older photos from your phone.');
+    expect(text).toContain('Start with front and back photos.');
     expect(text).not.toContain('Suggested next step');
   });
 });
@@ -430,15 +430,15 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
 
 describe('ProgressPhotosScreen compare entry', () => {
   test('hidden with zero or one photo, shown with two or more (not suppressed)', async () => {
-    expect(findPressable(await render([]), 'Compare two photos')).toBeUndefined();
-    expect(findPressable(await render([NEW]), 'Compare two photos')).toBeUndefined();
-    expect(findPressable(await render([NEW, OLD]), 'Compare two photos')).toBeDefined();
+    expect(findPressable(await render([]), 'Compare two photo sets')).toBeUndefined();
+    expect(findPressable(await render([NEW]), 'Compare two photo sets')).toBeUndefined();
+    expect(findPressable(await render([NEW, OLD]), 'Compare two photo sets')).toBeDefined();
   });
 
   test('pressing Compare opens the ProgressPhotoCompare surface', async () => {
     const tree = await render();
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(false);
-    await press(tree, 'Compare two photos');
+    await press(tree, 'Compare two photo sets');
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
@@ -462,7 +462,7 @@ describe('ProgressPhotosScreen compare entry', () => {
     const tree = await render([newSide, newBack, NEW, oldSide, oldBack, OLD], { scans });
     const text = flattenText(tree.toJSON());
 
-    expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeDefined();
+    expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
     expect(text).not.toContain('Latest set needs another angle');
     expect(text).not.toContain('Compare Volyume Scores');
   });
@@ -493,8 +493,7 @@ describe('ProgressPhotosScreen compare entry', () => {
       { id: 'scan-new', status: 'complete', requiredPosesComplete: true, capturedAt: NEW.ts, assets: [{ id: 'new-front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts }] },
     ];
     const tree = await render([NEW, OLD], { scans });
-    expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeUndefined();
-    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
+    expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
   });
 
   test('the compare surface honours reduce motion on its wrapping modal', async () => {
@@ -512,7 +511,7 @@ describe('ProgressPhotosScreen compare entry', () => {
 describe('ProgressPhotosScreen ED-safety suppression gate', () => {
   test('under suppression the Compare and Share entries are withheld (fail-closed double guard)', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: true });
-    expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
+    expect(findPressable(tree, 'Compare two photo sets')).toBeUndefined();
     expect(findPressable(tree, 'Share progress')).toBeUndefined();
     // Viewing the dated timeline stays available.
     expect(flashList(tree).props.data.length).toBeGreaterThan(0);
@@ -520,7 +519,7 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
 
   test('not suppressed and Pro: both Compare and Share are offered', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
-    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
+    expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
     expect(findPressable(tree, 'Share progress')).toBeDefined();
   });
 
@@ -556,7 +555,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Private by default');
     expect(text).not.toContain('Latest result');
-    expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
+    expect(findPressable(tree, 'Compare two photo sets')).toBeUndefined();
   });
 
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
@@ -590,8 +589,8 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
 
   test('free tier keeps Compare available (viewing is not a write)', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
-    await press(tree, 'Compare two photos');
+    expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
+    await press(tree, 'Compare two photo sets');
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 

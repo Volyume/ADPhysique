@@ -20,7 +20,7 @@ To run the app and coach you, Volyume may use:
 - Body weight, body measurements, body-fat percentage and lean mass when you enter them
 - Food diary entries, recipes, saved meals, water, calories and macro targets
 - Weekly check-ins, recovery, energy, adherence and eating-habits screening responses
-- Progress photo metadata and Physique Scan metadata, including photo quality, scan confidence, leanness band, visual score and progress signal
+- Progress photo metadata and Volyume Score analysis metadata, including photo quality, scan confidence, leanness band, visual score and progress signal
 - Usage events that tell us which app surfaces are used and where the app is slow
 - Crash and diagnostic events, scrubbed before they leave the device
 
@@ -66,7 +66,7 @@ Crash and diagnostic events age out according to the retention settings of our S
 
 ## 8. Your rights
 
-Under UK and EU GDPR you have the right to access, correct, delete, restrict, object to, and port your personal data. In Volyume, Settings > Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup contains database records, including progress photo metadata and Physique Scan metadata, but not private photo image files.
+Under UK and EU GDPR you have the right to access, correct, delete, restrict, object to, and port your personal data. In Volyume, Settings > Your data lets you export workout sets as CSV and create a JSON app-data backup. The JSON backup contains database records, including progress photo metadata and Volyume Score analysis metadata, but not private photo image files.
 
 To make a request, use the in-app controls or email support@volyume.app. We respond to verifiable requests within 30 days.
 

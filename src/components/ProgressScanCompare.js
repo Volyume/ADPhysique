@@ -102,19 +102,22 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   const deltaText = hideExact
     ? delta?.trendSummary
     : (delta?.summary || delta?.trendSummary);
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerCopy}>
+        <Text style={styles.title}>Compare photo sets</Text>
+        <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
+      </View>
+      <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close photo-set comparison">
+        <Ionicons name="close" size={26} color={colors.textPrimary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   if (suppressed) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.title}>Compare scans</Text>
-            <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
-          </View>
-          <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
-            <Ionicons name="close" size={26} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
           <Text style={styles.placeholderText}>Volyume Score comparison is hidden for now.</Text>
@@ -125,15 +128,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.title}>Compare scans</Text>
-          <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
-        </View>
-        <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close scan compare">
-          <Ionicons name="close" size={26} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      {renderHeader()}
 
       <ScrollView contentContainerStyle={styles.content}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>

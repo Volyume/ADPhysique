@@ -147,9 +147,9 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text style={styles.scanTitle}>Volyume Score results</Text>
+          <Text style={styles.scanTitle}>Score history</Text>
           <Text style={styles.scanSubtitle}>
-            Your private progress score. It compares repeatable front and back photo signals; it is not body fat percentage or a rating of your physique.
+            Private Volyume Score trend from repeatable photo sets. Not body fat.
           </Text>
         </View>
         <TouchableOpacity

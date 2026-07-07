@@ -317,7 +317,7 @@ export default function ProgressPhotoViewer({
       }
       : {
         buttonTitle: 'Delete',
-        message: 'Remove this photo from your device?',
+        message: 'Delete this photo from your device?',
       };
     appAlert(formatProgressPhotoDay(currentMeta.takenAt), deleteCopy.message, [
       { text: 'Cancel', style: 'cancel' },
