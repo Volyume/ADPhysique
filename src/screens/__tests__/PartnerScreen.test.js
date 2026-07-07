@@ -136,6 +136,18 @@ beforeEach(() => {
 });
 
 describe('load error state', () => {
+  test('renders a soft local-read notice without hiding the normal empty path', async () => {
+    const reload = jest.fn();
+    mockHook.value = base({ localReadIssue: true, reload });
+    const tree = await mount();
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Refreshing partner data');
+    expect(text).toContain('Your partner space is safe.');
+    expect(text).toContain('Train with a partner');
+    await press(tree, 'Refresh partner data');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   test('renders a retry surface instead of the empty invite pitch', async () => {
     const reload = jest.fn();
     mockHook.value = base({ error: true, reload });
@@ -182,17 +194,16 @@ describe('connected state: isolated pair cards', () => {
   test('active pairs show a support snapshot with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('What Sam can see');
-    expect(text).toContain('Private partner accountability.');
+    expect(text).toContain('Shared with Sam');
+    expect(text).toContain('Private accountability with one person.');
     expect(text).toContain('Shared');
-    expect(text).toContain('This week\'s training status');
-    expect(text).toContain('Your weekly sessions');
-    expect(text).toContain('One cheer a day');
-    expect(text).toContain('Chosen wins you approve');
-    expect(text).toContain('Shared block name');
+    expect(text).toContain('Weekly training status');
+    expect(text).toContain('Weekly sessions you set');
+    expect(text).toContain('One fixed cheer a day');
+    expect(text).toContain('Block label you approve');
     expect(text).toContain('Private');
-    expect(text).toContain('Workout weights, sets and reps');
-    expect(text).toContain('Food diary, coach notes and check-ins');
+    expect(text).toContain('Full workouts and lift numbers');
+    expect(text).toContain('Food, Coach and check-ins');
     expect(text).toContain('Body metrics and progress photos');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
     expect(text).toContain('Shared block label');
@@ -205,7 +216,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     const text = allText(tree).join(' ');
     expect(text).toContain('Weekly sessions');
-    expect(text).toContain('Optional: show the number of sessions you expect to train this week. It does not change Coach or your training plan.');
+    expect(text).toContain('Optional: share your rough training rhythm for this week. It does not assign workouts, change Coach, or judge the week.');
     expect(text).toContain('Sam set weekly sessions too.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
@@ -221,13 +232,13 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     let text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
-    expect(text).toContain('Send one workout, PR or progress card to Sam. You review the card before anything leaves.');
+    expect(text).toContain('Choose one workout, PR or progress update for Sam. You approve the exact preview first.');
 
     await press(tree, 'Share a win');
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Share a win');
-    expect(text).toContain('Pick one card. You review exactly what Sam sees before anything is sent.');
+    expect(text).toContain('Choose one win. You review exactly what Sam sees before anything is sent.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
@@ -478,7 +489,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'That partnership is no longer active. Refresh Partners and try again.',
+      'Volyume could not confirm this partnership online yet. Refresh Partners and try again.',
       { variant: 'error' },
     );
   });
@@ -559,7 +570,7 @@ describe('empty state', () => {
     // old pitch never said what the feature was or what a "signal" meant).
     expect(text).toContain('HOW IT WORKS');
     expect(text).toContain('You each see a simple weekly training status.');
-    expect(text).toContain('You can send one fixed cheer a day, or one reviewed win card when you choose.');
+    expect(text).toContain('You can send one fixed cheer a day, or one win you approve.');
     expect(text).toContain('Rest weeks never count as a miss.');
     expect(text).toContain('No feed, no followers, no public numbers.');
     // The word "signal" is gone from the pitch.

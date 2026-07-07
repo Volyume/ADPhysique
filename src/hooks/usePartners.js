@@ -39,7 +39,7 @@ const WEEK_MS = 7 * 86400000;
 const EMPTY = {
   loading: true, error: false, partnership: null, rowState: 'empty', partnerWeek: null,
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
-  sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, reload: () => {},
+  sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, localReadIssue: false, reload: () => {},
 };
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
@@ -292,6 +292,33 @@ async function safeEnrichPair(partnership, userId) {
   }
 }
 
+function applyOptimisticPairState(prev, {
+  partnership, optimisticPair, tier, activeCount, load,
+}) {
+  if (!partnership || !optimisticPair) return prev;
+  return {
+    ...prev,
+    loading: false,
+    error: false,
+    localReadIssue: false,
+    pairs: [
+      optimisticPair,
+      ...(prev.pairs || []).filter((pair) => pair.id !== optimisticPair.id),
+    ].sort((a, b) => (a.pairedAt || 0) - (b.pairedAt || 0)),
+    pendingInvite: null,
+    partnership,
+    rowState: optimisticPair.rowState,
+    partnerWeek: optimisticPair.partnerWeek,
+    myWeek: optimisticPair.myWeek,
+    sharedStreak: optimisticPair.sharedStreak,
+    lastReceived: optimisticPair.lastReceived,
+    sharedBlock: optimisticPair.sharedBlock,
+    cheerEnabled: optimisticPair.cheerEnabled,
+    canAdd: canAddPartner({ tier, activeCount: activeCount + 1 }),
+    reload: load,
+  };
+}
+
 export default function usePartners(userId, tier) {
   const [state, setState] = useState(EMPTY);
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
@@ -304,7 +331,7 @@ export default function usePartners(userId, tier) {
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
-    setState(prev => ({ ...prev, loading: silent ? prev.loading : true, error: false, reload: load }));
+    setState(prev => ({ ...prev, loading: silent ? prev.loading : true, error: false, localReadIssue: false, reload: load }));
     try {
       let partnerships = await readPartnershipsWithCloudRepair(userId);
       if (!isCurrentRequest()) return;
@@ -385,6 +412,7 @@ export default function usePartners(userId, tier) {
       setState({
         loading: false,
         error: false,
+        localReadIssue: false,
         pairs,
         pendingInvite,
         canAdd,
@@ -404,9 +432,9 @@ export default function usePartners(userId, tier) {
       setState((prev) => {
         const hasUsablePartnerState = (prev.pairs || []).length > 0 || !!prev.pendingInvite || !!prev.partnership;
         if (hasUsablePartnerState) {
-          return { ...prev, loading: false, error: false, reload: load };
+          return { ...prev, loading: false, error: false, localReadIssue: true, reload: load };
         }
-        return { ...EMPTY, loading: false, error: true, reload: load };
+        return { ...EMPTY, loading: false, error: false, localReadIssue: true, reload: load };
       });
     }
   }, [userId, tier]);
@@ -462,36 +490,23 @@ export default function usePartners(userId, tier) {
       clearCachedInvite();
       await clearPendingPartnerCode();
       await mirrorAcceptedPartnershipLocally(userId, r.data);
+      const optimisticPartnership = localActivePartnershipFromRedeem(userId, r.data);
+      const optimisticPair = minimalActivePair(optimisticPartnership, userId);
+      if (optimisticPartnership && optimisticPair) {
+        setState((prev) => applyOptimisticPairState(prev, {
+          partnership: optimisticPartnership,
+          optimisticPair,
+          tier,
+          activeCount,
+          load,
+        }));
+      }
       let visible = await isAcceptedPartnershipVisible(userId, r.data);
       if (!visible) {
         await pullPartnerMirrorNow(userId);
         visible = await waitForAcceptedPartnershipVisible(userId, r.data);
       }
       if (!visible) {
-        const optimisticPartnership = localActivePartnershipFromRedeem(userId, r.data);
-        const optimisticPair = minimalActivePair(optimisticPartnership, userId);
-        if (optimisticPair) {
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-            error: false,
-            pairs: [
-              optimisticPair,
-              ...(prev.pairs || []).filter((pair) => pair.id !== optimisticPair.id),
-            ].sort((a, b) => (a.pairedAt || 0) - (b.pairedAt || 0)),
-            pendingInvite: null,
-            partnership: optimisticPartnership,
-            rowState: optimisticPair.rowState,
-            partnerWeek: optimisticPair.partnerWeek,
-            myWeek: optimisticPair.myWeek,
-            sharedStreak: optimisticPair.sharedStreak,
-            lastReceived: optimisticPair.lastReceived,
-            sharedBlock: optimisticPair.sharedBlock,
-            cheerEnabled: optimisticPair.cheerEnabled,
-            canAdd: canAddPartner({ tier, activeCount: activeCount + 1 }),
-            reload: load,
-          }));
-        }
         pullPartnerMirrorNow(userId)
           .then(() => isAcceptedPartnershipVisible(userId, r.data))
           .then((visibleNow) => { if (visibleNow) load({ silent: true }); })

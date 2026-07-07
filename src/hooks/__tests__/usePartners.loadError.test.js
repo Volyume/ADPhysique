@@ -87,7 +87,7 @@ describe('usePartners load error state', () => {
     syncPartners.pullPartners.mockResolvedValue({ errors: 0 });
   });
 
-  test('failed local partnership reads surface as error, not empty', async () => {
+  test('failed first local partnership reads degrade to a soft refresh notice, not a hard error', async () => {
     db.getPartnershipsLocal.mockRejectedValue(new Error('offline'));
     const ref = {};
     function Probe() {
@@ -99,7 +99,8 @@ describe('usePartners load error state', () => {
     await flush();
 
     expect(ref.loading).toBe(false);
-    expect(ref.error).toBe(true);
+    expect(ref.error).toBe(false);
+    expect(ref.localReadIssue).toBe(true);
     expect(ref.rowState).toBe('empty');
     expect(typeof ref.reload).toBe('function');
   });
@@ -230,6 +231,7 @@ describe('usePartners load error state', () => {
 
     expect(ref.loading).toBe(false);
     expect(ref.error).toBe(false);
+    expect(ref.localReadIssue).toBe(true);
     expect(ref.pairs).toHaveLength(1);
     expect(ref.pairs[0]).toEqual(expect.objectContaining({ id: 'pair1', partnerFirstName: 'Sam' }));
   });

@@ -11,12 +11,12 @@ describe('partner accountability copy', () => {
   test('starts with a calm aim when the user has not set one', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
     expect(plan.title).toBe('Partner week with Sam');
-    expect(plan.headline).toBe('Set your weekly sessions. Sam sees the number only, never your plan.');
+    expect(plan.headline).toBe("Set this week's sessions. Sam sees the number only, never your plan.");
     expect(plan.primaryAction).toMatchObject({ key: 'set_aim', label: 'Set weekly sessions' });
     expect(plan.steps.find((step) => step.key === 'aim')).toMatchObject({
       label: 'Your weekly sessions',
       state: 'Not set',
-      copy: 'Choose your weekly sessions. Sam sees only that number.',
+      copy: 'Choose the number for this week. Sam sees only that number.',
     });
     expect(plan.steps.find((step) => step.key === 'partner_aim')).toMatchObject({
       label: "Sam's weekly sessions",
@@ -36,16 +36,16 @@ describe('partner accountability copy', () => {
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       label: 'Optional sharing',
       state: 'Optional',
-      copy: 'Cheers are fixed. Win cards ask every time.',
+      copy: 'Cheers are fixed. Wins ask every time.',
     });
   });
 
   test('falls back to win preview when cheer is already sent', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, cheerEnabled: false }, 'Sam');
-    expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Choose one win' });
+    expect(plan.primaryAction).toMatchObject({ key: 'share_wins', label: 'Choose a win' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       state: 'Optional',
-      copy: 'Today\'s cheer is sent. Win cards still ask before anything is sent.',
+      copy: 'Today\'s cheer is sent. Wins still ask before anything is sent.',
     });
   });
 
@@ -56,9 +56,9 @@ describe('partner accountability copy', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('Choose one win for Sam only when you want to. You check the card before it is sent.');
+    expect(plan.headline).toBe('Choose one win for Sam only when you want to. You approve the exact preview first.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Only weekly training status, your weekly sessions, fixed cheers and approved win cards are shared.');
+    expect(copy).toContain('Only weekly training status, weekly sessions you set, fixed cheers and wins you approve are shared.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
   });
 });
