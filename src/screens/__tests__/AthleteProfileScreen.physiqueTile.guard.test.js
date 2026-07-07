@@ -10,6 +10,8 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/function shouldShowPhysiqueScore\(\{ scan, bodyFat, bodyFatLoggedAt \}\)/);
     expect(source).toMatch(/function physiqueScoreTileValue\(scan\)/);
     expect(source).toMatch(/function physiqueScoreTileSub\(scan\)/);
+    expect(source).toMatch(/progressScanAssessmentForDisplay/);
+    expect(source).toMatch(/progressScanScoreForDisplay/);
     expect(source).toMatch(/const showPhysiqueScore = shouldShowPhysiqueScore\(\{/);
     expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
     expect(source).toMatch(/label: 'Volyume Score'/);
@@ -19,6 +21,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
     expect(source).toMatch(/value: physiqueScoreTileValue\(summary\.scan\)/);
     expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);
+    expect(source).not.toMatch(/const score = Number\(scan\?\.visualLeannessScore\)/);
     expect(source).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/weightLoggedAt/);

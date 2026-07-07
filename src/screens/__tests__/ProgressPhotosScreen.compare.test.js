@@ -482,7 +482,7 @@ describe('ProgressPhotosScreen compare entry', () => {
     const tree = await render([late, early], { scans });
     const cardText = JSON.stringify(checkInFor(tree, late));
 
-    expect(cardText).toContain('"children":"Score"');
+    expect(cardText).toContain('"children":"Volyume Score"');
     expect(cardText).toContain('"children":"88/100"');
     expect(cardText).not.toContain('"children":"22/100"');
   });

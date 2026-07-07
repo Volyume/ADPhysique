@@ -3,7 +3,7 @@
  *
  * The standard header for pushed / modal screens: a back chevron on the
  * left, the screen title, and an optional action on the right. Top-level
- * tab screens use ScreenHeader (title + Volyume wordmark) instead; this
+ * tab screens use ScreenHeader (title + compact Volyume V) instead; this
  * is its sibling for everything you navigate INTO.
  *
  * Extracted to kill ~16 hand-rolled copies that had drifted apart (some

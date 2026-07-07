@@ -841,7 +841,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!suggestions.length) {
       return (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>No suggestions ready for this slot. Try search, or build meals from your targets.</Text>
+          <Text style={styles.emptyText}>No suggestions ready for this meal. Try search, or build meals from your targets.</Text>
         </View>
       );
     }

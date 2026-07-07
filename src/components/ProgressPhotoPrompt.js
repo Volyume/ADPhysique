@@ -36,7 +36,9 @@ import Card from './Card';
 import Button from './Button';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, fontSize, fontWeight, withAlpha, circle } from '../styles/theme';
+import {
+  colors, spacing, fontSize, fontWeight, withAlpha, circle, radius,
+} from '../styles/theme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
 import { logError } from '../lib/errorLog';
@@ -203,6 +205,7 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
         accessibilityLabel="Don't ask again"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
+        <Ionicons name="notifications-off-outline" size={14} color={colors.textMuted} />
         <Text style={styles.optOutText}>Don&apos;t ask again</Text>
       </TouchableOpacity>
     </Card>
@@ -250,9 +253,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     alignSelf: 'center',
     marginTop: spacing.md,
-    paddingVertical: spacing.xxs,
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
   },
   optOutText: {
     fontSize: fontSize.xs,

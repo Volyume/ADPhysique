@@ -116,6 +116,27 @@ function cheerFailureMessage(error) {
   return 'Could not send that cheer. Open Partners again and try once more.';
 }
 
+function partnerWinFailureMessage(error, action = 'share') {
+  if (error === 'win_cards_unavailable') {
+    return 'Partner win sharing needs the latest cloud update.';
+  }
+  if (error === 'not_active') {
+    return 'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.';
+  }
+  if (error === 'partner_syncing') {
+    return 'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.';
+  }
+  if (error === 'partner_auth_required') {
+    return 'Volyume could not confirm this partner session. Refresh Partners, then try again.';
+  }
+  if (error === 'offline') {
+    return 'Volyume could not reach Partners just now. Try again when your connection is back.';
+  }
+  return action === 'delete'
+    ? 'Could not delete that win right now. Open Partners again and try once more.'
+    : 'Could not share that win right now. Open Partners again and try once more.';
+}
+
 // ── Small motion helpers (Reanimated, reduce-motion aware) ──
 
 function EntranceView({ children, duration, style }) {
@@ -306,9 +327,11 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
                 <TouchableOpacity
                   onPress={() => onRevoke(card)}
                   hitSlop={hitSlop}
+                  style={styles.partnerWinDeleteButton}
                   accessibilityRole="button"
                   accessibilityLabel={`Delete shared win ${card.title}`}
                 >
+                  <Ionicons name="trash-outline" size={iconSize.sm} color={colors.primary} />
                   <Text style={styles.partnerWinDelete}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
@@ -823,11 +846,7 @@ export default function PartnerScreen({ route }) {
       toast.show('Win shared with your partner', { variant: 'success' });
       return r;
     }
-    if (r?.error === 'win_cards_unavailable') {
-      toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
-    } else {
-      toast.show('Could not share that win right now. Open Partners again and try once more.', { variant: 'error' });
-    }
+    toast.show(partnerWinFailureMessage(r?.error, 'share'), { variant: r?.error === 'partner_syncing' ? 'warning' : 'error' });
     return r;
   }
 
@@ -836,10 +855,8 @@ export default function PartnerScreen({ route }) {
     const r = await p.revokeWin(card.id, card.pairId || card.pair_id || shareWinsPair?.id || null);
     if (r?.ok) {
       toast.show('Shared win deleted', { variant: 'success' });
-    } else if (r?.error === 'win_cards_unavailable') {
-      toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
     } else {
-      toast.show('Could not delete that win right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show(partnerWinFailureMessage(r?.error, 'delete'), { variant: r?.error === 'partner_syncing' ? 'warning' : 'error' });
     }
   }
 
@@ -1734,6 +1751,17 @@ const styles = StyleSheet.create({
   },
   partnerWinTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   partnerWinMeta: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  partnerWinDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+  },
   partnerWinDelete: { ...type.label, color: colors.primary },
   partnerWinTitle: { ...type.label, color: colors.textPrimary },
   partnerWinSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },

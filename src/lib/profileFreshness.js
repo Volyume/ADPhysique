@@ -45,17 +45,17 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
       ),
     },
     progressScan: {
-      state: stateForAge(scanDays, 28, 21),
+      state: stateForAge(scanDays, 7, 6),
       days: scanDays,
       label: 'Progress photos',
       sub: copyForAge(
         scanDays,
         {
           today: 'Indexed today. Retake only if you are correcting photo quality.',
-          yesterday: 'Indexed yesterday. Keep the next photo set 2 to 4 weeks away unless you are correcting quality.',
-          days: (days, soon, due) => days >= 28 ? due(days) : days >= 21 ? soon(days) : `Last indexed ${days} days ago. Keep the next photos comparable.`,
+          yesterday: 'Indexed yesterday. Keep the next photo set about a week away unless you are correcting quality.',
+          days: (days, soon, due) => days >= 7 ? due(days) : days >= 6 ? soon(days) : `Last indexed ${days} days ago. Keep the next photos comparable.`,
         },
-        (days) => `Last indexed ${days} days ago. Plan your next comparable photos soon.`,
+        (days) => `Last indexed ${days} days ago. Plan your next comparable photos this week.`,
         (days) => `Last indexed ${days} days ago. Retake when light, pose and timing are consistent.`,
         'No Volyume Score yet. Start with consistent front and back photos. Side is optional.',
       ),

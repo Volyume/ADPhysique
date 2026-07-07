@@ -227,7 +227,7 @@ export function buildProgressStudioHowItWorksCopy() {
     'Volyume Score is our own private visual progress score. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate or a rating of your physique.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
-    'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',
+    'Use progress photos about once a week. Retake sooner only when you are fixing a poor photo set.',
   ].join('\n\n');
 }
 

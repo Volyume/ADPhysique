@@ -16,10 +16,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
     expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(SCREEN).toMatch(/function libraryScanSummary\(scan\)/);
-    expect(SCREEN).toMatch(/label: 'Score'/);
+    expect(SCREEN).toMatch(/label: 'Volyume Score'/);
     expect(SCREEN).toMatch(/label: 'Leanness'/);
     expect(SCREEN).toMatch(/label: 'Signal'/);
-    expect(SCREEN).not.toMatch(/Latest scan/);
+    expect(SCREEN).not.toMatch(/Latest scan|Latest score/);
   });
 
   test('has trend-only display preference and one-week scan cadence', () => {
@@ -27,10 +27,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/setProgressScanHideExactPreference/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*7 \* 86400000/);
     expect(SCREEN).toMatch(/Leave more time between photo sets/);
+    expect(SCREEN).toMatch(/about a week apart/);
+    expect(SCREEN).toMatch(/retake sooner when you are fixing photo quality/);
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/Volyume Score may be less useful/);
     expect(SCREEN).toMatch(/without forcing a Volyume Score/);
-    expect(SCREEN).not.toMatch(/at least a week apart/);
+    expect(SCREEN).not.toMatch(/at least a week apart|at least 1 week apart/);
   });
 
   test('scan entries expose stored poses/photos through the existing full-size viewer', () => {
@@ -165,6 +167,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/const captureRouteActionRef = useRef\(false\);/);
     expect(SCREEN).toMatch(/const progressScanOpeningRef = useRef\(false\);/);
     expect(SCREEN).toMatch(/if \(progressScanOpeningRef\.current\) return;/);
+    expect(SCREEN).toMatch(/if \(scanDateOpen \|\| scanDatePickerOpen \|\| scanFlow \|\| progressScanOpeningRef\.current\) return;/);
     expect(SCREEN).toMatch(/if \(!route \|\| route\.disabled \|\| !canWrite\(\) \|\| captureRouteActionRef\.current\) return;/);
     expect(SCREEN).toMatch(/await openProgressScan\('guided'\);/);
     expect(SCREEN).toMatch(/const scanByPhotoName = useMemo/);

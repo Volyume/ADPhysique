@@ -290,6 +290,25 @@ describe('connected state: isolated pair cards', () => {
     );
   });
 
+  test('win sharing stale partnership state is a sync warning, not a connection error', async () => {
+    const hook = base({
+      pairs: [pair()],
+      shareWin: jest.fn(async () => ({ ok: false, error: 'partner_syncing' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Share a win');
+    await press(tree, 'Send workout complete to Sam');
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      { variant: 'warning' },
+    );
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.stringMatching(/connection|internet/i),
+      expect.anything(),
+    );
+  });
+
   test('renders sent win cards with sender delete control', async () => {
     const hook = base({
       pairs: [pair({
@@ -333,6 +352,35 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     await press(tree, 'Delete shared win Personal record');
     expect(mockToastShow).toHaveBeenCalledWith('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.stringMatching(/connection|internet/i),
+      expect.anything(),
+    );
+  });
+
+  test('win delete stale partnership state is a sync warning, not a connection error', async () => {
+    const hook = base({
+      pairs: [pair({
+        winCards: [{
+          id: 'win1',
+          pairId: 'p1',
+          senderId: 'u1',
+          cardType: 'personal_record',
+          title: 'Personal record',
+          summary: 'Bench press: New rep best.',
+          detail: 'Only this chosen record is shared. Wider lift history stays private.',
+          createdAt: Date.UTC(2026, 6, 6),
+        }],
+      })],
+      revokeWin: jest.fn(async () => ({ ok: false, error: 'partner_syncing' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Delete shared win Personal record');
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      { variant: 'warning' },
+    );
     expect(mockToastShow).not.toHaveBeenCalledWith(
       expect.stringMatching(/connection|internet/i),
       expect.anything(),

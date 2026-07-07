@@ -49,7 +49,7 @@ import ProSetupCompleteScreen from '../ProSetupCompleteScreen';
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'ProSetupCompleteScreen.js'), 'utf8');
 const FALLBACK_COPY = 'At the end of your training week, review how it went.';
-const DATED_COPY = 'Keep logging your morning weight. Your first coaching decision lands on Sunday 12 July';
+const DATED_COPY = 'Keep logging your morning weight. Your first weekly check-in opens on Sunday 12 July';
 
 const store = {
   user: { id: 'u1' },
@@ -116,11 +116,12 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(text).not.toContain(DATED_COPY);
   });
 
-  test('a healthy non-flagged read can still show the dated first coaching decision copy', async () => {
+  test('a healthy non-flagged read can still show the dated first weekly check-in copy', async () => {
     const text = await renderScreen();
 
     expect(text).toContain(DATED_COPY);
     expect(text).not.toContain(FALLBACK_COPY);
+    expect(SOURCE).not.toContain('first coaching decision lands');
   });
 
   test('training split details start collapsed so the reveal stays scannable', () => {

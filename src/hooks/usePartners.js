@@ -584,6 +584,14 @@ export default function usePartners(userId, tier) {
       const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
         r = await sendPartnerWinCard(userId, { pairId, preview });
+      } else {
+        if (BACKGROUND_MIRROR_RETRY_ENABLED) {
+          pullPartnerMirrorNow(userId)
+            .then(() => waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId }))
+            .then((visibleNow) => { if (visibleNow) load({ silent: true }); })
+            .catch(() => {});
+        }
+        r = { ok: false, error: 'partner_syncing' };
       }
     }
     if (r.ok && r.data) {
@@ -600,6 +608,14 @@ export default function usePartners(userId, tier) {
       const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
         r = await revokePartnerWinCard(userId, { cardId });
+      } else {
+        if (BACKGROUND_MIRROR_RETRY_ENABLED) {
+          pullPartnerMirrorNow(userId)
+            .then(() => waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId }))
+            .then((visibleNow) => { if (visibleNow) load({ silent: true }); })
+            .catch(() => {});
+        }
+        r = { ok: false, error: 'partner_syncing' };
       }
     }
     if (r.ok && r.data) {

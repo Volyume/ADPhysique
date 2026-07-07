@@ -50,6 +50,8 @@ describe('progress capture guide copy', () => {
     expect(how).toContain('Volyume Score is our own private visual progress score');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
+    expect(how).toContain('about once a week');
+    expect(how).not.toContain('every couple of weeks');
   });
 
   test('builds action-first photo-set routes for capture and import', () => {

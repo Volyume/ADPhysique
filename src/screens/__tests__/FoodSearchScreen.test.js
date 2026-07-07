@@ -195,6 +195,11 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/label: 'My recipes'/);
     expect(SCREEN_SOURCE).not.toMatch(/label: 'My meals'/);
   });
+
+  test('suggested empty copy uses meal wording, not internal slot jargon', () => {
+    expect(SCREEN_SOURCE).toContain('No suggestions ready for this meal');
+    expect(SCREEN_SOURCE).not.toContain('No suggestions ready for this slot');
+  });
 });
 
 describe('FoodSearchScreen confirmLog (A2)', () => {
