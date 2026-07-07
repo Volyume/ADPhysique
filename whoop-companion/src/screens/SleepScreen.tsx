@@ -235,7 +235,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         {capture ? (
           <>
             <View style={styles.grid}>
-              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={capture.coveragePct >= 60 ? colors.recoveryGreen : colors.recoveryYellow} />
+              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={coverageColor(capture.coveragePct)} />
               <Stat label="R-R beats" value={capture.rrCount} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
@@ -991,6 +991,12 @@ function confidenceLabel(confidence: 'high' | 'medium' | 'low'): string {
 function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
   if (confidence === 'high') return colors.recoveryGreen;
   if (confidence === 'medium') return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function coverageColor(coveragePct: number): string {
+  if (coveragePct >= 80) return colors.recoveryGreen;
+  if (coveragePct >= 60) return colors.recoveryYellow;
   return colors.recoveryRed;
 }
 
