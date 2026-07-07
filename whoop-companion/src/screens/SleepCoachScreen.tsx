@@ -101,6 +101,12 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const lastSleepPerformancePct = displayPct(
     sleepPerformance?.score ?? today?.sleepDetail?.performance ?? (lastSleep?.performance != null ? lastSleep.performance * 100 : null),
   );
+  const alarmArmed = strapAlarm.enabled || strapAlarm.pendingWrite === 'set';
+  const alarmMatchesWakeTarget =
+    alarmArmed &&
+    strapAlarm.wakeTs != null &&
+    strapAlarm.wakeTs > Date.now() + 30 * 1000 &&
+    Math.abs(strapAlarm.wakeTs - nextWakeTs) <= 2 * 60 * 1000;
   const recommendation = goalRecommendation({
     readinessScore: readiness?.score ?? null,
     recovery: today?.recovery ?? null,
@@ -109,17 +115,24 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     currentGoal: goal,
   });
   const alarmMeta =
-    strapAlarm.pendingWrite === 'set'
-      ? `Queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
-      : strapAlarm.pendingWrite === 'disable'
-        ? 'Disable queued for next connection'
-        : strapAlarm.enabled
-          ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}`
-          : 'Off on this app';
+    alarmArmed && !alarmMatchesWakeTarget
+      ? `Needs update for ${fmtClock(wakeMin)}`
+      : strapAlarm.pendingWrite === 'set'
+        ? `Queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
+        : strapAlarm.pendingWrite === 'disable'
+          ? 'Disable queued for next connection'
+          : strapAlarm.enabled
+            ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}`
+            : 'Off on this app';
+  const alarmActionTitle = alarmMatchesWakeTarget
+    ? `${connected ? 'Re-arm' : 'Queue'} latest alarm for ${fmtClock(wakeMin)}`
+    : `${connected ? 'Set' : 'Queue'} latest alarm for ${fmtClock(wakeMin)}`;
   const checklist = tonightChecklist({
     connected,
     keepAlive,
-    alarmEnabled: strapAlarm.enabled || strapAlarm.pendingWrite === 'set',
+    alarmArmed,
+    alarmMatchesWakeTarget,
+    wakeMin,
     targetMin,
     tibNeededMin,
     sleepDebtMin: need?.debtMin ?? 0,
@@ -303,7 +316,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           ))}
         </View>
         <PrimaryButton
-          title={alarmBusy === 'set' ? (connected ? 'Setting...' : 'Queueing...') : `${connected ? 'Set' : 'Queue'} latest alarm for ${fmtClock(wakeMin)}`}
+          title={alarmBusy === 'set' ? (connected ? 'Setting...' : 'Queueing...') : alarmActionTitle}
           onPress={() => void setWakeAlarm()}
           disabled={!!alarmBusy}
         />
@@ -439,7 +452,9 @@ type ChecklistItem = {
 function tonightChecklist(input: {
   connected: boolean;
   keepAlive: boolean;
-  alarmEnabled: boolean;
+  alarmArmed: boolean;
+  alarmMatchesWakeTarget: boolean;
+  wakeMin: number;
   targetMin: number;
   tibNeededMin: number;
   sleepDebtMin: number;
@@ -468,12 +483,14 @@ function tonightChecklist(input: {
     },
     {
       label: 'Wake alarm',
-      detail: input.alarmEnabled
-        ? 'A strap haptic wake-up is armed or queued.'
+      detail: input.alarmMatchesWakeTarget
+        ? `Strap haptic fallback matches the ${fmtClock(input.wakeMin)} wake target.`
+        : input.alarmArmed
+          ? `A strap alarm exists, but it does not match the current ${fmtClock(input.wakeMin)} wake target.`
         : 'Set a strap alarm if you want a reliable haptic fallback.',
-      state: input.alarmEnabled ? 'Armed' : 'Set',
-      icon: input.alarmEnabled ? 'alarm' : 'alarm-outline',
-      color: input.alarmEnabled ? colors.sleepTeal : colors.recoveryYellow,
+      state: input.alarmMatchesWakeTarget ? 'Ready' : input.alarmArmed ? 'Update' : 'Set',
+      icon: input.alarmMatchesWakeTarget ? 'alarm' : 'alarm-outline',
+      color: input.alarmMatchesWakeTarget ? colors.sleepTeal : colors.recoveryYellow,
     },
     {
       label: 'Sleep target',
