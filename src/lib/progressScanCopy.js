@@ -15,13 +15,13 @@ export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {
   if (suppressed) return 'Photo set saved privately. Score details are hidden right now.';
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume Physique Score ${Math.round(Number(assessment.visualLeannessScore))}/100`;
+    const score = `Volyume visual index ${Math.round(Number(assessment.visualLeannessScore))}`;
     const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
     const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
     if (hideExact) {
       return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden. This is not a body fat percentage.`;
     }
-    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual progress score, not a body fat percentage.']
+    return [score, band, confidence, `Progress Signal: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'This is a visual index for like-for-like progress, not a body fat percentage.']
       .filter(Boolean)
       .join('. ');
   }

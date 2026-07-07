@@ -28,7 +28,9 @@ function assessmentFor(scan) {
 function scanReasons(scan) {
   return new Set([
     ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
+    ...(Array.isArray(scan?.qualityWarnings) ? scan.qualityWarnings : []),
     ...(Array.isArray(scan?.signals?.abstentionReasons) ? scan.signals.abstentionReasons : []),
+    ...(Array.isArray(scan?.signals?.qualityWarnings) ? scan.signals.qualityWarnings : []),
   ].filter(Boolean));
 }
 
@@ -43,6 +45,7 @@ function unscoredState(scan) {
   if ([...reasons].some((reason) => MODEL_UNAVAILABLE_REASONS.has(reason))) return 'analysis_unavailable';
   if ([...reasons].some((reason) => QUALITY_REASONS.has(reason))) return 'retake_needed';
   if (assessmentFor(scan)?.scanConfidenceTier === 'not_enough') return 'not_enough';
+  if (scan?.analysisStatus === 'measured') return 'measured_only';
   if (scan?.analysisStatus === 'abstained') return 'not_scored';
   return null;
 }
@@ -58,13 +61,16 @@ function confidenceLabel(scan) {
   if (state === 'analysis_unavailable') return 'Analysis unavailable';
   if (state === 'retake_needed') return 'Retake needed';
   if (state === 'not_enough') return 'Not enough confidence';
+  if (state === 'measured_only') return 'Measured only';
   if (state === 'not_scored') return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.scanConfidenceLabel || scan?.qualityLabel || 'Saved';
 }
 
 function bandLabel(scan) {
-  if (unscoredState(scan)) return 'Not scored';
+  const state = unscoredState(scan);
+  if (state === 'measured_only') return 'Measured only';
+  if (state) return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.leannessBandLabel || 'Baseline';
 }
@@ -74,6 +80,7 @@ function signalLabel(scan, { suppressed = false } = {}) {
   const state = unscoredState(scan);
   if (state === 'analysis_unavailable') return 'Analysis unavailable';
   if (state === 'retake_needed') return 'Retake needed';
+  if (state === 'measured_only') return 'Measured only';
   if (state) return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || 'Baseline scan';
@@ -83,7 +90,7 @@ function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
   const score = scanScore(scan);
   if (suppressed) return 'Hidden';
   if (hideExact) return 'Hidden';
-  return score != null ? `${Math.round(score)}/100` : 'Not scored';
+  return score != null ? `${Math.round(score)} index` : 'Not scored';
 }
 
 function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
@@ -103,6 +110,9 @@ function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   }
   if (state === 'not_enough' || state === 'not_scored') {
     return scan?.copySummary || 'The photos are saved, but Volyume did not create a score from this set.';
+  }
+  if (state === 'measured_only') {
+    return scan?.copySummary || 'The photos were measured as visual scan context, but Volyume did not create a score from this set.';
   }
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
@@ -125,9 +135,9 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text style={styles.scanTitle}>Physique Score results</Text>
+          <Text style={styles.scanTitle}>Visual index results</Text>
           <Text style={styles.scanSubtitle}>
-            Volyume's visual progress score from your private photo sets. It shows a leanness band, confidence and trend, not body fat percentage.
+            Volyume's visual index from your private photo sets. It shows a leanness band, confidence and trend, not body fat percentage.
           </Text>
         </View>
         <TouchableOpacity
@@ -153,7 +163,7 @@ export default function ProgressScanHistoryCard({
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
                 <Text style={styles.scanDate}>{dateLabel}</Text>
-                <Text style={styles.scanEntryTitle}>Score for this set</Text>
+                <Text style={styles.scanEntryTitle}>Index for this set</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={styles.confidencePill}>
@@ -184,7 +194,7 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Volyume score</Text>
+                <Text style={styles.scanInsightLabel}>Visual index</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>

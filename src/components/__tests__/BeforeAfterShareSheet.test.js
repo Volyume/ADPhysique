@@ -192,7 +192,7 @@ describe('buildBeforeAfterParams', () => {
 
   test('scan score is included only when a scan has a physique assessment', () => {
     expect(formatShareScanRange({ estimateRangeLow: 10, estimateRangeHigh: 23.6 })).toBe('');
-    expect(formatShareScanRange(scoredScan(66))).toBe('Lean 66/100');
+    expect(formatShareScanRange(scoredScan(66))).toBe('Lean index 66');
     expect(formatShareScanRange({ analysisStatus: 'measured' })).toBe('');
     const p = buildBeforeAfterParams({
       olderTakenAt: older,
@@ -201,8 +201,8 @@ describe('buildBeforeAfterParams', () => {
       newerScan: scoredScan(66, 'Lean'),
       showWeight: false,
     });
-    expect(p.before.scanRange).toBe('Defined 54/100');
-    expect(p.after.scanRange).toBe('Lean 66/100');
+    expect(p.before.scanRange).toBe('Defined index 54');
+    expect(p.after.scanRange).toBe('Lean index 66');
     expect(p.before.weight).toBe('');
     expect(p.after.weight).toBe('');
   });
@@ -246,8 +246,8 @@ describe('buildProgressCardSharePayload', () => {
   test('summarises only receipt-level details for partner preview', () => {
     const payload = buildProgressCardSharePayload({
       aspect: 'portrait',
-      before: { date: '5 Jan 2026', weight: '', scanRange: 'Defined 54/100' },
-      after: { date: '20 Jun 2026', weight: '', scanRange: 'Lean 66/100' },
+      before: { date: '5 Jan 2026', weight: '', scanRange: 'Defined index 54' },
+      after: { date: '20 Jun 2026', weight: '', scanRange: 'Lean index 66' },
     });
     expect(payload).toEqual({
       label: 'Progress Photos card',

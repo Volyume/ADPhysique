@@ -300,18 +300,18 @@ export default function AthleteProfileScreen({ navigation }) {
     bodyFatLoggedAt: summary.bodyFatLoggedAt,
   });
   const physiqueTile = showPhysiqueScore ? {
-    label: 'Physique score',
+    label: 'Visual index',
     value: [
       summary.scan?.leannessBandLabel || null,
-      `${Math.round(summary.scan.visualLeannessScore)}/100`,
+      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `${Math.round(summary.scan.visualLeannessScore)} index`,
     ].filter(Boolean).join(' - '),
-    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Visual progress, not body fat.`,
+    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Like-for-like progress, not body fat.`,
   } : {
     label: 'Body fat',
     value: bodyFatText,
     sub: summary.bodyFatLoggedAt
       ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry`
-      : 'Shown until your first private photo score.',
+      : 'Shown until your first private visual index.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;

@@ -20,6 +20,22 @@ const FINAL_SCAN_QUALITY_GATES = {
   tiltDegrees: 20,
 };
 
+const SCORE_WITHHOLD_REASONS = new Set([
+  'missing_required_pose',
+  'model_unavailable',
+  'measured_signals_incomplete',
+  'no_person_detected',
+  'native_preprocess_unavailable',
+  'native_preprocess_shape_unusable',
+  'mask_shape_unusable',
+  'too_dark',
+  'too_blurry',
+  'whole_body_not_visible',
+  'multiple_people',
+  'pose_not_clear',
+  'estimate_out_of_range',
+]);
+
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
   { key: 'foundation', label: 'Foundation', min: 0, max: 19 },
   { key: 'active', label: 'Active', min: 20, max: 34 },
@@ -385,6 +401,10 @@ function confidenceTier(score, { measuredScoreReady = false } = {}) {
   return 'not_enough';
 }
 
+function reasonsThatWithholdScore(reasons = []) {
+  return (reasons || []).filter((reason) => SCORE_WITHHOLD_REASONS.has(canonicalReason(reason)));
+}
+
 export function scanConfidenceLabel(tier) {
   return SCAN_CONFIDENCE_COPY[tier] || SCAN_CONFIDENCE_COPY.unknown;
 }
@@ -562,14 +582,17 @@ export function buildPhysiqueAssessment({
 
 function progressScanAssessmentCopy(assessment = null) {
   if (!assessment) return 'Physique Scan saved. I could not read enough from the photos for a useful scan result.';
-  if (assessment.scanConfidenceTier === 'not_enough' || assessment.visualLeannessScore == null) {
+  if (assessment.visualLeannessScore == null) {
     return 'Physique Scan saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
-  const score = `${assessment.visualLeannessScore}/100`;
+  const score = `${assessment.visualLeannessScore}`;
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
-  return `Volyume Physique Score ${score}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual progress score, not a body fat percentage.`;
+  const prefix = assessment.progressSignal === 'baseline'
+    ? `Baseline visual index ${score}`
+    : `Volyume visual index ${score}`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a visual index for like-for-like progress, not a body fat percentage.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -821,11 +844,11 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignal = progressSignalFromDelta(delta, pairConfidenceTier);
     trendMagnitudePctPoints = progressSignal.signal === 'inconclusive' ? null : Math.abs(delta);
     if (progressSignal.signal === 'holding_steady') {
-      lines.push('Volyume Physique Score is broadly level against the last like-for-like scan.');
+      lines.push('Volyume visual index is broadly level against the last like-for-like scan.');
     } else if (progressSignal.signal === 'inconclusive') {
-      lines.push(`Volyume Physique Score changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
+      lines.push(`Volyume visual index changed by ${Math.abs(delta)} points, but scan confidence was low, so Volyume is not calling a progress trend from this pair.`);
     } else {
-      lines.push(`Volyume Physique Score is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
+      lines.push(`Volyume visual index is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)} points from the last like-for-like scan.`);
       trendVotes.push(delta > 0 ? 'leaner' : 'softer');
     }
   }
@@ -1151,9 +1174,11 @@ export function analyseProgressScan({
     modelEstimate: resolvedModelEstimate,
     previousScan,
   });
+  const withholdingReasons = reasonsThatWithholdScore(reasons);
+  const softQualityWarnings = reasons.filter((reason) => !withholdingReasons.includes(reason));
 
-  if (reasons.length > 0) {
-    const modelUnavailable = reasons.includes('model_unavailable');
+  if (withholdingReasons.length > 0) {
+    const modelUnavailable = withholdingReasons.includes('model_unavailable');
     return {
       analysisStatus: 'abstained',
       qualityScore: quality.score,
@@ -1177,7 +1202,8 @@ export function analyseProgressScan({
           ? 'On-device scan analysis was not available for the required photos.'
           : 'The scan quality was not strong enough for a useful measured trend.',
       },
-      abstentionReasons: reasons,
+      abstentionReasons: withholdingReasons,
+      qualityWarnings: softQualityWarnings,
       biasFlags,
       copySummary: modelUnavailable
         ? 'The scan was saved, but on-device analysis was not available for the required photos.'
@@ -1200,6 +1226,7 @@ export function analyseProgressScan({
           ? { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This scan needs a like-for-like previous scan before a trend is shown.' }
           : { direction: 'uncertain', magnitudePctPoints: null, explanation: 'This is your baseline scan.' },
         abstentionReasons: [],
+        qualityWarnings: softQualityWarnings,
         biasFlags,
         copySummary: hasScore ? progressScanAssessmentCopy(physiqueAssessment) : estimatorUnavailableCopy({
           assets, sex, heightCm, weightKg,
@@ -1264,6 +1291,7 @@ export function analyseProgressScan({
     physiqueAssessment,
     trend,
     abstentionReasons: [],
+    qualityWarnings: softQualityWarnings,
     biasFlags,
     copySummary: progressScanAssessmentCopy(physiqueAssessment),
   };

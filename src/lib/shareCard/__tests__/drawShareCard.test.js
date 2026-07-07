@@ -105,8 +105,8 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
   const BA_PARAMS = {
     cardType: 'beforeAfter',
     elapsedLabel: '14 weeks',
-    before: { date: '3 Mar 2026', scanRange: 'Defined 54/100', weight: '82.4 kg' },
-    after: { date: '9 Jun 2026', scanRange: 'Lean 66/100', weight: '78.1 kg' },
+    before: { date: '3 Mar 2026', scanRange: 'Defined index 54', weight: '82.4 kg' },
+    after: { date: '9 Jun 2026', scanRange: 'Lean index 66', weight: '78.1 kg' },
   };
 
   test.each([

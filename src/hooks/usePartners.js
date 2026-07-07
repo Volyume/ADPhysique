@@ -506,8 +506,7 @@ export default function usePartners(userId, tier) {
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
     let r = await sendCheer(userId, { pairId, kind, reciprocal });
     if (!r?.ok && shouldRetryCheerAfterMirrorRefresh(r?.error)) {
-      await pullPartnerMirrorNow(userId);
-      const visible = await isAcceptedPartnershipVisible(userId, { partnershipId: pairId });
+      const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
         r = await sendCheer(userId, { pairId, kind, reciprocal });
       }

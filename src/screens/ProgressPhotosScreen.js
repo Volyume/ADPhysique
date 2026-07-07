@@ -544,7 +544,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the Physique Score may be less useful.', [
+      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the visual index may be less useful.', [
         { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -610,7 +610,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
-      toast.show('The photo set was saved, but the Physique Score could not finish.', { variant: 'warning' });
+      toast.show('The photo set was saved, but the visual index could not finish.', { variant: 'warning' });
     }
   }
 
@@ -743,7 +743,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function deleteScanEntry(scan) {
     if (!userId || !scan?.id || readOnly) return;
-    appAlert('Delete photo set?', 'This removes every photo in this set, plus its saved Physique Score, from this device.', [
+    appAlert('Delete photo set?', 'This removes every photo in this set, plus its saved visual index, from this device.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete set',
@@ -971,7 +971,12 @@ export default function ProgressPhotosScreen({ navigation }) {
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.visualLeannessScore != null
-      ? (hideExactScans ? (latestAssessment.leannessBandLabel || 'Saved') : `${roundedScore(latestAssessment.visualLeannessScore)}/100`)
+      ? (hideExactScans
+        ? (latestAssessment.leannessBandLabel || 'Saved')
+        : [
+          latestAssessment.leannessBandLabel || null,
+          latestAssessment.progressSignal === 'baseline' ? 'baseline' : `${roundedScore(latestAssessment.visualLeannessScore)} index`,
+        ].filter(Boolean).join(' '))
       : (latestScan ? 'Saved' : 'No score yet');
   const latestSignalSentence = progressSignalSentence(latestAssessment?.progressSignalLabel);
   const currentPhotoText = suppressed
@@ -979,10 +984,10 @@ export default function ProgressPhotosScreen({ navigation }) {
     : latestPartialCapture
       ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
       : latestSignalSentence
-        ? `${latestSignalSentence} Volyume Physique Score is a progress score, not a body fat estimate.`
+        ? `${latestSignalSentence} The visual index is for like-for-like progress, not a body fat estimate.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
-        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and Physique Score together.');
+        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and visual score together.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
@@ -1006,7 +1011,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
     const roundedScanScore = roundedScore(scanScore);
     const scoreText = roundedScanScore != null
-      ? (suppressed || hideExactScans ? 'Score hidden' : `Physique ${roundedScanScore}/100`)
+      ? (suppressed || hideExactScans ? 'Score hidden' : `Visual index ${roundedScanScore}`)
       : null;
     const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
@@ -1131,7 +1136,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Keep dated front and back photos in one private library. When the photos are clear enough, Volyume adds a Physique Score, leanness band and progress signal. It is a visual progress measure, not a body fat estimate.
+              Keep dated front and back photos in one private library. When the photos are clear enough, Volyume adds a visual index, leanness band and progress signal. It is a visual progress measure, not a body fat estimate.
             </Text>
           </View>
 
@@ -1185,7 +1190,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   onPress={canCompareScans ? openScanCompare : openCompare}
                   fullWidth={false}
                   style={styles.heroSecondaryAction}
-                  accessibilityLabel={canCompareScans ? 'Compare two Physique Score entries' : 'Compare two photos'}
+                  accessibilityLabel={canCompareScans ? 'Compare two visual index entries' : 'Compare two photos'}
                 />
               ) : null}
             </View>
@@ -1217,7 +1222,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved bodyweight, angles and Physique Score when available.
+              Each photo set shows its date, saved bodyweight, angles and visual index when available.
             </Text>
           </View>
         ) : null}
@@ -1316,7 +1321,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Your first set can be new photos or older photos from your phone. Front and back are enough to create a Physique Score when the photos are clear.
+                Your first set can be new photos or older photos from your phone. Front and back are enough to create a visual index when the photos are clear.
               </Text>
             </>
           )}
@@ -1391,7 +1396,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         />
       ) : null}
 
-      {/* Score comparison. This is the Physique Score specific over-time view:
+      {/* Visual index comparison. This is the scan-specific over-time view:
           dated entries, visual score/band context, measured deltas, and
           pose-matched photos. It self-suppresses through usePhotoSuppression
           too. */}
@@ -1514,7 +1519,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest date is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate photo set if these photos are from another day.`
-                    : 'Take new photos or import existing ones. Both routes save to the same private library; clear front and back photos can receive a Physique Score.'}
+                    : 'Take new photos or import existing ones. Both routes save to the same private library; clear front and back photos can receive a visual index.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1564,7 +1569,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   <View style={styles.captureRouteNote}>
                     <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
                     <Text style={styles.captureRouteNoteText}>
-                      If the photos are not clear enough, Volyume saves them without forcing a Physique Score.
+                      If the photos are not clear enough, Volyume saves them without forcing a visual index.
                     </Text>
                   </View>
                 </ScrollView>

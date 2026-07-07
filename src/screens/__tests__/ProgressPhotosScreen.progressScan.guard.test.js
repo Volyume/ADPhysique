@@ -11,8 +11,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCAN_HISTORY).toMatch(/Physique Score results/);
-    expect(SCAN_HISTORY).toMatch(/Score for this set/);
+    expect(SCAN_HISTORY).toMatch(/Visual index results/);
+    expect(SCAN_HISTORY).toMatch(/Index for this set/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -22,8 +22,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*14 \* 86400000/);
     expect(SCREEN).toMatch(/Leave more time between photo sets/);
     expect(SCREEN).toMatch(/save photos today/);
-    expect(SCREEN).toMatch(/Physique Score may be less useful/);
-    expect(SCREEN).toMatch(/without forcing a Physique Score/);
+    expect(SCREEN).toMatch(/visual index may be less useful/);
+    expect(SCREEN).toMatch(/without forcing a visual index/);
     expect(SCREEN).toMatch(/progressCheckInCadenceLabel\(latestPhoto\?\.takenAt, Date\.now\(\), PROGRESS_SCAN_MIN_INTERVAL_MS\)/);
     expect(SCREEN).not.toMatch(/at least a week apart/);
   });
@@ -39,7 +39,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
     expect(SCREEN).toMatch(/ProgressScanCompare/);
-    expect(SCREEN).toMatch(/Compare two Physique Score entries/);
+    expect(SCREEN).toMatch(/Compare two visual index entries/);
     expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
     expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);

@@ -19,9 +19,9 @@ const scoredScan = {
 };
 
 describe('progressScanCopy', () => {
-  test('scanReadCopy explains Volyume score without presenting body fat percentage', () => {
+  test('scanReadCopy explains Volyume visual index without presenting body fat percentage', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Physique Score 72/100. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual progress score, not a body fat percentage.',
+      'Volyume visual index 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a visual index for like-for-like progress, not a body fat percentage.',
     );
   });
 

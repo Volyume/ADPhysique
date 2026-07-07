@@ -40,7 +40,7 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
-  'If the photo is not clear enough, save it as a progress photo instead of forcing a Physique Score.';
+  'If the photo is not clear enough, save it as a progress photo instead of forcing a visual index.';
 
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
@@ -92,7 +92,7 @@ export function getPoseCaptureGuidance(pose) {
 export function buildProgressStudioCapturePromptCopy() {
   return [
     'Take new photos or import existing ones. Both routes save a dated photo set to your private library.',
-    'Clear front and back photos can receive a Volyume Physique Score, leanness band, progress signal and confidence. It is not a body fat estimate.',
+    'Clear front and back photos can receive a Volyume visual index, leanness band, progress signal and confidence. It is not a body fat estimate.',
     'Use the same room, light, distance and camera height each time. Side is optional.',
     QUALITY_FIRST_CAPTURE_NOTE,
   ].join('\n\n');
@@ -128,7 +128,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'scan',
       eyebrow: 'New set',
       title: 'Take a new photo set',
-      body: 'Guided front and back photos. Side is optional. Clear sets can receive a Physique Score.',
+      body: 'Guided front and back photos. Side is optional. Clear sets can receive a visual index.',
       bestFor: 'Best for today\'s progress check.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
@@ -221,7 +221,7 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Volyume Physique Score is our own visual progress measure. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate.',
+    'Volyume visual index is our own visual progress measure. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',
