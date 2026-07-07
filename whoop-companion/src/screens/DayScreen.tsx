@@ -477,7 +477,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'CORE',
       title: 'Core recovery is usable',
-      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} remain experimental or unavailable for this day, so health monitor completeness is not full yet.`,
+      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} need decoded raw sleep-window samples before Health Monitor is complete for this day.`,
       facts,
       color: colors.strainBlue,
       tint: `${colors.strainBlue}16`,
@@ -500,7 +500,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
   return {
     label: 'READY',
     title: 'Daily inputs are complete',
-    body: 'Core recovery vitals, health monitor candidates and steps are present for this day.',
+    body: 'Core recovery vitals, decoded raw health channels and steps are present for this day.',
     facts,
     color: colors.recoveryGreen,
     tint: `${colors.recoveryGreen}12`,

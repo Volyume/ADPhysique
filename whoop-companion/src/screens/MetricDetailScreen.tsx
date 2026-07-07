@@ -420,7 +420,7 @@ function renderQualityCard(input: {
     const current = input.key === 'spo2' ? input.today?.spo2 ?? null : input.today?.skinTempC ?? null;
     const hasRawRows = (input.historySync?.rawVitalSamples ?? 0) > 0;
     const sleepBlocked = hasRawRows && current == null && rawVitalSleepBlocked(detail);
-    const status = current != null ? 'candidate' : sleepBlocked ? 'review sleep' : hasRawRows ? 'awaiting sleep' : 'needs raw rows';
+    const status = current != null ? 'decoded' : sleepBlocked ? 'review sleep' : hasRawRows ? 'awaiting sleep' : 'needs raw rows';
     return (
       <>
         <SectionLabel>Decode status</SectionLabel>
@@ -441,7 +441,7 @@ function renderQualityCard(input: {
           </View>
           <Text style={styles.qualityNote}>
             {current != null
-              ? 'This candidate is averaged from valid raw WHOOP 5 history samples inside the sleep or candidate-sleep window and shown separately until the mapping is confirmed against more captures.'
+              ? 'This decoded raw channel is averaged from valid WHOOP 5 history samples inside the sleep or candidate-sleep window and contributes to Health Monitor once a personal range is available.'
               : sleepBlocked
                 ? 'Raw vital rows were decoded, but Pulse needs a clearer sleep window before assigning them to Blood Oxygen or Skin Temperature. Keep auto sync connected, or review the sleep window if the timing looks wrong.'
               : hasRawRows
