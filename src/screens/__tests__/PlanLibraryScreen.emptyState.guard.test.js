@@ -18,12 +18,16 @@ describe('PlanLibraryScreen shared empty states', () => {
   test('keeps search and category chips in one compact filter band', () => {
     expect(source).toMatch(/<View style=\{styles\.filterPanel\}>[\s\S]*<SearchBar[\s\S]*<FlatList/);
     expect(source).toMatch(/filterPanel: \{[\s\S]*backgroundColor: colors\.surface[\s\S]*borderBottomColor: colors\.borderSubtle/);
-    expect(source).toMatch(/chipsList: \{ maxHeight: 38, flexShrink: 0 \}/);
+    expect(source).toMatch(/paddingTop: spacing\.xs/);
+    expect(source).toMatch(/paddingBottom: spacing\.xs/);
+    expect(source).toMatch(/chipsList: \{ maxHeight: 34, flexShrink: 0 \}/);
     expect(source).not.toMatch(/chipsList: \{ height: 52/);
   });
 
   test('the plan list sits on a surface band instead of leaving a raw black void', () => {
     expect(source).toMatch(/<View style=\{styles\.listBand\}>[\s\S]*<FlashList/);
     expect(source).toMatch(/listBand: \{ flex: 1, backgroundColor: colors\.surface \}/);
+    expect(source).toMatch(/ItemSeparatorComponent=\{\(\) => <View style=\{styles\.planSeparator\} \/>/);
+    expect(source).toMatch(/listContent: \{ paddingHorizontal: spacing\.lg, paddingTop: spacing\.sm, paddingBottom: spacing\.xl \}/);
   });
 });

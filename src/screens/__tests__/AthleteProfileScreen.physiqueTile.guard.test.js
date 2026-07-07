@@ -35,10 +35,13 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/Volyume avatars/);
     expect(source).toMatch(/styles\.avatarPresetGrid/);
     expect(source).toMatch(/AVATAR_PRESETS\.map\(\(preset\) => \{/);
+    expect(source).toMatch(/accessibilityLabel="Clear current avatar"/);
+    expect(source).toMatch(/Photo from phone/);
     expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
     expect(source).toMatch(/Add profile picture or Volyume avatar/);
     expect(source).not.toMatch(/title="Change photo"/);
     expect(source).not.toMatch(/title="Remove profile picture"/);
+    expect(source).not.toMatch(/<Text style=\{styles\.removeAvatarText\}>Remove profile picture<\/Text>/);
     expect(coachSource).toMatch(/import ProfileAvatarMark from '\.\.\/components\/ProfileAvatarMark';/);
     expect(coachSource).toMatch(/presetKey=\{userProfile\?\.avatarPreset\}/);
   });
