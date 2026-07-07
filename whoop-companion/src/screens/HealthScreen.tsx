@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Screen, SectionLabel, Stat } from '../ui/components';
+import { Card, NavRow, Screen, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
@@ -31,6 +31,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
   const effectiveSync = historySync ?? lastHistorySync;
+  const readiness = healthDataReadiness(hm, effectiveSync?.rawVitalSamples ?? 0);
 
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
@@ -59,6 +60,32 @@ export function HealthScreen({ nav }: { nav: Nav }) {
             ? 'overnight values found; personal ranges are still calibrating'
             : 'Wear your strap overnight and complete a full sync to populate your vitals'}
         </Text>
+      </Card>
+
+      <SectionLabel>Data readiness</SectionLabel>
+      <Card>
+        <View style={styles.readinessHead}>
+          <View style={[styles.readinessBadge, { backgroundColor: readiness.color }]}>
+            <Text style={styles.readinessBadgeText}>{readiness.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.readinessTitle}>{readiness.title}</Text>
+            <Text style={styles.readinessBody}>{readiness.body}</Text>
+          </View>
+        </View>
+        <View style={styles.sourceRow}>
+          <Stat label="Recovery vitals" value={`${readiness.trustedReady}/3`} color={readiness.trustedReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
+          <Stat label="Raw candidates" value={`${readiness.candidatesReady}/2`} color={readiness.candidatesReady > 0 ? colors.sleepTeal : colors.textTertiary} />
+          <Stat label="Raw rows" value={effectiveSync?.rawVitalSamples ?? '-'} />
+        </View>
+        <NavRow
+          label={readiness.actionLabel}
+          icon={readiness.icon}
+          iconColor={readiness.color}
+          value={readiness.actionValue}
+          onPress={() => nav.navigate(readiness.route)}
+          last
+        />
       </Card>
 
       <SectionLabel>Vitals</SectionLabel>
@@ -146,6 +173,70 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
   );
 }
 
+function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawVitalRows: number) {
+  const trustedReady = hm.vitals.filter((v) => !v.experimental && v.value != null).length;
+  const candidatesReady = hm.vitals.filter((v) => v.experimental && v.value != null).length;
+  const hasRawRows = rawVitalRows > 0;
+
+  if (trustedReady < 3) {
+    return {
+      badge: 'SYNC',
+      color: colors.strainBlue,
+      title: 'Recovery vitals need a fuller night',
+      body: 'RHR, HRV and respiratory rate need enough clean overnight heart-rate and R-R signal before recovery can be trusted.',
+      trustedReady,
+      candidatesReady,
+      actionLabel: 'Sync overnight history',
+      actionValue: `${trustedReady}/3 ready`,
+      icon: 'sync',
+      route: { name: 'device' } as const,
+    };
+  }
+
+  if (!hasRawRows || candidatesReady === 0) {
+    return {
+      badge: 'RAW',
+      color: colors.recoveryYellow,
+      title: 'Raw sensor candidates are missing',
+      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature appear only when the WHOOP history drain includes raw vital records.',
+      trustedReady,
+      candidatesReady,
+      actionLabel: 'Check device sync',
+      actionValue: hasRawRows ? `${candidatesReady}/2 candidates` : 'no raw rows',
+      icon: 'sync',
+      route: { name: 'device' } as const,
+    };
+  }
+
+  if (candidatesReady < 2) {
+    return {
+      badge: 'PART',
+      color: colors.sleepTeal,
+      title: 'Raw vitals partially decoded',
+      body: 'One raw sensor candidate is present. Keep syncing future nights before treating these experimental fields as trendable.',
+      trustedReady,
+      candidatesReady,
+      actionLabel: 'Review metric detail',
+      actionValue: `${candidatesReady}/2 candidates`,
+      icon: 'analytics',
+      route: { name: 'metric', key: 'spo2' } as const,
+    };
+  }
+
+  return {
+    badge: 'GOOD',
+    color: colors.recoveryGreen,
+    title: 'Health data is ready',
+    body: 'Trusted recovery vitals are populated and raw sensor candidates are available for review.',
+    trustedReady,
+    candidatesReady,
+    actionLabel: 'Open trends',
+    actionValue: 'health',
+    icon: 'trending-up',
+    route: { name: 'trends' } as const,
+  };
+}
+
 function formatDecodedRange(firstTs?: number, lastTs?: number): string {
   if (!firstTs || !lastTs) return 'No decoded range yet';
   const first = new Date(firstTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -157,6 +248,11 @@ const styles = StyleSheet.create({
   summaryLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1.4 },
   summaryValue: { fontSize: 40, fontFamily: fonts.black, marginTop: 6 },
   summarySub: { color: colors.textTertiary, fontSize: 13, marginTop: 2, fontFamily: fonts.text },
+  readinessHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  readinessBadge: { width: 52, height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  readinessBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  readinessTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  readinessBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
   last: { borderBottomWidth: 0 },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
