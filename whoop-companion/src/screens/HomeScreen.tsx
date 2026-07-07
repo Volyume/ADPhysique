@@ -35,7 +35,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const resilience = useStoreSelector(appStore, (s) => s.resilience);
   const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
   const session = useStoreSelector(appStore, (s) => s.session);
-  const steps = useStoreSelector(appStore, (s) => s.steps ?? s.bandSteps);
+  const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
 
   const recovery = today?.recovery ?? null;

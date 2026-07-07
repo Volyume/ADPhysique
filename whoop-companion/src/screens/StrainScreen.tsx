@@ -49,7 +49,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
-  const steps = useStoreSelector(appStore, (s) => s.steps ?? s.bandSteps);
+  const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
 
   const [zones, setZones] = useState<HrZone[]>([]);
