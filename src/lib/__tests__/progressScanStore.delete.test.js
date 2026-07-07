@@ -225,8 +225,10 @@ describe('finishProgressScanSession estimator persistence', () => {
         visualLeannessScore: 68,
         leannessBandLabel: 'Lean',
         scanConfidenceTier: 'moderate',
+        progressSignal: 'baseline',
       },
     });
+    expect(signals.physiqueAssessment.progressSignal).not.toBe('inconclusive');
     expect(JSON.stringify(signals)).not.toMatch(/estimateBodyFatPercent|estimateRangeLow|estimateRangeHigh/);
   });
 
