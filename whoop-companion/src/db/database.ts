@@ -17,6 +17,7 @@ import * as SQLite from 'expo-sqlite';
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 export type SleepStateSampleRow = { ts: number; state: number };
+export type RawFrameExportRow = { rowId: number; ts: number; source: string; hex: string };
 /**
  * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
  * sub-metrics (Sleep Need breakdown, the four Sleep Performance contributors,
@@ -493,6 +494,16 @@ export async function getAllRawFrames(limit = 200000): Promise<Array<{ ts: numbe
     'SELECT ts, source, hex FROM raw_frames ORDER BY ts ASC LIMIT ?',
     limit,
   );
+}
+
+export async function getRawFramesPage(afterRowId = 0, limit = 2000): Promise<RawFrameExportRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ row_id: number; ts: number; source: string; hex: string }>(
+    'SELECT rowid AS row_id, ts, source, hex FROM raw_frames WHERE rowid > ? ORDER BY rowid ASC LIMIT ?',
+    afterRowId,
+    limit,
+  );
+  return rows.map((r) => ({ rowId: r.row_id, ts: r.ts, source: r.source, hex: r.hex }));
 }
 
 export async function clearRawFrames(): Promise<void> {

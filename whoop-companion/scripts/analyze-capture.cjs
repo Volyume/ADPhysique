@@ -7,6 +7,10 @@ const PACKET_METADATA = 49;
 const PACKET_PUFFIN_METADATA = 56;
 const MIN_PLAUSIBLE_UNIX = 1_700_000_000;
 const FUTURE_MARGIN_SEC = 86_400;
+const WHOOP5_STEP_TICKS_PER_STEP = 8;
+const MAX_STEP_INTERVAL_MS = 15 * 60 * 1000;
+const MAX_STEP_RAW_DELTA = 512;
+const MAX_STEP_RATE_PER_SEC = 4.2;
 
 const path = process.argv[2];
 if (!path) {
@@ -50,11 +54,13 @@ function main() {
   const hrDates = summarizeTimed(decoded.hr.map((s) => s.ts));
   const stepDates = summarizeTimed(decoded.steps.map((s) => s.ts));
   const sleepStateDates = summarizeTimed(decoded.sleepStates.map((s) => s.ts));
-  const stepEstimate = estimateStepsFromCounters(decoded.steps);
+  const stepEstimate = estimateBandStepsFromCounters(decoded.steps);
   const hrByDay = groupByDay(decoded.hr.map((s) => s.ts));
   const stepByDay = groupByDay(decoded.steps.map((s) => s.ts));
+  const stepRowsByDay = groupRowsByDay(decoded.steps);
   const sleepStateByDay = groupByDay(decoded.sleepStates.map((s) => s.ts));
   const sleepStateCounts = countSleepStates(decoded.sleepStates);
+  const activityClassCounts = countActivityClasses(decoded.steps);
   const versions = decoded.versions.join(', ') || 'none';
   const bpm = decoded.hr.map((s) => s.bpm).filter((v) => v > 0);
   const rrCount = decoded.hr.reduce((a, s) => a + s.rr.length, 0);
@@ -71,7 +77,12 @@ function main() {
     `layouts: v18=${decoded.v18Records} v20=${decoded.v20Records} v21=${decoded.v21Records} v26=${decoded.v26Records} raw_sensor=${decoded.rawSensorRecords}`,
   );
   console.log(`hr: samples=${decoded.hr.length} rr=${rrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`);
-  console.log(`steps: rows=${decoded.steps.length} estimated_total=${stepEstimate ?? 'n/a'} ${formatRange(stepDates)}`);
+  console.log(
+    `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} ${formatRange(stepDates)}`,
+  );
+  console.log(
+    `step_activity_class: still=${activityClassCounts[0] ?? 0} walk=${activityClassCounts[1] ?? 0} run=${activityClassCounts[2] ?? 0} unknown=${activityClassCounts.unknown ?? 0}`,
+  );
   console.log(
     `sleep_state: rows=${decoded.sleepStates.length} wake=${sleepStateCounts[0] ?? 0} still=${sleepStateCounts[1] ?? 0} asleep=${sleepStateCounts[2] ?? 0} up=${sleepStateCounts[3] ?? 0} ${formatRange(sleepStateDates)}`,
   );
@@ -79,6 +90,13 @@ function main() {
   for (const [day, count] of Object.entries(hrByDay)) console.log(`  ${day}: ${count}`);
   console.log('step_rows_by_day:');
   for (const [day, count] of Object.entries(stepByDay)) console.log(`  ${day}: ${count}`);
+  console.log('step_estimate_by_day:');
+  for (const [day, rows] of Object.entries(stepRowsByDay)) {
+    const est = estimateBandStepsFromCounters(rows);
+    console.log(
+      `  ${day}: steps=${est?.steps ?? 'n/a'} raw_ticks=${est?.rawTicks ?? 'n/a'} used=${est?.usedIntervals ?? 0} dropped=${est?.droppedIntervals ?? 0}`,
+    );
+  }
   console.log('sleep_state_by_day:');
   for (const [day, count] of Object.entries(sleepStateByDay)) console.log(`  ${day}: ${count}`);
 
@@ -532,23 +550,44 @@ function removeRecordRateComponent(x, fs) {
   return x.map((v, i) => v - (colMean[i % fs] ?? 0));
 }
 
-function estimateStepsFromCounters(rows) {
+function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TICKS_PER_STEP) {
   if (rows.length < 2) return null;
   const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
-  let total = 0;
-  let usable = 0;
+  let rawTicks = 0;
+  let usedIntervals = 0;
+  let droppedIntervals = 0;
+  let activeIntervals = 0;
   for (let i = 1; i < sorted.length; i += 1) {
     const prev = sorted[i - 1];
     const cur = sorted[i];
-    const dtSec = Math.max(1, (cur.ts - prev.ts) / 1000);
+    const dtMs = cur.ts - prev.ts;
+    if (!Number.isFinite(dtMs) || dtMs <= 0 || dtMs > MAX_STEP_INTERVAL_MS) {
+      droppedIntervals += 1;
+      continue;
+    }
+    const dtSec = Math.max(1, dtMs / 1000);
     let delta = cur.counter - prev.counter;
     if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) delta += 65_536;
-    if (delta < 0) continue;
-    if (delta / dtSec > 6 || delta > 5_000) continue;
-    total += delta;
-    usable += 1;
+    if (delta <= 0) continue;
+    if (delta / dtSec > MAX_STEP_RATE_PER_SEC * calibrationDivisor || delta > MAX_STEP_RAW_DELTA) {
+      droppedIntervals += 1;
+      continue;
+    }
+    rawTicks += delta;
+    usedIntervals += 1;
+    if (prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2) {
+      activeIntervals += 1;
+    }
   }
-  return usable > 0 ? Math.max(0, Math.round(total)) : null;
+  if (usedIntervals <= 0) return null;
+  return {
+    steps: Math.max(0, Math.round(rawTicks / calibrationDivisor)),
+    rawTicks,
+    usedIntervals,
+    droppedIntervals,
+    calibrationDivisor,
+    confidence: activeIntervals > 0 ? 'medium' : 'low',
+  };
 }
 
 function summarizeTimed(timestamps) {
@@ -569,6 +608,28 @@ function groupByDay(timestamps) {
     out[day] = (out[day] ?? 0) + 1;
   }
   return Object.fromEntries(Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])));
+}
+
+function groupRowsByDay(rows) {
+  const out = {};
+  for (const row of rows) {
+    const d = new Date(row.ts);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    (out[day] ??= []).push(row);
+  }
+  return Object.fromEntries(Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])));
+}
+
+function countActivityClasses(rows) {
+  const counts = { unknown: 0 };
+  for (const row of rows) {
+    if (row.activityClass === 0 || row.activityClass === 1 || row.activityClass === 2) {
+      counts[row.activityClass] = (counts[row.activityClass] ?? 0) + 1;
+    } else {
+      counts.unknown += 1;
+    }
+  }
+  return counts;
 }
 
 function findSleepHints(hr) {

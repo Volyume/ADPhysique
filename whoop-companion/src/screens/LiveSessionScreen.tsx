@@ -71,7 +71,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const tint = session.kind === 'sleep' ? colors.sleepTeal : session.kind === 'nap' ? colors.recoveryYellow : colors.strainBlue;
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
   const stepSource =
-    stats?.stepSource === 'band' ? 'band' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
+    stats?.stepSource === 'band' ? 'band est.' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
 
   const save = () => {
     void appStore.stopSession(true);

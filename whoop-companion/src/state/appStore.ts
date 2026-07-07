@@ -79,6 +79,7 @@ import { rhythmScreen, RhythmResult } from '../metrics/afib';
 import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
+import { estimateStepsFromBandCounters } from '../metrics/bandSteps';
 import { activityGps } from '../data/activities';
 import { StructuredWorkout } from '../data/structuredWorkouts';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
@@ -307,8 +308,8 @@ class AppStore extends Store<AppState> {
       onHeartRate: (s) => void this.onHeartRate(s.bpm, s.rrMs),
       onRawFrame: (f) => this.onRawFrame(f),
     });
-    await this.startStepTracking();
     await this.refreshBandSteps();
+    await this.startStepTracking();
     await this.refreshDerived();
     await pruneHrSamples(addDays(Date.now(), -HR_RETENTION_DAYS));
     this.setState({ bufferedRecords: await countHistoryRecords() });
@@ -530,7 +531,7 @@ class AppStore extends Store<AppState> {
 
   private async refreshBandSteps(): Promise<number | null> {
     const now = Date.now();
-    const band = estimateStepsFromCounters(await getStepSamplesBetween(startOfDayMs(now), now));
+    const band = estimateStepsFromBandCounters(await getStepSamplesBetween(startOfDayMs(now), now));
     if (band != null) {
       const chosen = this.bestStepTotal(band);
       this.setState({ bandSteps: band, steps: chosen.steps, stepSource: chosen.source });
@@ -549,7 +550,14 @@ class AppStore extends Store<AppState> {
     if (sessionSource === 'phone' && liveSteps != null && liveSource !== 'band') {
       return { steps: liveSteps, source: 'phone' };
     }
-    if (sessionSource === 'band' && band != null && band > 0) return { steps: band, source: 'band' };
+    if (sessionSource === 'band' && band != null && band > 0 && (liveSteps == null || liveSteps <= 0)) {
+      return { steps: band, source: 'band' };
+    }
+    if (phone != null && phone > 0) {
+      if (band == null || band <= 0 || band > phone * 2.25 || liveSource === 'phone') {
+        return { steps: phone, source: 'phone' };
+      }
+    }
     if (band != null && band > 0 && (liveSteps == null || band >= liveSteps || liveSource === 'band')) {
       return { steps: band, source: 'band' };
     }
@@ -976,7 +984,7 @@ class AppStore extends Store<AppState> {
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
-    const steps = estimateStepsFromCounters(await getStepSamplesBetween(sod, dayEnd));
+    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(sod, dayEnd));
 
     const manualRaw = await kvGet(`manualSleep:${day}`);
     const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
@@ -1124,7 +1132,7 @@ class AppStore extends Store<AppState> {
     for (const row of rows) {
       if (row.source === 'nap') continue;
       if (row.stepSource === 'manual' || row.stepSource === 'phone') continue;
-      const bandSteps = estimateStepsFromCounters(await getStepSamplesBetween(row.startTs, row.endTs));
+      const bandSteps = estimateStepsFromBandCounters(await getStepSamplesBetween(row.startTs, row.endTs));
       if (bandSteps == null || bandSteps <= 0) continue;
       if (row.steps != null && Math.abs(row.steps - bandSteps) <= 1) continue;
       const durationMin = Math.max(1 / 60, (row.endTs - row.startTs) / 60000);
@@ -1344,7 +1352,7 @@ class AppStore extends Store<AppState> {
         : null;
     const bandActivitySteps =
       input.steps == null
-        ? estimateStepsFromCounters(await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []))
+        ? estimateStepsFromBandCounters(await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []))
         : null;
     const activitySteps = input.steps ?? bandActivitySteps;
     const stepSource = input.stepSource ?? (bandActivitySteps != null ? 'band' : null);
@@ -1871,7 +1879,7 @@ class AppStore extends Store<AppState> {
   };
 
   private async enrichDetectedActivity(d: DetectedActivity): Promise<DetectedActivity> {
-    const steps = estimateStepsFromCounters(await getStepSamplesBetween(d.startTs, d.endTs));
+    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(d.startTs, d.endTs));
     if (steps == null || steps <= 0) return { ...d, label: 'Workout', steps: null, cadenceSpm: null };
     const minutes = Math.max(1 / 60, (d.endTs - d.startTs) / 60000);
     const cadenceSpm = Math.round(steps / minutes);
@@ -2281,30 +2289,6 @@ function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: Historical
     rawSensorRecords: prev.rawSensorRecords + next.rawSensorRecords,
     versions: [...versions].sort((a, b) => a - b),
   };
-}
-
-function estimateStepsFromCounters(rows: Array<{ ts: number; counter: number }>): number | null {
-  if (rows.length < 2) return null;
-  const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
-  let total = 0;
-  let usable = 0;
-  for (let i = 1; i < sorted.length; i += 1) {
-    const prev = sorted[i - 1];
-    const cur = sorted[i];
-    if (!prev || !cur) continue;
-    const dtSec = Math.max(1, (cur.ts - prev.ts) / 1000);
-    let delta = cur.counter - prev.counter;
-    if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) {
-      delta += 65_536;
-    }
-    if (delta < 0) continue;
-    // Keep plausible human cadence only; this is a raw band counter, not a
-    // number to trust blindly after a corrupted chunk or firmware layout shift.
-    if (delta / dtSec > 6 || delta > 5_000) continue;
-    total += delta;
-    usable += 1;
-  }
-  return usable > 0 ? Math.max(0, Math.round(total)) : null;
 }
 
 function delay(ms: number): Promise<void> {
