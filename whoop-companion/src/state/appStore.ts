@@ -237,6 +237,7 @@ const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 5000;
 const AUTO_HISTORY_SYNC_MAX_ATTEMPTS = 6;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
+const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 
 class AppStore extends Store<AppState> {
@@ -269,6 +270,7 @@ class AppStore extends Store<AppState> {
   private lastAccelTs = 0;
   private preferredDeviceId: string | null = null;
   private connectInFlight = false;
+  private connectStartedAt = 0;
 
   constructor() {
     super(initialState);
@@ -598,7 +600,12 @@ class AppStore extends Store<AppState> {
 
   private async connectAsync(): Promise<void> {
     const status = this.getState().status;
-    if (this.connectInFlight || status === 'scanning' || status === 'connecting' || status === 'discovering') return;
+    const staleConnect = this.connectInFlight && Date.now() - this.connectStartedAt > CONNECT_IN_FLIGHT_STALE_MS;
+    if (staleConnect) this.connectInFlight = false;
+    if (this.connectInFlight || status === 'scanning' || status === 'connecting' || status === 'discovering') {
+      this.setState({ status: 'connecting', statusDetail: 'Connect already starting...' });
+      return;
+    }
     if (status === 'connected') {
       const deviceId = this.getState().device?.id;
       if (deviceId) {
@@ -607,12 +614,16 @@ class AppStore extends Store<AppState> {
       }
       return;
     }
-    this.setState({ error: null });
+    this.setState({ status: 'connecting', statusDetail: 'Starting WHOOP scan...', error: null });
     this.connectInFlight = true;
+    this.connectStartedAt = Date.now();
     try {
       await this.ble?.start(this.preferredDeviceId);
+    } catch (e) {
+      this.setState({ status: 'error', statusDetail: 'Connect failed', error: String(e) });
     } finally {
       this.connectInFlight = false;
+      this.connectStartedAt = 0;
     }
   };
 
