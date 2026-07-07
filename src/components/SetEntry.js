@@ -7,7 +7,7 @@ import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
-const STEPPER_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };
+const STEPPER_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };
 
 function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
@@ -439,8 +439,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stepBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface3,

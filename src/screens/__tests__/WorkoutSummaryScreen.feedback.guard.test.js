@@ -9,8 +9,8 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('? [0, 1, 2, 3]');
     expect(SOURCE).toContain(': Array.from({ length: max }, (_, i) => i + 1);');
     expect(SOURCE).toContain('hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}');
-    expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs2 \}/);
-    expect(SOURCE).toMatch(/ratingBtn: \{\s*width: 44, height: 44,/);
+    expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs, minHeight: 44 \}/);
+    expect(SOURCE).toMatch(/ratingBtn: \{\s*width: 44, height: 44, minWidth: 44,/);
   });
 
   test('keeps completed-workout footer compact and stable', () => {

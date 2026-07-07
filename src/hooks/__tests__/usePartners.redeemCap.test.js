@@ -147,11 +147,21 @@ describe('usePartners redeem enforces the partner cap', () => {
     expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(partnership);
   });
 
-  test('successful legacy redeem seeds an active local row before the pull catches up', async () => {
+  test('successful redeem with a complete partnership seeds an active local row before the pull catches up', async () => {
+    const partnership = {
+      id: 'p1',
+      member_a: 'them',
+      member_b: 'me',
+      status: 'active',
+      partner_first_name: 'Sam',
+      streak_enabled: true,
+      accepted_at: '2026-07-07T00:00:00.000Z',
+      created_at: '2026-07-07T00:00:00.000Z',
+    };
     db.getActivePartnerCount.mockResolvedValue(0);
     service.redeemPartnerInvite.mockResolvedValueOnce({
       ok: true,
-      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam', partnership },
     });
     const ref = renderHook('pro');
     let r;
@@ -159,6 +169,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     expect(r.ok).toBe(true);
     expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(expect.objectContaining({
       id: 'p1',
+      member_a: 'them',
       member_b: 'me',
       status: 'active',
       partner_first_name: 'Sam',
@@ -178,7 +189,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
   });
 
-  test('successful cloud redeem seeds optimistic state when a blind mirror write is not yet visible', async () => {
+  test('successful cloud redeem does not show an incomplete active row while sync catches up', async () => {
     db.getActivePartnerCount.mockResolvedValue(0);
     db.upsertPartnershipFromCloud.mockResolvedValueOnce(undefined);
     service.redeemPartnerInvite.mockResolvedValueOnce({
@@ -189,14 +200,20 @@ describe('usePartners redeem enforces the partner cap', () => {
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
-    expect(ref.pairs[0]).toMatchObject({
-      id: 'p1',
-      partnerFirstName: 'Sam',
-      partnership: { id: 'p1', status: 'active' },
-    });
+    expect(ref.pairs).toHaveLength(0);
   });
 
   test('successful cloud redeem returns ok when the pair is visible after an optional mirror write failure', async () => {
+    const partnership = {
+      id: 'p1',
+      member_a: 'them',
+      member_b: 'me',
+      status: 'active',
+      partner_first_name: 'Sam',
+      streak_enabled: true,
+      accepted_at: '2026-07-07T00:00:00.000Z',
+      created_at: '2026-07-07T00:00:00.000Z',
+    };
     const visiblePair = {
       id: 'p1',
       status: 'active',
@@ -213,7 +230,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       .mockResolvedValueOnce([visiblePair]);
     service.redeemPartnerInvite.mockResolvedValueOnce({
       ok: true,
-      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam', partnership },
     });
     const ref = renderHook('pro');
     let r;

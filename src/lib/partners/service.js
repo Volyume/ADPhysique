@@ -57,7 +57,7 @@ function cheerFailureCode(error, data) {
 }
 
 function shouldTryDirectCheerInsert(failureCode, error) {
-  if (failureCode === 'cheers_unavailable' || failureCode === 'insert_failed') return true;
+  if (failureCode === 'cheers_unavailable' || failureCode === 'insert_failed' || failureCode === 'not_active') return true;
   if (failureCode) return false;
   return !!error;
 }

@@ -54,9 +54,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
-    expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 4, bottom: 4, left: 4, right: 4 };');
+    expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 6, bottom: 6, left: 6, right: 6 };');
     expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 86,\s*flexShrink: 0,\s*gap: 1,/);
-    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 40,\s*height: 40,/);
+    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 36,\s*height: 36,/);
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);

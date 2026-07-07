@@ -122,6 +122,41 @@ function PrefRow({ label, options, value, onSelect, busy }) {
   );
 }
 
+function MealPreferencesControls({ prefs, busy, onSetPref }) {
+  return (
+    <>
+      <PrefRow
+        label="Meals per day"
+        options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+        value={prefs.mealsPerDay}
+        onSelect={(v) => onSetPref({ mealPlanMealsPerDay: v })}
+        busy={busy}
+      />
+      <PrefRow
+        label="Variety"
+        options={[
+          { value: 0, label: 'Repeat' },
+          { value: 0.5, label: 'Mixed' },
+          { value: 1, label: 'Varied' },
+        ]}
+        value={prefs.variety}
+        onSelect={(v) => onSetPref({ mealPlanVariety: v })}
+        busy={busy}
+      />
+      <PrefRow
+        label="Around training"
+        options={[
+          { value: false, label: 'Off' },
+          { value: true, label: 'Pre and post' },
+        ]}
+        value={!!prefs.periWorkoutSlots}
+        onSelect={(v) => onSetPref({ mealPlanPeriWorkout: v })}
+        busy={busy}
+      />
+    </>
+  );
+}
+
 export default function MealPlanScreen({ navigation, route }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
@@ -456,38 +491,48 @@ export default function MealPlanScreen({ navigation, route }) {
     );
   }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
 
-  // Change a preference, persist it, and rebuild the plan around it so the
-  // change is visible immediately (same targets, new prefs).
+  // Change a preference, persist it, and rebuild an existing plan around it so
+  // the change is visible immediately. Before generation, this only saves the
+  // user's choices so the first build uses them.
   const handleSetPref = useCallback(async (patch) => {
     if (!user?.id || busy) return;
     setBusy(true);
     try {
       await setMealPlanPrefs(patch);
-      await regenerateActiveMealPlan(user.id, { ...userProfile, ...patch });
-      await load();
-      toast.show('Plan updated to match.', { variant: 'success' });
+      if (plan) {
+        await regenerateActiveMealPlan(user.id, { ...userProfile, ...patch });
+        await load();
+        toast.show('Plan updated to match.', { variant: 'success' });
+      } else {
+        toast.show('Preferences saved.', { variant: 'success' });
+      }
     } catch (_) {
       toast.show("Couldn't update preferences. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, userProfile, busy, setMealPlanPrefs, load, toast]);
+  }, [user?.id, userProfile, plan, busy, setMealPlanPrefs, load, toast]);
 
   // Energy DISPLAY unit (kcal | kj): display-only. All `totals.kcal` values stay
   // kcal (the engine/stored unit); only the rendered energy number + label and
   // the spoken a11y word convert (energyWord) at the point of display.
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
-  const prefs = plan?.prefs || {};
+  const prefs = useMemo(() => ({
+    ...(plan?.prefs || {}),
+    mealsPerDay: plan?.prefs?.mealsPerDay ?? userProfile?.mealPlanMealsPerDay ?? 4,
+    periWorkoutSlots: plan?.prefs?.periWorkoutSlots ?? !!userProfile?.mealPlanPeriWorkout,
+    variety: userProfile?.mealPlanVariety ?? 0,
+  }), [plan?.prefs, userProfile?.mealPlanMealsPerDay, userProfile?.mealPlanPeriWorkout, userProfile?.mealPlanVariety]);
   const prefSummary = useMemo(() => {
     const meals = prefs.mealsPerDay ?? 4;
-    const variety = userProfile?.mealPlanVariety === 1
+    const variety = prefs.variety === 1
       ? 'varied'
-      : userProfile?.mealPlanVariety === 0.5
+      : prefs.variety === 0.5
         ? 'mixed'
         : 'repeat-friendly';
     const workoutMeals = prefs.periWorkoutSlots ? 'workout meals on' : 'workout meals off';
     return `${meals} meals, ${variety}, ${workoutMeals}`;
-  }, [prefs.mealsPerDay, prefs.periWorkoutSlots, userProfile?.mealPlanVariety]);
+  }, [prefs.mealsPerDay, prefs.periWorkoutSlots, prefs.variety]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
@@ -538,6 +583,22 @@ export default function MealPlanScreen({ navigation, route }) {
               <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary} />
               <Text style={styles.emptyStepText}>Nothing is logged until you add it</Text>
             </View>
+          </View>
+
+          <View style={styles.preferencesCard} accessibilityLabel={`Meal preferences, ${prefSummary}`}>
+            <View style={styles.prefsToggle}>
+              <View style={styles.preferencesIcon}>
+                <Ionicons name="options-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.prefsToggleCopy}>
+                <Text style={styles.prefsToggleText}>Meal preferences</Text>
+                <Text style={styles.prefsToggleSub}>{prefSummary}</Text>
+              </View>
+            </View>
+            <Text style={styles.preferencesHint}>Set these first. The meal builder uses them when it creates your day or week.</Text>
+          </View>
+          <View style={styles.prefsPanel}>
+            <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} />
           </View>
 
           <Card style={styles.planOption}>
@@ -657,34 +718,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
-              <PrefRow
-                label="Meals per day"
-                options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
-                value={prefs.mealsPerDay ?? 4}
-                onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
-                busy={busy}
-              />
-              <PrefRow
-                label="Variety"
-                options={[
-                  { value: 0, label: 'Repeat' },
-                  { value: 0.5, label: 'Mixed' },
-                  { value: 1, label: 'Varied' },
-                ]}
-                value={userProfile?.mealPlanVariety ?? 0}
-                onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
-                busy={busy}
-              />
-              <PrefRow
-                label="Around training"
-                options={[
-                  { value: false, label: 'Off' },
-                  { value: true, label: 'Pre and post' },
-                ]}
-                value={!!prefs.periWorkoutSlots}
-                onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
-                busy={busy}
-              />
+              <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} />
             </View>
           ) : null}
 
@@ -1064,6 +1098,7 @@ const styles = StyleSheet.create({
   // Prominent, but not shouty: the settings block sits before the meal list so
   // people see the controls that shape the plan before they review the meals.
   preferencesCard: {
+    alignSelf: 'stretch',
     gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -1090,6 +1125,7 @@ const styles = StyleSheet.create({
   prefsToggleSub: { ...type.caption, color: colors.textSecondary, marginTop: 1 },
   preferencesHint: { ...type.caption, color: colors.textMuted, lineHeight: 17, marginLeft: 34 + spacing.sm },
   prefsPanel: {
+    alignSelf: 'stretch',
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.lg,

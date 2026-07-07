@@ -94,13 +94,13 @@ function weekPhrase(name, week, resting) {
 
 function cheerFailureMessage(error) {
   if (error === 'not_active') {
-    return 'Volyume could not confirm this partnership online yet. Refresh Partners and try again.';
+    return 'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
   if (error === 'partner_update_needed') {
-    return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
+    return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
     return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
@@ -1422,7 +1422,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         <Text style={styles.pendingText}>Invitation sent. Waiting for your partner.</Text>
       </View>
       <Text style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
-      <Text style={styles.pendingHint}>Share the same invite again if they missed it. It still only pairs one person.</Text>
+      <Text style={styles.pendingHint}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
       {checkLine ? <Text style={styles.pendingCheckLine}>{checkLine}</Text> : null}
       <TouchableOpacity
         onPress={shareAgain}
@@ -1454,7 +1454,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         ) : (
           <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.textSecondary} />
         )}
-        <Text style={styles.pendingSecondaryText}>{checking ? 'Checking...' : 'Check status'}</Text>
+          <Text style={styles.pendingSecondaryText}>{checking ? 'Checking...' : 'Refresh status'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
