@@ -60,7 +60,7 @@ export default function SettingsAccountScreen({ navigation }) {
 
       {/* Sign out and delete account, isolated below the plan rows so a
           destructive tap is never next to a routine action. */}
-      <SectionHeader title="Session" />
+      <SectionHeader title="Account access" />
       <View style={styles.section}>
         <SettingRow
           icon="log-out-outline"

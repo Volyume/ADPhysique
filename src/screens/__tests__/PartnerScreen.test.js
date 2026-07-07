@@ -566,13 +566,13 @@ describe('empty state', () => {
     expect(text).toContain(
       'Pair with one person you already train with. They see whether you trained this week, plus any win you choose to send. Everything else stays private.',
     );
-    // The plain-English "how it works" explainer (founder call 2026-07-03: the
-    // old pitch never said what the feature was or what a "signal" meant).
-    expect(text).toContain('HOW IT WORKS');
-    expect(text).toContain('You each see a simple weekly training status.');
-    expect(text).toContain('You can send one fixed cheer a day, or one win you approve.');
-    expect(text).toContain('Rest weeks never count as a miss.');
-    expect(text).toContain('No feed, no followers, no public numbers.');
+    // The plain-English receipt explains what pairing actually exposes before
+    // the user invites anyone.
+    expect(text).toContain('What your partner sees');
+    expect(text).toContain('Whether you trained this week');
+    expect(text).toContain('One fixed cheer a day');
+    expect(text).toContain('Only the wins you choose to send');
+    expect(text).toContain('No food, photos, body metrics or private notes');
     // The word "signal" is gone from the pitch.
     expect(text).not.toContain('signal');
     expect(text).toContain('Invite someone you train with');
