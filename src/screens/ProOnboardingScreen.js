@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, hitSlop } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
@@ -1679,6 +1679,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggle, morningEnabled && styles.toggleOn]}
                   onPress={() => setMorningEnabled(v => !v)}
+                  hitSlop={hitSlop}
                   accessibilityRole="switch"
                   accessibilityState={{ checked: morningEnabled }}
                   accessibilityLabel="Morning weight reminder"
@@ -1729,6 +1730,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggle, checkinEnabled && styles.toggleOn]}
                   onPress={() => setCheckinEnabled(v => !v)}
+                  hitSlop={hitSlop}
                   accessibilityRole="switch"
                   accessibilityState={{ checked: checkinEnabled }}
                   accessibilityLabel="Weekly check-in reminder"
@@ -1786,6 +1788,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggle, cardioOn && styles.toggleOn]}
                   onPress={() => setCardioOn(v => !v)}
+                  hitSlop={hitSlop}
                   accessibilityRole="switch"
                   accessibilityState={{ checked: cardioOn }}
                   accessibilityLabel="Make cardio available"

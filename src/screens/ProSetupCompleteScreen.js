@@ -41,10 +41,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [nutritionSummary, setNutritionSummary] = useState(null);
   const [planRoutines, setPlanRoutines] = useState([]);
   const [planName, setPlanName] = useState(null);
-  // COMP-013: the week view IS the reveal, so card 3 opens expanded on first
-  // reveal (this screen is shown only once, at setup completion). Hiding the
-  // named sessions behind a tap would mute the moment.
-  const [planOpen, setPlanOpen] = useState(true);
+  // Keep the reveal scannable. The split receipt is available immediately, but
+  // the user should reach Start training before reading every rationale line.
+  const [planOpen, setPlanOpen] = useState(false);
   const [whyThis, setWhyThis] = useState(null);
   // Optional head start: build the first week of meals from the targets shown
   // above (founder 2026-06-15). It persists, so it's waiting in Meal planning
@@ -344,7 +343,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </Text>
                 ) : (
                   <Text style={styles.routineBody}>
-                    Open Plans to build or pick a routine, then start a session from Train.
+                    Open Plans to build or pick a routine, then start from Train.
                   </Text>
                 )}
               </View>
@@ -398,8 +397,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={styles.routineTitle}>4. Check in once a week</Text>
                 <Text style={styles.routineBody}>
                   {firstReviewLabel
-                    ? `Keep logging your morning weight and your first review lands on ${firstReviewLabel}. Two minutes to review how the week went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.`
-                    : 'End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.'}
+                    ? `Keep logging your morning weight. Your first review lands on ${firstReviewLabel} and takes about two minutes. Precision Coaching then explains any calorie or training change before you apply it.`
+                    : 'At the end of your training week, review how it went. Precision Coaching then explains any calorie or training change before you apply it.'}
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}
