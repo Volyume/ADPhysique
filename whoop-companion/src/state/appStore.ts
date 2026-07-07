@@ -2708,6 +2708,9 @@ const MIN_VITAL_SIGNAL_MIN = 90;
 const MIN_VITAL_COVERAGE_PCT = 55;
 const MIN_SLEEP_SCORE_SIGNAL_MIN = 150;
 const MIN_SLEEP_SCORE_COVERAGE_PCT = 50;
+const LONG_AUTO_SLEEP_MIN = 7 * 60;
+const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 18;
+const MIN_LONG_AUTO_SLEEP_STATE_MIN = 30;
 
 function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
   sleep.neededMin = need.neededMin;
@@ -2965,11 +2968,14 @@ function sleepEvidencePct(evidence?: SleepEvidence | null): number {
 }
 
 function longUncorroboratedAutoSleep(evidence: SleepEvidence | null | undefined, manual: boolean): boolean {
+  const stateMin = evidence?.sleepStateMin ?? 0;
+  const sleepStateProofMin = (evidence?.sleepStateAsleepMin ?? 0) + (evidence?.sleepStateStillMin ?? 0);
+  const hasStateProof = stateMin >= MIN_LONG_AUTO_SLEEP_STATE_MIN && sleepStateProofMin / Math.max(1, stateMin) >= 0.25;
   return (
     !manual &&
-    (evidence?.inBedMin ?? 0) >= 7 * 60 &&
-    sleepEvidencePct(evidence) < 10 &&
-    (evidence?.sleepStateMin ?? 0) < 30
+    (evidence?.inBedMin ?? 0) >= LONG_AUTO_SLEEP_MIN &&
+    sleepEvidencePct(evidence) < MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT &&
+    !hasStateProof
   );
 }
 
@@ -3181,7 +3187,7 @@ function sleepCaptureNote(input: {
     return 'A possible sleep window was rejected because decoded strap-state evidence is mostly wake. Review the window or let auto sync finish before trusting it.';
   }
   if (!input.hasSleep && input.hasCandidate && longUncorroboratedAutoSleep(input.evidence, input.manual)) {
-    return 'A long HR-only sleep window was found, but it needs stronger coverage or band-state corroboration before Pulse scores it as sleep.';
+    return 'A long HR-only sleep window was found, but it needs still-worn or decoded band-state corroboration before Pulse scores it as sleep.';
   }
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
