@@ -25,7 +25,8 @@ const STATUS_TEXT: Record<string, string> = {
   error: 'Error',
 };
 
-const RAW_FRAME_EXPORT_PAGE_SIZE = 300;
+const RAW_FRAME_EXPORT_PAGE_SIZE = 100;
+const MAX_SHARE_BYTES = 24 * 1024 * 1024;
 
 export function DeviceScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
@@ -200,6 +201,15 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         return;
       }
       const sizeKb = 'size' in info && info.size ? Math.round(info.size / 1024) : 0;
+      const sizeBytes = 'size' in info && info.size ? info.size : 0;
+
+      if (sizeBytes > MAX_SHARE_BYTES) {
+        Alert.alert(
+          'Large export saved',
+          `${exported} frames (${sizeKb} KB) were written to:\n${uri}\n\nThe file is too large to hand to Android's share sheet safely, so Pulse skipped sharing to avoid the OutOfMemory crash.`,
+        );
+        return;
+      }
 
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
