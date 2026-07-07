@@ -168,7 +168,8 @@ describe('DiaryScreen date navigation polish', () => {
     expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
     expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
     expect(SRC).toMatch(/dateCluster: \{[\s\S]*backgroundColor: colors\.surface/);
-    expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: 'transparent'/);
+    expect(SRC).toMatch(/dateButton: \{[\s\S]*backgroundColor: 'transparent'/);
   });
 });
 
