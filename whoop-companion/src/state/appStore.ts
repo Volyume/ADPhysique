@@ -92,7 +92,7 @@ import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
 import { computeEnergyReserve, EnergyReserve } from '../metrics/energyReserve';
-import { sleepTrustTier } from '../metrics/sleepTrustWeight';
+import { SLEEP_TRUST_LOW_COVERAGE_PCT, SLEEP_TRUST_LOW_SIGNAL_MIN, sleepTrustTier } from '../metrics/sleepTrustWeight';
 import {
   BandStepEstimate,
   estimateBandStepsFromCounters,
@@ -2857,8 +2857,7 @@ function sleepConfidence(
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto) return 'low';
-  if (signalMin >= 150 && coveragePct >= 55) return 'medium';
-  if (manual && signalMin >= 60 && coveragePct >= 35) return 'medium';
+  if (signalMin >= SLEEP_TRUST_LOW_SIGNAL_MIN && coveragePct >= SLEEP_TRUST_LOW_COVERAGE_PCT) return 'medium';
   return 'low';
 }
 
