@@ -194,10 +194,10 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Workout weights, sets and reps');
     expect(text).toContain('Food diary, coach notes and check-ins');
     expect(text).toContain('Body metrics and progress photos');
-    expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
-    expect(text).toContain('Block name only');
+    expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
+    expect(text).toContain('Shared block label');
     expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
-    expect(text).toContain('Manage name');
+    expect(text).toContain('Manage label');
   });
 
   test('active pairs show weekly sessions with the next safe action', async () => {
@@ -723,14 +723,14 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);
   });
 
-  test('manage sheet exposes name-only training block sharing', async () => {
+  test('manage sheet keeps new block-label sharing out of the main path', async () => {
     mockHook.value = base({ pairs: [pair({ partnerFirstName: 'Sam', partnerId: 'sam-id' })] });
     const tree = await mount();
 
     await press(tree, 'Manage partnership with Sam');
 
-    expect(allText(tree)).toContain('Share current block name');
-    expect(findPress(tree, 'Share current block name').length).toBeGreaterThan(0);
+    expect(allText(tree)).not.toContain('Share current block name');
+    expect(findPress(tree, 'Share current block name')).toHaveLength(0);
   });
 
   test('block wires the real block + unpair primitives with the exact copy', async () => {

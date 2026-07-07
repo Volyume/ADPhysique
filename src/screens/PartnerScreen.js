@@ -179,7 +179,7 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Block name only',
+      title: 'Shared block label',
       copy: `${block.blockName} is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.`,
     };
   }
@@ -283,9 +283,6 @@ function PartnerSupportSnapshot({ pair, name }) {
           ))}
         </View>
       </View>
-      <Text style={styles.supportFoot}>
-        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No weights, food, photos or Coach notes are shared.
-      </Text>
     </View>
   );
 }
@@ -403,7 +400,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-        <Text style={styles.blockStatusActionText}>Manage name</Text>
+      <Text style={styles.blockStatusActionText}>Manage label</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -1150,11 +1147,6 @@ export default function PartnerScreen({ route }) {
         {managePair ? (
           <View style={styles.sheetBody}>
             <SheetRow
-              icon="barbell-outline"
-              label="Share current block name"
-              onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
-            />
-            <SheetRow
               icon="exit-outline"
               label="End partnership"
               onPress={() => { const pr = managePair; setManagePair(null); confirmUnpair(pr); }}
@@ -1559,7 +1551,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Block name only</Text>
+        <Text style={styles.sheetHeading}>Shared block label</Text>
         <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing this block name" onPress={() => onLeave(pair)} />
       </View>
@@ -1590,7 +1582,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share current block name</Text>
+      <Text style={styles.sheetHeading}>Share a block label</Text>
       <Text style={styles.blockPitch}>
         Use this only if you and {name} already plan to run the same block. It shares the name only. Workouts and Coach changes stay private.
       </Text>
@@ -1749,7 +1741,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
-  supportFoot: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',
     alignItems: 'center',
