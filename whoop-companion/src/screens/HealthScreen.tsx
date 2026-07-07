@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Screen, SectionLabel } from '../ui/components';
+import { Card, Screen, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
@@ -26,8 +26,11 @@ const RHYTHM_LABEL: Record<string, string> = {
 export function HealthScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recent = useStoreSelector(appStore, (s) => s.recentDays);
+  const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
+  const effectiveSync = historySync ?? lastHistorySync;
 
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
@@ -66,6 +69,20 @@ export function HealthScreen({ nav }: { nav: Nav }) {
             onPress={() => nav.navigate({ name: 'metric', key: v.key as MetricKey })}
           />
         ))}
+      </Card>
+
+      <SectionLabel>Source</SectionLabel>
+      <Card>
+        <View style={styles.sourceRow}>
+          <Stat label="HR samples" value={effectiveSync?.hrSamples ?? '-'} />
+          <Stat label="R-R beats" value={effectiveSync?.rrSamples ?? '-'} />
+          <Stat label="Raw vitals" value={effectiveSync?.rawVitalSamples ?? '-'} />
+        </View>
+        <Text style={styles.sourceNote}>
+          {effectiveSync
+            ? `${formatDecodedRange(effectiveSync.firstSampleTs, effectiveSync.lastSampleTs)} / ${effectiveSync.status}`
+            : 'No history sync summary yet.'}
+        </Text>
       </Card>
 
       <SectionLabel>Heart rhythm screen</SectionLabel>
@@ -127,6 +144,13 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
   );
 }
 
+function formatDecodedRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'No decoded range yet';
+  const first = new Date(firstTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `Decoded ${first}-${last}`;
+}
+
 const styles = StyleSheet.create({
   summaryLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1.4 },
   summaryValue: { fontSize: 40, fontFamily: fonts.black, marginTop: 6 },
@@ -142,4 +166,6 @@ const styles = StyleSheet.create({
   rhythmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   rhythmStatus: { fontSize: 20, fontFamily: fonts.black },
   rhythmNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8, fontFamily: fonts.text },
+  sourceRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  sourceNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });

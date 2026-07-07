@@ -130,6 +130,14 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
               <Stat label="Steps" value={metric.steps != null ? metric.steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
             </Card>
           </View>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Blood oxygen" value={metric.spo2 != null ? Math.round(metric.spo2) : '-'} unit={metric.spo2 != null ? '%' : undefined} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Skin temp" value={metric.skinTempC != null ? metric.skinTempC.toFixed(1) : '-'} unit={metric.skinTempC != null ? 'C' : undefined} />
+            </Card>
+          </View>
         </>
       )}
 

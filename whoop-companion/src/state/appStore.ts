@@ -275,7 +275,8 @@ const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // the app is alive, so every screen reflects ongoing data without being opened.
 const RECOMPUTE_INTERVAL_MS = 60 * 1000;
 const HISTORY_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
-const HISTORY_STALL_TIMEOUT_MS = 90 * 1000;
+const HISTORY_STALL_TIMEOUT_MS = 45 * 1000;
+const HISTORY_STALL_NUDGE_LIMIT = 2;
 const HISTORY_WATCHDOG_INTERVAL_MS = 30 * 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
@@ -298,6 +299,8 @@ class AppStore extends Store<AppState> {
   private historyLastActivityTs = 0;
   private historyStopQueued = false;
   private historyEndAckSentThisBurst = false;
+  private historyStallRecoveries = 0;
+  private historyNudgeInFlight = false;
   private eventAssemblers = new Map<string, FrameAssembler>();
   private gpsActive = false;
   private recomputeTimer: ReturnType<typeof setInterval> | null = null;
@@ -1407,6 +1410,7 @@ class AppStore extends Store<AppState> {
 
   private markHistoryActivity(): void {
     this.historyLastActivityTs = Date.now();
+    this.historyStallRecoveries = 0;
     this.armHistoryTimeout();
   }
 
@@ -1433,12 +1437,57 @@ class AppStore extends Store<AppState> {
     const stalledMs = Date.now() - last;
     if (stalledMs < HISTORY_STALL_TIMEOUT_MS) return;
     const stalledSec = Math.round(stalledMs / 1000);
+    if (this.historyStallRecoveries < HISTORY_STALL_NUDGE_LIMIT && !this.historyNudgeInFlight) {
+      void this.nudgeStalledHistoryDrain(source, stalledSec);
+      return;
+    }
     this.setState((s) => ({
       historySync: s.historySync
         ? { ...s.historySync, status: `Sync stalled after ${stalledSec}s (${source}); retrying` }
         : s.historySync,
     }));
     this.enqueueHistoryStop('timeout');
+  }
+
+  private async nudgeStalledHistoryDrain(source: string, stalledSec: number): Promise<void> {
+    const ble = this.ble;
+    const attempt = this.historyStallRecoveries + 1;
+    this.historyStallRecoveries = attempt;
+    this.historyNudgeInFlight = true;
+    this.setState((s) => ({
+      historySync: s.historySync
+        ? { ...s.historySync, status: `Sync stalled after ${stalledSec}s (${source}); nudging strap ${attempt}/${HISTORY_STALL_NUDGE_LIMIT}` }
+        : s.historySync,
+    }));
+    try {
+      const commandReady = ble && (ble.canSendCommands || (await ble.refreshCommandChannel()) === true);
+      if (!commandReady) {
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: 'Sync stalled and command channel is unavailable; committing partial data' }
+            : s.historySync,
+        }));
+        this.enqueueHistoryStop('timeout');
+        return;
+      }
+      await ble.writeCommand(cmdSendHistoricalData());
+      this.historyLastActivityTs = Date.now();
+      this.armHistoryTimeout();
+      this.setState((s) => ({
+        historySync: s.historySync
+          ? { ...s.historySync, status: `History request re-sent after stall (${attempt}/${HISTORY_STALL_NUDGE_LIMIT})` }
+          : s.historySync,
+      }));
+    } catch (e) {
+      this.setState((s) => ({
+        historySync: s.historySync
+          ? { ...s.historySync, status: `Sync nudge failed: ${String(e)}; committing partial data` }
+          : s.historySync,
+      }));
+      this.enqueueHistoryStop('timeout');
+    } finally {
+      this.historyNudgeInFlight = false;
+    }
   }
 
   private clearHistoryTimeout(): void {
@@ -1458,8 +1507,9 @@ class AppStore extends Store<AppState> {
    */
   runHistoryDrain = async (mode: 'manual' | 'auto' = 'manual'): Promise<void> => {
     const ble = this.ble;
-    if (!ble) {
+    if (!ble || !ble.isConnected) {
       this.setState({ error: 'History drain needs an active WHOOP Bluetooth connection.' });
+      this.connect();
       return;
     }
     if (!ble.canSendCommands) {
@@ -1486,6 +1536,8 @@ class AppStore extends Store<AppState> {
     this.historyCommitQueue = Promise.resolve();
     this.historyStopQueued = false;
     this.historyEndAckSentThisBurst = false;
+    this.historyStallRecoveries = 0;
+    this.historyNudgeInFlight = false;
     this.historyDrainMode = mode;
     this.historyLastActivityTs = Date.now();
     this.setState({

@@ -41,6 +41,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const [nightHr, setNightHr] = useState<number[]>([]);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const neededMin = sleepNeed?.neededMin ?? BASE_NEED_MIN;
   const week = recentDays.slice(0, 7).reverse();
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
+  const effectiveSync = historySync ?? lastHistorySync;
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
@@ -116,6 +119,13 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
               <Stat label="Source" value={sourceLabel(capture.source)} />
             </View>
+            <View style={[styles.grid, { marginTop: 12 }]}>
+              <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
+              <Stat label="Raw vitals" value={effectiveSync?.rawVitalSamples ?? '-'} />
+            </View>
+            <Text style={styles.captureSource}>
+              {formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs)}
+            </Text>
             <Text style={styles.captureNote}>{capture.note}</Text>
           </>
         ) : (
@@ -354,8 +364,16 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
   return colors.textTertiary;
 }
 
+function formatDecodedRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'No decoded history range yet';
+  const first = new Date(firstTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `Decoded ${first}-${last}`;
+}
+
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  captureSource: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   captureNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
   grid: { flexDirection: 'row', gap: 12 },

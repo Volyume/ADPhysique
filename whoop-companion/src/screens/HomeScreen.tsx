@@ -67,6 +67,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const coverage = sleepCapture?.coveragePct ?? 0;
   const effectiveSync = historySync ?? lastHistorySync;
   const syncProblem = isRetryableSyncProblem(effectiveSync);
+  const decodedRange = formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const syncLabel = draining
     ? syncProblem
       ? 'Recovering sync'
@@ -110,6 +111,9 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining, syncProblem)} />
             <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
           </View>
+          <Text style={styles.qualityMeta}>
+            {decodedRange} / R-R {effectiveSync?.rrSamples ?? 0} / raw vitals {effectiveSync?.rawVitalSamples ?? 0}
+          </Text>
           {effectiveSync?.status ? <Text style={styles.qualityNote}>{effectiveSync.status}</Text> : null}
           {sleepCapture?.note ? <Text style={styles.qualityNote}>{sleepCapture.note}</Text> : null}
         </Card>
@@ -315,6 +319,7 @@ const styles = StyleSheet.create({
   qualityDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   qualityTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold, flex: 1 },
   qualityStatus: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
+  qualityMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
 });
 
@@ -346,4 +351,12 @@ function formatSyncAge(ts: number): string {
   const hours = Math.round(min / 60);
   if (hours < 24) return `${hours}h ago`;
   return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function formatDecodedRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'No decoded range yet';
+  const sameDay = new Date(firstTs).toDateString() === new Date(lastTs).toDateString();
+  const first = new Date(firstTs).toLocaleString(undefined, sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `Decoded ${first}-${last}`;
 }
