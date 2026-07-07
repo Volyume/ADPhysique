@@ -444,7 +444,7 @@ function PairCard({
               />
               <Text style={styles.heroWord}>weeks running, together</Text>
             </View>
-            <Text style={styles.heroSub}>Counted against each person's own plan. Rest weeks never break it.</Text>
+            <Text style={styles.heroSub}>Counted against each person's current plan. Rest weeks never break it.</Text>
           </View>
         ) : (
           <Text style={styles.heroFirst}>Your first shared week is under way</Text>
@@ -1442,7 +1442,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={styles.beatTitle}>A partner, not an audience</Text>
               <Text style={styles.beatLine}>One person you already know and trust.</Text>
               <Text style={styles.beatLine}>No feed, no followers, no public numbers.</Text>
-              <Text style={styles.beatLine}>Just whether you each trained against your own plan.</Text>
+              <Text style={styles.beatLine}>Just whether you each trained against your current plan.</Text>
               <Button
                 title="Continue"
                 style={styles.primaryBtn}

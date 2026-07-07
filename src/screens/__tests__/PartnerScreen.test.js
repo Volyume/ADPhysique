@@ -659,6 +659,12 @@ describe('pending state', () => {
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/textRow:/);
   });
 
+  test('visible plan copy refers to the current assigned plan, not an Own Plan concept', () => {
+    expect(PARTNER_SCREEN_SOURCE).toContain("each person's current plan");
+    expect(PARTNER_SCREEN_SOURCE).toContain('trained against your current plan');
+    expect(PARTNER_SCREEN_SOURCE).not.toMatch(/own plan/i);
+  });
+
   test('can manually refresh a pending connection after the other person accepts', async () => {
     const hook = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
     mockHook.value = hook;

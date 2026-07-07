@@ -209,6 +209,8 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('Adds these meals to the diary date. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Rebuild meals"');
     expect(source).toContain("isDayPlan ? 'Build week' : 'Build day'");
+    expect(source).toMatch(/swapBtn: \{[\s\S]*borderWidth: 1,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(source).toMatch(/swapText: \{ color: colors\.textPrimary/);
   });
 
   test('nutrition-target redirect carries a return intent back to Meal Plan', () => {
