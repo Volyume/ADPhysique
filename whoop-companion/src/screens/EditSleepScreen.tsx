@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
@@ -75,6 +75,24 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
     setTimeout(() => nav.back(), 700);
   };
 
+  const confirmClearManual = () => {
+    Alert.alert(
+      'Clear manual sleep window?',
+      'Pulse will return this day to auto-detection from synced strap history. Sleep stages, performance, recovery and readiness may change.',
+      [
+        { text: 'Keep override', style: 'cancel' },
+        {
+          text: 'Clear override',
+          style: 'destructive',
+          onPress: () => {
+            void appStore.clearManualSleep(targetDay);
+            nav.back();
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Screen title="Log / Adjust Sleep" onBack={nav.back} tint={colors.sleepTeal}>
       <Card>
@@ -124,7 +142,7 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PrimaryButton title={saved ? 'Saved - re-detecting' : 'Save & re-detect'} onPress={save} />
-      <SecondaryButton title="Clear manual override (auto-detect)" onPress={() => { void appStore.clearManualSleep(targetDay); nav.back(); }} />
+      <SecondaryButton title="Clear manual override (auto-detect)" onPress={confirmClearManual} />
     </Screen>
   );
 }
