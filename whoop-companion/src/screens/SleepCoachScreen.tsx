@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
+import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
@@ -42,12 +42,15 @@ const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
   { key: 1.0, name: 'Peak', pct: '100%', desc: 'Fully optimise recovery' },
 ];
 const SMART_WINDOWS = [0, 15, 30, 45] as const;
+type GoalMode = (typeof MODES)[number];
 
 export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const need = useStoreSelector(appStore, (s) => s.sleepNeed);
   const goal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const lastSleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
+  const today = useStoreSelector(appStore, (s) => s.today);
   const status = useStoreSelector(appStore, (s) => s.status);
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
@@ -93,6 +96,13 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
   const lastSleepPerformancePct = displayPct(lastSleep?.performance != null ? lastSleep.performance * 100 : null);
+  const recommendation = goalRecommendation({
+    readinessScore: readiness?.score ?? null,
+    recovery: today?.recovery ?? null,
+    sleepDebtMin: need?.debtMin ?? 0,
+    lastSleep,
+    currentGoal: goal,
+  });
   const alarmMeta =
     strapAlarm.pendingWrite === 'set'
       ? `Queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -155,6 +165,29 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         <Text style={styles.bigSub}>
           Recommended for your goal: {formatDuration(targetMin)} ({MODES.find((m) => m.key === goal)?.pct})
         </Text>
+      </Card>
+
+      <SectionLabel>Recommended tonight</SectionLabel>
+      <Card>
+        <View style={styles.recommendHead}>
+          <View style={[styles.recommendBadge, { backgroundColor: recommendation.color }]}>
+            <Text style={styles.recommendBadgeText}>{recommendation.mode.pct}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.recommendTitle}>{recommendation.mode.name}</Text>
+            <Text style={styles.recommendBody}>{recommendation.reason}</Text>
+          </View>
+        </View>
+        <View style={styles.recommendStats}>
+          <Stat label="Readiness" value={readiness?.score ?? '-'} color={readyColor(readiness?.score)} />
+          <Stat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={readyColor(today?.recovery)} />
+          <Stat label="Debt" value={formatDuration(need?.debtMin ?? 0)} color={(need?.debtMin ?? 0) >= 60 ? colors.recoveryYellow : colors.sleepTeal} />
+        </View>
+        {recommendation.mode.key !== goal ? (
+          <SecondaryButton title={`Apply ${recommendation.mode.pct} ${recommendation.mode.name}`} onPress={() => void appStore.setSleepGoal(recommendation.mode.key)} />
+        ) : (
+          <Text style={styles.recommendMeta}>Your current goal already matches tonight's signal.</Text>
+        )}
       </Card>
 
       <SectionLabel>Choose your sleep goal</SectionLabel>
@@ -315,10 +348,70 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function readyColor(value: number | null | undefined): string {
+  if (value == null) return colors.textTertiary;
+  if (value >= 70) return colors.recoveryGreen;
+  if (value >= 50) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function modeFor(key: number): GoalMode {
+  return MODES.find((m) => m.key === key) ?? MODES[1]!;
+}
+
+function goalRecommendation(input: {
+  readinessScore: number | null;
+  recovery: number | null;
+  sleepDebtMin: number;
+  lastSleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  currentGoal: number;
+}): { mode: GoalMode; reason: string; color: string } {
+  const shortfallMin = input.lastSleep
+    ? Math.max(0, (input.lastSleep.neededMin || 480) - input.lastSleep.asleepMin)
+    : 0;
+
+  if (input.sleepDebtMin >= 90 || shortfallMin >= 90 || (input.recovery != null && input.recovery < 34)) {
+    return {
+      mode: modeFor(1.0),
+      reason: `Recovery needs priority: ${formatDuration(input.sleepDebtMin)} debt and ${formatDuration(shortfallMin)} shortfall from the last scored night.`,
+      color: colors.recoveryYellow,
+    };
+  }
+
+  if ((input.readinessScore != null && input.readinessScore < 50) || input.sleepDebtMin >= 45 || shortfallMin >= 45) {
+    return {
+      mode: modeFor(0.85),
+      reason: 'Aim for enough sleep to stabilise recovery without forcing an unrealistic full catch-up night.',
+      color: colors.sleepTeal,
+    };
+  }
+
+  if (input.readinessScore != null && input.readinessScore >= 75 && input.sleepDebtMin < 30 && shortfallMin < 30) {
+    return {
+      mode: modeFor(0.7),
+      reason: 'Signals are strong and debt is low, so a lighter target is reasonable if tomorrow demands flexibility.',
+      color: colors.recoveryGreen,
+    };
+  }
+
+  return {
+    mode: modeFor(input.currentGoal),
+    reason: 'Your current target is a good fit for tonight based on available readiness, recovery and sleep debt.',
+    color: colors.sleepTeal,
+  };
+}
+
 const styles = StyleSheet.create({
   bigLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1.4 },
   bigValue: { color: colors.sleepTeal, fontSize: 44, fontFamily: fonts.black, marginTop: 6 },
   bigSub: { color: colors.textTertiary, fontSize: 13, marginTop: 2, fontFamily: fonts.text },
+  recommendHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  recommendBadge: { width: 54, height: 54, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  recommendBadgeText: { color: '#000', fontSize: 15, fontFamily: fonts.black },
+  recommendTitle: { color: colors.text, fontSize: 18, fontFamily: fonts.textBold },
+  recommendBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4, fontFamily: fonts.text },
+  recommendStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 },
+  recommendMeta: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 10, fontFamily: fonts.text },
   modeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   modeBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.textTertiary, marginRight: 14, alignItems: 'center', justifyContent: 'center' },
