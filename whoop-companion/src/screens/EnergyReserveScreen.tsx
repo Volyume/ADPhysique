@@ -53,6 +53,28 @@ function recentTrendDays(today: DailyMetricRow | null, recent: DailyMetricRow[])
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day)).slice(0, 7).reverse();
 }
 
+function inputState(ok: boolean): { value: string; color: string } {
+  return ok ? { value: 'Ready', color: colors.recoveryGreen } : { value: '-', color: colors.textTertiary };
+}
+
+function energyQualityNote(input: {
+  recovery: number | null;
+  sleep: number | null;
+  stress: number | null;
+  strain: number | null;
+  debtMin: number | null;
+}): string {
+  const missing = [
+    input.recovery == null ? 'recovery' : null,
+    input.sleep == null ? 'sleep' : null,
+    input.stress == null ? 'stress' : null,
+    input.strain == null ? 'strain' : null,
+    input.debtMin == null ? 'sleep debt' : null,
+  ].filter((v): v is string => v != null);
+  if (!missing.length) return 'Energy Reserve is using overnight charge, sleep debt, stress and activity drain.';
+  return `Energy Reserve is usable, but still waiting for ${missing.join(', ')} to make it sharper.`;
+}
+
 export function EnergyReserveScreen({ nav }: { nav: Nav }) {
   const energyReserve = useStoreSelector(appStore, (s) => s.energyReserve);
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -72,6 +94,10 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
       color: energyColor(score),
     };
   });
+  const recoveryState = inputState(today?.recovery != null);
+  const sleepState = inputState(todaySleepPerf != null);
+  const stressState = inputState(stress != null);
+  const strainState = inputState(today?.strain != null);
 
   return (
     <Screen title="Energy Reserve" onBack={nav.back} tint={energyColor(energyReserve?.score)}>
@@ -98,6 +124,29 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
         ) : (
           <Empty text="Energy Reserve appears once recovery, sleep, stress or strain data is available." />
         )}
+      </Card>
+
+      <SectionLabel>Energy quality</SectionLabel>
+      <Card>
+        <View style={styles.stats}>
+          <Stat label="Recovery" value={recoveryState.value} color={recoveryState.color} />
+          <Stat label="Sleep" value={sleepState.value} color={sleepState.color} />
+          <Stat label="Stress" value={stressState.value} color={stressState.color} />
+        </View>
+        <View style={styles.statsTight}>
+          <Stat label="Strain" value={strainState.value} color={strainState.color} />
+          <Stat label="Sleep debt" value={sleepNeed ? 'Ready' : '-'} color={sleepNeed ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="Trend" value={energyReserve ? trendLabel(energyReserve.trend) : '-'} color={energyReserve ? energyColor(energyReserve.score) : colors.textTertiary} />
+        </View>
+        <Text style={styles.note}>
+          {energyQualityNote({
+            recovery: today?.recovery ?? null,
+            sleep: todaySleepPerf,
+            stress,
+            strain: today?.strain ?? null,
+            debtMin: sleepNeed?.debtMin ?? null,
+          })}
+        </Text>
       </Card>
 
       {energyReserve ? (
@@ -141,6 +190,7 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
 
 const styles = StyleSheet.create({
   stats: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 18, gap: 10 },
+  statsTight: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 10, gap: 10 },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 14, textAlign: 'center', fontFamily: fonts.text },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
