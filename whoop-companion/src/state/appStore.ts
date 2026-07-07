@@ -1394,8 +1394,11 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    if (sleep) {
-      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+    const rawVitalWindow = sleep ?? candidateSleep;
+    if (rawVitalWindow) {
+      const rawVitals = averageRawVitals(
+        await getRawVitalSamplesBetween(rawVitalWindow.startTs - 30 * 60000, rawVitalWindow.endTs + 30 * 60000),
+      );
       spo2 = rawVitals.spo2;
       skinTempC = rawVitals.skinTempC;
     }
@@ -2202,8 +2205,11 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    if (sleep) {
-      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+    const rawVitalWindow = sleep ?? candidateSleep;
+    if (rawVitalWindow) {
+      const rawVitals = averageRawVitals(
+        await getRawVitalSamplesBetween(rawVitalWindow.startTs - 30 * 60000, rawVitalWindow.endTs + 30 * 60000),
+      );
       spo2 = rawVitals.spo2;
       skinTempC = rawVitals.skinTempC;
     }
