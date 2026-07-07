@@ -146,7 +146,7 @@ export default function MealPlanScreen({ navigation, route }) {
   // macros) is the plan's most useful surface, so every meal shows it unless the
   // user collapses it. Absent key === open; only an explicit false collapses.
   const [expanded, setExpanded] = useState({});
-  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(true);
   // The meal-swap sheet: a generous, style-diverse list of alternatives for
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
@@ -509,8 +509,22 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           <Text style={styles.emptyTitle}>Build meals</Text>
           <Text style={styles.emptyBody}>
-            Choose one day or a week. Volyume uses your targets and preferences, then you review every meal before it touches your diary.
+            Build real meals from your targets, check every plate, then add them to your diary when you are happy.
           </Text>
+          <View style={styles.emptySteps} accessibilityLabel="Meal builder steps">
+            <View style={styles.emptyStep}>
+              <Ionicons name="analytics-outline" size={16} color={colors.primary} />
+              <Text style={styles.emptyStepText}>Uses your calories and macros</Text>
+            </View>
+            <View style={styles.emptyStep}>
+              <Ionicons name="options-outline" size={16} color={colors.primary} />
+              <Text style={styles.emptyStepText}>Follows your meal preferences</Text>
+            </View>
+            <View style={styles.emptyStep}>
+              <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary} />
+              <Text style={styles.emptyStepText}>Nothing is logged until you add it</Text>
+            </View>
+          </View>
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
@@ -518,7 +532,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build one day's meals for this diary date. Good when you want a quick structure.
+              Build meals for this diary date only. Best when you want today organised quickly.
             </Text>
             <Button title="Plan this day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
@@ -529,7 +543,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build seven dated days plus a shopping list. Existing logged days are left alone.
+              Build seven dated days and a shopping list. Existing logged food is left alone.
             </Text>
             <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
@@ -603,20 +617,25 @@ export default function MealPlanScreen({ navigation, route }) {
           ) : null}
           {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
 
-          <TouchableOpacity
-            style={styles.prefsToggle}
-            onPress={() => setPrefsOpen((o) => !o)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: prefsOpen }}
-            accessibilityLabel={`Plan settings, ${prefSummary}`}
-          >
-            <Ionicons name="options-outline" size={18} color={colors.primary} />
-            <View style={styles.prefsToggleCopy}>
-              <Text style={styles.prefsToggleText}>Plan settings</Text>
-              <Text style={styles.prefsToggleSub}>{prefSummary}</Text>
-            </View>
-            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.preferencesCard}>
+            <TouchableOpacity
+              style={styles.prefsToggle}
+              onPress={() => setPrefsOpen((o) => !o)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: prefsOpen }}
+              accessibilityLabel={`Meal preferences, ${prefSummary}`}
+            >
+              <View style={styles.preferencesIcon}>
+                <Ionicons name="options-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.prefsToggleCopy}>
+                <Text style={styles.prefsToggleText}>Meal preferences</Text>
+                <Text style={styles.prefsToggleSub}>{prefSummary}</Text>
+              </View>
+              <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <Text style={styles.preferencesHint}>Set these before you add the plan. Changes rebuild the meals around the same targets.</Text>
+          </View>
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
               <PrefRow
@@ -649,6 +668,11 @@ export default function MealPlanScreen({ navigation, route }) {
               />
             </View>
           ) : null}
+
+          <View style={styles.reviewHeader}>
+            <Text style={styles.reviewTitle}>Review meals</Text>
+            <Text style={styles.reviewSub}>Tap a food to swap it. Hold a food to leave it out of future plans.</Text>
+          </View>
 
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
@@ -750,15 +774,15 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={styles.planActionTitle}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
-                    ? 'Check the meals above, swap anything you want, then add them to the diary date.'
-                    : 'Check each day, swap anything you want, then add the week from the date shown.'}
+                    ? 'Adds these meals to the diary date. Existing logged food is left alone.'
+                    : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
                 </Text>
               </View>
             </View>
             {isDayPlan ? (
-              <Button title="Add to diary" onPress={handleLogDay} loading={busy} fullWidth />
+              <Button title="Add this day" onPress={handleLogDay} loading={busy} fullWidth />
             ) : (
-              <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
+              <Button title="Add this week" onPress={handleLogWeek} loading={busy} fullWidth />
             )}
             <View style={styles.planQuickActions}>
               <TouchableOpacity
@@ -786,17 +810,13 @@ export default function MealPlanScreen({ navigation, route }) {
                 onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel={isDayPlan ? 'Switch to a week plan' : 'Switch to a day plan'}
+                accessibilityLabel={isDayPlan ? 'Build a week instead' : 'Build one day instead'}
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Plan week' : 'Plan one day'}</Text>
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Build week' : 'Build day'}</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          <Text style={styles.footNote}>
-            A plan is not logged food until you add it to your diary. Swap any meal you like; the day stays close to your target.
-          </Text>
         </ScrollView>
       )}
 
@@ -918,6 +938,23 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
+  emptySteps: {
+    alignSelf: 'stretch',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  emptyStep: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   planOption: {
     alignSelf: 'stretch',
     gap: spacing.sm,
@@ -1005,20 +1042,42 @@ const styles = StyleSheet.create({
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 1 },
-  footNote: { ...type.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 17 },
-  // Prominent, but not shouty: the settings row sits before the meal list so
+  // Prominent, but not shouty: the settings block sits before the meal list so
   // people see the controls that shape the plan before they review the meals.
-  prefsToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    minHeight: 48, marginVertical: spacing.sm,
+  preferencesCard: {
+    gap: spacing.xs,
     backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  prefsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 42,
+  },
+  preferencesIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
   },
   prefsToggleCopy: { flex: 1, minWidth: 0 },
   prefsToggleText: { ...type.bodyStrong, color: colors.textPrimary },
   prefsToggleSub: { ...type.caption, color: colors.textSecondary, marginTop: 1 },
-  prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm, marginTop: -spacing.xs },
+  preferencesHint: { ...type.caption, color: colors.textMuted, lineHeight: 17, marginLeft: 34 + spacing.sm },
+  prefsPanel: {
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   prefRow: { gap: spacing.xs },
   prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
@@ -1027,6 +1086,9 @@ const styles = StyleSheet.create({
   prefOptDisabled: { opacity: 0.6 },
   prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.primary },
+  reviewHeader: { gap: spacing.xxs, marginTop: spacing.xs },
+  reviewTitle: { ...type.label, color: colors.textPrimary },
+  reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },
   swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight

@@ -182,13 +182,15 @@ describe('MealPlanScreen review-before-add flow', () => {
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('<Text style={styles.emptyTitle}>Build meals</Text>');
-    expect(source).toContain('Choose one day or a week. Volyume uses your targets and preferences, then you review every meal before it touches your diary.');
+    expect(source).toContain('Build real meals from your targets, check every plate, then add them to your diary when you are happy.');
+    expect(source).toContain('Nothing is logged until you add it');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
-    expect(source.indexOf('Plan settings')).toBeLessThan(source.indexOf('{/* Meals */}'));
-    expect(source.indexOf('Plan settings')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));
+    expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source).toContain('Changes rebuild the meals around the same targets.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
-    expect(source).toContain('Check the meals above, swap anything you want, then add them to the diary date.');
+    expect(source).toContain('Adds these meals to the diary date. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Rebuild meals"');
-    expect(source).toContain("isDayPlan ? 'Plan week' : 'Plan one day'");
+    expect(source).toContain("isDayPlan ? 'Build week' : 'Build day'");
   });
 });
