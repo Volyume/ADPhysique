@@ -24,6 +24,7 @@ import type { HrZone } from '../metrics/strain';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 import { activitySummary } from '../ui/activityFormat';
+import { activityStrainCategory } from '../data/activities';
 
 const ZONE_COLORS = strainZoneColors;
 
@@ -82,7 +83,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   const sod = new Date().setHours(0, 0, 0, 0);
   const todayCardio = cardio.filter((c) => c.startTs >= sod && c.source !== 'nap');
   const strengthMin = todayCardio
-    .filter((c) => c.activity === 'Strength')
+    .filter((c) => activityStrainCategory(c.activity) === 'muscular')
     .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
   const week = recentDays.slice(0, 7).reverse();

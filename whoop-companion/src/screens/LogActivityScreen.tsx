@@ -21,7 +21,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
   const [customDuration, setCustomDuration] = useState('');
   const [dayOffset, setDayOffset] = useState(0);
   const [endTime, setEndTime] = useState(defaultEndTime());
-  const [avgHr, setAvgHr] = useState('140');
+  const [avgHr, setAvgHr] = useState('');
   const [maxHr, setMaxHr] = useState('');
   const [steps, setSteps] = useState('');
   const [distanceKm, setDistanceKm] = useState('');
@@ -145,7 +145,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
             onChangeText={setAvgHr}
             keyboardType="number-pad"
             style={styles.hrInput}
-            placeholder="140"
+            placeholder="optional"
             placeholderTextColor={colors.textTertiary}
           />
           <Text style={styles.hrUnit}>bpm</Text>
