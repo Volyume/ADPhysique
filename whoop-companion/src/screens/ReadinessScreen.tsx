@@ -23,6 +23,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const sleepDetail = today?.sleepDetail ?? null;
   const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
+  const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
   const qualityAction =
     !readiness
       ? null
@@ -125,6 +126,36 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
             </>
           ) : null}
 
+          {limiter ? (
+            <>
+              <SectionLabel>Readiness limiter</SectionLabel>
+              <Card>
+                <View style={styles.callHead}>
+                  <View style={[styles.callBadge, { backgroundColor: limiter.color }]}>
+                    <Text style={styles.callBadgeText}>{limiter.badge}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.callTitle}>{limiter.title}</Text>
+                    <Text style={styles.callBody}>{limiter.body}</Text>
+                  </View>
+                </View>
+                <View style={styles.statRow}>
+                  <Stat label="Limiter" value={limiter.metric} color={limiter.color} />
+                  <Stat label="Value" value={limiter.value} />
+                  <Stat label="Confidence" value={`${readiness.confidencePct}%`} color={confidenceColor(readiness.confidence)} />
+                </View>
+                <NavRow
+                  label={limiter.actionLabel}
+                  icon={limiter.icon}
+                  iconColor={limiter.color}
+                  value={limiter.actionValue}
+                  onPress={() => nav.navigate(limiter.route)}
+                  last
+                />
+              </Card>
+            </>
+          ) : null}
+
           <SectionLabel>Contributors</SectionLabel>
           <Card>
             {readiness.contributors.map((c) => (
@@ -148,6 +179,99 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
       ) : null}
     </Screen>
   );
+}
+
+function readinessLimiter(
+  readiness: NonNullable<ReturnType<typeof appStore.getState>['trainingReadiness']>,
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+): {
+  badge: string;
+  title: string;
+  body: string;
+  metric: string;
+  value: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  if (readiness.confidence === 'low' || readiness.confidencePct < 55) {
+    return {
+      badge: 'DATA',
+      title: 'Confidence is the limiter',
+      body: 'The training call should stay conservative until sleep/recovery inputs are complete enough to trust.',
+      metric: 'Confidence',
+      value: `${readiness.confidencePct}%`,
+      actionLabel: (sleepDetail?.coveragePct ?? 100) < 60 ? 'Sync overnight data' : 'Review sleep window',
+      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'quality',
+      icon: (sleepDetail?.coveragePct ?? 100) < 60 ? 'sync' : 'create',
+      color: colors.strainBlue,
+      route: (sleepDetail?.coveragePct ?? 100) < 60 ? { name: 'device' } : { name: 'editSleep' },
+    };
+  }
+
+  const debtMin = sleepDetail?.debtMin ?? 0;
+  if (debtMin >= 60) {
+    return {
+      badge: 'DEBT',
+      title: 'Sleep debt is holding readiness down',
+      body: 'Debt raises your sleep need and makes otherwise decent recovery less durable under training load.',
+      metric: 'Sleep debt',
+      value: `${Math.round(debtMin)}m`,
+      actionLabel: 'Plan tonight',
+      actionValue: 'sleep',
+      icon: 'moon',
+      color: colors.recoveryYellow,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  const weakContributor = readiness.contributors.find((c) => c.good === false);
+  if (weakContributor) {
+    const route =
+      weakContributor.key === 'sleep' || weakContributor.key === 'debt'
+        ? ({ name: 'sleep' } as const)
+        : weakContributor.key === 'load'
+          ? ({ name: 'training' } as const)
+          : weakContributor.key === 'hrv'
+            ? ({ name: 'recovery' } as const)
+            : ({ name: 'recovery' } as const);
+    return {
+      badge: 'FOCUS',
+      title: `${weakContributor.label} is the weak link`,
+      body: limiterBody(weakContributor.key),
+      metric: weakContributor.label,
+      value: weakContributor.value,
+      actionLabel: 'Open detail',
+      actionValue: weakContributor.label.toLowerCase(),
+      icon: weakContributor.key === 'load' ? 'barbell' : weakContributor.key === 'sleep' || weakContributor.key === 'debt' ? 'moon' : 'pulse',
+      color: colors.recoveryYellow,
+      route,
+    };
+  }
+
+  return {
+    badge: 'READY',
+    title: 'No single limiter stands out',
+    body: 'The major readiness inputs are aligned. Use the training call to choose quality over random extra volume.',
+    metric: 'Balanced',
+    value: readiness.label,
+    actionLabel: 'Start workout',
+    actionValue: 'quality',
+    icon: 'play',
+    color: colors.recoveryGreen,
+    route: { name: 'startMenu' },
+  };
+}
+
+function limiterBody(key: string): string {
+  if (key === 'recovery') return 'Recovery is the largest readiness input, so low recovery should steer the whole day easier.';
+  if (key === 'sleep') return 'Sleep performance is dragging the readiness blend down. Fixing sleep usually beats forcing more training.';
+  if (key === 'debt') return 'Debt compounds across nights; paying it down is the cleanest way to lift readiness.';
+  if (key === 'hrv') return 'HRV balance suggests your autonomic baseline is not fully settled yet.';
+  if (key === 'load') return 'Recent load is the limiter. Keep today controlled so the acute spike does not become tomorrow’s recovery problem.';
+  return 'This input is currently below the useful band for a harder training day.';
 }
 
 function readinessCall(
