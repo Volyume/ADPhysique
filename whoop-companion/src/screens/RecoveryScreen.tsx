@@ -451,7 +451,7 @@ function recoveryDriverInsight(
     return {
       badge: 'DATA',
       title: confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',
-      body: `The recovery score is capped at ${confidenceCap}% until the overnight window has stronger coverage or has been reviewed.`,
+      body: `The recovery score is capped at ${confidenceCap}% until the overnight window has stronger coverage, sleep-state corroboration, or has been reviewed.`,
       metric: 'Confidence',
       value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-',
       actionLabel: needsMoreSync ? 'Sync more data' : 'Review sleep window',

@@ -100,7 +100,7 @@ export function computeTrainingReadiness(input: {
       : sleepConfidence === 'low'
         ? 'Readiness is limited by low sleep confidence; sync more overnight data or review the sleep window.'
         : sleepConfidence === 'medium'
-          ? 'Readiness is usable, but more complete sleep coverage may refine it.'
+          ? 'Readiness is usable, but fuller sleep coverage or corroboration may refine it.'
           : 'Readiness is backed by recovery, sleep, HRV balance and recent training load.';
 
   return {

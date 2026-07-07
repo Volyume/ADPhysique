@@ -125,7 +125,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         ) : null}
         {perf?.cappedByConfidence ? (
           <Text style={styles.capNote}>
-            Score capped at {perf.confidenceCapPct}% until overnight coverage/confidence improves.
+            Score capped at {perf.confidenceCapPct}% until overnight coverage or sleep-state corroboration improves.
           </Text>
         ) : null}
       </Card>

@@ -380,7 +380,7 @@ function renderQualityCard(input: {
           </View>
           <Text style={styles.qualityNote}>
             {input.sleepPerformance?.cappedByConfidence && input.sleepPerformance.confidenceCapPct != null
-              ? `Score capped at ${input.sleepPerformance.confidenceCapPct}% until the overnight capture has stronger HR coverage.`
+              ? `Score capped at ${input.sleepPerformance.confidenceCapPct}% until the overnight capture has stronger coverage or sleep-state corroboration.`
               : sleepQualityNote(detail)}
           </Text>
         </Card>
