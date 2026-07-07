@@ -1249,10 +1249,12 @@ class AppStore extends Store<AppState> {
       rmssd = vitals.rmssd;
       rhr = vitals.rhr;
       resp = vitals.resp;
-      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
-      spo2 = rawVitals.spo2;
-      skinTempC = rawVitals.skinTempC;
     }
+    const rawVitalWindowStart = sleep?.startTs ?? winStart;
+    const rawVitalWindowEnd = sleep?.endTs ?? winEnd;
+    const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(rawVitalWindowStart, rawVitalWindowEnd));
+    spo2 = rawVitals.spo2;
+    skinTempC = rawVitals.skinTempC;
 
     const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
     const debtNights = recent
@@ -1968,10 +1970,12 @@ class AppStore extends Store<AppState> {
       rmssd = vitals.rmssd;
       rhr = vitals.rhr;
       resp = vitals.resp;
-      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
-      spo2 = rawVitals.spo2;
-      skinTempC = rawVitals.skinTempC;
     }
+    const rawVitalWindowStart = sleep?.startTs ?? winStart;
+    const rawVitalWindowEnd = sleep?.endTs ?? winEnd;
+    const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(rawVitalWindowStart, rawVitalWindowEnd));
+    spo2 = rawVitals.spo2;
+    skinTempC = rawVitals.skinTempC;
 
     // Baselines from prior days (exclude today).
     const recent = (await getRecentDailyMetrics(30)).filter((d) => d.day !== today);
