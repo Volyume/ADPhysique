@@ -171,9 +171,23 @@ export default function MealPlanScreen({ navigation, route }) {
   useEffect(() => { load(); }, [load]);
 
   const plan = record?.plan || null;
+  const planDayCount = plan?.days?.length ?? 0;
+  const planKind = plan?.kind ?? null;
   const day = plan?.days?.[dayIndex] || null;
   // Real weekday labels for the week picker (day i is scheduled to today + i).
   const dayLabels = useMemo(() => next7DayLabels(planStartDate), [planStartDate]);
+
+  useEffect(() => {
+    if (!planDayCount) {
+      if (dayIndex !== 0) setDayIndex(0);
+      return;
+    }
+    if (planKind === 'day' || planDayCount === 1) {
+      if (dayIndex !== 0) setDayIndex(0);
+      return;
+    }
+    if (dayIndex > planDayCount - 1) setDayIndex(planDayCount - 1);
+  }, [dayIndex, planDayCount, planKind]);
 
   // One generator, two modes (Feature A day / Feature B week). Each replaces
   // the active plan with the chosen kind; the user can switch any time.

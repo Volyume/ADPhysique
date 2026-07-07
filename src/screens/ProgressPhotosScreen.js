@@ -55,6 +55,7 @@ import {
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
+  visibleScoredScans,
 } from '../lib/progressPhotosController';
 import {
   buildCheckInTimeline,
@@ -948,8 +949,9 @@ export default function ProgressPhotosScreen({ navigation }) {
   // timeline and delete stay available. Share is additionally Pro-gated.
   const scanPhotoNames = useMemo(() => buildScanPhotoNameSet(visibleScans), [visibleScans]);
   const scanShareItems = scanShareItemsFromEntries(visibleScans);
+  const scoredScans = useMemo(() => visibleScoredScans(visibleScans), [visibleScans]);
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
-  const canCompareScans = !loading && visibleScans.length >= 2 && !suppressed;
+  const canCompareScans = !loading && scoredScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
   const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
@@ -1411,7 +1413,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         onRequestClose={() => setScanCompareOpen(false)}
       >
         <ProgressScanCompare
-          scans={visibleScans}
+          scans={scoredScans}
           hideExact={hideExactScans}
           onClose={() => setScanCompareOpen(false)}
         />

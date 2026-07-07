@@ -451,8 +451,8 @@ describe('ProgressPhotosScreen compare entry', () => {
       [oldSide.name]: { name: oldSide.name, takenAt: OLD.ts, pose: 'side', weightKg: null, note: null },
     });
     const scans = [
-      { id: 'scan-old', status: 'complete', requiredPosesComplete: true, capturedAt: OLD.ts, assets: [{ id: 'old-front', pose: 'front', photoName: OLD.name, uri: OLD.uri, takenAt: OLD.ts }, { id: 'old-back', pose: 'back', photoName: oldBack.name, uri: oldBack.uri, takenAt: OLD.ts }] },
-      { id: 'scan-new', status: 'complete', requiredPosesComplete: true, capturedAt: NEW.ts, assets: [{ id: 'new-front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts }, { id: 'new-back', pose: 'back', photoName: newBack.name, uri: newBack.uri, takenAt: NEW.ts }] },
+      { id: 'scan-old', status: 'complete', requiredPosesComplete: true, capturedAt: OLD.ts, signals: { physiqueAssessment: { visualLeannessScore: 42 } }, assets: [{ id: 'old-front', pose: 'front', photoName: OLD.name, uri: OLD.uri, takenAt: OLD.ts }, { id: 'old-back', pose: 'back', photoName: oldBack.name, uri: oldBack.uri, takenAt: OLD.ts }] },
+      { id: 'scan-new', status: 'complete', requiredPosesComplete: true, capturedAt: NEW.ts, signals: { physiqueAssessment: { visualLeannessScore: 49 } }, assets: [{ id: 'new-front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts }, { id: 'new-back', pose: 'back', photoName: newBack.name, uri: newBack.uri, takenAt: NEW.ts }] },
     ];
     const tree = await render([newSide, newBack, NEW, oldSide, oldBack, OLD], { scans });
     const text = flattenText(tree.toJSON());
@@ -460,6 +460,16 @@ describe('ProgressPhotosScreen compare entry', () => {
     expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeDefined();
     expect(text).not.toContain('Latest set needs another angle');
     expect(text).not.toContain('Compare Volyume Scores');
+  });
+
+  test('withheld-score photo sets fall back to normal photo comparison', async () => {
+    const scans = [
+      { id: 'scan-old', status: 'complete', requiredPosesComplete: true, capturedAt: OLD.ts, assets: [{ id: 'old-front', pose: 'front', photoName: OLD.name, uri: OLD.uri, takenAt: OLD.ts }] },
+      { id: 'scan-new', status: 'complete', requiredPosesComplete: true, capturedAt: NEW.ts, assets: [{ id: 'new-front', pose: 'front', photoName: NEW.name, uri: NEW.uri, takenAt: NEW.ts }] },
+    ];
+    const tree = await render([NEW, OLD], { scans });
+    expect(findPressable(tree, 'Compare two Volyume Score entries')).toBeUndefined();
+    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
   });
 
   test('the compare surface honours reduce motion on its wrapping modal', async () => {

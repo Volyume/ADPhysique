@@ -139,6 +139,10 @@ describe('progressPhotosController transforms', () => {
     const completeA = { type: 'checkin', takenAt: 100, poses: ['front', 'side', 'back'] };
     const completeB = { type: 'checkin', takenAt: 200, poses: ['front', 'side', 'back'] };
     const scans = [
+      { id: 's1', status: 'complete', requiredPosesComplete: true, signals: { physiqueAssessment: { visualLeannessScore: 41 } } },
+      { id: 's2', status: 'measured', requiredPosesComplete: true, signals: { physiqueAssessment: { visualLeannessScore: 45 } } },
+    ];
+    const unscoredScans = [
       { id: 's1', status: 'complete', requiredPosesComplete: true },
       { id: 's2', status: 'measured', requiredPosesComplete: true },
     ];
@@ -150,6 +154,8 @@ describe('progressPhotosController transforms', () => {
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans, suppressed: true }))
       .toBeNull();
     expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: [] }).kind)
+      .toBe('compare_checkins');
+    expect(buildPhysiqueStudioNextAction({ checkIns: [completeA, completeB], scans: unscoredScans }).kind)
       .toBe('compare_checkins');
     expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [] })).toBeNull();
     expect(buildPhysiqueStudioNextAction({ checkIns: [], scans: [], readOnly: true })).toBeNull();
