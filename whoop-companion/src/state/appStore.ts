@@ -477,6 +477,10 @@ class AppStore extends Store<AppState> {
     this.autoDrainedFor = deviceId;
     this.autoSyncAttempts += 1;
     await this.runHistoryDrain('auto');
+    if (!this.getState().draining && this.getState().status === 'connected' && this.getState().device?.id === deviceId) {
+      this.autoDrainedFor = '';
+      if (!this.autoSyncTimer) this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+    }
   }
 
   private retryAutoHistoryDrain(): void {
