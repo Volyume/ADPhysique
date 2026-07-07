@@ -238,7 +238,11 @@ export default function MealPlanScreen({ navigation, route }) {
         // F4 (audit NAV-2): NutritionTargets lives in ProfileStack; a bare
         // navigate from DiaryStack is a silent no-op, so the toast promised a
         // redirect that never happened.
-        navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets');
+        navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets', {
+          source: 'meal_plan_no_target',
+          returnToTab: 'DiaryTab',
+          returnToScreen: 'MealPlan',
+        });
         return;
       }
       await load();

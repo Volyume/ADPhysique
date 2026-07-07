@@ -194,4 +194,10 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('accessibilityLabel="Rebuild meals"');
     expect(source).toContain("isDayPlan ? 'Build week' : 'Build day'");
   });
+
+  test('nutrition-target redirect carries a return intent back to Meal Plan', () => {
+    expect(source).toContain("source: 'meal_plan_no_target'");
+    expect(source).toContain("returnToTab: 'DiaryTab'");
+    expect(source).toContain("returnToScreen: 'MealPlan'");
+  });
 });

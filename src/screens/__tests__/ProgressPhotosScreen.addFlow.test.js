@@ -131,7 +131,7 @@ import useAppStore from '../../store/useAppStore';
 import { saveProgressPhoto } from '../../lib/progressPhotos';
 import { upsertPhotoMeta } from '../../lib/progressPhotoMeta';
 import { createProgressScanSession, addProgressScanAsset } from '../../lib/progressScanStore';
-import { analyseProgressScanPhoto } from '../../lib/progressScanVision';
+import { analyseProgressScanPhoto, retakeCopyForVisionResult } from '../../lib/progressScanVision';
 import ProgressPhotosScreen from '../ProgressPhotosScreen';
 
 const USER_ID = 'u-add-1';
@@ -289,6 +289,68 @@ test('camera scan captures show the photo preview before analysis runs', async (
   await pressLabel(tree, 'Use photo');
   await flush();
   expect(analyseProgressScanPhoto).toHaveBeenCalledWith({ uri: 'file:///photos/1700000000000.jpg', pose: 'front' });
+});
+
+test('rapid route taps only start one guided photo set', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await pressLabel(tree, 'Add photo set');
+  await flush();
+  const start = tree.root.findAll(
+    (n) => n.props?.accessibilityLabel === 'Start photo set' && typeof n.props.onPress === 'function',
+  )[0];
+
+  await act(async () => {
+    start.props.onPress();
+    start.props.onPress();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  await flush();
+
+  expect(createProgressScanSession).toHaveBeenCalledTimes(1);
+});
+
+test('retake warning save action cannot insert the same scan asset twice', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  retakeCopyForVisionResult.mockReturnValueOnce('The photo is not clear enough for a score.');
+  let resolveAsset;
+  addProgressScanAsset.mockImplementationOnce(() => new Promise((resolve) => {
+    resolveAsset = () => resolve({ id: 'asset-1' });
+  }));
+  const tree = await render();
+  await pressLabel(tree, 'Add photo set');
+  await flush();
+  await pressLabel(tree, 'Start photo set');
+  await flush();
+
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+  await act(async () => {
+    capture.props.onCaptured('1700000000000.jpg', {
+      name: '1700000000000.jpg',
+      uri: 'file:///photos/1700000000000.jpg',
+      ts: 1700000000000,
+    });
+    await Promise.resolve();
+  });
+  await flush();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+
+  const retakeAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Retake this photo?');
+  expect(retakeAlert).toBeTruthy();
+  const saveButton = retakeAlert[2].find((button) => button.text === 'Save without estimate');
+  await act(async () => {
+    saveButton.onPress();
+    saveButton.onPress();
+    await Promise.resolve();
+  });
+  expect(addProgressScanAsset).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    resolveAsset();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 });
 
 test('setting the imported photo set date to the past indexes the set under that day', async () => {

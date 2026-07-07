@@ -194,6 +194,9 @@ export default function ProgressPhotosScreen({ navigation }) {
   // next guided capture seeds against it.
   const [referenceName, setReferenceName] = useState(null);
   const refreshRequestRef = useRef(0);
+  const captureRouteActionRef = useRef(false);
+  const progressScanOpeningRef = useRef(false);
+  const scanSaveInFlightRef = useRef(new Set());
 
   const refresh = useCallback(async () => {
     const requestId = refreshRequestRef.current + 1;
@@ -532,6 +535,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       ]);
       return;
     }
+    if (progressScanOpeningRef.current) return;
+    progressScanOpeningRef.current = true;
     try {
       const capturePrefs = await getProgressScanCapturePreferences();
       if (!canWrite()) return;
@@ -549,6 +554,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     } catch (e) {
       logError('ProgressPhotos.startScan', e, { userId });
       toast.show('Could not start that photo set. Please try again.', { variant: 'error' });
+    } finally {
+      progressScanOpeningRef.current = false;
     }
   }
 
@@ -639,25 +646,34 @@ export default function ProgressPhotosScreen({ navigation }) {
       await abandonLapsedScanFlow(flow, name, saved);
       return;
     }
-    const assetFields = assetFieldsFromVisionResult(vision);
-    const inserted = await addProgressScanAsset(userId, flow.scanId, {
-      pose,
-      photoName: name,
-      uri: saved.uri,
-      takenAt: flow?.mode === 'library' && Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now()),
-      ...assetFields,
-    });
-    if (!inserted) {
-      await cleanupUnattachedSavedScanPhoto({
-        userId,
-        name,
-        saved,
-        deleteProgressPhoto,
-        deletePhotoMeta,
+    const saveKey = [flow?.scanId, pose, name].filter(Boolean).join(':');
+    if (saveKey && scanSaveInFlightRef.current.has(saveKey)) return;
+    if (saveKey) scanSaveInFlightRef.current.add(saveKey);
+    let committed = false;
+    try {
+      const assetFields = assetFieldsFromVisionResult(vision);
+      const inserted = await addProgressScanAsset(userId, flow.scanId, {
+        pose,
+        photoName: name,
+        uri: saved.uri,
+        takenAt: flow?.mode === 'library' && Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now()),
+        ...assetFields,
       });
-      throw new Error('progress_scan_asset_save_failed');
+      if (!inserted) {
+        await cleanupUnattachedSavedScanPhoto({
+          userId,
+          name,
+          saved,
+          deleteProgressPhoto,
+          deletePhotoMeta,
+        });
+        throw new Error('progress_scan_asset_save_failed');
+      }
+      committed = true;
+      await continueScanAfterPose(flow, pose);
+    } finally {
+      if (saveKey && !committed) scanSaveInFlightRef.current.delete(saveKey);
     }
-    await continueScanAfterPose(flow, pose);
   }
 
   async function retakeScanPose(flow, pose, name, saved) {
@@ -781,9 +797,12 @@ export default function ProgressPhotosScreen({ navigation }) {
           {
             text: 'Save without estimate',
             onPress: () => {
+              setBusy(true);
               saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
                 logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
                 toast.show('Could not save that photo. Please try again.', { variant: 'error' });
+              }).finally(() => {
+                setBusy(false);
               });
             },
           },
@@ -824,31 +843,36 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCaptureOpen(true);
   }
 
-  function onCaptureRoutePress(route) {
-    if (!route || route.disabled || !canWrite()) return;
+  async function onCaptureRoutePress(route) {
+    if (!route || route.disabled || !canWrite() || captureRouteActionRef.current) return;
+    captureRouteActionRef.current = true;
     setCaptureRouteOpen(false);
-    if (route.key === 'complete_latest') {
-      openCheckInPoseCapture(latestPartialCapture?.checkIn, latestPartialCapture?.nextPose);
-      return;
-    }
-    if (route.key === 'scan') {
-      openProgressScan('guided');
-      return;
-    }
-    if (route.key === 'scan_library') {
-      openScanImportDateStep();
-      return;
-    }
-    if (route.key === 'guided') {
-      openGhostCapture();
-      return;
-    }
-    if (route.key === 'camera') {
-      pickFrom('camera');
-      return;
-    }
-    if (route.key === 'library') {
-      pickFrom('library');
+    try {
+      if (route.key === 'complete_latest') {
+        openCheckInPoseCapture(latestPartialCapture?.checkIn, latestPartialCapture?.nextPose);
+        return;
+      }
+      if (route.key === 'scan') {
+        await openProgressScan('guided');
+        return;
+      }
+      if (route.key === 'scan_library') {
+        openScanImportDateStep();
+        return;
+      }
+      if (route.key === 'guided') {
+        openGhostCapture();
+        return;
+      }
+      if (route.key === 'camera') {
+        await pickFrom('camera');
+        return;
+      }
+      if (route.key === 'library') {
+        await pickFrom('library');
+      }
+    } finally {
+      captureRouteActionRef.current = false;
     }
   }
 
@@ -929,6 +953,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   // (fail-closed): the comparison entry and the share card. Viewing the dated
   // timeline and delete stay available. Share is additionally Pro-gated.
   const scanPhotoNames = useMemo(() => buildScanPhotoNameSet(visibleScans), [visibleScans]);
+  const scanByPhotoName = useMemo(() => {
+    const map = new Map();
+    for (const scan of visibleScans || []) {
+      for (const asset of scan?.assets || []) {
+        if (asset?.photoName && !map.has(asset.photoName)) map.set(asset.photoName, scan);
+      }
+    }
+    return map;
+  }, [visibleScans]);
   const scanShareItems = scanShareItemsFromEntries(visibleScans);
   const scoredScans = useMemo(() => visibleScoredScans(visibleScans), [visibleScans]);
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
@@ -944,15 +977,35 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!Array.isArray(visibleScans) || visibleScans.length === 0) return null;
     return [...visibleScans].sort((a, b) => (Number(b.capturedAt) || Number(b.captured_at) || 0) - (Number(a.capturedAt) || Number(a.captured_at) || 0))[0] || null;
   }, [visibleScans]);
-  const scanByDateKey = useMemo(() => {
+  const scansByDateKey = useMemo(() => {
     const map = new Map();
     for (const scan of visibleScans || []) {
       const key = localDateKey(scan?.capturedAt ?? scan?.captured_at);
-      if (!key || map.has(key)) continue;
-      map.set(key, scan);
+      if (!key) continue;
+      const list = map.get(key) || [];
+      list.push(scan);
+      map.set(key, list);
+    }
+    for (const [key, list] of map.entries()) {
+      map.set(key, [...list].sort((a, b) => (
+        (Number(b?.capturedAt ?? b?.captured_at) || 0) - (Number(a?.capturedAt ?? a?.captured_at) || 0)
+      )));
     }
     return map;
   }, [visibleScans]);
+  function scanForCheckIn(item) {
+    const coverName = item?.cover?.name;
+    if (coverName && scanByPhotoName.has(coverName)) return scanByPhotoName.get(coverName);
+    for (const photo of item?.photos || []) {
+      if (photo?.name && scanByPhotoName.has(photo.name)) return scanByPhotoName.get(photo.name);
+    }
+    const candidates = scansByDateKey.get(localDateKey(item?.takenAt)) || [];
+    if (!candidates.length) return null;
+    return [...candidates].sort((a, b) => (
+      Math.abs((Number(a?.capturedAt ?? a?.captured_at) || 0) - (Number(item?.takenAt) || 0))
+        - Math.abs((Number(b?.capturedAt ?? b?.captured_at) || 0) - (Number(item?.takenAt) || 0))
+    ))[0] || null;
+  }
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
   const scanStatusLabel = suppressed
@@ -979,7 +1032,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       ? 'Full set'
       : `${item.poses.length}/${CORE_POSES.length} poses`;
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
-    const scanForDay = scanByDateKey.get(localDateKey(item.takenAt));
+    const scanForDay = scanForCheckIn(item);
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
     const roundedScanScore = roundedScore(scanScore);
     const scoreText = roundedScanScore != null

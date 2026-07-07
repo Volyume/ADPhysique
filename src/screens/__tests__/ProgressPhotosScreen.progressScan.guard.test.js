@@ -69,6 +69,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/deleteScanEntry/);
     expect(SCREEN).toMatch(/deleteViewerProgressPhoto/);
     expect(SCREEN).toMatch(/progress_scan_asset_save_failed/);
+    expect(SCREEN).toMatch(/const scanSaveInFlightRef = useRef\(new Set\(\)\);/);
+    expect(SCREEN).toMatch(/if \(saveKey && scanSaveInFlightRef\.current\.has\(saveKey\)\) return;/);
+    expect(SCREEN).toMatch(/if \(saveKey && !committed\) scanSaveInFlightRef\.current\.delete\(saveKey\);/);
   });
 
   test('post-capture scan writes re-check the live tier and abandon drafts on lapse', () => {
@@ -137,6 +140,19 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/if \(!uri\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/let savedPhoto = null;[\s\S]*savedPhoto = saved;/);
     expect(SCREEN).toMatch(/catch \(e\) \{[\s\S]*if \(flow\?\.scanId\) await abandonLapsedScanFlow\(flow, savedPhoto\?\.name, savedPhoto\);/);
+  });
+
+  test('scan start and score matching are idempotent and asset-owned', () => {
+    expect(SCREEN).toMatch(/const captureRouteActionRef = useRef\(false\);/);
+    expect(SCREEN).toMatch(/const progressScanOpeningRef = useRef\(false\);/);
+    expect(SCREEN).toMatch(/if \(progressScanOpeningRef\.current\) return;/);
+    expect(SCREEN).toMatch(/if \(!route \|\| route\.disabled \|\| !canWrite\(\) \|\| captureRouteActionRef\.current\) return;/);
+    expect(SCREEN).toMatch(/await openProgressScan\('guided'\);/);
+    expect(SCREEN).toMatch(/const scanByPhotoName = useMemo/);
+    expect(SCREEN).toMatch(/const scansByDateKey = useMemo/);
+    expect(SCREEN).toMatch(/function scanForCheckIn\(item\)/);
+    expect(SCREEN).toMatch(/if \(coverName && scanByPhotoName\.has\(coverName\)\) return scanByPhotoName\.get\(coverName\);/);
+    expect(SCREEN).toMatch(/const scanForDay = scanForCheckIn\(item\);/);
   });
 
   test('refresh results are guarded before committing photo and scan state', () => {
