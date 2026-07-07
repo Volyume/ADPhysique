@@ -480,6 +480,22 @@ describe('sendCheer', () => {
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
+  test('normalises a bare edge 403 as stale partnership state so the hook can retry', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: null,
+          error: { status: 403, message: 'Edge Function returned a non-2xx status code' },
+        })),
+      },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'not_active' });
+    expect(client._calls.cheerRows).toHaveLength(0);
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
+
   test('normalises a misconfigured cheer edge function as backend unavailable', async () => {
     const client = fakeClient({
       functions: {
