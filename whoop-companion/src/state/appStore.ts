@@ -2296,6 +2296,9 @@ class AppStore extends Store<AppState> {
       sleepDebtMin: need.debtMin,
       hrvBalance: hrvBal?.score ?? null,
       acwr: loadStatus.acwr,
+      sleepConfidence: sleepDetail?.confidence ?? null,
+      sleepCoveragePct: sleepDetail?.coveragePct ?? null,
+      sleepSignalMin: sleepDetail?.signalMin ?? null,
     });
     const energyReserve = computeEnergyReserve({
       recovery,

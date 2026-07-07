@@ -8,6 +8,11 @@
 export type Readiness = {
   score: number; // 0..100
   label: string; // Poor / Low / Moderate / High / Prime
+  confidence: 'high' | 'medium' | 'low';
+  confidencePct: number;
+  qualityLabel: string;
+  qualityNote: string;
+  missingInputs: string[];
   contributors: Array<{ key: string; label: string; value: string; good: boolean | null }>;
 };
 
@@ -33,8 +38,11 @@ export function computeTrainingReadiness(input: {
   sleepDebtMin: number;
   hrvBalance: number | null; // 0..100 (HRV vs baseline)
   acwr: number | null;
+  sleepConfidence?: 'high' | 'medium' | 'low' | null;
+  sleepCoveragePct?: number | null;
+  sleepSignalMin?: number | null;
 }): Readiness | null {
-  const { recovery, sleepPerformance, sleepDebtMin, hrvBalance, acwr } = input;
+  const { recovery, sleepPerformance, sleepDebtMin, hrvBalance, acwr, sleepConfidence = null, sleepCoveragePct = null, sleepSignalMin = null } = input;
   // Need at least recovery or sleep to say anything.
   if (recovery == null && sleepPerformance == null) return null;
 
@@ -56,5 +64,47 @@ export function computeTrainingReadiness(input: {
     { key: 'hrv', label: 'HRV balance', value: hrvBalance != null ? `${hrvBalance}` : '—', good: hrvBalance != null ? hrvBalance >= 50 : null },
     { key: 'load', label: 'Training load', value: acwr != null ? acwr.toFixed(2) : '—', good: acwr != null ? acwr >= 0.8 && acwr <= 1.3 : null },
   ];
-  return { score: clamped, label: readinessLabel(clamped), contributors };
+  const missingInputs = [
+    recovery == null ? 'recovery' : null,
+    sleepPerformance == null ? 'sleep performance' : null,
+    hrvBalance == null ? 'HRV balance' : null,
+    acwr == null ? 'training load' : null,
+  ].filter((v): v is string => v != null);
+
+  let confidencePct = 100;
+  if (recovery == null) confidencePct -= 25;
+  if (sleepPerformance == null) confidencePct -= 20;
+  if (hrvBalance == null) confidencePct -= 10;
+  if (acwr == null) confidencePct -= 10;
+  if (sleepConfidence === 'medium') confidencePct -= 12;
+  if (sleepConfidence === 'low') confidencePct -= 30;
+  if (sleepPerformance != null && sleepConfidence == null) confidencePct -= 12;
+  if (sleepCoveragePct != null && sleepCoveragePct < 60) confidencePct -= 20;
+  else if (sleepCoveragePct != null && sleepCoveragePct < 80) confidencePct -= 8;
+  if (sleepSignalMin != null && sleepSignalMin < 150) confidencePct -= 20;
+  else if (sleepSignalMin != null && sleepSignalMin < 240) confidencePct -= 8;
+  confidencePct = Math.max(20, Math.min(100, Math.round(confidencePct)));
+
+  const confidence = confidencePct >= 80 ? 'high' : confidencePct >= 55 ? 'medium' : 'low';
+  const qualityLabel =
+    confidence === 'high' ? 'Strong signal' : confidence === 'medium' ? 'Usable estimate' : 'Treat cautiously';
+  const qualityNote =
+    missingInputs.length > 0
+      ? `Readiness is using fallbacks until ${missingInputs.join(', ')} are available.`
+      : sleepConfidence === 'low'
+        ? 'Readiness is limited by low sleep confidence; sync more overnight data or review the sleep window.'
+        : sleepConfidence === 'medium'
+          ? 'Readiness is usable, but more complete sleep coverage may refine it.'
+          : 'Readiness is backed by recovery, sleep, HRV balance and recent training load.';
+
+  return {
+    score: clamped,
+    label: readinessLabel(clamped),
+    confidence,
+    confidencePct,
+    qualityLabel,
+    qualityNote,
+    missingInputs,
+    contributors,
+  };
 }
