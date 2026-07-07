@@ -17,7 +17,7 @@ import { todayLocalKey } from '../dayKey';
 import { buildInviteLinks, inviteShareMessage } from './link';
 import { recordPartnerSharingConsent } from './consent';
 import { isValidAckKey, DEFAULT_ACK_KEY } from './acknowledgements';
-import { validateShareWinDraft } from './shareWins';
+import { shareWinTypeByKey, validateShareWinDraft } from './shareWins';
 import {
   trackInviteMinted, trackInviteRedeemed, trackCheerSent, trackUnpair,
 } from './telemetry';
@@ -57,6 +57,11 @@ function normaliseCheerInsertError(error) {
   return error?.message || String(error);
 }
 
+function isMissingPartnerTable(error, tableName) {
+  const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
+  return text.includes('pgrst205') || text.includes(String(tableName).toLowerCase());
+}
+
 async function runCheerInsert(c, row) {
   const inserted = c.from('partner_cheers').insert(row);
   if (inserted?.select) {
@@ -86,14 +91,16 @@ async function insertCheerDirectly(c, { userId, pairId, sentOn, kind }) {
     error = retry?.error;
   }
 
+  if (error && isMissingPartnerTable(error, 'partner_cheers')) {
+    return { ok: false, error: 'cheers_unavailable' };
+  }
   const normalised = normaliseCheerInsertError(error);
   if (normalised) return { ok: false, error: normalised };
   return { ok: true, data: data || { ok: true, delivered: 'in_app' } };
 }
 
 function isMissingPartnerWinTable(error) {
-  const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
-  return text.includes('pgrst205') || text.includes('partner_win_cards');
+  return isMissingPartnerTable(error, 'partner_win_cards');
 }
 
 /**
@@ -247,6 +254,7 @@ export async function sendPartnerWinCard(userId, { pairId, preview } = {}) {
   if (!c || !userId || !pairId) return fail('offline');
   const draft = preview?.draft;
   if (!validateShareWinDraft(draft)) return fail('invalid_card');
+  const type = shareWinTypeByKey(draft.type);
   try {
     const row = {
       pair_id: pairId,
@@ -255,8 +263,8 @@ export async function sendPartnerWinCard(userId, { pairId, preview } = {}) {
       title: draft.title,
       summary: draft.summary,
       detail: draft.detail,
-      visible_to_partner: preview?.shared || '',
-      remains_private: preview?.private || '',
+      visible_to_partner: type?.shared || '',
+      remains_private: type?.private || '',
     };
     const { data, error } = await c.from('partner_win_cards')
       .insert(row)

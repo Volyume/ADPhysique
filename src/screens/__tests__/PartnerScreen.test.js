@@ -481,6 +481,21 @@ describe('cheer affordance', () => {
       { variant: 'error' },
     );
   });
+
+  test('a missing cheer backend does not blame the user connection', async () => {
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false, error: 'cheers_unavailable' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Partner cheers are not available right now. Try again later.',
+      { variant: 'error' },
+    );
+  });
 });
 
 describe('milestone moment slot', () => {

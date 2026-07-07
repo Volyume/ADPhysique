@@ -6,7 +6,8 @@ const SOURCE = fs.readFileSync(path.resolve(__dirname, '../usePartners.js'), 'ut
 describe('usePartners pending invite refresh guard', () => {
   test('pending invite polling pulls the cloud mirror before re-reading local state', () => {
     expect(SOURCE).toContain('const pendingRefreshKey = state.pendingInvite?.id');
-    expect(SOURCE).toContain('pullPartnerMirrorNow(userId).finally(load)');
+    expect(SOURCE).toContain('pullPartnerMirrorNow(userId).finally(() => load({ silent: true }))');
+    expect(SOURCE).toContain('loading: silent ? prev.loading : true');
     expect(SOURCE).toContain('return Number(result?.errors || 0) === 0;');
     expect(SOURCE).not.toContain('setInterval(() => { load(); }, PENDING_INVITE_REFRESH_MS)');
   });

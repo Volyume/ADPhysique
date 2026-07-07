@@ -444,6 +444,22 @@ describe('sendCheer', () => {
     expect(r).toEqual({ ok: false, error: 'already_cheered' });
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
+
+  test('normalises a missing cheer table as unavailable, not a connection fault', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: null,
+          error: { status: 404, message: 'Function not found' },
+        })),
+      },
+      cheerInsertError: { code: 'PGRST205', message: "Could not find the table 'partner_cheers' in the schema cache" },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'cheers_unavailable' });
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
 });
 
 describe('blockPartner', () => {
