@@ -440,11 +440,11 @@ function renderQualityCard(input: {
           </View>
           <Text style={styles.qualityNote}>
             {current != null
-              ? 'This candidate is averaged from valid raw WHOOP 5 history samples inside the confirmed sleep window and shown separately until the mapping is confirmed against more captures.'
+              ? 'This candidate is averaged from valid raw WHOOP 5 history samples inside the sleep or candidate-sleep window and shown separately until the mapping is confirmed against more captures.'
               : sleepBlocked
-                ? 'Raw vital rows were decoded, but Pulse needs a trusted sleep window before assigning them to Blood Oxygen or Skin Temperature. Keep auto sync connected, or review the sleep window if the timing looks wrong.'
+                ? 'Raw vital rows were decoded, but Pulse needs a clearer sleep window before assigning them to Blood Oxygen or Skin Temperature. Keep auto sync connected, or review the sleep window if the timing looks wrong.'
               : hasRawRows
-                ? 'Raw vital rows were decoded, but there are not enough valid samples inside a trusted sleep window yet. Finish auto sync or review the sleep window before trusting this metric.'
+                ? 'Raw vital rows were decoded, but there are not enough valid samples inside the overnight sleep window yet. Finish auto sync or review the sleep window before trusting this metric.'
                 : 'No raw vital rows have been decoded yet. Keep the strap connected long enough for history sync to backfill the overnight raw sensor records.'}
           </Text>
         </Card>
