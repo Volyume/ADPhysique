@@ -61,7 +61,6 @@ function fixture(overrides = {}) {
         adjustments: {
           training: { signal: 'push', note: 'SENTINEL-TRAINING recovery looked strong.' },
           calories: { change: -137, note: 'SENTINEL-CAL losing faster than the planned rate.' },
-          steps: { target: 9000, change: 1000, note: 'SENTINEL-STEPS easy extra output.' },
           cardio: { prescribed: true, type: 'Steady cardio', note: 'SENTINEL-CARDIO two sessions, your choice of activity.' },
         },
         deloadSuggested: true,
@@ -97,9 +96,10 @@ describe('full variant: every decision and its written why', () => {
   });
 
   test('the persisted written reasons appear verbatim', () => {
-    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
+    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
       expect(html).toContain(s);
     }
+    expect(html).not.toContain('SENTINEL-STEPS');
   });
 
   test('trend numbers, weekly rate, calorie change, phase and PRs render', () => {
@@ -145,12 +145,11 @@ describe('training signal vocabulary matches the engine', () => {
         weekStart: T0,
         adjustments: {
           training: { signal: 'hold', note: null },
-          steps: { target: 8000, change: 0, note: null },
         },
       }],
     }));
     expect(html).toContain('Held steady');
-    expect(html).toContain('8,000');
+    expect(html).not.toContain('Daily steps');
   });
 });
 
@@ -263,8 +262,8 @@ describe('neutral variant: no rate or weight emphasis, no prose, no disclosure',
     expect(html).toContain('Sessions completed');
     expect(html).toContain('More work added');
     expect(html).toContain('Steady cardio');
-    expect(html).toContain('9,000');
     expect(html).toContain('2,350');
+    expect(html).not.toContain('Daily steps');
   });
 
   test('the artefact never discloses why it is neutral', () => {

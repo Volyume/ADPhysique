@@ -1014,8 +1014,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Confirm-then-apply for the cardio prescription. Writes
   // userProfile.cardioPrescription (the prescription label), which
   // gates the cardio-adherence question on the weekly check-in
-  // (WeeklyCheckInScreen), same pattern as steps. cardio_adherence
-  // lands via migration 050.
+  // (WeeklyCheckInScreen). cardio_adherence lands via migration 050.
   async function handleApplyCardio() {
     if (applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'cardio')) return;
@@ -1125,7 +1124,7 @@ export default function CoachOutputScreen({ navigation, route }) {
 
   // Confirm-then-apply for the high-day / low-day macro cycle (GAP row
   // 6). Applying stores the split on userProfile.macroCycle, the same
-  // local-profile destination steps and cardio write to. The Diary
+  // local-profile destination cardio writes to. The Diary
   // reads it and shows the training-day or rest-day target for the day
   // being viewed. Re-reads current targets at tap time and recomputes
   // so the persisted split never scales from a stale snapshot.

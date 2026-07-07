@@ -1318,7 +1318,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           doubled the gap under Close (founder screenshot 2026-07-03). The
           inverse case, ActiveWorkout, where the band hides, is the one
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
-      <View style={[styles.stickyFooter, { paddingBottom: spacing.md }]}>
+      <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
         {saveError ? (
           <View style={styles.saveErrorCard}>
             <Ionicons name="warning-outline" size={16} color={colors.error} />
