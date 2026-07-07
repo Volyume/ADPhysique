@@ -65,6 +65,7 @@ function main() {
   const versions = decoded.versions.join(', ') || 'none';
   const bpm = decoded.hr.map((s) => s.bpm).filter((v) => v > 0);
   const rrCount = decoded.hr.reduce((a, s) => a + s.rr.length, 0);
+  const cleanRrCount = decoded.hr.reduce((a, s) => a + cleanSampleRr(s).length, 0);
 
   console.log(`file: ${path}`);
   console.log(`chunks: ${chunks.length}`);
@@ -77,7 +78,9 @@ function main() {
   console.log(
     `layouts: v18=${decoded.v18Records} v20=${decoded.v20Records} v21=${decoded.v21Records} v26=${decoded.v26Records} raw_sensor=${decoded.rawSensorRecords}`,
   );
-  console.log(`hr: samples=${decoded.hr.length} rr=${rrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`);
+  console.log(
+    `hr: samples=${decoded.hr.length} rr=${rrCount} rr_clean=${cleanRrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`,
+  );
   console.log(
     `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} ${formatRange(stepDates)}`,
   );
@@ -726,6 +729,20 @@ function countSleepStates(rows) {
   const counts = {};
   for (const row of rows) counts[row.state] = (counts[row.state] ?? 0) + 1;
   return counts;
+}
+
+function cleanSampleRr(sample) {
+  if (!sample.rr.length || sample.bpm < 30 || sample.bpm > 220) return [];
+  const expectedRr = 60000 / sample.bpm;
+  const clean = sample.rr.filter((rr) => {
+    if (rr < 300 || rr > 2000) return false;
+    const beatHr = 60000 / rr;
+    return Math.abs(beatHr - sample.bpm) <= Math.max(10, sample.bpm * 0.18);
+  });
+  if (!clean.length) return [];
+  const meanRr = clean.reduce((a, b) => a + b, 0) / clean.length;
+  if (Math.abs(meanRr - expectedRr) > Math.max(140, expectedRr * 0.22)) return [];
+  return clean;
 }
 
 function min(values) {

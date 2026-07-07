@@ -2194,7 +2194,7 @@ function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | nul
     return { rmssd: null, rhr: null, resp: null };
   }
 
-  const rr = samples.flatMap((s) => s.rr);
+  const rr = samples.flatMap(cleanSampleRr);
   const resp = rr.length >= 300 ? respiratoryRate(rr) : null;
   const rhr = restingHrFromSleep(samples);
   return {
@@ -2210,7 +2210,7 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
 
   const hrValues = mins.map((p) => p.hr).sort((a, b) => a - b);
   const medianHr = median(hrValues);
-  const artifactFloor = Math.max(38, medianHr - 22);
+  const artifactFloor = Math.max(38, medianHr - Math.max(12, medianHr * 0.22));
   const rolling: number[] = [];
   const window = 5;
   for (let i = 0; i + window <= mins.length; i += 1) {
@@ -2233,21 +2233,25 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
 function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | null {
   const buckets = new Map<number, { rr: number[]; hrs: number[] }>();
   for (const s of samples) {
+    const cleanRr = cleanSampleRr(s);
+    if (!cleanRr.length) continue;
     const bucket = Math.floor(s.ts / (5 * 60000));
     const cur = buckets.get(bucket) ?? { rr: [], hrs: [] };
-    cur.rr.push(...s.rr);
+    cur.rr.push(...cleanRr);
     cur.hrs.push(s.bpm);
     buckets.set(bucket, cur);
   }
 
   const windows = [...buckets.values()]
     .map((b) => {
+      const avgHr = b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length;
       const hrv = b.rr.length >= 30 ? computeHrv(b.rr) : null;
       if (!hrv) return null;
       if (hrv.rmssd < 5 || hrv.rmssd > 180) return null;
+      if (Math.abs(hrv.meanHr - avgHr) > Math.max(8, avgHr * 0.12)) return null;
       return {
         rmssd: hrv.rmssd,
-        avgHr: b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length,
+        avgHr,
         hrSamples: b.hrs.length,
       };
     })
@@ -2264,6 +2268,20 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
     .map((w) => w.rmssd)
     .sort((a, b) => a - b);
   return round1(median(restful));
+}
+
+function cleanSampleRr(sample: HrSampleRow): number[] {
+  if (!sample.rr.length || sample.bpm < 30 || sample.bpm > 220) return [];
+  const expectedRr = 60000 / sample.bpm;
+  const clean = sample.rr.filter((rr) => {
+    if (rr < 300 || rr > 2000) return false;
+    const beatHr = 60000 / rr;
+    return Math.abs(beatHr - sample.bpm) <= Math.max(10, sample.bpm * 0.18);
+  });
+  if (!clean.length) return [];
+  const meanRr = clean.reduce((a, b) => a + b, 0) / clean.length;
+  if (Math.abs(meanRr - expectedRr) > Math.max(140, expectedRr * 0.22)) return [];
+  return clean;
 }
 
 function recoveryEstimate(input: {
