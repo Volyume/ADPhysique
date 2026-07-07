@@ -82,7 +82,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.spo2,
     measured: true,
     blurb:
-      'Blood oxygen (SpO2) measures how much oxygen your red blood cells are carrying. This build shows an experimental candidate decoded from WHOOP 5 v21 history records. It is displayed for review and does not yet count toward the Health Monitor headline score.',
+      'Blood oxygen (SpO2) measures how much oxygen your red blood cells are carrying. This build decodes it from WHOOP 5 v21 raw history records and includes it in Health Monitor once a personal range is available.',
   },
   skin_temp: {
     title: 'Skin Temperature',
@@ -92,7 +92,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.skinTempC,
     measured: true,
     blurb:
-      'Skin temperature indicates how your body regulates heat and varies day to day, unlike core body temperature. This build shows an experimental candidate decoded from WHOOP 5 v20 history records. It is displayed for review and does not yet count toward the Health Monitor headline score.',
+      'Skin temperature indicates how your body regulates heat and varies day to day, unlike core body temperature. This build decodes it from WHOOP 5 v20 raw history records and includes it in Health Monitor once a personal range is available.',
   },
   recovery: {
     title: 'Recovery',

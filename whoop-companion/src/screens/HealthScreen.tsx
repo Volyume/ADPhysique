@@ -56,8 +56,8 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         <Text style={styles.summarySub}>
           {hm.measuredCount > 0
             ? hm.candidateCount > 0
-              ? `${hm.candidateCount} raw sensor candidate${hm.candidateCount === 1 ? '' : 's'} shown separately`
-              : 'trusted metrics within your 30-day typical range'
+              ? `includes ${hm.candidateCount} decoded raw channel${hm.candidateCount === 1 ? '' : 's'}`
+              : 'metrics within your 30-day typical range'
             : hm.valueCount > 0
             ? 'overnight values found; personal ranges are still calibrating'
             : 'Wear your strap overnight and complete a full sync to populate your vitals'}
@@ -77,7 +77,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         </View>
         <View style={styles.sourceRow}>
           <Stat label="Recovery vitals" value={`${readiness.trustedReady}/3`} color={readiness.trustedReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
-          <Stat label="Raw candidates" value={`${readiness.candidatesReady}/2`} color={readiness.rawColor} />
+          <Stat label="Raw channels" value={`${readiness.candidatesReady}/2`} color={readiness.rawColor} />
           <Stat label="Raw rows" value={effectiveSync?.rawVitalSamples ?? '-'} />
         </View>
         <NavRow
@@ -149,9 +149,9 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
   const rangeText = !vital.available
     ? 'Needs decoded overnight data'
     : vital.experimental && vital.range
-    ? `Experimental typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
+    ? `Decoded typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
     : vital.experimental
-    ? 'Experimental raw-sensor candidate'
+    ? 'Decoded raw channel'
     : vital.range
     ? `Typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
     : 'Needs overnight data';
@@ -220,13 +220,13 @@ function healthDataReadiness(
     return {
       badge: 'RAW',
       color: colors.recoveryYellow,
-      title: 'Raw sensor candidates are missing',
-      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature need valid raw candidates inside the overnight sleep window.',
+      title: 'Raw channels are missing',
+      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature need valid decoded samples inside the overnight sleep window.',
       trustedReady,
       candidatesReady,
       rawColor: hasRawRows ? colors.recoveryYellow : colors.textTertiary,
       actionLabel: 'Check device sync',
-      actionValue: hasRawRows ? `${candidatesReady}/2 candidates` : 'no raw rows',
+      actionValue: hasRawRows ? `${candidatesReady}/2 channels` : 'no raw rows',
       icon: 'sync',
       route: { name: 'device' } as const,
     };
@@ -237,12 +237,12 @@ function healthDataReadiness(
       badge: 'PART',
       color: colors.sleepTeal,
       title: 'Raw vitals partially decoded',
-      body: 'One raw candidate has enough sleep-window samples. Future nights will tell whether it is trendable.',
+      body: 'One raw channel has enough sleep-window samples. Future nights will build its personal range.',
       trustedReady,
       candidatesReady,
       rawColor: colors.recoveryYellow,
       actionLabel: 'Review metric detail',
-      actionValue: `${candidatesReady}/2 candidates`,
+      actionValue: `${candidatesReady}/2 channels`,
       icon: 'analytics',
       route: { name: 'metric', key: 'spo2' } as const,
     };
@@ -252,7 +252,7 @@ function healthDataReadiness(
     badge: 'GOOD',
     color: colors.recoveryGreen,
     title: 'Health data is ready',
-    body: 'Trusted recovery vitals and experimental raw sleep-window candidates are available for review.',
+    body: 'Recovery vitals and decoded raw sleep-window channels are available for review.',
     trustedReady,
     candidatesReady,
     rawColor: colors.recoveryGreen,

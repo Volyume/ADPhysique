@@ -6,9 +6,10 @@
  * - Heart Rate Variability
  * - Respiratory Rate
  *
- * WHOOP 5 history also exposes raw-sensor layouts in this user's captures. The
- * SpO2 and skin-temperature fields below are labelled experimental candidates
- * and do not count toward the headline range score until confirmed further.
+ * WHOOP 5 history also exposes raw-sensor layouts in this user's captures. SpO2
+ * and skin-temperature are decoded raw channels: they count toward the headline
+ * range once they have a value and personal range, while the UI still labels the
+ * source clearly because the mapping is reverse-engineered.
  */
 
 import { stdev } from './ema';
@@ -110,7 +111,7 @@ export function computeHealthMonitor(input: {
       'spo2',
       'Blood Oxygen',
       '%',
-      'Blood oxygen measures how much oxygen your red blood cells are carrying. This is an experimental candidate decoded from raw WHOOP 5 v21 history records and is not yet counted in the headline range score.',
+      'Blood oxygen measures how much oxygen your red blood cells are carrying. This channel is decoded from raw WHOOP 5 v21 history records and contributes to Health Monitor once a personal range is available.',
       input.spo2,
       true,
     ),
@@ -118,14 +119,14 @@ export function computeHealthMonitor(input: {
       'skin_temp',
       'Skin Temperature',
       'C',
-      'Skin temperature indicates how your body is regulating heat and varies day to day. This is an experimental candidate decoded from raw WHOOP 5 v20 history records and is not yet counted in the headline range score.',
+      'Skin temperature indicates how your body is regulating heat and varies day to day. This channel is decoded from raw WHOOP 5 v20 history records and contributes to Health Monitor once a personal range is available.',
       input.skinTemp,
       true,
     ),
   ];
 
   const withValues = vitals.filter((v) => v.available && v.value != null);
-  const measurable = withValues.filter((v) => !v.experimental && v.inRange != null);
+  const measurable = withValues.filter((v) => v.inRange != null);
   const candidateCount = withValues.filter((v) => v.experimental).length;
   const inRangeCount = measurable.filter((v) => v.inRange === true).length;
   return { vitals, inRangeCount, measuredCount: measurable.length, valueCount: withValues.length, candidateCount };
