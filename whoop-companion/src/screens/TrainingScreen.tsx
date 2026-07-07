@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Empty, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
+import { Card, Empty, NavRow, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
@@ -43,6 +43,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     .map((c) => ({ ts: c.startTs, trimp: c.trimp as number }));
   const load = trainingLoad(trimps, now);
   const statusColor = STATUS_COLOR[load.status] ?? colors.textSecondary;
+  const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
 
   // Weekly training load for the last 6 weeks.
   const DAY = 86400000;
@@ -59,6 +60,15 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   useEffect(() => {
     void appStore.weeklyIntensity().then(setIntensity);
   }, [cardio.length]);
+  const plan = trainingPlan({
+    loadStatus: load.status,
+    acwr: load.acwr,
+    readinessScore: readiness?.score ?? null,
+    readinessConfidence: readiness?.confidence ?? null,
+    recovery: today?.recovery ?? null,
+    intensity,
+    hasFitnessInputs,
+  });
 
   // Personal records from logged activities.
   const pr = useMemo(() => {
@@ -79,6 +89,32 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           <Text style={[styles.statusText, { color: statusColor }]}>{load.status}</Text>
         </View>
         <Text style={styles.statusDetail}>{load.statusDetail}</Text>
+      </Card>
+
+      <SectionLabel>Next training move</SectionLabel>
+      <Card>
+        <View style={styles.planHead}>
+          <View style={[styles.planBadge, { backgroundColor: plan.color }]}>
+            <Text style={styles.planBadgeText}>{plan.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.planTitle}>{plan.title}</Text>
+            <Text style={styles.planBody}>{plan.body}</Text>
+          </View>
+        </View>
+        <View style={styles.statRow}>
+          <Stat label="Target" value={plan.target} color={plan.color} />
+          <Stat label="Load ratio" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
+          <Stat label="Readiness" value={readiness?.score ?? '—'} color={readinessColor(readiness?.score)} />
+        </View>
+        <NavRow
+          label={plan.actionLabel}
+          icon={plan.icon}
+          iconColor={plan.color}
+          value={plan.actionValue}
+          onPress={() => nav.navigate(plan.route)}
+          last
+        />
       </Card>
 
       <SectionLabel>Fitness</SectionLabel>
@@ -210,12 +246,141 @@ function PrRow({ label, value, sub, last }: { label: string; value: string; sub?
   );
 }
 
+function readinessColor(score: number | null | undefined): string {
+  if (score == null) return colors.textTertiary;
+  if (score >= 70) return colors.recoveryGreen;
+  if (score >= 50) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function trainingPlan(input: {
+  loadStatus: string;
+  acwr: number | null;
+  readinessScore: number | null;
+  readinessConfidence: 'high' | 'medium' | 'low' | null;
+  recovery: number | null;
+  intensity: { moderate: number; vigorous: number; total: number; goal: number } | null;
+  hasFitnessInputs: boolean;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  target: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  if (input.readinessConfidence === 'low') {
+    return {
+      badge: 'DATA',
+      title: 'Resolve readiness confidence first',
+      body: 'Training guidance depends on a trustworthy overnight recovery signal. Fix the data before using load to make a hard call.',
+      target: 'hold',
+      actionLabel: 'Open readiness',
+      actionValue: 'quality',
+      icon: 'speedometer',
+      color: colors.strainBlue,
+      route: { name: 'readiness' },
+    };
+  }
+
+  if (input.loadStatus === 'Strained' || input.loadStatus === 'Overreaching' || (input.acwr != null && input.acwr > 1.5)) {
+    return {
+      badge: 'REST',
+      title: 'Absorb the load',
+      body: 'Your acute load has climbed too far above baseline. Keep today easy and let fitness consolidate.',
+      target: '0-5 strain',
+      actionLabel: 'Plan recovery sleep',
+      actionValue: 'recover',
+      icon: 'moon',
+      color: colors.recoveryRed,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if ((input.readinessScore != null && input.readinessScore < 50) || (input.recovery != null && input.recovery < 34)) {
+    return {
+      badge: 'EASY',
+      title: 'Maintain, do not chase adaptation',
+      body: 'Readiness/recovery is low. Choose low-intensity movement or technique work instead of load-building.',
+      target: '5-8 strain',
+      actionLabel: 'Open strain',
+      actionValue: 'easy',
+      icon: 'pulse',
+      color: colors.recoveryYellow,
+      route: { name: 'strain' },
+    };
+  }
+
+  if (input.loadStatus === 'Recovery' || (input.acwr != null && input.acwr < 0.8)) {
+    return {
+      badge: 'BUILD',
+      title: 'Rebuild load carefully',
+      body: 'Load is below your recent norm. A controlled aerobic session can restart progress without a spike.',
+      target: '8-11 strain',
+      actionLabel: 'Start workout',
+      actionValue: 'aerobic',
+      icon: 'play',
+      color: colors.sleepTeal,
+      route: { name: 'startMenu' },
+    };
+  }
+
+  const intensityRemaining = input.intensity ? Math.max(0, input.intensity.goal - input.intensity.total) : null;
+  if (intensityRemaining != null && intensityRemaining >= 45) {
+    return {
+      badge: 'MOVE',
+      title: 'Close the weekly intensity gap',
+      body: `${intensityRemaining} intensity minutes remain this week. A zone 2-3 session gives the best return.`,
+      target: 'Z2-Z3',
+      actionLabel: 'Start workout',
+      actionValue: 'minutes',
+      icon: 'play',
+      color: colors.recoveryGreen,
+      route: { name: 'startMenu' },
+    };
+  }
+
+  if (!input.hasFitnessInputs) {
+    return {
+      badge: 'BASE',
+      title: 'Improve fitness calibration',
+      body: 'Set true max HR and keep wearing the strap overnight so VO2max, zones and load guidance sharpen.',
+      target: 'inputs',
+      actionLabel: 'Open device profile',
+      actionValue: 'max HR',
+      icon: 'watch',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
+  return {
+    badge: 'GO',
+    title: 'Load is in a productive range',
+    body: 'A purposeful session is appropriate. Pick the workout that fits the goal rather than adding junk volume.',
+    target: '8-14 strain',
+    actionLabel: 'Start workout',
+    actionValue: 'quality',
+    icon: 'play',
+    color: colors.recoveryGreen,
+    route: { name: 'startMenu' },
+  };
+}
+
 const styles = StyleSheet.create({
   statusHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dot: { width: 12, height: 12, borderRadius: 6 },
   statusText: { fontSize: 22, fontFamily: fonts.black },
   statusDetail: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 8, fontFamily: fonts.text },
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  planHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  planBadge: { width: 50, height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  planBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  planTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  planBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 12, fontFamily: fonts.text },
   actRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   actName: { color: colors.text, fontSize: 15, fontFamily: fonts.textSemibold },
