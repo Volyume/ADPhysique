@@ -373,6 +373,11 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     const priorAvg = priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null;
     const delta = trendDeltaMeta(metric, avg, priorAvg);
+    const trustedVals = period
+      .filter((d) => d.sleepDetail?.confidence !== 'low')
+      .map(metric.pick)
+      .filter((v): v is number => v != null);
+    const trustedAvg = trustedVals.length ? trustedVals.reduce((a, b) => a + b, 0) / trustedVals.length : null;
 
     // Breakdown counts by band (only for banded metrics).
     let breakdown: Array<{ label: string; count: number; color: string }> | null = null;
@@ -413,16 +418,16 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
       .filter((_, i) => i % step === 0)
       .map((d) => {
         const value = metric.pick(d);
-        const lowConfidence = d.sleepDetail?.confidence === 'low';
+        const confidence = d.sleepDetail?.confidence;
         return {
           value,
           day: d.day,
           color: value != null && metric.band ? bandColors[metric.band(value)] : colors.sleepTeal,
-          opacity: lowConfidence ? 0.45 : 0.88,
+          opacity: confidence === 'low' ? 0.42 : confidence === 'medium' ? 0.68 : 0.88,
         };
       });
     const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
-    return { avg, priorAvg, delta, breakdown, quality, bars, insight };
+    return { avg, trustedAvg, priorAvg, delta, breakdown, quality, bars, insight };
   }, [history, days, metric]);
 
   const periodWord = range === 'W' ? 'week' : range === 'M' ? 'month' : '6 months';
@@ -491,8 +496,8 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         {view.bars.some((b) => b.value != null) ? (
           <>
             <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} onSelectDay={(day) => nav.navigate({ name: 'day', day })} />
-            {view.quality.low > 0 ? (
-              <Text style={styles.chartHint}>Dim bars are low-confidence nights; tap any bar to review the day.</Text>
+            {view.quality.low > 0 || view.quality.medium > 0 ? (
+              <Text style={styles.chartHint}>Dim bars have lower capture confidence; tap any bar to review the day.</Text>
             ) : null}
           </>
         ) : (
@@ -526,10 +531,10 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
               <QualityStat label="High" value={view.quality.high} color={colors.recoveryGreen} />
               <QualityStat label="Medium" value={view.quality.medium} color={colors.recoveryYellow} />
               <QualityStat label="Low" value={view.quality.low} color={colors.recoveryRed} />
-              <QualityStat label="Coverage" value={view.quality.avgCoverage != null ? `${view.quality.avgCoverage}%` : '-'} color={colors.sleepTeal} />
+              <QualityStat label="Trusted avg" value={view.trustedAvg != null ? fmtVal(view.trustedAvg, metric.hours) : '-'} color={colors.sleepTeal} />
             </View>
             <Text style={styles.qualityNote}>
-              Low-confidence nights can make sleep, recovery and readiness trends look worse or better than reality. Tap a bar to review that day.
+              Low-confidence nights can distort averages. Use trusted average and reviewed bars before changing your routine.
             </Text>
           </Card>
         </>
