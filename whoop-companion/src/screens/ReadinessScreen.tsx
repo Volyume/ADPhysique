@@ -75,7 +75,12 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
             <View style={styles.statRow}>
               <Stat label="Confidence" value={`${readiness.confidencePct}%`} color={confidenceColor(readiness.confidence)} />
               <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} />
-              <Stat label="Sleep signal" value={sleepDetail?.signalMin ?? '-'} unit={sleepDetail?.signalMin != null ? 'min' : undefined} />
+              <Stat
+                label={readiness.cappedByConfidence ? 'Score cap' : 'Sleep signal'}
+                value={readiness.cappedByConfidence ? `${readiness.scoreCap}%` : sleepDetail?.signalMin ?? '-'}
+                unit={!readiness.cappedByConfidence && sleepDetail?.signalMin != null ? 'min' : undefined}
+                color={readiness.cappedByConfidence ? colors.recoveryYellow : undefined}
+              />
             </View>
             <View style={styles.qualityHead}>
               <View style={[styles.dot, { backgroundColor: confidenceColor(readiness.confidence) }]} />
@@ -83,7 +88,11 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
                 {readiness.qualityLabel}
               </Text>
             </View>
-            <Text style={styles.qualityNote}>{readiness.qualityNote}</Text>
+            <Text style={styles.qualityNote}>
+              {readiness.cappedByConfidence && readiness.scoreCap != null
+                ? `${readiness.qualityNote} Score capped at ${readiness.scoreCap} until sleep confidence improves.`
+                : readiness.qualityNote}
+            </Text>
             {qualityAction ? (
               <NavRow
                 label={qualityAction.label}

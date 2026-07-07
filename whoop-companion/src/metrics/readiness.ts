@@ -10,6 +10,8 @@ export type Readiness = {
   label: string; // Poor / Low / Moderate / High / Prime
   confidence: 'high' | 'medium' | 'low';
   confidencePct: number;
+  scoreCap: number | null;
+  cappedByConfidence: boolean;
   qualityLabel: string;
   qualityNote: string;
   missingInputs: string[];
@@ -55,7 +57,9 @@ export function computeTrainingReadiness(input: {
   const score = Math.round(
     0.35 * rec + 0.25 * sleep + 0.15 * debtPenalty + 0.1 * hrv + 0.15 * load,
   );
-  const clamped = Math.max(1, Math.min(100, score));
+  const scoreCap = readinessScoreCap({ sleepConfidence, sleepCoveragePct, sleepSignalMin });
+  const clamped = Math.max(1, Math.min(100, Math.min(score, scoreCap ?? 100)));
+  const cappedByConfidence = scoreCap != null && clamped < Math.max(1, Math.min(100, score));
 
   const contributors = [
     { key: 'recovery', label: 'Recovery', value: recovery != null ? `${recovery}%` : '—', good: recovery != null ? recovery >= 60 : null },
@@ -102,9 +106,24 @@ export function computeTrainingReadiness(input: {
     label: readinessLabel(clamped),
     confidence,
     confidencePct,
+    scoreCap,
+    cappedByConfidence,
     qualityLabel,
     qualityNote,
     missingInputs,
     contributors,
   };
+}
+
+function readinessScoreCap(input: {
+  sleepConfidence: 'high' | 'medium' | 'low' | null;
+  sleepCoveragePct: number | null;
+  sleepSignalMin: number | null;
+}): number | null {
+  if (input.sleepConfidence === 'high') return null;
+  const coverage = input.sleepCoveragePct ?? 100;
+  const signal = input.sleepSignalMin ?? 999;
+  if (input.sleepConfidence === 'low' || coverage < 60 || signal < 150) return 65;
+  if (input.sleepConfidence === 'medium' || coverage < 80 || signal < 240) return 86;
+  return null;
 }
