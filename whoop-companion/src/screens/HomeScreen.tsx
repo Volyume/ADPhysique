@@ -287,7 +287,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             icon="footsteps"
             color={colors.recoveryGreen}
             value={steps != null ? steps.toLocaleString() : '—'}
-            sub={stepSource === 'band' ? 'band estimate' : stepSource === 'phone' ? 'phone pedometer' : 'waiting'}
+            sub={stepSource === 'band' ? 'band calibrated' : stepSource === 'phone' ? 'phone pedometer' : 'waiting'}
             onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
             style={styles.half}
           />

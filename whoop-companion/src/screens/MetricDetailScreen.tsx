@@ -504,7 +504,7 @@ function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {
 }
 
 function stepSourceLabel(source: 'band' | 'phone' | null): string {
-  if (source === 'band') return 'band est.';
+  if (source === 'band') return 'band calibrated';
   if (source === 'phone') return 'phone';
   return '-';
 }

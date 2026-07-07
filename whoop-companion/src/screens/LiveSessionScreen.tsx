@@ -74,7 +74,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
   const usesSteps = session.kind === 'workout' && activityUsesSteps(activityLabel);
   const stepSource =
-    stats?.stepSource === 'band' ? 'band est.' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
+    stats?.stepSource === 'band' ? 'band calibrated' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
   const quality = recordingQuality({
     session,
     stats,

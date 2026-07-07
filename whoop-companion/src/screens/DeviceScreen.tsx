@@ -345,7 +345,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Stat label="Today" value={steps != null ? steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
-          <Stat label="Source" value={stepSource === 'band' ? 'band est.' : stepSource ?? '-'} />
+          <Stat label="Source" value={stepSource === 'band' ? 'band calibrated' : stepSource ?? '-'} />
           <Stat label="Trust" value={stepTrust} />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>

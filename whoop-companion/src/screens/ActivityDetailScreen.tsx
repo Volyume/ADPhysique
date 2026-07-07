@@ -172,7 +172,7 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
               <Stat label="Laps" value={activity.lapCount ?? '-'} />
             </Card>
             <Card style={styles.half}>
-              <Stat label="Step trust" value={activity.stepSource === 'band' ? 'estimate' : activity.stepSource === 'phone' ? 'pedometer' : activity.stepSource === 'manual' ? 'entered' : '-'} />
+              <Stat label="Step trust" value={activity.stepSource === 'band' ? 'calibrated' : activity.stepSource === 'phone' ? 'pedometer' : activity.stepSource === 'manual' ? 'entered' : '-'} />
             </Card>
           </View>
         </>
