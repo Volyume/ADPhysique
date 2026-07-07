@@ -473,14 +473,14 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
   });
 
-  test('scan comparability refuses side-pose and setup changes before reporting progress', () => {
+  test('scan comparability ignores optional side-pose changes but still refuses setup changes before reporting progress', () => {
     const previous = comparableScan({ id: 'old', side: true });
     const withoutSide = comparableScan({ id: 'new', side: false });
     expect(scanComparability(withoutSide, previous)).toMatchObject({
-      comparable: false,
-      reason: 'The photo setup changed too much for a fair comparison.',
+      comparable: true,
+      reason: 'Like-for-like front and back scan.',
     });
-    expect(scanSetupStability(withoutSide, previous).issues).toContain('side_pose_set_changed');
+    expect(scanSetupStability(withoutSide, previous).issues).not.toContain('side_pose_set_changed');
 
     const movedCamera = comparableScan({ id: 'new', side: true, height: 0.62, centerY: 0.32, tilt: 6 });
     const setup = scanSetupStability(movedCamera, previous);

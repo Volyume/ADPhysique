@@ -39,16 +39,16 @@ jest.mock('react-native-fast-tflite', () => ({
 }));
 
 function syntheticPersonMask({
-  width = 256, height = 256, shiftX = 0, top = 26, bottom = 236,
+  width = 256, height = 256, shiftX = 0, top = 26, bottom = 236, widthScale = 1,
 } = {}) {
   const mask = new Float32Array(width * height).fill(0.04);
   const bodyHeight = bottom - top;
   for (let y = top; y <= bottom; y += 1) {
     const rel = (y - top) / bodyHeight;
-    const halfWidth = 18
+    const halfWidth = (18
       + 24 * Math.exp(-((rel - 0.24) ** 2) / 0.012)
       + 13 * Math.exp(-((rel - 0.66) ** 2) / 0.018)
-      - 6 * Math.exp(-((rel - 0.52) ** 2) / 0.014);
+      - 6 * Math.exp(-((rel - 0.52) ** 2) / 0.014)) * widthScale;
     const cx = Math.round(width / 2 + shiftX);
     for (let x = Math.max(0, Math.round(cx - halfWidth)); x <= Math.min(width - 1, Math.round(cx + halfWidth)); x += 1) {
       mask[y * width + x] = 0.96;
@@ -208,6 +208,20 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
     expect(result.silhouetteRatios.waistToHip).toBeGreaterThan(0);
     expect(result.abstentionReasons).toEqual([]);
+    expect(retakeCopyForVisionResult(result)).toBeNull();
+  });
+
+  test('broad full-body silhouettes are not mistaken for unclear poses', () => {
+    const result = measureMaskSignals(syntheticPersonMask({ widthScale: 1.8 }), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+
+    expect(result.bodyBox.height).toBeGreaterThan(0.75);
+    expect(result.bodyBox.width).toBeGreaterThan(0.5);
+    expect(result.quality.poseConfidence).toBeGreaterThan(0.65);
+    expect(result.abstentionReasons).not.toContain('pose_not_clear');
     expect(retakeCopyForVisionResult(result)).toBeNull();
   });
 

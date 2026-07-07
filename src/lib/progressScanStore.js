@@ -300,27 +300,30 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
   const deltaExplanation = ['complete', 'measured'].includes(analysis.analysisStatus)
     ? explainMeasuredScanDelta({ currentScan: currentForDelta, previousScan: comparablePrevious })
     : null;
+  const scoreReady = analysis.physiqueAssessment?.visualLeannessScore != null;
+  const comparisonReady = deltaExplanation?.comparisonStatus === 'comparable';
+  const baselineComparison = deltaExplanation?.comparisonStatus === 'baseline';
   const physiqueAssessment = analysis.physiqueAssessment
     ? {
         ...analysis.physiqueAssessment,
-        progressSignal: deltaExplanation?.comparisonStatus === 'comparable'
+        progressSignal: comparisonReady
           ? (deltaExplanation.progressSignal ?? analysis.physiqueAssessment.progressSignal)
-          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'inconclusive'),
-        progressSignalLabel: deltaExplanation?.comparisonStatus === 'comparable'
+          : (baselineComparison ? 'baseline' : (scoreReady ? 'trend_pending' : 'inconclusive')),
+        progressSignalLabel: comparisonReady
           ? (deltaExplanation.progressSignalLabel ?? analysis.physiqueAssessment.progressSignalLabel)
-          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'Baseline scan' : 'Inconclusive'),
-        progressDirection: deltaExplanation?.comparisonStatus === 'comparable'
+          : (baselineComparison ? 'Baseline scan' : (scoreReady ? 'Trend not ready' : 'Inconclusive')),
+        progressDirection: comparisonReady
           ? (deltaExplanation.progressDirection ?? analysis.physiqueAssessment.progressDirection)
-          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'uncertain'),
-        progressDeltaScore: deltaExplanation?.comparisonStatus === 'comparable'
+          : (baselineComparison ? 'baseline' : 'uncertain'),
+        progressDeltaScore: comparisonReady
           ? (deltaExplanation.progressDeltaScore ?? analysis.physiqueAssessment.progressDeltaScore)
           : null,
-        previousLeannessScore: deltaExplanation?.comparisonStatus === 'comparable'
+        previousLeannessScore: comparisonReady
           ? (deltaExplanation.previousLeannessScore ?? analysis.physiqueAssessment.previousLeannessScore)
           : null,
-        visualTrendDirection: deltaExplanation?.comparisonStatus === 'comparable'
+        visualTrendDirection: comparisonReady
           ? (deltaExplanation.visualTrendDirection ?? null)
-          : (deltaExplanation?.comparisonStatus === 'baseline' ? 'baseline' : 'uncertain'),
+          : (baselineComparison ? 'baseline' : 'uncertain'),
       }
     : null;
   const signalsSummary = measuredSignalsSummaryFromAssets(assets, analysis.modelEstimate ?? null, {

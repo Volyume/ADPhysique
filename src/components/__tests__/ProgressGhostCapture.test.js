@@ -134,6 +134,8 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/useSafeAreaInsets/);
   expect(SOURCE).toMatch(/controlsInsetStyle/);
   expect(SOURCE).toMatch(/insets\?\.bottom/);
+  expect(SOURCE).toMatch(/ANDROID_NAV_BAR_GUARD\s*=\s*48/);
+  expect(SOURCE).toMatch(/safeBottomInset/);
 });
 
 test('renders side and back pose guidance for scan captures', async () => {
@@ -173,6 +175,7 @@ test('capture previews the photo, then saves, records the pose, and calls onCapt
     await captureBtn.props.onPress();
   });
 
+  expect(mockTakePicture).toHaveBeenCalledWith({ quality: 0.92 });
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(JSON.stringify(tree.toJSON())).toContain('Check this photo');
   expect(JSON.stringify(tree.toJSON())).toContain('file:///captured.jpg');

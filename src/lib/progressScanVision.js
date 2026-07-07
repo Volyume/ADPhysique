@@ -366,11 +366,18 @@ export function measureMaskSignals(mask, opts = {}) {
   const waistToShoulder = waistWidth != null && shoulderWidth > 0 ? waistWidth / shoulderWidth : null;
   const waistToHip = waistWidth != null && hipWidth > 0 ? waistWidth / hipWidth : null;
   const hipToShoulder = hipWidth != null && shoulderWidth > 0 ? hipWidth / shoulderWidth : null;
-  const verticality = widthRatio > 0 ? heightRatio / widthRatio : null;
-  const poseConfidence = round(clamp(((verticality ?? 0) - 1.15) / 1.2, 0, 1), 3);
   const bodyTiltDegrees = shoulderCenter != null && hipCenter != null
     ? round((Math.atan2(hipCenter - shoulderCenter, Math.max(1, bbox.height * 0.42)) * 180) / Math.PI, 2)
     : null;
+  const uprightScore = bodyTiltDegrees == null
+    ? 0.75
+    : 1 - clamp(Math.abs(bodyTiltDegrees) / 18, 0, 1);
+  const poseHeightScore = 1 - clamp(Math.abs(heightRatio - 0.74) / 0.32, 0, 1);
+  const poseConfidence = round(clamp(
+    (poseHeightScore * 0.45) + (centreScore * 0.25) + (uprightScore * 0.30),
+    0,
+    1,
+  ), 3);
   const lightingScore = finiteNumber(opts.lightingScore);
   const blurScore = finiteNumber(opts.blurScore);
 
