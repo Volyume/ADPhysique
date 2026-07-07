@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
-import { Nav } from '../ui/navigation';
+import { Nav, Route } from '../ui/navigation';
 import { formatDuration } from '../util/time';
 import { kvGet, kvSet } from '../db/database';
 
@@ -53,6 +54,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
   const status = useStoreSelector(appStore, (s) => s.status);
+  const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
 
@@ -114,6 +116,15 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         : strapAlarm.enabled
           ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}`
           : 'Off on this app';
+  const checklist = tonightChecklist({
+    connected,
+    keepAlive,
+    alarmEnabled: strapAlarm.enabled || strapAlarm.pendingWrite === 'set',
+    targetMin,
+    tibNeededMin,
+    sleepDebtMin: need?.debtMin ?? 0,
+    inSleepWindow,
+  });
 
   const setWakeAlarm = async () => {
     if (alarmBusy) return;
@@ -212,6 +223,18 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
             </View>
             <Text style={styles.modeHours}>{formatDuration(Math.round(neededMin * m.key))}</Text>
           </Pressable>
+        ))}
+      </Card>
+
+      <SectionLabel>Tonight readiness</SectionLabel>
+      <Card style={{ paddingVertical: 2 }}>
+        {checklist.map((item, i) => (
+          <ReadinessRow
+            key={item.label}
+            item={item}
+            last={i === checklist.length - 1}
+            onPress={item.route ? () => nav.navigate(item.route!) : undefined}
+          />
         ))}
       </Card>
 
@@ -404,6 +427,82 @@ function goalRecommendation(input: {
   };
 }
 
+type ChecklistItem = {
+  label: string;
+  detail: string;
+  state: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  route?: Route;
+};
+
+function tonightChecklist(input: {
+  connected: boolean;
+  keepAlive: boolean;
+  alarmEnabled: boolean;
+  targetMin: number;
+  tibNeededMin: number;
+  sleepDebtMin: number;
+  inSleepWindow: boolean;
+}): ChecklistItem[] {
+  return [
+    {
+      label: 'Strap sync',
+      detail: input.connected
+        ? 'Connected now; stored history can backfill after wake.'
+        : 'Connect before bed or after waking so stored history can drain.',
+      state: input.connected ? 'Ready' : 'Connect',
+      icon: input.connected ? 'bluetooth' : 'bluetooth-outline',
+      color: input.connected ? colors.recoveryGreen : colors.strainBlue,
+      route: { name: 'device' },
+    },
+    {
+      label: 'Background sync',
+      detail: input.keepAlive
+        ? 'Protection is on for long history drains.'
+        : 'Turn this on if overnight syncs stall when the phone sleeps.',
+      state: input.keepAlive ? 'On' : 'Off',
+      icon: input.keepAlive ? 'shield-checkmark' : 'shield-outline',
+      color: input.keepAlive ? colors.recoveryGreen : colors.recoveryYellow,
+      route: { name: 'device' },
+    },
+    {
+      label: 'Wake alarm',
+      detail: input.alarmEnabled
+        ? 'A strap haptic wake-up is armed or queued.'
+        : 'Set a strap alarm if you want a reliable haptic fallback.',
+      state: input.alarmEnabled ? 'Armed' : 'Set',
+      icon: input.alarmEnabled ? 'alarm' : 'alarm-outline',
+      color: input.alarmEnabled ? colors.sleepTeal : colors.recoveryYellow,
+    },
+    {
+      label: 'Sleep target',
+      detail: input.inSleepWindow
+        ? `Sleep window is open; target is ${formatDuration(input.targetMin)} asleep.`
+        : `${formatDuration(input.tibNeededMin)} in bed aims for ${formatDuration(input.targetMin)} asleep.`,
+      state: input.sleepDebtMin >= 60 ? 'Debt' : 'Set',
+      icon: input.sleepDebtMin >= 60 ? 'moon' : 'checkmark-circle',
+      color: input.sleepDebtMin >= 60 ? colors.recoveryYellow : colors.recoveryGreen,
+    },
+  ];
+}
+
+function ReadinessRow({ item, last, onPress }: { item: ChecklistItem; last: boolean; onPress?: () => void }) {
+  return (
+    <Pressable disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.readyRow, !last && styles.readyBorder, pressed && styles.pressed]}>
+      <View style={[styles.readyIcon, { backgroundColor: `${item.color}22` }]}>
+        <Ionicons name={item.icon} size={18} color={item.color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.readyLabel}>{item.label}</Text>
+        <Text style={styles.readyDetail}>{item.detail}</Text>
+      </View>
+      <Text style={[styles.readyState, { color: item.color }]}>{item.state}</Text>
+      {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} /> : null}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   bigLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1.4 },
   bigValue: { color: colors.sleepTeal, fontSize: 44, fontFamily: fonts.black, marginTop: 6 },
@@ -423,6 +522,13 @@ const styles = StyleSheet.create({
   modeName: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   modeDesc: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   modeHours: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bold },
+  readyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  readyBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  readyIcon: { width: 38, height: 38, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  readyLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  readyDetail: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  readyState: { fontSize: 12, fontFamily: fonts.textBold },
+  pressed: { opacity: 0.65 },
   breakRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9 },
   swatch: { width: 10, height: 10, borderRadius: 3, marginRight: 10 },
   breakLabel: { color: colors.textSecondary, fontSize: 14, flex: 1, fontFamily: fonts.text },
