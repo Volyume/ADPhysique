@@ -72,13 +72,12 @@ class ProgressScanImageModule : Module() {
         if (!targetDir.exists()) targetDir.mkdirs()
         val target = File(targetDir, safeName)
         if (!target.exists() || target.length() <= 0L) {
-          context.assets.open(safeName).use { input ->
-            FileOutputStream(target).use { output ->
-              input.copyTo(output)
-            }
+          if (!copyFirstBundledModelAsset(context, safeName, target)) {
+            promise.resolve(null)
+            return@AsyncFunction
           }
         }
-        promise.resolve(Uri.fromFile(target).toString())
+        promise.resolve(if (target.exists() && target.length() > 0L) Uri.fromFile(target).toString() else null)
       } catch (_: Throwable) {
         promise.resolve(null)
       }
@@ -335,6 +334,34 @@ class ProgressScanImageModule : Module() {
       null -> FileInputStream(File(uriString))
       else -> null
     }
+  }
+
+  private fun bundledModelAssetCandidates(safeName: String): List<String> {
+    val base = safeName.substringBeforeLast('.', safeName)
+    val expoAssetKey = "assets_ml_$base"
+    return listOf(
+      safeName,
+      "ml/$safeName",
+      "assets/ml/$safeName",
+      expoAssetKey,
+      "$expoAssetKey.tflite",
+    ).distinct()
+  }
+
+  private fun copyFirstBundledModelAsset(context: Context, safeName: String, target: File): Boolean {
+    for (candidate in bundledModelAssetCandidates(safeName)) {
+      try {
+        context.assets.open(candidate).use { input ->
+          FileOutputStream(target).use { output ->
+            input.copyTo(output)
+          }
+        }
+        if (target.exists() && target.length() > 0L) return true
+      } catch (_: Throwable) {
+        try { target.delete() } catch (_: Throwable) { /* keep looking */ }
+      }
+    }
+    return false
   }
 
   private fun clamp01(value: Double): Double {
