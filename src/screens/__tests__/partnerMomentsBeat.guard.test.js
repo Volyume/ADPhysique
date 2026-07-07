@@ -49,6 +49,8 @@ describe('WorkoutSummaryScreen partner-beat moment wiring', () => {
     expect(src).toMatch(/result\?\.ok \|\| result\?\.error === 'already_cheered'/);
     expect(src).toMatch(/WorkoutSummaryScreen\.postWorkoutCheer/);
     expect(src).toMatch(/partnerCheerFailureMessage\(result\?\.error\)/);
+    expect(src).toContain('Partner cheers are not available right now. Try again later.');
+    expect(src).toContain('Partner cheers need the latest partner update before they can send.');
   });
 
   test('the beat keeps its existing gating (no new beat for unpaired users)', () => {

@@ -496,6 +496,21 @@ describe('cheer affordance', () => {
       { variant: 'error' },
     );
   });
+
+  test('a partner schema update cheer failure does not blame the user connection', async () => {
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false, error: 'partner_update_needed' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.',
+      { variant: 'error' },
+    );
+  });
 });
 
 describe('milestone moment slot', () => {
@@ -703,6 +718,8 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="This week's sessions" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);
   });
 
   test('manage sheet exposes name-only training block sharing', async () => {

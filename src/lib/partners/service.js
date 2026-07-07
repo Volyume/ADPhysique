@@ -49,17 +49,43 @@ function isMissingCheerKindColumn(error) {
     && (text.includes('schema cache') || text.includes('column') || text.includes('could not find'));
 }
 
+function isPartnerSchemaDriftError(error) {
+  const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
+  return error?.code === 'PGRST204'
+    || text.includes('schema cache')
+    || text.includes('could not find')
+    || text.includes('column')
+    || text.includes('relation');
+}
+
+function isPartnerAuthError(error) {
+  const status = error?.status ?? error?.context?.status ?? error?.context?.response?.status;
+  const text = [error?.code, error?.message, error?.details, error?.hint, status].filter(v => v != null).join(' ').toLowerCase();
+  return status === 401
+    || status === 403
+    || text.includes('jwt')
+    || text.includes('not authenticated')
+    || text.includes('auth session')
+    || text.includes('permission denied for schema');
+}
+
 function normaliseCheerInsertError(error) {
   if (!error) return null;
   if (isDuplicateCheerError(error)) return 'already_cheered';
   const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
   if (text.includes('row-level security') || text.includes('rls') || text.includes('permission denied')) return 'not_active';
+  if (isPartnerAuthError(error)) return 'partner_auth_required';
+  if (isPartnerSchemaDriftError(error)) return 'partner_update_needed';
   return error?.message || String(error);
 }
 
 function isMissingPartnerTable(error, tableName) {
-  const text = [error?.code, error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
-  return text.includes('pgrst205') || text.includes(String(tableName).toLowerCase());
+  const code = String(error?.code || '').toUpperCase();
+  const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
+  if (code === 'PGRST205' || code === '42P01') return text.includes(String(tableName).toLowerCase());
+  return !text.includes('column')
+    && text.includes(String(tableName).toLowerCase())
+    && (text.includes('schema cache') || text.includes('does not exist') || text.includes('relation'));
 }
 
 async function runCheerInsert(c, row) {
@@ -244,6 +270,8 @@ export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, recipr
       trackCheerSent();
       return direct;
     } catch (inner) {
+      const normalised = normaliseCheerInsertError(inner);
+      if (normalised) return { ok: false, error: normalised };
       return fail(inner);
     }
   }
