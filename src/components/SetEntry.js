@@ -191,7 +191,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             returnKeyType="done"
             onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
             selectTextOnFocus
-            accessibilityLabel="Duration in minutes and seconds"
+            accessibilityLabel="Time in minutes and seconds"
           />
           <TouchableOpacity
             style={styles.stepBtn}

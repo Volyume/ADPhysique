@@ -32,6 +32,23 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('Choose your recovery rating to finish setup.');
   });
 
+  test('coaching reminders are required timing choices, not break-the-loop toggles', () => {
+    expect(SOURCE).toContain('Pick a morning time and weekly check-in day.');
+    expect(SOURCE).toContain('Settings &gt; Coaching reminders');
+    expect(SOURCE).toContain('morningEnabled: true');
+    expect(SOURCE).toContain('checkinEnabled: true');
+    expect(SOURCE).toContain('styles.requiredPill');
+    expect(SOURCE).toContain('<Text style={styles.requiredPillText}>Required</Text>');
+    expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time"');
+    expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day"');
+    expect(SOURCE).toContain('accessibilityState={{ checked: morningHour === h }}');
+    expect(SOURCE).toContain('accessibilityState={{ checked: checkinDay === i }}');
+    expect(SOURCE).not.toContain('setMorningEnabled(v => !v)');
+    expect(SOURCE).not.toContain('setCheckinEnabled(v => !v)');
+    expect(SOURCE).not.toContain('accessibilityLabel="Morning weight reminder"');
+    expect(SOURCE).not.toContain('accessibilityLabel="Weekly check-in reminder"');
+  });
+
   test('final submit never builds targets from fallback body data', () => {
     expect(SOURCE).toContain('Volyume will not build targets from fallback body data.');
     expect(SOURCE).toContain('const safeWeightKg = bwKg;');

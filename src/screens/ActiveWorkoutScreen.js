@@ -1315,7 +1315,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setType: currentSet.setType,
       });
       const retryAction = currentSet.setType === 'warmup'
-        ? 'Done'
+        ? 'Log warm-up'
         : isClusterType(currentSet.setType)
           ? 'Start cluster'
           : 'Log set';
@@ -2719,7 +2719,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setShowSetTypePicker(false)}
         >
           {showSetTypePicker ? (
-            <>
+            <View style={styles.sheetHost}>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2764,7 +2764,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             </WorkoutSheetScroll>
           </View>
-            </>
+            </View>
           ) : null}
         </Modal>
 
@@ -2780,7 +2780,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setShowWarmupRamp(false)}
         >
           {showWarmupRamp ? (
-            <>
+            <View style={styles.sheetHost}>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2850,7 +2850,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               })()}
             </WorkoutSheetScroll>
           </View>
-            </>
+            </View>
           ) : null}
         </Modal>
 
@@ -2865,7 +2865,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setShowPlates(false)}
         >
           {showPlates ? (
-            <>
+            <View style={styles.sheetHost}>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -2942,7 +2942,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               })()}
             </WorkoutSheetScroll>
           </View>
-            </>
+            </View>
           ) : null}
         </Modal>
 
@@ -2956,7 +2956,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setShowOverflow(false)}
         >
           {showOverflow ? (
-            <>
+            <View style={styles.sheetHost}>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -3101,7 +3101,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </WorkoutSheetScroll>
           </View>
-            </>
+            </View>
           ) : null}
         </Modal>
 
@@ -3113,7 +3113,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setShowExecution(false)}
         >
           {showExecution ? (
-            <>
+            <View style={styles.sheetHost}>
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
@@ -3201,7 +3201,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </Text>
             </WorkoutSheetScroll>
           </View>
-            </>
+            </View>
           ) : null}
         </Modal>
 
@@ -3575,6 +3575,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
   addFirstBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg, marginTop: spacing.lg },
   addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  sheetHost: { flex: 1, justifyContent: 'flex-end' },
   sheetOverlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md, maxHeight: '92%' },
   sheetHandle: { width: 36, height: 4, borderRadius: radius.hair, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
