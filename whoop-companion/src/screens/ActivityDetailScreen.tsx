@@ -12,6 +12,7 @@ import { formatDistance, formatPace } from '../sensors/location';
 import { formatClock, formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
 import { recoveryTimeHours, trainingEffect } from '../metrics/training';
+import { parseNapDetail } from '../metrics/naps';
 
 export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
@@ -20,7 +21,12 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   const [hr, setHr] = useState<number[]>([]);
 
   useEffect(() => {
-    if (activity) void appStore.activityDetail(activity.startTs, activity.endTs).then((d) => { setZones(d.zones); setHr(d.hr); });
+    if (activity) {
+      void appStore.activityDetail(activity.startTs, activity.endTs).then((d) => {
+        setZones(d.zones);
+        setHr(d.hr);
+      });
+    }
   }, [id]);
 
   if (!activity) {
@@ -31,26 +37,42 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
     );
   }
 
+  const isNap = activity.source === 'nap';
+  const nap = isNap ? parseNapDetail(activity.notes) : null;
   const durMin = Math.round((activity.endTs - activity.startTs) / 60000);
   const elapsedSec = Math.round((activity.endTs - activity.startTs) / 1000);
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
-  const te = zones.some((z) => z.minutes > 0) ? trainingEffect(zones) : null;
+  const te = !isNap && zones.some((z) => z.minutes > 0) ? trainingEffect(zones) : null;
   const recoveryHrs = te ? recoveryTimeHours(te) : null;
-  const date = new Date(activity.startTs).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const date = new Date(activity.startTs).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  const tint = isNap ? colors.sleepTeal : colors.strainBlue;
 
   const remove = () =>
     Alert.alert('Delete activity', `Remove this ${activity.activity}?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => { void appStore.removeCardio(activity.id); nav.back(); } },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void appStore.removeCardio(activity.id);
+          nav.back();
+        },
+      },
     ]);
 
   return (
-    <Screen title={activity.activity} onBack={nav.back} tint={colors.strainBlue}>
+    <Screen title={activity.activity} onBack={nav.back} tint={tint}>
       <Card>
         <View style={styles.headRow}>
           <View>
             <Text style={styles.title}>{activity.activity}</Text>
-            <Text style={styles.sub}>{date} · {formatClock(activity.startTs)}–{formatClock(activity.endTs)}</Text>
+            <Text style={styles.sub}>
+              {date} - {formatClock(activity.startTs)}-{formatClock(activity.endTs)}
+            </Text>
           </View>
           <Pressable hitSlop={10} onPress={remove}>
             <Ionicons name="trash-outline" size={20} color={colors.textTertiary} />
@@ -58,37 +80,84 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
         </View>
         <View style={styles.statRow}>
           <Stat label="Duration" value={formatDuration(durMin)} />
-          <Stat label="Strain" value={activity.strain != null ? activity.strain.toFixed(1) : '—'} color={colors.strainBlue} />
-          <Stat label="Calories" value={activity.kcal ?? '—'} color={colors.recoveryYellow} />
+          {isNap ? (
+            <>
+              <Stat label="Asleep" value={nap ? formatDuration(nap.asleepMin) : '-'} color={colors.sleepTeal} />
+              <Stat label="Efficiency" value={nap ? `${nap.efficiency}%` : '-'} color={colors.sleepTeal} />
+            </>
+          ) : (
+            <>
+              <Stat label="Strain" value={activity.strain != null ? activity.strain.toFixed(1) : '-'} color={colors.strainBlue} />
+              <Stat label="Calories" value={activity.kcal ?? '-'} color={colors.recoveryYellow} />
+            </>
+          )}
         </View>
       </Card>
 
-      <View style={styles.grid}>
-        <Card style={styles.half}><Stat label="Avg HR" value={activity.avgHr ?? '—'} unit={activity.avgHr != null ? 'bpm' : undefined} color={colors.recoveryRed} /></Card>
-        <Card style={styles.half}><Stat label="Distance" value={formatDistance(activity.distanceM)} color={colors.recoveryGreen} /></Card>
-      </View>
-      <View style={styles.grid}>
-        <Card style={styles.half}>
-          <Stat label="Max HR" value={activity.maxHr ?? '—'} unit={activity.maxHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
-        </Card>
-        <Card style={styles.half}>
-          <Stat label="Steps" value={activity.steps != null ? activity.steps.toLocaleString() : '—'} color={colors.recoveryGreen} />
-        </Card>
-      </View>
-      <View style={styles.grid}>
-        <Card style={styles.half}>
-          <Stat label="Cadence" value={activity.cadenceSpm ?? '—'} unit={activity.cadenceSpm != null ? 'spm' : undefined} />
-        </Card>
-        <Card style={styles.half}><Stat label="Laps" value={activity.lapCount ?? '—'} /></Card>
-      </View>
-      {activity.distanceM != null ? (
+      {isNap ? (
+        <>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Restorative" value={nap ? formatDuration(nap.restorativeMin) : '-'} color={colors.sleepTeal} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="HR coverage" value={nap ? `${nap.coveragePct}%` : '-'} color={colors.sleepTeal} />
+            </Card>
+          </View>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Avg HR" value={activity.avgHr ?? '-'} unit={activity.avgHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Source" value={nap?.autoDetected ? 'auto-detected' : 'timer'} />
+            </Card>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Avg HR" value={activity.avgHr ?? '-'} unit={activity.avgHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Distance" value={formatDistance(activity.distanceM)} color={colors.recoveryGreen} />
+            </Card>
+          </View>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Max HR" value={activity.maxHr ?? '-'} unit={activity.maxHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Steps" value={activity.steps != null ? activity.steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
+            </Card>
+          </View>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
+              <Stat label="Cadence" value={activity.cadenceSpm ?? '-'} unit={activity.cadenceSpm != null ? 'spm' : undefined} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Laps" value={activity.lapCount ?? '-'} />
+            </Card>
+          </View>
+        </>
+      )}
+
+      {!isNap && activity.distanceM != null ? (
         <View style={styles.grid}>
-          <Card style={styles.half}><Stat label="Pace" value={formatPace(activity.distanceM, elapsedSec)} /></Card>
-          <Card style={styles.half}><Stat label="Avg speed" value={activity.distanceM > 0 ? (activity.distanceM / 1000 / (elapsedSec / 3600)).toFixed(1) : '—'} unit="km/h" /></Card>
+          <Card style={styles.half}>
+            <Stat label="Pace" value={formatPace(activity.distanceM, elapsedSec)} />
+          </Card>
+          <Card style={styles.half}>
+            <Stat
+              label="Avg speed"
+              value={activity.distanceM > 0 ? (activity.distanceM / 1000 / (elapsedSec / 3600)).toFixed(1) : '-'}
+              unit="km/h"
+            />
+          </Card>
         </View>
       ) : null}
 
-      {activity.route && activity.route.length >= 2 ? (
+      {!isNap && activity.route && activity.route.length >= 2 ? (
         <>
           <SectionLabel>Route</SectionLabel>
           <Card style={{ alignItems: 'center' }}>
@@ -102,13 +171,12 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
           <SectionLabel>Training effect</SectionLabel>
           <Card>
             <View style={styles.statRow}>
-              <Stat label={`Aerobic · ${te.aerobicLabel}`} value={te.aerobic.toFixed(1)} color={colors.strainBlue} />
-              <Stat label={`Anaerobic · ${te.anaerobicLabel}`} value={te.anaerobic.toFixed(1)} color={colors.recoveryRed} />
-              <Stat label="Recovery time" value={recoveryHrs != null ? `${recoveryHrs}h` : '—'} color={colors.recoveryYellow} />
+              <Stat label={`Aerobic - ${te.aerobicLabel}`} value={te.aerobic.toFixed(1)} color={colors.strainBlue} />
+              <Stat label={`Anaerobic - ${te.anaerobicLabel}`} value={te.anaerobic.toFixed(1)} color={colors.recoveryRed} />
+              <Stat label="Recovery time" value={recoveryHrs != null ? `${recoveryHrs}h` : '-'} color={colors.recoveryYellow} />
             </View>
             <Text style={styles.teNote}>
-              Training Effect (0–5) and recovery time are estimated from your heart-rate response —
-              a faithful approximation of Garmin/Firstbeat's model.
+              Training Effect (0-5) and recovery time are estimated from your heart-rate response.
             </Text>
           </Card>
         </>
@@ -123,21 +191,30 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
         )}
       </Card>
 
-      <SectionLabel>Time in heart-rate zones</SectionLabel>
-      <Card>
-        {zones.some((z) => z.minutes > 0) ? (
-          zones.map((z, i) => (
-            <Bar key={z.zone} label={`Z${z.zone}`} value={z.minutes / zoneMax} color={strainZoneColors[i] ?? colors.strainBlue} right={formatDuration(z.minutes)} />
-          ))
-        ) : (
-          <Empty text="No heart-rate zone data for this activity." />
-        )}
-      </Card>
+      {!isNap ? (
+        <>
+          <SectionLabel>Time in heart-rate zones</SectionLabel>
+          <Card>
+            {zones.some((z) => z.minutes > 0) ? (
+              zones.map((z, i) => (
+                <Bar
+                  key={z.zone}
+                  label={`Z${z.zone}`}
+                  value={z.minutes / zoneMax}
+                  color={strainZoneColors[i] ?? colors.strainBlue}
+                  right={formatDuration(z.minutes)}
+                />
+              ))
+            ) : (
+              <Empty text="No heart-rate zone data for this activity." />
+            )}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }
 
-/** Self-scaling polyline of the GPS route (no map tiles / API key needed). */
 function RouteTrace({ route }: { route: Array<{ lat: number; lng: number }> }) {
   const W = 320;
   const H = 180;

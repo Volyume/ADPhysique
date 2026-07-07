@@ -45,6 +45,11 @@ export type SleepResult = {
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
 
+type SleepWindowOptions = {
+  minWindowMin: number;
+  maxWindowMin: number;
+};
+
 /**
  * WHOOP-style Sleep Need breakdown (HOW SLEEP NEED IS CALCULATED): a personal
  * baseline, plus extra need from recent day Strain, plus a portion of accrued
@@ -132,9 +137,12 @@ function expandToMinutes(
   return out;
 }
 
-/** Find the main sleep window from HR-first wearable data. */
-function findSleepWindow(samples: SleepMinute[]): { start: number; end: number } | null {
-  if (samples.length < 30) return null;
+/** Find a sleep/nap window from HR-first wearable data. */
+function findSleepWindow(
+  samples: SleepMinute[],
+  opts: SleepWindowOptions = { minWindowMin: 90, maxWindowMin: MAX_AUTO_SLEEP_WINDOW_MIN },
+): { start: number; end: number } | null {
+  if (samples.length < Math.min(30, opts.minWindowMin)) return null;
   const hrs = samples.map((s) => s.hr).filter((v): v is number => v != null);
   if (hrs.length === 0) return null;
 
@@ -212,8 +220,8 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   if (runStart >= 0) {
     closeRun(asleepFlag.length - gap);
   }
-  if (bestElapsed >= 90) {
-    return trimSleepWindow(samples, bestStart, bestEnd, p20, spread);
+  if (bestElapsed >= opts.minWindowMin) {
+    return trimSleepWindow(samples, bestStart, bestEnd, p20, spread, opts);
   }
 
   // If the app was opened only for a sleep session, the whole capture may be a
@@ -222,7 +230,7 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   const firstTs = samples[0]?.ts ?? 0;
   const lastTs = samples[samples.length - 1]?.ts ?? firstTs;
   const spanMin = Math.round((lastTs - firstTs) / 60000) + 1;
-  if (spanMin >= 90 && spanMin <= 11 * 60 && p50 <= 85 && p80 - p20 <= 25) {
+  if (spanMin >= opts.minWindowMin && spanMin <= opts.maxWindowMin && p50 <= 85 && p80 - p20 <= 25) {
     return { start: 0, end: samples.length };
   }
 
@@ -235,8 +243,9 @@ function trimSleepWindow(
   end: number,
   p20: number,
   spread: number,
+  opts: SleepWindowOptions,
 ): { start: number; end: number } | null {
-  if (end - start < 90) return null;
+  if (end - start < opts.minWindowMin) return null;
   const coreThreshold = p20 + spread * 0.4;
   const core = (index: number): boolean => {
     const s = samples[index];
@@ -273,9 +282,9 @@ function trimSleepWindow(
     }
   }
 
-  if (trimmedEnd - trimmedStart < 90) return { start, end };
-  if (trimmedEnd - trimmedStart > MAX_AUTO_SLEEP_WINDOW_MIN) {
-    return lowestHrSubwindow(samples, trimmedStart, trimmedEnd, MAX_AUTO_SLEEP_WINDOW_MIN);
+  if (trimmedEnd - trimmedStart < opts.minWindowMin) return { start, end };
+  if (trimmedEnd - trimmedStart > opts.maxWindowMin) {
+    return lowestHrSubwindow(samples, trimmedStart, trimmedEnd, opts.maxWindowMin);
   }
   return { start: trimmedStart, end: trimmedEnd };
 }
@@ -343,12 +352,24 @@ export function durationOnlySleep(
 export function computeSleep(
   samples: SleepMinute[],
   neededMin = BASE_NEED_MIN,
-  opts: { forceWindow?: boolean; startTs?: number; endTs?: number; source?: SleepSource } = {},
+  opts: {
+    forceWindow?: boolean;
+    startTs?: number;
+    endTs?: number;
+    source?: SleepSource;
+    minWindowMin?: number;
+    maxWindowMin?: number;
+  } = {},
 ): SleepResult | null {
   // forceWindow: treat the WHOLE input as the sleep window (used when the user
   // has manually logged or adjusted the sleep period, so we score exactly those
   // bounds instead of auto-detecting within them).
-  const win = opts.forceWindow ? { start: 0, end: samples.length } : findSleepWindow(samples);
+  const win = opts.forceWindow
+    ? { start: 0, end: samples.length }
+    : findSleepWindow(samples, {
+        minWindowMin: opts.minWindowMin ?? 90,
+        maxWindowMin: opts.maxWindowMin ?? MAX_AUTO_SLEEP_WINDOW_MIN,
+      });
   if (!win || win.end - win.start < 1) {
     if (opts.forceWindow && opts.startTs != null && opts.endTs != null) {
       return durationOnlySleep(opts.startTs, opts.endTs, neededMin);

@@ -72,6 +72,7 @@ import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
+import { encodeNapDetail, napCreditMin, napDetailFromSleep, StoredNapDetail } from '../metrics/naps';
 import { decodeAccel, decodeHeartbeatSteps, isAccelFrame } from '../whoop/strapEvents';
 import { StepCounter } from '../metrics/stepDetect';
 import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
@@ -1106,9 +1107,10 @@ class AppStore extends Store<AppState> {
       .reverse()
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
-    const napMin = (await listCardio())
+    await this.autoDetectNapsForDay(sod, dayEnd, sleep);
+    const napMin = (await listCardio(250))
       .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
-      .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
+      .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
     if (sleep) {
       sleep.neededMin = need.neededMin;
@@ -1427,6 +1429,7 @@ class AppStore extends Store<AppState> {
     source?: string;
   }): Promise<void> => {
     const profile = this.getState().profile;
+    const isNap = input.source === 'nap';
     const durationMin = Math.max(1 / 60, (input.endTs - input.startTs) / 60000);
     const minutes = Math.max(1, Math.round(durationMin));
     const hrRows = await getHrSamplesBetween(input.startTs, input.endTs).catch(() => []);
@@ -1434,20 +1437,24 @@ class AppStore extends Store<AppState> {
     const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : input.avgHr;
     const maxHr = bpms.length ? Math.max(...bpms) : input.maxHr ?? null;
     const perMinSamples = perMinuteHr(hrRows).map((p) => ({ hr: p.hr, minutes: 1 }));
-    const load = perMinSamples.length
+    const load = isNap
+      ? null
+      : perMinSamples.length
       ? edwardsTrimp(perMinSamples, profile)
       : input.avgHr
         ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile)
         : null;
     const strain = load !== null ? strainFromLoad(load) : null;
     // Calories from HR (Keytel) — the WHOOP-style HR-driven energy estimate.
-    const kcal = perMinSamples.length
+    const kcal = isNap
+      ? null
+      : perMinSamples.length
       ? totalKcal(perMinSamples, profile)
       : input.avgHr
         ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes)
         : null;
     const bandActivitySteps =
-      input.steps == null
+      !isNap && input.steps == null
         ? estimateStepsFromBandCounters(
             await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []),
             this.getState().bandStepDivisor,
@@ -1467,9 +1474,9 @@ class AppStore extends Store<AppState> {
       kcal,
       distanceM: input.distanceM ?? null,
       route: input.route ?? null,
-      steps: activitySteps ?? null,
-      cadenceSpm: input.cadenceSpm ?? (activitySteps != null ? Math.round(activitySteps / durationMin) : null),
-      stepSource,
+      steps: isNap ? null : activitySteps ?? null,
+      cadenceSpm: isNap ? null : input.cadenceSpm ?? (activitySteps != null ? Math.round(activitySteps / durationMin) : null),
+      stepSource: isNap ? null : stepSource,
       lapCount: input.lapCount ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
@@ -1495,6 +1502,79 @@ class AppStore extends Store<AppState> {
     await kvSet(`manualSleep:${dayKey(Date.now())}`, '');
     await this.recomputeToday();
   };
+
+  private async scoreNapWindow(startTs: number, endTs: number, autoDetected: boolean): Promise<StoredNapDetail | null> {
+    if (endTs - startTs < 5 * 60000) return null;
+    const hrRows = await getHrSamplesBetween(startTs, endTs).catch(() => []);
+    const perMin = perMinuteHr(hrRows);
+    const sleepInput = await buildSleepInput(perMin, startTs, endTs);
+    const sleep = computeSleep(sleepInput, undefined, {
+      forceWindow: true,
+      startTs,
+      endTs,
+      source: perMin.length >= 5 ? 'manual_hr' : 'manual_duration',
+    });
+    return sleep ? napDetailFromSleep(sleep, autoDetected) : null;
+  }
+
+  private async autoDetectNapsForDay(sod: number, dayEnd: number, mainSleep: SleepResult | null): Promise<void> {
+    const scanStart = sod + 5 * 3600 * 1000;
+    const scanEnd = Math.min(dayEnd, sod + 22 * 3600 * 1000);
+    if (scanEnd - scanStart < 20 * 60000) return;
+
+    const existing = (await listCardio(250)).filter((c) => c.startTs < scanEnd && c.endTs > scanStart);
+    const existingNaps = existing.filter((c) => c.source === 'nap');
+    const blocked = existing
+      .filter((c) => c.source !== 'nap')
+      .map((c) => ({ startTs: c.startTs - 10 * 60000, endTs: c.endTs + 10 * 60000 }));
+    if (mainSleep) {
+      blocked.push({ startTs: mainSleep.startTs - 30 * 60000, endTs: mainSleep.endTs + 30 * 60000 });
+    }
+
+    const allHr = await getHrSamplesBetween(scanStart, scanEnd).catch(() => []);
+    const allPerMin = perMinuteHr(allHr).filter((p) => !blocked.some((b) => rangesOverlap(p.tsMs, p.tsMs + 60000, b.startTs, b.endTs)));
+    if (allPerMin.length < 120) return;
+    const dayMedianHr = median(allPerMin.map((p) => p.hr));
+    const segments = splitContiguousMinutes(allPerMin, 20);
+
+    for (const segment of segments) {
+      if (segment.length < 20) continue;
+      const startTs = segment[0]!.tsMs;
+      const endTs = segment[segment.length - 1]!.tsMs + 60000;
+      if (existingNaps.some((n) => overlapMinutes(startTs, endTs, n.startTs, n.endTs) >= 10)) continue;
+
+      const sleepInput = await buildSleepInput(segment, startTs, endTs);
+      const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: 180 });
+      if (!nap || !napIsReliable(nap)) continue;
+      if (blocked.some((b) => rangesOverlap(nap.startTs, nap.endTs, b.startTs, b.endTs))) continue;
+      if (existingNaps.some((n) => overlapMinutes(nap.startTs, nap.endTs, n.startTs, n.endTs) >= 10)) continue;
+
+      const napHr = await getHrSamplesBetween(nap.startTs, nap.endTs).catch(() => []);
+      const bpms = napHr.map((r) => r.bpm).filter((v) => v >= 30 && v <= 160);
+      const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
+      if (avgHr != null && avgHr > dayMedianHr - 2 && avgHr > 75) continue;
+
+      await insertCardio({
+        id: `nap_${nap.startTs}`,
+        startTs: nap.startTs,
+        endTs: nap.endTs,
+        activity: 'Nap',
+        avgHr,
+        maxHr: bpms.length ? Math.max(...bpms) : null,
+        trimp: null,
+        strain: null,
+        kcal: null,
+        distanceM: null,
+        route: null,
+        steps: null,
+        cadenceSpm: null,
+        stepSource: null,
+        lapCount: null,
+        source: 'nap',
+        notes: encodeNapDetail(napDetailFromSleep(nap, true)),
+      });
+    }
+  }
 
   // ---- live session (start / track / log) ----
   startSession = (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): void => {
@@ -1628,6 +1708,19 @@ class AppStore extends Store<AppState> {
       await this.setManualSleep(s.startTs, endTs);
       return;
     }
+    if (s.kind === 'nap') {
+      const napDetail = await this.scoreNapWindow(s.startTs, endTs, false);
+      await this.addCardio({
+        activity: s.label,
+        startTs: napDetail?.startTs ?? s.startTs,
+        endTs: napDetail?.endTs ?? endTs,
+        avgHr: stats?.avgHr ?? s.maxHr ?? null,
+        maxHr: stats?.maxHr ?? s.maxHr ?? null,
+        source: 'nap',
+        notes: encodeNapDetail(napDetail) ?? undefined,
+      });
+      return;
+    }
     const usesSteps = sessionUsesSteps(s);
     await this.addCardio({
       activity: s.label,
@@ -1641,7 +1734,7 @@ class AppStore extends Store<AppState> {
       cadenceSpm: usesSteps ? stats?.cadenceSpm ?? null : null,
       stepSource: usesSteps ? stats?.stepSource ?? null : null,
       lapCount: s.laps.length,
-      source: s.kind === 'nap' ? 'nap' : 'live',
+      source: 'live',
     });
   };
 
@@ -1729,9 +1822,10 @@ class AppStore extends Store<AppState> {
       .reverse() // oldest → newest for the rolling carry
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
-    const napMin = (await listCardio())
+    await this.autoDetectNapsForDay(sod, now, sleep);
+    const napMin = (await listCardio(250))
       .filter((c) => c.source === 'nap' && c.startTs >= sod)
-      .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
+      .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
     if (sleep) {
       sleep.neededMin = need.neededMin;
@@ -2140,6 +2234,46 @@ function minuteMode<T extends { ts: number }>(rows: T[], pick: (row: T) => numbe
     if (bestValue != null) out.set(minute, bestValue);
   }
   return out;
+}
+
+function splitContiguousMinutes(
+  rows: Array<{ tsMs: number; hr: number }>,
+  maxGapMin: number,
+): Array<Array<{ tsMs: number; hr: number }>> {
+  if (!rows.length) return [];
+  const out: Array<Array<{ tsMs: number; hr: number }>> = [];
+  let cur: Array<{ tsMs: number; hr: number }> = [];
+  for (const row of rows) {
+    const prev = cur[cur.length - 1];
+    if (prev && row.tsMs - prev.tsMs > maxGapMin * 60000) {
+      out.push(cur);
+      cur = [];
+    }
+    cur.push(row);
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+function napIsReliable(nap: SleepResult): boolean {
+  const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
+  return (
+    nap.inBedMin >= 20 &&
+    nap.inBedMin <= 180 &&
+    nap.asleepMin >= 15 &&
+    nap.signalMin >= 15 &&
+    coveragePct >= 50 &&
+    nap.efficiency >= 0.55
+  );
+}
+
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function overlapMinutes(aStart: number, aEnd: number, bStart: number, bEnd: number): number {
+  const ms = Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
+  return Math.round(ms / 60000);
 }
 
 type OvernightVitals = {
