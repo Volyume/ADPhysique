@@ -978,6 +978,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
   const canCompareScans = !loading && scoredScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
+  const compareButtonTitle = canCompareScans ? 'Compare scores' : 'Compare photos';
   const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
   const latestPhoto = useMemo(() => {
@@ -1200,7 +1201,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
               {(canCompareScans || canCompare) ? (
                 <Button
-                  title="Compare"
+                  title={compareButtonTitle}
                   icon="git-compare-outline"
                   variant="tertiary"
                   onPress={canCompareScans ? openScanCompare : openCompare}
@@ -1506,7 +1507,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 accessibilityLabel={`Change photo set date, currently ${formatProgressPhotoDay(scanDateMs)}`}
               >
                 <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-                <Text style={styles.scanDateValue}>{formatProgressPhotoDay(scanDateMs)}</Text>
+                <Text style={styles.scanDateValue} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
                 <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               <View style={styles.scanDateActions}>
@@ -2080,7 +2081,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  captureRouteTitle: { ...type.h3, color: colors.textPrimary, flex: 1 },
+  captureRouteTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   captureRouteIntro: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
   captureRouteScroll: { flexShrink: 1, minHeight: 0 },
   captureRouteList: { gap: spacing.sm, paddingBottom: spacing.sm },
@@ -2174,7 +2175,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   scanDateContent: { gap: spacing.md },
-  scanDateTitle: { ...type.title, color: colors.textPrimary },
+  scanDateTitle: { ...type.bodyStrong, color: colors.textPrimary },
   scanDateIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanDateField: {
     flexDirection: 'row',

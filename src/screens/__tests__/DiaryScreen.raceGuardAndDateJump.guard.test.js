@@ -179,6 +179,17 @@ describe('DiaryScreen date navigation polish', () => {
   });
 });
 
+describe('DiaryScreen bottom controls', () => {
+  test('selection toolbar and barcode FAB respect the device bottom inset', () => {
+    expect(SRC).toMatch(/import \{ SafeAreaView, useSafeAreaInsets \} from 'react-native-safe-area-context';/);
+    expect(SRC).toMatch(/const insets = useSafeAreaInsets\(\);/);
+    expect(SRC).toMatch(/const scanFabStyle = useMemo\(/);
+    expect(SRC).toMatch(/bottom: spacing\.xl \+ bottomInset/);
+    expect(SRC).toMatch(/const selectionBarStyle = useMemo\(/);
+    expect(SRC).toMatch(/paddingBottom: spacing\.xl \+ bottomInset/);
+  });
+});
+
 describe('DiaryScreen saved food entry points', () => {
   test('the meal-card Saved action opens one chooser for saved meals and recipes', () => {
     expect(SRC).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);

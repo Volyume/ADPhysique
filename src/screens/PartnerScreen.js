@@ -245,6 +245,7 @@ function PartnerGuidedWeekCard({
           <View key={step.key} style={styles.supportPlanStep}>
             <Text style={styles.supportPlanStepLabel}>{step.label}</Text>
             <Text style={styles.supportPlanStepState}>{step.state}</Text>
+            <Text style={styles.supportPlanStepCopy} numberOfLines={2}>{step.copy}</Text>
           </View>
         ))}
       </View>
@@ -1764,6 +1765,7 @@ const styles = StyleSheet.create({
   },
   supportPlanStepLabel: { ...type.caption, color: colors.textSecondary },
   supportPlanStepState: { ...type.label, color: colors.textPrimary },
+  supportPlanStepCopy: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
   supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',

@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -69,6 +69,7 @@ import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 
 export default function DiaryScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
@@ -1011,6 +1012,15 @@ export default function DiaryScreen({ navigation }) {
   const isViewingToday = selectedDate === todayIso;
   const dateHeading = isViewingToday ? 'Today' : friendlyDate(selectedDate);
   const dateSubCopy = selectedDateDetail;
+  const bottomInset = Math.max(0, Number(insets?.bottom) || 0);
+  const scanFabStyle = useMemo(
+    () => [styles.scanFab, { bottom: spacing.xl + bottomInset }],
+    [bottomInset],
+  );
+  const selectionBarStyle = useMemo(
+    () => [styles.selectionBar, { paddingBottom: spacing.xl + bottomInset }],
+    [bottomInset],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1411,7 +1421,7 @@ export default function DiaryScreen({ navigation }) {
           and ScanBarcode is a hard-locked Pro route anyway). */}
       {!selectionMode && !readOnly ? (
         <TouchableOpacity
-          style={styles.scanFab}
+          style={scanFabStyle}
           onPress={() => {
             // Pass the likely meal slot so a scan no longer defaults to
             // 'snack'. The empty-day CTA uses the same inferred slot.
@@ -1426,7 +1436,7 @@ export default function DiaryScreen({ navigation }) {
       ) : null}
 
       {selectionMode && !readOnly ? (
-        <View style={styles.selectionBar}>
+        <View style={selectionBarStyle}>
           <View style={styles.selTopRow}>
             <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
               <Ionicons name="close" size={22} color={colors.textPrimary} />

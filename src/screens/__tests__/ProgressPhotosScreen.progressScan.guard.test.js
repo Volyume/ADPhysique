@@ -124,6 +124,18 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/name="body-outline"/);
   });
 
+  test('compare action copy is specific without adding another prompt card', () => {
+    expect(SCREEN).toMatch(/const compareButtonTitle = canCompareScans \? 'Compare scores' : 'Compare photos';/);
+    expect(SCREEN).toMatch(/title=\{compareButtonTitle\}/);
+    expect(SCREEN).toMatch(/accessibilityLabel=\{canCompareScans \? 'Compare two Volyume Score entries' : 'Compare two photos'\}/);
+  });
+
+  test('photo-set sheets keep titles and date fields narrow-screen safe', () => {
+    expect(SCREEN).toMatch(/<Text style=\{styles\.scanDateValue\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(SCREEN).toMatch(/captureRouteTitle: \{ \.\.\.type\.title/);
+    expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
+  });
+
   test('destructive scan copy says a set delete removes the full scored set', () => {
     expect(SCREEN).toMatch(/Delete photo set\?/);
     expect(SCREEN).toMatch(/This removes every photo in this set/);
