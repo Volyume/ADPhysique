@@ -189,6 +189,14 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source).toContain('const [prefsOpen, setPrefsOpen] = useState(false);');
     expect(source).toContain('Changes rebuild the meals around the same targets.');
+    expect(source).toContain('Repeat is easiest to prep. Mixed keeps some meals familiar. Varied changes more across the week.');
+    expect(source).toContain('Switch this on if you want separate meals before and after training. Leave it off for a simpler day.');
+    expect(source).toContain("label: 'Pre + post'");
+    expect(source).toContain('accessibilityState={{ checked: selected, disabled: busy }}');
+    expect(source).toContain('const insets = useSafeAreaInsets();');
+    expect(source).toContain("edges={['top', 'bottom']}");
+    expect(source).toContain('bottomScrollPadding');
+    expect(source).toContain('emptyBottomPadding');
     expect(source).toContain('const hasSwappableFoods = (day?.slots || []).some');
     expect(source).toContain('Hold a swappable food to leave it out of future plans.');
     expect(source).toContain('Review the meals and add the plan when it looks right.');

@@ -18,8 +18,8 @@
  */
 
 const SLOT_LABELS = Object.freeze({
-  meal_1: 'meal 1', meal_2: 'meal 2', meal_3: 'meal 3',
-  meal_4: 'meal 4', meal_5: 'meal 5', meal_6: 'meal 6',
+  meal_1: 'your first meal', meal_2: 'your second meal', meal_3: 'your third meal',
+  meal_4: 'your fourth meal', meal_5: 'your fifth meal', meal_6: 'your sixth meal',
   pre_workout: 'your pre-workout meal',
   post_workout: 'your post-workout meal',
 });
@@ -28,7 +28,7 @@ function slotLabel(slot) {
   return SLOT_LABELS[slot] || 'your plan';
 }
 
-// "65 g less white rice at meal 3" / "40 g more oats at meal 1"
+// "65 g less white rice at your third meal" / "40 g more oats at your first meal"
 function describeEdit(edit, { withGrams = true } = {}) {
   const diff = edit.gramsAfter - edit.gramsBefore;
   const dir = diff < 0 ? 'less' : 'more';

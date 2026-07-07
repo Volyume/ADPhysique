@@ -927,7 +927,7 @@ export default function PartnerScreen({ route }) {
     const name = pair.partnerFirstName || 'your partner';
     appAlert(
       `Block ${name}`,
-      'Volyume blocks them first, then ends the partnership and removes shared data. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
+      'Volyume blocks them first, then ends the partnership and removes shared data. They will not be told you blocked them. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1077,7 +1077,7 @@ export default function PartnerScreen({ route }) {
             <Text style={styles.emptyBody}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.'
-                : 'Pair with one person you already train with. They see whether you trained this week, plus any win you choose to send. Everything else stays private.'}
+                : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the wins you choose to send. Food, photos, body metrics and notes stay private.'}
             </Text>
 
             {hasIncomingShareIntent ? (

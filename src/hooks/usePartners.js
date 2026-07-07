@@ -44,6 +44,7 @@ const EMPTY = {
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 const PENDING_INVITE_REFRESH_MS = 2000;
+const ACTIVE_PARTNER_REFRESH_MS = 10000;
 const REDEEM_VISIBILITY_RETRY_MS = (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID)
   ? [0]
   : [350, 900, 1600];
@@ -466,6 +467,17 @@ export default function usePartners(userId, tier) {
     return () => { cancelled = true; clearInterval(timer); };
   }, [userId, pendingRefreshKey, load]);
 
+  const activeRefreshKey = (state.pairs || []).map((pair) => pair?.id).filter(Boolean).join('|') || null;
+  useEffect(() => {
+    if (!PASSIVE_PENDING_REFRESH_ENABLED || !userId || !activeRefreshKey) return undefined;
+    let cancelled = false;
+    const tick = () => {
+      if (!cancelled) pullPartnerMirrorNow(userId).finally(() => load({ silent: true }));
+    };
+    const timer = setInterval(tick, ACTIVE_PARTNER_REFRESH_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [userId, activeRefreshKey, load]);
+
   const refresh = useCallback(async () => {
     const pulled = await pullPartnerMirrorNow(userId);
     await load();
@@ -533,6 +545,7 @@ export default function usePartners(userId, tier) {
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
     let r = await sendCheer(userId, { pairId, kind, reciprocal });
     if (!r?.ok && shouldRetryCheerAfterMirrorRefresh(r?.error)) {
+      await pullPartnerMirrorNow(userId);
       const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
         r = await sendCheer(userId, { pairId, kind, reciprocal });

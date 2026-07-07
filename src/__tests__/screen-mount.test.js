@@ -2302,8 +2302,8 @@ describe('MealPlanScreen "Training today?" control', () => {
       expect(training.length).toBe(1);
       expect(rest.length).toBe(1);
       // Pre-selected Training is disabled (the selected radio); Rest is live.
-      expect(training[0].props.accessibilityState.selected).toBe(true);
-      expect(rest[0].props.accessibilityState.selected).toBe(false);
+      expect(training[0].props.accessibilityState.checked).toBe(true);
+      expect(rest[0].props.accessibilityState.checked).toBe(false);
 
       // Tapping Rest re-variants this day via the service: dayIndex 0,
       // training: false.

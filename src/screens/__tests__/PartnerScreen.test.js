@@ -573,7 +573,7 @@ describe('empty state', () => {
     const text = allText(await mount());
     expect(text).toContain('Train with a partner');
     expect(text).toContain(
-      'Pair with one person you already train with. They see whether you trained this week, plus any win you choose to send. Everything else stays private.',
+      'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the wins you choose to send. Food, photos, body metrics and notes stay private.',
     );
     // The plain-English receipt explains what pairing actually exposes before
     // the user invites anyone.
@@ -768,7 +768,7 @@ describe('manage sheet: block confirm', () => {
     const call = mockAlertCalls.find((c) => c.title === 'Block Sam');
     expect(call).toBeTruthy();
     expect(call.message).toBe(
-      'Volyume blocks them first, then ends the partnership and removes shared data. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
+      'Volyume blocks them first, then ends the partnership and removes shared data. They will not be told you blocked them. If the final clean-up cannot complete, they stay blocked and you can retry ending the partnership.',
     );
     const blockBtn = call.buttons.find((b) => b.style === 'destructive');
     expect(blockBtn.text).toBe('Block');

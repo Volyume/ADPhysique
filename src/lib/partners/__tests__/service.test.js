@@ -188,7 +188,8 @@ describe('createPartnerInvite', () => {
     expect(r.ok).toBe(true);
     expect(r.data.deepLink).toBe('volyume://partner/ABCD1234EF');
     expect(r.data.webLink).toBe('https://volyume.app/partner/ABCD1234EF');
-    expect(r.data.shareMessage).toContain('No numbers, no feed');
+    expect(r.data.shareMessage).toContain('one daily cheer');
+    expect(r.data.shareMessage).toContain('No food, photos, body metrics or feed');
     expect(postEvent).toHaveBeenCalledWith('u1', 'partner_invite_sent', expect.any(Object));
   });
 });

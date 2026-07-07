@@ -13,6 +13,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
     expect(SCAN_HISTORY).toMatch(/Volyume Score results/);
     expect(SCAN_HISTORY).toMatch(/Score for this set/);
+    expect(SCAN_HISTORY).toMatch(/front\/back outline signals plus scan quality/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 

@@ -56,6 +56,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('not body fat percentage');
     expect(text).toContain('Score for this set');
     expect(text).toContain('Result note');
+    expect(text).toContain('Basis: front/back outline signals plus scan quality. No body fat percentage.');
     expect(text).not.toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
@@ -88,6 +89,7 @@ describe('ProgressScanHistoryCard', () => {
     const suppressed = await render({ suppressed: true });
     const suppressedText = flattenText(suppressed.toJSON());
     expect(suppressedText).toContain('Score detail is hidden right now');
+    expect(suppressedText).not.toContain('Basis: front/back outline signals');
     expect(suppressedText).not.toContain('82.5 kg weight snapshot');
     expect(suppressedText).not.toContain('Volyume Score is down');
   });

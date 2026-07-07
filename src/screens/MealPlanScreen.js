@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
@@ -95,7 +95,9 @@ function sumDayTotals(slots) {
 }
 
 // One labelled segmented row of preference options (a small radio group).
-function PrefRow({ label, options, value, onSelect, busy }) {
+function PrefRow({
+  label, help, options, value, onSelect, busy,
+}) {
   return (
     <View style={styles.prefRow}>
       <Text style={styles.prefLabel}>{label}</Text>
@@ -110,7 +112,7 @@ function PrefRow({ label, options, value, onSelect, busy }) {
               disabled={busy || selected}
               hitSlop={hitSlop}
               accessibilityRole="radio"
-              accessibilityState={{ selected, disabled: busy }}
+              accessibilityState={{ checked: selected, disabled: busy }}
               accessibilityLabel={`${label}: ${opt.label}`}
             >
               <Text style={[styles.prefOptText, selected && styles.prefOptTextOn]}>{opt.label}</Text>
@@ -118,6 +120,7 @@ function PrefRow({ label, options, value, onSelect, busy }) {
           );
         })}
       </View>
+      {help ? <Text style={styles.prefHelp}>{help}</Text> : null}
     </View>
   );
 }
@@ -127,6 +130,7 @@ function MealPreferencesControls({ prefs, busy, onSetPref }) {
     <>
       <PrefRow
         label="Meals per day"
+        help="Choose how many meals Volyume should build before snacks or pre-workout extras."
         options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
         value={prefs.mealsPerDay}
         onSelect={(v) => onSetPref({ mealPlanMealsPerDay: v })}
@@ -134,6 +138,7 @@ function MealPreferencesControls({ prefs, busy, onSetPref }) {
       />
       <PrefRow
         label="Variety"
+        help="Repeat is easiest to prep. Mixed keeps some meals familiar. Varied changes more across the week."
         options={[
           { value: 0, label: 'Repeat' },
           { value: 0.5, label: 'Mixed' },
@@ -145,9 +150,10 @@ function MealPreferencesControls({ prefs, busy, onSetPref }) {
       />
       <PrefRow
         label="Around training"
+        help="Switch this on if you want separate meals before and after training. Leave it off for a simpler day."
         options={[
           { value: false, label: 'Off' },
-          { value: true, label: 'Pre and post' },
+          { value: true, label: 'Pre + post' },
         ]}
         value={!!prefs.periWorkoutSlots}
         onSelect={(v) => onSetPref({ mealPlanPeriWorkout: v })}
@@ -168,7 +174,10 @@ export default function MealPlanScreen({ navigation, route }) {
   // screens, recomputed on layout change (rotation / split-screen) rather than
   // frozen at module load.
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const swapListMaxHeight = Math.min(360, Math.round(windowHeight * 0.6));
+  const bottomScrollPadding = Math.max(spacing.xxxl, insets.bottom + spacing.xxl);
+  const emptyBottomPadding = Math.max(spacing.xl, insets.bottom + spacing.xl);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -554,7 +563,7 @@ export default function MealPlanScreen({ navigation, route }) {
   }, [day]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Day meal plan' : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
@@ -569,7 +578,7 @@ export default function MealPlanScreen({ navigation, route }) {
           />
         </View>
       ) : !plan ? (
-        <ScrollView contentContainerStyle={styles.emptyScroll}>
+        <ScrollView contentContainerStyle={[styles.emptyScroll, { paddingBottom: emptyBottomPadding }]}>
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
@@ -631,7 +640,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </Card>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomScrollPadding }]}>
           {/* Day picker, only for a multi-day (week) plan; a "Plan my day"
               plan is a single day with no picker. */}
           {!isDayPlan ? (
@@ -1152,6 +1161,7 @@ const styles = StyleSheet.create({
   prefOptDisabled: { opacity: 0.6 },
   prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.primary },
+  prefHelp: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
   reviewHeader: { gap: spacing.xxs, marginTop: spacing.xs },
   reviewTitle: { ...type.label, color: colors.textPrimary },
   reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },
