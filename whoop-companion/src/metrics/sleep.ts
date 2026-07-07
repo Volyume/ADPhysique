@@ -48,6 +48,7 @@ export type SleepResult = {
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
+const MAX_AUTO_BRIDGE_MIN = 25;
 
 type SleepWindowOptions = {
   minWindowMin: number;
@@ -210,7 +211,7 @@ function findSleepWindow(
       gap = 0;
     } else if (runStart >= 0 && bridgeFlag[i]) {
       gap += 1;
-      if (gap > 45) {
+      if (gap > MAX_AUTO_BRIDGE_MIN) {
         closeRun(i - gap);
         runStart = -1;
         gap = 0;
