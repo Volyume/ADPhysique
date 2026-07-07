@@ -1321,15 +1321,18 @@ class AppStore extends Store<AppState> {
     if (!stats) return;
     const days = new Set<string>();
     const today = dayKey(Date.now());
+    const addOvernightDay = (ts: number) => {
+      days.add(dayKey(ts));
+      const hour = new Date(ts).getHours();
+      if (hour >= 20) days.add(dayKey(addDays(ts, 1)));
+      if (hour < 12) days.add(dayKey(ts));
+    };
     for (const sample of stats.hr) {
-      days.add(dayKey(sample.ts));
-      const hour = new Date(sample.ts).getHours();
-      if (hour >= 20) days.add(dayKey(addDays(sample.ts, 1)));
-      if (hour < 12) days.add(dayKey(sample.ts));
+      addOvernightDay(sample.ts);
     }
     for (const sample of stats.steps) days.add(dayKey(sample.ts));
-    for (const sample of stats.sleepStates) days.add(dayKey(sample.ts));
-    for (const sample of stats.rawVitals) days.add(dayKey(sample.ts));
+    for (const sample of stats.sleepStates) addOvernightDay(sample.ts);
+    for (const sample of stats.rawVitals) addOvernightDay(sample.ts);
     const ordered = [...days].filter((d) => d !== today).sort((a, b) => a.localeCompare(b));
     for (const day of ordered) {
       await this.backfillDailyMetric(day);
