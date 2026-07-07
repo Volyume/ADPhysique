@@ -59,10 +59,10 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).not.toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
-    expect(text).toContain('Score index');
+    expect(text).toContain('Volyume index');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72');
-    expect(text).toContain('Show details');
+    expect(text).toContain('Hide index');
     expect(text).not.toContain('private visual progress index for repeatable photos');
     expect(text).not.toContain('82.5 kg weight snapshot');
 
@@ -78,10 +78,11 @@ describe('ProgressScanHistoryCard', () => {
   test('hide-exact and suppression remove detailed score and weight copy', async () => {
     const hidden = await render({ hideExact: true });
     const hiddenText = flattenText(hidden.toJSON());
-    expect(hiddenText).toContain('Trend only');
+    expect(hiddenText).toContain('Show index');
     expect(hiddenText).toContain('Leanness band');
-    expect(hiddenText).toContain('Score indexTrend only');
+    expect(hiddenText).toContain('Volyume indexHidden');
     expect(hiddenText).not.toContain('72/100');
+    expect(hiddenText).not.toContain('Volyume index72');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
     const suppressed = await render({ suppressed: true });
@@ -124,7 +125,7 @@ describe('ProgressScanHistoryCard', () => {
     });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Confidence: Analysis unavailable');
-    expect(text).toContain('Score indexNot scored');
+    expect(text).toContain('Volyume indexNot scored');
     expect(text).not.toContain('Confidence: Low');
   });
 
@@ -151,8 +152,31 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('Confidence: Measured only');
     expect(text).toContain('Leanness bandMeasured only');
     expect(text).toContain('SignalMeasured only');
-    expect(text).toContain('Score indexNot scored');
+    expect(text).toContain('Volyume indexNot scored');
     expect(text).not.toContain('Leanness bandBaseline');
     expect(text).not.toContain('Baseline scan');
+  });
+
+  test('legacy v1 scores are recalibrated before rendering', async () => {
+    const legacyScan = {
+      ...scan,
+      id: 'legacy-scan',
+      signals: {
+        physiqueAssessment: {
+          assessmentVersion: 'volyume_physique_scan_score_v1',
+          visualLeannessScore: 37,
+          leannessBandLabel: 'Athletic',
+          scanConfidenceLabel: 'Moderate',
+          progressSignalLabel: 'Baseline scan',
+        },
+      },
+    };
+    let tree;
+    await act(async () => {
+      tree = create(<ProgressScanHistoryCard scans={[legacyScan]} />);
+    });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Volyume index71');
+    expect(text).not.toContain('Volyume index37');
   });
 });

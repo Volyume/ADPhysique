@@ -571,7 +571,7 @@ export default function CoachReviewScreen() {
                       key={`win-${i}`}
                       icon="trending-up-outline"
                       iconColor={colors.primary}
-                      text={`${win.exerciseName} · ${win.detail}`}
+                      text={`${win.exerciseName} - ${win.detail}`}
                       subtext="Consistent small improvements are the foundation of long-term progress."
                     />
                   ))}
@@ -605,10 +605,10 @@ export default function CoachReviewScreen() {
                       ? colors.warning
                       : colors.textMuted;
                     const text = isOver
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · more sets than you can comfortably recover from`
+                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - more sets than you can comfortably recover from`
                       : isNear
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · approaching the upper limit`
-                      : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · below the minimum for meaningful progress`;
+                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - approaching the upper limit`
+                      : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - below the minimum for meaningful progress`;
                     const subtext = isOver
                       ? 'Reducing volume slightly next week will let your body recover and come back stronger.'
                       : isNear

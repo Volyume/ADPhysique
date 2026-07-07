@@ -21,7 +21,7 @@ const scoredScan = {
 describe('progressScanCopy', () => {
   test('scanReadCopy explains Volyume Score without presenting body fat percentage', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Score index 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a private visual progress index for repeatable photos, not a body fat percentage or a rating of your physique.',
+      'Volyume index 72. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a private visual progress index for repeatable photos, not a body fat percentage or a rating of your physique.',
     );
   });
 
@@ -60,5 +60,23 @@ describe('progressScanCopy', () => {
 
   test('scanStatsCopy falls back when scan stats are empty', () => {
     expect(scanStatsCopy({})).toBe('Stored photo set');
+  });
+
+  test('legacy v1 scan numbers are recalibrated before display copy', () => {
+    const legacy = {
+      ...scoredScan,
+      signals: {
+        physiqueAssessment: {
+          assessmentVersion: 'volyume_physique_scan_score_v1',
+          visualLeannessScore: 37,
+          leannessBandLabel: 'Athletic',
+          scanConfidenceLabel: 'Moderate',
+          progressSignalLabel: 'Baseline scan',
+        },
+      },
+    };
+    const copy = scanReadCopy(legacy);
+    expect(copy).toContain('Volyume index 71');
+    expect(copy).not.toContain('index 37');
   });
 });

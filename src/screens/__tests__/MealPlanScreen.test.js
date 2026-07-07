@@ -189,6 +189,9 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source).toContain('const [prefsOpen, setPrefsOpen] = useState(false);');
     expect(source).toContain('Changes rebuild the meals around the same targets.');
+    expect(source).toContain('const hasSwappableFoods = (day?.slots || []).some');
+    expect(source).toContain('Hold a swappable food to leave it out of future plans.');
+    expect(source).toContain('Review the meals and add the plan when it looks right.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
     expect(source).toContain('Adds these meals to the diary date. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Rebuild meals"');

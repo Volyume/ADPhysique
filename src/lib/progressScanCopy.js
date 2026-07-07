@@ -1,7 +1,9 @@
+import { progressScanAssessmentForDisplay } from './progressScanDisplay';
+
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 
 export function trendOnlyScanCopy(scan) {
-  const assessment = scan?.signals?.physiqueAssessment || null;
+  const assessment = progressScanAssessmentForDisplay(scan);
   if (assessment?.progressSignalLabel) return `Progress Signal: ${assessment.progressSignalLabel}.`;
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.deltaExplanation?.comparisonStatus === 'not_comparable') return 'Trend context: saved, but not compared because the setup changed too much.';
@@ -13,9 +15,9 @@ export function trendOnlyScanCopy(scan) {
 
 export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
   if (suppressed) return 'Photo set saved privately. Score details are hidden right now.';
-  const assessment = scan?.signals?.physiqueAssessment || null;
+  const assessment = progressScanAssessmentForDisplay(scan);
   if (assessment?.visualLeannessScore != null) {
-    const score = `Volyume Score index ${Math.round(Number(assessment.visualLeannessScore))}`;
+    const score = `Volyume index ${Math.round(Number(assessment.visualLeannessScore))}`;
     const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
     const confidence = assessment.scanConfidenceLabel ? `Scan Confidence: ${assessment.scanConfidenceLabel}` : null;
     if (hideExact) {
