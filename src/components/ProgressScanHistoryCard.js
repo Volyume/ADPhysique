@@ -120,6 +120,15 @@ function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   return 'Use the same pose, lighting and framing next time for the cleanest read.';
 }
 
+function scoreBasisLabel(scan, { suppressed = false } = {}) {
+  if (suppressed || scanScore(scan) == null) return null;
+  const assessment = assessmentFor(scan);
+  const signals = Array.isArray(assessment?.measuredSignalsUsed) ? assessment.measuredSignalsUsed : [];
+  return signals.includes('side_depth')
+    ? 'Basis: front, back and side outline signals plus scan quality. No body fat percentage.'
+    : 'Basis: front/back outline signals plus scan quality. No body fat percentage.';
+}
+
 export default function ProgressScanHistoryCard({
   scans = [],
   hideExact = false,
@@ -157,6 +166,7 @@ export default function ProgressScanHistoryCard({
       </View>
       {scans.map((scan) => {
         const dateLabel = formatProgressPhotoDay(scan.capturedAt);
+        const basisLabel = scoreBasisLabel(scan, { suppressed });
         return (
           <View key={scan.id} style={styles.scanEntry}>
             <View style={styles.scanEntryHeader}>
@@ -203,6 +213,7 @@ export default function ProgressScanHistoryCard({
             </View>
             <View style={styles.scanReasonBox}>
               <Text style={styles.scanReasonLabel}>Result note</Text>
+              {basisLabel ? <Text style={styles.scanBasis}>{basisLabel}</Text> : null}
               <Text style={styles.scanBody}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
@@ -300,6 +311,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   scanReasonLabel: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  scanBasis: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   scanAssetRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   scanAssetThumb: { width: 72, gap: spacing.xxs },
   scanAssetImage: { width: 72, height: 72, borderRadius: radius.sm, backgroundColor: colors.surface2 },

@@ -185,6 +185,8 @@ describe('buildPlanEditNarration', () => {
     expect(n.headline.toLowerCase()).toContain('dropped');
     expect(n.body).toMatch(/g (less|more)/);
     expect(n.body.toLowerCase()).toContain('protein stays the same');
+    expect(n.body).not.toMatch(/\bmeal [1-6]\b/i);
+    expect(n.body).toMatch(/your (first|second|third|fourth|fifth|sixth) meal/);
     expect(n.deepLink.label).toBe('See your meal plan');
     expect(n.headline).not.toMatch(/—|–/); // no em/en dashes
     expect(n.body).not.toMatch(/—|–/);

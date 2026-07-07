@@ -126,6 +126,7 @@ describe('DiaryScreen empty-day add flow', () => {
     expect(SRC).toMatch(/const likelyMealSlot = useMemo\(\(\) => \{/);
     expect(SRC).toMatch(/inferMealSlotForHour\(new Date\(\)\.getHours\(\), keys\)/);
     expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
+    expect(SRC).toMatch(/navigation\.navigate\('FoodSearch', \{ mealSlot: likelyMealSlot \|\| 'meal_1', entryDate: selectedDate, initialTab: 'suggested' \}\)/);
     expect(SRC).toMatch(/addLabel="Add food"/);
     expect(SRC).not.toMatch(/likelyMealLabel/);
     expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);

@@ -991,8 +991,8 @@ export default function DiaryScreen({ navigation }) {
   // copy. Lands on FoodSearch's Suggested tab (the one browse list that works
   // with zero logging history) rather than the dead "Copy yesterday" tap.
   const goToSuggested = useCallback(() => {
-    navigation.navigate('FoodSearch', { mealSlot: 'meal_1', entryDate: selectedDate, initialTab: 'suggested' });
-  }, [navigation, selectedDate]);
+    navigation.navigate('FoodSearch', { mealSlot: likelyMealSlot || 'meal_1', entryDate: selectedDate, initialTab: 'suggested' });
+  }, [navigation, selectedDate, likelyMealSlot]);
 
   // "Copy a previous day" picker (food audit F-3): open a list of recent days
   // with food logged, before the day in view; tapping one copies it in.
