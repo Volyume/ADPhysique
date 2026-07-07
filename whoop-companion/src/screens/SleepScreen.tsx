@@ -18,7 +18,7 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
-import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -599,8 +599,8 @@ function sleepVerdict(input: {
   }
 
   const longAutoWindow = sleep.source === 'auto_hr' && sleep.inBedMin >= 10 * 60 && sleep.efficiency >= 0.92;
-  const littleMotionEvidence = capture ? capture.sleepStateMin < 30 && capture.stillMin < 45 : true;
-  if (longAutoWindow && littleMotionEvidence) {
+  const weakLongAutoEvidence = capture ? sleepEvidencePct(capture) < 25 : true;
+  if (longAutoWindow && weakLongAutoEvidence) {
     return {
       badge: 'CHECK',
       title: 'Window may be too generous',
@@ -1167,7 +1167,7 @@ function sleepTrustStrip(
   const longHrOnly = longHrOnlyCapture(capture);
   const coverage = Math.max(0, Math.min(100, capture.coveragePct));
   const signalScore = Math.max(0, Math.min(100, Math.round((capture.signalMin / 360) * 100)));
-  const stillScore = Math.max(0, Math.min(100, Math.round((capture.stillMin / Math.max(1, capture.windowMin)) * 300)));
+  const stillScore = Math.max(0, Math.min(100, Math.round(sleepEvidencePct(capture) * 3)));
   const base = Math.round(coverage * 0.55 + signalScore * 0.25 + stillScore * 0.2);
   const score = stateConflict
     ? Math.min(35, base)
