@@ -272,10 +272,10 @@ describe('MealSection', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Breakfast');
     expect(txt).toContain('Add food');
-    expect(txt).toContain('Saved');
-    expect(txt).toContain('Barcode');
-    expect(txt).toContain('Quick add');
-    expect(txt).toContain('Nothing logged yet.');
+    expect(txt).toContain('Add saved meal to Breakfast');
+    expect(txt).toContain('Scan barcode for Breakfast');
+    expect(txt).toContain('Quick add to Breakfast');
+    expect(txt).not.toContain('Nothing logged yet.');
     expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
   });
 
@@ -365,8 +365,8 @@ describe('read-only diary components (E10 lapse views)', () => {
     const txt = JSON.stringify(tree);
     expect(txt).not.toContain('Add food');
     expect(txt).not.toContain('Quick add');
-    expect(txt).not.toContain('Saved');
-    expect(txt).not.toContain('Barcode');
+    expect(txt).not.toContain('Add saved meal');
+    expect(txt).not.toContain('Scan barcode');
     expect(txt).not.toContain('Eggs'); // usuals are one-tap writes
   });
 
@@ -404,9 +404,9 @@ describe('read-only diary components (E10 lapse views)', () => {
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Add food');
-    expect(txt).toContain('Saved');
-    expect(txt).toContain('Barcode');
-    expect(txt).toContain('Quick add');
+    expect(txt).toContain('Add saved meal to Breakfast');
+    expect(txt).toContain('Scan barcode for Breakfast');
+    expect(txt).toContain('Quick add to Breakfast');
   });
 });
 
