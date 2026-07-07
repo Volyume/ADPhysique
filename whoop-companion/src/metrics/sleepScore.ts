@@ -12,7 +12,12 @@
 import { SleepResult } from './sleep';
 
 export type SleepContributor = { key: string; label: string; score: number; detail: string };
-export type SleepScore = { score: number; contributors: SleepContributor[] };
+export type SleepScore = {
+  score: number;
+  contributors: SleepContributor[];
+  confidenceCapPct: number | null;
+  cappedByConfidence: boolean;
+};
 
 const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x));
 
@@ -30,7 +35,7 @@ function ideal(value: number, lo: number, hi: number): number {
   return clamp(100 - ((value - hi) / hi) * 100);
 }
 
-export function computeSleepScore(sleep: SleepResult): SleepScore {
+export function computeSleepScore(sleep: SleepResult, opts?: { confidenceCapPct?: number | null }): SleepScore {
   const asleep = sleep.asleepMin;
   const need = sleep.neededMin || 480;
   const eff = sleep.efficiency * 100;
@@ -52,10 +57,12 @@ export function computeSleepScore(sleep: SleepResult): SleepScore {
     { key: 'restfulness', label: 'Restfulness', score: Math.round(restfulness), detail: `${wakeEvents} awakening${wakeEvents === 1 ? '' : 's'}` },
   ];
 
-  const score = Math.round(
+  const rawScore = Math.round(
     clamp(0.35 * total + 0.2 * efficiency + 0.15 * rem + 0.15 * deep + 0.15 * restfulness, 1, 99),
   );
-  return { score, contributors };
+  const confidenceCapPct = opts?.confidenceCapPct == null ? null : Math.round(clamp(opts.confidenceCapPct, 1, 100));
+  const score = Math.round(Math.min(rawScore, confidenceCapPct ?? 100));
+  return { score, contributors, confidenceCapPct, cappedByConfidence: confidenceCapPct != null && score < rawScore };
 }
 
 function midSleepAwakeEvents(hypnogram: SleepResult['hypnogram']): number {

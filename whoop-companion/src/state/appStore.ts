@@ -2180,7 +2180,7 @@ class AppStore extends Store<AppState> {
         evidence: captureSleep,
       }),
     };
-    const sleepScoreResult = sleep ? computeSleepScore(sleep) : null;
+    let sleepScoreResult: SleepScore | null = null;
 
     // Sleep regularity / consistency over stored windows (prior nights + tonight).
     const priorWindows = recent
@@ -2227,6 +2227,9 @@ class AppStore extends Store<AppState> {
         consistencyPct: consistency?.score ?? null,
         highStressPct,
         confidenceCapPct: sleepPerformanceCap(confidence, boundedSleepCoveragePct, sleep),
+      });
+      sleepScoreResult = computeSleepScore(sleep, {
+        confidenceCapPct: sleepQualityCap(confidence, boundedSleepCoveragePct, sleep),
       });
       sleepDetail = {
         performance: sleepPerformanceResult.score,
@@ -2733,6 +2736,17 @@ function sleepPerformanceCap(
     return Math.max(70, Math.min(ceiling, coveragePct + (corroborated ? 15 : 8)));
   }
   return Math.max(45, Math.min(65, coveragePct + 20));
+}
+
+function sleepQualityCap(
+  confidence: SleepConfidence,
+  coveragePct: number,
+  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
+): number {
+  if (confidence === 'high') return 99;
+  const corroborated = sleepEvidencePct(evidence) >= 25;
+  if (confidence === 'medium') return Math.max(72, Math.min(corroborated ? 90 : 84, coveragePct + (corroborated ? 12 : 6)));
+  return Math.max(40, Math.min(62, coveragePct + 18));
 }
 
 function sleepEvidencePct(evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null): number {

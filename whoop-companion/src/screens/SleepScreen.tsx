@@ -181,6 +181,11 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             {sleepScore.contributors.map((c) => (
               <ScoreRow key={c.key} label={c.label} value={c.score} detail={c.detail} />
             ))}
+            {sleepScore.cappedByConfidence ? (
+              <Text style={styles.surplusNote}>
+                Sleep Quality is capped by capture confidence until auto sync fills in stronger overnight coverage.
+              </Text>
+            ) : null}
           </>
         ) : (
           <Empty text="Quality factors appear after a scored sleep." />
