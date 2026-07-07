@@ -95,7 +95,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const applyStepCalibration = async () => {
     const actual = Number(actualSteps.replace(/,/g, '').trim());
     if (!Number.isFinite(actual) || actual <= 0) {
-      Alert.alert('Calibration needs a step count', "Enter today's actual steps for the synced WHOOP counter.");
+      Alert.alert('Calibration needs a step count', 'Enter the real step count for the synced counter range shown on this screen.');
       return;
     }
     try {
@@ -321,13 +321,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>Band counter range: {stepRangeText}</Text>
         <View style={styles.calibrationRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>Actual steps</Text>
+            <Text style={styles.fieldLabel}>Actual synced-range steps</Text>
             <TextInput
               style={styles.input}
               value={actualSteps}
               onChangeText={setActualSteps}
               keyboardType="number-pad"
-              placeholder="e.g. 200"
+              placeholder="e.g. 2400"
               placeholderTextColor={colors.textTertiary}
             />
           </View>
@@ -337,8 +337,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          Today uses phone steps when the uncalibrated band counter disagrees. After a known walk, enter the real step
-          count to calibrate the strap counter for workouts and backfilled days.
+          Today uses phone steps when the uncalibrated band counter disagrees. To calibrate the strap, enter the real
+          step count for the synced band counter range above, not just a single walk unless the range only covers that
+          walk.
         </Text>
       </Card>
 
