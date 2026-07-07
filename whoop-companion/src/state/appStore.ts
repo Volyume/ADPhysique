@@ -196,7 +196,7 @@ const initialState: AppState = {
   frameCount: 0,
   capturing: false,
   draining: false,
-  backgroundKeepAlive: false,
+  backgroundKeepAlive: true,
   today: null,
   recentDays: [],
   lastSleep: null,
@@ -284,7 +284,8 @@ class AppStore extends Store<AppState> {
     const profile = await loadProfile();
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
-    const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
+    const keepAliveRaw = await kvGet('backgroundKeepAlive');
+    const keepAlive = keepAliveRaw !== '0';
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));

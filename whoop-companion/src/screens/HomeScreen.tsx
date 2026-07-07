@@ -61,16 +61,21 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const stressTileLabel =
     stressValue == null ? '—' : stressValue >= 2 ? 'High' : stressValue >= 1 ? 'Medium' : 'Low';
 
-  const syncLabel = draining
-    ? 'Syncing'
-    : lastSyncTs
-      ? `Synced ${formatSyncAge(lastSyncTs)}`
-      : status === 'connected'
-        ? 'Waiting for sync'
-        : 'Connect strap';
   const signalMin = sleepCapture?.signalMin ?? 0;
   const coverage = sleepCapture?.coveragePct ?? 0;
   const effectiveSync = historySync ?? lastHistorySync;
+  const syncProblem = isRetryableSyncProblem(effectiveSync);
+  const syncLabel = draining
+    ? syncProblem
+      ? 'Recovering sync'
+      : 'Syncing'
+    : syncProblem
+      ? 'Retrying sync'
+      : lastSyncTs
+        ? `Synced ${formatSyncAge(lastSyncTs)}`
+        : status === 'connected'
+          ? 'Waiting for sync'
+          : 'Connect strap';
 
   return (
     <View style={{ flex: 1 }}>
@@ -94,13 +99,13 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         {/* Sync/data trust */}
         <Card onPress={() => nav.navigate({ name: 'device' })}>
           <View style={styles.qualityHead}>
-            <View style={[styles.qualityDot, { backgroundColor: qualityColor(coverage, signalMin, draining) }]} />
+            <View style={[styles.qualityDot, { backgroundColor: qualityColor(coverage, signalMin, draining, syncProblem) }]} />
             <Text style={styles.qualityTitle}>Data quality</Text>
             <Text style={styles.qualityStatus}>{syncLabel}</Text>
           </View>
           <View style={styles.liveRow}>
             <Stat label="Sleep signal" value={signalMin || '-'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
-            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining)} />
+            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining, syncProblem)} />
             <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
           </View>
           {effectiveSync?.status ? <Text style={styles.qualityNote}>{effectiveSync.status}</Text> : null}
@@ -313,11 +318,18 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
-function qualityColor(coverage: number, signalMin: number, syncing: boolean): string {
+function qualityColor(coverage: number, signalMin: number, syncing: boolean, syncProblem = false): string {
   if (syncing) return colors.strainBlue;
+  if (syncProblem) return colors.recoveryYellow;
   if (coverage >= 60 && signalMin >= 120) return colors.recoveryGreen;
   if (signalMin >= 30) return colors.recoveryYellow;
   return colors.textTertiary;
+}
+
+function isRetryableSyncProblem(sync: { status: string; reason?: string } | null | undefined): boolean {
+  if (!sync) return false;
+  const status = sync.status.toLowerCase();
+  return sync.reason === 'timeout' || status.includes('stalled') || status.includes('partial sync');
 }
 
 function formatSyncAge(ts: number): string {
