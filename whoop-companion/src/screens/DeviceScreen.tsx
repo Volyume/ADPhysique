@@ -25,8 +25,8 @@ const STATUS_TEXT: Record<string, string> = {
   error: 'Error',
 };
 
-const RAW_FRAME_EXPORT_PAGE_SIZE = 100;
-const MAX_SHARE_BYTES = 24 * 1024 * 1024;
+const RAW_FRAME_EXPORT_PAGE_SIZE = 25;
+const MAX_SHARE_BYTES = 12 * 1024 * 1024;
 
 export function DeviceScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
@@ -176,7 +176,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       setExportProgress({ exported: 0, total: totalFrames });
       // Plain .txt is accepted by most Android share targets. Write page by
       // page so large captures do not allocate one enormous JS string.
-      const file = new File(Paths.cache, `pulse-frames-${totalFrames}.txt`);
+      const file = new File(Paths.cache, `pulse-frames-${totalFrames}-${Date.now()}.txt`);
       file.create({ overwrite: true });
       const handle = file.open();
       let exported = 0;
@@ -186,11 +186,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         for (;;) {
           const page = await getRawFramesPage(lastRowId, RAW_FRAME_EXPORT_PAGE_SIZE);
           if (!page.length) break;
-          let chunk = '';
           for (const frame of page) {
-            chunk += `${frame.ts}\t${frame.source}\t${frame.hex}\n`;
+            writeAscii(handle, `${frame.ts}\t${frame.source}\t${frame.hex}\n`);
           }
-          writeAscii(handle, chunk);
           exported += page.length;
           lastRowId = page[page.length - 1]!.rowId;
           setExportProgress({ exported, total: totalFrames });
