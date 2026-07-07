@@ -30,6 +30,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const sleepEnd = metric?.sleepEnd ?? null;
   const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);
   const sleepReview = metric ? daySleepReview(metric) : null;
+  const vitalsReview = metric ? dayVitalsReview(metric) : null;
 
   return (
     <Screen
@@ -145,6 +146,24 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
           </Card>
 
           <SectionLabel>Vitals and activity</SectionLabel>
+          {vitalsReview ? (
+            <View style={[styles.vitalsBanner, { borderColor: vitalsReview.color, backgroundColor: vitalsReview.tint }]}>
+              <View style={[styles.reviewBadge, { backgroundColor: vitalsReview.color }]}>
+                <Text style={[styles.reviewBadgeText, { color: vitalsReview.textColor }]}>{vitalsReview.label}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reviewTitle}>{vitalsReview.title}</Text>
+                <Text style={styles.reviewBody}>{vitalsReview.body}</Text>
+                <View style={styles.vitalFacts}>
+                  {vitalsReview.facts.map((fact) => (
+                    <View key={fact} style={styles.vitalFact}>
+                      <Text style={styles.vitalFactText}>{fact}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          ) : null}
           <View style={styles.grid}>
             <Card style={styles.half}>
               <Stat label="HRV" value={metric.rmssd != null ? Math.round(metric.rmssd) : '-'} unit={metric.rmssd != null ? 'ms' : undefined} />
@@ -384,6 +403,94 @@ function daySleepReview(metric: DailyMetricRow): {
   };
 }
 
+function dayVitalsReview(metric: DailyMetricRow): {
+  label: string;
+  title: string;
+  body: string;
+  facts: string[];
+  color: string;
+  tint: string;
+  textColor: string;
+} {
+  const coreMissing = [
+    metric.rmssd == null ? 'HRV' : null,
+    metric.rhr == null ? 'RHR' : null,
+    metric.resp == null ? 'Resp' : null,
+  ].filter(Boolean) as string[];
+  const healthMissing = [
+    metric.spo2 == null ? 'SpO2' : null,
+    metric.skinTempC == null ? 'Skin temp' : null,
+  ].filter(Boolean) as string[];
+  const sleepCoverage = metric.sleepDetail?.coveragePct ?? null;
+  const lowSleepCoverage = sleepCoverage != null && sleepCoverage < 60;
+  const hasSteps = metric.steps != null;
+  const facts = [
+    coreMissing.length === 0 ? 'Core vitals ready' : `${coreMissing.join(', ')} missing`,
+    healthMissing.length === 0 ? 'Health monitor ready' : `${healthMissing.join(', ')} pending`,
+    hasSteps ? 'Steps captured' : 'Steps missing',
+  ];
+
+  if (coreMissing.length >= 2 || lowSleepCoverage) {
+    return {
+      label: 'SYNC',
+      title: 'Recovery inputs need more data',
+      body: lowSleepCoverage
+        ? `Sleep coverage is ${sleepCoverage}%, so overnight vitals and recovery should be treated as partial until auto sync backfills more history.`
+        : `Missing ${coreMissing.join(', ')} from the overnight window. Recovery, stress and health monitor panels will stay limited until those inputs are captured.`,
+      facts,
+      color: colors.recoveryRed,
+      tint: `${colors.recoveryRed}12`,
+      textColor: colors.white,
+    };
+  }
+
+  if (coreMissing.length > 0) {
+    return {
+      label: 'VITAL',
+      title: 'One core vital is incomplete',
+      body: `${coreMissing[0]} is missing for this day. Sleep timing can still be useful, but recovery confidence is lower until the overnight signal fills in.`,
+      facts,
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  if (healthMissing.length > 0) {
+    return {
+      label: 'CORE',
+      title: 'Core recovery is usable',
+      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} remain experimental or unavailable for this day, so health monitor completeness is not full yet.`,
+      facts,
+      color: colors.strainBlue,
+      tint: `${colors.strainBlue}16`,
+      textColor: colors.white,
+    };
+  }
+
+  if (!hasSteps) {
+    return {
+      label: 'STEP',
+      title: 'Vitals ready, activity incomplete',
+      body: 'Overnight recovery inputs are present, but the daily step total is missing. Keep the strap connected or calibrate steps after a known walk.',
+      facts,
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  return {
+    label: 'READY',
+    title: 'Daily inputs are complete',
+    body: 'Core recovery vitals, health monitor candidates and steps are present for this day.',
+    facts,
+    color: colors.recoveryGreen,
+    tint: `${colors.recoveryGreen}12`,
+    textColor: '#000',
+  };
+}
+
 function formatDayLong(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -451,6 +558,25 @@ const styles = StyleSheet.create({
   reviewBadgeText: { fontSize: 10, fontFamily: fonts.black },
   reviewTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
   reviewBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  vitalsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
+  },
+  vitalFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  vitalFact: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: colors.surface,
+  },
+  vitalFactText: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 12, fontFamily: fonts.text },
   adjustRow: {
     flexDirection: 'row',
