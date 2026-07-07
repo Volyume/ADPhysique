@@ -30,11 +30,16 @@ export enum Command {
   HISTORICAL_DATA_RESULT = 23,
   GET_DATA_RANGE = 34,
   GET_HELLO_HARVARD = 35, // session hello
+  SET_ALARM_TIME = 66,
+  GET_ALARM_TIME = 67,
+  RUN_ALARM = 68,
+  DISABLE_ALARM = 69,
   ENTER_HIGH_FREQ_SYNC = 96,
   EXIT_HIGH_FREQ_SYNC = 97,
   START_RAW_DATA = 81, // accel raw (~1 Hz) via REALTIME_RAW_DATA
   TOGGLE_IMU_MODE = 106, // IMU realtime (accel+gyro) via REALTIME_IMU_DATA_STREAM (51)
   SET_FF_VALUE = 0x78, // 120 — write a persistent feature-flag value (deep streams)
+  STOP_HAPTICS = 122,
   GET_HELLO = 145, // alternate hello
 }
 
@@ -94,6 +99,16 @@ export function cmdEnableHrBroadcast(on = true): Uint8Array {
 export function cmdToggleRealtimeHr(on = true): Uint8Array {
   const payload = new Uint8Array([on ? 1 : 0]);
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.TOGGLE_REALTIME_HR, payload));
+}
+
+/** Clear the strap's stored wake/haptic alarm. */
+export function cmdDisableAlarm(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.DISABLE_ALARM));
+}
+
+/** Stop any currently-running haptic vibration pattern. */
+export function cmdStopHaptics(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.STOP_HAPTICS));
 }
 
 /**

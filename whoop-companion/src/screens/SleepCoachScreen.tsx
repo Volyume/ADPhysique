@@ -177,8 +177,8 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
       ) : null}
 
       <Text style={styles.alarmNote}>
-        WHOOP’s silent haptic alarm requires writing alarm settings to the strap. That command isn’t
-        validated for this firmware yet, so smart-alarm scheduling is not enabled in this build.
+        Existing strap alarms can be disabled from Device. Setting a new silent haptic alarm still waits for
+        SET_ALARM_TIME payload validation, so smart-alarm scheduling is not enabled in this build.
       </Text>
     </Screen>
   );

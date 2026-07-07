@@ -21,6 +21,8 @@ import {
   cmdEnterHighFreqSync,
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
+  cmdDisableAlarm,
+  cmdStopHaptics,
   parseHistoryMetadata,
   HistoryMetadata,
 } from '../whoop/commands';
@@ -712,6 +714,31 @@ class AppStore extends Store<AppState> {
       error: null,
     });
     setTimeout(() => this.connect(), 300);
+  };
+
+  private async requireCommandChannel(action: string): Promise<WhoopBle> {
+    const ble = this.ble;
+    if (!ble || !ble.isConnected) {
+      throw new Error(`${action} needs the strap connected first.`);
+    }
+    const ready = ble.canSendCommands || (await ble.refreshCommandChannel());
+    if (!ready) {
+      throw new Error(`${action} needs the WHOOP command channel (fd4b0002), but it is not available on this connection.`);
+    }
+    return ble;
+  }
+
+  disableStrapAlarm = async (): Promise<void> => {
+    const ble = await this.requireCommandChannel('Disable alarm');
+    await ble.writeCommand(cmdDisableAlarm());
+    await ble.writeCommand(cmdStopHaptics()).catch(() => {});
+    this.setState({ error: null, statusDetail: 'Wake alarm disable command sent' });
+  };
+
+  stopStrapHaptics = async (): Promise<void> => {
+    const ble = await this.requireCommandChannel('Stop haptics');
+    await ble.writeCommand(cmdStopHaptics());
+    this.setState({ error: null, statusDetail: 'Stop haptics command sent' });
   };
 
   /** Start the foreground-service guard used by Android background sync. */

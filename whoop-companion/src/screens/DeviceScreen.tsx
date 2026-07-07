@@ -51,6 +51,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
   const [actualSteps, setActualSteps] = useState('');
   const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
+  const [alarmBusy, setAlarmBusy] = useState<'disable' | 'stop' | null>(null);
 
   // Frames actually written to the database (what export reads), polled so we can
   // see whether persistence is keeping up with the live (in-memory) counter.
@@ -96,6 +97,32 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     const divisor = await appStore.setBandStepDivisor(WHOOP5_STEP_TICKS_PER_STEP);
     setActualSteps('');
     Alert.alert('Step calibration reset', `${divisor.toFixed(1)} ticks per step`);
+  };
+
+  const disableWakeAlarm = async () => {
+    if (alarmBusy) return;
+    setAlarmBusy('disable');
+    try {
+      await appStore.disableStrapAlarm();
+      Alert.alert('Wake alarm disabled', 'Sent the WHOOP disable-alarm command to the strap. This should clear the stored haptic alarm.');
+    } catch (e) {
+      Alert.alert('Could not disable alarm', String(e));
+    } finally {
+      setAlarmBusy(null);
+    }
+  };
+
+  const stopHaptics = async () => {
+    if (alarmBusy) return;
+    setAlarmBusy('stop');
+    try {
+      await appStore.stopStrapHaptics();
+      Alert.alert('Haptics stopped', 'Sent the WHOOP stop-haptics command to the strap.');
+    } catch (e) {
+      Alert.alert('Could not stop haptics', String(e));
+    } finally {
+      setAlarmBusy(null);
+    }
   };
 
   const exportFrames = async () => {
@@ -209,6 +236,24 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </Card>
       ) : null}
+
+      <SectionLabel>Wake alarm</SectionLabel>
+      <Card>
+        <SecondaryButton
+          title={alarmBusy === 'disable' ? 'Disabling...' : 'Disable strap alarm'}
+          onPress={() => void disableWakeAlarm()}
+          disabled={!connected || !!alarmBusy}
+        />
+        <SecondaryButton
+          title={alarmBusy === 'stop' ? 'Stopping...' : 'Stop buzzing now'}
+          onPress={() => void stopHaptics()}
+          disabled={!connected || !!alarmBusy}
+        />
+        <Text style={styles.hint}>
+          Uses the WHOOP command channel to send DISABLE_ALARM, then STOP_HAPTICS. Keep the strap connected until the
+          success message appears. Setting a new alarm is not enabled until the SET_ALARM_TIME payload is validated.
+        </Text>
+      </Card>
 
       <SectionLabel>Steps</SectionLabel>
       <Card>
