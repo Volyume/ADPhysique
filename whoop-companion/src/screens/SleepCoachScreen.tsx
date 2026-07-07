@@ -31,6 +31,10 @@ function median(xs: number[]): number | null {
   const s = [...xs].sort((a, b) => a - b);
   return s[Math.floor(s.length / 2)] ?? null;
 }
+function displayPct(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
 
 const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
   { key: 0.7, name: 'Get By', pct: '70%', desc: 'Minimum to function' },
@@ -88,6 +92,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const wakeCountdownMin = relativeMin(nextWakeTs);
   const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
+  const lastSleepPerformancePct = displayPct(lastSleep?.performance != null ? lastSleep.performance * 100 : null);
   const alarmMeta =
     strapAlarm.pendingWrite === 'set'
       ? `Queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -292,7 +297,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
             <View style={styles.breakRow}>
               <Text style={styles.breakLabel}>Sleep performance</Text>
               <Text style={styles.breakVal}>
-                {lastSleep.performance != null ? `${Math.round(lastSleep.performance * 100)}%` : '—'}
+                {lastSleepPerformancePct != null ? `${lastSleepPerformancePct}%` : '—'}
               </Text>
             </View>
             <View style={styles.breakRow}>
