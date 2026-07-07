@@ -15,7 +15,9 @@ export function normaliseProgressScanTimerSeconds(value) {
 
 export async function getProgressScanHideExactPreference() {
   try {
-    return (await AsyncStorage.getItem(PROGRESS_SCAN_HIDE_EXACT_KEY)) === 'true';
+    const stored = await AsyncStorage.getItem(PROGRESS_SCAN_HIDE_EXACT_KEY);
+    if (stored == null) return true;
+    return stored === 'true';
   } catch (_) {
     return true;
   }

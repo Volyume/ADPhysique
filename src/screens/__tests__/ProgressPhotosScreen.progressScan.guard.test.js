@@ -44,11 +44,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
     expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
     expect(SCREEN).toMatch(/hideWeight=\{hideExactScans && scanPhotoNames\.has\(viewerName\)\}/);
-    expect(SCREEN).toMatch(/Share score card/);
+    expect(SCREEN).toMatch(/Share progress card/);
   });
 
   test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Score detail is hidden right now/);
+    expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Index detail is hidden right now/);
     expect(SCAN_HISTORY).toMatch(/if \(hideExact && scan\?\.deltaExplanation\?\.trendSummary\)/);
     expect(SCAN_HISTORY).toMatch(/whyLabel\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_HISTORY).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact \}\)/);
@@ -106,7 +106,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Your private physique record/);
     expect(SCREEN).toMatch(/Private on this device/);
     expect(SCREEN).toMatch(/not visible to partners, staff or anyone else/);
-    expect(SCREEN).toMatch(/How the score works/);
+    expect(SCREEN).toMatch(/How the visual index works/);
     expect(SCREEN).toMatch(/visual progress measure, not a body fat estimate/);
     expect(SCREEN).toMatch(/withheld rather than guessed/);
     expect(SCREEN).not.toMatch(/heroPlaceholder/);

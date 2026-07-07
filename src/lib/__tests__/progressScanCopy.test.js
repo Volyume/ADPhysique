@@ -25,15 +25,15 @@ describe('progressScanCopy', () => {
     );
   });
 
-  test('hide-exact keeps the trend and hides the detailed score', () => {
+  test('hide-exact keeps the trend and hides the detailed index', () => {
     expect(scanReadCopy(scoredScan, { hideExact: true })).toBe(
-      'Lean band. Progress Signal: Slight positive trend. Detailed score is hidden. This is not a body fat percentage.',
+      'Lean band. Progress Signal: Slight positive trend. Detailed index is hidden. This is not a body fat percentage.',
     );
   });
 
-  test('suppression hides score details completely', () => {
+  test('suppression hides index details completely', () => {
     expect(scanReadCopy(scoredScan, { suppressed: true })).toBe(
-      'Photo set saved privately. Score details are hidden right now.',
+      'Photo set saved privately. Index details are hidden right now.',
     );
   });
 

@@ -80,7 +80,7 @@ describe('ProgressScanHistoryCard', () => {
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
     expect(hiddenText).toContain('Lean band');
-    expect(hiddenText).toContain('Visual indexHidden');
+    expect(hiddenText).toContain('Visual indexTrend only');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
@@ -124,7 +124,7 @@ describe('ProgressScanHistoryCard', () => {
     });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Confidence: Analysis unavailable');
-    expect(text).toContain('Visual indexNot scored');
+    expect(text).toContain('Visual indexNot indexed');
     expect(text).not.toContain('Confidence: Low');
   });
 
@@ -134,7 +134,7 @@ describe('ProgressScanHistoryCard', () => {
       id: 'scan-measured-only',
       analysisStatus: 'measured',
       qualityLabel: 'usable',
-      copySummary: 'The photos were measured as visual scan context, but Volyume did not create a score from this set.',
+      copySummary: 'The photos were measured as visual scan context, but Volyume did not create an index from this set.',
       signals: {
         physiqueAssessment: {
           visualLeannessScore: null,
@@ -151,7 +151,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('Confidence: Measured only');
     expect(text).toContain('Leanness bandMeasured only');
     expect(text).toContain('SignalMeasured only');
-    expect(text).toContain('Visual indexNot scored');
+    expect(text).toContain('Visual indexNot indexed');
     expect(text).not.toContain('Leanness bandBaseline');
     expect(text).not.toContain('Baseline scan');
   });
