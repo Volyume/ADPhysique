@@ -652,6 +652,13 @@ describe('pending state', () => {
     expect(findPress(tree, 'Cancel invitation').length).toBeGreaterThan(0);
   });
 
+  test('pending invite actions are styled as buttons, not plain text links', () => {
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/style=\{styles\.pendingDanger\}/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/name="close-circle-outline"/);
+    expect(PARTNER_SCREEN_SOURCE).not.toMatch(/style=\{styles\.textRow\}/);
+    expect(PARTNER_SCREEN_SOURCE).not.toMatch(/textRow:/);
+  });
+
   test('can manually refresh a pending connection after the other person accepts', async () => {
     const hook = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
     mockHook.value = hook;
