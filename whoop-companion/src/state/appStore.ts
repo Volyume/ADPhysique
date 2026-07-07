@@ -92,6 +92,7 @@ import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
 import { computeEnergyReserve, EnergyReserve } from '../metrics/energyReserve';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 import {
   BandStepEstimate,
   estimateBandStepsFromCounters,
@@ -2890,10 +2891,9 @@ function sleepQualityCap(
 
 function applyRecoveryConfidenceCap(recovery: number | null, detail: SleepDetail | null): number | null {
   if (recovery == null || !detail) return recovery;
-  const coverage = detail.coveragePct ?? 100;
-  const signal = detail.signalMin ?? 999;
-  if (detail.confidence === 'low' || coverage < 60 || signal < 150) return Math.min(recovery, 66);
-  if (detail.confidence === 'medium' || coverage < 80 || signal < 240) return Math.min(recovery, 85);
+  const tier = sleepTrustTier(detail);
+  if (tier === 'low') return Math.min(recovery, 66);
+  if (tier === 'medium') return Math.min(recovery, 85);
   return recovery;
 }
 

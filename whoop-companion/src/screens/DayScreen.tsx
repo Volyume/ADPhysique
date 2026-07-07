@@ -13,6 +13,7 @@ import { activitySummary } from '../ui/activityFormat';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -328,6 +329,7 @@ function daySleepReview(metric: DailyMetricRow): {
   const inBed = detail.inBedMin ?? metric.sleepMin;
   const efficiency = detail.efficiency ?? (inBed > 0 ? Math.round((metric.sleepMin / inBed) * 100) : null);
   const hasCoreVitals = metric.rmssd != null && metric.rhr != null && metric.resp != null;
+  const trustTier = sleepTrustTier(detail);
 
   if (sleepStateWakeConflict(detail)) {
     return {
@@ -340,7 +342,7 @@ function daySleepReview(metric: DailyMetricRow): {
     };
   }
 
-  if (detail.confidence === 'low' || sleepNeedsMoreSync(detail)) {
+  if (trustTier === 'low' || sleepNeedsMoreSync(detail)) {
     const needsSync = sleepNeedsMoreSync(detail);
     return {
       label: needsSync ? 'SYNC' : 'CHECK',
@@ -388,7 +390,7 @@ function daySleepReview(metric: DailyMetricRow): {
     };
   }
 
-  if (detail.confidence === 'medium' || coverage < 80) {
+  if (trustTier === 'medium') {
     return {
       label: 'OK',
       title: 'Usable with caution',

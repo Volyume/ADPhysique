@@ -1,10 +1,27 @@
 import type { DailyMetricRow } from '../db/database';
 
+export type SleepTrustTier = 'none' | 'low' | 'medium' | 'high';
+
+export type SleepTrustSource = {
+  confidence?: 'high' | 'medium' | 'low' | null;
+  coveragePct?: number | null;
+  signalMin?: number | null;
+};
+
+export function sleepTrustTier(source: SleepTrustSource | null | undefined): SleepTrustTier {
+  if (!source) return 'none';
+  const coveragePct = source.coveragePct ?? 100;
+  const signalMin = source.signalMin ?? 999;
+  if (source.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 'low';
+  if (source.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 'medium';
+  return 'high';
+}
+
 export function sleepTrustWeight(day: DailyMetricRow): number {
-  const confidence = day.sleepDetail?.confidence;
-  if (confidence === 'high') return 1;
-  if (confidence === 'medium') return 0.7;
-  if (confidence === 'low') return 0;
+  const tier = sleepTrustTier(day.sleepDetail);
+  if (tier === 'high') return 1;
+  if (tier === 'medium') return 0.7;
+  if (tier === 'low') return 0;
   return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
 }
 

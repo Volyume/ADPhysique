@@ -5,6 +5,8 @@
  * debt and training load.
  */
 
+import { sleepTrustTier } from './sleepTrustWeight';
+
 export type Readiness = {
   score: number; // 0..100
   label: string; // Poor / Low / Moderate / High / Prime
@@ -122,11 +124,13 @@ function readinessScoreCap(input: {
   sleepCoveragePct: number | null;
   sleepSignalMin: number | null;
 }): number | null {
-  if (input.sleepConfidence === 'high') return null;
-  const coverage = input.sleepCoveragePct ?? 100;
-  const signal = input.sleepSignalMin ?? 999;
-  if (input.sleepConfidence === 'low' || coverage < 60 || signal < 150) return 65;
-  if (input.sleepConfidence === 'medium' || coverage < 80 || signal < 240) return 86;
+  const tier = sleepTrustTier({
+    confidence: input.sleepConfidence,
+    coveragePct: input.sleepCoveragePct,
+    signalMin: input.sleepSignalMin,
+  });
+  if (tier === 'low') return 65;
+  if (tier === 'medium') return 86;
   return null;
 }
 
@@ -146,13 +150,12 @@ function sleepTrustContributor(input: {
         ? `${label} · ${signal}m`
         : label;
 
-  const weak = confidence === 'low' || (coverage != null && coverage < 60) || (signal != null && signal < 150);
-  const provisional = confidence === 'medium' || (coverage != null && coverage < 80) || (signal != null && signal < 240);
+  const tier = sleepTrustTier({ confidence, coveragePct: coverage, signalMin: signal });
 
   return {
     key: 'sleep_trust',
     label: 'Sleep trust',
     value: detail,
-    good: confidence == null && coverage == null && signal == null ? null : !(weak || provisional),
+    good: confidence == null && coverage == null && signal == null ? null : tier === 'high',
   };
 }

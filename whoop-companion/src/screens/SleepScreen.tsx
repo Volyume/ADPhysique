@@ -25,6 +25,7 @@ import type { DailyMetricRow } from '../db/database';
 import { napCreditMin, parseNapDetail } from '../metrics/naps';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 const BASE_NEED_MIN = 480;
 
@@ -969,14 +970,15 @@ function stageQualityCheck(
       color: colors.recoveryRed,
     };
   }
-  if (capture.confidence === 'low' || capture.coveragePct < 60 || capture.signalMin < 150) {
+  const tier = sleepTrustTier(capture);
+  if (tier === 'low') {
     return {
       label: 'Stage estimate',
       body: 'partial signal; use timing before REM/deep detail.',
       color: colors.recoveryRed,
     };
   }
-  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || !sleepHasCorroboration(capture)) {
+  if (tier === 'medium' || !sleepHasCorroboration(capture)) {
     return {
       label: 'Stage estimate',
       body: `${capture.coveragePct}% coverage, ${evidencePct}% corroborating evidence.`,
@@ -1175,13 +1177,14 @@ function sleepTrustStrip(
   const signalScore = Math.max(0, Math.min(100, Math.round((capture.signalMin / 360) * 100)));
   const stillScore = Math.max(0, Math.min(100, Math.round(sleepEvidencePct(capture) * 3)));
   const base = Math.round(coverage * 0.55 + signalScore * 0.25 + stillScore * 0.2);
+  const tier = sleepTrustTier(capture);
   const score = stateConflict
     ? Math.min(35, base)
     : longHrOnly
       ? Math.min(58, base)
-      : cappedByConfidence || capture.confidence === 'low'
+      : cappedByConfidence || tier === 'low'
         ? Math.min(65, base)
-        : capture.confidence === 'medium'
+        : tier === 'medium'
           ? Math.min(82, Math.max(55, base))
           : Math.max(88, base);
 
@@ -1201,7 +1204,7 @@ function sleepTrustStrip(
       color: colors.strainBlue,
     };
   }
-  if (cappedByConfidence || capture.confidence === 'low' || coverage < 60 || capture.signalMin < 150) {
+  if (cappedByConfidence || tier === 'low') {
     return {
       score,
       label: 'Partial',
@@ -1209,7 +1212,7 @@ function sleepTrustStrip(
       color: colors.recoveryYellow,
     };
   }
-  if (capture.confidence === 'medium' || coverage < 80 || capture.signalMin < 240) {
+  if (tier === 'medium') {
     return {
       score,
       label: 'Usable',

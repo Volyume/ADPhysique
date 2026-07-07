@@ -12,6 +12,7 @@ import { illnessTint } from './IllnessScreen';
 import { DayRail } from './DayScreen';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null);
@@ -35,21 +36,18 @@ function barConfidence(day: DailyMetricRow): 'high' | 'medium' | 'low' | null {
 }
 
 function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
-  if (!sleepDetail) return null;
-  const coveragePct = sleepDetail.coveragePct ?? 100;
-  const signalMin = sleepDetail.signalMin ?? 999;
-  if (sleepDetail.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 66;
-  if (sleepDetail.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 85;
+  const tier = sleepTrustTier(sleepDetail);
+  if (tier === 'low') return 66;
+  if (tier === 'medium') return 85;
   return null;
 }
 
 function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
   if (!sleepDetail) return null;
   if (sleepStateWakeConflict(sleepDetail)) return 25;
-  const coveragePct = sleepDetail.coveragePct ?? 100;
-  const signalMin = sleepDetail.signalMin ?? 999;
-  if (sleepDetail.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 45;
-  if (sleepDetail.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 72;
+  const tier = sleepTrustTier(sleepDetail);
+  if (tier === 'low') return 45;
+  if (tier === 'medium') return 72;
   return 100;
 }
 
