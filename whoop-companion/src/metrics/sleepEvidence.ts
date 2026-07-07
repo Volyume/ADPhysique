@@ -17,6 +17,7 @@ export type SleepCorroborationEvidence = SleepStateEvidence & {
 
 const LONG_AUTO_SLEEP_MIN = 7 * 60;
 const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 18;
+const MIN_SLEEP_CORROBORATION_PCT = 25;
 const MIN_LONG_AUTO_SLEEP_STATE_MIN = 60;
 const MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO = 0.35;
 const MIN_LONG_AUTO_SLEEP_WINDOW_PROOF_RATIO = 0.12;
@@ -47,6 +48,10 @@ export function sleepEvidencePct(evidence: SleepCorroborationEvidence | null | u
     Math.max(0, (evidence?.motionMin ?? 0) - (evidence?.movingMin ?? 0)),
   );
   return Math.round((stillMin / Math.max(1, windowMin)) * 100);
+}
+
+export function sleepHasCorroboration(evidence: SleepCorroborationEvidence | null | undefined): boolean {
+  return sleepEvidencePct(evidence) >= MIN_SLEEP_CORROBORATION_PCT;
 }
 
 export function longAutoSleepNeedsCorroboration(

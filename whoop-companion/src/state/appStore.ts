@@ -74,7 +74,7 @@ import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency'
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
-import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepStateWakeConflict } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
@@ -2850,7 +2850,7 @@ function sleepConfidence(
   evidence?: SleepEvidence | null,
 ): SleepConfidence {
   const evidencePct = sleepEvidencePct(evidence);
-  const corroborated = evidencePct >= 25;
+  const corroborated = sleepHasCorroboration(evidence);
   const stateConflict = sleepStateWakeConflict(evidence);
   const longUncorroboratedAuto = longAutoSleepNeedsCorroboration(evidence, manual);
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
@@ -2869,7 +2869,7 @@ function sleepPerformanceCap(
   if (confidence === 'high') return 100;
   if (sleepStateWakeConflict(evidence)) return Math.max(45, Math.min(68, coveragePct + 8));
   if (confidence === 'medium') {
-    const corroborated = sleepEvidencePct(evidence) >= 25;
+    const corroborated = sleepHasCorroboration(evidence);
     const ceiling = corroborated ? 92 : 86;
     return Math.max(70, Math.min(ceiling, coveragePct + (corroborated ? 15 : 8)));
   }
@@ -2883,7 +2883,7 @@ function sleepQualityCap(
 ): number {
   if (confidence === 'high') return 99;
   if (sleepStateWakeConflict(evidence)) return Math.max(40, Math.min(62, coveragePct + 4));
-  const corroborated = sleepEvidencePct(evidence) >= 25;
+  const corroborated = sleepHasCorroboration(evidence);
   if (confidence === 'medium') return Math.max(72, Math.min(corroborated ? 90 : 84, coveragePct + (corroborated ? 12 : 6)));
   return Math.max(40, Math.min(62, coveragePct + 18));
 }
@@ -3159,7 +3159,6 @@ function sleepCaptureNote(input: {
   evidence?: SleepEvidence | null;
 }): string {
   const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
-  const evidencePct = sleepEvidencePct(input.evidence);
   if (input.hasSleep && sleepStateWakeConflict(input.evidence) && !input.manual) {
     return 'Sleep is capped because decoded strap-state evidence is mostly wake; review the window after auto sync finishes.';
   }
@@ -3167,7 +3166,7 @@ function sleepCaptureNote(input: {
     return 'High-confidence sleep: HR coverage is strong and corroborated by still-worn band evidence.';
   }
   if (input.hasSleep && confidence === 'medium') {
-    if (evidencePct < 25 && !input.manual) {
+    if (!sleepHasCorroboration(input.evidence) && !input.manual) {
       return 'Medium-confidence HR-only sleep estimate; still-worn corroboration is sparse, so the score is capped.';
     }
     return 'Medium-confidence sleep estimate; more synced coverage can still refine the score.';

@@ -18,7 +18,7 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
-import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -605,7 +605,7 @@ function sleepVerdict(input: {
   }
 
   const longAutoWindow = sleep.source === 'auto_hr' && sleep.inBedMin >= 10 * 60 && sleep.efficiency >= 0.92;
-  const weakLongAutoEvidence = capture ? sleepEvidencePct(capture) < 25 : true;
+  const weakLongAutoEvidence = capture ? !sleepHasCorroboration(capture) : true;
   if (longAutoWindow && weakLongAutoEvidence) {
     return {
       badge: 'CHECK',
@@ -976,7 +976,7 @@ function stageQualityCheck(
       color: colors.recoveryRed,
     };
   }
-  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || evidencePct < 25) {
+  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || !sleepHasCorroboration(capture)) {
     return {
       label: 'Stage estimate',
       body: `${capture.coveragePct}% coverage, ${evidencePct}% corroborating evidence.`,
