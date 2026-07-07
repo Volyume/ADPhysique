@@ -162,6 +162,166 @@ function QualityStat({ label, value, color }: { label: string; value: string | n
   );
 }
 
+function sleepTrendInsight({
+  period,
+  metric,
+  avg,
+  priorAvg,
+  quality,
+}: {
+  period: DailyMetricRow[];
+  metric: TrendMetric;
+  avg: number | null;
+  priorAvg: number | null;
+  quality: { total: number; high: number; medium: number; low: number; avgCoverage: number | null };
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  color: string;
+  usableNights: number;
+  totalNights: number;
+  usableColor: string;
+  direction: string;
+  directionColor: string;
+  nextMove: string;
+} {
+  const totalNights = period.filter((d) => d.sleepMin != null || d.sleepDetail != null).length;
+  const usableNights = quality.high + quality.medium;
+  const usableColor = totalNights === 0 ? colors.textTertiary : usableNights / Math.max(1, totalNights) >= 0.75 ? colors.recoveryGreen : colors.recoveryYellow;
+  const delta = avg != null && priorAvg != null ? avg - priorAvg : null;
+  const improvesWhenLower = metric.key === 'debt';
+  const improved = delta == null ? null : improvesWhenLower ? delta <= -0.25 : delta >= (metric.hours ? 0.25 : 3);
+  const worsened = delta == null ? null : improvesWhenLower ? delta >= 0.25 : delta <= (metric.hours ? -0.25 : -3);
+  const direction =
+    delta == null
+      ? 'building'
+      : improved
+        ? 'better'
+        : worsened
+          ? 'worse'
+          : 'steady';
+  const directionColor = direction === 'better' ? colors.recoveryGreen : direction === 'worse' ? colors.recoveryYellow : colors.sleepTeal;
+
+  if (totalNights === 0) {
+    return {
+      badge: 'SYNC',
+      title: 'Trend needs sleep nights',
+      body: 'Wear the strap overnight and let history sync complete before using this range to make sleep decisions.',
+      color: colors.strainBlue,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'sync',
+    };
+  }
+
+  if (quality.low > 0 || (quality.avgCoverage != null && quality.avgCoverage < 65)) {
+    return {
+      badge: 'DATA',
+      title: 'Fix trend confidence first',
+      body: `${quality.low} low-confidence night${quality.low === 1 ? '' : 's'} or partial coverage can distort this trend. Review dim bars before changing your routine.`,
+      color: colors.recoveryYellow,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'review',
+    };
+  }
+
+  if (metric.key === 'debt' && avg != null && avg >= 1) {
+    return {
+      badge: 'DEBT',
+      title: 'Sleep debt is the constraint',
+      body: `Average debt is ${fmtHM(avg)}. The highest-value move is adding enough time in bed for several nights, not chasing stage percentages.`,
+      color: colors.recoveryYellow,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'bedtime',
+    };
+  }
+
+  if (metric.key === 'consistency' && avg != null && avg < 75) {
+    return {
+      badge: 'TIME',
+      title: 'Schedule stability is limiting sleep',
+      body: 'Bed and wake timing are moving around enough to affect recovery. Pick a realistic wake anchor and let bedtime follow it.',
+      color: colors.sleepTeal,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'anchor',
+    };
+  }
+
+  if (metric.key === 'efficiency' && avg != null && avg < 85) {
+    return {
+      badge: 'REST',
+      title: 'Continuity needs attention',
+      body: 'Efficiency is below the useful range. Look for late caffeine, alcohol, late heavy meals, overheating, or a sleep window that includes too much awake time.',
+      color: colors.sleepTeal,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'continuity',
+    };
+  }
+
+  if (direction === 'better') {
+    return {
+      badge: 'HOLD',
+      title: 'This trend is moving well',
+      body: `${metric.title} is improving against the prior range. Keep the routine stable long enough to prove it is repeatable.`,
+      color: colors.recoveryGreen,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'hold',
+    };
+  }
+
+  if (direction === 'worse') {
+    return {
+      badge: 'CHECK',
+      title: 'The trend is slipping',
+      body: `${metric.title} is worse than the prior range. Check sleep timing, recent strain, naps and capture quality before making a training call.`,
+      color: colors.recoveryYellow,
+      usableNights,
+      totalNights,
+      usableColor,
+      direction,
+      directionColor,
+      nextMove: 'adjust',
+    };
+  }
+
+  return {
+    badge: 'STEADY',
+    title: 'Trend is stable',
+    body: 'The selected sleep signal is holding steady. Use the breakdown and quality cards to decide whether to maintain or make one small change.',
+    color: colors.sleepTeal,
+    usableNights,
+    totalNights,
+    usableColor,
+    direction,
+    directionColor,
+    nextMove: 'steady',
+  };
+}
+
 export function SleepTrendsScreen({ nav }: { nav: Nav }) {
   const [range, setRange] = useState<RangeKey>('M');
   const [metricKey, setMetricKey] = useState('performance');
@@ -232,7 +392,8 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           opacity: metric.key === 'performance' && lowConfidence ? 0.45 : 0.88,
         };
       });
-    return { avg, priorAvg, deltaPct, breakdown, quality, bars };
+    const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
+    return { avg, priorAvg, deltaPct, breakdown, quality, bars, insight };
   }, [history, days, metric]);
 
   const periodWord = range === 'W' ? 'week' : range === 'M' ? 'month' : '6 months';
@@ -304,6 +465,24 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         ) : (
           <Empty text="No data for this metric in the selected range yet." />
         )}
+      </Card>
+
+      <SectionLabel>Trend interpretation</SectionLabel>
+      <Card>
+        <View style={styles.insightHead}>
+          <View style={[styles.insightBadge, { backgroundColor: view.insight.color }]}>
+            <Text style={styles.insightBadgeText}>{view.insight.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.insightTitle}>{view.insight.title}</Text>
+            <Text style={styles.insightBody}>{view.insight.body}</Text>
+          </View>
+        </View>
+        <View style={styles.insightStats}>
+          <QualityStat label="Usable nights" value={`${view.insight.usableNights}/${view.insight.totalNights}`} color={view.insight.usableColor} />
+          <QualityStat label="Direction" value={view.insight.direction} color={view.insight.directionColor} />
+          <QualityStat label="Next move" value={view.insight.nextMove} color={view.insight.color} />
+        </View>
       </Card>
 
       {view.quality.total > 0 ? (
@@ -423,6 +602,12 @@ const styles = StyleSheet.create({
   deltaText: { fontSize: 12, fontFamily: fonts.textBold },
   sentence: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 10, marginBottom: 6, fontFamily: fonts.text },
   chartHint: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 4, fontFamily: fonts.text },
+  insightHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  insightBadge: { width: 52, height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  insightBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  insightTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  insightBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
+  insightStats: { flexDirection: 'row', justifyContent: 'space-between' },
   qualityGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   qualityStat: { flex: 1, alignItems: 'center' },
   qualityValue: { fontSize: 20, fontFamily: fonts.black },
