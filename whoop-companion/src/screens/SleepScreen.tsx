@@ -65,6 +65,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const captureSummary = capture ? sleepEvidenceSummary(capture) : null;
+  const trustStrip = capture ? sleepTrustStrip(capture, !!perf?.cappedByConfidence) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
   const scoreDrivers = useMemo(
@@ -103,6 +104,18 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
         {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
+        {trustStrip ? (
+          <View style={[styles.trustStrip, { borderColor: trustStrip.color }]}>
+            <View style={styles.trustStripHead}>
+              <Text style={styles.trustStripLabel}>Score trust</Text>
+              <Text style={[styles.trustStripValue, { color: trustStrip.color }]}>{trustStrip.label}</Text>
+            </View>
+            <View style={styles.trustTrack}>
+              <View style={[styles.trustFill, { width: `${trustStrip.score}%`, backgroundColor: trustStrip.color }]} />
+            </View>
+            <Text style={styles.trustStripBody}>{trustStrip.body}</Text>
+          </View>
+        ) : null}
         {capture ? (
           <View style={styles.ringQuality}>
             <Stat label="Confidence" value={sleepConfidenceLabel(capture.confidence)} color={sleepConfidenceColor(capture.confidence)} />
@@ -1147,6 +1160,66 @@ function longHrOnlyCapture(capture: NonNullable<ReturnType<typeof appStore.getSt
     (capture.signalMin < 420 || capture.coveragePct < 85);
 }
 
+function sleepTrustStrip(
+  capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
+  cappedByConfidence: boolean,
+): { score: number; label: string; body: string; color: string } {
+  const stateConflict = sleepStateWakeConflict(capture);
+  const longHrOnly = longHrOnlyCapture(capture);
+  const coverage = Math.max(0, Math.min(100, capture.coveragePct));
+  const signalScore = Math.max(0, Math.min(100, Math.round((capture.signalMin / 360) * 100)));
+  const stillScore = Math.max(0, Math.min(100, Math.round((capture.stillMin / Math.max(1, capture.windowMin)) * 300)));
+  const base = Math.round(coverage * 0.55 + signalScore * 0.25 + stillScore * 0.2);
+  const score = stateConflict
+    ? Math.min(35, base)
+    : longHrOnly
+      ? Math.min(58, base)
+      : cappedByConfidence || capture.confidence === 'low'
+        ? Math.min(65, base)
+        : capture.confidence === 'medium'
+          ? Math.min(82, Math.max(55, base))
+          : Math.max(88, base);
+
+  if (stateConflict) {
+    return {
+      score,
+      label: 'Review',
+      body: `Mostly wake state evidence (${sleepStateWakeDisplay(capture)}). Review before trusting sleep, recovery or readiness.`,
+      color: colors.recoveryRed,
+    };
+  }
+  if (longHrOnly) {
+    return {
+      score,
+      label: 'Needs proof',
+      body: 'Long HR-only window with sparse still-state evidence. Keep sync running or adjust the window.',
+      color: colors.strainBlue,
+    };
+  }
+  if (cappedByConfidence || capture.confidence === 'low' || coverage < 60 || capture.signalMin < 150) {
+    return {
+      score,
+      label: 'Partial',
+      body: `${coverage}% coverage and ${capture.signalMin} signal minutes. Treat the score as provisional.`,
+      color: colors.recoveryYellow,
+    };
+  }
+  if (capture.confidence === 'medium' || coverage < 80 || capture.signalMin < 240) {
+    return {
+      score,
+      label: 'Usable',
+      body: 'Good enough to guide the day, but more synced minutes can still refine stages and recovery.',
+      color: colors.recoveryYellow,
+    };
+  }
+  return {
+    score,
+    label: 'Strong',
+    body: 'Coverage, signal and corroboration are aligned enough to trust the result.',
+    color: colors.recoveryGreen,
+  };
+}
+
 function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): {
   badge: string;
   title: string;
@@ -1237,6 +1310,13 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
 
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  trustStrip: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 8, padding: 10, marginTop: 12, backgroundColor: colors.surface },
+  trustStripHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 7 },
+  trustStripLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.textSemibold },
+  trustStripValue: { fontSize: 13, fontFamily: fonts.textBold },
+  trustStripBody: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 7, fontFamily: fonts.text },
+  trustTrack: { height: 7, borderRadius: 4, backgroundColor: colors.card, overflow: 'hidden' },
+  trustFill: { height: 7, borderRadius: 4 },
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
   surplusNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
