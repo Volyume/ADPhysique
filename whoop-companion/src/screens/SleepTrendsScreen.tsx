@@ -170,6 +170,30 @@ function trendDeltaMeta(metric: TrendMetric, avg: number | null, priorAvg: numbe
   };
 }
 
+function trendWeight(day: DailyMetricRow): number {
+  const confidence = day.sleepDetail?.confidence;
+  if (confidence === 'high') return 1;
+  if (confidence === 'medium') return 0.7;
+  if (confidence === 'low') return 0;
+  return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
+}
+
+function weightedAverage(rows: DailyMetricRow[], metric: TrendMetric): { avg: number | null; weight: number; count: number } {
+  let total = 0;
+  let weightTotal = 0;
+  let count = 0;
+  for (const row of rows) {
+    const value = metric.pick(row);
+    if (value == null) continue;
+    const weight = trendWeight(row);
+    if (weight <= 0) continue;
+    total += value * weight;
+    weightTotal += weight;
+    count += 1;
+  }
+  return { avg: weightTotal > 0 ? total / weightTotal : null, weight: weightTotal, count };
+}
+
 function trendDeltaColor(improved: boolean | null): string {
   if (improved === false) return '#ffa722';
   if (improved === null) return colors.sleepTeal;
@@ -217,7 +241,8 @@ function sleepTrendInsight({
 } {
   const totalNights = period.filter((d) => d.sleepMin != null || d.sleepDetail != null).length;
   const usableNights = quality.high + quality.medium;
-  const usableColor = totalNights === 0 ? colors.textTertiary : usableNights / Math.max(1, totalNights) >= 0.75 ? colors.recoveryGreen : colors.recoveryYellow;
+  const usableRatio = usableNights / Math.max(1, totalNights);
+  const usableColor = totalNights === 0 ? colors.textTertiary : usableRatio >= 0.75 ? colors.recoveryGreen : colors.recoveryYellow;
   const delta = avg != null && priorAvg != null ? avg - priorAvg : null;
   const improvesWhenLower = metric.key === 'debt';
   const improved = delta == null ? null : improvesWhenLower ? delta <= -0.25 : delta >= (metric.hours ? 0.25 : 3);
@@ -247,11 +272,11 @@ function sleepTrendInsight({
     };
   }
 
-  if (quality.low > 0 || (quality.avgCoverage != null && quality.avgCoverage < 65)) {
+  if (quality.low > 0 || usableRatio < 0.7 || (quality.avgCoverage != null && quality.avgCoverage < 65)) {
     return {
       badge: 'DATA',
       title: 'Fix trend confidence first',
-      body: `${quality.low} low-confidence night${quality.low === 1 ? '' : 's'} or partial coverage can distort this trend. Review dim bars before changing your routine.`,
+      body: `${usableNights}/${totalNights} nights are usable for this trend. Low-confidence or partial bars stay visible, but the headline now favors trusted nights.`,
       color: colors.recoveryYellow,
       usableNights,
       totalNights,
@@ -370,15 +395,12 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     const prior = history.slice(-days * 2, -days);
     const vals = period.map(metric.pick).filter((v): v is number => v != null);
     const priorVals = prior.map(metric.pick).filter((v): v is number => v != null);
-    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    const priorAvg = priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null;
+    const rawAvg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const weighted = weightedAverage(period, metric);
+    const priorWeighted = weightedAverage(prior, metric);
+    const avg = weighted.avg ?? rawAvg;
+    const priorAvg = priorWeighted.avg ?? (priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null);
     const delta = trendDeltaMeta(metric, avg, priorAvg);
-    const trustedVals = period
-      .filter((d) => d.sleepDetail?.confidence !== 'low')
-      .map(metric.pick)
-      .filter((v): v is number => v != null);
-    const trustedAvg = trustedVals.length ? trustedVals.reduce((a, b) => a + b, 0) / trustedVals.length : null;
-
     // Breakdown counts by band (only for banded metrics).
     let breakdown: Array<{ label: string; count: number; color: string }> | null = null;
     if (metric.band && metric.bandLabels) {
@@ -427,7 +449,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         };
       });
     const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
-    return { avg, trustedAvg, priorAvg, delta, breakdown, quality, bars, insight };
+    return { avg, rawAvg, priorAvg, delta, breakdown, quality, bars, insight, weighted };
   }, [history, days, metric]);
 
   const periodWord = range === 'W' ? 'week' : range === 'M' ? 'month' : '6 months';
@@ -471,7 +493,7 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
 
       {/* Average + delta */}
       <Card>
-        <Text style={styles.avgLabel}>AVERAGE</Text>
+        <Text style={styles.avgLabel}>{view.weighted.avg != null ? 'TRUSTED AVERAGE' : 'AVERAGE'}</Text>
         <View style={styles.avgRow}>
           <Text style={styles.avgValue}>{view.avg != null ? fmtVal(view.avg, metric.hours) : '—'}</Text>
           {view.delta.pct != null ? (
@@ -491,6 +513,11 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           <Text style={styles.sentence}>
             Your average {metric.title.toLowerCase()} this {periodWord} ({fmtVal(view.avg, metric.hours)}) was{' '}
             {view.delta.label === 'unchanged' ? 'in line with' : view.delta.label === 'higher' ? 'higher than' : 'lower than'} your previous average of {fmtVal(view.priorAvg, metric.hours)}.
+          </Text>
+        ) : null}
+        {view.rawAvg != null && view.weighted.avg != null && Math.abs(view.rawAvg - view.weighted.avg) > (metric.hours ? 0.08 : 1) ? (
+          <Text style={styles.trustSentence}>
+            Raw average was {fmtVal(view.rawAvg, metric.hours)}; trusted weighting reduces low-confidence nights before comparing trends.
           </Text>
         ) : null}
         {view.bars.some((b) => b.value != null) ? (
@@ -531,10 +558,10 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
               <QualityStat label="High" value={view.quality.high} color={colors.recoveryGreen} />
               <QualityStat label="Medium" value={view.quality.medium} color={colors.recoveryYellow} />
               <QualityStat label="Low" value={view.quality.low} color={colors.recoveryRed} />
-              <QualityStat label="Trusted avg" value={view.trustedAvg != null ? fmtVal(view.trustedAvg, metric.hours) : '-'} color={colors.sleepTeal} />
+              <QualityStat label="Weighted avg" value={view.weighted.avg != null ? fmtVal(view.weighted.avg, metric.hours) : '-'} color={colors.sleepTeal} />
             </View>
             <Text style={styles.qualityNote}>
-              Low-confidence nights can distort averages. Use trusted average and reviewed bars before changing your routine.
+              High-confidence nights drive the weighted average, medium nights contribute partially, and low-confidence nights stay visible for review.
             </Text>
           </Card>
         </>
@@ -639,6 +666,7 @@ const styles = StyleSheet.create({
   delta: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   deltaText: { fontSize: 12, fontFamily: fonts.textBold },
   sentence: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 10, marginBottom: 6, fontFamily: fonts.text },
+  trustSentence: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 2, marginBottom: 6, fontFamily: fonts.text },
   chartHint: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 4, fontFamily: fonts.text },
   insightHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   insightBadge: { width: 52, height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
