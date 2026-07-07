@@ -201,6 +201,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [scanDateOpen, setScanDateOpen] = useState(false);
   const [scanDatePickerOpen, setScanDatePickerOpen] = useState(false);
   const [scanDateMs, setScanDateMs] = useState(Date.now());
+  const [scanReview, setScanReview] = useState(null);
 
   // The "Photo details" step (date + pose) shown after an image is obtained and
   // BEFORE it is finalised. A picked camera/library image carries `pendingUri`
@@ -346,7 +347,12 @@ export default function ProgressPhotosScreen({ navigation }) {
         return;
       }
       setBusy(false);
-      await onScanCaptured(saved.name, saved, flow, pose);
+      setScanReview({
+        name: saved.name,
+        saved,
+        flow,
+        pose,
+      });
     } catch (e) {
       logError('ProgressPhotos.scanLibraryPose', e, { userId, pose });
       if (flow?.scanId) await abandonLapsedScanFlow(flow, savedPhoto?.name, savedPhoto);
@@ -684,6 +690,25 @@ export default function ProgressPhotosScreen({ navigation }) {
       logError('ProgressPhotos.scanRetakeDelete', e, { userId, pose });
       toast.show('Could not remove that photo. Please try again.', { variant: 'error' });
     }
+  }
+
+  async function approveScanReview() {
+    const review = scanReview;
+    if (!review) return;
+    setScanReview(null);
+    await onScanCaptured(
+      review.name,
+      { ...review.saved, previewApproved: true },
+      review.flow,
+      review.pose,
+    );
+  }
+
+  async function retakeScanReview() {
+    const review = scanReview;
+    if (!review) return;
+    setScanReview(null);
+    await retakeScanPose(review.flow, review.pose, review.name, review.saved);
   }
 
   async function discardScanDraft(flow = scanFlow) {
@@ -1560,6 +1585,54 @@ export default function ProgressPhotosScreen({ navigation }) {
         />
       </Modal>
 
+      <Modal
+        visible={!!scanReview}
+        animationType={reduceMotion ? 'none' : 'slide'}
+        onRequestClose={retakeScanReview}
+      >
+        <SafeAreaView style={styles.scanReviewSafe}>
+          <View style={styles.scanReviewHeader}>
+            <View style={styles.scanReviewTitleBlock}>
+              <Text style={styles.scanReviewEyebrow}>Photo review</Text>
+              <Text style={styles.scanReviewTitle}>
+                Check {POSE_LABEL[scanReview?.pose]?.toLowerCase() || 'this'} photo
+              </Text>
+            </View>
+          </View>
+          <View style={styles.scanReviewImageWrap}>
+            {scanReview?.saved?.uri ? (
+              <Image
+                source={{ uri: scanReview.saved.uri }}
+                style={styles.scanReviewImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+                accessibilityLabel={`${POSE_LABEL[scanReview?.pose] || 'Progress'} photo preview`}
+              />
+            ) : null}
+          </View>
+          <View style={styles.scanReviewFooter}>
+            <Text style={styles.scanReviewCopy}>
+              Use it if your whole body is visible, the photo is sharp, and the camera or source photo looks upright.
+            </Text>
+            <View style={styles.scanReviewActions}>
+              <Button
+                title="Retake"
+                variant="secondary"
+                onPress={retakeScanReview}
+                fullWidth={false}
+                style={styles.scanReviewButton}
+              />
+              <Button
+                title="Use photo"
+                onPress={approveScanReview}
+                fullWidth={false}
+                style={styles.scanReviewButton}
+              />
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
       {/* Photo details (date + pose) shown after an image is obtained and before
           it is finalised. Its own Modal; only mounted while open. */}
       <PhotoDetailsSheet
@@ -1585,6 +1658,39 @@ export default function ProgressPhotosScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  scanReviewSafe: { flex: 1, backgroundColor: colors.background },
+  scanReviewHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  scanReviewTitleBlock: { gap: spacing.xxs },
+  scanReviewEyebrow: { ...type.caption, color: colors.primary },
+  scanReviewTitle: { ...type.title, color: colors.textPrimary },
+  scanReviewImageWrap: {
+    flex: 1,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.camera,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanReviewImage: { width: '100%', height: '100%' },
+  scanReviewFooter: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  scanReviewCopy: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  scanReviewActions: { flexDirection: 'row', gap: spacing.sm },
+  scanReviewButton: { flex: 1 },
   timelineList: { flex: 1 },
   listHeaderBleed: {
     marginHorizontal: -spacing.lg,
