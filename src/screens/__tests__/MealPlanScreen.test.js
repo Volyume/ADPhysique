@@ -182,7 +182,12 @@ describe('MealPlanScreen review-before-add flow', () => {
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('<Text style={styles.emptyTitle}>Build meals</Text>');
+    expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
     expect(source).toContain('Build real meals from your targets, check every plate, then add them to your diary when you are happy.');
+    expect(source).toContain('title="Build this day"');
+    expect(source).toContain('title="Build the week"');
+    expect(source).not.toContain('title="Plan this day"');
+    expect(source).not.toContain('title="Plan the week"');
     expect(source).toContain('Nothing is logged until you add it');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));

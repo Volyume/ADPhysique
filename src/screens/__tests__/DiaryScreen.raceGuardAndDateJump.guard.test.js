@@ -159,7 +159,7 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Build meals<\/Text>/);
-    expect(SRC).toMatch(/Create meals from your targets for this date or the week\. Nothing is logged until you add it\./);
+    expect(SRC).toMatch(/Build meals from your targets for this date or the week\. Nothing is logged until you add it\./);
   });
 });
 
