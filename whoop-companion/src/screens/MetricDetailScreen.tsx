@@ -13,7 +13,7 @@ import { computeEnergyReserve } from '../metrics/energyReserve';
 import { formatDuration } from '../util/time';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
-import { sleepTrustTier } from '../metrics/sleepTrustWeight';
+import { sleepTrustTier, sleepTrustWeight } from '../metrics/sleepTrustWeight';
 
 type Def = {
   title: string;
@@ -270,7 +270,9 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
   const def: Def = DEFS[metricKey] ?? (DEFS.hrv as Def);
 
   const current = today ? def.pick(today) : null;
-  const series = history.map(def.pick).filter((v): v is number => v != null);
+  const metricHistory = trustedMetricRows(history, metricKey, def);
+  const series = metricHistory.trustedValues;
+  const rawSeries = metricHistory.rawValues;
   const baseline = series.length ? series.reduce((a, b) => a + b, 0) / series.length : null;
   const tint = def.color(current);
 
@@ -279,6 +281,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
     value: def.pick(d),
     display: def.pick(d) != null ? formatMetricValue(metricKey, def.pick(d) as number, def, false) : '',
     color: tint,
+    confidence: metricUsesSleepTrust(metricKey) && def.pick(d) != null ? d.sleepDetail?.confidence ?? null : null,
   }));
 
   return (
@@ -329,6 +332,11 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
                 </Text>
               </View>
             ) : null}
+            {metricHistory.excludedLowTrust > 0 ? (
+              <Text style={styles.trustNote}>
+                Baseline excludes {metricHistory.excludedLowTrust} low-confidence sleep night{metricHistory.excludedLowTrust === 1 ? '' : 's'}; bars remain visible for review.
+              </Text>
+            ) : null}
           </Card>
 
           <SectionLabel>Last 7 days</SectionLabel>
@@ -344,6 +352,8 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
           <Card>
             {series.length >= 2 && baseline != null ? (
               <BaselineChart values={series} baseline={baseline} sd={stdev(series) || 1} color={tint} height={150} />
+            ) : rawSeries.length >= 2 && metricHistory.excludedLowTrust > 0 ? (
+              <Empty text="Trusted baseline needs more high- or medium-confidence sleep nights." />
             ) : (
               <Empty text="Not enough data yet for a baseline trend." />
             )}
@@ -456,6 +466,51 @@ function renderQualityCard(input: {
   return null;
 }
 
+function metricUsesSleepTrust(key: MetricKey): boolean {
+  return (
+    key === 'recovery' ||
+    key === 'sleep_performance' ||
+    key === 'sleep_need' ||
+    key === 'sleep_debt' ||
+    key === 'sleep_efficiency' ||
+    key === 'energy_reserve' ||
+    key === 'hrv' ||
+    key === 'rhr' ||
+    key === 'respiratory' ||
+    key === 'spo2' ||
+    key === 'skin_temp'
+  );
+}
+
+function trustedMetricRows(
+  rows: DailyMetricRow[],
+  key: MetricKey,
+  def: Def,
+): { trustedValues: number[]; rawValues: number[]; excludedLowTrust: number } {
+  const rawValues: number[] = [];
+  const trustedValues: number[] = [];
+  let excludedLowTrust = 0;
+  const trustAware = metricUsesSleepTrust(key);
+
+  for (const row of rows) {
+    const value = def.pick(row);
+    if (value == null || !Number.isFinite(value)) continue;
+    rawValues.push(value);
+    if (!trustAware) {
+      trustedValues.push(value);
+      continue;
+    }
+    const weight = sleepTrustWeight(row);
+    if (weight <= 0) {
+      excludedLowTrust += 1;
+      continue;
+    }
+    trustedValues.push(value);
+  }
+
+  return { trustedValues, rawValues, excludedLowTrust };
+}
+
 function rawVitalSleepBlocked(detail: DailyMetricRow['sleepDetail']): boolean {
   if (!detail) return true;
   if (sleepTrustTier(detail) === 'low') return true;
@@ -544,6 +599,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
   k: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
   v: { color: colors.text, fontSize: 15, fontFamily: fonts.bold },
+  trustNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 8, fontFamily: fonts.text },
   blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   statRowTight: { marginTop: 14 },
