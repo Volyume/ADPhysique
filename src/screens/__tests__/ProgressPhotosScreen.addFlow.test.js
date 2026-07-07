@@ -187,7 +187,7 @@ async function openImportScanDateStep(tree) {
 async function importFrontScanPhoto(tree) {
   await openImportScanDateStep(tree);
   await flush();
-  await pressLabel(tree, 'Import photos for this scan');
+  await pressLabel(tree, 'Import photos for this photo set');
 }
 
 async function approveScanReview(tree) {
@@ -222,19 +222,19 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(hasPressableLabel(tree, 'Choose from photos')).toBe(false);
 });
 
-test('importing photos asks for the scan date before touching the library', async () => {
+test('importing photos asks for the photo set date before touching the library', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await openImportScanDateStep(tree);
   await flush();
-  const importAction = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Import photos for this scan');
+  const importAction = tree.root.findAll((n) => typeof n.type === 'string' && n.props?.accessibilityLabel === 'Import photos for this photo set');
   expect(importAction.length).toBeGreaterThan(0);
   expect(createProgressScanSession).not.toHaveBeenCalled();
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
 });
 
-test('confirming the scan date imports the first photo into the scan pipeline', async () => {
+test('confirming the photo set date imports the first photo into the scan pipeline', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await importFrontScanPhoto(tree);
@@ -291,7 +291,7 @@ test('camera scan captures show the photo preview before analysis runs', async (
   expect(analyseProgressScanPhoto).toHaveBeenCalledWith({ uri: 'file:///photos/1700000000000.jpg', pose: 'front' });
 });
 
-test('setting the imported scan date to the past indexes the set under that day', async () => {
+test('setting the imported photo set date to the past indexes the set under that day', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await openImportScanDateStep(tree);
@@ -299,7 +299,7 @@ test('setting the imported scan date to the past indexes the set under that day'
 
   const field = tree.root.findAll(
     (n) => typeof n.props?.accessibilityLabel === 'string'
-      && n.props.accessibilityLabel.startsWith('Change scan date')
+      && n.props.accessibilityLabel.startsWith('Change photo set date')
       && typeof n.props.onPress === 'function',
   )[0];
   await act(async () => { field.props.onPress(); });
@@ -310,7 +310,7 @@ test('setting the imported scan date to the past indexes the set under that day'
   const pastDay = new Date(wk.getFullYear(), wk.getMonth(), wk.getDate()).getTime();
   await act(async () => { dtp.props.onChange({ type: 'set' }, new Date(pastDay)); });
 
-  await pressLabel(tree, 'Import photos for this scan');
+  await pressLabel(tree, 'Import photos for this photo set');
   await flush();
 
   expect(createProgressScanSession).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ capturedAt: pastDay }));
@@ -322,7 +322,7 @@ test('setting the imported scan date to the past indexes the set under that day'
   }));
 });
 
-test('a pro-to-free flip with the scan date sheet open blocks the import', async () => {
+test('a pro-to-free flip with the photo set date sheet open blocks the import', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await openImportScanDateStep(tree);
@@ -331,7 +331,7 @@ test('a pro-to-free flip with the scan date sheet open blocks the import', async
   // Tier lapses while the sheet is open.
   useAppStore.getState = () => ({ tier: 'free', user: { id: USER_ID } });
 
-  await pressLabel(tree, 'Import photos for this scan');
+  await pressLabel(tree, 'Import photos for this photo set');
   await flush();
 
   expect(createProgressScanSession).not.toHaveBeenCalled();
