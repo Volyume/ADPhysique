@@ -23,7 +23,10 @@ export const MAX_STEP_TICKS_PER_STEP = 30;
 
 const MAX_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_RAW_DELTA = 512;
-const MAX_STEPS_PER_SECOND = 4.2; // 252 spm ceiling after calibration.
+// WHOOP history batches counter increments; the July capture has legitimate
+// one-second jumps of 6-7 units during a known short walk. Keep a ceiling high
+// enough for those batches while still rejecting wild counter corruption.
+const MAX_STEPS_PER_SECOND = 8;
 
 export function estimateBandStepsFromCounters(
   rows: BandStepCounterRow[],

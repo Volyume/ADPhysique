@@ -17,9 +17,10 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
-import { formatClock, formatDuration } from '../util/time';
+import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
+import { napCreditMin, parseNapDetail } from '../metrics/naps';
 
 const BASE_NEED_MIN = 480;
 
@@ -41,6 +42,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const historySync = useStoreSelector(appStore, (s) => s.historySync);
   const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const [nightHr, setNightHr] = useState<number[]>([]);
@@ -54,6 +56,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const week = recentDays.slice(0, 7).reverse();
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
   const effectiveSync = historySync ?? lastHistorySync;
+  const todayStart = startOfDayMs(Date.now());
+  const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
@@ -189,6 +193,31 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         <View style={styles.divider} />
         <NeedRow label="Sleep needed" value={formatDuration(neededMin)} strong />
         {sleep ? <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong /> : null}
+      </Card>
+
+      <SectionLabel>Naps</SectionLabel>
+      <Card style={{ paddingVertical: 2 }}>
+        {naps.length ? (
+          naps.map((nap, i) => {
+            const detail = parseNapDetail(nap.notes);
+            const credit = napCreditMin(nap);
+            const label = `${formatClock(nap.startTs)} Nap`;
+            const source = detail?.autoDetected ? 'auto' : 'timer';
+            return (
+              <NavRow
+                key={nap.id}
+                label={label}
+                icon="cafe"
+                iconColor={colors.recoveryYellow}
+                value={`${formatDuration(credit)} / ${source}`}
+                onPress={() => nav.navigate({ name: 'activity', id: nap.id })}
+                last={i === naps.length - 1}
+              />
+            );
+          })
+        ) : (
+          <Empty text="No naps logged or auto-detected today." />
+        )}
       </Card>
 
       {/* Sleep Stress */}

@@ -7,10 +7,12 @@ const PACKET_METADATA = 49;
 const PACKET_PUFFIN_METADATA = 56;
 const MIN_PLAUSIBLE_UNIX = 1_700_000_000;
 const FUTURE_MARGIN_SEC = 86_400;
-const WHOOP5_STEP_TICKS_PER_STEP = 8;
+// Keep this aligned with src/metrics/bandSteps.ts. The July capture showed the
+// WHOOP 5 history counter ending near the user's real ~200-step walk.
+const WHOOP5_STEP_TICKS_PER_STEP = 1;
 const MAX_STEP_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_STEP_RAW_DELTA = 512;
-const MAX_STEP_RATE_PER_SEC = 4.2;
+const MAX_STEP_RATE_PER_SEC = 8;
 
 const path = process.argv[2];
 if (!path) {
