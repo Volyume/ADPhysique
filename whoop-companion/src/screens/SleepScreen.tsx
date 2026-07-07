@@ -83,6 +83,13 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
         {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
+        {capture ? (
+          <View style={styles.ringQuality}>
+            <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
+            <Stat label="Coverage" value={`${capture.coveragePct}%`} color={capture.coveragePct >= 80 ? colors.recoveryGreen : capture.coveragePct >= 60 ? colors.recoveryYellow : colors.recoveryRed} />
+            <Stat label="Signal" value={capture.signalMin} unit="min" />
+          </View>
+        ) : null}
       </Card>
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
@@ -266,7 +273,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       </Card>
 
       {/* Sleep Consistency */}
-      <SectionLabel>Sleep consistency</SectionLabel>
+      <SectionLabel>Sleep schedule</SectionLabel>
       <Card>
         {consistency ? (
           <>
@@ -302,7 +309,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
 
       {regularity ? (
         <>
-          <SectionLabel>Schedule regularity</SectionLabel>
+          <SectionLabel>Long-term regularity</SectionLabel>
           <Card>
             <ScheduleRow label="14-night regularity" value={`${regularity.score}%`} detail={`${regularity.nights} nights`} />
             <ScheduleRow label="Bedtime spread" value={formatDuration(regularity.bedSdMin)} detail="lower is better" />
@@ -505,6 +512,7 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
 
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
