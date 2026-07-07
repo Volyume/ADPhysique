@@ -63,6 +63,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
+  const scoreDrivers = useMemo(
+    () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed, stress }),
+    [perf, sleepScore, sleep, capture, sleepNeed, stress],
+  );
   const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
   const tonightFocus = sleepFocus({
     sleep,
@@ -175,6 +179,17 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           <Empty text="Quality factors appear after a scored sleep." />
         )}
       </Card>
+
+      {scoreDrivers.length ? (
+        <>
+          <SectionLabel>Why it scored this way</SectionLabel>
+          <Card>
+            {scoreDrivers.map((d, i) => (
+              <DriverRow key={`${d.tone}-${d.label}`} driver={d} last={i === scoreDrivers.length - 1} />
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       {/* Quick actions */}
       <Card style={{ paddingVertical: 2 }}>
@@ -652,6 +667,151 @@ function LegendDot({ band }: { band: Band }) {
   );
 }
 
+type SleepDriver = {
+  tone: 'limit' | 'help' | 'data';
+  label: string;
+  value: string;
+  detail: string;
+  color: string;
+};
+
+function sleepScoreDrivers(input: {
+  perf: ReturnType<typeof appStore.getState>['sleepPerformance'];
+  sleepScore: ReturnType<typeof appStore.getState>['sleepScore'];
+  sleep: ReturnType<typeof appStore.getState>['lastSleep'];
+  capture: ReturnType<typeof appStore.getState>['sleepCapture'];
+  sleepNeed: ReturnType<typeof appStore.getState>['sleepNeed'];
+  stress: ReturnType<typeof appStore.getState>['sleepStress'];
+}): SleepDriver[] {
+  const drivers: SleepDriver[] = [];
+  const capture = input.capture;
+
+  if (capture && (capture.coveragePct < 80 || capture.signalMin < 240 || input.perf?.cappedByConfidence)) {
+    drivers.push({
+      tone: 'data',
+      label: 'Capture confidence',
+      value: `${capture.coveragePct}%`,
+      detail:
+        capture.coveragePct < 60 || capture.signalMin < 150
+          ? 'Partial overnight history is the biggest uncertainty in this result.'
+          : 'Usable signal, but more synced minutes can still refine sleep and recovery.',
+      color: capture.coveragePct < 60 || capture.signalMin < 150 ? colors.recoveryRed : colors.recoveryYellow,
+    });
+  }
+
+  const perfContributors =
+    input.perf?.contributors
+      .filter((c) => c.value != null)
+      .map((c) => ({ label: c.label, value: c.value as number, inverse: c.inverse }))
+      .sort((a, b) => (a.inverse ? b.value - a.value : a.value - b.value)) ?? [];
+  const weakestPerf = perfContributors[0];
+  if (weakestPerf) {
+    const limiting = weakestPerf.inverse ? weakestPerf.value >= 15 : weakestPerf.value < 80;
+    if (limiting) {
+      drivers.push({
+        tone: 'limit',
+        label: weakestPerf.label,
+        value: `${Math.round(weakestPerf.value)}%`,
+        detail: performanceDriverDetail(weakestPerf.label, weakestPerf.value, weakestPerf.inverse),
+        color: colors.recoveryYellow,
+      });
+    }
+  }
+
+  const qualityContributors =
+    input.sleepScore?.contributors.slice().sort((a, b) => a.score - b.score) ?? [];
+  const weakestQuality = qualityContributors[0];
+  if (weakestQuality && weakestQuality.score < 70) {
+    drivers.push({
+      tone: 'limit',
+      label: weakestQuality.label,
+      value: `${weakestQuality.score}`,
+      detail: weakestQuality.detail,
+      color: sleepQualityColor(weakestQuality.score),
+    });
+  }
+
+  const debtMin = input.sleepNeed?.debtMin ?? 0;
+  if (debtMin >= 45) {
+    drivers.push({
+      tone: 'limit',
+      label: 'Sleep debt',
+      value: formatDuration(debtMin),
+      detail: 'Debt raises tonight’s need, so the same hours score lower until the deficit comes down.',
+      color: debtMin >= 90 ? colors.recoveryRed : colors.recoveryYellow,
+    });
+  }
+
+  if ((input.stress?.highPct ?? 0) >= 15) {
+    drivers.push({
+      tone: 'limit',
+      label: 'High sleep stress',
+      value: `${input.stress?.highPct ?? 0}%`,
+      detail: 'More high-stress sleep lowers the performance blend even when duration is solid.',
+      color: colors.recoveryYellow,
+    });
+  }
+
+  const strongestPerf = [...perfContributors].reverse().find((c) => (c.inverse ? c.value <= 8 : c.value >= 85));
+  if (strongestPerf) {
+    drivers.push({
+      tone: 'help',
+      label: strongestPerf.label,
+      value: `${Math.round(strongestPerf.value)}%`,
+      detail: strongestPerf.inverse
+        ? 'Low stress was a positive contributor.'
+        : 'This contributor supported the sleep result.',
+      color: colors.recoveryGreen,
+    });
+  } else if (input.sleep && input.sleep.restorativeMin >= 120) {
+    drivers.push({
+      tone: 'help',
+      label: 'Restorative sleep',
+      value: formatDuration(input.sleep.restorativeMin),
+      detail: 'Deep and REM sleep gave the night a stronger recovery foundation.',
+      color: colors.sleepTeal,
+    });
+  }
+
+  return uniqueDrivers(drivers).slice(0, 4);
+}
+
+function performanceDriverDetail(label: string, value: number, inverse: boolean): string {
+  if (inverse) return `${Math.round(value)}% of the night was in this limiting band.`;
+  if (label === 'Hours vs Needed') return 'Duration was short against the current need estimate.';
+  if (label === 'Sleep Efficiency') return 'More time awake inside the window pulled the score down.';
+  if (label === 'Sleep Consistency') return 'Irregular bed and wake timing is still weighing on the blend.';
+  return 'This contributor was below the current target band.';
+}
+
+function uniqueDrivers(drivers: SleepDriver[]): SleepDriver[] {
+  const seen = new Set<string>();
+  return drivers.filter((d) => {
+    const key = d.label;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function DriverRow({ driver, last }: { driver: SleepDriver; last?: boolean }) {
+  const symbol = driver.tone === 'help' ? '+' : driver.tone === 'data' ? '!' : '-';
+  return (
+    <View style={[styles.driverRow, last && styles.driverRowLast]}>
+      <View style={[styles.driverBadge, { backgroundColor: driver.color }]}>
+        <Text style={styles.driverBadgeText}>{symbol}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.driverHead}>
+          <Text style={styles.driverLabel}>{driver.label}</Text>
+          <Text style={[styles.driverValue, { color: driver.color }]}>{driver.value}</Text>
+        </View>
+        <Text style={styles.driverDetail}>{driver.detail}</Text>
+      </View>
+    </View>
+  );
+}
+
 function StageBar({ name, color, minutes, total, typicalPct }: { name: string; color: string; minutes: number; total: number; typicalPct: number | null }) {
   const pct = Math.round((minutes / total) * 100);
   return (
@@ -815,6 +975,14 @@ const styles = StyleSheet.create({
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   scoreRowValue: { fontSize: 18, fontFamily: fonts.bold },
+  driverRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  driverRowLast: { borderBottomWidth: 0 },
+  driverBadge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  driverBadgeText: { color: '#000', fontSize: 16, fontFamily: fonts.black },
+  driverHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  driverLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold, flex: 1 },
+  driverValue: { fontSize: 14, fontFamily: fonts.bold },
+  driverDetail: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
   scheduleRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   scheduleRowLast: { borderBottomWidth: 0 },
   scheduleLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
