@@ -22,6 +22,13 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);
   });
 
+  test('keeps optional post-workout ratings collapsed until the user opens them', () => {
+    expect(SOURCE).toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(false);');
+    expect(SOURCE).toContain('Rate this session');
+    expect(SOURCE).not.toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);');
+    expect(SOURCE).not.toContain('Add session feedback');
+  });
+
   test('does not delay completed workout controls behind reveal animations', () => {
     const revealSource = SOURCE.slice(
       SOURCE.indexOf('function RevealSection'),
