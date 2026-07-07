@@ -115,6 +115,17 @@ function roundedScore(value) {
   return Number.isFinite(n) ? Math.round(n) : null;
 }
 
+function latestScanScoreLabel({ assessment = null, latestScan = null, suppressed = false, hideExact = false } = {}) {
+  if (suppressed) return 'Hidden';
+  const score = roundedScore(assessment?.visualLeannessScore);
+  if (score == null) return latestScan ? 'Saved' : 'No score yet';
+  if (hideExact) return assessment?.leannessBandLabel || 'Saved';
+  return [
+    assessment?.leannessBandLabel || null,
+    `index ${score}`,
+  ].filter(Boolean).join(' - ');
+}
+
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
 export default function ProgressPhotosScreen({ navigation }) {
@@ -1008,16 +1019,12 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
-  const scanStatusLabel = suppressed
-    ? 'Hidden'
-    : latestAssessment?.visualLeannessScore != null
-      ? (hideExactScans
-        ? (latestAssessment.leannessBandLabel || 'Saved')
-        : [
-          latestAssessment.leannessBandLabel || null,
-          latestAssessment.progressSignal === 'baseline' ? 'baseline' : `Score ${roundedScore(latestAssessment.visualLeannessScore)}`,
-        ].filter(Boolean).join(' '))
-      : (latestScan ? 'Saved' : 'No score yet');
+  const scanStatusLabel = latestScanScoreLabel({
+    assessment: latestAssessment,
+    latestScan,
+    suppressed,
+    hideExact: hideExactScans,
+  });
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
@@ -1036,7 +1043,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
     const roundedScanScore = roundedScore(scanScore);
     const scoreText = roundedScanScore != null
-      ? (suppressed || hideExactScans ? 'Score hidden' : `Score ${roundedScanScore}`)
+      ? (suppressed || hideExactScans ? 'Index hidden' : `Index ${roundedScanScore}`)
       : null;
     const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];

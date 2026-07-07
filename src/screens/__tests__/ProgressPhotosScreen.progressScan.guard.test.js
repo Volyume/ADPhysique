@@ -11,6 +11,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
+    expect(SCREEN).toMatch(/function latestScanScoreLabel\(\{ assessment = null, latestScan = null, suppressed = false, hideExact = false \} = \{\}\)/);
+    expect(SCREEN).toMatch(/`index \$\{score\}`/);
+    expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
+    expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(SCAN_HISTORY).toMatch(/Volyume Score results/);
     expect(SCAN_HISTORY).toMatch(/Score for this set/);
     expect(SCAN_HISTORY).toMatch(/front\/back outline signals plus scan quality/);

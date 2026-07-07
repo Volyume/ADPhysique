@@ -81,6 +81,20 @@ function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
   return scanAt >= bodyFatAt;
 }
 
+function physiqueScoreTileValue(scan) {
+  const score = Number(scan?.visualLeannessScore);
+  const scoreLabel = Number.isFinite(score) ? `index ${Math.round(score)}` : null;
+  return [
+    scan?.leannessBandLabel || null,
+    scoreLabel,
+  ].filter(Boolean).join(' - ') || 'Scored';
+}
+
+function physiqueScoreTileSub(scan) {
+  const signal = scan?.progressSignalLabel || (scan?.progressSignal === 'baseline' ? 'Baseline scan' : null);
+  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private progress index, not body fat.`;
+}
+
 const COACHING_PHASE_LABELS = {
   mild_cut: 'Lose fat (cut)',
   mild_bulk: 'Build muscle (lean gain)',
@@ -320,11 +334,8 @@ export default function AthleteProfileScreen({ navigation }) {
   });
   const physiqueTile = showPhysiqueScore ? {
     label: 'Volyume Score',
-    value: [
-      summary.scan?.leannessBandLabel || null,
-      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `index ${Math.round(summary.scan.visualLeannessScore)}`,
-    ].filter(Boolean).join(' - '),
-    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Private progress index, not body fat.`,
+    value: physiqueScoreTileValue(summary.scan),
+    sub: physiqueScoreTileSub(summary.scan),
   } : summary.bodyFatLoggedAt ? {
     label: 'Body fat',
     value: bodyFatText,
