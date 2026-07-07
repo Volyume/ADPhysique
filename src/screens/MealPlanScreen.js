@@ -564,7 +564,7 @@ export default function MealPlanScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Day meal plan' : 'Weekly meal plan'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
@@ -625,7 +625,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={styles.planOptionDesc}>
               Build meals for this diary date only. Best when you want today organised quickly.
             </Text>
-            <Button title="Plan this day" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Build this day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -636,7 +636,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={styles.planOptionDesc}>
               Build seven dated days and a shopping list. Existing logged food is left alone.
             </Text>
-            <Button title="Plan the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Build the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </ScrollView>
       ) : (

@@ -1287,7 +1287,7 @@ export default function DiaryScreen({ navigation }) {
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Build meals</Text>
-                    <Text style={styles.buildPlanSub}>Create meals from your targets for this date or the week. Nothing is logged until you add it.</Text>
+                    <Text style={styles.buildPlanSub}>Build meals from your targets for this date or the week. Nothing is logged until you add it.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
