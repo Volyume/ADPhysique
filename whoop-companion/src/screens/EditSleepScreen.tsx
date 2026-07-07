@@ -30,11 +30,18 @@ export function EditSleepScreen({ nav }: { nav: Nav }) {
   const [bed, setBed] = useState(bedInit);
   const [wake, setWake] = useState(wakeInit);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const save = () => {
     const bedEvening = bed.h >= 12;
     const startTs = tsFor(bed.h, bed.m, bedEvening);
     const endTs = tsFor(wake.h, wake.m, false);
+    const durationMin = Math.round((endTs - startTs) / 60000);
+    if (durationMin < 20 || durationMin > 18 * 60) {
+      setError('Choose a sleep window between 20 minutes and 18 hours, with wake time after bed time.');
+      return;
+    }
+    setError(null);
     void appStore.setManualSleep(startTs, endTs);
     setSaved(true);
     setTimeout(() => nav.back(), 700);
@@ -60,7 +67,8 @@ export function EditSleepScreen({ nav }: { nav: Nav }) {
         <TimePicker value={wake} onChange={setWake} />
       </Card>
 
-      <PrimaryButton title={saved ? 'Saved — re-detecting ✓' : 'Save & re-detect'} onPress={save} />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <PrimaryButton title={saved ? 'Saved - re-detecting' : 'Save & re-detect'} onPress={save} />
       <SecondaryButton title="Clear manual override (auto-detect)" onPress={() => { void appStore.clearManualSleep(); nav.back(); }} />
     </Screen>
   );
@@ -101,4 +109,5 @@ const styles = StyleSheet.create({
   stepperLabel: { color: colors.textTertiary, fontSize: 11, marginBottom: 6, fontFamily: fonts.text },
   stepperRow: { flexDirection: 'row', gap: 8 },
   stepBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  error: { color: colors.danger, fontSize: 13, lineHeight: 18, marginBottom: 10, fontFamily: fonts.textSemibold },
 });
