@@ -53,6 +53,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
       : today?.sleepPerf != null
         ? clampPct(Math.round(today.sleepPerf * 100)) / 100
         : null;
+  const todaySleepTier = sleepTrustTier(today?.sleepDetail);
+  const sleepNeedsReview = todaySleepTier === 'low';
 
   const hm = useMemo(() => appStore.healthMonitor(), [today, recentDays]);
 
@@ -98,7 +100,9 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           ? 'Waiting for sync'
           : 'Connect strap';
   const sleepDialSub =
-    sleepPerformance?.cappedByConfidence && sleepPerformance.confidenceCapPct != null
+    sleepNeedsReview
+      ? 'low trust'
+      : sleepPerformance?.cappedByConfidence && sleepPerformance.confidenceCapPct != null
       ? `capped ${sleepPerformance.confidenceCapPct}%`
       : confidence
         ? `${sleepConfidenceLabel(confidence).toLowerCase()} confidence`
@@ -162,9 +166,9 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             <Dial
               label="Sleep"
               sub={sleepDialSub}
-              main={sleepPerf != null ? `${Math.round(sleepPerf * 100)}%` : '—'}
-              color={colors.sleepTeal}
-              fraction={sleepPerf ?? 0}
+              main={sleepNeedsReview ? 'Review' : sleepPerf != null ? `${Math.round(sleepPerf * 100)}%` : '—'}
+              color={sleepNeedsReview ? colors.recoveryRed : colors.sleepTeal}
+              fraction={sleepNeedsReview ? 0 : sleepPerf ?? 0}
               onPress={() => nav.navigate({ name: 'sleep' })}
             />
             <Dial

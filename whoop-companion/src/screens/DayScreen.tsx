@@ -30,6 +30,8 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
     : metric?.sleepPerf != null
       ? clampPct(Math.round(metric.sleepPerf * 100))
       : null;
+  const sleepTier = sleepTrustTier(metric?.sleepDetail);
+  const sleepNeedsReview = sleepTier === 'low';
   const sleepStart = metric?.sleepStart ?? null;
   const sleepEnd = metric?.sleepEnd ?? null;
   const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);
@@ -74,9 +76,9 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
             <View style={styles.ringRow}>
               <Dial
                 label="Sleep"
-                main={sleepPerf != null ? `${sleepPerf}%` : '-'}
-                fraction={sleepPerf != null ? sleepPerf / 100 : 0}
-                color={colors.sleepTeal}
+                main={sleepNeedsReview ? 'Review' : sleepPerf != null ? `${sleepPerf}%` : '-'}
+                fraction={sleepNeedsReview ? 0 : sleepPerf != null ? sleepPerf / 100 : 0}
+                color={sleepNeedsReview ? colors.recoveryRed : colors.sleepTeal}
                 size={92}
               />
               <Dial
@@ -249,7 +251,7 @@ export function DayRail({
             <Text style={[styles.dayNum, active && styles.dayTextActive]}>{new Date(`${d.day}T00:00:00`).getDate()}</Text>
             <View style={styles.dayDots}>
               <View style={[styles.dot, { backgroundColor: d.recovery != null ? recoveryColor(d.recovery) : colors.surface }]} />
-              <View style={[styles.dot, { backgroundColor: d.sleepMin != null ? colors.sleepTeal : colors.surface }]} />
+              <View style={[styles.dot, { backgroundColor: sleepDotColor(d) }]} />
               <View style={[styles.dot, { backgroundColor: d.strain != null ? colors.strainBlue : colors.surface }]} />
             </View>
           </TouchableOpacity>
@@ -272,6 +274,14 @@ function StageRow({ label, minutes, total, color }: { label: string; minutes: nu
       </View>
     </View>
   );
+}
+
+function sleepDotColor(day: DailyMetricRow): string {
+  if (day.sleepMin == null) return colors.surface;
+  const tier = sleepTrustTier(day.sleepDetail);
+  if (tier === 'low') return colors.recoveryRed;
+  if (tier === 'medium') return colors.recoveryYellow;
+  return colors.sleepTeal;
 }
 
 function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
