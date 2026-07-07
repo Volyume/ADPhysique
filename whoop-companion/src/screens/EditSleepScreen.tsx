@@ -9,6 +9,7 @@ import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { dayKey, formatDuration, startOfDayMs } from '../util/time';
 import { sleepConfidenceColor, sleepCoverageColor } from '../ui/sleepTrust';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -191,11 +192,14 @@ function sleepWindowPreview(input: {
       tint: `${colors.strainBlue}16`,
     };
   }
-  if (input.confidence === 'low' || (input.coveragePct ?? 0) < 60 || (input.signalMin ?? 0) < 150) {
+  const needsMoreSync = sleepNeedsMoreSync({ coveragePct: input.coveragePct, signalMin: input.signalMin });
+  if (input.confidence === 'low' || needsMoreSync) {
     return {
       badge: 'SYNC',
-      title: 'Data confidence is still limited',
-      body: 'Adjusting the window can fix timing, but more synced history is still needed before trusting recovery.',
+      title: needsMoreSync ? 'More synced history is needed' : 'Data confidence is still limited',
+      body: needsMoreSync
+        ? 'Adjusting the window can fix timing, but recovery should stay cautious until overnight history backfills.'
+        : 'Adjusting the window can fix timing. Compare it with how the night felt before trusting recovery.',
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,
     };
