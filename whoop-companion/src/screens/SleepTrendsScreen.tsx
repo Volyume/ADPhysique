@@ -222,7 +222,16 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     const step = Math.max(1, Math.ceil(period.length / 30));
     const bars = period
       .filter((_, i) => i % step === 0)
-      .map((d) => ({ value: metric.pick(d), day: d.day }));
+      .map((d) => {
+        const value = metric.pick(d);
+        const lowConfidence = d.sleepDetail?.confidence === 'low';
+        return {
+          value,
+          day: d.day,
+          color: value != null && metric.band ? bandColors[metric.band(value)] : colors.sleepTeal,
+          opacity: metric.key === 'performance' && lowConfidence ? 0.45 : 0.88,
+        };
+      });
     return { avg, priorAvg, deltaPct, breakdown, quality, bars };
   }, [history, days, metric]);
 
@@ -286,7 +295,12 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           </Text>
         ) : null}
         {view.bars.some((b) => b.value != null) ? (
-          <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} onSelectDay={(day) => nav.navigate({ name: 'day', day })} />
+          <>
+            <TrendChart bars={view.bars} avg={view.avg} hours={metric.hours} onSelectDay={(day) => nav.navigate({ name: 'day', day })} />
+            {metric.key === 'performance' ? (
+              <Text style={styles.chartHint}>Dim bars are low-confidence nights; tap any bar to review the day.</Text>
+            ) : null}
+          </>
         ) : (
           <Empty text="No data for this metric in the selected range yet." />
         )}
@@ -339,7 +353,7 @@ function TrendChart({
   hours,
   onSelectDay,
 }: {
-  bars: Array<{ value: number | null; day: string }>;
+  bars: Array<{ value: number | null; day: string; color: string; opacity: number }>;
   avg: number | null;
   hours: boolean;
   onSelectDay: (day: string) => void;
@@ -368,8 +382,8 @@ function TrendChart({
               width={bw}
               height={Math.max(1, h)}
               rx={2}
-              fill={colors.sleepTeal}
-              opacity={0.85}
+              fill={b.color}
+              opacity={b.opacity}
               onPress={() => onSelectDay(b.day)}
             />
             {showLabel ? (
@@ -408,6 +422,7 @@ const styles = StyleSheet.create({
   delta: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   deltaText: { fontSize: 12, fontFamily: fonts.textBold },
   sentence: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 10, marginBottom: 6, fontFamily: fonts.text },
+  chartHint: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 4, fontFamily: fonts.text },
   qualityGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   qualityStat: { flex: 1, alignItems: 'center' },
   qualityValue: { fontSize: 20, fontFamily: fonts.black },
