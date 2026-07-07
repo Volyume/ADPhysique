@@ -11,13 +11,13 @@ export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 14 * 86400000;
 
 const REQUIRED_SCORE_RATIO_KEYS = ['waistToShoulder', 'waistToHip', 'waistToHeight', 'bodyAreaRatio'];
 const FINAL_SCAN_QUALITY_GATES = {
-  lighting: 0.3,
-  blur: 0.3,
-  framing: 0.32,
-  pose: 0.28,
-  segmentation: 0.38,
-  separation: 0.28,
-  tiltDegrees: 16,
+  lighting: 0.25,
+  blur: 0.18,
+  framing: 0.25,
+  pose: 0.22,
+  segmentation: 0.30,
+  separation: 0.20,
+  tiltDegrees: 20,
 };
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [

@@ -275,6 +275,26 @@ describe('Progress Scan vision signal extraction', () => {
     expect(retakeCopyForVisionResult(result)).toBeNull();
   });
 
+  test('moderate phone-photo softness lowers confidence without forcing a retake when the model measures a silhouette', () => {
+    const result = measureMaskSignals(syntheticPersonMask({
+      foregroundProbability: 0.38,
+      backgroundProbability: 0.18,
+    }), {
+      lightingScore: 0.42,
+      blurScore: 0.22,
+      pose: 'front',
+      engine: 'fast_tflite',
+    });
+
+    expect(result.modelBacked).toBe(true);
+    expect(result.quality.segmentationConfidence).toBeGreaterThan(0.30);
+    expect(result.quality.backgroundSeparation).toBeGreaterThan(0.20);
+    expect(result.abstentionReasons).not.toContain('too_blurry');
+    expect(result.abstentionReasons).not.toContain('clothing_or_background_uncertain');
+    expect(result.needsRetake).toBe(false);
+    expect(retakeCopyForVisionResult(result)).toBeNull();
+  });
+
   test('adaptive threshold does not turn flat uncertain masks into a scored silhouette', () => {
     const flat = new Float32Array(256 * 256).fill(0.22);
     const result = measureMaskSignals(flat, {
