@@ -19,6 +19,13 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
   return colors.recoveryRed;
 }
 
+function readinessSleepNeedsSync(
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+): boolean {
+  if (!sleepDetail) return true;
+  return (sleepDetail.coveragePct ?? 100) < 60 || (sleepDetail.signalMin ?? 999) < 150;
+}
+
 export function ReadinessScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -26,6 +33,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
   const sleepStateConflict = sleepStateWakeConflict(sleepDetail);
   const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
   const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
+  const sleepNeedsSync = readinessSleepNeedsSync(sleepDetail);
   const qualityAction =
     !readiness
       ? null
@@ -38,7 +46,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
           }
       : readiness.missingInputs.includes('sleep performance') ||
           readiness.missingInputs.includes('recovery') ||
-          (sleepDetail?.coveragePct ?? 100) < 60
+          sleepNeedsSync
         ? {
             label: 'Sync overnight data',
             value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'needs sync',
@@ -349,17 +357,20 @@ function readinessCall(
     };
   }
 
-  if (readiness.confidence === 'low' || (sleepDetail?.coveragePct ?? 100) < 60) {
+  if (readiness.confidence === 'low' || readinessSleepNeedsSync(sleepDetail)) {
+    const needsSync = readinessSleepNeedsSync(sleepDetail);
     return {
       badge: 'DATA',
-      title: 'Trust the signal before the session',
-      body: 'Readiness is currently limited by sleep data quality. Finish syncing or review the sleep window before choosing a hard workout.',
+      title: needsSync ? 'Trust the signal before the session' : 'Review sleep before the session',
+      body: needsSync
+        ? 'Readiness is currently limited by sleep data quality. Finish syncing before choosing a hard workout.'
+        : 'Readiness is currently limited by low sleep confidence despite usable signal. Review the sleep window before choosing a hard workout.',
       targetStrain: 'hold',
-      actionLabel: 'Fix readiness confidence',
+      actionLabel: needsSync ? 'Sync overnight data' : 'Review sleep window',
       actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'needs sync',
-      icon: (sleepDetail?.coveragePct ?? 100) < 60 ? 'sync' : 'create',
+      icon: needsSync ? 'sync' : 'create',
       color: colors.strainBlue,
-      route: (sleepDetail?.coveragePct ?? 100) < 60 ? { name: 'device' } : { name: 'editSleep' },
+      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
     };
   }
 

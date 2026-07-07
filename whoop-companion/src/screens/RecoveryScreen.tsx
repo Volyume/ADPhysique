@@ -42,6 +42,11 @@ function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null
   return null;
 }
 
+function recoverySleepNeedsSync(sleepDetail: DailyMetricRow['sleepDetail'] | null): boolean {
+  if (!sleepDetail) return true;
+  return (sleepDetail.coveragePct ?? 100) < 60 || (sleepDetail.signalMin ?? 999) < 150;
+}
+
 function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
   if (!sleepDetail) return null;
   if (sleepStateWakeConflict(sleepDetail)) return 25;
@@ -447,7 +452,7 @@ function recoveryDriverInsight(
     };
   }
   if (confidenceCap != null) {
-    const needsMoreSync = confidenceCap <= 66 || (sleepDetail?.coveragePct ?? 100) < 60;
+    const needsMoreSync = recoverySleepNeedsSync(sleepDetail);
     return {
       badge: 'DATA',
       title: confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',
