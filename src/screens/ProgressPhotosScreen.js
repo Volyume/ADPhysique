@@ -357,7 +357,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     } catch (e) {
       logError('ProgressPhotos.scanLibraryPose', e, { userId, pose });
       if (flow?.scanId) await abandonLapsedScanFlow(flow, savedPhoto?.name, savedPhoto);
-      toast.show('Could not add that scan photo. Please try again.', { variant: 'error' });
+      toast.show('Could not add that photo. Please try again.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -566,7 +566,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       }
     } catch (e) {
       logError('ProgressPhotos.startScan', e, { userId });
-      toast.show('Could not start the scan. Please try again.', { variant: 'error' });
+      toast.show('Could not start that photo set. Please try again.', { variant: 'error' });
     }
   }
 
@@ -610,7 +610,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
-      toast.show('The scan was saved, but analysis could not finish.', { variant: 'warning' });
+      toast.show('The photo set was saved, but the Physique Score could not finish.', { variant: 'warning' });
     }
   }
 
@@ -632,8 +632,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     if (pose === 'back') {
-      appAlert('Back saved', 'A side photo is optional. It can help line up future scans, but you can finish now.', [
-        { text: 'Finish scan', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
+      appAlert('Back saved', 'A side photo is optional. It can help line up future comparisons, but you can finish now.', [
+        { text: 'Finish photo set', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
         {
           text: flow?.mode === 'library' ? 'Import side' : 'Take side',
           onPress: () => {
@@ -737,7 +737,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     } catch (e) {
       logError('ProgressPhotos.discardScan', e, { userId, scanId });
       setScanFlow(flow);
-      toast.show('Could not remove that draft scan. Please try again.', { variant: 'error' });
+      toast.show('Could not remove that draft photo set. Please try again.', { variant: 'error' });
     }
   }
 
@@ -756,7 +756,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             toast.show('Photo set deleted.', { variant: 'success' });
           } catch (e) {
             logError('ProgressPhotos.deleteScan', e, { userId, scanId: scan.id });
-            toast.show('Could not delete that scan. Please try again.', { variant: 'error' });
+            toast.show('Could not delete that photo set. Please try again.', { variant: 'error' });
           }
         },
       },
@@ -801,7 +801,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             onPress: () => {
               saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
                 logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
-                toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
+                toast.show('Could not save that photo. Please try again.', { variant: 'error' });
               });
             },
           },
@@ -814,7 +814,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       }
     } catch (e) {
       logError('ProgressPhotos.scanCaptured', e, { userId, pose });
-      toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
+      toast.show('Could not save that photo. Please try again.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -1429,7 +1429,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           activeOpacity={1}
           onPress={closeScanImportDateStep}
           accessibilityRole="button"
-          accessibilityLabel="Close scan date"
+          accessibilityLabel="Close photo set date"
         >
           <View style={styles.scanDateSheet} onStartShouldSetResponder={() => true}>
             <ScrollView
@@ -1437,7 +1437,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.scanDateTitle}>Date for this scan</Text>
+              <Text style={styles.scanDateTitle}>Date for this photo set</Text>
               <Text style={styles.scanDateIntro}>
                 Pick the day these photos were taken. Volyume uses that date for the library entry and the bodyweight snapshot.
               </Text>
@@ -1445,7 +1445,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 style={styles.scanDateField}
                 onPress={() => setScanDatePickerOpen(true)}
                 accessibilityRole="button"
-                accessibilityLabel={`Change scan date, currently ${formatProgressPhotoDay(scanDateMs)}`}
+                accessibilityLabel={`Change photo set date, currently ${formatProgressPhotoDay(scanDateMs)}`}
               >
                 <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
                 <Text style={styles.scanDateValue}>{formatProgressPhotoDay(scanDateMs)}</Text>
@@ -1458,14 +1458,14 @@ export default function ProgressPhotosScreen({ navigation }) {
                   size="sm"
                   fullWidth={false}
                   onPress={closeScanImportDateStep}
-                  accessibilityLabel="Cancel imported scan"
+                  accessibilityLabel="Cancel imported photo set"
                 />
                 <Button
                   title="Import photos"
                   size="sm"
                   fullWidth={false}
                   onPress={confirmScanImportDate}
-                  accessibilityLabel="Import photos for this scan"
+                  accessibilityLabel="Import photos for this photo set"
                 />
               </View>
             </ScrollView>
@@ -1667,6 +1667,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         visible={detailsOpen}
         initialDateMs={pendingDate}
         initialPose={pendingPose}
+        previewUri={pendingUri}
         onConfirm={onDetailsConfirm}
         onCancel={onDetailsCancel}
       />
