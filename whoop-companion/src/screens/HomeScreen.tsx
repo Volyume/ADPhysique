@@ -233,7 +233,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
                 : colors.recoveryRed
             }
             value={readiness ? `${readiness.score}` : '—'}
-            sub={readiness ? readiness.label : 'needs recovery'}
+            sub={readiness ? `${readiness.label} / ${readiness.confidencePct}% conf` : 'needs recovery'}
             onPress={() => nav.navigate({ name: 'readiness' })}
             style={styles.half}
           />
