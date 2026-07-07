@@ -10,6 +10,7 @@ import { Nav } from '../ui/navigation';
 import { dayKey, formatDuration, startOfDayMs } from '../util/time';
 import { sleepConfidenceColor, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -192,8 +193,9 @@ function sleepWindowPreview(input: {
       tint: `${colors.strainBlue}16`,
     };
   }
-  const needsMoreSync = sleepNeedsMoreSync({ coveragePct: input.coveragePct, signalMin: input.signalMin });
-  if (input.confidence === 'low' || needsMoreSync) {
+  const source = { confidence: input.confidence, coveragePct: input.coveragePct, signalMin: input.signalMin };
+  const needsMoreSync = sleepNeedsMoreSync(source);
+  if (sleepTrustTier(source) === 'low' || needsMoreSync) {
     return {
       badge: 'SYNC',
       title: needsMoreSync ? 'More synced history is needed' : 'Data confidence is still limited',

@@ -294,8 +294,9 @@ function sleepTrustNote(metric: DailyMetricRow): string {
   if (sleepStateWakeConflict(detail)) {
     return `Low-confidence sleep: decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(detail)}). Review the window after sync finishes.`;
   }
-  if (detail.confidence === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
-  if (detail.confidence === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
+  const tier = sleepTrustTier(detail);
+  if (tier === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
+  if (tier === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
   if (!sleepNeedsMoreSync(detail)) {
     return `Low-confidence sleep: coverage is present, but still-worn or decoded sleep-state corroboration is weak. Review the window before trusting score/recovery.`;
   }
@@ -431,7 +432,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
   ].filter(Boolean) as string[];
   const sleepCoverage = metric.sleepDetail?.coveragePct ?? null;
   const sleepNeedsSync = sleepNeedsMoreSync(metric.sleepDetail);
-  const sleepTrustBlocked = metric.sleepDetail?.confidence === 'low' || sleepNeedsSync;
+  const sleepTrustBlocked = sleepTrustTier(metric.sleepDetail) === 'low' || sleepNeedsSync;
   const hasSteps = metric.steps != null;
   const facts = [
     coreMissing.length === 0 ? 'Core vitals ready' : `${coreMissing.join(', ')} missing`,
