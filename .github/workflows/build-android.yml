@@ -138,12 +138,57 @@ jobs:
         uses: android-actions/setup-android@v3
 
       # API 35 (Android 15) is now the Play Store minimum target. Make sure the
-      # platform and build-tools the build compiles against are installed, so
-      # the Gradle build doesn't fail on a missing SDK component.
-      - name: Install Android SDK 35 + build-tools 35
+      # platform, build-tools, CMake, and native NDK versions are installed
+      # before Gradle starts. React Native 0.81 uses NDK 27.1.12297006, while
+      # Expo SQLite still configures its CMake build with NDK 27.0.12077973.
+      # Installing both here keeps Gradle from trying a fragile SDK download
+      # halfway through the release build.
+      - name: Install Android SDK, NDK and CMake
         run: |
-          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" >/dev/null || true
-          echo "✓ Requested platforms;android-35 and build-tools;35.0.0"
+          set -eu
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "::error::ANDROID_HOME/ANDROID_SDK_ROOT is not set after setup-android."
+            exit 1
+          fi
+
+          # sdkmanager can leave partial archives behind after transient network
+          # errors. Clear the package directory and SDK temp area before retrying
+          # so Gradle never sees a corrupt NDK install.
+          install_sdk_package() {
+            package="$1"
+            component_path="$2"
+            for attempt in 1 2 3; do
+              echo "Installing ${package} (attempt ${attempt}/3)"
+              if sdkmanager "$package"; then
+                break
+              fi
+
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::Failed to install ${package} after 3 attempts."
+                exit 1
+              fi
+
+              rm -rf "$component_path" "$SDK_ROOT/.temp" || true
+              sleep $((attempt * 5))
+            done
+
+            if [ ! -d "$component_path" ]; then
+              echo "::error::${package} did not create expected directory: ${component_path}"
+              exit 1
+            fi
+          }
+
+          yes | sdkmanager --licenses >/dev/null || true
+          install_sdk_package "platforms;android-35" "$SDK_ROOT/platforms/android-35"
+          install_sdk_package "build-tools;35.0.0" "$SDK_ROOT/build-tools/35.0.0"
+          install_sdk_package "cmake;3.22.1" "$SDK_ROOT/cmake/3.22.1"
+          install_sdk_package "ndk;27.1.12297006" "$SDK_ROOT/ndk/27.1.12297006"
+          install_sdk_package "ndk;27.0.12077973" "$SDK_ROOT/ndk/27.0.12077973"
+
+          echo "Installed Android SDK 35, build-tools 35.0.0, CMake 3.22.1, and required NDKs."
+          ls -la "$SDK_ROOT/ndk"
 
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android --clean
