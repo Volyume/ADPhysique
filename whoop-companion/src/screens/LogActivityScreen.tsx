@@ -13,6 +13,9 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
   const [activity, setActivity] = useState('Running');
   const [duration, setDuration] = useState(45);
   const [avgHr, setAvgHr] = useState('140');
+  const [maxHr, setMaxHr] = useState('');
+  const [steps, setSteps] = useState('');
+  const [distanceKm, setDistanceKm] = useState('');
   const [done, setDone] = useState(false);
 
   const save = () => {
@@ -23,6 +26,10 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
       startTs: start,
       endTs: end,
       avgHr: avgHr ? Number(avgHr) : null,
+      maxHr: maxHr ? Number(maxHr) : null,
+      steps: steps ? Number(steps) : null,
+      distanceM: distanceKm ? Number(distanceKm) * 1000 : null,
+      stepSource: steps ? 'manual' : null,
       source: 'manual',
     });
     setDone(true);
@@ -84,6 +91,45 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
         </Text>
       </Card>
 
+      <SectionLabel>Optional workout details</SectionLabel>
+      <Card>
+        <View style={styles.detailGrid}>
+          <View style={styles.detailField}>
+            <Text style={styles.fieldLabel}>Max HR</Text>
+            <TextInput
+              value={maxHr}
+              onChangeText={setMaxHr}
+              keyboardType="number-pad"
+              style={styles.smallInput}
+              placeholder="bpm"
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+          <View style={styles.detailField}>
+            <Text style={styles.fieldLabel}>Steps</Text>
+            <TextInput
+              value={steps}
+              onChangeText={setSteps}
+              keyboardType="number-pad"
+              style={styles.smallInput}
+              placeholder="0"
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+        </View>
+        <View style={styles.detailField}>
+          <Text style={styles.fieldLabel}>Distance (km)</Text>
+          <TextInput
+            value={distanceKm}
+            onChangeText={setDistanceKm}
+            keyboardType="decimal-pad"
+            style={styles.smallInput}
+            placeholder="0.00"
+            placeholderTextColor={colors.textTertiary}
+          />
+        </View>
+      </Card>
+
       <PrimaryButton title={done ? 'Saved ✓' : 'Save activity'} onPress={save} />
     </Screen>
   );
@@ -99,5 +145,9 @@ const styles = StyleSheet.create({
   hrRow: { flexDirection: 'row', alignItems: 'center' },
   hrInput: { color: colors.text, fontSize: 28, fontFamily: fonts.black, minWidth: 80 },
   hrUnit: { color: colors.textSecondary, fontSize: 14, marginLeft: 8, fontFamily: fonts.text },
+  detailGrid: { flexDirection: 'row', gap: 12 },
+  detailField: { flex: 1, marginBottom: 10 },
+  fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4, fontFamily: fonts.text },
+  smallInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 12, color: colors.text, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, fontFamily: fonts.text },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });

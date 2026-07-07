@@ -179,6 +179,8 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
                 <Text style={styles.actMeta}>
                   {new Date(c.startTs).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ·{' '}
                   {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
+                  {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
+                  {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
               </View>

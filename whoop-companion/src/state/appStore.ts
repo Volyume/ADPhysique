@@ -61,7 +61,7 @@ import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
-import { kcalPerMinute } from '../metrics/calories';
+import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
@@ -86,6 +86,8 @@ export type LiveSession = {
   startTs: number;
   laps: number[];
   maxHr: number | null;
+  startSteps: number | null;
+  stepSource: 'band' | 'phone' | null;
   hasGps: boolean; // mirrors WHOOP's SportDto.has_gps — phone GPS for this sport
   distanceM: number | null; // live GPS distance (metres)
   speedMps: number | null; // latest GPS speed (m/s)
@@ -97,6 +99,9 @@ export type SessionStats = {
   avgHr: number | null;
   maxHr: number | null;
   strain: number | null;
+  steps: number | null;
+  cadenceSpm: number | null;
+  stepSource: 'band' | 'phone' | null;
   zones: ReturnType<typeof hrZones>;
   beats: number;
 };
@@ -218,6 +223,9 @@ const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // the app is alive, so every screen reflects ongoing data without being opened.
 const RECOMPUTE_INTERVAL_MS = 60 * 1000;
 const HISTORY_IDLE_TIMEOUT_MS = 60 * 1000;
+const AUTO_HISTORY_SYNC_RETRY_MS = 5000;
+const AUTO_HISTORY_SYNC_MAX_ATTEMPTS = 6;
+const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -234,6 +242,8 @@ class AppStore extends Store<AppState> {
   private appStateSub: { remove: () => void } | null = null;
   private stepSub: { remove: () => void } | null = null;
   private autoDrainedFor = ''; // device id we've already auto-drained this connection
+  private autoSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoSyncAttempts = 0;
   private lastStatus: WhoopStatus = 'idle';
   private stepCounter = new StepCounter();
   private stepDay = '';
@@ -285,9 +295,7 @@ class AppStore extends Store<AppState> {
     this.setState({ status, statusDetail: detail ?? '' });
     const device = this.getState().device;
     if (status === 'connected' && device && this.autoDrainedFor !== device.id) {
-      this.autoDrainedFor = device.id;
-      // Give the link a moment to settle, then backfill from the strap buffer.
-      setTimeout(() => void this.runHistoryDrain().catch(() => {}), 1500);
+      this.scheduleAutoHistoryDrain(device.id, 3500);
     }
     // Optional live-diagnostic keep-alive. Sleep uses stored-history backfill.
     if (status === 'connected' && this.getState().backgroundKeepAlive) {
@@ -295,9 +303,60 @@ class AppStore extends Store<AppState> {
     }
     if (status === 'disconnected' || status === 'idle') {
       this.autoDrainedFor = '';
+      this.clearAutoSyncTimer();
       if (this.getState().draining) this.enqueueHistoryStop('disconnect');
     }
     this.lastStatus = status;
+  }
+
+  private scheduleAutoHistoryDrain(deviceId: string, delayMs = AUTO_HISTORY_SYNC_RETRY_MS): void {
+    if (this.autoSyncTimer || this.autoDrainedFor === deviceId) return;
+    this.autoSyncTimer = setTimeout(() => {
+      this.autoSyncTimer = null;
+      void this.runAutoHistoryDrain(deviceId);
+    }, delayMs);
+  }
+
+  private async runAutoHistoryDrain(deviceId: string): Promise<void> {
+    const state = this.getState();
+    if (state.device?.id !== deviceId || state.status !== 'connected') return;
+    if (state.draining) {
+      this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+      return;
+    }
+    if (!this.ble?.canSendCommands) {
+      this.autoSyncAttempts += 1;
+      if (this.autoSyncAttempts <= AUTO_HISTORY_SYNC_MAX_ATTEMPTS) {
+        this.setState((s) => ({
+          historySync: s.historySync
+            ? { ...s.historySync, status: `Auto sync waiting for command channel (${this.autoSyncAttempts})` }
+            : {
+                status: `Auto sync waiting for command channel (${this.autoSyncAttempts})`,
+                rawRecords: 0,
+                decodedRecords: 0,
+                hrSamples: 0,
+                rrSamples: 0,
+                stepSamples: 0,
+                rawSensorRecords: 0,
+                rejectedRecords: 0,
+                droppedImplausibleTs: 0,
+                versions: [],
+              },
+        }));
+        this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+      }
+      return;
+    }
+    this.autoDrainedFor = deviceId;
+    this.autoSyncAttempts = 0;
+    await this.runHistoryDrain('auto');
+  }
+
+  private clearAutoSyncTimer(): void {
+    if (this.autoSyncTimer) {
+      clearTimeout(this.autoSyncTimer);
+      this.autoSyncTimer = null;
+    }
   }
 
   private startBackgroundRecompute(): void {
@@ -311,6 +370,16 @@ class AppStore extends Store<AppState> {
     if (s === 'active') {
       void this.refreshStepCount().catch(() => {});
       void this.refreshDerived().catch(() => {});
+      const state = this.getState();
+      if (
+        state.status === 'connected' &&
+        state.device &&
+        !state.draining &&
+        (!state.lastSyncTs || Date.now() - state.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS)
+      ) {
+        this.autoDrainedFor = '';
+        this.scheduleAutoHistoryDrain(state.device.id, 1000);
+      }
     }
   }
 
@@ -337,7 +406,8 @@ class AppStore extends Store<AppState> {
         this.lastLiveStepCount = liveSteps;
         const phone = this.stepBase + Math.max(0, liveSteps - this.stepLiveOffset);
         const band = this.getState().bandSteps;
-        this.setState({ steps: band ?? phone, stepSource: band != null ? 'band' : 'phone' });
+        const chosen = this.bestStepTotal(band, phone);
+        this.setState({ steps: chosen.steps, stepSource: chosen.source });
       });
     } catch (e) {
       this.setState({ error: `Phone step tracking unavailable: ${String(e)}` });
@@ -352,7 +422,8 @@ class AppStore extends Store<AppState> {
       this.stepDay = dayKey(Date.now());
       this.stepBase = Math.max(0, rounded - liveSinceDayStart);
       const band = this.getState().bandSteps;
-      this.setState({ steps: band ?? rounded, stepSource: band != null ? 'band' : 'phone' });
+      const chosen = this.bestStepTotal(band, rounded);
+      this.setState({ steps: chosen.steps, stepSource: chosen.source });
     }
   }
 
@@ -360,9 +431,74 @@ class AppStore extends Store<AppState> {
     const now = Date.now();
     const band = estimateStepsFromCounters(await getStepSamplesBetween(startOfDayMs(now), now));
     if (band != null) {
-      this.setState({ bandSteps: band, steps: band, stepSource: 'band' });
+      const chosen = this.bestStepTotal(band);
+      this.setState({ bandSteps: band, steps: chosen.steps, stepSource: chosen.source });
     }
     return band;
+  }
+
+  private bestStepTotal(
+    band: number | null,
+    phone?: number | null,
+  ): { steps: number | null; source: 'band' | 'phone' | null } {
+    const state = this.getState();
+    const liveSteps = phone ?? state.steps;
+    const liveSource = phone != null ? 'phone' : state.stepSource;
+    const sessionSource = state.session?.stepSource;
+    if (sessionSource === 'phone' && liveSteps != null && liveSource !== 'band') {
+      return { steps: liveSteps, source: 'phone' };
+    }
+    if (sessionSource === 'band' && band != null && band > 0) return { steps: band, source: 'band' };
+    if (band != null && band > 0 && (liveSteps == null || band >= liveSteps || liveSource === 'band')) {
+      return { steps: band, source: 'band' };
+    }
+    if (liveSteps != null) return { steps: liveSteps, source: liveSource ?? 'phone' };
+    if (state.bandSteps != null) return { steps: state.bandSteps, source: 'band' };
+    return { steps: null, source: null };
+  }
+
+  private currentStepSnapshot(): { steps: number | null; source: 'band' | 'phone' | null } {
+    const state = this.getState();
+    if (state.steps != null) {
+      const source =
+        state.stepSource ?? (state.bandSteps != null && state.steps === state.bandSteps ? 'band' : 'phone');
+      return { steps: state.steps, source };
+    }
+    if (state.bandSteps != null) return { steps: state.bandSteps, source: 'band' };
+    return { steps: null, source: null };
+  }
+
+  private sessionStepStats(
+    session: LiveSession,
+    now = Date.now(),
+  ): Pick<SessionStats, 'steps' | 'cadenceSpm' | 'stepSource'> {
+    const current = this.currentStepSnapshot();
+    let startSteps = session.startSteps;
+    let source = session.stepSource;
+
+    if (startSteps == null && current.steps != null) {
+      startSteps = current.steps;
+      source = current.source;
+      const live = this.getState().session;
+      if (live && live.startTs === session.startTs) {
+        this.setState({ session: { ...live, startSteps, stepSource: source } });
+      }
+    }
+
+    if (startSteps == null || current.steps == null) {
+      return { steps: null, cadenceSpm: null, stepSource: source ?? current.source };
+    }
+    if (source != null && current.source != null && source !== current.source) {
+      return { steps: null, cadenceSpm: null, stepSource: source };
+    }
+
+    const steps = Math.max(0, Math.round(current.steps - startSteps));
+    const minutes = Math.max(1 / 60, (now - session.startTs) / 60000);
+    return {
+      steps,
+      cadenceSpm: Math.round(steps / minutes),
+      stepSource: source ?? current.source,
+    };
   }
 
   connect = (): void => {
@@ -542,6 +678,7 @@ class AppStore extends Store<AppState> {
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
         if (tail.length) await this.persistHistoryFrames(tail);
+        await this.backfillHistoryDays(this.historySessionStats);
         this.clearHistoryTimeout();
         this.setState((s) => ({
           draining: false,
@@ -593,6 +730,187 @@ class AppStore extends Store<AppState> {
     return decoded;
   }
 
+  private async backfillHistoryDays(stats: HistoricalDecodeResult | null): Promise<void> {
+    if (!stats) return;
+    const days = new Set<string>();
+    const today = dayKey(Date.now());
+    for (const sample of stats.hr) {
+      days.add(dayKey(sample.ts));
+      const hour = new Date(sample.ts).getHours();
+      if (hour >= 20) days.add(dayKey(addDays(sample.ts, 1)));
+      if (hour < 12) days.add(dayKey(sample.ts));
+    }
+    for (const sample of stats.steps) days.add(dayKey(sample.ts));
+    const ordered = [...days].filter((d) => d !== today).sort((a, b) => a.localeCompare(b));
+    for (const day of ordered) {
+      await this.backfillDailyMetric(day);
+    }
+  }
+
+  private async backfillDailyMetric(day: string): Promise<void> {
+    const profile = this.getState().profile;
+    const now = Date.now();
+    const sod = dayStartFromKey(day);
+    const dayEnd = Math.min(sod + 24 * 60 * 60 * 1000, now);
+    if (dayEnd <= sod) return;
+
+    const dayHr = await getHrSamplesBetween(sod, dayEnd);
+    const perMin = perMinuteHr(dayHr);
+    const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
+    const load = edwardsTrimp(strainSamples, profile);
+    const strain = strainSamples.length ? strainFromLoad(load) : null;
+    const steps = estimateStepsFromCounters(await getStepSamplesBetween(sod, dayEnd));
+
+    const manualRaw = await kvGet(`manualSleep:${day}`);
+    const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
+    const winStart = manual ? manual.startTs : sod - 4 * 3600 * 1000;
+    const winEnd = manual ? manual.endTs : Math.min(sod + 12 * 3600 * 1000, now);
+    const nightHr = await getHrSamplesBetween(winStart, winEnd);
+    const nightPerMin = perMinuteHr(nightHr);
+    const sleepInput: SleepMinute[] = nightPerMin.map((p) => ({ ts: p.tsMs, hr: p.hr, motion: null }));
+    let sleep = manual
+      ? computeSleep(sleepInput, undefined, {
+          forceWindow: true,
+          startTs: manual.startTs,
+          endTs: manual.endTs,
+          source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
+        })
+      : computeSleep(sleepInput);
+    if (manual && !sleep) sleep = durationOnlySleep(manual.startTs, manual.endTs);
+
+    let rmssd: number | null = null;
+    let rhr: number | null = null;
+    let resp: number | null = null;
+    const scoredNightHr = sleep ? nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs) : [];
+    if (sleep) {
+      const rr = scoredNightHr.flatMap((s) => s.rr);
+      rmssd = computeHrv(rr)?.rmssd ?? null;
+      resp = respiratoryRate(rr);
+      const windowMin = perMinuteHr(scoredNightHr);
+      rhr = windowMin.length ? Math.round(Math.min(...windowMin.map((p) => p.hr))) : null;
+    }
+
+    const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
+    const debtNights = recent
+      .filter((d) => d.sleepMin != null)
+      .slice(0, 14)
+      .reverse()
+      .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
+    const accruedDebtMin = sleepDebt(debtNights);
+    const napMin = (await listCardio())
+      .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
+      .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
+    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
+    if (sleep) {
+      sleep.neededMin = need.neededMin;
+      sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
+    }
+
+    let sleepStressResult: SleepStress | null = null;
+    if (sleep) {
+      const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
+      for (const s of scoredNightHr) {
+        const m = Math.floor(s.ts / 60000);
+        const b = byMin.get(m) ?? { hrs: [], rr: [] };
+        b.hrs.push(s.bpm);
+        b.rr.push(...s.rr);
+        byMin.set(m, b);
+      }
+      const epochs: StressEpoch[] = [...byMin.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, v]) => ({
+          hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
+          rmssd: computeHrv(v.rr)?.rmssd ?? null,
+        }));
+      sleepStressResult = computeSleepStress(epochs);
+    }
+
+    let sleepDetail: SleepDetail | null = null;
+    if (sleep) {
+      const priorWindows = recent
+        .filter((d) => d.sleepStart != null && d.sleepEnd != null)
+        .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
+      priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
+      const consistency = sleepConsistency(priorWindows);
+      const sleepCoveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+      const hoursVsNeededPct = Math.round((sleep.asleepMin / need.neededMin) * 100);
+      const efficiencyPct = Math.round(sleep.efficiency * 100);
+      const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
+      const sleepPerformanceResult = computeSleepPerformance({
+        hoursVsNeededPct,
+        efficiencyPct,
+        consistencyPct: consistency?.score ?? null,
+        highStressPct: sleepStressResult?.highPct ?? 0,
+      });
+      sleepDetail = {
+        performance: sleepPerformanceResult.score,
+        hoursVsNeeded: hoursVsNeededPct,
+        needMin: need.neededMin,
+        baselineMin: need.baselineMin,
+        napMin: need.napMin,
+        strainMin: need.strainMin,
+        debtMin: need.debtMin,
+        efficiency: efficiencyPct,
+        consistency: consistency?.score ?? null,
+        restorativeMin: sleep.restorativeMin,
+        restorativePct,
+        latencyMin: sleep.latencyMin,
+        wakeEvents: sleep.wakeEvents,
+        inBedMin: sleep.inBedMin,
+        stressHigh: sleepStressResult?.highPct ?? null,
+        stressMed: sleepStressResult?.medPct ?? null,
+        stressLow: sleepStressResult?.lowPct ?? null,
+        source: sleep.source,
+        signalMin: sleep.signalMin,
+        coveragePct: Math.max(0, Math.min(100, sleepCoveragePct)),
+      };
+    }
+
+    const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
+      recent
+        .filter((d) => pick(d) != null)
+        .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
+    const rmssdSamples = toDayValues((d) => d.rmssd);
+    const rhrSamples = toDayValues((d) => d.rhr);
+    const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
+    const rhrBaseline = emaBaseline(rhrSamples) ?? null;
+    const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
+    const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
+
+    let recovery: number | null = null;
+    if (rmssd != null && rhr != null && rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
+      recovery = computeRecovery({
+        rmssd,
+        rmssdBaseline: rmssdBaseline ?? rmssd,
+        rmssdSd,
+        restingHr: rhr,
+        rhrBaseline: rhrBaseline ?? rhr,
+        rhrSd,
+        sleepPerformance: sleep?.performance ?? null,
+      }).score;
+    }
+
+    await upsertDailyMetric({
+      day,
+      recovery,
+      rmssd,
+      rhr,
+      resp,
+      sleepMin: sleep?.asleepMin ?? null,
+      sleepPerf: sleep?.performance ?? null,
+      strain,
+      steps,
+      sleepStart: sleep?.startTs ?? null,
+      sleepEnd: sleep?.endTs ?? null,
+      deepMin: sleep?.stages.deep ?? null,
+      remMin: sleep?.stages.rem ?? null,
+      lightMin: sleep?.stages.light ?? null,
+      awakeMin: sleep?.stages.awake ?? null,
+      sleepDetail,
+      updatedAt: now,
+    });
+  }
+
   private armHistoryTimeout(): void {
     this.clearHistoryTimeout();
     this.historyIdleTimer = setTimeout(() => this.enqueueHistoryStop('timeout'), HISTORY_IDLE_TIMEOUT_MS);
@@ -613,11 +931,12 @@ class AppStore extends Store<AppState> {
    * Run the historical drain handshake and backfill decoded WHOOP 5 history into
    * the local HR/R-R and step-counter tables.
    */
-  runHistoryDrain = async (): Promise<void> => {
+  runHistoryDrain = async (mode: 'manual' | 'auto' = 'manual'): Promise<void> => {
     if (!this.ble?.canSendCommands) {
       this.setState({ error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.' });
       return;
     }
+    this.clearAutoSyncTimer();
     this.clearHistoryTimeout();
     this.eventAssemblers.forEach((asm) => asm.reset());
     this.historyRecords = [];
@@ -629,7 +948,7 @@ class AppStore extends Store<AppState> {
       capturing: true,
       error: null,
       historySync: {
-        status: 'Requesting stored history',
+        status: mode === 'auto' ? 'Auto sync: requesting stored history' : 'Requesting stored history',
         rawRecords: 0,
         decodedRecords: 0,
         hrSamples: 0,
@@ -661,7 +980,9 @@ class AppStore extends Store<AppState> {
       }
       await this.ble.writeCommand(cmdSendHistoricalData());
       this.setState((s) => ({
-        historySync: s.historySync ? { ...s.historySync, status: 'Waiting for stored history' } : s.historySync,
+        historySync: s.historySync
+          ? { ...s.historySync, status: mode === 'auto' ? 'Auto sync: waiting for stored history' : 'Waiting for stored history' }
+          : s.historySync,
       }));
       this.armHistoryTimeout();
     } catch (e) {
@@ -690,28 +1011,52 @@ class AppStore extends Store<AppState> {
     startTs: number;
     endTs: number;
     avgHr: number | null;
+    maxHr?: number | null;
     distanceM?: number | null;
     route?: Array<{ lat: number; lng: number }> | null;
+    steps?: number | null;
+    cadenceSpm?: number | null;
+    stepSource?: string | null;
+    lapCount?: number | null;
     notes?: string;
     source?: string;
   }): Promise<void> => {
     const profile = this.getState().profile;
-    const minutes = Math.max(1, Math.round((input.endTs - input.startTs) / 60000));
-    const load = input.avgHr ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile) : null;
+    const durationMin = Math.max(1 / 60, (input.endTs - input.startTs) / 60000);
+    const minutes = Math.max(1, Math.round(durationMin));
+    const hrRows = await getHrSamplesBetween(input.startTs, input.endTs).catch(() => []);
+    const bpms = hrRows.map((r) => r.bpm);
+    const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : input.avgHr;
+    const maxHr = bpms.length ? Math.max(...bpms) : input.maxHr ?? null;
+    const perMinSamples = perMinuteHr(hrRows).map((p) => ({ hr: p.hr, minutes: 1 }));
+    const load = perMinSamples.length
+      ? edwardsTrimp(perMinSamples, profile)
+      : input.avgHr
+        ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile)
+        : null;
     const strain = load !== null ? strainFromLoad(load) : null;
     // Calories from HR (Keytel) — the WHOOP-style HR-driven energy estimate.
-    const kcal = input.avgHr ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes) : null;
+    const kcal = perMinSamples.length
+      ? totalKcal(perMinSamples, profile)
+      : input.avgHr
+        ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes)
+        : null;
     const row: CardioRow = {
       id: `c_${input.startTs}`,
       startTs: input.startTs,
       endTs: input.endTs,
       activity: input.activity,
-      avgHr: input.avgHr,
+      avgHr,
+      maxHr,
       trimp: load !== null ? Math.round(load) : null,
       strain,
       kcal,
       distanceM: input.distanceM ?? null,
       route: input.route ?? null,
+      steps: input.steps ?? null,
+      cadenceSpm: input.cadenceSpm ?? (input.steps != null ? Math.round(input.steps / durationMin) : null),
+      stepSource: input.stepSource ?? null,
+      lapCount: input.lapCount ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
     };
@@ -739,6 +1084,7 @@ class AppStore extends Store<AppState> {
 
   // ---- live session (start / track / log) ----
   startSession = (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): void => {
+    const stepSnapshot = this.currentStepSnapshot();
     this.setState({
       session: {
         kind,
@@ -746,6 +1092,8 @@ class AppStore extends Store<AppState> {
         startTs: Date.now(),
         laps: [],
         maxHr: null,
+        startSteps: stepSnapshot.steps,
+        stepSource: stepSnapshot.source,
         hasGps,
         distanceM: hasGps ? 0 : null,
         speedMps: null,
@@ -839,7 +1187,16 @@ class AppStore extends Store<AppState> {
     const zones = hrZones(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
     const load = edwardsTrimp(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
     const strain = perMin.length ? strainFromLoad(load) : null;
-    return { elapsedSec: Math.round((now - s.startTs) / 1000), avgHr, maxHr, strain, zones, beats: rows.length };
+    const stepStats = this.sessionStepStats(s, now);
+    return {
+      elapsedSec: Math.round((now - s.startTs) / 1000),
+      avgHr,
+      maxHr,
+      strain,
+      ...stepStats,
+      zones,
+      beats: rows.length,
+    };
   };
 
   /** Stop the session and (optionally) save it: workout/nap → cardio, sleep → manual window. */
@@ -861,8 +1218,13 @@ class AppStore extends Store<AppState> {
       startTs: s.startTs,
       endTs,
       avgHr: stats?.avgHr ?? s.maxHr ?? null,
+      maxHr: stats?.maxHr ?? s.maxHr ?? null,
       distanceM: gpsDistance,
       route: s.route.length ? s.route : null,
+      steps: stats?.steps ?? null,
+      cadenceSpm: stats?.cadenceSpm ?? null,
+      stepSource: stats?.stepSource ?? null,
+      lapCount: s.laps.length,
       source: s.kind === 'nap' ? 'nap' : 'live',
     });
   };
@@ -894,7 +1256,8 @@ class AppStore extends Store<AppState> {
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
     const bandStepsToday = await this.refreshBandSteps();
-    const bestSteps = bandStepsToday ?? this.getState().steps ?? this.getState().bandSteps;
+    const stepChoice = this.bestStepTotal(bandStepsToday);
+    const bestSteps = stepChoice.steps;
 
     // Last night's window. A manual override (logged/adjusted by the user) takes
     // precedence and is scored over exactly those bounds; otherwise auto-detect
@@ -1125,7 +1488,7 @@ class AppStore extends Store<AppState> {
       sleepCapture,
       bandSteps: bandStepsToday ?? this.getState().bandSteps,
       steps: bestSteps,
-      stepSource: bandStepsToday != null ? 'band' : this.getState().stepSource,
+      stepSource: stepChoice.source ?? this.getState().stepSource,
       trainingReadiness,
       recoveryParts,
       hrvBal,
@@ -1285,6 +1648,10 @@ function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr
   return [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([minute, b]) => ({ tsMs: minute * 60000, hr: b.sum / b.n }));
+}
+
+function dayStartFromKey(day: string): number {
+  return new Date(`${day}T00:00:00`).getTime();
 }
 
 function sleepCaptureNote(input: {

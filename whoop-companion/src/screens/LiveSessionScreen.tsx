@@ -36,7 +36,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
     const id = setInterval(() => {
       setNow(Date.now());
       ticked.current += 1;
-      if (ticked.current % 5 === 0) void appStore.sessionStats().then(setStats);
+      if (ticked.current % 2 === 0) void appStore.sessionStats().then(setStats);
       // Buzz on each structured-workout step change (and on completion).
       const s = appStore.getState().session;
       if (s?.plan) {
@@ -70,6 +70,8 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const planState = plan ? stepAt(plan, elapsed) : null;
   const tint = session.kind === 'sleep' ? colors.sleepTeal : session.kind === 'nap' ? colors.recoveryYellow : colors.strainBlue;
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
+  const stepSource =
+    stats?.stepSource === 'band' ? 'band' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
 
   const save = () => {
     void appStore.stopSession(true);
@@ -117,6 +119,20 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
 
         {isWorkout ? (
           <>
+            <View style={styles.statRow}>
+              <Stat
+                label="Steps"
+                value={stats?.steps != null ? stats.steps.toLocaleString() : '—'}
+                color={colors.recoveryGreen}
+              />
+              <Stat
+                label="Cadence"
+                value={stats?.cadenceSpm ?? '—'}
+                unit={stats?.cadenceSpm != null ? 'spm' : undefined}
+              />
+              <Stat label="Step source" value={stepSource} />
+            </View>
+
             <View style={styles.statRow}>
               <Stat label="Activity strain" value={stats?.strain != null ? stats.strain.toFixed(1) : '—'} color={colors.strainBlue} />
               <Stat

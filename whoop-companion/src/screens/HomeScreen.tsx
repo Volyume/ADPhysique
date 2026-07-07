@@ -8,6 +8,8 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { illnessTint } from './IllnessScreen';
 import { formatClock, formatDuration } from '../util/time';
+import { DayRail } from './DayScreen';
+import type { DailyMetricRow } from '../db/database';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -23,6 +25,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const resilience = useStoreSelector(appStore, (s) => s.resilience);
   const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
   const session = useStoreSelector(appStore, (s) => s.session);
+  const steps = useStoreSelector(appStore, (s) => s.steps ?? s.bandSteps);
+  const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
@@ -41,6 +45,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     day: 'numeric',
     month: 'long',
   });
+  const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
 
   const todayCardio = cardio.filter((c) => c.startTs >= new Date().setHours(0, 0, 0, 0));
   const stressLabel =
@@ -50,6 +55,11 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     <View style={{ flex: 1 }}>
       <Screen title="VOLYUME Pulse">
         <Text style={styles.date}>{dateLabel}</Text>
+        <DayRail
+          days={days}
+          selected={today?.day ?? ''}
+          onSelect={(day) => nav.navigate({ name: 'day', day })}
+        />
 
         {session ? (
           <Pressable onPress={() => nav.navigate({ name: 'liveSession' })} style={({ pressed }) => pressed && { opacity: 0.7 }}>
@@ -166,13 +176,25 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             style={styles.half}
           />
           <Tile
+            title="Steps"
+            icon="footsteps"
+            color={colors.recoveryGreen}
+            value={steps != null ? steps.toLocaleString() : '—'}
+            sub={stepSource === 'band' ? 'WHOOP band' : stepSource === 'phone' ? 'phone pedometer' : 'waiting'}
+            onPress={() => nav.navigate({ name: 'strain' })}
+            style={styles.half}
+          />
+        </View>
+
+        <View style={styles.grid}>
+          <Tile
             title="Training Status"
             icon="fitness"
             color={colors.strainBlue}
             value=""
-            sub="VO₂max · load"
+            sub="VO2max / load"
             onPress={() => nav.navigate({ name: 'training' })}
-            style={styles.half}
+            style={{ flex: 1, marginTop: 0 }}
           />
         </View>
 
@@ -209,6 +231,8 @@ export function HomeScreen({ nav }: { nav: Nav }) {
                 <Text style={styles.actName}>{c.activity}</Text>
                 <Text style={styles.actMeta}>
                   {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
+                  {c.distanceM != null ? ` · ${Math.round(c.distanceM)} m` : ''}
+                  {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
               </View>
@@ -240,3 +264,9 @@ const styles = StyleSheet.create({
   recText: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
 });
 
+function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
+  const byDay = new Map<string, DailyMetricRow>();
+  if (today) byDay.set(today.day, today);
+  for (const d of recent) byDay.set(d.day, d);
+  return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+}

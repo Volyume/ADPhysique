@@ -104,7 +104,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Card style={{ paddingVertical: 2 }}>
-        <NavRow label="Training Status" icon="fitness" iconColor={colors.strainBlue} value="VO₂max · load · effect" onPress={() => nav.navigate({ name: 'training' })} last />
+        <NavRow label="Start workout" icon="play" iconColor={colors.recoveryGreen} value="steps / GPS / HR" onPress={() => nav.navigate({ name: 'startMenu' })} />
+        <NavRow label="Training Status" icon="fitness" iconColor={colors.strainBlue} value="VO2max / load / effect" onPress={() => nav.navigate({ name: 'training' })} last />
       </Card>
 
       <Card>
@@ -113,7 +114,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow
           label={stepSource === 'phone' ? 'Steps (phone)' : 'Steps'}
-          display={steps != null ? `${steps}` : 'Needs motion permission'}
+          display={steps != null ? steps.toLocaleString() : 'Needs motion permission'}
           current={steps}
           prior={null}
         />
@@ -166,7 +167,9 @@ export function StrainScreen({ nav }: { nav: Nav }) {
                 <Text style={styles.sessionMeta}>
                   {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
                   {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
+                  {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
                   {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
+                  {c.maxHr ? ` · max ${c.maxHr}` : ''}
                   {c.kcal != null ? ` · ${c.kcal} cal` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>

@@ -69,11 +69,16 @@ export type CardioRow = {
   endTs: number;
   activity: string;
   avgHr: number | null;
+  maxHr: number | null;
   trimp: number | null;
   strain: number | null;
   kcal: number | null;
   distanceM: number | null; // GPS distance (metres), outdoor workouts
   route: Array<{ lat: number; lng: number }> | null; // GPS route trace
+  steps: number | null;
+  cadenceSpm: number | null;
+  stepSource: string | null;
+  lapCount: number | null;
   source: string; // 'manual' | 'auto' | 'live' | 'nap'
   notes: string | null;
 };
@@ -110,8 +115,10 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE TABLE IF NOT EXISTS cardio (
           id TEXT PRIMARY KEY,
           start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL,
-          activity TEXT NOT NULL, avg_hr INTEGER, trimp REAL, strain REAL,
-          kcal INTEGER, distance_m REAL, route TEXT, source TEXT NOT NULL, notes TEXT
+          activity TEXT NOT NULL, avg_hr INTEGER, max_hr INTEGER, trimp REAL, strain REAL,
+          kcal INTEGER, distance_m REAL, route TEXT,
+          steps INTEGER, cadence_spm INTEGER, step_source TEXT, lap_count INTEGER,
+          source TEXT NOT NULL, notes TEXT
         );
         CREATE TABLE IF NOT EXISTS journal (
           id TEXT PRIMARY KEY, day TEXT NOT NULL, behaviour TEXT NOT NULL,
@@ -154,7 +161,15 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           // Column already exists — nothing to do.
         }
       }
-      for (const col of ['distance_m REAL', 'route TEXT']) {
+      for (const col of [
+        'distance_m REAL',
+        'route TEXT',
+        'max_hr INTEGER',
+        'steps INTEGER',
+        'cadence_spm INTEGER',
+        'step_source TEXT',
+        'lap_count INTEGER',
+      ]) {
         try {
           await db.execAsync(`ALTER TABLE cardio ADD COLUMN ${col}`);
         } catch {
@@ -321,18 +336,26 @@ export async function getRecentDailyMetrics(limit = 30): Promise<DailyMetricRow[
 export async function insertCardio(c: CardioRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO cardio (id, start_ts, end_ts, activity, avg_hr, trimp, strain, kcal, distance_m, route, source, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO cardio (
+       id, start_ts, end_ts, activity, avg_hr, max_hr, trimp, strain, kcal,
+       distance_m, route, steps, cadence_spm, step_source, lap_count, source, notes
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     c.id,
     c.startTs,
     c.endTs,
     c.activity,
     c.avgHr,
+    c.maxHr,
     c.trimp,
     c.strain,
     c.kcal,
     c.distanceM,
     c.route && c.route.length ? JSON.stringify(c.route) : null,
+    c.steps,
+    c.cadenceSpm,
+    c.stepSource,
+    c.lapCount,
     c.source,
     c.notes,
   );
@@ -351,11 +374,16 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
     end_ts: number;
     activity: string;
     avg_hr: number | null;
+    max_hr: number | null;
     trimp: number | null;
     strain: number | null;
     kcal: number | null;
     distance_m: number | null;
     route: string | null;
+    steps: number | null;
+    cadence_spm: number | null;
+    step_source: string | null;
+    lap_count: number | null;
     source: string;
     notes: string | null;
   }>('SELECT * FROM cardio ORDER BY start_ts DESC LIMIT ?', limit);
@@ -374,11 +402,16 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
       endTs: r.end_ts,
       activity: r.activity,
       avgHr: r.avg_hr,
+      maxHr: r.max_hr ?? null,
       trimp: r.trimp,
       strain: r.strain,
       kcal: r.kcal,
       distanceM: r.distance_m ?? null,
       route,
+      steps: r.steps ?? null,
+      cadenceSpm: r.cadence_spm ?? null,
+      stepSource: r.step_source ?? null,
+      lapCount: r.lap_count ?? null,
       source: r.source,
       notes: r.notes,
     };

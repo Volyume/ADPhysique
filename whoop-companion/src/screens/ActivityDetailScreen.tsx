@@ -67,6 +67,20 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
         <Card style={styles.half}><Stat label="Avg HR" value={activity.avgHr ?? '—'} unit={activity.avgHr != null ? 'bpm' : undefined} color={colors.recoveryRed} /></Card>
         <Card style={styles.half}><Stat label="Distance" value={formatDistance(activity.distanceM)} color={colors.recoveryGreen} /></Card>
       </View>
+      <View style={styles.grid}>
+        <Card style={styles.half}>
+          <Stat label="Max HR" value={activity.maxHr ?? '—'} unit={activity.maxHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
+        </Card>
+        <Card style={styles.half}>
+          <Stat label="Steps" value={activity.steps != null ? activity.steps.toLocaleString() : '—'} color={colors.recoveryGreen} />
+        </Card>
+      </View>
+      <View style={styles.grid}>
+        <Card style={styles.half}>
+          <Stat label="Cadence" value={activity.cadenceSpm ?? '—'} unit={activity.cadenceSpm != null ? 'spm' : undefined} />
+        </Card>
+        <Card style={styles.half}><Stat label="Laps" value={activity.lapCount ?? '—'} /></Card>
+      </View>
       {activity.distanceM != null ? (
         <View style={styles.grid}>
           <Card style={styles.half}><Stat label="Pace" value={formatPace(activity.distanceM, elapsedSec)} /></Card>

@@ -30,6 +30,7 @@ import { ReadinessScreen } from './src/screens/ReadinessScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
+import { DayScreen } from './src/screens/DayScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
 import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
@@ -148,6 +149,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <StartScreen nav={nav} />;
     case 'liveSession':
       return <LiveSessionScreen nav={nav} />;
+    case 'day':
+      return <DayScreen nav={nav} day={route.day} />;
     case 'metric':
       return <MetricDetailScreen nav={nav} metricKey={route.key} />;
     case 'activity':

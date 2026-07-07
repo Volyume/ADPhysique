@@ -167,8 +167,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           disabled={!connected || draining}
         />
         <Text style={styles.hint}>
-          The strap records to its own memory. On every reconnect this app requests stored history, decodes v18
-          HR/R-R records, recognises v20/v21 raw sensor records, and backfills sleep from confirmed HR rows.
+          The strap records to its own memory. On connect and when the app returns to the foreground, auto sync
+          requests stored history, decodes v18 HR/R-R records, recognises v20/v21/v26 sensor records, backfills
+          previous days, and recomputes sleep from confirmed HR rows. Use Sync now only as a retry.
         </Text>
       </Card>
 
