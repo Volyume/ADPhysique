@@ -155,6 +155,33 @@ function isMissingPartnerWinTable(error) {
   return isMissingPartnerTable(error, 'partner_win_cards');
 }
 
+function normalisePartnerWinError(error) {
+  if (!error) return 'unknown';
+  if (isMissingPartnerWinTable(error)) return 'win_cards_unavailable';
+  const status = error?.status ?? error?.context?.status ?? error?.context?.response?.status;
+  const text = [error?.code, error?.message, error?.details, error?.hint, error?.name, status]
+    .filter(v => v != null).join(' ').toLowerCase();
+  if (status === 401 || text.includes('jwt') || text.includes('not authenticated') || text.includes('auth session')) {
+    return 'partner_auth_required';
+  }
+  if (
+    status === 403
+    || text.includes('row-level security')
+    || text.includes('rls')
+    || text.includes('not active')
+    || text.includes('not_active')
+    || text.includes('not a member')
+    || text.includes('not_member')
+    || text.includes('inactive')
+    || text.includes('partnership not found')
+    || text.includes('forbidden')
+  ) {
+    return 'not_active';
+  }
+  if (text.includes('failed to fetch') || text.includes('network request failed') || text.includes('networkerror')) return 'offline';
+  return error?.message || String(error);
+}
+
 /**
  * Create an invite: the server generates the code and stores only its hash; we
  * receive the plaintext once to share out-of-band. Emits partner_invite_sent.
@@ -328,12 +355,11 @@ export async function sendPartnerWinCard(userId, { pairId, preview } = {}) {
       .select('*')
       .single();
     if (error) {
-      if (isMissingPartnerWinTable(error)) return { ok: false, error: 'win_cards_unavailable' };
-      return fail(error);
+      return { ok: false, error: normalisePartnerWinError(error) };
     }
     return { ok: true, data };
   } catch (e) {
-    return fail(e);
+    return { ok: false, error: normalisePartnerWinError(e) };
   }
 }
 
@@ -349,12 +375,11 @@ export async function revokePartnerWinCard(userId, { cardId } = {}) {
       .select('*')
       .single();
     if (error) {
-      if (isMissingPartnerWinTable(error)) return { ok: false, error: 'win_cards_unavailable' };
-      return fail(error);
+      return { ok: false, error: normalisePartnerWinError(error) };
     }
     return { ok: true, data };
   } catch (e) {
-    return fail(e);
+    return { ok: false, error: normalisePartnerWinError(e) };
   }
 }
 

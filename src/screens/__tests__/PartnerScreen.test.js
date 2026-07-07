@@ -191,20 +191,19 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toMatch(/missed|fail|broke/i);
   });
 
-  test('active pairs show a support snapshot with shared and private boundaries', async () => {
+  test('active pairs show one guided partner-week card with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('Shared with Sam');
-    expect(text).toContain('Private accountability with one person.');
-    expect(text).toContain('Shared');
-    expect(text).toContain('Weekly training status');
-    expect(text).toContain('Weekly sessions you set');
-    expect(text).toContain('One fixed cheer a day');
-    expect(text).toContain('Block label you approve');
+    expect(text).toContain('Partner week with Sam');
+    expect(text).toContain("Set this week's sessions. Sam sees only the number, not your plan.");
+    expect(text).toContain('weekly training status');
+    expect(text).toContain('Your weekly sessions');
+    expect(text).toContain("Sam's weekly sessions");
+    expect(text).toContain('one fixed cheer a day');
     expect(text).toContain('Private');
-    expect(text).toContain('Full workouts and lift numbers');
-    expect(text).toContain('Food, Coach and check-ins');
-    expect(text).toContain('Body metrics and progress photos');
+    expect(text).toContain('workouts, food, Coach, check-ins, body metrics and photos');
+    expect(text).not.toContain('Shared with Sam');
+    expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
     expect(text).toContain('Shared block label');
     expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
@@ -215,9 +214,10 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('Weekly sessions');
-    expect(text).toContain('Optional: share your rough training rhythm for this week. It does not assign workouts, change Coach, or judge the week.');
-    expect(text).toContain('Sam set weekly sessions too.');
+    expect(text).toContain('weekly sessions');
+    expect(text).toContain("Set this week's sessions. Sam sees only the number, not your plan.");
+    expect(text).toContain("Sam's weekly sessions");
+    expect(text).toContain('Set');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
     expect(text).not.toContain('You have logged 2 of 4.');
@@ -232,7 +232,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     let text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
-    expect(text).toContain('Choose one workout, PR or progress update for Sam. You approve the exact preview first.');
+    expect(text).toContain('Send one workout, PR or progress update. You approve the preview before Sam sees it.');
 
     await press(tree, 'Share a win');
     text = allText(tree).join(' ');
@@ -279,6 +279,7 @@ describe('connected state: isolated pair cards', () => {
       pairs: [pair({
         winCards: [{
           id: 'win1',
+          pairId: 'p1',
           senderId: 'u1',
           cardType: 'personal_record',
           title: 'Personal record',
@@ -293,7 +294,7 @@ describe('connected state: isolated pair cards', () => {
     expect(allText(tree)).toContain('Shared wins');
     expect(allText(tree)).toContain('Bench press: New rep best.');
     await press(tree, 'Delete shared win Personal record');
-    expect(hook.revokeWin).toHaveBeenCalledWith('win1');
+    expect(hook.revokeWin).toHaveBeenCalledWith('win1', 'p1');
   });
 
   test('progress-card share preview can use a sanitized exported-card payload', async () => {

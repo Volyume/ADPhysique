@@ -42,13 +42,14 @@ import { getAllProgrammes } from '../lib/database';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
 import { ACKNOWLEDGEMENTS } from '../lib/partners/acknowledgements';
-import { resolveIntention, KEPT_LINE, clampAim } from '../lib/partners/intention';
+import { KEPT_LINE, clampAim } from '../lib/partners/intention';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
 import {
   SHARE_WIN_POLICY,
   buildShareWinExamplePreviews,
   buildShareWinReviewReceipt,
 } from '../lib/partners/shareWins';
+import { buildPartnerSupportPlan } from '../lib/partners/supportPlan';
 import { INVITE_EXPIRY_DAYS } from '../lib/partners/inviteCache';
 import { PARTNER_PRIVACY_NOTICE_VERSION } from '../lib/partners/consent';
 import { trackPartnerSurfaceView, trackInviteJourneyStep } from '../lib/partners/telemetry';
@@ -201,90 +202,53 @@ function blockStatusCopy(block, partnerName, userId) {
   return null;
 }
 
-// D5-A weekly intention: each side's OWN aim, shown side by side and NEVER
-// compared. A shared line when both aims match; otherwise each own aim on its
-// own. Plus a calm control to set or change your own aim (intention, not
-// obligation). No "must", no "target", no ranking language anywhere here.
-function IntentionBlock({ pair, onSetAim }) {
-  const name = pair.partnerFirstName || 'Your partner';
-  const { shared, mine, theirs } = resolveIntention({
-    myAim: pair.myAim, partnerAim: pair.partnerAim, partnerName: name,
-  });
-  const hasAnyLine = !!(shared || mine || theirs);
+function PartnerGuidedWeekCard({
+  pair, name, plan, onSetAim, onCheer, onShareWins, suppressCheerAction = false,
+}) {
+  const supportPlan = plan || buildPartnerSupportPlan(pair, name);
+  const action = supportPlan.primaryAction;
+  const showAction = action && !(suppressCheerAction && action.key === 'cheer');
+  const actionIcon = action?.key === 'set_aim'
+    ? 'calendar-outline'
+    : action?.key === 'cheer'
+      ? 'hand-left-outline'
+      : 'trophy-outline';
+  const steps = (supportPlan.steps || []).filter((step) => step.key !== 'share').slice(0, 3);
+  function pressAction() {
+    if (action?.key === 'set_aim') onSetAim(pair);
+    else if (action?.key === 'cheer') onCheer(pair);
+    else onShareWins(pair);
+  }
   return (
-    <View style={styles.intention}>
-      <View style={styles.intentionHead}>
-        <View style={styles.intentionTitleRow}>
-          <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.primary} />
-          <Text style={styles.intentionTitle}>Weekly sessions</Text>
+    <View style={styles.supportPlanCard}>
+      <View style={styles.supportPlanHead}>
+        <View style={styles.supportPlanTitleRow}>
+          <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+          <Text style={styles.supportPlanTitle}>{supportPlan.title}</Text>
         </View>
-        <View style={styles.intentionStatePill}>
-          <Text style={styles.intentionStateText}>{pair.myAim > 0 ? 'Set' : 'Not set'}</Text>
-        </View>
+        <Text style={styles.supportPlanHeadline}>{supportPlan.headline}</Text>
       </View>
-      <Text style={styles.intentionIntro}>
-        Optional: share your rough training rhythm for this week. It does not assign workouts, change Coach, or judge the week.
-      </Text>
-      {shared ? <Text style={styles.intentionShared}>{shared}</Text> : null}
-      {mine ? <Text style={styles.intentionOwn}>{mine}</Text> : null}
-      {theirs ? <Text style={styles.intentionOwn}>{theirs}</Text> : null}
-      {!hasAnyLine ? <Text style={styles.intentionOwn}>No weekly sessions set yet.</Text> : null}
-      <TouchableOpacity
-        onPress={() => onSetAim(pair)}
-        style={styles.intentionSetLarge}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel={pair.myAim > 0 ? 'Change this week\'s sessions' : 'Set this week\'s sessions'}
-      >
-        <Ionicons name="flag-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.intentionSetLargeText}>
-          {pair.myAim > 0 ? 'Change weekly sessions' : 'Set weekly sessions'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function PartnerSupportSnapshot({ pair, name }) {
-  const hasBlock = pair.sharedBlock && (pair.sharedBlock.status === 'active' || pair.sharedBlock.status === 'proposed');
-  const sharedRows = [
-    'First name',
-    'Weekly training status',
-    'Weekly sessions you set',
-    'One fixed cheer a day',
-    hasBlock ? 'Block label you approve' : 'Wins you choose to send',
-  ].filter(Boolean);
-  const privateRows = [
-    'Full workouts and lift numbers',
-    'Food, Coach and check-ins',
-    'Body metrics and progress photos',
-  ];
-  return (
-    <View style={styles.supportSnapshot}>
-      <View style={styles.supportHead}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.supportTitle}>Shared with {name}</Text>
+      {showAction ? (
+        <TouchableOpacity
+          onPress={pressAction}
+          style={styles.supportPlanAction}
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel={action.accessibilityLabel || action.label}
+        >
+          <Ionicons name={actionIcon} size={iconSize.sm} color={colors.onPrimary} />
+          <Text style={styles.supportPlanActionText}>{action.label}</Text>
+        </TouchableOpacity>
+      ) : null}
+      <View style={styles.supportPlanSteps}>
+        {steps.map((step) => (
+          <View key={step.key} style={styles.supportPlanStep}>
+            <Text style={styles.supportPlanStepLabel}>{step.label}</Text>
+            <Text style={styles.supportPlanStepState}>{step.state}</Text>
+          </View>
+        ))}
       </View>
-      <View style={styles.supportGrid}>
-        <View style={styles.supportCell}>
-          <Text style={styles.supportLabel}>Shared</Text>
-          {sharedRows.map((row) => (
-            <View key={row} style={styles.supportBulletRow}>
-              <View style={styles.supportDot} />
-              <Text style={styles.supportText}>{row}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.supportCell}>
-          <Text style={styles.supportLabel}>Private</Text>
-          {privateRows.map((row) => (
-            <View key={row} style={styles.supportBulletRow}>
-              <View style={styles.supportDotMuted} />
-              <Text style={styles.supportText}>{row}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      <Text style={styles.supportPlanPrivacy}>{supportPlan.privacyLine}</Text>
     </View>
   );
 }
@@ -306,7 +270,7 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       <View style={styles.shareWinsRowCopy}>
         <Text style={styles.shareWinsTitle}>Share a win</Text>
         <Text style={styles.shareWinsText}>
-          Choose one workout, PR or progress update for {name}. You approve the exact preview first.
+          Send one workout, PR or progress update. You approve the preview before {name} sees it.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -409,17 +373,6 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
   );
 }
 
-function ConnectedIntroCard() {
-  return (
-    <View style={styles.connectedIntro}>
-      <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
-      <Text style={styles.connectedIntroText}>
-        Private accountability with one person. They see weekly training status, weekly sessions you choose to show, one fixed cheer a day and wins you approve.
-      </Text>
-    </View>
-  );
-}
-
 function LocalReadNotice({ onRefresh }) {
   return (
     <TouchableOpacity
@@ -450,6 +403,8 @@ function PairCard({
   const block = pair.sharedBlock;
   const hasChip = block && (block.status === 'active' || block.status === 'proposed');
   const showReconnect = pair.sharedStreak?.status === 'archived' && !reconnectDismissed;
+  const supportPlan = buildPartnerSupportPlan(pair, name);
+  const supportActionKey = supportPlan.primaryAction?.key;
 
   return (
     <Card style={styles.pairCard} tone="primary">
@@ -497,18 +452,26 @@ function PairCard({
           <PersonRow phrase={weekPhrase('You', pair.myWeek, myResting)} resting={myResting} />
           <PersonRow phrase={weekPhrase(name, pair.partnerWeek, partnerResting)} resting={partnerResting} />
         </View>
-
-        <IntentionBlock pair={pair} onSetAim={onSetAim} />
       </View>
 
       {showReconnect ? (
         <ReconnectCard onReconnect={() => onReconnect(pair)} onDismiss={() => onDismissReconnect(pair)} />
       ) : null}
 
-      <PartnerSupportSnapshot pair={pair} name={name} />
+      <PartnerGuidedWeekCard
+        pair={pair}
+        name={name}
+        plan={supportPlan}
+        onSetAim={onSetAim}
+        onCheer={onCheer}
+        onShareWins={onOpenShareWins}
+        suppressCheerAction={!!moment}
+      />
 
       <View style={styles.partnerShareSection}>
-        <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} partnerName={name} />
+        {supportActionKey === 'share_wins' ? null : (
+          <PartnerShareWinsCard onOpen={() => onOpenShareWins(pair)} partnerName={name} />
+        )}
         <PartnerWinCards cards={pair.winCards || []} userId={userId} onRevoke={onRevokeWin} />
       </View>
 
@@ -530,7 +493,7 @@ function PairCard({
       {/* The moment IS that day's cheer surface (it carries its own pill), so
           the standing cheer row is hidden while a moment shows; it returns as
           the pair's cheer affordance when no moment is visible. */}
-      {moment ? null : (
+      {moment || supportActionKey === 'cheer' ? null : (
         <CheerPill enabled={pair.cheerEnabled} onPress={() => onCheer(pair)} style={styles.cheerRowAlign} />
       )}
     </Card>
@@ -866,7 +829,7 @@ export default function PartnerScreen({ route }) {
 
   async function handleRevokeWin(card) {
     if (!card?.id) return;
-    const r = await p.revokeWin(card.id);
+    const r = await p.revokeWin(card.id, card.pairId || card.pair_id || shareWinsPair?.id || null);
     if (r?.ok) {
       toast.show('Shared win deleted', { variant: 'success' });
     } else if (r?.error === 'win_cards_unavailable') {
@@ -1040,7 +1003,6 @@ export default function PartnerScreen({ route }) {
 
         {connected ? (
           <>
-            <ConnectedIntroCard />
             {pairs.map((pair) => (
               <PairCard
                 key={pair.id}
@@ -1686,17 +1648,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 
   // ── PairCard ──
-  connectedIntro: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-  },
-  connectedIntroText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   localReadNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1772,76 +1723,48 @@ const styles = StyleSheet.create({
   dotResting: { backgroundColor: stateColors.watch },
   personText: { ...type.body, color: colors.textPrimary, flex: 1 },
 
-  // D5-A weekly intention
-  intention: {
-    gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-  },
-  intentionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  intentionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  intentionTitle: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
-  intentionIntro: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
-  intentionShared: { ...type.body, color: colors.textPrimary },
-  intentionOwn: { ...type.body, color: colors.textSecondary },
-  intentionStatePill: {
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-  },
-  intentionStateText: { ...type.caption, color: colors.primary },
-  intentionSetLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 44,
-    paddingTop: spacing.xs,
-  },
-  intentionSetLargeText: { ...type.label, color: colors.primary },
   keptLine: { ...type.body, color: colors.primary },
 
-  // Active-pair trust snapshot
-  supportSnapshot: {
+  // Active-pair guided week
+  supportPlanCard: {
     gap: spacing.sm,
-    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  supportHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  supportTitle: { ...type.label, color: colors.textPrimary },
-  supportGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  supportCell: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
-  supportLabel: { ...type.caption, color: colors.textSecondary },
-  supportBulletRow: {
+  supportPlanHead: { gap: spacing.xs },
+  supportPlanTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  supportPlanTitle: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
+  supportPlanHeadline: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
+  supportPlanAction: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
-  },
-  supportDot: {
-    width: 5,
-    height: 5,
     borderRadius: radius.full,
     backgroundColor: colors.primary,
-    marginTop: 7,
-    flexShrink: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+    alignSelf: 'flex-start',
   },
-  supportDotMuted: {
-    width: 5,
-    height: 5,
-    borderRadius: radius.full,
-    backgroundColor: colors.textMuted,
-    marginTop: 7,
-    flexShrink: 0,
+  supportPlanActionText: { ...type.label, color: colors.onPrimary },
+  supportPlanSteps: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  supportPlanStep: {
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 96,
+    gap: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  supportText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary },
+  supportPlanStepState: { ...type.label, color: colors.textPrimary },
+  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',
     alignItems: 'center',

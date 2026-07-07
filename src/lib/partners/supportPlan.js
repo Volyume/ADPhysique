@@ -1,7 +1,7 @@
 import { ticksLabel } from './signals';
 
 export const PARTNER_SUPPORT_PRIVACY_LINE =
-  'Only weekly training status, weekly sessions you set, fixed cheers and wins you approve are shared.';
+  'Shared: weekly training status, sessions you set, one fixed cheer a day and wins you approve. Private: workouts, food, Coach, check-ins, body metrics and photos.';
 
 function hasAim(value) {
   return Math.round(Number(value) || 0) > 0;
@@ -16,17 +16,17 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   const myAimSet = hasAim(pair.myAim);
   const partnerAimSet = hasAim(pair.partnerAim);
   const cheerAvailable = pair.cheerEnabled !== false;
-  let headline = `Choose one win for ${name} only when you want to. You approve the exact preview first.`;
-  let primaryAction = { key: 'share_wins', label: 'Choose a win', accessibilityLabel: 'Choose a win to share' };
+  let headline = `Share one win with ${name} only when you want to. You approve the preview first.`;
+  let primaryAction = { key: 'share_wins', label: 'Share a win', accessibilityLabel: 'Share a win' };
 
   if (!myAimSet) {
-    headline = `Set this week's sessions. ${name} sees the number only, never your plan.`;
+    headline = `Set this week's sessions. ${name} sees only the number, not your plan.`;
     primaryAction = { key: 'set_aim', label: 'Set weekly sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `Send ${name} one fixed cheer for today. It is private to this partnership, with no free text or reply thread.`;
-    primaryAction = { key: 'cheer', label: 'Choose a fixed cheer', accessibilityLabel: 'Choose a cheer for today' };
+    headline = `Send ${name} one cheer for today. Fixed lines only, no free text or reply thread.`;
+    primaryAction = { key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' };
   } else if (pair.weekKept) {
-    headline = `Last week was kept. ${name} still only sees the items listed below and wins you approve.`;
+    headline = `Last week was kept. ${name} still only sees the items listed here and wins you approve.`;
   }
 
   return Object.freeze({
@@ -40,7 +40,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
         label: 'Your weekly sessions',
         state: myAimSet ? 'Set' : 'Not set',
         copy: myAimSet
-          ? `${name} sees ${Math.round(Number(pair.myAim) || 0)} planned sessions.`
+          ? `${name} sees ${Math.round(Number(pair.myAim) || 0)} sessions.`
           : `Choose the number for this week. ${name} sees only that number.`,
       }),
       Object.freeze({
@@ -48,7 +48,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
         label: `${name}'s weekly sessions`,
         state: partnerAimSet ? 'Set' : 'Not shared',
         copy: partnerAimSet
-          ? `${name} shared ${Math.round(Number(pair.partnerAim) || 0)} planned sessions.`
+          ? `${name} shared ${Math.round(Number(pair.partnerAim) || 0)} sessions.`
           : `Nothing shows until ${name} chooses a number.`,
       }),
       Object.freeze({
@@ -61,7 +61,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
         key: 'share',
         label: 'Optional sharing',
         state: 'Optional',
-        copy: cheerAvailable ? 'Cheers are fixed. Wins ask every time.' : 'Today\'s cheer is sent. Wins still ask before anything is sent.',
+        copy: cheerAvailable ? 'Cheers use fixed lines. Wins ask every time.' : 'Today\'s cheer is sent. Wins still ask before anything is sent.',
       }),
     ]),
   });
