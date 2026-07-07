@@ -10,6 +10,7 @@ import { illnessTint } from './IllnessScreen';
 import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
+import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
@@ -259,26 +260,29 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         <SectionLabel>Today's activities</SectionLabel>
         <Card>
           {sleep ? (
-            <View style={styles.actRow}>
-              <Text style={styles.actName}>Sleep</Text>
-              <Text style={styles.actMeta}>
-                {formatDuration(sleep.asleepMin)} · {formatClock(sleep.startTs)}–{formatClock(sleep.endTs)}
-              </Text>
-            </View>
+            <Pressable onPress={() => nav.navigate({ name: 'sleep' })} style={({ pressed }) => [styles.actRow, pressed && styles.pressedRow]}>
+              <View style={styles.actText}>
+                <Text style={styles.actName}>Sleep</Text>
+                <Text style={styles.actMeta}>
+                  {formatDuration(sleep.asleepMin)} - {formatClock(sleep.startTs)}-{formatClock(sleep.endTs)}
+                </Text>
+              </View>
+            </Pressable>
           ) : null}
           {todayCardio.length === 0 && !sleep ? (
             <Empty text="No activities yet today. Tap + to log one." />
           ) : (
             todayCardio.map((c) => (
-              <View key={c.id} style={styles.actRow}>
-                <Text style={styles.actName}>{c.activity}</Text>
-                <Text style={styles.actMeta}>
-                  {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
-                  {c.distanceM != null ? ` · ${Math.round(c.distanceM)} m` : ''}
-                  {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
-                  {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
-                </Text>
-              </View>
+              <Pressable
+                key={c.id}
+                onPress={() => nav.navigate({ name: 'activity', id: c.id })}
+                style={({ pressed }) => [styles.actRow, pressed && styles.pressedRow]}
+              >
+                <View style={styles.actText}>
+                  <Text style={styles.actName}>{c.activity}</Text>
+                  <Text style={styles.actMeta}>{activitySummary(c)}</Text>
+                </View>
+              </Pressable>
             ))
           )}
         </Card>
@@ -296,9 +300,11 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 12, marginTop: 12 },
   half: { flex: 1, marginTop: 0 },
   liveRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  actRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
+  actRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  actText: { flex: 1 },
   actName: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  actMeta: { color: colors.textSecondary, fontSize: 12 },
+  actMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
+  pressedRow: { opacity: 0.65 },
   illnessHead: { flexDirection: 'row', alignItems: 'center' },
   illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },

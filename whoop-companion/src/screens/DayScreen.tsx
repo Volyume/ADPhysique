@@ -8,8 +8,8 @@ import { Card, Dial, Empty, Screen, SectionLabel, Stat } from '../ui/components'
 import { colors, fonts, recoveryColor, sleepStageColors } from '../ui/theme';
 import type { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
-import { formatDistance } from '../sensors/location';
 import { clampPct } from '../util/number';
+import { activitySummary } from '../ui/activityFormat';
 
 export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -136,7 +136,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
       <SectionLabel>Timeline</SectionLabel>
       <Card>
         {metric?.sleepStart && metric.sleepEnd ? (
-          <View style={styles.row}>
+          <TouchableOpacity style={styles.row} onPress={() => nav.navigate({ name: 'sleep' })}>
             <View>
               <Text style={styles.rowTitle}>Sleep</Text>
               <Text style={styles.rowMeta}>
@@ -144,7 +144,8 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 {metric.sleepMin != null ? ` / ${formatDuration(metric.sleepMin)}` : ''}
               </Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </TouchableOpacity>
         ) : null}
         {acts.length === 0 && !metric?.sleepStart ? (
           <Empty text="No sleep or activities recorded for this date." />
@@ -154,10 +155,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{c.activity}</Text>
                 <Text style={styles.rowMeta}>
-                  {formatClock(c.startTs)} / {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
-                  {c.distanceM != null ? ` / ${formatDistance(c.distanceM)}` : ''}
-                  {c.steps != null ? ` / ${c.steps.toLocaleString()} steps` : ''}
-                  {c.strain != null ? ` / strain ${c.strain.toFixed(1)}` : ''}
+                  {formatClock(c.startTs)} / {activitySummary(c)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />

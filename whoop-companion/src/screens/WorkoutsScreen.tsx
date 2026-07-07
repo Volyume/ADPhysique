@@ -27,14 +27,21 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
   const [restMin, setRestMin] = useState(3);
   const [repeats, setRepeats] = useState(4);
   const [cooldown, setCooldown] = useState(5);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const refresh = () => void appStore.listWorkoutTemplates().then(setSaved);
   useEffect(refresh, []);
 
-  const start = (w: StructuredWorkout) => {
-    appStore.startPlannedSession(w);
-    nav.back();
-    nav.navigate({ name: 'liveSession' });
+  const start = async (w: StructuredWorkout) => {
+    if (startingId) return;
+    setStartingId(w.id);
+    try {
+      await appStore.startPlannedSession(w);
+      nav.back();
+      nav.navigate({ name: 'liveSession' });
+    } finally {
+      setStartingId(null);
+    }
   };
 
   const buildAndStart = (alsoSave: boolean) => {
@@ -54,7 +61,7 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
     if (alsoSave) {
       void appStore.saveWorkoutTemplate(w).then(refresh);
     } else {
-      start(w);
+      void start(w);
     }
   };
 
@@ -62,14 +69,14 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
     <Screen title="Workouts" onBack={nav.back} tint={colors.strainBlue}>
       <SectionLabel>Presets</SectionLabel>
       {PRESET_WORKOUTS.map((w) => (
-        <WorkoutCard key={w.id} w={w} onStart={() => start(w)} />
+        <WorkoutCard key={w.id} w={w} onStart={() => void start(w)} starting={startingId === w.id} disabled={!!startingId} />
       ))}
 
       {saved.length > 0 ? (
         <>
           <SectionLabel>Your workouts</SectionLabel>
           {saved.map((w) => (
-            <WorkoutCard key={w.id} w={w} onStart={() => start(w)} onDelete={() => void appStore.deleteWorkoutTemplate(w.id).then(refresh)} />
+            <WorkoutCard key={w.id} w={w} onStart={() => void start(w)} onDelete={() => void appStore.deleteWorkoutTemplate(w.id).then(refresh)} starting={startingId === w.id} disabled={!!startingId} />
           ))}
         </>
       ) : null}
@@ -84,10 +91,10 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
         <Stepper label="Cool-down (min)" value={cooldown} setValue={setCooldown} step={1} min={0} max={30} last />
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
           <View style={{ flex: 1 }}>
-            <PrimaryButton title="Start now" onPress={() => buildAndStart(false)} />
+            <PrimaryButton title={startingId ? 'Starting' : 'Start now'} onPress={() => buildAndStart(false)} disabled={!!startingId} />
           </View>
           <View style={{ flex: 1 }}>
-            <Pressable onPress={() => buildAndStart(true)} style={styles.saveBtn}>
+            <Pressable onPress={() => buildAndStart(true)} disabled={!!startingId} style={[styles.saveBtn, startingId && styles.disabled]}>
               <Text style={styles.saveText}>Save</Text>
             </Pressable>
           </View>
@@ -99,7 +106,7 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
   );
 }
 
-function WorkoutCard({ w, onStart, onDelete }: { w: StructuredWorkout; onStart: () => void; onDelete?: () => void }) {
+function WorkoutCard({ w, onStart, onDelete, starting, disabled }: { w: StructuredWorkout; onStart: () => void; onDelete?: () => void; starting?: boolean; disabled?: boolean }) {
   const work = w.steps.filter((s) => s.kind === 'work').length;
   return (
     <Card>
@@ -115,9 +122,9 @@ function WorkoutCard({ w, onStart, onDelete }: { w: StructuredWorkout; onStart: 
             <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
           </Pressable>
         ) : null}
-        <Pressable onPress={onStart} style={styles.startBtn}>
+        <Pressable onPress={onStart} disabled={disabled} style={[styles.startBtn, disabled && styles.disabled]}>
           <Ionicons name="play" size={16} color="#000" />
-          <Text style={styles.startText}>Start</Text>
+          <Text style={styles.startText}>{starting ? 'Starting' : 'Start'}</Text>
         </Pressable>
       </View>
     </Card>
@@ -155,4 +162,5 @@ const styles = StyleSheet.create({
   stepValue: { color: colors.text, fontSize: 16, fontFamily: fonts.bold, minWidth: 28, textAlign: 'center' },
   saveBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.surface },
   saveText: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  disabled: { opacity: 0.55 },
 });

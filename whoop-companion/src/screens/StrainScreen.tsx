@@ -20,10 +20,10 @@ import {
 import { colors, strainZoneColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
-import { formatDistance } from '../sensors/location';
 import type { HrZone } from '../metrics/strain';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
+import { activitySummary } from '../ui/activityFormat';
 
 const ZONE_COLORS = strainZoneColors;
 
@@ -80,7 +80,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   const z13 = zones.filter((z) => z.zone <= 3).reduce((a, b) => a + b.minutes, 0);
   const z45 = zones.filter((z) => z.zone >= 4).reduce((a, b) => a + b.minutes, 0);
   const sod = new Date().setHours(0, 0, 0, 0);
-  const todayCardio = cardio.filter((c) => c.startTs >= sod);
+  const todayCardio = cardio.filter((c) => c.startTs >= sod && c.source !== 'nap');
   const strengthMin = todayCardio
     .filter((c) => c.activity === 'Strength')
     .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
@@ -174,15 +174,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
             <Pressable key={c.id} style={styles.sessionRow} onPress={() => nav.navigate({ name: 'activity', id: c.id })}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sessionName}>{c.activity}</Text>
-                <Text style={styles.sessionMeta}>
-                  {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
-                  {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
-                  {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
-                  {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
-                  {c.maxHr ? ` · max ${c.maxHr}` : ''}
-                  {c.kcal != null ? ` · ${c.kcal} cal` : ''}
-                  {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
-                </Text>
+                <Text style={styles.sessionMeta}>{activitySummary(c)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
             </Pressable>

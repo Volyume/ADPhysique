@@ -253,6 +253,7 @@ const initialState: AppState = {
 };
 
 const HR_RETENTION_DAYS = 21;
+const CARDIO_RECENT_LIMIT = 250;
 const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // How often to recompute + persist derived metrics from the stored stream while
 // the app is alive, so every screen reflects ongoing data without being opened.
@@ -541,7 +542,7 @@ class AppStore extends Store<AppState> {
     }
   }
 
-  private async refreshStepCount(): Promise<void> {
+  private async refreshStepCount(): Promise<number | null> {
     const phoneSteps = await stepsToday();
     if (phoneSteps != null) {
       const rounded = Math.max(0, Math.round(phoneSteps));
@@ -551,7 +552,9 @@ class AppStore extends Store<AppState> {
       const band = this.getState().bandSteps;
       const chosen = this.bestStepTotal(band, rounded);
       this.setState({ steps: chosen.steps, stepSource: chosen.source });
+      return rounded;
     }
+    return null;
   }
 
   private async refreshBandSteps(): Promise<number | null> {
@@ -585,19 +588,20 @@ class AppStore extends Store<AppState> {
     const liveSteps = phone ?? state.steps;
     const liveSource = phone != null ? 'phone' : state.stepSource;
     const sessionSource = state.session?.stepSource;
-    if (sessionSource === 'phone' && liveSteps != null && liveSource !== 'band') {
+    if (sessionSource === 'phone' && liveSteps != null && liveSource === 'phone') {
       return { steps: liveSteps, source: 'phone' };
     }
     if (sessionSource === 'band' && band != null && band > 0 && (liveSteps == null || liveSteps <= 0)) {
       return { steps: band, source: 'band' };
     }
-    if (phone != null && phone > 0) {
-      if (band == null || band <= 0 || band > phone * 2.25 || liveSource === 'phone') {
+    if (band != null && band > 0) {
+      if (phone != null && phone > 0 && band > phone * 2.25) {
         return { steps: phone, source: 'phone' };
       }
-    }
-    if (band != null && band > 0 && (liveSteps == null || band >= liveSteps || liveSource === 'band')) {
       return { steps: band, source: 'band' };
+    }
+    if (phone != null && phone > 0) {
+      return { steps: phone, source: 'phone' };
     }
     if (liveSteps != null) return { steps: liveSteps, source: liveSource ?? 'phone' };
     if (state.bandSteps != null) return { steps: state.bandSteps, source: 'band' };
@@ -751,7 +755,7 @@ class AppStore extends Store<AppState> {
     await this.recomputeToday();
     await this.reestimateRecentBandStepDays();
     await this.backfillCardioStepsFromHistory();
-    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio() });
+    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio(CARDIO_RECENT_LIMIT) });
     return divisor;
   };
 
@@ -1108,7 +1112,7 @@ class AppStore extends Store<AppState> {
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, dayEnd, sleep);
-    const napMin = (await listCardio(250))
+    const napMin = (await listCardio(CARDIO_RECENT_LIMIT))
       .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
       .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
@@ -1241,7 +1245,7 @@ class AppStore extends Store<AppState> {
       });
       changed = true;
     }
-    if (changed) this.setState({ cardio: await listCardio() });
+    if (changed) this.setState({ cardio: await listCardio(CARDIO_RECENT_LIMIT) });
   }
 
   private armHistoryTimeout(): void {
@@ -1482,13 +1486,13 @@ class AppStore extends Store<AppState> {
       notes: input.notes ?? null,
     };
     await insertCardio(row);
-    this.setState({ cardio: await listCardio() });
+    this.setState({ cardio: await listCardio(CARDIO_RECENT_LIMIT) });
     await this.recomputeToday();
   };
 
   removeCardio = async (id: string): Promise<void> => {
     await deleteCardio(id);
-    this.setState({ cardio: await listCardio() });
+    this.setState({ cardio: await listCardio(CARDIO_RECENT_LIMIT) });
     await this.recomputeToday();
   };
 
@@ -1522,7 +1526,7 @@ class AppStore extends Store<AppState> {
     const scanEnd = Math.min(dayEnd, sod + 22 * 3600 * 1000);
     if (scanEnd - scanStart < 20 * 60000) return;
 
-    const existing = (await listCardio(250)).filter((c) => c.startTs < scanEnd && c.endTs > scanStart);
+    const existing = (await listCardio(CARDIO_RECENT_LIMIT)).filter((c) => c.startTs < scanEnd && c.endTs > scanStart);
     const existingNaps = existing.filter((c) => c.source === 'nap');
     const blocked = existing
       .filter((c) => c.source !== 'nap')
@@ -1577,9 +1581,15 @@ class AppStore extends Store<AppState> {
   }
 
   // ---- live session (start / track / log) ----
-  startSession = (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): void => {
+  startSession = async (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): Promise<void> => {
     const tracksSteps = kind === 'workout' && activityUsesSteps(plan?.activity ?? label);
-    const stepSnapshot = tracksSteps ? this.currentStepSnapshot() : { steps: null, source: null };
+    let stepSnapshot: { steps: number | null; source: 'band' | 'phone' | null } = { steps: null, source: null };
+    if (tracksSteps) {
+      const phoneSteps = await this.refreshStepCount().catch(() => null);
+      stepSnapshot = phoneSteps != null
+        ? { steps: phoneSteps, source: 'phone' }
+        : this.currentStepSnapshot();
+    }
     this.setState({
       session: {
         kind,
@@ -1600,8 +1610,8 @@ class AppStore extends Store<AppState> {
   };
 
   /** Start a live workout that follows a structured/interval plan. */
-  startPlannedSession = (workout: StructuredWorkout): void => {
-    this.startSession('workout', workout.name, activityGps(workout.activity), workout);
+  startPlannedSession = async (workout: StructuredWorkout): Promise<void> => {
+    await this.startSession('workout', workout.name, activityGps(workout.activity), workout);
   };
 
   // ---- structured workout templates (persisted) ----
@@ -1749,7 +1759,7 @@ class AppStore extends Store<AppState> {
   // ---- derived metrics ----
   refreshDerived = async (): Promise<void> => {
     await this.recomputeToday();
-    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio() });
+    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio(CARDIO_RECENT_LIMIT) });
   };
 
   recomputeToday = async (): Promise<void> => {
@@ -1823,7 +1833,8 @@ class AppStore extends Store<AppState> {
       .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, now, sleep);
-    const napMin = (await listCardio(250))
+    const cardioAfterNapDetect = await listCardio(CARDIO_RECENT_LIMIT);
+    const napMin = cardioAfterNapDetect
       .filter((c) => c.source === 'nap' && c.startTs >= sod)
       .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
@@ -2022,6 +2033,7 @@ class AppStore extends Store<AppState> {
       resilience: resilienceResult,
       cardioAge: cardioAgeResult,
       recentDays: await getRecentDailyMetrics(30),
+      cardio: await listCardio(CARDIO_RECENT_LIMIT),
     });
   };
 
