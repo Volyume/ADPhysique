@@ -1249,7 +1249,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && (
           <View style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Tell your coach</Text>
+              <Text style={styles.sectionTitle}>Session feedback</Text>
               <Text style={styles.optionalLabel}>optional</Text>
             </View>
             <Text style={styles.coachZoneSubHeading}>How did the session feel?</Text>

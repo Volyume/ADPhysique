@@ -3278,7 +3278,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 This will delete the current workout session. Your plan will not advance.
               </Text>
               <TouchableOpacity style={styles.keepTrainingBtn} onPress={() => setShowDiscardModal(false)} accessibilityRole="button" accessibilityLabel="Keep training">
-                <Text style={styles.keepTrainingBtnText}>Keep Training</Text>
+                <Text style={styles.keepTrainingBtnText}>Keep training</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
