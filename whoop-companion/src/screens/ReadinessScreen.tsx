@@ -22,11 +22,19 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
   const sleepDetail = today?.sleepDetail ?? null;
+  const sleepStateConflict = hasWakeStateConflict(sleepDetail);
   const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
   const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
   const qualityAction =
     !readiness
       ? null
+      : sleepStateConflict
+        ? {
+            label: 'Review sleep window',
+            value: `${(sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0)}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+            route: { name: 'editSleep' } as const,
+            icon: 'create',
+          }
       : readiness.missingInputs.includes('sleep performance') ||
           readiness.missingInputs.includes('recovery') ||
           (sleepDetail?.coveragePct ?? 100) < 60
@@ -76,10 +84,10 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
               <Stat label="Confidence" value={`${readiness.confidencePct}%`} color={confidenceColor(readiness.confidence)} />
               <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} />
               <Stat
-                label={readiness.cappedByConfidence ? 'Score cap' : 'Sleep signal'}
-                value={readiness.cappedByConfidence ? `${readiness.scoreCap}%` : sleepDetail?.signalMin ?? '-'}
-                unit={!readiness.cappedByConfidence && sleepDetail?.signalMin != null ? 'min' : undefined}
-                color={readiness.cappedByConfidence ? colors.recoveryYellow : undefined}
+                label={sleepStateConflict ? 'Sleep state' : readiness.cappedByConfidence ? 'Score cap' : 'Sleep signal'}
+                value={sleepStateConflict ? 'wake' : readiness.cappedByConfidence ? `${readiness.scoreCap}%` : sleepDetail?.signalMin ?? '-'}
+                unit={!sleepStateConflict && !readiness.cappedByConfidence && sleepDetail?.signalMin != null ? 'min' : undefined}
+                color={sleepStateConflict ? colors.recoveryRed : readiness.cappedByConfidence ? colors.recoveryYellow : undefined}
               />
             </View>
             <View style={styles.qualityHead}>
@@ -205,6 +213,22 @@ function readinessLimiter(
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
+  if (hasWakeStateConflict(sleepDetail)) {
+    const wakeMin = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+    return {
+      badge: 'DATA',
+      title: 'Sleep window is the limiter',
+      body: 'Decoded strap-state evidence is mostly wake, so readiness should stay conservative until the sleep window is reviewed.',
+      metric: 'Sleep state',
+      value: `${wakeMin}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+      actionLabel: 'Review sleep window',
+      actionValue: 'state evidence',
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
+
   if (readiness.confidence === 'low' || readiness.confidencePct < 55) {
     return {
       badge: 'DATA',
@@ -297,6 +321,21 @@ function readinessCall(
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
+  if (hasWakeStateConflict(sleepDetail)) {
+    const wakeMin = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+    return {
+      badge: 'CHECK',
+      title: 'Review sleep before training',
+      body: 'The sleep window conflicts with strap-state evidence. Keep training easy until the window is fixed or more history arrives.',
+      targetStrain: 'hold',
+      actionLabel: 'Adjust sleep window',
+      actionValue: `${wakeMin}/${sleepDetail?.sleepStateMin ?? 0} min wake`,
+      icon: 'create',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
+
   if (readiness.confidence === 'low' || (sleepDetail?.coveragePct ?? 100) < 60) {
     return {
       badge: 'DATA',
@@ -378,6 +417,16 @@ function readinessCall(
     color: colors.recoveryRed,
     route: { name: 'sleepCoach' },
   };
+}
+
+function hasWakeStateConflict(
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+): boolean {
+  const stateMin = sleepDetail?.sleepStateMin ?? 0;
+  if (stateMin < 30) return false;
+  const wakeLike = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+  const sleepLike = (sleepDetail?.sleepStateAsleepMin ?? 0) + (sleepDetail?.sleepStateStillMin ?? 0);
+  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 const styles = StyleSheet.create({
