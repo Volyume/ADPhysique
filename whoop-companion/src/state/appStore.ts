@@ -1893,7 +1893,7 @@ class AppStore extends Store<AppState> {
     if (scanEnd - scanStart < 20 * 60000) return;
 
     const existing = (await listCardio(CARDIO_RECENT_LIMIT)).filter((c) => c.startTs < scanEnd && c.endTs > scanStart);
-    const existingNaps = existing.filter((c) => c.source === 'nap');
+    const napRanges = existing.filter((c) => c.source === 'nap').map((c) => ({ startTs: c.startTs, endTs: c.endTs }));
     const blocked = existing
       .filter((c) => c.source !== 'nap')
       .map((c) => ({ startTs: c.startTs - 10 * 60000, endTs: c.endTs + 10 * 60000 }));
@@ -1911,13 +1911,13 @@ class AppStore extends Store<AppState> {
       if (segment.length < 20) continue;
       const startTs = segment[0]!.tsMs;
       const endTs = segment[segment.length - 1]!.tsMs + 60000;
-      if (existingNaps.some((n) => overlapMinutes(startTs, endTs, n.startTs, n.endTs) >= 10)) continue;
+      if (napRanges.some((n) => overlapMinutes(startTs, endTs, n.startTs, n.endTs) >= 10)) continue;
 
       const sleepInput = await buildSleepInput(segment, startTs, endTs);
       const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: 180 });
       if (!nap || !napIsReliable(nap)) continue;
       if (blocked.some((b) => rangesOverlap(nap.startTs, nap.endTs, b.startTs, b.endTs))) continue;
-      if (existingNaps.some((n) => overlapMinutes(nap.startTs, nap.endTs, n.startTs, n.endTs) >= 10)) continue;
+      if (napRanges.some((n) => overlapMinutes(nap.startTs, nap.endTs, n.startTs, n.endTs) >= 10)) continue;
 
       const napHr = await getHrSamplesBetween(nap.startTs, nap.endTs).catch(() => []);
       const bpms = napHr.map((r) => r.bpm).filter((v) => v >= 30 && v <= 160);
@@ -1943,6 +1943,7 @@ class AppStore extends Store<AppState> {
         source: 'nap',
         notes: encodeNapDetail(napDetailFromSleep(nap, true)),
       });
+      napRanges.push({ startTs: nap.startTs, endTs: nap.endTs });
     }
   }
 
@@ -2655,7 +2656,10 @@ function splitContiguousMinutes(
 
 function napIsReliable(nap: SleepResult): boolean {
   const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
-  const stillPct = Math.round(((nap.stillMin ?? 0) / Math.max(1, nap.inBedMin)) * 100);
+  const corroborationPct = sleepEvidencePct(nap);
+  const stateSleepLikeMin = (nap.sleepStateAsleepMin ?? 0) + (nap.sleepStateStillMin ?? 0);
+  const hasStateProof = (nap.sleepStateMin ?? 0) >= 12 && stateSleepLikeMin / Math.max(1, nap.sleepStateMin ?? 0) >= 0.3;
+  const hasMotionProof = nap.motionMin >= 12 && corroborationPct >= 20;
   return (
     !sleepStateWakeConflict(nap) &&
     nap.inBedMin >= 20 &&
@@ -2663,7 +2667,7 @@ function napIsReliable(nap: SleepResult): boolean {
     nap.asleepMin >= 15 &&
     nap.signalMin >= 20 &&
     coveragePct >= 60 &&
-    stillPct >= 20 &&
+    (hasMotionProof || hasStateProof) &&
     nap.efficiency >= 0.6
   );
 }
