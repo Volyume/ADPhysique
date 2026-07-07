@@ -12,6 +12,7 @@ import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
 import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
+import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -464,6 +465,16 @@ function dailyFocus(input: {
 } {
   const coverage = input.sleepCapture?.coveragePct ?? 0;
   const signalMin = input.sleepCapture?.signalMin ?? 0;
+  if (sleepStateWakeConflict(input.sleepCapture)) {
+    return {
+      badge: 'CHECK',
+      title: 'Review sleep before trusting today',
+      body: `Decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(input.sleepCapture)}), so Pulse is holding back sleep, recovery and readiness confidence.`,
+      action: 'Adjust sleep window',
+      color: colors.recoveryRed,
+      route: { name: 'editSleep' },
+    };
+  }
   if (input.draining || input.syncProblem || !input.sleep || coverage < 60 || signalMin < 150 || input.sleepPerformanceCapped) {
     return {
       badge: input.draining ? 'SYNC' : 'DATA',
