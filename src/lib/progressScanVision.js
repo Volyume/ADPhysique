@@ -371,40 +371,47 @@ export function blurScoreFromRgb(rgb, width, height) {
   return round(clamp(Math.log10(Math.max(0, variance) + 1) / 3, 0, 1), 3);
 }
 
-function widthAtBand(binary, width, height, bbox, ratio) {
-  if (!bbox) return null;
-  const yCentre = Math.round(bbox.minY + bbox.height * ratio);
-  const band = Math.max(1, Math.round(bbox.height * 0.018));
+function rowWidthAndCenter(binary, width, bbox, y) {
+  const row = y * width;
   let minX = width;
   let maxX = -1;
-  for (let y = Math.max(0, yCentre - band); y <= Math.min(height - 1, yCentre + band); y += 1) {
-    const row = y * width;
-    for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
-      if (binary[row + x]) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-      }
+  for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
+    if (binary[row + x]) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
     }
   }
-  return maxX >= minX ? maxX - minX + 1 : null;
+  return maxX >= minX ? {
+    width: maxX - minX + 1,
+    center: (minX + maxX + 1) / 2,
+  } : null;
 }
 
-function centerAtBand(binary, width, height, bbox, ratio) {
+function profileInRange(binary, width, height, bbox, startRatio, endRatio) {
   if (!bbox) return null;
-  const yCentre = Math.round(bbox.minY + bbox.height * ratio);
-  const band = Math.max(1, Math.round(bbox.height * 0.018));
-  let minX = width;
-  let maxX = -1;
-  for (let y = Math.max(0, yCentre - band); y <= Math.min(height - 1, yCentre + band); y += 1) {
-    const row = y * width;
-    for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
-      if (binary[row + x]) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-      }
-    }
+  const yStart = Math.max(0, Math.round(bbox.minY + bbox.height * startRatio));
+  const yEnd = Math.min(height - 1, Math.round(bbox.minY + bbox.height * endRatio));
+  const samples = [];
+  for (let y = yStart; y <= yEnd; y += 1) {
+    const row = rowWidthAndCenter(binary, width, bbox, y);
+    if (row) samples.push(row);
   }
-  return maxX >= minX ? (minX + maxX + 1) / 2 : null;
+  return samples.length ? samples : null;
+}
+
+function percentile(values = [], p = 0.5) {
+  const nums = values.map(finiteNumber).filter((v) => v != null).sort((a, b) => a - b);
+  if (!nums.length) return null;
+  const idx = clamp(Math.round((nums.length - 1) * p), 0, nums.length - 1);
+  return nums[idx];
+}
+
+function widthFromProfile(profile, p = 0.5) {
+  return percentile((profile || []).map((row) => row.width), p);
+}
+
+function centerFromProfile(profile) {
+  return percentile((profile || []).map((row) => row.center), 0.5);
 }
 
 function connectedComponents(binary, width, height) {
@@ -565,12 +572,16 @@ export function measureMaskSignals(mask, opts = {}) {
   const cropPenalty = (touchesTop || touchesBottom ? 0.32 : 0) + (touchesSide ? 0.16 : 0);
   const framingScore = round(clamp((centreScore * 0.35) + (heightScore * 0.5) + 0.15 - cropPenalty, 0, 1), 3);
 
-  const shoulderWidth = widthAtBand(binary, width, height, bbox, 0.24);
-  const shoulderCenter = centerAtBand(binary, width, height, bbox, 0.24);
-  const waistWidth = widthAtBand(binary, width, height, bbox, 0.52);
-  const hipWidth = widthAtBand(binary, width, height, bbox, 0.66);
-  const hipCenter = centerAtBand(binary, width, height, bbox, 0.66);
-  const thighWidth = widthAtBand(binary, width, height, bbox, 0.80);
+  const shoulderProfile = profileInRange(binary, width, height, bbox, 0.18, 0.31);
+  const waistProfile = profileInRange(binary, width, height, bbox, 0.44, 0.58);
+  const hipProfile = profileInRange(binary, width, height, bbox, 0.60, 0.72);
+  const thighProfile = profileInRange(binary, width, height, bbox, 0.76, 0.84);
+  const shoulderWidth = widthFromProfile(shoulderProfile, 0.85);
+  const shoulderCenter = centerFromProfile(shoulderProfile);
+  const waistWidth = widthFromProfile(waistProfile, 0.25);
+  const hipWidth = widthFromProfile(hipProfile, 0.70);
+  const hipCenter = centerFromProfile(hipProfile);
+  const thighWidth = widthFromProfile(thighProfile, 0.60);
   const shoulderToHeight = shoulderWidth != null ? shoulderWidth / bbox.height : null;
   const waistToHeight = waistWidth != null ? waistWidth / bbox.height : null;
   const hipToHeight = hipWidth != null ? hipWidth / bbox.height : null;

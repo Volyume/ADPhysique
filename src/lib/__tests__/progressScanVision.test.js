@@ -62,6 +62,18 @@ function syntheticPersonMask({
   return mask;
 }
 
+function widenMaskRows(mask, {
+  width = 256, centerX = 128, yStart, yEnd, halfWidth, foregroundProbability = 0.96,
+} = {}) {
+  const out = new Float32Array(mask);
+  for (let y = yStart; y <= yEnd; y += 1) {
+    for (let x = Math.max(0, centerX - halfWidth); x <= Math.min(width - 1, centerX + halfWidth); x += 1) {
+      out[y * width + x] = foregroundProbability;
+    }
+  }
+  return out;
+}
+
 function bytesToBase64(bytes) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let out = '';
@@ -297,6 +309,28 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.silhouetteRatios.waistToHip).toBeGreaterThan(0);
     expect(result.abstentionReasons).toEqual([]);
     expect(retakeCopyForVisionResult(result)).toBeNull();
+  });
+
+  test('zone measurements resist a narrow waist-row artefact', () => {
+    const base = measureMaskSignals(syntheticPersonMask(), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+    const noisy = measureMaskSignals(widenMaskRows(syntheticPersonMask(), {
+      yStart: 134,
+      yEnd: 136,
+      halfWidth: 82,
+    }), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+
+    expect(noisy.abstentionReasons).toEqual([]);
+    expect(Math.abs(
+      noisy.silhouetteRatios.waistToShoulder - base.silhouetteRatios.waistToShoulder,
+    )).toBeLessThan(0.03);
   });
 
   test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {
