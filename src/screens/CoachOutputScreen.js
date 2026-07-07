@@ -207,12 +207,12 @@ function AdjustmentRow({
 // the calorie row states the post-tap absolute and honest duration BEFORE the
 // tap. NU-3: a floor-held computation renders its reason instead of a button.
 function NextWeekCard({
-  adjustments, onApplyCalories, onApplySteps, onApplyCardio,
+  adjustments, onApplyCalories, onApplyCardio,
   applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
   cardioVerdict,
 }) {
-  const { calories, steps, cardio } = adjustments;
+  const { calories, cardio } = adjustments;
 
   const calLabel =
     calories === null
@@ -221,7 +221,6 @@ function NextWeekCard({
       ? 'Hold at current target'
       : signedEnergyChange(calories.change, energyUnit);
 
-  const stepsLabel = steps !== null ? `${steps.target.toLocaleString('en-GB')}/day target` : null;
   // NU-3: the floor hold (pre-tap classification) or a tap-time notice
   // replaces the button; the row explains itself instead of no-opping.
   const calorieHold = caloriePreview?.kind === 'floor_hold'
@@ -263,18 +262,6 @@ function NextWeekCard({
           iconName="flame-outline"
           label="Calories held"
           note="No change needed this week."
-        />
-      )}
-      {steps !== null && (
-        <AdjustmentRow
-          iconName="footsteps-outline"
-          label={stepsLabel}
-          note={steps.note}
-          applied={!!steps.applied}
-          onApply={steps.target && !steps.applied ? onApplySteps : undefined}
-          applyState={applyStateFor('steps')}
-          onApplySettled={() => onApplySettled('steps')}
-          emphasis={hero && heroRow === 'steps'}
         />
       )}
       {cardio !== null && (
@@ -1019,30 +1006,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       setApplySettling(s => ({ ...s, training: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
-    } finally {
-      setApplyingKey(null);
-    }
-  }
-
-  // Confirm-then-apply for the steps target. Writes
-  // userProfile.stepsTarget, which is the destination the weekly
-  // check-in already consumes: once set, the check-in shows the
-  // steps-adherence question (WeeklyCheckInScreen) and that adherence
-  // feeds the next coach run. No new surface needed.
-  async function handleApplySteps() {
-    if (applyingKey || !user?.id || !output) return;
-    if (isApplied(output, 'steps')) return;
-    const target = output.adjustments?.steps?.target;
-    if (!target) return;
-    setApplyingKey('steps');
-    try {
-      await saveLocalProfile(user.id, { ...latestProfile(), stepsTarget: target });
-      const updated = markApplied(output, 'steps', { target });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
-      setOutput(updated);
-      setApplySettling(s => ({ ...s, steps: true }));
-    } catch (e) {
-      logError('CoachOutputScreen.handleApplySteps', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
     }
@@ -1878,7 +1841,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     <NextWeekCard
       adjustments={adjustments}
       onApplyCalories={handleApplyCalories}
-      onApplySteps={handleApplySteps}
       onApplyCardio={handleApplyCardio}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
@@ -1887,7 +1849,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       caloriePreview={caloriePreview}
       calorieNotice={applyNotice.calories ?? null}
       hero={zones.heroKind === 'nutrition'}
-      heroRow={output.primary?.domain === 'steps' ? 'steps' : 'calories'}
+      heroRow="calories"
     />
   );
   const macroCardEl = macroCycle ? (
