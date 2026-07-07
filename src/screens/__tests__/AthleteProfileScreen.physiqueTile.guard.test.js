@@ -16,7 +16,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
-    expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>\{focusTile\.label\}: \{focusTile\.value\}<\/Text>/);
+    expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>Current focus: \{focusTile\.value\}<\/Text>/);
     expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
     expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
