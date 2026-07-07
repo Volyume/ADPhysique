@@ -7,6 +7,7 @@ import { Card, Empty, Screen, SectionLabel, WeeklyBars } from '../ui/components'
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav, MetricKey } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
+import { computeEnergyReserve } from '../metrics/energyReserve';
 
 type RangeKey = 'W' | 'M' | '6M' | 'ALL';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -25,6 +26,23 @@ type Series = {
   decimals?: number;
 };
 
+function energyReserveScore(d: DailyMetricRow): number | null {
+  const sleepPerformance = nullableClampPct(
+    d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+  );
+  const stress = d.sleepDetail?.stressHigh != null ? (d.sleepDetail.stressHigh / 100) * 3 : null;
+  return (
+    computeEnergyReserve({
+      recovery: d.recovery,
+      sleepPerformance,
+      sleepDebtMin: d.sleepDetail?.debtMin ?? 0,
+      hrvBalance: null,
+      strain: d.strain,
+      stress,
+    })?.score ?? null
+  );
+}
+
 const SERIESES: Series[] = [
   { key: 'recovery', title: 'RECOVERY', unit: '%', pick: (d) => d.recovery, color: (v) => recoveryColor(v) },
   { key: 'strain', title: 'DAY STRAIN', unit: '', pick: (d) => d.strain, color: () => colors.strainBlue, decimals: 1 },
@@ -34,6 +52,13 @@ const SERIESES: Series[] = [
     unit: '%',
     pick: (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)),
     color: () => colors.sleepTeal,
+  },
+  {
+    key: 'energy_reserve',
+    title: 'ENERGY RESERVE',
+    unit: '',
+    pick: energyReserveScore,
+    color: (v) => (v == null ? colors.textTertiary : v >= 70 ? colors.recoveryGreen : v >= 50 ? colors.recoveryYellow : colors.recoveryRed),
   },
   { key: 'hrv', title: 'HRV', unit: 'ms', pick: (d) => d.rmssd, color: () => colors.recoveryGreen },
   { key: 'rhr', title: 'RESTING HEART RATE', unit: 'bpm', pick: (d) => d.rhr, color: () => colors.recoveryRed },

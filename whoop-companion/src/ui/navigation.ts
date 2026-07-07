@@ -21,6 +21,7 @@ export type MetricKey =
   | 'sleep_need'
   | 'sleep_debt'
   | 'sleep_efficiency'
+  | 'energy_reserve'
   | 'calories'
   | 'avg_hr'
   | 'max_hr'
@@ -46,6 +47,7 @@ export type Route =
   | { name: 'sleepTrends' }
   | { name: 'training' }
   | { name: 'readiness' }
+  | { name: 'energyReserve' }
   | { name: 'workouts' }
   | { name: 'startMenu' }
   | { name: 'liveSession' }

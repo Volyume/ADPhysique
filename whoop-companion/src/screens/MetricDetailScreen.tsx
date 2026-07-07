@@ -9,6 +9,7 @@ import { stdev } from '../metrics/ema';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
+import { computeEnergyReserve } from '../metrics/energyReserve';
 
 type Def = {
   title: string;
@@ -22,6 +23,23 @@ type Def = {
 };
 
 const NEUTRAL = colors.strainBlue;
+
+function energyReserveScore(d: DailyMetricRow): number | null {
+  const sleepPerformance = nullableClampPct(
+    d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+  );
+  const stress = d.sleepDetail?.stressHigh != null ? (d.sleepDetail.stressHigh / 100) * 3 : null;
+  return (
+    computeEnergyReserve({
+      recovery: d.recovery,
+      sleepPerformance,
+      sleepDebtMin: d.sleepDetail?.debtMin ?? 0,
+      hrvBalance: null,
+      strain: d.strain,
+      stress,
+    })?.score ?? null
+  );
+}
 
 const DEFS: Record<string, Def> = {
   hrv: {
@@ -100,6 +118,15 @@ const DEFS: Record<string, Def> = {
     measured: true,
     blurb:
       'Sleep Performance is a composite of four contributors: Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
+  },
+  energy_reserve: {
+    title: 'Energy Reserve',
+    unit: '',
+    color: (v) => (v == null ? colors.textTertiary : v >= 70 ? colors.recoveryGreen : v >= 50 ? colors.recoveryYellow : colors.recoveryRed),
+    pick: energyReserveScore,
+    measured: true,
+    blurb:
+      'Energy Reserve estimates usable energy from recovery, sleep charge, sleep debt, stress and strain. It is separate from Training Readiness: this estimates energy availability, not how hard you should train.',
   },
   steps: {
     title: 'Steps',
@@ -264,6 +291,7 @@ function ringFraction(key: MetricKey, value: number | null): number {
     case 'recovery':
     case 'sleep_performance':
     case 'spo2':
+    case 'energy_reserve':
       return value / 100;
     case 'strain':
       return value / 21;

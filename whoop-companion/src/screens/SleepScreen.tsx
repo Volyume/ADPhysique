@@ -35,6 +35,7 @@ const STAGE_EDU = [
 export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const perf = useStoreSelector(appStore, (s) => s.sleepPerformance);
+  const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
@@ -102,6 +103,23 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           <LegendDot band="sufficient" />
           <LegendDot band="optimal" />
         </View>
+      </Card>
+
+      <SectionLabel>Sleep quality</SectionLabel>
+      <Card>
+        {sleepScore ? (
+          <>
+            <View style={styles.scoreHead}>
+              <Text style={[styles.scoreValue, { color: sleepQualityColor(sleepScore.score) }]}>{sleepScore.score}</Text>
+              <Text style={styles.scoreLabel}>Oura-style quality score</Text>
+            </View>
+            {sleepScore.contributors.map((c) => (
+              <ScoreRow key={c.key} label={c.label} value={c.score} detail={c.detail} />
+            ))}
+          </>
+        ) : (
+          <Empty text="Sleep Quality appears after a scored sleep." />
+        )}
       </Card>
 
       {/* Quick actions */}
@@ -368,6 +386,25 @@ function NeedRow({ label, value, strong }: { label: string; value: string; stron
   );
 }
 
+function ScoreRow({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return (
+    <View style={styles.scoreRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.scoreRowLabel}>{label}</Text>
+        <Text style={styles.scoreRowDetail}>{detail}</Text>
+      </View>
+      <Text style={[styles.scoreRowValue, { color: sleepQualityColor(value) }]}>{value}</Text>
+    </View>
+  );
+}
+
+function sleepQualityColor(score: number): string {
+  if (score >= 85) return colors.recoveryGreen;
+  if (score >= 70) return colors.sleepTeal;
+  if (score >= 55) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
 function fmtMin(minOfDay: number): string {
   const h = Math.floor(minOfDay / 60) % 24;
   const m = Math.round(minOfDay % 60);
@@ -402,6 +439,13 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
 
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  scoreHead: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 },
+  scoreValue: { fontSize: 44, fontFamily: fonts.black, marginRight: 10 },
+  scoreLabel: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.textSemibold },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
+  scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
+  scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+  scoreRowValue: { fontSize: 18, fontFamily: fonts.bold },
   captureSource: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   captureNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },

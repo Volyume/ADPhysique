@@ -39,6 +39,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
+  const energyReserve = useStoreSelector(appStore, (s) => s.energyReserve);
   // Composite Sleep Performance (WHOOP's headline) when available, else the
   // hours-vs-needed ratio as a fallback for older rows.
   const sleepPerf =
@@ -224,6 +225,18 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             style={styles.half}
           />
           <Tile
+            title="Energy"
+            icon="battery-charging"
+            color={energyColor(energyReserve?.score)}
+            value={energyReserve ? `${energyReserve.score}` : '—'}
+            sub={energyReserve ? energyReserve.label : 'needs data'}
+            onPress={() => nav.navigate({ name: 'energyReserve' })}
+            style={styles.half}
+          />
+        </View>
+
+        <View style={styles.grid}>
+          <Tile
             title="Steps"
             icon="footsteps"
             color={colors.recoveryGreen}
@@ -232,9 +245,6 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
             style={styles.half}
           />
-        </View>
-
-        <View style={styles.grid}>
           <Tile
             title="Training Status"
             icon="fitness"
@@ -242,7 +252,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             value=""
             sub="VO2max / load"
             onPress={() => nav.navigate({ name: 'training' })}
-            style={{ flex: 1, marginTop: 0 }}
+            style={styles.half}
           />
         </View>
 
@@ -336,6 +346,13 @@ function qualityColor(coverage: number, signalMin: number, syncing: boolean, syn
   if (coverage >= 60 && signalMin >= 120) return colors.recoveryGreen;
   if (signalMin >= 30) return colors.recoveryYellow;
   return colors.textTertiary;
+}
+
+function energyColor(score: number | null | undefined): string {
+  if (score == null) return colors.textSecondary;
+  if (score >= 70) return colors.recoveryGreen;
+  if (score >= 50) return colors.recoveryYellow;
+  return colors.recoveryRed;
 }
 
 function isRetryableSyncProblem(sync: { status: string; reason?: string } | null | undefined): boolean {

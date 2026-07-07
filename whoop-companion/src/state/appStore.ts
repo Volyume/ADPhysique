@@ -90,6 +90,7 @@ import { rhythmScreen, RhythmResult } from '../metrics/afib';
 import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
+import { computeEnergyReserve, EnergyReserve } from '../metrics/energyReserve';
 import {
   BandStepEstimate,
   estimateBandStepsFromCounters,
@@ -198,6 +199,7 @@ export type AppState = {
     note: string;
   } | null;
   trainingReadiness: Readiness | null; // Garmin-style readiness, built on Recovery
+  energyReserve: EnergyReserve | null; // all-day usable energy estimate
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: { hrvSub: number; rhrSub: number; respSub: number | null; sleepSub: number } | null;
@@ -248,6 +250,7 @@ const initialState: AppState = {
   sleepPerformance: null,
   sleepCapture: null,
   trainingReadiness: null,
+  energyReserve: null,
   sleepGoal: 0.85,
   recoveryParts: null,
   hrvBal: null,
@@ -2261,6 +2264,14 @@ class AppStore extends Store<AppState> {
       hrvBalance: hrvBal?.score ?? null,
       acwr: loadStatus.acwr,
     });
+    const energyReserve = computeEnergyReserve({
+      recovery,
+      sleepPerformance: sleepPerfPct,
+      sleepDebtMin: need.debtMin,
+      hrvBalance: hrvBal?.score ?? null,
+      strain,
+      stress: this.getState().liveStress ?? storedStress,
+    });
 
     const row: DailyMetricRow = {
       day: today,
@@ -2299,6 +2310,7 @@ class AppStore extends Store<AppState> {
       steps: bestSteps,
       stepSource: stepChoice.source ?? this.getState().stepSource,
       trainingReadiness,
+      energyReserve,
       recoveryParts,
       hrvBal,
       illness,

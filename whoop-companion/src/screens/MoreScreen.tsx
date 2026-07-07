@@ -19,6 +19,7 @@ export function MoreScreen({ nav }: { nav: Nav }) {
       <Card style={{ paddingVertical: 2 }}>
         <NavRow label="Health Monitor" icon="pulse" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'health' })} />
         <NavRow label="Stress Monitor" icon="speedometer" iconColor={colors.strainBlue} onPress={() => nav.navigate({ name: 'stress' })} />
+        <NavRow label="Energy Reserve" icon="battery-charging" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'energyReserve' })} />
         <NavRow label="Resilience" icon="shield-half" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'resilience' })} />
         <NavRow label="Sick-Risk Monitor" icon="medkit" iconColor={colors.recoveryYellow} onPress={() => nav.navigate({ name: 'illness' })} />
         <NavRow label="Sleep Coach" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} />

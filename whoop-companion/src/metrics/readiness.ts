@@ -2,8 +2,7 @@
  * Training Readiness — a Garmin-style "should I train hard today?" score, but
  * built ON TOP OF our existing WHOOP Recovery score (Recovery is its dominant
  * input) rather than duplicating it. It fuses Recovery with sleep, HRV, sleep
- * debt and training load. We deliberately do NOT ship a separate Garmin "Body
- * Battery" energy metric — our Recovery score already serves that role.
+ * debt and training load.
  */
 
 export type Readiness = {
