@@ -57,7 +57,7 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
         },
         (days) => `Last scored ${days} days ago. Plan your next comparable photos soon.`,
         (days) => `Last scored ${days} days ago. Retake when light, pose and timing are consistent.`,
-        'No score yet. Start with consistent front, side and back photos.',
+        'No score yet. Start with consistent front and back photos. Side is optional.',
       ),
     },
     lifts: {
