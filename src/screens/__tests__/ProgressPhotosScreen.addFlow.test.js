@@ -190,6 +190,16 @@ async function importFrontScanPhoto(tree) {
   await pressLabel(tree, 'Import photos for this scan');
 }
 
+async function approveScanReview(tree) {
+  expect(allTexts(tree).join(' ')).toContain('Check front photo');
+  expect(tree.root.findAll(
+    (n) => n.props?.source?.uri === 'file:///photos/1700000000000.jpg',
+  ).length).toBeGreaterThan(0);
+  expect(analyseProgressScanPhoto).not.toHaveBeenCalled();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+}
+
 beforeEach(() => jest.clearAllMocks());
 
 test('add photos sheet presents guided capture and import as the two scan paths', async () => {
@@ -225,9 +235,7 @@ test('importing photos asks for the scan date before touching the library', asyn
 });
 
 test('confirming the scan date imports the first photo into the scan pipeline', async () => {
-  mockAppAlert.mockImplementation((title, _message, buttons = []) => {
-    if (title === 'Use this photo?') buttons.find((b) => b.text === 'Use photo')?.onPress?.();
-  });
+  mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await importFrontScanPhoto(tree);
   await flush();
@@ -242,6 +250,7 @@ test('confirming the scan date imports the first photo into the scan pipeline', 
   // Today by default.
   const startOfToday = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   expect(patch.takenAt).toBeGreaterThanOrEqual(startOfToday);
+  await approveScanReview(tree);
   expect(analyseProgressScanPhoto).toHaveBeenCalledWith({ uri: 'file:///photos/1700000000000.jpg', pose: 'front' });
   expect(addProgressScanAsset).toHaveBeenCalledWith(USER_ID, 'scan-1', expect.objectContaining({
     pose: 'front',
@@ -251,9 +260,7 @@ test('confirming the scan date imports the first photo into the scan pipeline', 
 });
 
 test('setting the imported scan date to the past indexes the set under that day', async () => {
-  mockAppAlert.mockImplementation((title, _message, buttons = []) => {
-    if (title === 'Use this photo?') buttons.find((b) => b.text === 'Use photo')?.onPress?.();
-  });
+  mockAppAlert.mockImplementation(() => {});
   const tree = await render();
   await openImportScanDateStep(tree);
   await flush();
@@ -277,6 +284,10 @@ test('setting the imported scan date to the past indexes the set under that day'
   expect(createProgressScanSession).toHaveBeenCalledWith(USER_ID, expect.objectContaining({ capturedAt: pastDay }));
   const patch = upsertPhotoMeta.mock.calls[0][2];
   expect(patch.takenAt).toBe(pastDay);
+  await approveScanReview(tree);
+  expect(addProgressScanAsset).toHaveBeenCalledWith(USER_ID, 'scan-1', expect.objectContaining({
+    takenAt: pastDay,
+  }));
 });
 
 test('a pro-to-free flip with the scan date sheet open blocks the import', async () => {
