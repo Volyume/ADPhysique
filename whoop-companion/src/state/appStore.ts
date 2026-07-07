@@ -1389,81 +1389,28 @@ class AppStore extends Store<AppState> {
       .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
       .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
-    if (sleep) {
-      sleep.neededMin = need.neededMin;
-      sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
-    }
+    if (sleep) applySleepNeed(sleep, need);
 
-    let sleepStressResult: SleepStress | null = null;
-    if (sleep) {
-      const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
-      for (const s of scoredNightHr) {
-        const m = Math.floor(s.ts / 60000);
-        const b = byMin.get(m) ?? { hrs: [], rr: [] };
-        b.hrs.push(s.bpm);
-        b.rr.push(...s.rr);
-        byMin.set(m, b);
-      }
-      const epochs: StressEpoch[] = [...byMin.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(([, v]) => ({
-          hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
-          rmssd: computeHrv(v.rr)?.rmssd ?? null,
-        }));
-      sleepStressResult = computeSleepStress(epochs);
-    }
+    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr) : null;
 
     let sleepDetail: SleepDetail | null = null;
+    let sleepPerformanceResult: SleepPerformance | null = null;
     if (sleep) {
       const priorWindows = recent
         .filter((d) => d.sleepStart != null && d.sleepEnd != null)
         .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
       priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
       const consistency = sleepConsistency(priorWindows);
-      const sleepCoveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
-      const boundedSleepCoveragePct = Math.max(0, Math.min(100, sleepCoveragePct));
-      const confidence = sleepConfidence(sleep.signalMin, boundedSleepCoveragePct, !!manual, sleep);
-      const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
-      const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
-      const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
-      const sleepPerformanceResult = computeSleepPerformance({
-        hoursVsNeededPct,
-        efficiencyPct,
+      const scored = buildSleepDetail({
+        sleep,
+        need,
         consistencyPct: consistency?.score ?? null,
-        highStressPct: sleepStressResult?.highPct ?? 0,
-        confidenceCapPct: sleepPerformanceCap(confidence, boundedSleepCoveragePct, sleep),
+        sleepStress: sleepStressResult,
+        manual: !!manual,
+        includeQualityScore: false,
       });
-      sleepDetail = {
-        performance: sleepPerformanceResult.score,
-        hoursVsNeeded: hoursVsNeededPct,
-        needMin: need.neededMin,
-        baselineMin: need.baselineMin,
-        napMin: need.napMin,
-        strainMin: need.strainMin,
-        debtMin: need.debtMin,
-        efficiency: efficiencyPct,
-        consistency: consistency?.score ?? null,
-        restorativeMin: sleep.restorativeMin,
-        restorativePct,
-        latencyMin: sleep.latencyMin,
-        wakeEvents: sleep.wakeEvents,
-        inBedMin: sleep.inBedMin,
-        stressHigh: sleepStressResult?.highPct ?? null,
-        stressMed: sleepStressResult?.medPct ?? null,
-        stressLow: sleepStressResult?.lowPct ?? null,
-        source: sleep.source,
-        signalMin: sleep.signalMin,
-        motionMin: sleep.motionMin,
-        stillMin: sleep.stillMin,
-        movingMin: sleep.movingMin,
-        sleepStateMin: sleep.sleepStateMin,
-        sleepStateWakeMin: sleep.sleepStateWakeMin,
-        sleepStateStillMin: sleep.sleepStateStillMin,
-        sleepStateAsleepMin: sleep.sleepStateAsleepMin,
-        sleepStateUpMin: sleep.sleepStateUpMin,
-        coveragePct: boundedSleepCoveragePct,
-        confidence,
-      };
+      sleepPerformanceResult = scored.performance;
+      sleepDetail = scored.detail;
     }
 
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
@@ -1477,7 +1424,7 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
-      sleepPerformance: sleepDetail?.performance != null ? sleepDetail.performance / 100 : (sleep?.performance ?? null),
+      sleepPerformance: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       rmssdSamples,
       rhrSamples,
       respSamples,
@@ -1493,7 +1440,7 @@ class AppStore extends Store<AppState> {
       spo2,
       skinTempC,
       sleepMin: sleep?.asleepMin ?? null,
-      sleepPerf: sleepDetail?.performance != null ? sleepDetail.performance / 100 : (sleep?.performance ?? null),
+      sleepPerf: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       strain,
       steps,
       sleepStart: sleep?.startTs ?? null,
@@ -2243,10 +2190,7 @@ class AppStore extends Store<AppState> {
       .filter((c) => c.source === 'nap' && c.startTs >= sod)
       .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
-    if (sleep) {
-      sleep.neededMin = need.neededMin;
-      sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
-    }
+    if (sleep) applySleepNeed(sleep, need);
     const captureSleep = candidateSleep ?? sleep;
     const sleepCoveragePct = captureSleep
       ? Math.round((captureSleep.signalMin / Math.max(1, captureSleep.inBedMin)) * 100)
@@ -2289,77 +2233,23 @@ class AppStore extends Store<AppState> {
     const consistency = sleepConsistency(priorWindows);
 
     // ---- WHOOP-style Sleep Stress (0-3) over time-in-bed, from R-R + HR ----
-    let sleepStressResult: SleepStress | null = null;
-    if (sleep) {
-      const winSamples = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs);
-      const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
-      for (const s of winSamples) {
-        const m = Math.floor(s.ts / 60000);
-        const b = byMin.get(m) ?? { hrs: [], rr: [] };
-        b.hrs.push(s.bpm);
-        b.rr.push(...s.rr);
-        byMin.set(m, b);
-      }
-      const epochs: StressEpoch[] = [...byMin.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(([, v]) => ({
-          hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
-          rmssd: computeHrv(v.rr)?.rmssd ?? null,
-        }));
-      sleepStressResult = computeSleepStress(epochs);
-    }
+    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr) : null;
 
     // ---- WHOOP-style Sleep Performance composite + 4 contributors ----
     let sleepPerformanceResult: SleepPerformance | null = null;
     let sleepDetail: SleepDetail | null = null;
     if (sleep) {
-      const confidence = sleepConfidence(sleep.signalMin, boundedSleepCoveragePct, !!manual, sleep);
-      const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
-      const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
-      const restorativePct =
-        sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
-      const highStressPct = sleepStressResult?.highPct ?? 0;
-      sleepPerformanceResult = computeSleepPerformance({
-        hoursVsNeededPct,
-        efficiencyPct,
+      const scored = buildSleepDetail({
+        sleep,
+        need,
         consistencyPct: consistency?.score ?? null,
-        highStressPct,
-        confidenceCapPct: sleepPerformanceCap(confidence, boundedSleepCoveragePct, sleep),
+        sleepStress: sleepStressResult,
+        manual: !!manual,
+        includeQualityScore: true,
       });
-      sleepScoreResult = computeSleepScore(sleep, {
-        confidenceCapPct: sleepQualityCap(confidence, boundedSleepCoveragePct, sleep),
-      });
-      sleepDetail = {
-        performance: sleepPerformanceResult.score,
-        hoursVsNeeded: hoursVsNeededPct,
-        needMin: need.neededMin,
-        baselineMin: need.baselineMin,
-        napMin: need.napMin,
-        strainMin: need.strainMin,
-        debtMin: need.debtMin,
-        efficiency: efficiencyPct,
-        consistency: consistency?.score ?? null,
-        restorativeMin: sleep.restorativeMin,
-        restorativePct,
-        latencyMin: sleep.latencyMin,
-        wakeEvents: sleep.wakeEvents,
-        inBedMin: sleep.inBedMin,
-        stressHigh: sleepStressResult?.highPct ?? null,
-        stressMed: sleepStressResult?.medPct ?? null,
-        stressLow: sleepStressResult?.lowPct ?? null,
-        source: sleep.source,
-        signalMin: sleep.signalMin,
-        motionMin: sleep.motionMin,
-        stillMin: sleep.stillMin,
-        movingMin: sleep.movingMin,
-        sleepStateMin: sleep.sleepStateMin,
-        sleepStateWakeMin: sleep.sleepStateWakeMin,
-        sleepStateStillMin: sleep.sleepStateStillMin,
-        sleepStateAsleepMin: sleep.sleepStateAsleepMin,
-        sleepStateUpMin: sleep.sleepStateUpMin,
-        coveragePct: boundedSleepCoveragePct,
-        confidence,
-      };
+      sleepPerformanceResult = scored.performance;
+      sleepScoreResult = scored.score;
+      sleepDetail = scored.detail;
     }
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       recent
@@ -2795,8 +2685,107 @@ const MIN_VITAL_COVERAGE_PCT = 55;
 const MIN_SLEEP_SCORE_SIGNAL_MIN = 150;
 const MIN_SLEEP_SCORE_COVERAGE_PCT = 50;
 
+function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
+  sleep.neededMin = need.neededMin;
+  sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
+}
+
 function sleepCoveragePct(sleep: SleepResult): number {
   return Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
+}
+
+function boundedSleepCoveragePct(sleep: SleepResult): number {
+  return Math.max(0, Math.min(100, sleepCoveragePct(sleep)));
+}
+
+function buildSleepStress(samples: HrSampleRow[]): SleepStress | null {
+  const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
+  for (const s of samples) {
+    const m = Math.floor(s.ts / 60000);
+    const b = byMin.get(m) ?? { hrs: [], rr: [] };
+    b.hrs.push(s.bpm);
+    b.rr.push(...s.rr);
+    byMin.set(m, b);
+  }
+  const epochs: StressEpoch[] = [...byMin.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, v]) => ({
+      hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
+      rmssd: computeHrv(v.rr)?.rmssd ?? null,
+    }));
+  return computeSleepStress(epochs);
+}
+
+function buildSleepDetail(input: {
+  sleep: SleepResult;
+  need: SleepNeed;
+  consistencyPct: number | null;
+  sleepStress: SleepStress | null;
+  manual: boolean;
+  includeQualityScore: boolean;
+}): {
+  detail: SleepDetail;
+  performance: SleepPerformance;
+  score: SleepScore | null;
+  confidence: SleepConfidence;
+  coveragePct: number;
+} {
+  const { sleep, need, consistencyPct, sleepStress, manual } = input;
+  const coveragePct = boundedSleepCoveragePct(sleep);
+  const confidence = sleepConfidence(sleep.signalMin, coveragePct, manual, sleep);
+  const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
+  const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
+  const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
+  const performance = computeSleepPerformance({
+    hoursVsNeededPct,
+    efficiencyPct,
+    consistencyPct,
+    highStressPct: sleepStress?.highPct ?? 0,
+    confidenceCapPct: sleepPerformanceCap(confidence, coveragePct, sleep),
+  });
+  const score = input.includeQualityScore
+    ? computeSleepScore(sleep, {
+        confidenceCapPct: sleepQualityCap(confidence, coveragePct, sleep),
+      })
+    : null;
+
+  return {
+    detail: {
+      performance: performance.score,
+      hoursVsNeeded: hoursVsNeededPct,
+      needMin: need.neededMin,
+      baselineMin: need.baselineMin,
+      napMin: need.napMin,
+      strainMin: need.strainMin,
+      debtMin: need.debtMin,
+      efficiency: efficiencyPct,
+      consistency: consistencyPct,
+      restorativeMin: sleep.restorativeMin,
+      restorativePct,
+      latencyMin: sleep.latencyMin,
+      wakeEvents: sleep.wakeEvents,
+      inBedMin: sleep.inBedMin,
+      stressHigh: sleepStress?.highPct ?? null,
+      stressMed: sleepStress?.medPct ?? null,
+      stressLow: sleepStress?.lowPct ?? null,
+      source: sleep.source,
+      signalMin: sleep.signalMin,
+      motionMin: sleep.motionMin,
+      stillMin: sleep.stillMin,
+      movingMin: sleep.movingMin,
+      sleepStateMin: sleep.sleepStateMin,
+      sleepStateWakeMin: sleep.sleepStateWakeMin,
+      sleepStateStillMin: sleep.sleepStateStillMin,
+      sleepStateAsleepMin: sleep.sleepStateAsleepMin,
+      sleepStateUpMin: sleep.sleepStateUpMin,
+      coveragePct,
+      confidence,
+    },
+    performance,
+    score,
+    confidence,
+    coveragePct,
+  };
 }
 
 function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
