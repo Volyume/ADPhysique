@@ -305,9 +305,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // Step 4, recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
-  const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
-  const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
   // Cardio available by default. On means the cardio library + logging are
   // available to the user; it does NOT allocate cardio. The coach only ever
@@ -407,9 +405,7 @@ export default function ProOnboardingScreen({ navigation }) {
       if (Array.isArray(a.planWeakPoints)) setPlanWeakPoints(a.planWeakPoints.filter((m) => typeof m === 'string').slice(0, 3));
       str(a.proteinOverride, setProteinOverride);
       str(a.recoveryRating, setRecoveryRating);
-      bool(a.morningEnabled, setMorningEnabled);
       num(a.morningHour, setMorningHour);
-      bool(a.checkinEnabled, setCheckinEnabled);
       num(a.checkinDay, setCheckinDay);
       bool(a.cardioOn, setCardioOn);
       // The account step is behind a restored draft by definition.
@@ -436,7 +432,7 @@ export default function ProOnboardingScreen({ navigation }) {
       bodyFat, bfSource, localHeightUnits, sex, age, heightCm, heightFt,
       heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
       trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
-      recoveryRating, morningEnabled, morningHour, checkinEnabled, checkinDay,
+      recoveryRating, morningHour, checkinDay,
       cardioOn,
     };
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
@@ -449,7 +445,7 @@ export default function ProOnboardingScreen({ navigation }) {
     bodyWeight, bodyFat, bfSource, localHeightUnits, sex, age, heightCm,
     heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
     equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
-    recoveryRating, morningEnabled, morningHour, checkinEnabled, checkinDay,
+    recoveryRating, morningHour, checkinDay,
     cardioOn,
   ]);
 
@@ -642,15 +638,14 @@ export default function ProOnboardingScreen({ navigation }) {
 
     let planFailed = false;
     try {
-      if (morningEnabled || checkinEnabled) {
+      {
         // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
-        // all read these top-level keys. An earlier nested shape
-        // (prefs.checkin.weekday, prefs.morning.hour) was silently
-        // dropped by every reader, defaulting every enrolled user to
-        // a Sunday check-in regardless of the day they picked here.
+        // all read these top-level keys. The coaching loop needs both
+        // reminders, so onboarding matches Settings > Coaching reminders:
+        // users pick times, not on/off switches.
         const prefs = {
-          morningEnabled,
-          checkinEnabled,
+          morningEnabled: true,
+          checkinEnabled: true,
           morningHour,
           morningMinute: 0,
           checkinDay,
@@ -664,26 +659,19 @@ export default function ProOnboardingScreen({ navigation }) {
         await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
         const status = await requestNotificationPermissions();
         if (status === 'granted') {
-          if (morningEnabled) {
-            await scheduleMorningWeightNotification(morningHour, 0);
-            // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
-            await scheduleEveningWeightReminder();
-          }
-          if (checkinEnabled) {
-            await scheduleCheckinReminder(checkinDay, 12, 0);
-          }
+          await scheduleMorningWeightNotification(morningHour, 0);
+          await scheduleEveningWeightReminder();
+          await scheduleCheckinReminder(checkinDay, 12, 0);
           // OPP-C03: pre-lay the missed check-in follow-up pair for the
           // first check-in cycle (reads the prefs blob just saved; the
           // helper self-guards on tier, toggle and ED flag).
-          if (checkinEnabled) {
-            try {
-              // eslint-disable-next-line global-require
-              const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
-              // eslint-disable-next-line global-require
-              const { default: store } = require('../store/useAppStore');
-              await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
-            } catch (_) {}
-          }
+          try {
+            // eslint-disable-next-line global-require
+            const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+            // eslint-disable-next-line global-require
+            const { default: store } = require('../store/useAppStore');
+            await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+          } catch (_) {}
         }
       }
 
@@ -1675,7 +1663,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Optional prompts for the habits your weekly check-in depends on. Change them any time in Settings.</Text>
+            <Text style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in Settings &gt; Coaching reminders.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
@@ -1688,44 +1676,37 @@ export default function ProOnboardingScreen({ navigation }) {
                     A quick morning weigh-in gives a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.toggle, morningEnabled && styles.toggleOn]}
-                  onPress={() => setMorningEnabled(v => !v)}
-                  hitSlop={hitSlop}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: morningEnabled }}
-                  accessibilityLabel="Morning weight reminder"
-                >
-                  <View style={[styles.toggleThumb, morningEnabled && styles.toggleThumbOn]} />
-                </TouchableOpacity>
+                <View style={styles.requiredPill} accessibilityLabel="Required coaching reminder">
+                  <Text style={styles.requiredPillText}>Required</Text>
+                </View>
               </View>
 
-              {morningEnabled && (
-                <View style={styles.timeRow}>
-                  <Text style={styles.timeLabel}>Remind me at</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.hourScroll}
-                    contentContainerStyle={styles.hourScrollContent}
-                  >
-                    {HOURS.map(h => (
-                      <TouchableOpacity
-                        key={h}
-                        style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
-                        onPress={() => setMorningHour(h)}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: morningHour === h }}
-                        accessibilityLabel={`Remind me at ${fmt12(h)}`}
-                      >
-                        <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
-                          {fmt12(h)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+              <View style={styles.timeRow}>
+                <Text style={styles.timeLabel}>Remind me at</Text>
+                <View accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time">
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.hourScroll}
+                  contentContainerStyle={styles.hourScrollContent}
+                >
+                  {HOURS.map(h => (
+                    <TouchableOpacity
+                      key={h}
+                      style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
+                      onPress={() => setMorningHour(h)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: morningHour === h }}
+                      accessibilityLabel={`Remind me at ${fmt12(h)}`}
+                    >
+                      <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
+                        {fmt12(h)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
                 </View>
-              )}
+              </View>
             </View>
 
             <View style={styles.notifSection}>
@@ -1739,44 +1720,37 @@ export default function ProOnboardingScreen({ navigation }) {
                     Pick the day you are most likely to review training, food and recovery honestly.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.toggle, checkinEnabled && styles.toggleOn]}
-                  onPress={() => setCheckinEnabled(v => !v)}
-                  hitSlop={hitSlop}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: checkinEnabled }}
-                  accessibilityLabel="Weekly check-in reminder"
-                >
-                  <View style={[styles.toggleThumb, checkinEnabled && styles.toggleThumbOn]} />
-                </TouchableOpacity>
+                <View style={styles.requiredPill} accessibilityLabel="Required coaching reminder">
+                  <Text style={styles.requiredPillText}>Required</Text>
+                </View>
               </View>
 
-              {checkinEnabled && (
-                <View style={styles.timeRow}>
-                  <Text style={styles.timeLabel}>Check in on</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.hourScroll}
-                    contentContainerStyle={styles.hourScrollContent}
-                  >
-                    {DAYS.map((d, i) => (
-                      <TouchableOpacity
-                        key={d}
-                        style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
-                        onPress={() => setCheckinDay(i)}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: checkinDay === i }}
-                        accessibilityLabel={`Check in on ${d}`}
-                      >
-                        <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
-                          {d.slice(0, 3)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+              <View style={styles.timeRow}>
+                <Text style={styles.timeLabel}>Check in on</Text>
+                <View accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day">
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.hourScroll}
+                  contentContainerStyle={styles.hourScrollContent}
+                >
+                  {DAYS.map((d, i) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
+                      onPress={() => setCheckinDay(i)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: checkinDay === i }}
+                      accessibilityLabel={`Check in on ${d}`}
+                    >
+                      <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
+                        {d.slice(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
                 </View>
-              )}
+              </View>
             </View>
           </View>
 
@@ -2049,6 +2023,16 @@ const styles = StyleSheet.create({
   },
   notifTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
   notifSub: { ...type.captionTight, color: colors.textMuted },
+  requiredPill: {
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.188),
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    alignSelf: 'flex-start',
+  },
+  requiredPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
 
   coachCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,

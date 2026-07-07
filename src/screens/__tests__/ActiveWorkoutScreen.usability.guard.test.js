@@ -69,7 +69,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('distance time input is announced as time, not duration', () => {
+    const durationWindow = SET_ENTRY.match(/testID="volyume-duration-input"[\s\S]{0,700}/)?.[0] ?? '';
     const distanceWindow = SET_ENTRY.match(/testID="volyume-distance-time-input"[\s\S]{0,700}/)?.[0] ?? '';
+    expect(durationWindow).toContain('accessibilityLabel="Time in minutes and seconds"');
+    expect(durationWindow).not.toContain('accessibilityLabel="Duration in minutes and seconds"');
     expect(distanceWindow).toContain('accessibilityLabel="Time in minutes and seconds"');
     expect(distanceWindow).not.toContain('accessibilityLabel="Duration in minutes and seconds"');
   });
@@ -85,12 +88,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: 44,\s*height: 44,/);
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
+    expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
     expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);
   });
 
   test('long workout utility sheets are scroll-safe on phone screens', () => {
     expect(ACTIVE_WORKOUT).toContain('function WorkoutSheetScroll');
     expect(ACTIVE_WORKOUT.match(/<WorkoutSheetScroll>/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(ACTIVE_WORKOUT).toContain("sheetHost: { flex: 1, justifyContent: 'flex-end' }");
+    expect(ACTIVE_WORKOUT.match(/<View style=\{styles\.sheetHost\}>/g)?.length).toBeGreaterThanOrEqual(5);
     expect(ACTIVE_WORKOUT).toMatch(/sheet: \{[^}]*maxHeight: '92%'/);
     expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
   });
