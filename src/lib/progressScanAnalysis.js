@@ -9,6 +9,17 @@ export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmen
 export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v1';
 export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 14 * 86400000;
 
+const REQUIRED_SCORE_RATIO_KEYS = ['waistToShoulder', 'waistToHip', 'waistToHeight', 'bodyAreaRatio'];
+const FINAL_SCAN_QUALITY_GATES = {
+  lighting: 0.3,
+  blur: 0.3,
+  framing: 0.32,
+  pose: 0.28,
+  segmentation: 0.38,
+  separation: 0.28,
+  tiltDegrees: 16,
+};
+
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
   { key: 'foundation', label: 'Foundation', min: 0, max: 19 },
   { key: 'active', label: 'Active', min: 20, max: 34 },
@@ -116,6 +127,11 @@ function assetSignals(asset = {}) {
   return parseMaybeJson(asset.signals ?? asset.signalsJson, null);
 }
 
+function hasRequiredScoreRatios(asset = {}) {
+  const ratios = assetSignals(asset)?.silhouetteRatios;
+  return REQUIRED_SCORE_RATIO_KEYS.every((key) => finiteNumber(ratios?.[key]) != null);
+}
+
 function hasModelBackedAssets(assets = []) {
   return (assets || []).some((asset) => assetSignals(asset)?.modelBacked);
 }
@@ -153,6 +169,7 @@ export function abstentionReasonsForAssets(assets = []) {
   else if (!requiredModelBackedPosesComplete(assets)) reasons.add('model_unavailable');
   for (const asset of requiredPoseAssets(assets)) {
     const signals = assetSignals(asset);
+    if (signals?.modelBacked && !hasRequiredScoreRatios(asset)) reasons.add('measured_signals_incomplete');
     for (const reason of signals?.abstentionReasons || []) {
       const canonical = canonicalReason(reason);
       if (canonical && canonical !== 'model_unavailable') reasons.add(canonical);
@@ -164,13 +181,13 @@ export function abstentionReasonsForAssets(assets = []) {
     const segmentation = finiteNumber(asset.segmentationConfidence);
     const tilt = finiteNumber(asset.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees);
     const separation = finiteNumber(signals?.quality?.backgroundSeparation);
-    if (lighting != null && lighting < 0.45) reasons.add('too_dark');
-    if (blur != null && blur < 0.45) reasons.add('too_blurry');
-    if (framing != null && framing < 0.55) reasons.add('whole_body_not_visible');
-    if (landmarks != null && landmarks < 0.55) reasons.add('pose_not_clear');
-    if (segmentation != null && segmentation < 0.55) reasons.add('segmentation_low_confidence');
-    if (tilt != null && Math.abs(tilt) > 10) reasons.add('camera_tilted');
-    if (separation != null && separation < 0.45) reasons.add('clothing_or_background_uncertain');
+    if (lighting != null && lighting < FINAL_SCAN_QUALITY_GATES.lighting) reasons.add('too_dark');
+    if (blur != null && blur < FINAL_SCAN_QUALITY_GATES.blur) reasons.add('too_blurry');
+    if (framing != null && framing < FINAL_SCAN_QUALITY_GATES.framing) reasons.add('whole_body_not_visible');
+    if (landmarks != null && landmarks < FINAL_SCAN_QUALITY_GATES.pose) reasons.add('pose_not_clear');
+    if (segmentation != null && segmentation < FINAL_SCAN_QUALITY_GATES.segmentation) reasons.add('segmentation_low_confidence');
+    if (tilt != null && Math.abs(tilt) > FINAL_SCAN_QUALITY_GATES.tiltDegrees) reasons.add('camera_tilted');
+    if (separation != null && separation < FINAL_SCAN_QUALITY_GATES.separation) reasons.add('clothing_or_background_uncertain');
   }
   return [...reasons];
 }
