@@ -29,6 +29,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const sleepStart = metric?.sleepStart ?? null;
   const sleepEnd = metric?.sleepEnd ?? null;
   const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);
+  const sleepReview = metric ? daySleepReview(metric) : null;
 
   return (
     <Screen
@@ -109,6 +110,17 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                   <Stat label="Coverage" value={`${metric.sleepDetail?.coveragePct ?? 0}%`} color={coverageColor(metric.sleepDetail?.coveragePct ?? 0)} />
                   <Stat label="Signal" value={metric.sleepDetail?.signalMin ?? 0} unit="min" />
                 </View>
+                {sleepReview ? (
+                  <View style={[styles.reviewBanner, { borderColor: sleepReview.color, backgroundColor: sleepReview.tint }]}>
+                    <View style={[styles.reviewBadge, { backgroundColor: sleepReview.color }]}>
+                      <Text style={[styles.reviewBadgeText, { color: sleepReview.textColor }]}>{sleepReview.label}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewTitle}>{sleepReview.title}</Text>
+                      <Text style={styles.reviewBody}>{sleepReview.body}</Text>
+                    </View>
+                  </View>
+                ) : null}
                 <Text style={styles.note}>{sleepTrustNote(metric)}</Text>
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>
@@ -279,6 +291,99 @@ function sleepTrustNote(metric: DailyMetricRow): string {
   return `Low-confidence sleep: ${detail.coveragePct}% coverage with ${detail.signalMin} signal minutes. Sync more data or adjust the window before trusting score/recovery.`;
 }
 
+function daySleepReview(metric: DailyMetricRow): {
+  label: string;
+  title: string;
+  body: string;
+  color: string;
+  tint: string;
+  textColor: string;
+} | null {
+  if (metric.sleepMin == null) return null;
+
+  const detail = metric.sleepDetail;
+  if (!detail) {
+    return {
+      label: 'CHECK',
+      title: 'Sleep needs review',
+      body: 'The app has a sleep duration but no capture detail, so stages and recovery inputs should be treated as incomplete.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  const coverage = detail.coveragePct ?? 0;
+  const signal = detail.signalMin ?? 0;
+  const inBed = detail.inBedMin ?? metric.sleepMin;
+  const efficiency = detail.efficiency ?? (inBed > 0 ? Math.round((metric.sleepMin / inBed) * 100) : null);
+  const hasCoreVitals = metric.rmssd != null && metric.rhr != null && metric.resp != null;
+
+  if (detail.confidence === 'low' || coverage < 60 || signal < 150) {
+    return {
+      label: 'SYNC',
+      title: 'Partial overnight capture',
+      body: `Only ${coverage}% coverage and ${signal} signal minutes are available. Keep the strap connected and let auto sync backfill before trusting sleep or recovery.`,
+      color: colors.recoveryRed,
+      tint: `${colors.recoveryRed}12`,
+      textColor: colors.white,
+    };
+  }
+
+  if ((detail.hoursVsNeeded ?? 0) > 105 || (detail.performance ?? 0) > 100) {
+    return {
+      label: 'NEED',
+      title: 'Sleep need looks overfilled',
+      body: 'The duration beat the current sleep-need estimate. Check that the window does not include awake time before using the score.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  if ((efficiency ?? 0) >= 94 && inBed >= 600) {
+    return {
+      label: 'CHECK',
+      title: 'Window may be too wide',
+      body: `Efficiency is ${efficiency}% across ${formatDuration(inBed)} in bed. If you were awake at either end, trim the window for cleaner stages.`,
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  if (!hasCoreVitals) {
+    return {
+      label: 'VITAL',
+      title: 'Recovery inputs incomplete',
+      body: 'Sleep timing is usable, but HRV, resting HR or respiratory rate is missing, so recovery confidence is limited.',
+      color: colors.strainBlue,
+      tint: `${colors.strainBlue}18`,
+      textColor: colors.white,
+    };
+  }
+
+  if (detail.confidence === 'medium' || coverage < 80) {
+    return {
+      label: 'OK',
+      title: 'Usable with caution',
+      body: `Coverage is ${coverage}%. Trends are useful, but adjust the sleep window if the bedtime or wake time looks wrong.`,
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
+
+  return {
+    label: 'GOOD',
+    title: 'Strong sleep capture',
+    body: `This day has ${coverage}% coverage, ${signal} signal minutes and the core overnight vitals needed for recovery scoring.`,
+    color: colors.recoveryGreen,
+    tint: `${colors.recoveryGreen}12`,
+    textColor: '#000',
+  };
+}
+
 function formatDayLong(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -327,7 +432,26 @@ const styles = StyleSheet.create({
   big: { color: colors.text, fontSize: 30, fontFamily: fonts.black },
   sub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
   qualityGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  note: { color: colors.textTertiary, fontSize: 12, marginTop: 12, fontFamily: fonts.text },
+  reviewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 14,
+  },
+  reviewBadge: {
+    width: 48,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewBadgeText: { fontSize: 10, fontFamily: fonts.black },
+  reviewTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  reviewBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  note: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 12, fontFamily: fonts.text },
   adjustRow: {
     flexDirection: 'row',
     alignItems: 'center',
