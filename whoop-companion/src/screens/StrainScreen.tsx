@@ -63,7 +63,16 @@ export function StrainScreen({ nav }: { nav: Nav }) {
 
   const addSuggested = (d: DetectedActivity) => {
     void appStore
-      .addCardio({ activity: 'Workout', startTs: d.startTs, endTs: d.endTs, avgHr: d.avgHr, source: 'auto' })
+      .addCardio({
+        activity: d.label ?? 'Workout',
+        startTs: d.startTs,
+        endTs: d.endTs,
+        avgHr: d.avgHr,
+        steps: d.steps ?? null,
+        cadenceSpm: d.cadenceSpm ?? null,
+        stepSource: d.steps != null ? 'band' : null,
+        source: 'auto',
+      })
       .then(() => appStore.suggestedActivities().then(setSuggested));
   };
 
@@ -139,9 +148,11 @@ export function StrainScreen({ nav }: { nav: Nav }) {
             {suggested.map((d) => (
               <View key={d.startTs} style={styles.sessionRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sessionName}>Possible workout</Text>
+                  <Text style={styles.sessionName}>Possible {d.label?.toLowerCase() ?? 'workout'}</Text>
                   <Text style={styles.sessionMeta}>
-                    {formatDuration(Math.round((d.endTs - d.startTs) / 60000))} · {d.avgHr} bpm avg · auto-detected
+                    {formatDuration(Math.round((d.endTs - d.startTs) / 60000))} · {d.avgHr} bpm avg
+                    {d.steps != null ? ` · ${d.steps.toLocaleString()} steps` : ''}
+                    {d.cadenceSpm != null ? ` · ${d.cadenceSpm} spm` : ''} · auto-detected
                   </Text>
                 </View>
                 <Pressable onPress={() => addSuggested(d)} style={styles.addBtn}>

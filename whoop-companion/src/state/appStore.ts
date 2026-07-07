@@ -1649,8 +1649,22 @@ class AppStore extends Store<AppState> {
     const rows = await getHrSamplesBetween(sod, Date.now());
     const perMin = perMinuteHr(rows).map((p) => ({ tsMs: p.tsMs, hr: p.hr }));
     const existing = this.getState().cardio.filter((c) => c.startTs >= sod);
-    return detectActivities(perMin, this.getState().profile, existing);
+    const detected = detectActivities(perMin, this.getState().profile, existing);
+    return Promise.all(detected.map((d) => this.enrichDetectedActivity(d)));
   };
+
+  private async enrichDetectedActivity(d: DetectedActivity): Promise<DetectedActivity> {
+    const steps = estimateStepsFromCounters(await getStepSamplesBetween(d.startTs, d.endTs));
+    if (steps == null || steps <= 0) return { ...d, label: 'Workout', steps: null, cadenceSpm: null };
+    const minutes = Math.max(1 / 60, (d.endTs - d.startTs) / 60000);
+    const cadenceSpm = Math.round(steps / minutes);
+    return {
+      ...d,
+      label: cadenceSpm >= 130 ? 'Running' : cadenceSpm >= 60 ? 'Walking' : 'Workout',
+      steps,
+      cadenceSpm,
+    };
+  }
 
   /**
    * Weekly Intensity Minutes (WHO guideline): minutes of moderate (HR zones 2–3)

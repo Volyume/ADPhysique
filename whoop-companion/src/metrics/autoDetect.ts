@@ -8,7 +8,14 @@
 
 import { hrMaxFor, UserProfile } from './strain';
 
-export type DetectedActivity = { startTs: number; endTs: number; avgHr: number };
+export type DetectedActivity = {
+  startTs: number;
+  endTs: number;
+  avgHr: number;
+  label?: string;
+  steps?: number | null;
+  cadenceSpm?: number | null;
+};
 
 const MIN_MINUTES = 15;
 const GAP_TOLERANCE_MIN = 3; // brief dips below threshold don't end the bout
