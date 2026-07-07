@@ -28,9 +28,9 @@ const SCREEN = fs.readFileSync(
   'utf8',
 );
 
-// The eight apply keys with a committing button on this screen.
+// The seven apply keys with a committing button on this screen.
 const APPLY_KEYS = [
-  'calories', 'training', 'steps', 'cardio',
+  'calories', 'training', 'cardio',
   'deload', 'dietBreak', 'macroCycle', 'refeed',
 ];
 

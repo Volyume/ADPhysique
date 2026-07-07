@@ -55,6 +55,7 @@ import MealSection from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
+import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
@@ -1029,7 +1030,7 @@ export default function DiaryScreen({ navigation }) {
           title="Eat"
           right={(
             <View style={styles.headerNutritionIcon}>
-              <Ionicons name="nutrition-outline" size={20} color={colors.primary} />
+              <VolyumeIcon size={19} />
             </View>
           )}
         />

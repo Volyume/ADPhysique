@@ -15,7 +15,7 @@ describe('WorkoutSummaryScreen feedback controls', () => {
 
   test('keeps completed-workout footer compact and stable', () => {
     expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
-    expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.md }]}>');
+    expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>');
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
