@@ -35,6 +35,14 @@ function ideal(value: number, lo: number, hi: number): number {
   return clamp(100 - ((value - hi) / hi) * 100);
 }
 
+function totalSleepAdequacy(asleepMin: number, needMin: number): number {
+  if (needMin <= 0) return 0;
+  const ratio = asleepMin / needMin;
+  if (ratio <= 1) return clamp(ratio * 100);
+  if (ratio <= 1.1) return 100;
+  return clamp(100 - ((ratio - 1.1) / 0.45) * 35, 65, 100);
+}
+
 export function computeSleepScore(sleep: SleepResult, opts?: { confidenceCapPct?: number | null }): SleepScore {
   const asleep = sleep.asleepMin;
   const need = sleep.neededMin || 480;
@@ -43,7 +51,7 @@ export function computeSleepScore(sleep: SleepResult, opts?: { confidenceCapPct?
   const deepPct = asleep > 0 ? (sleep.stages.deep / asleep) * 100 : 0;
   const wakeEvents = midSleepAwakeEvents(sleep.hypnogram);
 
-  const total = clamp((asleep / need) * 100);
+  const total = totalSleepAdequacy(asleep, need);
   const efficiency = band(eff, 85, 95); // Oura: 85 good, 95 optimal
   const rem = ideal(remPct, 18, 26); // ~20–25% ideal
   const deep = ideal(deepPct, 13, 20); // ~13–20% ideal
