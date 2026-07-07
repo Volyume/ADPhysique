@@ -157,6 +157,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [routineName, setRoutineName] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
   // COMP-013: the calibrated first-session acknowledgement, shown only on the
   // live summary of a user's very first completed session. null = not the first
@@ -549,6 +550,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     }
     if (!workoutId) { navigation.popToTop(); return; }
     setSaving(true);
+    setSaveError(null);
     if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     try {
       await updateWorkout(workoutId, {
@@ -560,7 +562,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
       });
-    } catch (_e) {}
+    } catch (e) {
+      logError('WorkoutSummaryScreen.saveWorkoutFeedback', e, { workoutId, userId: user?.id });
+      setSaving(false);
+      setSaveError('Could not save your session notes and ratings. Please check your connection and try Close again.');
+      toast.show('Could not save your session yet. Try Close again.', { variant: 'error' });
+      return;
+    }
 
     // Contribute this session's sleep-quality rating to the week's recovery
     // record. This is the ONLY field WorkoutSummary writes to weekly_checkins:
@@ -588,7 +596,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           weekStart: localWeekStartMs(workoutDayMs({ startedAt, endedAt })),
           sleepQuality: preWorkoutReadiness.sleepQuality,
         });
-      } catch (_e) {}
+      } catch (e) {
+        logError('WorkoutSummaryScreen.saveSleepQuality', e, { workoutId, userId: user?.id });
+      }
     }
 
     // Write adaptation events for engine decisions. These are an
@@ -623,13 +633,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           });
         }
       }
-    } catch (_e) {}
+    } catch (e) {
+      logError('WorkoutSummaryScreen.createAdaptationEvents', e, { workoutId, userId: user?.id });
+    }
 
     // Save "next time" note if the user typed one
     if (user?.id && nextTimeNote.trim()) {
       try {
         await saveNextTimeNote(user.id, { routineId: routineId ?? null, note: nextTimeNote.trim() });
-      } catch (_e) {}
+      } catch (e) {
+        logError('WorkoutSummaryScreen.saveNextTimeNote', e, { workoutId, userId: user?.id });
+      }
     }
 
     // Background sync to Supabase, fire and forget, never blocks navigation
@@ -1305,9 +1319,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           inverse case, ActiveWorkout, where the band hides, is the one
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
       <View style={[styles.stickyFooter, { paddingBottom: spacing.md }]}>
+        {saveError ? (
+          <View style={styles.saveErrorCard}>
+            <Ionicons name="warning-outline" size={16} color={colors.error} />
+            <Text style={styles.saveErrorText}>{saveError}</Text>
+          </View>
+        ) : null}
         <View style={styles.footerRow}>
           <Button
-            title="Close"
+            title={saving ? 'Saving' : 'Close'}
             variant="secondary"
             size="lg"
             style={styles.doneBtn}
@@ -1705,6 +1725,19 @@ const styles = StyleSheet.create({
     minHeight: 68,
     backgroundColor: colors.background,
   },
+  saveErrorCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: withAlpha(colors.error, 0.12),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.error, 0.28),
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  saveErrorText: { ...type.caption, color: colors.textPrimary, flex: 1, lineHeight: 18 },
   footerRow: {
     flexDirection: 'row',
     gap: spacing.md,

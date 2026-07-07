@@ -19,6 +19,11 @@ export function visibleCompletedScans(scans = []) {
     .filter((scan) => scan?.status !== 'draft' && scan?.requiredPosesComplete);
 }
 
+export function visibleScoredScans(scans = []) {
+  return visibleCompletedScans(scans)
+    .filter((scan) => Number.isFinite(Number(scan?.signals?.physiqueAssessment?.visualLeannessScore)));
+}
+
 export function scanShareItemsFromEntries(scans = [], nowMs = Date.now()) {
   return visibleCompletedScans(scans)
     .filter((scan) => Array.isArray(scan.assets))
@@ -108,7 +113,7 @@ export function buildPhysiqueStudioNextAction({
   const ordered = [...source].sort((a, b) => (Number(b.takenAt) || 0) - (Number(a.takenAt) || 0));
   const latest = ordered[0] || null;
   const completed = ordered.filter(checkInIsComplete);
-  const visibleScans = visibleCompletedScans(scans);
+  const scoredScans = visibleScoredScans(scans);
 
   if (latest && !checkInIsComplete(latest) && !readOnly) {
     const poses = Array.isArray(latest.poses) ? latest.poses : [];
@@ -128,12 +133,12 @@ export function buildPhysiqueStudioNextAction({
     };
   }
 
-  if (!suppressed && visibleScans.length >= 2) {
+  if (!suppressed && scoredScans.length >= 2) {
     return {
       kind: 'compare_scans',
       title: 'Compare Volyume Scores',
       body: 'Compare two scored photo sets using photos taken in the same poses.',
-      reason: `${visibleScans.length} scored photo sets are ready.`,
+      reason: `${scoredScans.length} scored photo sets are ready.`,
       detailItems: [
         'The Volyume Score shows broad change, not an exact number.',
         'This is not an exact body fat percentage.',
