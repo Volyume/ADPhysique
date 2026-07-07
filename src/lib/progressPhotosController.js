@@ -8,6 +8,8 @@ export function enrichProgressPhotos(photos = [], metaMap = {}) {
       ts: photo.ts,
       takenAt,
       pose: (meta && meta.pose) || null,
+      weightKg: meta && Number.isFinite(meta.weightKg) ? meta.weightKg : null,
+      note: meta && meta.note ? meta.note : null,
     };
   });
 }
@@ -186,6 +188,29 @@ export async function deleteViewerProgressPhoto({
   if (item) {
     const fileDeleted = await deleteProgressPhoto(userId, item.uri);
     if (!fileDeleted) throw new Error('progress_photo_delete_failed');
+  }
+  return true;
+}
+
+export async function deleteViewerProgressPhotoSet({
+  userId,
+  names = [],
+  photos = [],
+  detachProgressScanPhoto,
+  deletePhotoMeta,
+  deleteProgressPhoto,
+}) {
+  const uniqueNames = [...new Set((Array.isArray(names) ? names : []).filter(Boolean))];
+  if (uniqueNames.length === 0) return true;
+  for (const name of uniqueNames) {
+    await deleteViewerProgressPhoto({
+      userId,
+      name,
+      photos,
+      detachProgressScanPhoto,
+      deletePhotoMeta,
+      deleteProgressPhoto,
+    });
   }
   return true;
 }

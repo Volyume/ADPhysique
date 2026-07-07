@@ -46,6 +46,7 @@ import {
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
+  deleteViewerProgressPhotoSet,
   findScanForPhotoName,
   buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
@@ -456,6 +457,15 @@ export default function ProgressPhotosScreen({ navigation }) {
       .filter((item) => item.type === 'checkin'),
     [enriched],
   );
+  const checkInByPhotoName = useMemo(() => {
+    const map = new Map();
+    for (const item of allCheckIns) {
+      for (const photo of item.photos || []) {
+        if (photo?.name) map.set(photo.name, item);
+      }
+    }
+    return map;
+  }, [allCheckIns]);
   const latestPartialCapture = useMemo(() => {
     const latest = allCheckIns[0] || null;
     if (!latest) return null;
@@ -883,27 +893,45 @@ export default function ProgressPhotosScreen({ navigation }) {
         await refresh();
         return;
       }
-      await deleteViewerProgressPhoto({
-        userId: uid,
-        name,
-        photos,
-        detachProgressScanPhoto,
-        deletePhotoMeta,
-        deleteProgressPhoto,
-      });
+      const checkIn = checkInByPhotoName.get(name);
+      const setNames = (checkIn?.photos || []).map((photo) => photo?.name).filter(Boolean);
+      if (setNames.length > 1) {
+        await deleteViewerProgressPhotoSet({
+          userId: uid,
+          names: setNames,
+          photos,
+          detachProgressScanPhoto,
+          deletePhotoMeta,
+          deleteProgressPhoto,
+        });
+        setReferenceName((prev) => (setNames.includes(prev) ? null : prev));
+      } else {
+        await deleteViewerProgressPhoto({
+          userId: uid,
+          name,
+          photos,
+          detachProgressScanPhoto,
+          deletePhotoMeta,
+          deleteProgressPhoto,
+        });
+        setReferenceName((prev) => (prev === name ? null : prev));
+      }
     } catch (e) {
       logError('ProgressPhotos.delete', e, { name });
       toast.show('Could not delete that photo. Please try again.', { variant: 'error' });
       return;
     }
-    setReferenceName((prev) => (prev === name ? null : prev));
     setViewerOpen(false);
     await refresh();
-  }, [canWrite, photos, refresh, toast, userId, visibleScans]);
+  }, [canWrite, checkInByPhotoName, photos, refresh, toast, userId, visibleScans]);
 
   const viewerDeleteModeForPhoto = useCallback(
-    (name) => (findScanForPhotoName(visibleScans, name) ? 'scan-set' : 'photo'),
-    [visibleScans],
+    (name) => {
+      if (findScanForPhotoName(visibleScans, name)) return 'scan-set';
+      const checkIn = checkInByPhotoName.get(name);
+      return (checkIn?.photos || []).length > 1 ? 'photo-set' : 'photo';
+    },
+    [checkInByPhotoName, visibleScans],
   );
 
   function openCompare() { setCompareOpen(true); }

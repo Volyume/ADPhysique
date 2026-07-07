@@ -165,7 +165,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     }));
   });
 
-  test('successful cloud redeem reports mirror pending if this device cannot show the pair yet', async () => {
+  test('successful cloud redeem reports success while the local mirror catches up', async () => {
     db.getActivePartnerCount.mockResolvedValue(0);
     db.upsertPartnershipFromCloud.mockRejectedValueOnce(new Error('local mirror write failed'));
     service.redeemPartnerInvite.mockResolvedValueOnce({
@@ -175,10 +175,10 @@ describe('usePartners redeem enforces the partner cap', () => {
     const ref = renderHook('pro');
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
-    expect(r).toEqual({ ok: false, error: 'local_mirror_pending' });
+    expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
   });
 
-  test('successful cloud redeem does not treat a blind mirror write as visible', async () => {
+  test('successful cloud redeem seeds optimistic state when a blind mirror write is not yet visible', async () => {
     db.getActivePartnerCount.mockResolvedValue(0);
     db.upsertPartnershipFromCloud.mockResolvedValueOnce(undefined);
     service.redeemPartnerInvite.mockResolvedValueOnce({
@@ -188,7 +188,12 @@ describe('usePartners redeem enforces the partner cap', () => {
     const ref = renderHook('pro');
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
-    expect(r).toEqual({ ok: false, error: 'local_mirror_pending' });
+    expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
+    expect(ref.pairs[0]).toMatchObject({
+      id: 'p1',
+      partnerFirstName: 'Sam',
+      partnership: { id: 'p1', status: 'active' },
+    });
   });
 
   test('successful cloud redeem returns ok when the pair is visible after an optional mirror write failure', async () => {

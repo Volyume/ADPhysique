@@ -46,6 +46,12 @@ function cheerFailureCode(error, data) {
   return data?.error || null;
 }
 
+function shouldTryDirectCheerInsert(failureCode, error) {
+  if (failureCode === 'cheers_unavailable' || failureCode === 'insert_failed') return true;
+  if (failureCode) return false;
+  return !!error;
+}
+
 function isDuplicateCheerError(error) {
   const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
   return error?.code === '23505' || text.includes('duplicate') || text.includes('unique');
@@ -253,6 +259,9 @@ export async function sendCheer(userId, { pairId, kind = DEFAULT_ACK_KEY, recipr
     const failureCode = cheerFailureCode(error, data);
     if (failureCode === 'already_cheered') return { ok: false, error: failureCode };
     if (failureCode || error) {
+      if (!shouldTryDirectCheerInsert(failureCode, error)) {
+        return { ok: false, error: failureCode || 'offline' };
+      }
       const direct = await insertCheerDirectly(c, {
         userId,
         pairId,

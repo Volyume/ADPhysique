@@ -6,6 +6,7 @@ import {
   cleanupRetakenScanPose,
   cleanupUnattachedSavedScanPhoto,
   deleteViewerProgressPhoto,
+  deleteViewerProgressPhotoSet,
   enrichProgressPhotos,
   findScanForPhotoName,
   progressCheckInCadenceLabel,
@@ -20,11 +21,11 @@ describe('progressPhotosController transforms', () => {
       { name: 'a.jpg', uri: 'file:///a.jpg', ts: 100 },
       { name: 'b.jpg', uri: 'file:///b.jpg', ts: 200 },
     ];
-    const metaMap = { 'a.jpg': { takenAt: 123, pose: 'front' } };
+    const metaMap = { 'a.jpg': { takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup' } };
 
     expect(enrichProgressPhotos(photos, metaMap)).toEqual([
-      { name: 'a.jpg', uri: 'file:///a.jpg', ts: 100, takenAt: 123, pose: 'front' },
-      { name: 'b.jpg', uri: 'file:///b.jpg', ts: 200, takenAt: 200, pose: null },
+      { name: 'a.jpg', uri: 'file:///a.jpg', ts: 100, takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup' },
+      { name: 'b.jpg', uri: 'file:///b.jpg', ts: 200, takenAt: 200, pose: null, weightKg: null, note: null },
     ]);
   });
 
@@ -243,6 +244,32 @@ describe('progressPhotosController cleanup orchestration', () => {
       deletePhotoMeta: jest.fn(async () => result.meta),
       deleteProgressPhoto: jest.fn(async () => result.file),
     })).rejects.toThrow(message);
+  });
+
+  test('deleteViewerProgressPhotoSet deletes every photo in a saved set', async () => {
+    const detachProgressScanPhoto = jest.fn(async () => true);
+    const deletePhotoMeta = jest.fn(async () => true);
+    const deleteProgressPhoto = jest.fn(async () => true);
+
+    await deleteViewerProgressPhotoSet({
+      userId: 'u1',
+      names: ['front.jpg', 'side.jpg', 'back.jpg'],
+      photos: [
+        { name: 'front.jpg', uri: 'file:///front.jpg' },
+        { name: 'side.jpg', uri: 'file:///side.jpg' },
+        { name: 'back.jpg', uri: 'file:///back.jpg' },
+      ],
+      detachProgressScanPhoto,
+      deletePhotoMeta,
+      deleteProgressPhoto,
+    });
+
+    expect(detachProgressScanPhoto).toHaveBeenCalledTimes(3);
+    expect(deletePhotoMeta).toHaveBeenCalledTimes(3);
+    expect(deleteProgressPhoto).toHaveBeenCalledTimes(3);
+    expect(deleteProgressPhoto).toHaveBeenNthCalledWith(1, 'u1', 'file:///front.jpg');
+    expect(deleteProgressPhoto).toHaveBeenNthCalledWith(2, 'u1', 'file:///side.jpg');
+    expect(deleteProgressPhoto).toHaveBeenNthCalledWith(3, 'u1', 'file:///back.jpg');
   });
 
   test('cleanupRetakenScanPose deletes file then metadata and uses retake error names', async () => {
