@@ -182,11 +182,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // this holds null under any suppressed state. Marked seen on cheer or unmount.
   const [partnerMoment, setPartnerMoment] = useState(null);
   const partnerMomentRef = useRef(null);
-  // Default-expanded so the energy + sleep prompts surface naturally
-  // at the end of the session. The coach engine relies on these
-  // signals; hiding them behind a tap was making the post-workout
-  // check-in feel like it had disappeared.
-  const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);
+  // Keep the completion state calm: the workout is done, and the primary
+  // actions must be visible immediately. These optional answers still feed the
+  // coaching loop, but only open when the lifter deliberately rates the session.
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
@@ -1229,17 +1228,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={styles.sectionTitle}>Tell your coach</Text>
               <Text style={styles.optionalLabel}>optional</Text>
             </View>
-            <Text style={styles.coachZoneSubHeading}>How did it feel?</Text>
+            <Text style={styles.coachZoneSubHeading}>How did the session feel?</Text>
             <TouchableOpacity
               style={styles.feedbackToggleBtn}
               onPress={() => setFeedbackExpanded(e => !e)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityState={{ expanded: feedbackExpanded }}
-              accessibilityLabel={feedbackExpanded ? 'Hide session feedback' : 'Add session feedback'}
+              accessibilityLabel={feedbackExpanded ? 'Hide session rating' : 'Rate this session'}
             >
               <Text style={styles.feedbackToggleBtnText}>
-                {feedbackExpanded ? 'Hide session feedback' : 'Add session feedback'}
+                {feedbackExpanded ? 'Hide session rating' : 'Rate this session'}
               </Text>
               <Ionicons
                 name={feedbackExpanded ? 'chevron-up' : 'chevron-down'}

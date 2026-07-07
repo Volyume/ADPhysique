@@ -186,12 +186,12 @@ const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/Per
 // Every other Pro route below stays hard-locked, so no mutation surface
 // (FoodSearch, ScanBarcode, MealPlan, cardio, recipes...) leaks via deep link.
 const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
-const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos and Physique Scan', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
+const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos and Volyume Score', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
 // path, never the live feature). The guard is the upgrade path, matching how
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
 const GatedPartner          = lazyScreen(() => withProGuard(require('../screens/PartnerScreen').default, 'Training partner'));
-const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Your week'));
+const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Coaching decision'));
 const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/ProGoalSetupScreen').default, 'Pro goal setup'));
 const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Update training'));
 const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
