@@ -161,6 +161,14 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Build meals<\/Text>/);
     expect(SRC).toMatch(/Build meals from your targets for this date or the week\. Nothing is logged until you add it\./);
   });
+
+  test('small diary actions use button chrome instead of loose text links', () => {
+    expect(SRC).toMatch(/style=\{\[styles\.offCardButton, styles\.offCardButtonMuted\]\}/);
+    expect(SRC).toMatch(/style=\{styles\.offCardButton\}/);
+    expect(SRC).toMatch(/style=\{styles\.plannedBtnGhostButton\}/);
+    expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
+    expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
+  });
 });
 
 describe('DiaryScreen date navigation polish', () => {
@@ -195,7 +203,11 @@ describe('DiaryScreen saved food entry points', () => {
     expect(SRC).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
     expect(SRC).toMatch(/const \[savedPickerSlot, setSavedPickerSlot\] = useState\(null\);/);
     expect(SRC).toMatch(/function addSavedMeal\(slot\) \{\s*setSavedPickerSlot\(slot\);\s*\}/);
-    expect(SRC).toMatch(/accessibilityLabel="Saved food"/);
+    expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
+    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodTitle\}>Saved meals and recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodOptionTitle\}>Saved meals<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodOptionTitle\}>Recipes<\/Text>/);
+    expect(SRC).toMatch(/is in Saved meals/);
     expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);
     expect(SRC).toMatch(/openSavedFoodRoute\('MyRecipes'\)/);

@@ -186,6 +186,14 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).toMatch(/Set your targets first and Volyume can suggest meals that fit them\./);
     expect(SCREEN_SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionTargets'\)/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Set nutrition targets"/);
+    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.emptyActionText\}>Set nutrition targets<\/Text>/);
+  });
+
+  test('the custom tab labels saved meal surfaces plainly', () => {
+    expect(SCREEN_SOURCE).toMatch(/label: 'Recipes'/);
+    expect(SCREEN_SOURCE).toMatch(/label: 'Saved meals'/);
+    expect(SCREEN_SOURCE).not.toMatch(/label: 'My recipes'/);
+    expect(SCREEN_SOURCE).not.toMatch(/label: 'My meals'/);
   });
 });
 

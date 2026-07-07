@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, withAlpha, alpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import {
@@ -842,7 +842,7 @@ export default function DiaryScreen({ navigation }) {
       await createSavedMeal(userId, { name, items });
       audit('food.saveMeal', { count: items.length });
       exitSelection();
-      toast.show(`"${name}" is in My meals.`, { variant: 'success' });
+      toast.show(`"${name}" is in Saved meals.`, { variant: 'success' });
     } catch (_) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }
@@ -1158,7 +1158,13 @@ export default function DiaryScreen({ navigation }) {
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
             <View style={styles.offCardRow}>
-              <TouchableOpacity onPress={onDismissOffCard} hitSlop={8} accessibilityRole="button" accessibilityLabel="Not now">
+              <TouchableOpacity
+                onPress={onDismissOffCard}
+                hitSlop={8}
+                style={[styles.offCardButton, styles.offCardButtonMuted]}
+                accessibilityRole="button"
+                accessibilityLabel="Not now"
+              >
                 <Text style={styles.offCardDismiss}>Not now</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1171,6 +1177,7 @@ export default function DiaryScreen({ navigation }) {
                   onDismissOffCard();
                 }}
                 hitSlop={8}
+                style={styles.offCardButton}
                 accessibilityRole="button"
                 accessibilityLabel="Open sharing settings"
               >
@@ -1222,7 +1229,13 @@ export default function DiaryScreen({ navigation }) {
                       <Text style={styles.plannedBtnPrimaryText}>Mark as eaten</Text>
                     </TouchableOpacity>
                   ) : null}
-                  <TouchableOpacity onPress={handleClearPlanned} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned meals">
+                  <TouchableOpacity
+                    onPress={handleClearPlanned}
+                    hitSlop={8}
+                    style={styles.plannedBtnGhostButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear the planned meals"
+                  >
                     <Text style={styles.plannedBtnGhost}>Clear</Text>
                   </TouchableOpacity>
                 </View>
@@ -1364,10 +1377,10 @@ export default function DiaryScreen({ navigation }) {
       <BottomSheet
         visible={!!savedPickerSlot && !readOnly}
         onClose={() => setSavedPickerSlot(null)}
-        accessibilityLabel="Saved food"
+        accessibilityLabel="Saved meals and recipes"
       >
-        <Text style={styles.savedFoodTitle}>Saved food</Text>
-        <Text style={styles.savedFoodIntro}>Use a meal saved from your diary, or a recipe you built.</Text>
+        <Text style={styles.savedFoodTitle}>Saved meals and recipes</Text>
+        <Text style={styles.savedFoodIntro}>Use a saved meal from your diary, or a recipe you built.</Text>
         <TouchableOpacity
           style={styles.savedFoodOption}
           onPress={() => openSavedFoodRoute('MyMeals')}
@@ -1387,13 +1400,13 @@ export default function DiaryScreen({ navigation }) {
           style={styles.savedFoodOption}
           onPress={() => openSavedFoodRoute('MyRecipes')}
           accessibilityRole="button"
-          accessibilityLabel="Open my recipes"
+          accessibilityLabel="Open recipes"
         >
           <View style={styles.savedFoodIcon}>
             <Ionicons name="restaurant-outline" size={20} color={colors.primary} />
           </View>
           <View style={styles.savedFoodText}>
-            <Text style={styles.savedFoodOptionTitle}>My recipes</Text>
+            <Text style={styles.savedFoodOptionTitle}>Recipes</Text>
             <Text style={styles.savedFoodOptionSub}>Recipes with ingredients and servings.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -1899,7 +1912,20 @@ const styles = StyleSheet.create({
   readOnlyEmpty: { alignItems: 'center', paddingVertical: spacing.xxl },
   readOnlyEmptyText: { ...type.bodySm, color: colors.textMuted },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
-  offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
+  offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' },
+  offCardButton: {
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.md,
+  },
+  offCardButtonMuted: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
   offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   addMealRow: {
@@ -1938,13 +1964,24 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
-  plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   plannedBtnPrimary: {
     backgroundColor: colors.primary, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
     alignItems: 'center', justifyContent: 'center',
   },
   plannedBtnPrimaryText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBtnGhostButton: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   plannedBtnGhost: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   waterRow: {
     marginBottom: spacing.lg,

@@ -15,7 +15,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/label: 'Volyume Score'/);
     expect(source).toMatch(/label: 'Body fat'/);
     expect(source).toMatch(/label: 'Progress photos'/);
-    expect(source).toMatch(/Private progress score, not body fat/);
+    expect(source).toMatch(/Private Volyume Score, not body fat/);
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
     expect(source).toMatch(/value: physiqueScoreTileValue\(summary\.scan\)/);
     expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);
@@ -46,6 +46,8 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/styles\.avatarPresetGrid/);
     expect(source).toMatch(/AVATAR_PRESETS\.map\(\(preset\) => \{/);
     expect(source).toMatch(/accessibilityLabel="Clear current avatar"/);
+    expect(source).toMatch(/avatarClearButton: \{[\s\S]*minHeight: 44/);
+    expect(source).toMatch(/borderColor: withAlpha\(colors\.error, alpha\.edge\)/);
     expect(source).toMatch(/Photo from phone/);
     expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
     expect(source).toMatch(/Add profile picture or Volyume avatar/);

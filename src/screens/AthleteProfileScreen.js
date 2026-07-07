@@ -93,7 +93,7 @@ function physiqueScoreTileValue(scan) {
 
 function physiqueScoreTileSub(scan) {
   const signal = scan?.progressSignalLabel || (scan?.progressSignal === 'baseline' ? 'Baseline scan' : null);
-  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private progress score, not body fat.`;
+  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private Volyume Score, not body fat.`;
 }
 
 const COACHING_PHASE_LABELS = {
@@ -664,15 +664,15 @@ const styles = StyleSheet.create({
   avatarSheetTitle: { ...type.h3, color: colors.textPrimary },
   avatarSheetIntro: { ...type.bodySm, color: colors.textSecondary },
   avatarClearButton: {
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: 'center',
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    borderColor: withAlpha(colors.error, alpha.edge),
+    backgroundColor: colors.errorBg,
   },
-  avatarClearText: { ...type.label, color: colors.textSecondary },
+  avatarClearText: { ...type.label, color: colors.error },
   avatarGalleryLabel: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', fontWeight: fontWeight.black },
   photoOption: {
     minHeight: 64,

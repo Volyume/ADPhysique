@@ -91,6 +91,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('swapBtnText');
     expect(ACTIVE_WORKOUT).toContain('headerFinishButton');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
+    expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
+    expect(ACTIVE_WORKOUT).toMatch(/autoAdvanceRowActionBtn: \{[\s\S]*minHeight: 44/);
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.keepTrainingBtnText}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');

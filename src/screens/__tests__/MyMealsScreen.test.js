@@ -15,6 +15,8 @@
  * test can invoke a row's renderItem directly, exactly as a real tap would).
  */
 import { create, act } from 'react-test-renderer';
+import fs from 'fs';
+import path from 'path';
 
 const mockToastShow = jest.fn();
 
@@ -62,6 +64,7 @@ import {
 } from '../../lib/food/db';
 import MyMealsScreen from '../MyMealsScreen';
 
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'MyMealsScreen.js'), 'utf8');
 const store = { user: { id: 'u1' }, accessibility: { energyUnit: 'kcal' } };
 
 function makeNav() {
@@ -107,6 +110,11 @@ beforeEach(() => {
 });
 
 describe('MyMealsScreen row tap (C6)', () => {
+  test('uses the same Saved meals label as the food search entry point', () => {
+    expect(SOURCE).toContain('<BackHeader title="Saved meals" />');
+    expect(SOURCE).not.toContain('title="My meals"');
+  });
+
   test('shows a retry state when saved meals fail to load', async () => {
     listSavedMeals.mockRejectedValueOnce(new Error('offline'));
     const nav = makeNav();
