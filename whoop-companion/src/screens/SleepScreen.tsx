@@ -961,7 +961,7 @@ function stageQualityCheck(
   capture: ReturnType<typeof appStore.getState>['sleepCapture'],
 ): { label: string; body: string; color: string } | null {
   if (!sleep || !capture) return null;
-  const stillPct = Math.round(((capture.stillMin ?? 0) / Math.max(1, capture.windowMin)) * 100);
+  const evidencePct = sleepEvidencePct(capture);
   if (sleepStateWakeConflict(capture)) {
     return {
       label: 'Stage estimate',
@@ -976,16 +976,16 @@ function stageQualityCheck(
       color: colors.recoveryRed,
     };
   }
-  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || stillPct < 25) {
+  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || evidencePct < 25) {
     return {
       label: 'Stage estimate',
-      body: `${capture.coveragePct}% coverage, ${stillPct}% still evidence.`,
+      body: `${capture.coveragePct}% coverage, ${evidencePct}% corroborating evidence.`,
       color: colors.recoveryYellow,
     };
   }
   return {
     label: 'Stage confidence',
-    body: `${capture.coveragePct}% coverage with ${stillPct}% still evidence.`,
+    body: `${capture.coveragePct}% coverage with ${evidencePct}% corroborating evidence.`,
     color: colors.recoveryGreen,
   };
 }
