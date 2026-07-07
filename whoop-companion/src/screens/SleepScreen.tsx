@@ -702,8 +702,13 @@ function sleepScoreDrivers(input: {
   const perfContributors =
     input.perf?.contributors
       .filter((c) => c.value != null)
-      .map((c) => ({ label: c.label, value: c.value as number, inverse: c.inverse }))
-      .sort((a, b) => (a.inverse ? b.value - a.value : a.value - b.value)) ?? [];
+      .map((c) => ({
+        label: c.label,
+        value: c.value as number,
+        inverse: c.inverse,
+        badness: c.inverse ? c.value as number : 100 - (c.value as number),
+      }))
+      .sort((a, b) => b.badness - a.badness) ?? [];
   const weakestPerf = perfContributors[0];
   if (weakestPerf) {
     const limiting = weakestPerf.inverse ? weakestPerf.value >= 15 : weakestPerf.value < 80;
@@ -752,7 +757,9 @@ function sleepScoreDrivers(input: {
     });
   }
 
-  const strongestPerf = [...perfContributors].reverse().find((c) => (c.inverse ? c.value <= 8 : c.value >= 85));
+  const strongestPerf = [...perfContributors]
+    .sort((a, b) => a.badness - b.badness)
+    .find((c) => (c.inverse ? c.value <= 8 : c.value >= 85));
   if (strongestPerf) {
     drivers.push({
       tone: 'help',
