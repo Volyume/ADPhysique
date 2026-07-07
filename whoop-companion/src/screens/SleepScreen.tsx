@@ -67,6 +67,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
     () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed, stress }),
     [perf, sleepScore, sleep, capture, sleepNeed, stress],
   );
+  const stageQuality = useMemo(() => stageQualityCheck(sleep, capture), [sleep, capture]);
   const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
   const tonightFocus = sleepFocus({
     sleep,
@@ -283,6 +284,15 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             </View>
             <LineChart values={nightHr} color={colors.sleepTeal} leftLabel={formatClock(sleep.startTs)} rightLabel={formatClock(sleep.endTs)} />
             <Hypnogram segments={sleep.hypnogram} total={tib} />
+            {stageQuality ? (
+              <View style={[styles.stageQuality, { borderColor: stageQuality.color }]}>
+                <View style={[styles.stageQualityDot, { backgroundColor: stageQuality.color }]} />
+                <Text style={styles.stageQualityText}>
+                  <Text style={{ color: stageQuality.color, fontFamily: fonts.textBold }}>{stageQuality.label}</Text>
+                  {` · ${stageQuality.body}`}
+                </Text>
+              </View>
+            ) : null}
             <View style={{ marginTop: 14 }}>
               {STAGE_EDU.map((s) => (
                 <StageBar
@@ -804,6 +814,33 @@ function performanceDriverDetail(label: string, value: number, inverse: boolean)
   return 'This contributor was below the current target band.';
 }
 
+function stageQualityCheck(
+  sleep: ReturnType<typeof appStore.getState>['lastSleep'],
+  capture: ReturnType<typeof appStore.getState>['sleepCapture'],
+): { label: string; body: string; color: string } | null {
+  if (!sleep || !capture) return null;
+  const stillPct = Math.round(((capture.stillMin ?? 0) / Math.max(1, capture.windowMin)) * 100);
+  if (capture.confidence === 'low' || capture.coveragePct < 60 || capture.signalMin < 150) {
+    return {
+      label: 'Stage estimate',
+      body: 'partial signal; use timing before REM/deep detail.',
+      color: colors.recoveryRed,
+    };
+  }
+  if (capture.confidence === 'medium' || capture.coveragePct < 80 || capture.signalMin < 240 || stillPct < 25) {
+    return {
+      label: 'Stage estimate',
+      body: `${capture.coveragePct}% coverage, ${stillPct}% still evidence.`,
+      color: colors.recoveryYellow,
+    };
+  }
+  return {
+    label: 'Stage confidence',
+    body: `${capture.coveragePct}% coverage with ${stillPct}% still evidence.`,
+    color: colors.recoveryGreen,
+  };
+}
+
 function uniqueDrivers(drivers: SleepDriver[]): SleepDriver[] {
   const seen = new Set<string>();
   return drivers.filter((d) => {
@@ -1099,6 +1136,9 @@ const styles = StyleSheet.create({
   stageTrack: { height: 8, backgroundColor: colors.surface, borderRadius: 4, overflow: 'visible', justifyContent: 'center' },
   stageFill: { height: 8, borderRadius: 4 },
   typicalMark: { position: 'absolute', width: 2, height: 14, backgroundColor: colors.textSecondary, top: -3, opacity: 0.7 },
+  stageQuality: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginTop: 12, backgroundColor: colors.surface },
+  stageQualityDot: { width: 7, height: 7, borderRadius: 4, marginRight: 8 },
+  stageQualityText: { flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17, fontFamily: fonts.text },
   hypnogram: { flexDirection: 'row', gap: 8, marginTop: 16 },
   hypnogramLabels: { width: 42, height: 74, justifyContent: 'space-between' },
   hypnogramLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold },
