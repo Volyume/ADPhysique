@@ -1,4 +1,4 @@
-import { logError } from './errorLog';
+import { logError, logWarn } from './errorLog';
 
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
 export const PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION = 'mlkit_selfie_segmentation_16.0.0-beta6';
@@ -42,6 +42,59 @@ function sourceProtocolForLog(source) {
   return match ? match[1].toLowerCase() : 'none';
 }
 
+function diagnosticNumber(value, places = 3) {
+  const n = finiteNumber(value);
+  return n == null ? null : round(n, places);
+}
+
+export function progressScanVisionDiagnostic(result = {}) {
+  const quality = result?.quality || {};
+  const mask = result?.mask || {};
+  const box = result?.bodyBox || {};
+  return {
+    modelBacked: result?.modelBacked === true,
+    heuristicBacked: result?.heuristicBacked === true,
+    engine: result?.engine || null,
+    modelVersion: result?.modelVersion || null,
+    unavailableReason: result?.unavailableReason || result?.fallbackReason || null,
+    pose: result?.pose || null,
+    reasons: Array.isArray(result?.abstentionReasons) ? result.abstentionReasons.slice(0, 8) : [],
+    quality: {
+      segmentationConfidence: diagnosticNumber(quality.segmentationConfidence),
+      framingScore: diagnosticNumber(quality.framingScore),
+      blurScore: diagnosticNumber(quality.blurScore),
+      lightingScore: diagnosticNumber(quality.lightingScore),
+      poseConfidence: diagnosticNumber(quality.poseConfidence),
+      backgroundSeparation: diagnosticNumber(quality.backgroundSeparation),
+      cameraTiltDegrees: diagnosticNumber(quality.cameraTiltDegrees, 2),
+      foregroundThreshold: diagnosticNumber(quality.foregroundThreshold),
+      componentDominance: diagnosticNumber(quality.componentDominance),
+      connectedComponents: diagnosticNumber(quality.connectedComponents, 0),
+    },
+    mask: {
+      foregroundRatio: diagnosticNumber(mask.foregroundRatio, 4),
+      foregroundMeanProbability: diagnosticNumber(mask.foregroundMeanProbability),
+      backgroundMeanProbability: diagnosticNumber(mask.backgroundMeanProbability),
+    },
+    bodyBox: {
+      width: diagnosticNumber(box.width, 4),
+      height: diagnosticNumber(box.height, 4),
+      centerX: diagnosticNumber(box.centerX, 4),
+      centerY: diagnosticNumber(box.centerY, 4),
+    },
+  };
+}
+
+function logVisionDiagnosticIfNeeded(scope, result) {
+  const reasons = Array.isArray(result?.abstentionReasons) ? result.abstentionReasons : [];
+  const quality = result?.quality || {};
+  const lowSignal = (finiteNumber(quality.segmentationConfidence) ?? 1) < 0.5
+    || (finiteNumber(quality.framingScore) ?? 1) < 0.5
+    || (finiteNumber(quality.poseConfidence) ?? 1) < 0.5;
+  if (!reasons.length && !lowSignal) return;
+  logWarn(scope, 'progress_scan_vision_diagnostic', progressScanVisionDiagnostic(result));
+}
+
 function safeFastTfliteSource(source) {
   const url = normaliseFastTfliteUri(source?.url);
   return url ? { url } : null;
@@ -53,6 +106,11 @@ export async function resolveProgressScanModelSource() {
     const nativeUri = await imageModule.resolveBundledModel?.(MODEL_FILE_NAME);
     const normalisedNativeUri = normaliseFastTfliteUri(nativeUri);
     if (normalisedNativeUri) return { url: normalisedNativeUri };
+    if (nativeUri) {
+      logWarn('progressScanVision.nativeModelSourceRejected', 'progress_scan_native_model_source_unusable', {
+        modelSourceUrlProtocol: sourceProtocolForLog({ url: nativeUri }),
+      });
+    }
   } catch (_) { /* fall through to Expo Asset resolution */ }
 
   const source = MODEL_SOURCE();
@@ -65,7 +123,14 @@ export async function resolveProgressScanModelSource() {
     downloaded?.uri,
     asset.uri,
   ].map(normaliseFastTfliteUri).find(Boolean);
-  return uri ? { url: uri } : null;
+  if (uri) return { url: uri };
+  logWarn('progressScanVision.modelSourceUnavailable', 'progress_scan_model_source_unavailable', {
+    downloadedLocalUriProtocol: sourceProtocolForLog({ url: downloaded?.localUri }),
+    assetLocalUriProtocol: sourceProtocolForLog({ url: asset.localUri }),
+    downloadedUriProtocol: sourceProtocolForLog({ url: downloaded?.uri }),
+    assetUriProtocol: sourceProtocolForLog({ url: asset.uri }),
+  });
+  return null;
 }
 
 function finiteNumber(v) {
@@ -464,6 +529,7 @@ export function measureMaskSignals(mask, opts = {}) {
   return {
     modelBacked: opts.modelBacked !== false,
     heuristicBacked: !!opts.heuristicBacked,
+    engine: opts.engine || null,
     modelVersion: opts.modelVersion || PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
     fallbackReason: opts.fallbackReason || null,
     inputSize: width,
@@ -514,6 +580,7 @@ export function measureMaskSignals(mask, opts = {}) {
 export function unavailableVisionResult(reason = 'model_unavailable') {
   return {
     modelBacked: false,
+    engine: null,
     modelVersion: null,
     inputSize: PROGRESS_SCAN_MODEL_INPUT_SIZE,
     quality: {},
@@ -595,17 +662,24 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
     );
     const nativeMask = nativeSegmentationMaskFromResult(nativeSegmentation);
     if (nativeMask) {
-      return measureMaskSignals(nativeMask.mask, {
+      const result = measureMaskSignals(nativeMask.mask, {
         ...common,
         width: nativeMask.width,
         height: nativeMask.height,
         contentRect: nativeSegmentation.contentRect || extracted.contentRect,
         modelBacked: true,
+        engine: nativeSegmentation.engine || 'mlkit_selfie_segmentation',
         modelVersion: PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION,
       });
+      logVisionDiagnosticIfNeeded('progressScanVision.nativeSegmentation', result);
+      return result;
     }
     const model = await loadProgressScanModel();
-    if (!model) return unavailableVisionResult(modelUnavailableReason || 'model_unavailable');
+    if (!model) {
+      const result = unavailableVisionResult(modelUnavailableReason || 'model_unavailable');
+      logVisionDiagnosticIfNeeded('progressScanVision.modelUnavailable', { ...result, pose });
+      return result;
+    }
     let mask;
     try {
       const input = rgbBytesToFloat32(rgb);
@@ -613,12 +687,17 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       mask = outputToFloat32Array(outputs);
     } catch (_) {
       modelUnavailableReason = 'model_run_failed';
-      return unavailableVisionResult('model_run_failed');
+      const result = unavailableVisionResult('model_run_failed');
+      logVisionDiagnosticIfNeeded('progressScanVision.modelRunFailed', { ...result, pose });
+      return result;
     }
-    return measureMaskSignals(mask, {
+    const result = measureMaskSignals(mask, {
       ...common,
       modelBacked: true,
+      engine: 'fast_tflite',
     });
+    logVisionDiagnosticIfNeeded('progressScanVision.fastTflite', result);
+    return result;
   } catch (e) {
     logError('progressScanVision.analysePhoto', e, { pose });
     return unavailableVisionResult('model_unavailable');

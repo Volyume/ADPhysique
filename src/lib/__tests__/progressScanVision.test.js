@@ -4,6 +4,7 @@ import {
   base64ToFloat32Array,
   base64ToUint8Array,
   measureMaskSignals,
+  progressScanVisionDiagnostic,
   resolveProgressScanModelSource,
   resetProgressScanModelCacheForTests,
   retakeCopyForVisionResult,
@@ -312,11 +313,35 @@ describe('Progress Scan vision signal extraction', () => {
       lightingScore: 0.9,
       blurScore: 0.88,
       pose: 'front',
+      engine: 'fast_tflite',
     });
     const fields = assetFieldsFromVisionResult(result);
     expect(fields.qualityScore).toBeGreaterThan(0.7);
     expect(fields.landmarkConfidence).toBeGreaterThan(0.7);
     expect(fields.signals.modelBacked).toBe(true);
     expect(JSON.stringify(fields)).not.toMatch(/file:|base64|rgbBase64/i);
+  });
+
+  test('diagnostics expose scan gates without image data or file paths', () => {
+    const result = measureMaskSignals(syntheticPersonMask({
+      foregroundProbability: 0.43,
+      backgroundProbability: 0.08,
+    }), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+      engine: 'mlkit_selfie_segmentation',
+    });
+
+    const diagnostic = progressScanVisionDiagnostic(result);
+
+    expect(diagnostic).toMatchObject({
+      modelBacked: true,
+      engine: 'mlkit_selfie_segmentation',
+      pose: 'front',
+    });
+    expect(diagnostic.quality.foregroundThreshold).toBeLessThan(0.5);
+    expect(diagnostic.mask.foregroundRatio).toBeGreaterThan(0);
+    expect(JSON.stringify(diagnostic)).not.toMatch(/file:|base64|rgbBase64|cache|progress_photos/i);
   });
 });
