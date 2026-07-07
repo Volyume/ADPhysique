@@ -14,6 +14,7 @@ import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
 import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { sleepConfidenceColor, sleepConfidenceLabel } from '../ui/sleepTrust';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -426,7 +427,7 @@ function homeSleepQuality(input: {
   if (capture && longHrOnlyHomeCapture(capture)) {
     return { color: colors.strainBlue, status: 'Needs proof', issue: 'hr_only' };
   }
-  if (!input.hasSleep || input.capped || coverage < 60 || signalMin < 150) {
+  if (!input.hasSleep || input.capped || sleepNeedsMoreSync(capture)) {
     return { color: qualityColor(coverage, signalMin, false, false), status: 'Partial sleep', issue: 'partial' };
   }
   if (coverage >= 80 && signalMin >= 240) return { color: colors.recoveryGreen, status: null, issue: null };
@@ -508,7 +509,7 @@ function dailyFocus(input: {
       route: input.sleep ? { name: 'sleep' } : { name: 'device' },
     };
   }
-  if (input.draining || input.syncProblem || !input.sleep || coverage < 60 || signalMin < 150 || input.sleepPerformanceCapped) {
+  if (input.draining || input.syncProblem || !input.sleep || sleepNeedsMoreSync(input.sleepCapture) || input.sleepPerformanceCapped) {
     return {
       badge: input.draining ? 'SYNC' : 'DATA',
       title: input.draining ? 'Let history finish syncing' : 'Fix sleep data confidence',

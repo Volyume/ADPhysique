@@ -12,6 +12,7 @@ import { nullableClampPct } from '../util/number';
 import { computeEnergyReserve } from '../metrics/energyReserve';
 import { formatDuration } from '../util/time';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 type Def = {
   title: string;
@@ -457,9 +458,7 @@ function renderQualityCard(input: {
 function rawVitalSleepBlocked(detail: DailyMetricRow['sleepDetail']): boolean {
   if (!detail) return true;
   if (detail.confidence === 'low') return true;
-  if ((detail.coveragePct ?? 0) < 60) return true;
-  if ((detail.signalMin ?? 0) < 150) return true;
-  return false;
+  return sleepNeedsMoreSync(detail);
 }
 
 function ringFraction(key: MetricKey, value: number | null): number {

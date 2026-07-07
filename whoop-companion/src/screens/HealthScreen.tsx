@@ -9,6 +9,7 @@ import { colors, fonts } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
 import { RhythmResult } from '../metrics/afib';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 const RHYTHM_COLOR: Record<string, string> = {
   regular: colors.recoveryGreen,
@@ -181,10 +182,7 @@ function healthDataReadiness(
   const sleepNeedsReview =
     hasRawRows &&
     candidatesReady === 0 &&
-    (!sleepDetail ||
-      sleepDetail.confidence === 'low' ||
-      (sleepDetail.coveragePct ?? 0) < 60 ||
-      (sleepDetail.signalMin ?? 0) < 150);
+    (sleepDetail?.confidence === 'low' || sleepNeedsMoreSync(sleepDetail));
 
   if (trustedReady < 3) {
     return {
