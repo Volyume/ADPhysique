@@ -538,6 +538,9 @@ export default function MealPlanScreen({ navigation, route }) {
     return `${meals} meals, ${variety}, ${workoutMeals}`;
   }, [prefs.mealsPerDay, prefs.periWorkoutSlots, prefs.variety]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
+  const hasSwappableFoods = (day?.slots || []).some((slot) => (
+    !!slot.components && (slot.items || []).some((it) => (it.foodRef || '').startsWith('curated:'))
+  ));
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
   // Feature A "Plan my day": a single-day plan renders without the week picker
@@ -728,7 +731,11 @@ export default function MealPlanScreen({ navigation, route }) {
 
           <View style={styles.reviewHeader}>
             <Text style={styles.reviewTitle}>Review meals</Text>
-            <Text style={styles.reviewSub}>Tap a food to swap it. Hold a food to leave it out of future plans.</Text>
+            <Text style={styles.reviewSub}>
+              {hasSwappableFoods
+                ? 'Tap a food to swap it. Hold a swappable food to leave it out of future plans.'
+                : 'Review the meals and add the plan when it looks right.'}
+            </Text>
           </View>
 
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:

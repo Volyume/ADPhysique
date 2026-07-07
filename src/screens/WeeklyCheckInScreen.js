@@ -939,7 +939,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             onChangeText={setNotes}
             multiline
             accessibilityLabel="Anything else to flag?"
-            placeholder="Anything Volyume should take into account this week…"
+            placeholder="Anything Volyume should take into account this week..."
             placeholderTextColor={colors.textMuted}
             maxLength={280}
             textAlignVertical="top"
@@ -1153,9 +1153,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
             </Text>
             <Text style={styles.gateBody}>
-              You can change the day in Settings → Coaching reminders. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
+              You can change the day in Settings &gt; Coaching reminders. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
+          <TouchableOpacity
+            style={styles.gateDeferBtn}
+            onPress={() => navigation.navigate('CoachingReminders')}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Open coaching reminders"
+          >
+            <Text style={styles.gateDeferBtnText}>Change check-in day</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>

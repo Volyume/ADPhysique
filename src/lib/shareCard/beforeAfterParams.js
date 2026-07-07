@@ -1,4 +1,5 @@
 import { formatProgressPhotoDay } from '../progressPhotoDates';
+import { progressScanAssessmentForDisplay } from '../progressScanDisplay';
 import { formatBodyWeight } from '../units';
 
 const DAY_MS = 86400000;
@@ -65,7 +66,7 @@ export function finiteNumber(value) {
 }
 
 export function formatShareScanRange(scan) {
-  const assessment = scan?.signals?.physiqueAssessment || null;
+  const assessment = progressScanAssessmentForDisplay(scan);
   if (assessment?.visualLeannessScore != null) {
     return `${assessment.leannessBandLabel || 'Scan'} index ${assessment.visualLeannessScore}`;
   }

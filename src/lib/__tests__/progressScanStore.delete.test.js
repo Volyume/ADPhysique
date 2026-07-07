@@ -179,7 +179,7 @@ describe('deleteProgressScanSession cleanup', () => {
       legacyVisualLeannessScore: 37,
       displayScoreCalibratedFrom: 'volyume_physique_scan_score_v1',
     });
-    expect(scan.copySummary).toMatch(/Volyume Score index 71/);
+    expect(scan.copySummary).toMatch(/Volyume index 71/);
     expect(scan.copySummary).not.toMatch(/index 37/);
   });
 

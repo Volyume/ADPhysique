@@ -694,8 +694,8 @@ export function progressScanAssessmentCopy(assessment = null) {
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
   const prefix = assessment.progressSignal === 'baseline'
-    ? `Baseline Volyume Score index ${score}`
-    : `Volyume Score index ${score}`;
+    ? `Baseline Volyume index ${score}`
+    : `Volyume index ${score}`;
   return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress index for photos taken in similar conditions, not a body fat percentage or a rating of your physique.`;
 }
 
