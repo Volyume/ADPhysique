@@ -19,6 +19,9 @@ function nextWakeTimestamp(wakeMin: number, now = Date.now()): number {
   if (d.getTime() <= now + 30 * 1000) d.setDate(d.getDate() + 1);
   return d.getTime();
 }
+function relativeMin(targetTs: number, now = Date.now()): number {
+  return Math.max(0, Math.round((targetTs - now) / 60000));
+}
 function formatAlarmDate(ts: number | null): string {
   if (!ts) return 'None set';
   return new Date(ts).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -80,6 +83,10 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const bedMin = wakeMin - tibNeededMin;
   const smartStartMin = wakeMin - smartWindowMin;
   const nextWakeTs = nextWakeTimestamp(wakeMin);
+  const plannedBedTs = nextWakeTs - tibNeededMin * 60000;
+  const bedCountdownMin = relativeMin(plannedBedTs);
+  const wakeCountdownMin = relativeMin(nextWakeTs);
+  const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
   const alarmMeta =
     strapAlarm.pendingWrite === 'set'
@@ -195,6 +202,17 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           To reach {MODES.find((m) => m.key === goal)?.pct} of your sleep need ({formatDuration(targetMin)} asleep),
           allowing for your typical {Math.round(expectedEff * 100)}% efficiency.
         </Text>
+        <View style={styles.tonightRow}>
+          <View style={[styles.tonightDot, { backgroundColor: inSleepWindow ? colors.recoveryYellow : colors.sleepTeal }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tonightTitle}>{inSleepWindow ? 'Sleep window is open' : `Bed in ${formatDuration(bedCountdownMin)}`}</Text>
+            <Text style={styles.tonightMeta}>
+              {inSleepWindow
+                ? `${formatDuration(wakeCountdownMin)} until planned wake at ${fmtClock(wakeMin)}`
+                : `Suggested bed ${fmtClock(bedMin)} for ${formatDuration(tibNeededMin)} in bed`}
+            </Text>
+          </View>
+        </View>
       </Card>
 
       <SectionLabel>Wake alarm</SectionLabel>
@@ -323,6 +341,10 @@ const styles = StyleSheet.create({
   stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   stepTxt: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
   wakeValue: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, minWidth: 56, textAlign: 'center' },
+  tonightRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  tonightDot: { width: 10, height: 10, borderRadius: 5 },
+  tonightTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  tonightMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   alarmRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   alarmTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   alarmMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
