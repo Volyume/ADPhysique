@@ -25,7 +25,7 @@ const STATUS_TEXT: Record<string, string> = {
   error: 'Error',
 };
 
-const RAW_FRAME_EXPORT_PAGE_SIZE = 1500;
+const RAW_FRAME_EXPORT_PAGE_SIZE = 300;
 
 export function DeviceScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
@@ -50,6 +50,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const bandStepEstimate = useStoreSelector(appStore, (s) => s.bandStepEstimate);
   const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
   const [actualSteps, setActualSteps] = useState('');
+  const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
 
   // Frames actually written to the database (what export reads), polled so we can
   // see whether persistence is keeping up with the live (in-memory) counter.
@@ -98,6 +99,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   };
 
   const exportFrames = async () => {
+    if (exportProgress) return;
     try {
       const totalFrames = await countRawFrames();
       if (totalFrames === 0) {
@@ -107,6 +109,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         );
         return;
       }
+      setExportProgress({ exported: 0, total: totalFrames });
       // Plain .txt is accepted by most Android share targets. Write page by
       // page so large captures do not allocate one enormous JS string.
       const file = new File(Paths.cache, `pulse-frames-${totalFrames}.txt`);
@@ -126,6 +129,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           writeAscii(handle, chunk);
           exported += page.length;
           lastRowId = page[page.length - 1]!.rowId;
+          setExportProgress({ exported, total: totalFrames });
+          await pauseForUi();
           if (page.length < RAW_FRAME_EXPORT_PAGE_SIZE) break;
         }
       } finally {
@@ -158,6 +163,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       }
     } catch (e) {
       Alert.alert('Export failed', String(e));
+    } finally {
+      setExportProgress(null);
     }
   };
 
@@ -310,7 +317,16 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
             />
           </View>
         </View>
-        <SecondaryButton title="Export captured frames" onPress={() => void exportFrames()} />
+        <SecondaryButton
+          title={exportProgress ? 'Exporting...' : 'Export captured frames'}
+          onPress={() => void exportFrames()}
+          disabled={!!exportProgress}
+        />
+        {exportProgress ? (
+          <Text style={styles.diagText}>
+            Exported {exportProgress.exported.toLocaleString()} / {exportProgress.total.toLocaleString()} frames
+          </Text>
+        ) : null}
         <SecondaryButton title="Clear captured frames" onPress={() => void clearRawFrames()} />
         <Text style={styles.hint}>
           Capturing the strap's proprietary frames lets the history / sleep decoder be finalised. Export and share them
@@ -396,6 +412,10 @@ function writeAscii(handle: WritableFileHandle, text: string): void {
     bytes[i] = text.charCodeAt(i) & 0x7f;
   }
   handle.writeBytes(bytes);
+}
+
+function pauseForUi(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 const styles = StyleSheet.create({
