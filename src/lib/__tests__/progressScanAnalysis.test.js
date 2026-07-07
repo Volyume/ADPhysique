@@ -1,5 +1,6 @@
 import {
   analyseProgressScan,
+  abstentionReasonsForAssets,
   buildEstimateRange,
   computeScanConfidenceScore,
   computeVisualLeannessScore,
@@ -128,6 +129,48 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toContain('model_unavailable');
     expect(out.estimate).toBeNull();
     expect(out.range).toBeNull();
+  });
+
+  test('model-backed photos with incomplete silhouette ratios do not fabricate a score', () => {
+    const incompleteBack = {
+      ...modelBackedAssets[1],
+      signals: {
+        ...backSignal,
+        silhouetteRatios: {
+          waistToShoulder: 0.62,
+          waistToHip: 0.76,
+          waistToHeight: 0.18,
+        },
+      },
+    };
+    const out = analyseProgressScan({
+      assets: [modelBackedAssets[0], incompleteBack],
+      modelEstimate: null,
+    });
+    expect(out.analysisStatus).toBe('abstained');
+    expect(out.abstentionReasons).toContain('measured_signals_incomplete');
+    expect(out.physiqueAssessment.visualLeannessScore).toBeNull();
+  });
+
+  test('final abstention gate matches model-backed vision thresholds instead of re-blocking usable scans', () => {
+    const usableSignal = {
+      ...frontSignal,
+      quality: {
+        segmentationConfidence: 0.42,
+        framingScore: 0.4,
+        blurScore: 0.4,
+        lightingScore: 0.4,
+        poseConfidence: 0.35,
+        cameraTiltDegrees: 12,
+        backgroundSeparation: 0.34,
+      },
+      abstentionReasons: [],
+    };
+    const usableAssets = [
+      { pose: 'front', qualityScore: 0.4, lightingScore: 0.4, blurScore: 0.4, framingScore: 0.4, segmentationConfidence: 0.42, signals: usableSignal },
+      { pose: 'back', qualityScore: 0.4, lightingScore: 0.4, blurScore: 0.4, framingScore: 0.4, segmentationConfidence: 0.42, signals: { ...usableSignal, silhouetteRatios: backSignal.silhouetteRatios } },
+    ];
+    expect(abstentionReasonsForAssets(usableAssets)).toEqual([]);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
