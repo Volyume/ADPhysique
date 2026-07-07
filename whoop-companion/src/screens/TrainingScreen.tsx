@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
+import type { DailyMetricRow } from '../db/database';
 import { Card, Empty, NavRow, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
@@ -45,7 +46,9 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   const load = trainingLoad(trimps, now);
   const statusColor = STATUS_COLOR[load.status] ?? colors.textSecondary;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
-  const sleepStateConflict = sleepStateWakeConflict(today?.sleepDetail ?? null);
+  const sleepDetail = today?.sleepDetail ?? null;
+  const sleepStateConflict = sleepStateWakeConflict(sleepDetail);
+  const sleepReadinessFix = trainingSleepFix(sleepDetail);
 
   // Weekly training load for the last 6 weeks.
   const DAY = 86400000;
@@ -68,6 +71,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     readinessScore: readiness?.score ?? null,
     readinessConfidence: readiness?.confidence ?? null,
     sleepStateConflict,
+    sleepReadinessFix,
     recovery: today?.recovery ?? null,
     intensity,
     hasFitnessInputs,
@@ -80,6 +84,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     readinessScore: readiness?.score ?? null,
     readinessConfidence: readiness?.confidence ?? null,
     sleepStateConflict,
+    sleepReadinessFix,
   });
 
   // Personal records from logged activities.
@@ -280,6 +285,7 @@ function trainingLoadDriver(input: {
   readinessScore: number | null;
   readinessConfidence: 'high' | 'medium' | 'low' | null;
   sleepStateConflict: boolean;
+  sleepReadinessFix: SleepReadinessFix;
 }): {
   badge: string;
   title: string;
@@ -308,14 +314,16 @@ function trainingLoadDriver(input: {
   if (input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
-      title: 'Readiness confidence limits training guidance',
-      body: 'Load status is useful, but the session call should stay conservative until overnight readiness confidence improves.',
+      title: input.sleepReadinessFix.needsSync ? 'Sync overnight data before training' : 'Review sleep before training',
+      body: input.sleepReadinessFix.needsSync
+        ? 'Load status is useful, but the session call should stay conservative until overnight coverage and signal finish backfilling.'
+        : 'Load status is useful, but low sleep confidence is limiting the session call. Review the sleep window before using load to go hard.',
       metric: 'Readiness',
-      actionLabel: 'Open readiness',
-      actionValue: 'quality',
-      icon: 'speedometer',
+      actionLabel: input.sleepReadinessFix.needsSync ? 'Open device sync' : 'Open readiness',
+      actionValue: input.sleepReadinessFix.actionValue,
+      icon: input.sleepReadinessFix.needsSync ? 'sync' : 'speedometer',
       color: colors.strainBlue,
-      route: { name: 'readiness' },
+      route: input.sleepReadinessFix.route,
     };
   }
 
@@ -407,12 +415,30 @@ function readinessColor(score: number | null | undefined): string {
   return colors.recoveryRed;
 }
 
+type SleepReadinessFix = {
+  needsSync: boolean;
+  actionValue: string;
+  route: Parameters<Nav['navigate']>[0];
+};
+
+function trainingSleepFix(sleepDetail: DailyMetricRow['sleepDetail'] | null): SleepReadinessFix {
+  const coverage = sleepDetail?.coveragePct ?? null;
+  const signal = sleepDetail?.signalMin ?? null;
+  const needsSync = !sleepDetail || (coverage ?? 100) < 60 || (signal ?? 999) < 150;
+  return {
+    needsSync,
+    actionValue: needsSync ? (coverage != null ? `${coverage}% coverage` : 'needs sync') : 'review window',
+    route: needsSync ? { name: 'device' } : { name: 'readiness' },
+  };
+}
+
 function trainingPlan(input: {
   loadStatus: string;
   acwr: number | null;
   readinessScore: number | null;
   readinessConfidence: 'high' | 'medium' | 'low' | null;
   sleepStateConflict: boolean;
+  sleepReadinessFix: SleepReadinessFix;
   recovery: number | null;
   intensity: { moderate: number; vigorous: number; total: number; goal: number } | null;
   hasFitnessInputs: boolean;
@@ -444,14 +470,16 @@ function trainingPlan(input: {
   if (input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
-      title: 'Resolve readiness confidence first',
-      body: 'Training guidance depends on a trustworthy overnight recovery signal. Fix the data before using load to make a hard call.',
+      title: input.sleepReadinessFix.needsSync ? 'Finish overnight sync first' : 'Resolve sleep confidence first',
+      body: input.sleepReadinessFix.needsSync
+        ? 'Training guidance depends on enough overnight coverage and signal. Let sync finish before using load to make a hard call.'
+        : 'Training guidance depends on a trustworthy overnight recovery signal. Review the sleep window before using load to make a hard call.',
       target: 'hold',
-      actionLabel: 'Open readiness',
-      actionValue: 'quality',
-      icon: 'speedometer',
+      actionLabel: input.sleepReadinessFix.needsSync ? 'Open device sync' : 'Open readiness',
+      actionValue: input.sleepReadinessFix.actionValue,
+      icon: input.sleepReadinessFix.needsSync ? 'sync' : 'speedometer',
       color: colors.strainBlue,
-      route: { name: 'readiness' },
+      route: input.sleepReadinessFix.route,
     };
   }
 
