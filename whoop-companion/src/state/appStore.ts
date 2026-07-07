@@ -2192,23 +2192,18 @@ class AppStore extends Store<AppState> {
     const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
     if (sleep) applySleepNeed(sleep, need);
     const captureSleep = candidateSleep ?? sleep;
+    const captureEvidence = captureSleep
+      ? sleepResultCaptureEvidence(captureSleep)
+      : sleepInputCaptureEvidence(sleepInput, captureWindowMin);
+    const captureTrustEvidence = captureSleep ?? sleepCaptureEvidenceAsSleepEvidence(captureEvidence);
     const sleepCoveragePct = captureSleep
       ? Math.round((captureSleep.signalMin / Math.max(1, captureSleep.inBedMin)) * 100)
       : Math.round((nightPerMin.length / captureWindowMin) * 100);
     const boundedSleepCoveragePct = Math.max(0, Math.min(100, sleepCoveragePct));
     const captureNightHr = captureSleep ? nightHr.filter((s) => s.ts >= captureSleep.startTs && s.ts < captureSleep.endTs) : nightHr;
-    const captureConfidence = sleepConfidence(captureSleep?.signalMin ?? nightPerMin.length, boundedSleepCoveragePct, !!manual, captureSleep);
+    const captureConfidence = sleepConfidence(captureEvidence.signalMin, boundedSleepCoveragePct, !!manual, captureTrustEvidence);
     const sleepCapture: AppState['sleepCapture'] = {
-      windowMin: captureSleep?.inBedMin ?? captureWindowMin,
-      signalMin: captureSleep?.signalMin ?? nightPerMin.length,
-      motionMin: captureSleep?.motionMin ?? 0,
-      stillMin: captureSleep?.stillMin ?? 0,
-      movingMin: captureSleep?.movingMin ?? 0,
-      sleepStateMin: captureSleep?.sleepStateMin ?? 0,
-      sleepStateWakeMin: captureSleep?.sleepStateWakeMin ?? 0,
-      sleepStateStillMin: captureSleep?.sleepStateStillMin ?? 0,
-      sleepStateAsleepMin: captureSleep?.sleepStateAsleepMin ?? 0,
-      sleepStateUpMin: captureSleep?.sleepStateUpMin ?? 0,
+      ...captureEvidence,
       coveragePct: boundedSleepCoveragePct,
       rrCount: captureNightHr.reduce((a, s) => a + s.rr.length, 0),
       confidence: captureConfidence,
@@ -2217,9 +2212,9 @@ class AppStore extends Store<AppState> {
         hasSleep: !!sleep,
         hasCandidate: !!candidateSleep,
         manual: !!manual,
-        signalMin: captureSleep?.signalMin ?? nightPerMin.length,
+        signalMin: captureEvidence.signalMin,
         coveragePct: boundedSleepCoveragePct,
-        evidence: captureSleep,
+        evidence: captureTrustEvidence,
       }),
     };
     let sleepScoreResult: SleepScore | null = null;
@@ -2869,6 +2864,64 @@ type SleepEvidence = Pick<
   | 'sleepStateAsleepMin'
   | 'sleepStateUpMin'
 >;
+
+type SleepCaptureEvidence = Pick<
+  NonNullable<AppState['sleepCapture']>,
+  | 'windowMin'
+  | 'signalMin'
+  | 'motionMin'
+  | 'stillMin'
+  | 'movingMin'
+  | 'sleepStateMin'
+  | 'sleepStateWakeMin'
+  | 'sleepStateStillMin'
+  | 'sleepStateAsleepMin'
+  | 'sleepStateUpMin'
+>;
+
+function sleepResultCaptureEvidence(sleep: SleepResult): SleepCaptureEvidence {
+  return {
+    windowMin: sleep.inBedMin,
+    signalMin: sleep.signalMin,
+    motionMin: sleep.motionMin,
+    stillMin: sleep.stillMin,
+    movingMin: sleep.movingMin,
+    sleepStateMin: sleep.sleepStateMin,
+    sleepStateWakeMin: sleep.sleepStateWakeMin,
+    sleepStateStillMin: sleep.sleepStateStillMin,
+    sleepStateAsleepMin: sleep.sleepStateAsleepMin,
+    sleepStateUpMin: sleep.sleepStateUpMin,
+  };
+}
+
+function sleepInputCaptureEvidence(samples: SleepMinute[], windowMin: number): SleepCaptureEvidence {
+  return {
+    windowMin,
+    signalMin: samples.filter((s) => s.hr != null).length,
+    motionMin: samples.filter((s) => s.motion != null).length,
+    stillMin: samples.filter((s) => s.motion != null && s.motion < 0.2).length,
+    movingMin: samples.filter((s) => s.motion != null && s.motion >= 0.4).length,
+    sleepStateMin: samples.filter((s) => s.bandSleepState != null).length,
+    sleepStateWakeMin: samples.filter((s) => s.bandSleepState === 0).length,
+    sleepStateStillMin: samples.filter((s) => s.bandSleepState === 1).length,
+    sleepStateAsleepMin: samples.filter((s) => s.bandSleepState === 2).length,
+    sleepStateUpMin: samples.filter((s) => s.bandSleepState === 3).length,
+  };
+}
+
+function sleepCaptureEvidenceAsSleepEvidence(evidence: SleepCaptureEvidence): SleepEvidence {
+  return {
+    inBedMin: evidence.windowMin,
+    motionMin: evidence.motionMin,
+    stillMin: evidence.stillMin,
+    movingMin: evidence.movingMin,
+    sleepStateMin: evidence.sleepStateMin,
+    sleepStateWakeMin: evidence.sleepStateWakeMin,
+    sleepStateStillMin: evidence.sleepStateStillMin,
+    sleepStateAsleepMin: evidence.sleepStateAsleepMin,
+    sleepStateUpMin: evidence.sleepStateUpMin,
+  };
+}
 
 function sleepEvidencePct(evidence?: SleepEvidence | null): number {
   if (!evidence?.inBedMin) return 0;
