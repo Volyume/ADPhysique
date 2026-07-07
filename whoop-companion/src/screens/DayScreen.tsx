@@ -104,9 +104,12 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="Light" minutes={metric.lightMin} total={totalStageMin} color={sleepStageColors.light} />
                 <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
-                <Text style={styles.note}>
-                  Signal {metric.sleepDetail?.signalMin ?? 0} min / coverage {metric.sleepDetail?.coveragePct ?? 0}% / still {metric.sleepDetail?.stillMin ?? metric.sleepDetail?.motionMin ?? 0} min / moving {metric.sleepDetail?.movingMin ?? 0} min / {confidenceLabel(metric.sleepDetail?.confidence)} confidence
-                </Text>
+                <View style={styles.qualityGrid}>
+                  <Stat label="Confidence" value={confidenceLabel(metric.sleepDetail?.confidence)} color={confidenceColor(metric.sleepDetail?.confidence)} />
+                  <Stat label="Coverage" value={`${metric.sleepDetail?.coveragePct ?? 0}%`} color={coverageColor(metric.sleepDetail?.coveragePct ?? 0)} />
+                  <Stat label="Signal" value={metric.sleepDetail?.signalMin ?? 0} unit="min" />
+                </View>
+                <Text style={styles.note}>{sleepTrustNote(metric)}</Text>
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.adjustTitle}>Adjust this sleep</Text>
@@ -254,6 +257,28 @@ function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefine
   return 'low';
 }
 
+function confidenceColor(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
+  if (confidence === 'high') return colors.recoveryGreen;
+  if (confidence === 'medium') return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function coverageColor(coveragePct: number): string {
+  if (coveragePct >= 80) return colors.recoveryGreen;
+  if (coveragePct >= 60) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function sleepTrustNote(metric: DailyMetricRow): string {
+  const detail = metric.sleepDetail;
+  if (!detail) return 'No capture detail is available for this sleep yet.';
+  const still = detail.stillMin ?? detail.motionMin ?? 0;
+  const moving = detail.movingMin ?? 0;
+  if (detail.confidence === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
+  if (detail.confidence === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
+  return `Low-confidence sleep: ${detail.coveragePct}% coverage with ${detail.signalMin} signal minutes. Sync more data or adjust the window before trusting score/recovery.`;
+}
+
 function formatDayLong(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -301,6 +326,7 @@ const styles = StyleSheet.create({
   sleepHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 },
   big: { color: colors.text, fontSize: 30, fontFamily: fonts.black },
   sub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
+  qualityGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   note: { color: colors.textTertiary, fontSize: 12, marginTop: 12, fontFamily: fonts.text },
   adjustRow: {
     flexDirection: 'row',
