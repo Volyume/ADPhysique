@@ -106,6 +106,16 @@ function daysToFreqBucket(daysPerWeek) {
 // never drift apart (F11: sex drives the sacred ED calorie floor + BMR).
 const SEX_OPTIONS = [{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }];
 const ACCEPTED_SEX_VALUES = SEX_OPTIONS.map((o) => o.value);
+const BODY_FAT_SOURCE_OPTIONS = [
+  { label: 'BIA', value: 'bia' },
+  { label: 'Caliper', value: 'caliper' },
+  { label: 'DEXA', value: 'dexa' },
+];
+const BODY_FAT_SOURCE_VALUES = BODY_FAT_SOURCE_OPTIONS.map((o) => o.value);
+
+function normaliseMeasuredBodyFatSource(source) {
+  return BODY_FAT_SOURCE_VALUES.includes(source) ? source : 'bia';
+}
 
 // ONBOARD-001: height bounds (cm) for the required-details gate. Height feeds
 // BMR and the calorie / FFM targets, so the step-2 gate refuses to advance until
@@ -224,7 +234,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // only) and the bulk target came out ~300 kcal too low, landing on the lean
   // bulk number.
   const [bodyFat, setBodyFat] = useState('');
-  const [bfSource, setBfSource] = useState('visual');
+  const [bfSource, setBfSource] = useState('bia');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   // Biological sex has NO default (founder 2026-07-01): it drives the ED
   // calorie floor (1500 male / 1200 female) and BMR, so a silent 'male' default
@@ -387,7 +397,7 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.bodyWeightStLbs, setBodyWeightStLbs);
       str(a.bodyWeight, setBodyWeight);
       str(a.bodyFat, setBodyFat);
-      str(a.bfSource, setBfSource);
+      if (typeof a.bfSource === 'string') setBfSource(normaliseMeasuredBodyFatSource(a.bfSource));
       if (a.localHeightUnits === 'imperial' || a.localHeightUnits === 'metric') setLocalHeightUnits(a.localHeightUnits);
       // Sex only ever restores an explicit prior choice; anything else stays null.
       const sexValid = ACCEPTED_SEX_VALUES.includes(a.sex);
@@ -711,6 +721,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // it as set when it is a sane percentage, so a typo can't poison the calc.
       const bfParsed = parseFloat(bodyFat);
       const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
+      const measuredBfSource = bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null;
       // Build inputs through the shared builder so onboarding and Update Your
       // Plan can never feed the engine different shapes (the bug that made the
       // two flows disagree). Same values as before, so onboarding output is
@@ -721,7 +732,7 @@ export default function ProOnboardingScreen({ navigation }) {
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
         bodyFatPct: bfNum,
-        bodyFatSource: bfNum != null ? bfSource : null,
+        bodyFatSource: measuredBfSource,
         daysPerWeek,
         trainingPhase,
         trainingGoal,
@@ -766,7 +777,7 @@ export default function ProOnboardingScreen({ navigation }) {
         // the Katch-McArdle BMR path. Without this the update flow silently fell
         // back to Mifflin and produced different calories from an unchanged body.
         bodyFatPct: bfNum,
-        bodyFatSource: bfNum != null ? bfSource : null,
+        bodyFatSource: measuredBfSource,
         // Store the nutrition goal key alongside the phase so surfaces that read
         // userProfile.goal (Nutrition Targets summary) show the right phase
         // instead of defaulting to lean_gain.
@@ -782,7 +793,7 @@ export default function ProOnboardingScreen({ navigation }) {
         await logBodyMetric(user.id, {
           weightKg: bwKg,
           bodyFatPercent: bfNum,
-          bodyFatSource: bfNum != null ? bfSource : null,
+          bodyFatSource: measuredBfSource,
           loggedAt: Date.now(),
         });
         // Also seed the morning weights series so the weekly check-in
@@ -1269,12 +1280,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
                     <SegmentedControl
-                      options={[
-                        { label: 'Visual', value: 'visual' },
-                        { label: 'BIA', value: 'bia' },
-                        { label: 'Caliper', value: 'caliper' },
-                        { label: 'DEXA', value: 'dexa' },
-                      ]}
+                      options={BODY_FAT_SOURCE_OPTIONS}
                       value={bfSource}
                       onChange={setBfSource}
                       accessibilityLabel="Body fat measurement method"
@@ -1417,7 +1423,7 @@ export default function ProOnboardingScreen({ navigation }) {
             heightCm: hcm,
             weightKg: bwKg,
             bodyFatPct: bfNum,
-            bodyFatSource: bfNum != null ? bfSource : null,
+            bodyFatSource: bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null,
             daysPerWeek,
             trainingPhase,
             trainingGoal,

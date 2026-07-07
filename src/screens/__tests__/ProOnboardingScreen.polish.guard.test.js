@@ -15,6 +15,8 @@ describe('ProOnboardingScreen premium polish guards', () => {
   test('optional body composition points users towards Volyume Score, not body fat guessing', () => {
     expect(SOURCE).toContain('Volyume Score for progress');
     expect(SOURCE).toContain('without asking you to estimate exact body fat');
+    expect(SOURCE).toContain('const BODY_FAT_SOURCE_OPTIONS = [');
+    expect(SOURCE).not.toContain("{ label: 'Visual', value: 'visual' }");
   });
 
   test('header outcome chips and dense rows are shrink-safe on phones', () => {
