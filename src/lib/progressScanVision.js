@@ -307,6 +307,48 @@ function connectedComponents(binary, width, height) {
   return { count, largest };
 }
 
+function adaptiveForegroundThreshold(mask, width, height, contentRect) {
+  const bins = 64;
+  const hist = new Int32Array(bins);
+  let total = 0;
+  let sumTotal = 0;
+
+  for (let y = contentRect.y; y < contentRect.y + contentRect.height; y += 1) {
+    const row = y * width;
+    for (let x = contentRect.x; x < contentRect.x + contentRect.width; x += 1) {
+      const p = clamp(Number(mask[row + x]) || 0, 0, 1);
+      const bin = Math.min(bins - 1, Math.floor(p * bins));
+      hist[bin] += 1;
+      total += 1;
+      sumTotal += p;
+    }
+  }
+
+  if (total <= 0) return 0.5;
+
+  let weightBg = 0;
+  let sumBg = 0;
+  let best = null;
+  for (let i = 0; i < bins - 1; i += 1) {
+    const centre = (i + 0.5) / bins;
+    weightBg += hist[i];
+    sumBg += hist[i] * centre;
+    const weightFg = total - weightBg;
+    if (weightBg < total * 0.01 || weightFg < total * 0.01) continue;
+    const meanBg = sumBg / weightBg;
+    const meanFg = (sumTotal - sumBg) / weightFg;
+    const variance = weightBg * weightFg * ((meanBg - meanFg) ** 2);
+    if (!best || variance > best.variance) {
+      best = { variance, meanBg, meanFg };
+    }
+  }
+
+  if (!best) return 0.5;
+  const separation = best.meanFg - best.meanBg;
+  if (best.meanFg < 0.28 || separation < 0.14) return 0.5;
+  return round(clamp((best.meanBg + best.meanFg) / 2, 0.18, 0.62), 3);
+}
+
 export function measureMaskSignals(mask, opts = {}) {
   const width = opts.width || PROGRESS_SCAN_MODEL_INPUT_SIZE;
   const height = opts.height || PROGRESS_SCAN_MODEL_INPUT_SIZE;
@@ -316,6 +358,7 @@ export function measureMaskSignals(mask, opts = {}) {
   }
   const contentRect = normaliseContentRect(opts.contentRect, width, height);
   const contentArea = contentRect.width * contentRect.height;
+  const foregroundThreshold = adaptiveForegroundThreshold(mask, width, height, contentRect);
 
   const binary = new Uint8Array(total);
   let foreground = 0;
@@ -332,7 +375,7 @@ export function measureMaskSignals(mask, opts = {}) {
     for (let x = contentRect.x; x < contentRect.x + contentRect.width; x += 1) {
       const i = row + x;
       const p = clamp(Number(mask[i]) || 0, 0, 1);
-      if (p >= 0.5) {
+      if (p >= foregroundThreshold) {
         binary[i] = 1;
         foreground += 1;
         fgProb += p;
@@ -434,6 +477,7 @@ export function measureMaskSignals(mask, opts = {}) {
       poseConfidence,
       cameraTiltDegrees: bodyTiltDegrees,
       backgroundSeparation: round(separation, 3),
+      foregroundThreshold,
       componentDominance: round(componentDominance, 3),
       connectedComponents: components.count,
     },

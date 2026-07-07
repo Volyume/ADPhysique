@@ -134,7 +134,7 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/useSafeAreaInsets/);
   expect(SOURCE).toMatch(/controlsInsetStyle/);
   expect(SOURCE).toMatch(/insets\?\.bottom/);
-  expect(SOURCE).toMatch(/ANDROID_NAV_BAR_GUARD\s*=\s*48/);
+  expect(SOURCE).toMatch(/ANDROID_NAV_BAR_GUARD\s*=\s*72/);
   expect(SOURCE).toMatch(/safeBottomInset/);
 });
 

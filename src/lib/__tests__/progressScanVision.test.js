@@ -40,8 +40,9 @@ jest.mock('react-native-fast-tflite', () => ({
 
 function syntheticPersonMask({
   width = 256, height = 256, shiftX = 0, top = 26, bottom = 236, widthScale = 1,
+  foregroundProbability = 0.96, backgroundProbability = 0.04,
 } = {}) {
-  const mask = new Float32Array(width * height).fill(0.04);
+  const mask = new Float32Array(width * height).fill(backgroundProbability);
   const bodyHeight = bottom - top;
   for (let y = top; y <= bottom; y += 1) {
     const rel = (y - top) / bodyHeight;
@@ -51,7 +52,7 @@ function syntheticPersonMask({
       - 6 * Math.exp(-((rel - 0.52) ** 2) / 0.014)) * widthScale;
     const cx = Math.round(width / 2 + shiftX);
     for (let x = Math.max(0, Math.round(cx - halfWidth)); x <= Math.min(width - 1, Math.round(cx + halfWidth)); x += 1) {
-      mask[y * width + x] = 0.96;
+      mask[y * width + x] = foregroundProbability;
     }
   }
   return mask;
@@ -216,6 +217,36 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.silhouetteRatios.waistToHip).toBeGreaterThan(0);
     expect(result.abstentionReasons).toEqual([]);
     expect(retakeCopyForVisionResult(result)).toBeNull();
+  });
+
+  test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {
+    const result = measureMaskSignals(syntheticPersonMask({
+      foregroundProbability: 0.43,
+      backgroundProbability: 0.08,
+    }), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+
+    expect(result.modelBacked).toBe(true);
+    expect(result.quality.foregroundThreshold).toBeLessThan(0.5);
+    expect(result.quality.segmentationConfidence).toBeGreaterThan(0.38);
+    expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
+    expect(result.abstentionReasons).not.toContain('no_person_detected');
+    expect(retakeCopyForVisionResult(result)).toBeNull();
+  });
+
+  test('adaptive threshold does not turn flat uncertain masks into a scored silhouette', () => {
+    const flat = new Float32Array(256 * 256).fill(0.22);
+    const result = measureMaskSignals(flat, {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+
+    expect(result.modelBacked).toBe(false);
+    expect(result.abstentionReasons).toContain('no_person_detected');
   });
 
   test('broad full-body silhouettes are not mistaken for unclear poses', () => {
