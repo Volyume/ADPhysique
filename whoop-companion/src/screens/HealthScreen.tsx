@@ -10,6 +10,7 @@ import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
 import { RhythmResult } from '../metrics/afib';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 const RHYTHM_COLOR: Record<string, string> = {
   regular: colors.recoveryGreen,
@@ -182,7 +183,7 @@ function healthDataReadiness(
   const sleepNeedsReview =
     hasRawRows &&
     candidatesReady === 0 &&
-    (sleepDetail?.confidence === 'low' || sleepNeedsMoreSync(sleepDetail));
+    (sleepTrustTier(sleepDetail) === 'low' || sleepNeedsMoreSync(sleepDetail));
 
   if (trustedReady < 3) {
     return {

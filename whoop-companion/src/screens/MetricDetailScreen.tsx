@@ -13,6 +13,7 @@ import { computeEnergyReserve } from '../metrics/energyReserve';
 import { formatDuration } from '../util/time';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 type Def = {
   title: string;
@@ -457,7 +458,7 @@ function renderQualityCard(input: {
 
 function rawVitalSleepBlocked(detail: DailyMetricRow['sleepDetail']): boolean {
   if (!detail) return true;
-  if (detail.confidence === 'low') return true;
+  if (sleepTrustTier(detail) === 'low') return true;
   return sleepNeedsMoreSync(detail);
 }
 
@@ -508,10 +509,11 @@ function centerSubForMetric(key: MetricKey, value: number, def: Def): string | u
 
 function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {
   if (!detail) return 'No sleep-detail breakdown has been saved for today yet.';
-  if (detail.confidence === 'high') {
+  const tier = sleepTrustTier(detail);
+  if (tier === 'high') {
     return `Strong overnight capture: ${detail.coveragePct ?? 0}% HR coverage and ${detail.signalMin ?? 0} signal minutes.`;
   }
-  if (detail.confidence === 'medium') {
+  if (tier === 'medium') {
     return `Usable estimate: ${detail.coveragePct ?? 0}% coverage. Review the sleep window if timing feels wrong.`;
   }
   return `Low-confidence estimate: ${detail.coveragePct ?? 0}% coverage. Sync more history before trusting score, recovery, or readiness.`;

@@ -15,6 +15,7 @@ import type { DailyMetricRow } from '../db/database';
 import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { sleepConfidenceColor, sleepConfidenceLabel } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
+import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -402,12 +403,13 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
-function qualityColor(coverage: number, signalMin: number, syncing: boolean, syncProblem = false): string {
+function qualityColor(capture: ReturnType<typeof appStore.getState>['sleepCapture'], syncing: boolean, syncProblem = false): string {
   if (syncing) return colors.strainBlue;
   if (syncProblem) return colors.recoveryYellow;
-  if (coverage >= 80 && signalMin >= 240) return colors.recoveryGreen;
-  if (coverage >= 60 && signalMin >= 120) return colors.recoveryYellow;
-  if (signalMin >= 30) return colors.recoveryRed;
+  const tier = sleepTrustTier(capture);
+  if (tier === 'high') return colors.recoveryGreen;
+  if (tier === 'medium') return colors.recoveryYellow;
+  if (tier === 'low') return colors.recoveryRed;
   return colors.textTertiary;
 }
 
@@ -419,8 +421,7 @@ function homeSleepQuality(input: {
   capped: boolean;
 }): { color: string; status: string | null; issue: 'wake' | 'hr_only' | 'partial' | 'sync' | null } {
   const capture = input.capture;
-  const coverage = capture?.coveragePct ?? 0;
-  const signalMin = capture?.signalMin ?? 0;
+  const tier = sleepTrustTier(capture);
   if (input.draining) return { color: colors.strainBlue, status: 'Syncing', issue: 'sync' };
   if (input.syncProblem) return { color: colors.recoveryYellow, status: 'Retrying sync', issue: 'sync' };
   if (sleepStateWakeConflict(capture)) return { color: colors.recoveryRed, status: 'Review sleep', issue: 'wake' };
@@ -428,9 +429,9 @@ function homeSleepQuality(input: {
     return { color: colors.strainBlue, status: 'Needs proof', issue: 'hr_only' };
   }
   if (!input.hasSleep || input.capped || sleepNeedsMoreSync(capture)) {
-    return { color: qualityColor(coverage, signalMin, false, false), status: 'Partial sleep', issue: 'partial' };
+    return { color: qualityColor(capture, false, false), status: 'Partial sleep', issue: 'partial' };
   }
-  if (coverage >= 80 && signalMin >= 240) return { color: colors.recoveryGreen, status: null, issue: null };
+  if (tier === 'high') return { color: colors.recoveryGreen, status: null, issue: null };
   return { color: colors.recoveryYellow, status: 'Usable data', issue: null };
 }
 
