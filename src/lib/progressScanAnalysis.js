@@ -557,6 +557,40 @@ export function leannessBandForScore(score) {
   return PROGRESS_SCAN_LEANNESS_BANDS.find((band) => n >= band.min && n <= band.max) || null;
 }
 
+export function normaliseStoredPhysiqueAssessment(assessment = null) {
+  if (!assessment || typeof assessment !== 'object') return assessment ?? null;
+  if (assessment.assessmentVersion !== 'volyume_physique_scan_score_v1') return assessment;
+  const oldScore = finiteNumber(assessment.visualLeannessScore);
+  const nextScore = calibrateVolyumeScore(oldScore);
+  if (nextScore == null) return assessment;
+  const band = leannessBandForScore(nextScore);
+  return {
+    ...assessment,
+    assessmentVersion: PROGRESS_SCAN_SCORE_VERSION,
+    legacyAssessmentVersion: assessment.assessmentVersion,
+    visualLeannessScore: nextScore,
+    leannessBand: band?.key ?? assessment.leannessBand ?? null,
+    leannessBandLabel: band?.label ?? assessment.leannessBandLabel ?? null,
+    indexInputs: {
+      ...(assessment.indexInputs || {}),
+      legacyVisualLeannessScore: oldScore,
+      displayScoreCalibratedFrom: assessment.assessmentVersion,
+    },
+  };
+}
+
+export function normaliseStoredProgressScanSignals(signals = null) {
+  if (!signals || typeof signals !== 'object') return signals ?? null;
+  const assessment = normaliseStoredPhysiqueAssessment(signals.physiqueAssessment);
+  if (assessment === signals.physiqueAssessment) return signals;
+  return {
+    ...signals,
+    physiqueAssessment: assessment,
+    physiqueScoreVersion: PROGRESS_SCAN_SCORE_VERSION,
+    legacyPhysiqueScoreVersion: signals.physiqueScoreVersion ?? 'volyume_physique_scan_score_v1',
+  };
+}
+
 export function progressSignalLabel(signal) {
   return PROGRESS_SIGNAL_COPY[signal] || PROGRESS_SIGNAL_COPY.inconclusive;
 }
@@ -650,7 +684,7 @@ export function buildPhysiqueAssessment({
   };
 }
 
-function progressScanAssessmentCopy(assessment = null) {
+export function progressScanAssessmentCopy(assessment = null) {
   if (!assessment) return 'Progress photos saved. I could not read enough from the photos for a useful score.';
   if (assessment.visualLeannessScore == null) {
     return 'Progress photos saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
