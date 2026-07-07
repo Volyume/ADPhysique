@@ -9,6 +9,7 @@ import {
   resetProgressScanModelCacheForTests,
   retakeCopyForVisionResult,
   unavailableVisionResult,
+  validateProgressScanModelContract,
 } from '../progressScanVision';
 
 const mockDownloadAsync = jest.fn(async () => ({
@@ -84,6 +85,14 @@ function float32ToBase64(values) {
   return bytesToBase64(bytes);
 }
 
+function tfliteModel(run) {
+  return {
+    inputs: [{ name: 'input_1', dataType: 'float32', shape: [1, 256, 256, 3] }],
+    outputs: [{ name: 'segmentation_masks', dataType: 'float32', shape: [1, 256, 256, 1] }],
+    run: jest.fn(run),
+  };
+}
+
 describe('Progress Scan vision signal extraction', () => {
   beforeEach(() => {
     mockDownloadAsync.mockClear();
@@ -117,6 +126,39 @@ describe('Progress Scan vision signal extraction', () => {
     expect(mockResolveBundledModel).toHaveBeenCalledWith('selfie_segmentation.tflite');
     expect(mockFromModule).not.toHaveBeenCalled();
     expect(mockDownloadAsync).not.toHaveBeenCalled();
+  });
+
+  test('validates the bundled TFLite tensor contract before scoring photos', () => {
+    expect(validateProgressScanModelContract(tfliteModel(async () => []))).toMatchObject({
+      ok: true,
+      inputShape: [1, 256, 256, 3],
+      outputShape: [1, 256, 256, 1],
+    });
+    expect(validateProgressScanModelContract({
+      inputs: [{ name: 'wrong', dataType: 'float32', shape: [1, 224, 224, 3] }],
+      outputs: [{ name: 'mask', dataType: 'float32', shape: [1, 224, 224, 1] }],
+      run: jest.fn(),
+    })).toMatchObject({
+      ok: false,
+      reason: 'model_input_shape_unsupported',
+    });
+  });
+
+  test('rejects a loaded model with missing tensor metadata instead of running a weak unknown contract', async () => {
+    const rgb = new Uint8Array(256 * 256 * 3).fill(128);
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockExtractRgb.mockResolvedValueOnce({
+      rgbBase64: bytesToBase64(rgb),
+      lightingScore: 0.9,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+    });
+    mockLoadTensorflowModel.mockResolvedValueOnce({ run: jest.fn(async () => [syntheticPersonMask()]) });
+    mockSegmentPersonMask.mockResolvedValueOnce(null);
+
+    const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
+
+    expect(result.modelBacked).toBe(false);
+    expect(result.abstentionReasons).toContain('model_tensor_metadata_missing');
   });
 
   test('resolves bundled TFLite model to a protocol URL before native loading', async () => {
@@ -160,7 +202,7 @@ describe('Progress Scan vision signal extraction', () => {
 
   test('retries TFLite loading after a transient native load failure', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
-    const model = { run: jest.fn(async () => [syntheticPersonMask()]) };
+    const model = tfliteModel(async () => [syntheticPersonMask()]);
     mockResolveBundledModel.mockResolvedValue('file:///cache/selfie_segmentation.tflite');
     mockExtractRgb.mockResolvedValue({
       rgbBase64: bytesToBase64(rgb),
@@ -186,7 +228,7 @@ describe('Progress Scan vision signal extraction', () => {
   test('uses the bundled TFLite model before falling back to native ML Kit masks', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const mask = syntheticPersonMask();
-    const model = { run: jest.fn(async () => [mask]) };
+    const model = tfliteModel(async () => [mask]);
     mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(rgb),
@@ -216,7 +258,7 @@ describe('Progress Scan vision signal extraction', () => {
   test('falls back to native ML Kit when TFLite cannot produce a usable person mask', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const nativeMask = syntheticPersonMask();
-    const model = { run: jest.fn(async () => [new Float32Array(256 * 256).fill(0.02)]) };
+    const model = tfliteModel(async () => [new Float32Array(256 * 256).fill(0.02)]);
     mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
     mockLoadTensorflowModel.mockResolvedValueOnce(model);
     mockExtractRgb.mockResolvedValueOnce({
