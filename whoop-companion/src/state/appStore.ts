@@ -2632,6 +2632,7 @@ function napIsReliable(nap: SleepResult): boolean {
   const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
   const stillPct = Math.round(((nap.stillMin ?? 0) / Math.max(1, nap.inBedMin)) * 100);
   return (
+    !sleepStateWakeConflict(nap) &&
     nap.inBedMin >= 20 &&
     nap.inBedMin <= 180 &&
     nap.asleepMin >= 15 &&
