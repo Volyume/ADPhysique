@@ -197,10 +197,28 @@ function buildAssessment(history: DailyMetricRow[], days: number): {
   const currentScore = weightedAssessmentScore(recoveryAvg, sleepAvg, strainAvg);
   const priorScore = weightedAssessmentScore(priorRecovery, priorSleep, priorStrain);
   const delta = currentScore != null && priorScore != null ? Math.round(currentScore - priorScore) : null;
+  const sleepRows = current.filter((d) => d.sleepMin != null || d.sleepDetail != null).length;
+  const confidenceRows = current.filter((d) => d.sleepDetail?.confidence != null).length;
   const lowConfidence = current.filter((d) => d.sleepDetail?.confidence === 'low').length;
   const mediumConfidence = current.filter((d) => d.sleepDetail?.confidence === 'medium').length;
-  const qualityLabel = lowConfidence > 0 ? `${lowConfidence} low` : mediumConfidence > 0 ? `${mediumConfidence} usable` : 'strong';
-  const qualityColor = lowConfidence > 0 ? colors.recoveryRed : mediumConfidence > 0 ? colors.recoveryYellow : colors.recoveryGreen;
+  const qualityLabel =
+    sleepRows === 0
+      ? 'no sleep'
+      : confidenceRows === 0
+        ? 'unverified'
+        : lowConfidence > 0
+          ? `${lowConfidence} low`
+          : mediumConfidence > 0
+            ? `${mediumConfidence} usable`
+            : 'strong';
+  const qualityColor =
+    sleepRows === 0 || confidenceRows === 0
+      ? colors.textTertiary
+      : lowConfidence > 0
+        ? colors.recoveryRed
+        : mediumConfidence > 0
+          ? colors.recoveryYellow
+          : colors.recoveryGreen;
   const strainText = strainAvg == null ? 'unknown training load' : strainAvg >= 12 ? 'high training load' : strainAvg >= 8 ? 'productive training load' : 'controlled training load';
   const recoveryText = recoveryAvg == null ? 'recovery is still building' : recoveryAvg >= 67 ? 'recovery stayed high' : recoveryAvg >= 34 ? 'recovery was mixed' : 'recovery was low';
   const sleepText = sleepAvg == null ? 'sleep needs more data' : sleepAvg >= 85 ? 'sleep supported the week' : sleepAvg >= 70 ? 'sleep was sufficient but improvable' : 'sleep limited recovery';
