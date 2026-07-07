@@ -62,6 +62,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const neededMin = sleepNeed?.neededMin ?? BASE_NEED_MIN;
   const week = recentDays.slice(0, 7).reverse();
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
+  const debtExcludedNights = useMemo(() => lowTrustDebtNightCount(recentDays, today?.day), [recentDays, today?.day]);
   const effectiveSync = historySync ?? lastHistorySync;
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
@@ -403,6 +404,11 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         <View style={styles.divider} />
         <NeedRow label="Sleep needed" value={formatDuration(neededMin)} strong />
         {sleep ? <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong /> : null}
+        {debtExcludedNights > 0 ? (
+          <Text style={styles.needNote}>
+            Sleep debt is based on trusted nights; {debtExcludedNights} low-confidence night{debtExcludedNights === 1 ? '' : 's'} are waiting for stronger sync before changing the carry.
+          </Text>
+        ) : null}
       </Card>
 
       <SectionLabel>Naps</SectionLabel>
@@ -1103,6 +1109,13 @@ function NeedRow({ label, value, strong }: { label: string; value: string; stron
   );
 }
 
+function lowTrustDebtNightCount(days: DailyMetricRow[], todayDay: string | undefined): number {
+  return days
+    .filter((d) => d.day !== todayDay && d.sleepMin != null)
+    .slice(0, 14)
+    .filter((d) => sleepTrustTier(d.sleepDetail) === 'low').length;
+}
+
 function ScoreRow({ label, value, detail }: { label: string; value: number; detail: string }) {
   return (
     <View style={styles.scoreRow}>
@@ -1405,5 +1418,6 @@ const styles = StyleSheet.create({
   needLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
   needValue: { color: colors.text, fontSize: 14, fontFamily: fonts.text },
   needStrong: { color: colors.text, fontFamily: fonts.bold },
+  needNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 8, fontFamily: fonts.text },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 6 },
 });
