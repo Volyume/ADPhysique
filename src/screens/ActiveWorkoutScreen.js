@@ -2157,7 +2157,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             )}
             {currentSet.setType === 'warmup' && !warmupHintSeenRef.current && (
               <Text style={styles.warmupOneTimeHint}>
-                Get the muscles and joints ready. Light weight, easy reps. Tap Done when you're ready to work.
+                Get the muscles and joints ready. Light weight, easy reps. Tap Log warm-up when you&apos;re ready to work.
               </Text>
             )}
             {/* Card header (COMP-001): three fixed lines replace the old

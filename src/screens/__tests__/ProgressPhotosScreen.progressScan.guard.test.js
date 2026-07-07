@@ -24,7 +24,6 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/Volyume Score may be less useful/);
     expect(SCREEN).toMatch(/without forcing a Volyume Score/);
-    expect(SCREEN).toMatch(/progressCheckInCadenceLabel\(latestPhoto\?\.takenAt, Date\.now\(\), PROGRESS_SCAN_MIN_INTERVAL_MS\)/);
     expect(SCREEN).not.toMatch(/at least a week apart/);
   });
 
@@ -33,8 +32,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/onOpenPhoto=\{openViewer\}/);
     expect(SCAN_HISTORY).toMatch(/scan\.assets\.map/);
     expect(SCAN_HISTORY).toMatch(/onOpenPhoto\?\.\(asset\.photoName\)/);
-    expect(SCAN_HISTORY).toMatch(/scanStatsCopy/);
-    expect(SCAN_HISTORY).toMatch(/scanReadCopy/);
+    expect(SCAN_HISTORY).not.toMatch(/scanStatsCopy/);
+    expect(SCAN_HISTORY).not.toMatch(/scanReadCopy/);
   });
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
@@ -51,7 +50,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCAN_HISTORY).toMatch(/if \(suppressed\) return 'Score detail is hidden right now/);
     expect(SCAN_HISTORY).toMatch(/if \(hideExact && scan\?\.deltaExplanation\?\.trendSummary\)/);
     expect(SCAN_HISTORY).toMatch(/whyLabel\(scan, \{ suppressed, hideExact \}\)/);
-    expect(SCAN_HISTORY).toMatch(/scanStatsCopy\(scan, \{ suppressed, hideExact \}\)/);
+    expect(SCAN_HISTORY).toMatch(/weightLabel\(scan, \{ suppressed, hideExact \}\)/);
     expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
 
@@ -104,11 +103,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Your private physique record/);
-    expect(SCREEN).toMatch(/Private on this device/);
-    expect(SCREEN).toMatch(/not visible to partners, staff or anyone else/);
-    expect(SCREEN).toMatch(/What the Volyume Score means/);
-    expect(SCREEN).toMatch(/The first score is a baseline/);
-    expect(SCREEN).toMatch(/private progress index, not a body fat percentage or a rating of your physique/);
+    expect(SCREEN).toMatch(/Private by default/);
+    expect(SCREEN).toMatch(/Nothing is shared or exported unless you choose it/);
+    expect(SCREEN).toMatch(/private progress index for like-for-like comparisons, not body fat/);
+    expect(SCREEN).not.toMatch(/What the Volyume Score means/);
+    expect(SCREEN).not.toMatch(/Latest result/);
+    expect(SCREEN).not.toMatch(/signalCard/);
+    expect(SCREEN).not.toMatch(/scoreGuideCard/);
     expect(SCREEN).not.toMatch(/heroPlaceholder/);
     expect(SCREEN).not.toMatch(/heroImageFrame/);
     expect(SCREEN).not.toMatch(/heroScrim/);

@@ -119,6 +119,7 @@ export function buildProgressStudioCaptureRoutes({
       bestFor: 'Adds to the existing date.',
       actionLabel: `Add missing photo: Add ${missingPoseLabel} photo`,
       recommended: true,
+      recommendationLabel: 'Finish set',
     });
   }
 
@@ -132,6 +133,7 @@ export function buildProgressStudioCaptureRoutes({
       bestFor: 'For new photos taken today.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
+      recommendationLabel: 'Best baseline',
       disabled: !canScan,
       disabledReason: 'Sign in to save a photo set.',
     });
@@ -164,6 +166,7 @@ export function buildProgressStudioCaptureRoutes({
       ]),
       actionLabel: `Add ${missingPoseLabel} photo`,
       recommended: true,
+      recommendationLabel: 'Finish set',
     });
   }
 

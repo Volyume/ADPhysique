@@ -23,7 +23,7 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
     headline = `Set this week's sessions. ${name} sees the number only, never your plan.`;
     primaryAction = { key: 'set_aim', label: 'Set weekly sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
-    headline = `Send ${name} one fixed cheer for today. It is private to this partnership and is not chat.`;
+    headline = `Send ${name} one fixed cheer for today. It is private to this partnership, with no free text or reply thread.`;
     primaryAction = { key: 'cheer', label: 'Choose a fixed cheer', accessibilityLabel: 'Choose a cheer for today' };
   } else if (pair.weekKept) {
     headline = `Last week was kept. ${name} still only sees the items listed below and wins you approve.`;

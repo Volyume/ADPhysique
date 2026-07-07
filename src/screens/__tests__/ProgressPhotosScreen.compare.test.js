@@ -259,7 +259,7 @@ describe('ProgressPhotosScreen timeline', () => {
   test('partial-set prompt guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Latest set needs another angle');
+    expect(text).toContain('Partial setup');
     expect(text).toContain('Add front photo');
     await press(tree, 'Add a Front photo for this date');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
@@ -270,8 +270,11 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Private on this device');
-    expect(text).toContain('not visible to partners');
+    expect(text).toContain('Private by default');
+    expect(text).toContain('Nothing is shared or exported unless you choose it.');
+    expect(text).toContain('private progress index for like-for-like comparisons');
+    expect(text).not.toContain('Latest result');
+    expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photo set');
     expect(text).toContain('Your first set can be new photos or older photos from your phone.');
@@ -529,16 +532,16 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Score details are hidden for now');
-    expect(text).toContain('Nothing is uploaded or shared unless you choose it.');
+    expect(text).toContain('Private by default');
+    expect(text).not.toContain('Latest result');
     expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
   });
 
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Private on this device');
-    expect(text).toContain('not visible to partners, staff or anyone else');
+    expect(text).toContain('Private by default');
+    expect(text).toContain('Nothing is shared or exported unless you choose it.');
     expect(text).not.toContain('Not synced, not shared');
   });
 });

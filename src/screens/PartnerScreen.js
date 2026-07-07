@@ -425,7 +425,7 @@ function LocalReadNotice({ onRefresh }) {
       accessibilityRole="button"
       accessibilityLabel="Refresh partner data"
     >
-      <Ionicons name="sync-outline" size={iconSize.sm} color={colors.primary} />
+      <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
       <View style={styles.localReadNoticeCopy}>
         <Text style={styles.localReadNoticeTitle}>Refreshing partner data</Text>
         <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to check the cloud copy again.</Text>
@@ -1282,7 +1282,7 @@ function AckSheetBody({ pair, onSend }) {
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Send a cheer</Text>
-      <Text style={styles.blockPitch}>Choose one fixed line for today. No chat, no free text, no pressure.</Text>
+      <Text style={styles.blockPitch}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
       {ACKNOWLEDGEMENTS.map((ack) => (
         <TouchableOpacity
           key={ack.key}

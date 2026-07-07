@@ -248,11 +248,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // A7 provenance for the cardio prefill: { sessions, targetSessions } from
   // the week's cardio log, so the pre-selected answer names its source.
   const [cardioMeta, setCardioMeta] = useState(null);
-  // Legacy steps state remains only so older saved check-ins can be read
-  // without schema churn. The shipped check-in no longer asks for steps.
-  const [stepsSummary] = useState(null);
-  const [stepsManual, setStepsManual] = useState('');
-  const [stepsOverride, setStepsOverride] = useState(false);
 
   // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1-5
@@ -265,12 +260,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
-  // Step collection is not part of the shipped coaching surface. The old
-  // internal fields remain for backwards compatibility, but the user is no
-  // longer asked for a weekly step average.
-  const showSteps = false;
-  const hasStepsTarget = showSteps
-    && Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
 
   useEffect(() => {
@@ -439,10 +428,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
             // Restore the user's free-text note, stripping the auto-appended
             // joint/sore lines so resubmitting can't duplicate them.
             setNotes(stripAutoNotes(existingCheckin.notes));
-            if (existingCheckin.stepsAvg != null) {
-              setStepsManual(String(existingCheckin.stepsAvg));
-              setStepsOverride(true);
-            }
           } else {
             // First check-in this week: pre-select the derived values so the
             // user only overrides when the data is wrong, not pick from scratch.
@@ -516,7 +501,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
     !forceFullWizard &&
     trainingPerformance != null &&
     (!hasNutritionTarget || calsAdherence != null) &&
-    (!showSteps || !!stepsSummary?.registered) &&
     (!hasCardioPrescription || cardioAdherence != null);
 
   // The fast card's only required inputs: the two we never derive.
@@ -583,15 +567,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
-        stepsAvg: showSteps
-          // A typed value always wins (manual fallback, or an override of the
-          // auto figure); otherwise use the registered average; otherwise null.
-          ? (stepsManual !== ''
-            ? parseInt(stepsManual, 10)
-            : stepsSummary?.registered
-              ? Math.round(stepsSummary.avgSteps)
-              : null)
-          : null,
+        stepsAvg: null,
         cardioAdherence: cardioAdherence ?? null,
         cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
@@ -862,73 +838,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
         )}
 
-        {/* Steps. Read the registered average when 4+ days are tracked,
-            otherwise ask for a single average as the fallback. */}
-        {showSteps && (
-          <View style={styles.section}>
-            {stepsSummary?.registered && !stepsOverride ? (
-              <>
-                <SectionLabel>Steps this week</SectionLabel>
-                <TouchableOpacity
-                  style={styles.stepsAutoRow}
-                  onPress={() => {
-                    setStepsManual(String(Math.round(stepsSummary.avgSteps)));
-                    setStepsOverride(true);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Averaged ${Math.round(stepsSummary.avgSteps)} steps a day. Tap to override.`}
-                >
-                  <Ionicons name="walk-outline" size={18} color={colors.primary} />
-                  <Text style={styles.stepsAutoText}>
-                    Averaged {Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day. Tap to override.
-                  </Text>
-                </TouchableOpacity>
-                {(() => {
-                  const target = Number(userProfile?.stepsTarget ?? userProfile?.steps_target) || 0;
-                  if (!target) return null;
-                  const avg = Math.round(stepsSummary.avgSteps);
-                  const verdict = avg >= target ? 'on target'
-                    : avg >= target * 0.9 ? 'just under target'
-                    : 'under target';
-                  return (
-                    <Text style={styles.autoDerivedNote}>
-                      Against your {target.toLocaleString('en-GB')} step target ({verdict}). Override only if your steps were tracked on a device not synced here.
-                    </Text>
-                  );
-                })()}
-              </>
-            ) : (
-              <>
-                <SectionLabel hint={stepsSummary?.registered
-                  ? 'Enter the average from your tracker'
-                  : 'We could not read your steps automatically this week'}>
-                  Average steps a day
-                </SectionLabel>
-                <TextField
-                  containerStyle={styles.shortFieldContainer}
-                  fieldStyle={styles.shortField}
-                  inputStyle={styles.shortFieldInput}
-                  value={stepsManual}
-                  onChangeText={t => setStepsManual(t.replace(/[^0-9]/g, ''))}
-                  accessibilityLabel="Average steps a day"
-                  keyboardType="number-pad"
-                  placeholder="8000"
-                  placeholderTextColor={colors.textMuted}
-                  returnKeyType="done"
-                  maxLength={6}
-                />
-              </>
-            )}
-            {!hasStepsTarget && (
-              <Text style={styles.autoDerivedNote}>
-                No step target set. Add one in Settings for step coaching, or just log your average here.
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Cardio (shown once a cardio prescription has been applied
-            from the coach card; mirrors the steps adherence question). */}
+        {/* Cardio, shown once a cardio prescription has been applied. */}
         {hasCardioPrescription && (
           <View style={styles.section}>
             <SectionLabel>Prescribed cardio</SectionLabel>
@@ -1129,12 +1039,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
         icon: 'restaurant-outline',
         label: 'Nutrition',
         value: calsAdherence ? CALS_TEXT[calsAdherence] : null,
-      },
-      showSteps && stepsSummary?.registered && {
-        key: 'steps',
-        icon: 'walk-outline',
-        label: 'Steps',
-        value: `${Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day`,
       },
       hasCardioPrescription && {
         key: 'cardio',
@@ -1769,14 +1673,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.medium,
   },
-  stepsAutoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-  },
-  stepsAutoText: { ...type.num('body'), color: colors.textPrimary },
-
   notesFieldContainer: { gap: 0 },
   notesField: {
     borderRadius: radius.md,

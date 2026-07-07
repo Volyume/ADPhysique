@@ -31,7 +31,7 @@ describe('partner accountability copy', () => {
 
   test('routes to cheer when aim is set and the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is private to this partnership and is not chat.');
+    expect(plan.headline).toBe('Send Sam one fixed cheer for today. It is private to this partnership, with no free text or reply thread.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Choose a fixed cheer' });
     expect(plan.steps.find((step) => step.key === 'share')).toMatchObject({
       label: 'Optional sharing',
@@ -60,5 +60,6 @@ describe('partner accountability copy', () => {
     const copy = JSON.stringify(plan);
     expect(copy).toContain('Only weekly training status, weekly sessions you set, fixed cheers and wins you approve are shared.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
+    expect(copy).not.toMatch(/\bchat\b|chatbot|AI chat/i);
   });
 });
