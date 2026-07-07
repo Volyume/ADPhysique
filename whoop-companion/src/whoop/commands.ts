@@ -103,12 +103,26 @@ export function cmdToggleRealtimeHr(on = true): Uint8Array {
 
 /** Clear the strap's stored wake/haptic alarm. */
 export function cmdDisableAlarm(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.DISABLE_ALARM));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.DISABLE_ALARM, new Uint8Array([0x01])));
 }
 
 /** Stop any currently-running haptic vibration pattern. */
 export function cmdStopHaptics(): Uint8Array {
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.STOP_HAPTICS));
+}
+
+/** Arm the strap's stored wake/haptic alarm at a Unix epoch timestamp. */
+export function cmdSetAlarmTime(wakeTsMs: number): Uint8Array {
+  const epoch = Math.floor(wakeTsMs / 1000) >>> 0;
+  const payload = new Uint8Array(7);
+  payload[0] = 0x01;
+  payload[1] = epoch & 0xff;
+  payload[2] = (epoch >> 8) & 0xff;
+  payload[3] = (epoch >> 16) & 0xff;
+  payload[4] = (epoch >> 24) & 0xff;
+  payload[5] = 0x00;
+  payload[6] = 0x00;
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_ALARM_TIME, payload));
 }
 
 /**

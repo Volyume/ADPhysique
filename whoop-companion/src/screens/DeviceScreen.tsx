@@ -44,6 +44,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
+  const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
   const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
@@ -239,6 +240,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
 
       <SectionLabel>Wake alarm</SectionLabel>
       <Card>
+        <Text style={styles.diagText}>
+          Strap alarm: {strapAlarm.enabled ? `set for ${formatAlarmDate(strapAlarm.wakeTs)}` : 'off in Pulse'}
+        </Text>
         <SecondaryButton
           title={alarmBusy === 'disable' ? 'Disabling...' : 'Disable strap alarm'}
           onPress={() => void disableWakeAlarm()}
@@ -249,9 +253,10 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           onPress={() => void stopHaptics()}
           disabled={!connected || !!alarmBusy}
         />
+        <SecondaryButton title="Open Sleep Coach" onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <Text style={styles.hint}>
-          Uses the WHOOP command channel to send DISABLE_ALARM, then STOP_HAPTICS. Keep the strap connected until the
-          success message appears. Setting a new alarm is not enabled until the SET_ALARM_TIME payload is validated.
+          Sleep Coach can set the strap alarm from your wake target. These controls disable the stored alarm or stop an
+          active buzz immediately.
         </Text>
       </Card>
 
@@ -461,6 +466,11 @@ function writeAscii(handle: WritableFileHandle, text: string): void {
 
 function pauseForUi(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function formatAlarmDate(ts: number | null): string {
+  if (!ts) return 'unknown';
+  return new Date(ts).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 const styles = StyleSheet.create({

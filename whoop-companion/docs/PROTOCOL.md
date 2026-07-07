@@ -53,6 +53,13 @@ layer matches them.
    (and/or `TOGGLE_REALTIME_HR` (3, payload 1) → HR via proprietary REALTIME_DATA=40)
 4. `LINK_VALID` (1) every ~10 s keepalive, or the strap drops the link.
 
+## Haptic wake alarm
+Community WHOOP protocol references (NOOP / OpenStrap) confirm:
+- `SET_ALARM_TIME` (66): payload `[0x01] + epoch_u32_LE + [0x00, 0x00]`.
+- `DISABLE_ALARM` (69): payload `[0x01]`.
+- `RUN_ALARM` (68): payload `[0x01]`.
+- `STOP_HAPTICS` (122): stops any active vibration pattern.
+
 ## Historical drain
 `ENTER_HIGH_FREQ_SYNC` (96) → wait → `SEND_HISTORICAL_DATA` (22) → for each
 HISTORICAL_DATA(47) chunk reply `HISTORICAL_DATA_RESULT` (23) [SUCCESS, start_id u32,

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Screen, SectionLabel } from '../ui/components';
+import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
@@ -12,6 +12,16 @@ import { kvGet, kvSet } from '../db/database';
 function fmtClock(minOfDay: number): string {
   const m = ((minOfDay % 1440) + 1440) % 1440;
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+function nextWakeTimestamp(wakeMin: number, now = Date.now()): number {
+  const d = new Date(now);
+  d.setHours(Math.floor(wakeMin / 60), wakeMin % 60, 0, 0);
+  if (d.getTime() <= now + 30 * 1000) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+function formatAlarmDate(ts: number | null): string {
+  if (!ts) return 'None set';
+  return new Date(ts).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 }
 function median(xs: number[]): number | null {
   if (!xs.length) return null;
@@ -30,6 +40,9 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const goal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const lastSleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const status = useStoreSelector(appStore, (s) => s.status);
+  const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
+  const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
 
   const neededMin = need?.neededMin ?? 480;
   const targetMin = Math.round(neededMin * goal);
@@ -55,6 +68,34 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
   const tibNeededMin = Math.round(targetMin / Math.max(0.5, expectedEff));
   const bedMin = wakeMin - tibNeededMin;
+  const nextWakeTs = nextWakeTimestamp(wakeMin);
+  const connected = status === 'connected';
+
+  const setWakeAlarm = async () => {
+    if (alarmBusy) return;
+    setAlarmBusy('set');
+    try {
+      await appStore.setStrapWakeAlarm(nextWakeTs);
+      Alert.alert('Wake alarm set', `The strap wake alarm is set for ${formatAlarmDate(nextWakeTs)}.`);
+    } catch (e) {
+      Alert.alert('Could not set wake alarm', String(e));
+    } finally {
+      setAlarmBusy(null);
+    }
+  };
+
+  const disableWakeAlarm = async () => {
+    if (alarmBusy) return;
+    setAlarmBusy('disable');
+    try {
+      await appStore.disableStrapAlarm();
+      Alert.alert('Wake alarm disabled', 'The strap alarm disable command was sent.');
+    } catch (e) {
+      Alert.alert('Could not disable wake alarm', String(e));
+    } finally {
+      setAlarmBusy(null);
+    }
+  };
 
   const rows = need
     ? [
@@ -127,6 +168,33 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         </Text>
       </Card>
 
+      <SectionLabel>Wake alarm</SectionLabel>
+      <Card>
+        <View style={styles.alarmRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.alarmTitle}>Strap haptic alarm</Text>
+            <Text style={styles.alarmMeta}>
+              {strapAlarm.enabled ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}` : 'Off on this app'}
+            </Text>
+          </View>
+          <Text style={styles.alarmTime}>{fmtClock(wakeMin)}</Text>
+        </View>
+        <PrimaryButton
+          title={alarmBusy === 'set' ? 'Setting...' : `Set strap alarm for ${fmtClock(wakeMin)}`}
+          onPress={() => void setWakeAlarm()}
+          disabled={!connected || !!alarmBusy}
+        />
+        <SecondaryButton
+          title={alarmBusy === 'disable' ? 'Disabling...' : 'Disable strap alarm'}
+          onPress={() => void disableWakeAlarm()}
+          disabled={!connected || !!alarmBusy}
+        />
+        <Text style={styles.planNote}>
+          The alarm writes directly to the WHOOP strap. It will use the wake-up time above; connect the strap first,
+          then keep it nearby until the confirmation appears.
+        </Text>
+      </Card>
+
       <SectionLabel>How sleep need is calculated</SectionLabel>
       <Card>
         {need ? (
@@ -177,8 +245,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
       ) : null}
 
       <Text style={styles.alarmNote}>
-        Existing strap alarms can be disabled from Device. Setting a new silent haptic alarm still waits for
-        SET_ALARM_TIME payload validation, so smart-alarm scheduling is not enabled in this build.
+        Smart-window alarms are not enabled yet; this sets a fixed haptic wake alarm at your planned wake time.
       </Text>
     </Screen>
   );
@@ -215,5 +282,9 @@ const styles = StyleSheet.create({
   stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   stepTxt: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
   wakeValue: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, minWidth: 56, textAlign: 'center' },
+  alarmRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  alarmTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  alarmMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+  alarmTime: { color: colors.sleepTeal, fontSize: 24, fontFamily: fonts.black },
   planNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });

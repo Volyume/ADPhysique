@@ -22,6 +22,7 @@ import {
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
   cmdDisableAlarm,
+  cmdSetAlarmTime,
   cmdStopHaptics,
   parseHistoryMetadata,
   HistoryMetadata,
@@ -145,6 +146,12 @@ export type HistorySyncReport = {
   mode?: 'manual' | 'auto';
 };
 
+export type StrapAlarmState = {
+  enabled: boolean;
+  wakeTs: number | null;
+  updatedAt: number | null;
+};
+
 // Phone-GPS gating per activity comes from the unified activity catalogue
 // (mirrors WHOOP's per-sport SportDto.has_gps).
 export { activityGps as activityUsesGps } from '../data/activities';
@@ -202,6 +209,7 @@ export type AppState = {
   historySync: HistorySyncReport | null;
   lastHistorySync: HistorySyncReport | null;
   lastSyncTs: number | null; // last time the strap buffer was drained
+  strapAlarm: StrapAlarmState;
   profile: UserProfile;
   error: string | null;
 };
@@ -250,6 +258,7 @@ const initialState: AppState = {
   historySync: null,
   lastHistorySync: null,
   lastSyncTs: null,
+  strapAlarm: { enabled: false, wakeTs: null, updatedAt: null },
   profile: DEFAULT_PROFILE,
   error: null,
 };
@@ -268,6 +277,7 @@ const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
+const STRAP_ALARM_KEY = 'strapAlarm';
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -318,6 +328,7 @@ class AppStore extends Store<AppState> {
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
     const stepDivisorRaw = await kvGet(STEP_DIVISOR_KEY);
     const bandStepDivisor = normaliseStepDivisor(stepDivisorRaw ? Number(stepDivisorRaw) : WHOOP5_STEP_TICKS_PER_STEP);
+    const strapAlarm = parseStrapAlarm(await kvGet(STRAP_ALARM_KEY));
     this.preferredDeviceId = await kvGet(LAST_DEVICE_ID_KEY);
     this.setState({
       profile,
@@ -326,6 +337,7 @@ class AppStore extends Store<AppState> {
       lastSyncTs: Number.isFinite(lastSyncTs) ? lastSyncTs : null,
       lastHistorySync,
       bandStepDivisor,
+      strapAlarm,
     });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
@@ -728,11 +740,24 @@ class AppStore extends Store<AppState> {
     return ble;
   }
 
+  setStrapWakeAlarm = async (wakeTs: number): Promise<void> => {
+    if (!Number.isFinite(wakeTs) || wakeTs <= Date.now() + 30 * 1000) {
+      throw new Error('Choose a wake time at least 30 seconds in the future.');
+    }
+    const ble = await this.requireCommandChannel('Set wake alarm');
+    await ble.writeCommand(cmdSetAlarmTime(wakeTs));
+    const alarm: StrapAlarmState = { enabled: true, wakeTs: Math.round(wakeTs), updatedAt: Date.now() };
+    await kvSet(STRAP_ALARM_KEY, JSON.stringify(alarm));
+    this.setState({ strapAlarm: alarm, error: null, statusDetail: 'Wake alarm set on strap' });
+  };
+
   disableStrapAlarm = async (): Promise<void> => {
     const ble = await this.requireCommandChannel('Disable alarm');
     await ble.writeCommand(cmdDisableAlarm());
     await ble.writeCommand(cmdStopHaptics()).catch(() => {});
-    this.setState({ error: null, statusDetail: 'Wake alarm disable command sent' });
+    const alarm: StrapAlarmState = { enabled: false, wakeTs: null, updatedAt: Date.now() };
+    await kvSet(STRAP_ALARM_KEY, JSON.stringify(alarm));
+    this.setState({ strapAlarm: alarm, error: null, statusDetail: 'Wake alarm disabled on strap' });
   };
 
   stopStrapHaptics = async (): Promise<void> => {
@@ -2609,6 +2634,20 @@ function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
     };
   } catch {
     return null;
+  }
+}
+
+function parseStrapAlarm(raw: string | null): StrapAlarmState {
+  if (!raw) return initialState.strapAlarm;
+  try {
+    const parsed = JSON.parse(raw) as Partial<StrapAlarmState>;
+    return {
+      enabled: parsed.enabled === true,
+      wakeTs: typeof parsed.wakeTs === 'number' && Number.isFinite(parsed.wakeTs) ? Math.round(parsed.wakeTs) : null,
+      updatedAt: typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt) ? Math.round(parsed.updatedAt) : null,
+    };
+  } catch {
+    return initialState.strapAlarm;
   }
 }
 
