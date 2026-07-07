@@ -61,9 +61,11 @@ export function computeTrainingReadiness(input: {
   const clamped = Math.max(1, Math.min(100, Math.min(score, scoreCap ?? 100)));
   const cappedByConfidence = scoreCap != null && clamped < Math.max(1, Math.min(100, score));
 
+  const sleepTrust = sleepTrustContributor({ sleepConfidence, sleepCoveragePct, sleepSignalMin });
   const contributors = [
     { key: 'recovery', label: 'Recovery', value: recovery != null ? `${recovery}%` : '—', good: recovery != null ? recovery >= 60 : null },
     { key: 'sleep', label: 'Sleep', value: sleepPerformance != null ? `${sleepPerformance}%` : '—', good: sleepPerformance != null ? sleepPerformance >= 70 : null },
+    sleepTrust,
     { key: 'debt', label: 'Sleep debt', value: `${Math.round(sleepDebtMin)}m`, good: sleepDebtMin < 45 },
     { key: 'hrv', label: 'HRV balance', value: hrvBalance != null ? `${hrvBalance}` : '—', good: hrvBalance != null ? hrvBalance >= 50 : null },
     { key: 'load', label: 'Training load', value: acwr != null ? acwr.toFixed(2) : '—', good: acwr != null ? acwr >= 0.8 && acwr <= 1.3 : null },
@@ -126,4 +128,31 @@ function readinessScoreCap(input: {
   if (input.sleepConfidence === 'low' || coverage < 60 || signal < 150) return 65;
   if (input.sleepConfidence === 'medium' || coverage < 80 || signal < 240) return 86;
   return null;
+}
+
+function sleepTrustContributor(input: {
+  sleepConfidence: 'high' | 'medium' | 'low' | null;
+  sleepCoveragePct: number | null;
+  sleepSignalMin: number | null;
+}): Readiness['contributors'][number] {
+  const confidence = input.sleepConfidence;
+  const coverage = input.sleepCoveragePct;
+  const signal = input.sleepSignalMin;
+  const label = confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : confidence === 'low' ? 'Low' : '—';
+  const detail =
+    coverage != null
+      ? `${label} · ${coverage}%`
+      : signal != null
+        ? `${label} · ${signal}m`
+        : label;
+
+  const weak = confidence === 'low' || (coverage != null && coverage < 60) || (signal != null && signal < 150);
+  const provisional = confidence === 'medium' || (coverage != null && coverage < 80) || (signal != null && signal < 240);
+
+  return {
+    key: 'sleep_trust',
+    label: 'Sleep trust',
+    value: detail,
+    good: confidence == null && coverage == null && signal == null ? null : !(weak || provisional),
+  };
 }

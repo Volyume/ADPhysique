@@ -42,6 +42,23 @@ function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null
   return null;
 }
 
+function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
+  if (!sleepDetail) return null;
+  if (sleepStateWakeConflict(sleepDetail)) return 25;
+  const coveragePct = sleepDetail.coveragePct ?? 100;
+  const signalMin = sleepDetail.signalMin ?? 999;
+  if (sleepDetail.confidence === 'low' || coveragePct < 60 || signalMin < 150) return 45;
+  if (sleepDetail.confidence === 'medium' || coveragePct < 80 || signalMin < 240) return 72;
+  return 100;
+}
+
+function sleepCaptureTrustLabel(sleepDetail: DailyMetricRow['sleepDetail'] | null): string {
+  if (!sleepDetail) return 'needs data';
+  if (sleepStateWakeConflict(sleepDetail)) return 'wake conflict';
+  const confidence = sleepConfidenceLabel(sleepDetail.confidence);
+  return sleepDetail.coveragePct != null ? `${confidence} · ${sleepDetail.coveragePct}%` : confidence;
+}
+
 function recoveryStatusLabel(recovery: number | null, cap: number | null): string {
   if (recovery == null) return 'needs data';
   if (cap != null) return recovery >= cap ? `capped ${cap}%` : `cap ${cap}%`;
@@ -148,6 +165,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const sleepDetail = today?.sleepDetail ?? null;
   const confidence = sleepDetail?.confidence ?? null;
   const confidenceCap = recoveryConfidenceCap(sleepDetail);
+  const captureTrustScore = sleepCaptureTrustScore(sleepDetail);
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);
@@ -285,6 +303,16 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               value={fourTier(parts.sleepSub).label}
               color={fourTier(parts.sleepSub).color}
               onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}
+            />
+            <ContributorRow
+              label="Sleep capture trust"
+              percent={captureTrustScore}
+              value={sleepCaptureTrustLabel(sleepDetail)}
+              color={sleepStateWakeConflict(sleepDetail) ? colors.recoveryRed : undefined}
+              onPress={() => {
+                if (captureTrustScore != null && captureTrustScore < 80) nav.navigate({ name: 'sleep' });
+                else nav.navigate({ name: 'metric', key: 'sleep_performance' });
+              }}
             />
           </Card>
         </>

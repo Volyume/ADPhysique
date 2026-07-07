@@ -181,7 +181,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
                 <View
                   style={[
                     styles.dot,
-                    { backgroundColor: c.good == null ? colors.textTertiary : c.good ? colors.recoveryGreen : colors.recoveryYellow },
+                    { backgroundColor: contributorDotColor(c) },
                   ]}
                 />
                 <Text style={styles.rowLabel}>{c.label}</Text>
@@ -197,6 +197,13 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
       ) : null}
     </Screen>
   );
+}
+
+function contributorDotColor(c: { key: string; value: string; good: boolean | null }): string {
+  if (c.good == null) return colors.textTertiary;
+  if (c.good) return colors.recoveryGreen;
+  if (c.key === 'sleep_trust' && c.value.toLowerCase().includes('low')) return colors.recoveryRed;
+  return colors.recoveryYellow;
 }
 
 function readinessLimiter(
@@ -263,7 +270,9 @@ function readinessLimiter(
   const weakContributor = readiness.contributors.find((c) => c.good === false);
   if (weakContributor) {
     const route =
-      weakContributor.key === 'sleep' || weakContributor.key === 'debt'
+      weakContributor.key === 'sleep_trust'
+        ? ((sleepDetail?.coveragePct ?? 100) < 80 ? ({ name: 'device' } as const) : ({ name: 'editSleep' } as const))
+        : weakContributor.key === 'sleep' || weakContributor.key === 'debt'
         ? ({ name: 'sleep' } as const)
         : weakContributor.key === 'load'
           ? ({ name: 'training' } as const)
@@ -276,10 +285,14 @@ function readinessLimiter(
       body: limiterBody(weakContributor.key),
       metric: weakContributor.label,
       value: weakContributor.value,
-      actionLabel: 'Open detail',
+      actionLabel: weakContributor.key === 'sleep_trust'
+        ? (sleepDetail?.coveragePct ?? 100) < 80 ? 'Sync more data' : 'Review sleep window'
+        : 'Open detail',
       actionValue: weakContributor.label.toLowerCase(),
-      icon: weakContributor.key === 'load' ? 'barbell' : weakContributor.key === 'sleep' || weakContributor.key === 'debt' ? 'moon' : 'pulse',
-      color: colors.recoveryYellow,
+      icon: weakContributor.key === 'sleep_trust'
+        ? (sleepDetail?.coveragePct ?? 100) < 80 ? 'sync' : 'create'
+        : weakContributor.key === 'load' ? 'barbell' : weakContributor.key === 'sleep' || weakContributor.key === 'debt' ? 'moon' : 'pulse',
+      color: weakContributor.key === 'sleep_trust' ? colors.strainBlue : colors.recoveryYellow,
       route,
     };
   }
@@ -301,6 +314,7 @@ function readinessLimiter(
 function limiterBody(key: string): string {
   if (key === 'recovery') return 'Recovery is the largest readiness input, so low recovery should steer the whole day easier.';
   if (key === 'sleep') return 'Sleep performance is dragging the readiness blend down. Fixing sleep usually beats forcing more training.';
+  if (key === 'sleep_trust') return 'Sleep quality may be fine, but the capture itself is not strong enough to support a hard training call yet.';
   if (key === 'debt') return 'Debt compounds across nights; paying it down is the cleanest way to lift readiness.';
   if (key === 'hrv') return 'HRV balance suggests your autonomic baseline is not fully settled yet.';
   if (key === 'load') return 'Recent load is the limiter. Keep today controlled so the acute spike does not become tomorrow’s recovery problem.';
