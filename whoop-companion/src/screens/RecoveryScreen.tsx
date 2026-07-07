@@ -41,6 +41,10 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
   return colors.textTertiary;
 }
 
+function barConfidence(day: DailyMetricRow): 'high' | 'medium' | 'low' | null {
+  return day.sleepDetail?.confidence ?? null;
+}
+
 function recoveryQualityNote(day: DailyMetricRow | null, confidence: 'high' | 'medium' | 'low' | null): string {
   if (!day) return 'Recovery appears after a synced overnight record.';
   const missing = [
@@ -321,6 +325,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               value: d.recovery,
               display: d.recovery != null ? `${d.recovery}%` : '',
               color: recoveryColor(d.recovery),
+              confidence: d.recovery != null ? barConfidence(d) : null,
             }))}
           />
         )}
@@ -336,6 +341,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               value: d.rmssd != null ? Math.round(d.rmssd) : null,
               display: d.rmssd != null ? `${Math.round(d.rmssd)}` : '',
               color: colors.recoveryGreen,
+              confidence: d.rmssd != null ? barConfidence(d) : null,
             }))}
           />
         )}

@@ -65,6 +65,19 @@ const SERIESES: Series[] = [
   { key: 'steps', title: 'STEPS', unit: '', pick: (d) => d.steps, color: () => colors.recoveryGreen },
 ];
 
+function confidenceForSeries(series: MetricKey, day: DailyMetricRow): 'high' | 'medium' | 'low' | null {
+  if (
+    series === 'recovery' ||
+    series === 'sleep_performance' ||
+    series === 'energy_reserve' ||
+    series === 'hrv' ||
+    series === 'rhr'
+  ) {
+    return day.sleepDetail?.confidence ?? null;
+  }
+  return null;
+}
+
 export function TrendsScreen({ nav }: { nav: Nav }) {
   const [range, setRange] = useState<RangeKey>('M');
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
@@ -106,6 +119,7 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
               value: s.pick(d),
               display: s.pick(d) != null ? `${s.pick(d)}` : '',
               color: s.color(s.pick(d)),
+              confidence: s.pick(d) != null ? confidenceForSeries(s.key, d) : null,
             }));
           return (
             <View key={s.key}>

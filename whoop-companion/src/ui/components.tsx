@@ -659,25 +659,43 @@ export function WeeklyBars({
   data,
   height = 170,
 }: {
-  data: Array<{ label: string; value: number | null; display?: string; color?: string }>;
+  data: Array<{
+    label: string;
+    value: number | null;
+    display?: string;
+    color?: string;
+    confidence?: 'high' | 'medium' | 'low' | null;
+    dimmed?: boolean;
+  }>;
   height?: number;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value ?? 0));
-  const barArea = height - 44;
+  const hasConfidence = data.some((d) => d.confidence === 'medium' || d.confidence === 'low' || d.dimmed);
+  const barArea = height - (hasConfidence ? 52 : 44);
   return (
     <View style={[weeklyStyles.wrap, { height }]}>
-      {data.map((d, i) => (
-        <View key={i} style={weeklyStyles.col}>
-          <Text style={weeklyStyles.val}>{d.display ?? (d.value != null ? `${d.value}` : '')}</Text>
-          <AnimatedWeeklyBar height={Math.max(2, ((d.value ?? 0) / max) * barArea)} color={d.color ?? colors.strainBlue} delay={i * 35} />
-          <Text style={weeklyStyles.day}>{d.label}</Text>
-        </View>
-      ))}
+      {data.map((d, i) => {
+        const barOpacity = d.dimmed || d.confidence === 'low' ? 0.38 : d.confidence === 'medium' ? 0.64 : 1;
+        const dotColor = d.confidence === 'low' ? colors.recoveryRed : d.confidence === 'medium' ? colors.recoveryYellow : 'transparent';
+        return (
+          <View key={i} style={weeklyStyles.col}>
+            <Text style={[weeklyStyles.val, barOpacity < 1 && weeklyStyles.dimText]}>{d.display ?? (d.value != null ? `${d.value}` : '')}</Text>
+            {hasConfidence ? <View style={[weeklyStyles.qualityDot, { backgroundColor: dotColor }]} /> : null}
+            <AnimatedWeeklyBar
+              height={Math.max(2, ((d.value ?? 0) / max) * barArea)}
+              color={d.color ?? colors.strainBlue}
+              delay={i * 35}
+              opacity={barOpacity}
+            />
+            <Text style={weeklyStyles.day}>{d.label}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
-function AnimatedWeeklyBar({ height, color, delay }: { height: number; color: string; delay: number }) {
+function AnimatedWeeklyBar({ height, color, delay, opacity }: { height: number; color: string; delay: number; opacity?: number }) {
   const animated = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(animated, {
@@ -688,7 +706,7 @@ function AnimatedWeeklyBar({ height, color, delay }: { height: number; color: st
       useNativeDriver: false,
     }).start();
   }, [animated, delay, height]);
-  return <Animated.View style={[weeklyStyles.bar, { height: animated, backgroundColor: color }]} />;
+  return <Animated.View style={[weeklyStyles.bar, { height: animated, backgroundColor: color, opacity: opacity ?? 1 }]} />;
 }
 
 /** A tappable navigation row: icon + label, optional value, chevron. */
@@ -855,6 +873,8 @@ const weeklyStyles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'flex-end' },
   col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   val: { color: colors.textSecondary, fontSize: 11, marginBottom: 4, fontFamily: fonts.medium },
+  dimText: { color: colors.textTertiary },
+  qualityDot: { width: 5, height: 5, borderRadius: 2.5, marginBottom: 5 },
   bar: { width: 18, borderRadius: 4 },
   day: { color: colors.textTertiary, fontSize: 10, marginTop: 6, fontFamily: fonts.text },
 });
