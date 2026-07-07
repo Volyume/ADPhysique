@@ -150,24 +150,33 @@ function outputToFloat32Array(outputs) {
 }
 
 function loadProgressScanModel() {
-  if (modelUnavailableReason) return Promise.resolve(null);
   if (!modelPromise) {
     modelPromise = (async () => {
-      const { loadTensorflowModel } = require('react-native-fast-tflite');
-      const modelSource = await resolveProgressScanModelSource();
-      if (!modelSource) {
-        modelUnavailableReason = 'model_source_unavailable';
-        return null;
-      }
+      modelUnavailableReason = null;
       try {
+        const { loadTensorflowModel } = require('react-native-fast-tflite');
+        const modelSource = await resolveProgressScanModelSource();
+        if (!modelSource) {
+          modelUnavailableReason = 'model_source_unavailable';
+          return null;
+        }
         return await loadTensorflowModel(modelSource, []);
       } catch (_) {
-        modelUnavailableReason = 'model_load_failed';
+        if (!modelUnavailableReason) modelUnavailableReason = 'model_load_failed';
         return null;
       }
+    })().then((model) => {
+      if (!model) modelPromise = null;
+      return model;
     });
   }
   return modelPromise;
+}
+
+export function resetProgressScanModelCacheForTests() {
+  if (process.env.NODE_ENV !== 'test') return;
+  modelPromise = null;
+  modelUnavailableReason = null;
 }
 
 export function blurScoreFromRgb(rgb, width, height) {

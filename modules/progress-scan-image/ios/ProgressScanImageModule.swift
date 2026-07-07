@@ -7,6 +7,28 @@ public class ProgressScanImageModule: Module {
   public func definition() -> ModuleDefinition {
     Name("ProgressScanImage")
 
+    AsyncFunction("resolveBundledModel") { (fileName: String) -> String? in
+      let safeName = URL(fileURLWithPath: fileName).lastPathComponent
+      guard !safeName.isEmpty else { return nil }
+      let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+      guard let targetDir = caches?.appendingPathComponent("progress_scan_models", isDirectory: true) else { return nil }
+      try? FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
+      let target = targetDir.appendingPathComponent(safeName)
+      if FileManager.default.fileExists(atPath: target.path),
+         ((try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0 {
+        return target.absoluteString
+      }
+      guard let source = bundledModelUrl(safeName: safeName) else { return nil }
+      try? FileManager.default.removeItem(at: target)
+      do {
+        try FileManager.default.copyItem(at: source, to: target)
+        let size = (try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        return size > 0 ? target.absoluteString : nil
+      } catch {
+        return nil
+      }
+    }
+
     AsyncFunction("extractRgb") { (uri: String, width: Int, height: Int) -> [String: Any]? in
       guard width > 0, height > 0 else { return nil }
       guard let url = imageUrl(from: uri) else { return nil }
@@ -106,5 +128,25 @@ public class ProgressScanImageModule: Module {
       return URL(fileURLWithPath: String(uri.dropFirst("file://".count)))
     }
     return URL(fileURLWithPath: uri)
+  }
+
+  private func bundledModelUrl(safeName: String) -> URL? {
+    let url = URL(fileURLWithPath: safeName)
+    let base = url.deletingPathExtension().lastPathComponent
+    let ext = url.pathExtension.isEmpty ? "tflite" : url.pathExtension
+    let candidates = [
+      (base, ext),
+      ("assets_ml_\(base)", ""),
+      ("assets_ml_\(base)", ext),
+    ]
+    for candidate in candidates {
+      if let found = Bundle.main.url(
+        forResource: candidate.0,
+        withExtension: candidate.1.isEmpty ? nil : candidate.1
+      ) {
+        return found
+      }
+    }
+    return nil
   }
 }

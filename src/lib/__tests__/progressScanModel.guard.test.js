@@ -40,11 +40,24 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(vision).toMatch(/selfie_segmentation\.tflite/);
     expect(vision).toMatch(/Asset\.fromModule\(source\)/);
     expect(vision).toMatch(/normaliseFastTfliteUri/);
+    expect(vision).toMatch(/resolveBundledModel\?\.\(MODEL_FILE_NAME\)/);
     expect(vision).toMatch(/const modelSource = await resolveProgressScanModelSource\(\)/);
     expect(vision).toMatch(/if \(!modelSource\)/);
     expect(vision).toMatch(/loadTensorflowModel\(modelSource, \[\]\)/);
     expect(vision).not.toMatch(/loadTensorflowModel\(MODEL_SOURCE\(\), \[\]\)/);
     expect(`${read('package.json')}\n${vision}`).not.toMatch(/executorch|react-native-pytorch-core/i);
+  });
+
+  test('native model resolver copies release assets before fast-tflite sees them', () => {
+    const androidModule = read('modules/progress-scan-image/android/src/main/java/expo/modules/progressscanimage/ProgressScanImageModule.kt');
+    const iosModule = read('modules/progress-scan-image/ios/ProgressScanImageModule.swift');
+    expect(androidModule).toMatch(/AsyncFunction\("resolveBundledModel"\)/);
+    expect(androidModule).toMatch(/copyFirstBundledModelAsset/);
+    expect(androidModule).toMatch(/assets_ml_\$base/);
+    expect(androidModule).toMatch(/Uri\.fromFile\(target\)\.toString\(\)/);
+    expect(iosModule).toMatch(/AsyncFunction\("resolveBundledModel"\)/);
+    expect(iosModule).toMatch(/progress_scan_models/);
+    expect(iosModule).toMatch(/target\.absoluteString/);
   });
 
   test('iOS deployment target remains 16.0 for v1', () => {
