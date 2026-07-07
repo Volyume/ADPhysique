@@ -1937,12 +1937,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : (
               <TouchableOpacity
                 onPress={handleFinishWorkout}
-                style={styles.headerTapTarget}
+                style={[styles.headerTapTarget, styles.headerFinishButton]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="Finish workout"
               >
-                <Text style={styles.finishBtn}>Finish workout</Text>
+                <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
+                <Text style={styles.headerFinishText}>Finish</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1999,16 +2000,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.exerciseNameRow}>
               <Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>
               <TouchableOpacity
-                style={styles.swapBtn}
-                onPress={handleOpenSwap}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Swap exercise"
-              >
-                <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
-                <Text style={styles.swapBtnText}>Swap</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={styles.overflowBtn}
                 onPress={() => {
                   if (showInfoTipPulse) {
@@ -2046,12 +2037,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons name="flash-outline" size={16} color={colors.primary} />
                   <Text style={styles.starterBannerText}>{timeCrunchMsg}</Text>
                   <TouchableOpacity
+                    style={styles.inlineActionPill}
                     onPress={handleRevertTimeCrunch}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityRole="button"
                     accessibilityLabel="Do the full session instead"
                   >
-                    <Text style={styles.starterBannerAction}>Full session</Text>
+                    <Text style={styles.inlineActionPillText}>Full session</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -2072,6 +2064,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
                   <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
                   <TouchableOpacity
+                    style={styles.inlineActionPill}
                     onPress={async () => {
                       try { await markNoteShown(note.id); } catch (_e) {}
                       setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
@@ -2080,7 +2073,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss note"
                   >
-                    <Text style={styles.nextTimeBannerDismiss}>Got it</Text>
+                    <Text style={styles.inlineActionPillText}>Got it</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -2096,11 +2089,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     </View>
                   </View>
                   <TouchableOpacity
+                    style={styles.inlineActionPill}
                     onPress={() => setDeloadDismissed(true)}
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss deload banner"
                   >
-                    <Text style={styles.deloadSkip}>Skip</Text>
+                    <Text style={styles.inlineActionPillText}>Skip</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -2224,8 +2218,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   >
                     <Text style={styles.beatLineLabel} numberOfLines={2}>
                       Recovery week - <Text style={styles.beatLineValue}>{target.weight}{units} x {target.repsMin}</Text>
-                      <Text style={styles.beatLineHint}>  Tap to use</Text>
                     </Text>
+                    <View style={styles.beatLineCue}>
+                      <Ionicons name="arrow-down-circle-outline" size={13} color={colors.textSecondary} />
+                      <Text style={styles.beatLineCueText}>Use</Text>
+                    </View>
                   </TouchableOpacity>
                 );
               }
@@ -2258,8 +2255,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       {range ? ' - Target ' : ''}
                       {range ? <Text style={styles.beatLineValue}>{range}</Text> : null}
                       {glyph ? <Text style={styles.beatLineGlyph}> {glyph}</Text> : null}
-                      <Text style={styles.beatLineHint}>  Tap to use</Text>
                     </Text>
+                    <View style={styles.beatLineCue}>
+                      <Ionicons name="arrow-down-circle-outline" size={13} color={colors.textSecondary} />
+                      <Text style={styles.beatLineCueText}>Use</Text>
+                    </View>
                   </TouchableOpacity>
                 );
               }
@@ -2316,7 +2316,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  {firstSetPrompt} Use the three-dot menu for form tips, warm-ups, swaps and session options.
+                  {firstSetPrompt} Open More for form tips, warm-ups, swaps and session options.
                 </Text>
               </View>
             )}
@@ -2432,6 +2432,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.autoAdvanceRowText}>Next exercise in a moment</Text>
               <Text style={styles.autoAdvanceRowDot}> - </Text>
               <TouchableOpacity
+                style={styles.autoAdvanceRowActionBtn}
                 onPress={cancelAutoAdvance}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
@@ -3371,8 +3372,9 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.timerText}>{elapsed}</Text>
-        <TouchableOpacity onPress={onFinish} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
-          <Text style={styles.finishBtn}>Finish workout</Text>
+        <TouchableOpacity onPress={onFinish} style={[styles.headerTapTarget, styles.headerFinishButton]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
+          <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
+          <Text style={styles.headerFinishText}>Finish</Text>
         </TouchableOpacity>
       </View>
 
@@ -3414,7 +3416,17 @@ const styles = StyleSheet.create({
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: 88, alignItems: 'flex-end', justifyContent: 'center' },
-  finishBtn: { ...type.label, color: colors.primary, paddingVertical: spacing.xs, textAlign: 'right' },
+  headerFinishButton: {
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    minWidth: 76,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerFinishText: { ...type.label, color: colors.textPrimary, textAlign: 'right' },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   timerText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   starterBanner: {
@@ -3424,7 +3436,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   starterBannerText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
-  starterBannerAction: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  inlineActionPill: {
+    minHeight: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  inlineActionPillText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 52 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
   navTab: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface2 },
@@ -3448,8 +3470,6 @@ const styles = StyleSheet.create({
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   exerciseName: { flex: 1, fontSize: fontSize.lg, lineHeight: 23, fontWeight: fontWeight.black, color: colors.textPrimary },
-  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
   swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -3478,11 +3498,22 @@ const styles = StyleSheet.create({
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
   orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  beatLine: { alignSelf: 'stretch', minHeight: 28, justifyContent: 'center', paddingVertical: 0 },
-  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  beatLine: { alignSelf: 'stretch', minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, paddingVertical: 0 },
+  beatLineLabel: { flex: 1, minWidth: 0, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
-  beatLineHint: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  beatLineCue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.xs,
+    minHeight: 26,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  beatLineCueText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   coachLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
   coachLineText: { ...type.bodySm, flex: 1, color: colors.primary },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
@@ -3513,11 +3544,21 @@ const styles = StyleSheet.create({
   // tappable ending, not another banner competing for attention.
   autoAdvanceRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   autoAdvanceRowText: { ...type.caption, color: colors.textMuted },
   autoAdvanceRowDot: { ...type.caption, color: colors.textMuted },
-  autoAdvanceRowAction: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  autoAdvanceRowActionBtn: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  autoAdvanceRowAction: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   // A2: the pinned action bar. Sits above the home indicator; the scroll's
   // bottom spacer keeps content clear of it.
   bottomBar: {
@@ -3545,12 +3586,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   clusterAddBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  clusterCancel: { alignItems: 'center', paddingVertical: spacing.xs },
-  clusterCancelText: { fontSize: fontSize.sm, color: colors.textMuted },
+  clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: 38, paddingHorizontal: spacing.lg, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  clusterCancelText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.sm, minHeight: 44, borderWidth: 1, borderColor: colors.border },
   actionBtnText: { ...type.label, color: colors.textSecondary },
-  overflowBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  overflowBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -3687,12 +3737,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textPrimary,
   },
-  nextTimeBannerDismiss: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-    paddingLeft: spacing.xs,
-  },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.warningBg,
@@ -3702,5 +3746,4 @@ const styles = StyleSheet.create({
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
   deloadBannerSub: { ...type.caption, color: colors.textMuted },
-  deloadSkip: { ...type.label, color: colors.textMuted },
 });

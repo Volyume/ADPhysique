@@ -87,7 +87,7 @@ describe('usePartners load error state', () => {
     syncPartners.pullPartners.mockResolvedValue({ errors: 0 });
   });
 
-  test('failed first local partnership reads show a hard refresh state when nothing usable is cached', async () => {
+  test('failed first local partnership read shows a recoverable refresh notice before hard error', async () => {
     db.getPartnershipsLocal.mockRejectedValue(new Error('offline'));
     const ref = {};
     function Probe() {
@@ -99,10 +99,18 @@ describe('usePartners load error state', () => {
     await flush();
 
     expect(ref.loading).toBe(false);
+    expect(ref.error).toBe(false);
+    expect(ref.localReadIssue).toBe(true);
+    expect(ref.rowState).toBe('empty');
+    expect(typeof ref.reload).toBe('function');
+
+    await act(async () => { await ref.reload(); });
+    await flush();
+
+    expect(ref.loading).toBe(false);
     expect(ref.error).toBe(true);
     expect(ref.localReadIssue).toBe(false);
     expect(ref.rowState).toBe('empty');
-    expect(typeof ref.reload).toBe('function');
   });
 
   test('a failed first local read tries one cloud mirror repair before showing an error', async () => {

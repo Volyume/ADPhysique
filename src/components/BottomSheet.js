@@ -151,7 +151,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxHeight: '92%',
   },
-  scroll: { alignSelf: 'stretch', flex: 1, minHeight: 0 },
+  // Do not use flex: 1 here. The sheet panel is content-sized with maxHeight,
+  // and a flex child can collapse to a tiny strip on Android when the parent
+  // is not given an explicit height.
+  scroll: { alignSelf: 'stretch', maxHeight: '100%' },
   scrollContent: { gap: spacing.md, paddingBottom: spacing.sm },
   handle: {
     alignSelf: 'center',

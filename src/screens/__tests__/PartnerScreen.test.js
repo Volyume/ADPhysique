@@ -195,12 +195,14 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
     expect(text).toContain('Partner week with Sam');
-    expect(text).toContain("Set this week's sessions. Sam sees only the number, not your plan.");
+    expect(text).toContain('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
     expect(text).toContain('weekly training status');
-    expect(text).toContain('Your weekly sessions');
-    expect(text).toContain("Sam's weekly sessions");
-    expect(text).toContain('You have logged 2 of 4.');
-    expect(text).toContain('Choose the number for this week. Sam sees only that number.');
+    expect(text).toContain('Your week');
+    expect(text).toContain("Sam's week");
+    expect(text).toContain('Shown as training status from your Coach-assigned plan.');
+    expect(text).toContain("Sam's exact workouts, loads and notes stay private.");
+    expect(text).toContain('Wins');
+    expect(text).toContain('You choose');
     expect(text).toContain('one fixed cheer a day');
     expect(text).toContain('Private');
     expect(text).toContain('workouts, food, Coach, check-ins, body metrics and photos');
@@ -212,21 +214,22 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Manage label');
   });
 
-  test('active pairs show weekly sessions with the next safe action', async () => {
+  test('active pairs do not ask users to set weekly sessions', async () => {
     mockHook.value = base({ pairs: [pair({ myAim: 0, partnerAim: 3 })] });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('weekly sessions');
-    expect(text).toContain("Set this week's sessions. Sam sees only the number, not your plan.");
-    expect(text).toContain("Sam's weekly sessions");
-    expect(text).toContain('Set');
+    expect(text).not.toContain('weekly sessions');
+    expect(text).not.toContain("Set this week's sessions. Sam sees only the number, not your plan.");
+    expect(text).not.toContain("Sam's weekly sessions");
+    expect(text).toContain('Send Sam one cheer for today. Fixed lines only, no free text or reply thread.');
+    expect(text).toContain('Your week');
+    expect(text).toContain("Sam's week");
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
-    expect(text).toContain('You have logged 2 of 4.');
-    await press(tree, "Set this week's sessions");
-    expect(allText(tree)).toContain('Weekly sessions');
-    expect(findPress(tree, 'Decrease sessions').length).toBeGreaterThan(0);
-    expect(findPress(tree, 'Increase sessions').length).toBeGreaterThan(0);
+    expect(text).toContain('Shown as training status from your Coach-assigned plan.');
+    expect(findPress(tree, "Set this week's sessions")).toHaveLength(0);
+    expect(findPress(tree, 'Decrease sessions')).toHaveLength(0);
+    expect(findPress(tree, 'Increase sessions')).toHaveLength(0);
   });
 
   test('active pairs show consent-gated shareable wins without widening partner privacy', async () => {
@@ -455,7 +458,7 @@ describe('cheer affordance', () => {
     expect(allText(tree)).not.toContain('Here with you.');
   });
 
-  test('weekly sessions do not create a second cheer surface', async () => {
+  test('partner support does not create a second cheer surface', async () => {
     const hook = base({ pairs: [pair({ myAim: 4, cheerEnabled: true })] });
     mockHook.value = hook;
     const tree = await mount();
@@ -512,6 +515,22 @@ describe('cheer affordance', () => {
     expect(mockToastShow).toHaveBeenCalledWith(
       'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.',
       { variant: 'error' },
+    );
+  });
+
+  test('a syncing partnership acknowledgement is a warning, not a connection error', async () => {
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(async () => ({ ok: false, error: 'partner_syncing' })),
+    });
+    mockHook.value = hook;
+    const tree = await mount();
+    await press(tree, 'Send a cheer');
+    await press(tree, 'Here with you.');
+    expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      { variant: 'warning' },
     );
   });
 
@@ -752,7 +771,7 @@ describe('invite journey', () => {
 describe('manage sheet: block confirm', () => {
   test('partner bottom sheets that can overflow opt into internal scrolling', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Manage partnership" scroll/);
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="This week's sessions" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).not.toMatch(/accessibilityLabel="This week's sessions" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);

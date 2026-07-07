@@ -43,11 +43,12 @@ const EMPTY = {
 };
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
+const BACKGROUND_MIRROR_RETRY_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 const PENDING_INVITE_REFRESH_MS = 2000;
 const ACTIVE_PARTNER_REFRESH_MS = 10000;
 const REDEEM_VISIBILITY_RETRY_MS = (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID)
   ? [0]
-  : [350, 900, 1600];
+  : [350, 900, 1600, 3000, 5000];
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
@@ -337,13 +338,18 @@ export default function usePartners(userId, tier) {
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
   const pendingTriedRef = useRef(false);
   const loadRequestRef = useRef(0);
+  const loadFailureCountRef = useRef(0);
 
   const load = useCallback(async (opts = {}) => {
     const silent = opts?.silent === true;
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
-    if (!userId) { setState({ ...EMPTY, loading: false }); return; }
+    if (!userId) {
+      loadFailureCountRef.current = 0;
+      setState({ ...EMPTY, loading: false });
+      return;
+    }
     setState(prev => ({ ...prev, loading: silent ? prev.loading : true, error: false, localReadIssue: false, reload: load }));
     try {
       let partnerships = await readPartnershipsWithCloudRepair(userId);
@@ -439,12 +445,14 @@ export default function usePartners(userId, tier) {
         cheerEnabled: primaryPair?.cheerEnabled ?? false,
         reload: load,
       });
+      loadFailureCountRef.current = 0;
     } catch (e) {
       if (!isCurrentRequest()) return;
+      loadFailureCountRef.current += 1;
       logError('usePartners.load', e, { userId });
       setState((prev) => {
         const hasUsablePartnerState = (prev.pairs || []).length > 0 || !!prev.pendingInvite || !!prev.partnership;
-        if (hasUsablePartnerState) {
+        if (hasUsablePartnerState || loadFailureCountRef.current < 2) {
           return { ...prev, loading: false, error: false, localReadIssue: true, reload: load };
         }
         return { ...EMPTY, loading: false, error: true, localReadIssue: false, reload: load };
@@ -549,6 +557,14 @@ export default function usePartners(userId, tier) {
       const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
         r = await sendCheer(userId, { pairId, kind, reciprocal });
+      } else {
+        if (BACKGROUND_MIRROR_RETRY_ENABLED) {
+          pullPartnerMirrorNow(userId)
+            .then(() => waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId }))
+            .then((visibleNow) => { if (visibleNow) load({ silent: true }); })
+            .catch(() => {});
+        }
+        r = { ok: false, error: 'partner_syncing' };
       }
     }
     if (r?.ok || r?.error === 'already_cheered') {
