@@ -119,6 +119,33 @@ const DEFS: Record<string, Def> = {
     blurb:
       'Sleep Performance is a composite of four contributors: Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
   },
+  sleep_need: {
+    title: 'Sleep Need',
+    unit: 'min',
+    color: () => colors.sleepTeal,
+    pick: (d) => d.sleepDetail?.needMin ?? null,
+    measured: true,
+    blurb:
+      'Sleep Need is the target amount of sleep for the night. It starts from your baseline, adds recent strain and sleep debt, then subtracts nap credit.',
+  },
+  sleep_debt: {
+    title: 'Sleep Debt',
+    unit: 'min',
+    color: (v) => (v == null ? colors.textTertiary : v >= 90 ? colors.recoveryRed : v >= 45 ? colors.recoveryYellow : colors.recoveryGreen),
+    pick: (d) => d.sleepDetail?.debtMin ?? null,
+    measured: true,
+    blurb:
+      'Sleep Debt is the rolling shortfall between sleep needed and sleep achieved. Lower is better; sustained debt raises tonight’s sleep target.',
+  },
+  sleep_efficiency: {
+    title: 'Sleep Efficiency',
+    unit: '%',
+    color: (v) => (v == null ? colors.textTertiary : v >= 90 ? colors.recoveryGreen : v >= 85 ? colors.sleepTeal : colors.recoveryYellow),
+    pick: (d) => d.sleepDetail?.efficiency ?? null,
+    measured: true,
+    blurb:
+      'Sleep Efficiency is asleep time divided by time in bed. Low efficiency usually means too much awake time inside the detected or manually adjusted sleep window.',
+  },
   energy_reserve: {
     title: 'Energy Reserve',
     unit: '',
@@ -136,6 +163,33 @@ const DEFS: Record<string, Def> = {
     measured: true,
     blurb:
       'Daily steps use the captured WHOOP history counter by default, with phone pedometer fallback for live/today totals when available. Calibrate after a known walk if your strap drifts high or low.',
+  },
+  calories: {
+    title: 'Calories',
+    unit: 'kcal',
+    color: () => colors.recoveryYellow,
+    pick: () => null,
+    measured: false,
+    blurb:
+      'Activity calories are calculated for saved workouts from heart rate, duration and profile data. A daily calorie total is not stored as a first-class daily metric yet.',
+  },
+  avg_hr: {
+    title: 'Average Heart Rate',
+    unit: 'bpm',
+    color: () => colors.recoveryRed,
+    pick: () => null,
+    measured: false,
+    blurb:
+      'Average heart rate is available on individual activities and live sessions. Daily all-day average HR is not stored as a dedicated trend metric yet.',
+  },
+  max_hr: {
+    title: 'Max Heart Rate',
+    unit: 'bpm',
+    color: () => colors.recoveryRed,
+    pick: () => null,
+    measured: false,
+    blurb:
+      'Max heart rate is available on individual activities and live sessions. Daily max HR is not stored as a dedicated trend metric yet.',
   },
 };
 
@@ -386,9 +440,14 @@ function ringFraction(key: MetricKey, value: number | null): number {
   switch (key) {
     case 'recovery':
     case 'sleep_performance':
+    case 'sleep_efficiency':
     case 'spo2':
     case 'energy_reserve':
       return value / 100;
+    case 'sleep_need':
+      return Math.min(1, value / 600);
+    case 'sleep_debt':
+      return Math.min(1, value / 180);
     case 'strain':
       return value / 21;
     case 'hrv':
