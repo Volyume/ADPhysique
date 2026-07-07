@@ -69,6 +69,14 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     intensity,
     hasFitnessInputs,
   });
+  const loadDriver = trainingLoadDriver({
+    loadStatus: load.status,
+    acwr: load.acwr,
+    acute: load.acute,
+    chronic: load.chronic,
+    readinessScore: readiness?.score ?? null,
+    readinessConfidence: readiness?.confidence ?? null,
+  });
 
   // Personal records from logged activities.
   const pr = useMemo(() => {
@@ -162,6 +170,32 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
         </Text>
       </Card>
 
+      <SectionLabel>Load driver</SectionLabel>
+      <Card>
+        <View style={styles.planHead}>
+          <View style={[styles.planBadge, { backgroundColor: loadDriver.color }]}>
+            <Text style={styles.planBadgeText}>{loadDriver.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.planTitle}>{loadDriver.title}</Text>
+            <Text style={styles.planBody}>{loadDriver.body}</Text>
+          </View>
+        </View>
+        <View style={styles.statRow}>
+          <Stat label="Driver" value={loadDriver.metric} color={loadDriver.color} />
+          <Stat label="ACWR" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
+          <Stat label="Readiness" value={readiness?.score ?? '—'} color={readinessColor(readiness?.score)} />
+        </View>
+        <NavRow
+          label={loadDriver.actionLabel}
+          icon={loadDriver.icon}
+          iconColor={loadDriver.color}
+          value={loadDriver.actionValue}
+          onPress={() => nav.navigate(loadDriver.route)}
+          last
+        />
+      </Card>
+
       <SectionLabel>Weekly load</SectionLabel>
       <Card>
         {weeks.some((w) => w.value > 0) ? <WeeklyBars data={weeks} /> : <Empty text="Log activities to build your weekly training load." />}
@@ -232,6 +266,107 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
       </Text>
     </Screen>
   );
+}
+
+function trainingLoadDriver(input: {
+  loadStatus: string;
+  acwr: number | null;
+  acute: number;
+  chronic: number;
+  readinessScore: number | null;
+  readinessConfidence: 'high' | 'medium' | 'low' | null;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  metric: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  if (input.readinessConfidence === 'low') {
+    return {
+      badge: 'DATA',
+      title: 'Readiness confidence limits training guidance',
+      body: 'Load status is useful, but the session call should stay conservative until overnight readiness confidence improves.',
+      metric: 'Readiness',
+      actionLabel: 'Open readiness',
+      actionValue: 'quality',
+      icon: 'speedometer',
+      color: colors.strainBlue,
+      route: { name: 'readiness' },
+    };
+  }
+
+  if (input.acwr != null && input.acwr > 1.5) {
+    return {
+      badge: 'SPIKE',
+      title: 'Acute load has spiked',
+      body: `Your 7-day load is ${input.acwr.toFixed(2)}× chronic load. The best move is absorbing work, not adding more.`,
+      metric: 'Load ratio',
+      actionLabel: 'Plan recovery',
+      actionValue: 'sleep',
+      icon: 'moon',
+      color: colors.recoveryRed,
+      route: { name: 'sleepCoach' },
+    };
+  }
+
+  if (input.acwr != null && input.acwr < 0.8) {
+    return {
+      badge: 'LOW',
+      title: 'Load is below your norm',
+      body: 'Fitness stimulus is light versus recent history. Build gradually with a controlled aerobic or strength session.',
+      metric: 'Load ratio',
+      actionLabel: 'Start workout',
+      actionValue: 'build',
+      icon: 'play',
+      color: colors.sleepTeal,
+      route: { name: 'startMenu' },
+    };
+  }
+
+  if (input.readinessScore != null && input.readinessScore < 50) {
+    return {
+      badge: 'BODY',
+      title: 'Body signal is the limiter',
+      body: 'Load ratio is not the main issue; readiness says today should stay easy.',
+      metric: 'Readiness',
+      actionLabel: 'Open readiness',
+      actionValue: 'easy',
+      icon: 'speedometer',
+      color: colors.recoveryYellow,
+      route: { name: 'readiness' },
+    };
+  }
+
+  if (input.loadStatus === 'Productive' || input.loadStatus === 'Peaking') {
+    return {
+      badge: 'GOOD',
+      title: 'Training load is in a useful range',
+      body: 'Acute load is close enough to chronic load to create stimulus without an obvious spike.',
+      metric: 'Balanced load',
+      actionLabel: 'Start workout',
+      actionValue: 'quality',
+      icon: 'play',
+      color: colors.recoveryGreen,
+      route: { name: 'startMenu' },
+    };
+  }
+
+  return {
+    badge: 'HOLD',
+    title: `${input.loadStatus} load pattern`,
+    body: `Acute load is ${input.acute}, chronic load is ${input.chronic}. Keep the next session aligned with readiness rather than chasing a fixed weekly total.`,
+    metric: 'Load status',
+    actionLabel: 'Open readiness',
+    actionValue: 'context',
+    icon: 'speedometer',
+    color: STATUS_COLOR[input.loadStatus] ?? colors.sleepTeal,
+    route: { name: 'readiness' },
+  };
 }
 
 function PrRow({ label, value, sub, last }: { label: string; value: string; sub?: string; last?: boolean }) {
