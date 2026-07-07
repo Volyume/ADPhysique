@@ -7,7 +7,7 @@ import { Card, Empty, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { computeEnergyReserve, EnergyReserveEffect } from '../metrics/energyReserve';
-import { nullableClampPct } from '../util/number';
+import { clampPct, nullableClampPct } from '../util/number';
 
 function energyColor(score: number | null | undefined): string {
   if (score == null) return colors.textTertiary;
@@ -60,6 +60,9 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const stress = useStoreSelector(appStore, (s) => s.liveStress ?? s.storedStress);
   const trendDays = recentTrendDays(today, recentDays);
+  const todaySleepPerf = nullableClampPct(
+    today?.sleepDetail?.performance ?? (today?.sleepPerf != null ? Math.round(today.sleepPerf * 100) : null),
+  );
   const bars = trendDays.map((d) => {
     const score = scoreFromDay(d);
     return {
@@ -128,7 +131,7 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={styles.stats}>
           <Stat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={energyColor(today?.recovery)} />
-          <Stat label="Sleep" value={today?.sleepDetail?.performance != null ? `${today.sleepDetail.performance}%` : today?.sleepPerf != null ? `${Math.round(today.sleepPerf * 100)}%` : '-'} color={colors.sleepTeal} />
+          <Stat label="Sleep" value={todaySleepPerf != null ? `${clampPct(todaySleepPerf)}%` : '-'} color={colors.sleepTeal} />
           <Stat label="Strain" value={today?.strain != null ? today.strain.toFixed(1) : '-'} color={colors.strainBlue} />
         </View>
       </Card>
