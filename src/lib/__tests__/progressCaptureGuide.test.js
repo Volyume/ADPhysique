@@ -64,13 +64,13 @@ describe('progress capture guide copy', () => {
       title: 'Take a new photo set',
       actionLabel: 'Start photo set',
       recommended: true,
-      bestFor: "Best for today's progress check.",
+      bestFor: 'For new photos taken today.',
     });
     expect(routes[0].steps).toBeUndefined();
     expect(routes[1]).toMatchObject({
       title: 'Import a photo set',
       actionLabel: 'Import photo set',
-      bestFor: 'Best for older photos.',
+      bestFor: 'For older photos already on your phone.',
     });
     expect(routes[1].steps).toBeUndefined();
   });

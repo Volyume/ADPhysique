@@ -2091,17 +2091,6 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.planEditCard} accessibilityRole="summary">
             <Text style={styles.planEditHead}>{planEditNote.headline}</Text>
             <Text style={styles.planEditBody}>{planEditNote.body}</Text>
-            {planEditNote.deepLink ? (
-              <TouchableOpacity
-                style={styles.planEditLink}
-                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
-                accessibilityRole="button"
-                accessibilityLabel={planEditNote.deepLink.label}
-              >
-                <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
-                <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
-              </TouchableOpacity>
-            ) : null}
           </View>
         ) : null}
 
@@ -2136,6 +2125,17 @@ export default function CoachOutputScreen({ navigation, route }) {
               <Text style={styles.planEditLinkText}>Repeat last week</Text>
             </TouchableOpacity>
           </View>
+          {planEditNote?.deepLink ? (
+            <TouchableOpacity
+              style={styles.planEditLink}
+              onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
+              accessibilityRole="button"
+              accessibilityLabel={planEditNote.deepLink.label}
+            >
+              <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
+              <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* P3: cardio recovery caution (one line, advisory, no Apply).
@@ -2302,9 +2302,9 @@ const styles = StyleSheet.create({
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
-  planEditLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, marginTop: spacing.xs },
+  planEditLink: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, minHeight: 40, paddingVertical: spacing.xs, marginTop: spacing.xs },
   planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  nextWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
+  nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.lg },
   safe: {
     flex: 1,
     backgroundColor: colors.background,

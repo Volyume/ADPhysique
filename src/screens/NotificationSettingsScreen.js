@@ -131,7 +131,7 @@ async function applyNotifications(prefs, permissionStatus) {
 
 export default function NotificationSettingsScreen({ navigation }) {
   // Morning weight + weekly check-in reminders are Pro coaching inputs;
-  // they drive the weekly Precision Coaching loop. Training reminders are
+  // they drive the weekly coaching loop. Training reminders are
   // a general utility (any user benefits from "remember to train") so they
   // stay visible to Free users too.
   const tier = useAppStore(s => s.tier);
@@ -606,7 +606,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {/* Morning weight + weekly check-in reminders moved to a dedicated
             Pro screen (Settings > Coaching reminders). The toggles here
             were misleading. Those reminders are non-optional inputs to
-            Precision Coaching, so flipping them off broke the coaching
+            the Coach, so flipping them off broke the coaching
             loop. CoachingRemindersScreen exposes the day + hour pickers
             without toggles; both reminders are always scheduled for Pro
             users. This screen now only handles training reminders. */}

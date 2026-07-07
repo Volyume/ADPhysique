@@ -32,7 +32,7 @@ const COLLECTIONS = [
   { key: 'beginner',  label: 'Beginner' },
   { key: 'dumbbell',  label: 'Dumbbells only' },
   { key: 'short',     label: 'Short sessions' },
-  { key: 'division',  label: 'Bodybuilding Divisions' },
+  { key: 'division',  label: 'Bodybuilding divisions' },
 ];
 
 // ─── Divisions ────────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
   return (
     <View style={styles.divisionSection}>
       <Text style={styles.divisionIntroDesc}>
-        These plans are built around the specific visual priorities of each judged division. Designed for competitors, or anyone who trains with a division in mind.
+        Plans for stage categories, or anyone training for that shape. Pick a division to narrow the library.
       </Text>
       <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>
@@ -665,7 +665,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {quizResult.difficulty != null && (
                     <Text style={styles.quizResultMeta}>
                       {DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate'}
-                      {workoutCounts[quizResult.id] ? ` · ${workoutCounts[quizResult.id]} workouts` : ''}
+                      {workoutCounts[quizResult.id] ? ` - ${workoutCounts[quizResult.id]} workouts` : ''}
                     </Text>
                   )}
                 </Card>
@@ -712,19 +712,19 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.sm,
     gap: spacing.xs,
   },
   searchRow: {
     margin: 0,
   },
 
-  chipsList: { maxHeight: 34, flexShrink: 0 },
+  chipsList: { minHeight: 44, maxHeight: 48, flexShrink: 0 },
   chipsContent: {
-    paddingVertical: 0,
+    paddingVertical: spacing.xxs,
     gap: spacing.sm, alignItems: 'center',
   },
-  collectionChip: { paddingVertical: 4 },
+  collectionChip: { minHeight: 40, justifyContent: 'center', paddingVertical: spacing.xs },
   collectionChipText: { ...type.label, color: colors.textSecondary },
   collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
 
   // Plan list
   listBand: { flex: 1, backgroundColor: colors.surface },
-  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl },
   planSeparator: { height: spacing.sm },
 
   // Quiz banner. Card owns background/radius/padding/border here.
@@ -802,8 +802,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   previewText: { ...type.label, color: colors.textSecondary },
-  previewBtn: { minHeight: 40, justifyContent: 'center', paddingRight: spacing.sm },
-  addBtn: { minHeight: 40, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  previewBtn: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },
+  addBtn: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
   skeletonWrap: { gap: spacing.md },
