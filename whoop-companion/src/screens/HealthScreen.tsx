@@ -31,7 +31,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
   const effectiveSync = historySync ?? lastHistorySync;
-  const readiness = healthDataReadiness(hm, effectiveSync?.rawVitalSamples ?? 0);
+  const readiness = healthDataReadiness(hm, effectiveSync?.rawVitalSamples ?? 0, today?.sleepDetail ?? null);
 
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
@@ -170,10 +170,21 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
   );
 }
 
-function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawVitalRows: number) {
+function healthDataReadiness(
+  hm: ReturnType<typeof appStore.healthMonitor>,
+  rawVitalRows: number,
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+) {
   const trustedReady = hm.vitals.filter((v) => !v.experimental && v.value != null).length;
   const candidatesReady = hm.vitals.filter((v) => v.experimental && v.value != null).length;
   const hasRawRows = rawVitalRows > 0;
+  const sleepNeedsReview =
+    hasRawRows &&
+    candidatesReady === 0 &&
+    (!sleepDetail ||
+      sleepDetail.confidence === 'low' ||
+      (sleepDetail.coveragePct ?? 0) < 60 ||
+      (sleepDetail.signalMin ?? 0) < 150);
 
   if (trustedReady < 3) {
     return {
@@ -192,6 +203,21 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
   }
 
   if (!hasRawRows || candidatesReady === 0) {
+    if (sleepNeedsReview) {
+      return {
+        badge: 'SLEEP',
+        color: colors.strainBlue,
+        title: 'Raw rows need a trusted sleep window',
+        body: 'Raw sensor rows were decoded, but Blood Oxygen and Skin Temperature need enough valid samples inside a trusted sleep window.',
+        trustedReady,
+        candidatesReady,
+        rawColor: colors.recoveryYellow,
+        actionLabel: 'Review sleep evidence',
+        actionValue: `${rawVitalRows} raw rows`,
+        icon: 'moon',
+        route: { name: 'sleep' } as const,
+      };
+    }
     return {
       badge: 'RAW',
       color: colors.recoveryYellow,
