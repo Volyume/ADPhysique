@@ -3,6 +3,20 @@ import { parseNapDetail } from '../metrics/naps';
 import { formatDistance } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
+export function stepSourceLabel(source: string | null | undefined): string {
+  if (source === 'band') return 'band estimate';
+  if (source === 'phone') return 'phone pedometer';
+  if (source === 'manual') return 'manual entry';
+  return 'source unknown';
+}
+
+export function stepSourceShort(source: string | null | undefined): string {
+  if (source === 'band') return 'band est.';
+  if (source === 'phone') return 'phone';
+  if (source === 'manual') return 'manual';
+  return 'unknown';
+}
+
 export function activitySummary(c: CardioRow): string {
   if (c.source === 'nap') {
     const nap = parseNapDetail(c.notes);
@@ -18,7 +32,7 @@ export function activitySummary(c: CardioRow): string {
 
   const parts = [formatDuration(durationMin(c))];
   if (c.distanceM != null) parts.push(formatDistance(c.distanceM));
-  if (c.steps != null) parts.push(`${c.steps.toLocaleString()} steps`);
+  if (c.steps != null) parts.push(`${c.steps.toLocaleString()} steps (${stepSourceShort(c.stepSource)})`);
   if (c.avgHr != null) parts.push(`${c.avgHr} bpm avg`);
   if (c.strain != null) parts.push(`strain ${c.strain.toFixed(1)}`);
   return parts.join(' - ');

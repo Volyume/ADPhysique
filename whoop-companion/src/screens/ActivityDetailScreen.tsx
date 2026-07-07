@@ -13,6 +13,7 @@ import { formatClock, formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
 import { recoveryTimeHours, trainingEffect } from '../metrics/training';
 import { parseNapDetail } from '../metrics/naps';
+import { stepSourceLabel } from '../ui/activityFormat';
 
 export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
@@ -136,7 +137,15 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
               <Stat label="Cadence" value={activity.cadenceSpm ?? '-'} unit={activity.cadenceSpm != null ? 'spm' : undefined} />
             </Card>
             <Card style={styles.half}>
+              <Stat label="Step source" value={activity.steps != null ? stepSourceLabel(activity.stepSource) : '-'} />
+            </Card>
+          </View>
+          <View style={styles.grid}>
+            <Card style={styles.half}>
               <Stat label="Laps" value={activity.lapCount ?? '-'} />
+            </Card>
+            <Card style={styles.half}>
+              <Stat label="Step trust" value={activity.stepSource === 'band' ? 'estimate' : activity.stepSource === 'phone' ? 'pedometer' : activity.stepSource === 'manual' ? 'entered' : '-'} />
             </Card>
           </View>
         </>
