@@ -12,8 +12,8 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('Recovery affects your plan volume. Reminders keep coaching consistent.');
   });
 
-  test('optional body composition points users towards visual index, not body fat guessing', () => {
-    expect(SOURCE).toContain('Volyume visual index for progress');
+  test('optional body composition points users towards Volyume Score, not body fat guessing', () => {
+    expect(SOURCE).toContain('Volyume Score for progress');
     expect(SOURCE).toContain('without asking you to estimate exact body fat');
   });
 

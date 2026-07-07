@@ -312,7 +312,7 @@ export default function ProgressPhotoViewer({
       ? {
         buttonTitle: 'Delete set',
         message: deleteMode === 'scan-set'
-          ? 'Delete this full photo set from your device? This removes every photo in the set, plus its saved visual index.'
+          ? 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Volyume Score.'
           : 'Delete this full photo set from your device? This removes every photo saved for this date.',
       }
       : {

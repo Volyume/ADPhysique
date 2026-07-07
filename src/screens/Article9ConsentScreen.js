@@ -186,7 +186,7 @@ export default function Article9ConsentScreen({ navigation }) {
           'Everything you log to your food diary',
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
-          'Progress photos you choose to take, plus Physique Scan quality, confidence, leanness band, visual index and progress signal when you use that feature',
+          'Progress photos you choose to take, plus Physique Scan quality, confidence, leanness band, Volyume Score and progress signal when you use that feature',
         ]} />
 
         <Text style={styles.body}>

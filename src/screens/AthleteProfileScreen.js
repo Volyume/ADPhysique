@@ -300,10 +300,10 @@ export default function AthleteProfileScreen({ navigation }) {
     bodyFatLoggedAt: summary.bodyFatLoggedAt,
   });
   const physiqueTile = showPhysiqueScore ? {
-    label: 'Visual index',
+    label: 'Volyume Score',
     value: [
       summary.scan?.leannessBandLabel || null,
-      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `${Math.round(summary.scan.visualLeannessScore)} index`,
+      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `${Math.round(summary.scan.visualLeannessScore)}`,
     ].filter(Boolean).join(' - '),
     sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Like-for-like progress, not body fat.`,
   } : {
@@ -311,7 +311,7 @@ export default function AthleteProfileScreen({ navigation }) {
     value: bodyFatText,
     sub: summary.bodyFatLoggedAt
       ? `${formatDate(summary.bodyFatLoggedAt)} - manual entry`
-      : 'Shown until your first private visual index.',
+      : 'Shown until your first private Volyume Score.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;

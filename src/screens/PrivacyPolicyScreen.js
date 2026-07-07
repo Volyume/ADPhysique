@@ -23,7 +23,7 @@ export default function PrivacyPolicyScreen() {
           <Body>
             If you use Progress Photos or Physique Scan, the photo files stay on this device unless you choose
             to share or export them. The app may store local metadata and scan outputs such as photo quality,
-            scan confidence, leanness band, visual index and progress signal. Physique Scan is a visual
+            scan confidence, leanness band, Volyume Score and progress signal. Physique Scan is a visual
             progress feature, not an exact body fat percentage, DEXA scan, diagnosis, or medical assessment.
           </Body>
           <Body>

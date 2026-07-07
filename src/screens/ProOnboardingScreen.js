@@ -1246,7 +1246,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.sectionLast}>
                 <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  A measured figure can sharpen targets. Progress Photos can create a Volyume visual index for progress without asking you to estimate exact body fat.
+                  A measured figure can sharpen targets. Progress Photos can create a Volyume Score for progress without asking you to estimate exact body fat.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}

@@ -131,11 +131,11 @@ export function buildPhysiqueStudioNextAction({
   if (!suppressed && visibleScans.length >= 2) {
     return {
       kind: 'compare_scans',
-      title: 'Compare visual indexes',
-      body: 'Compare two indexed photo sets using photos taken in the same poses.',
-      reason: `${visibleScans.length} indexed photo sets are ready.`,
+      title: 'Compare Volyume Scores',
+      body: 'Compare two scored photo sets using photos taken in the same poses.',
+      reason: `${visibleScans.length} scored photo sets are ready.`,
       detailItems: [
-        'The visual index shows broad change, not an exact number.',
+        'The Volyume Score shows broad change, not an exact number.',
         'This is not an exact body fat percentage.',
       ],
       cta: 'Compare scans',

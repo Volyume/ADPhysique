@@ -177,7 +177,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
   });
 
-  test('borderline but model-measured required poses keep a low-confidence visual index', () => {
+  test('borderline but model-measured required poses keep a low-confidence Volyume Score', () => {
     const borderlineFront = {
       ...frontSignal,
       engine: 'mlkit_selfie_segmentation',
@@ -228,7 +228,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toEqual([]);
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline visual index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
 
     const summary = measuredSignalsSummaryFromAssets(assets, null, {
       physiqueAssessment: out.physiqueAssessment,
@@ -302,7 +302,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
     expect(out.physiqueAssessment.progressSignal).toBe('baseline');
-    expect(out.copySummary).toMatch(/Baseline visual index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
   });
 
   test('soft vision warnings lower confidence without erasing a complete measured score', () => {
@@ -362,7 +362,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     ]));
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline visual index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
@@ -409,8 +409,44 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Baseline visual index 68/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 68/i);
     expect(out.copySummary).toMatch(/not a body fat percentage/i);
+  });
+
+  test('private estimator anchor keeps a lean scan from looking falsely low', () => {
+    const leanEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 10,
+      inputs: {
+        sex: 'male',
+        bmi: 24,
+        waistToShoulder: 0.72,
+        waistToHip: 0.94,
+        waistToHeight: 0.27,
+        bodyAreaRatio: 0.37,
+        frontBackWaistSpread: 0.01,
+      },
+      biasFlags: [],
+    };
+
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: leanEstimate,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 78,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.estimate).toBeNull();
+    expect(out.range).toBeNull();
+    expect(out.physiqueAssessment.indexInputs).toMatchObject({
+      silhouetteScore: 30,
+      estimatorAnchorScore: 84,
+    });
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(65);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
   });
 
   test('optional side photo quality cannot withhold a clear front and back score', () => {
@@ -459,7 +495,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toEqual([]);
     expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
-    expect(out.copySummary).toMatch(/Baseline visual index/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score/i);
   });
 
   test('known bias flags concretely lower scan confidence, not just copy', () => {
@@ -659,7 +695,7 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
     expect(out.measuredSignalsOnly).toBe(true);
-    expect(out.summary).toMatch(/Volyume visual index is up 12 points/i);
+    expect(out.summary).toMatch(/Volyume Score is up 12 points/i);
     expect(out.summary).toMatch(/visual physique signal/i);
     expect(out.summary).not.toMatch(/body fat ranges|midpoint|provisional photo-scan estimate/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
