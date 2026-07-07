@@ -977,26 +977,26 @@ export default function ProgressPhotosScreen({ navigation }) {
           latestAssessment.leannessBandLabel || null,
           latestAssessment.progressSignal === 'baseline' ? 'baseline' : `${roundedScore(latestAssessment.visualLeannessScore)} index`,
         ].filter(Boolean).join(' '))
-      : (latestScan ? 'Saved' : 'No score yet');
+      : (latestScan ? 'Saved' : 'No index yet');
   const latestSignalSentence = progressSignalSentence(latestAssessment?.progressSignalLabel);
   const currentPhotoText = suppressed
-    ? 'Score details are hidden for now. Your photos are still private on this phone.'
+    ? 'Index details are hidden for now. Your photos are still private on this phone.'
     : latestPartialCapture
       ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
       : latestSignalSentence
         ? `${latestSignalSentence} The visual index is for like-for-like progress, not a body fat estimate.`
       : latestScan?.copySummary || (latestPhoto
         ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
-        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and visual score together.');
+        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and visual index together.');
   const currentPhotoSupport = suppressed
     ? 'Nothing is uploaded or shared unless you choose it.'
     : latestScan
       ? 'Use the same full-body frame, lighting and camera height whenever you take the next set.'
-      : 'Front and back are enough for a score. Side is optional, but helpful for shape and posture.';
+      : 'Front and back are enough for an index. Side is optional, but helpful for shape and posture.';
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
     { key: 'next', icon: 'time-outline', label: 'Next useful set', value: nextCheckInLabel },
-    { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
+    { key: 'scan', icon: 'scan', label: 'Latest index', value: scanStatusLabel },
   ];
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
@@ -1011,7 +1011,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const scanScore = scanForDay?.signals?.physiqueAssessment?.visualLeannessScore;
     const roundedScanScore = roundedScore(scanScore);
     const scoreText = roundedScanScore != null
-      ? (suppressed || hideExactScans ? 'Score hidden' : `Visual index ${roundedScanScore}`)
+      ? (suppressed || hideExactScans ? 'Index hidden' : `Visual index ${roundedScanScore}`)
       : null;
     const metaText = [scoreText, weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
@@ -1156,10 +1156,10 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.scoreGuideCard}>
               <View style={styles.scoreGuideHead}>
                 <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.scoreGuideTitle}>How the score works</Text>
+                <Text style={styles.scoreGuideTitle}>How the visual index works</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Volyume looks for repeatable visual changes from clear front and back photos taken in a similar setup. If the read is not reliable enough, the photos are still saved, but the score is withheld rather than guessed.
+                Volyume looks for repeatable visual changes from clear front and back photos taken in a similar setup. If the read is not reliable enough, the photos are still saved, but the index is withheld rather than guessed.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
@@ -1293,7 +1293,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         {showShareAction ? (
           <View style={styles.actionRow}>
             <Button
-              title={scanShareItems.length >= 2 ? 'Share score card' : 'Share photos'}
+              title={scanShareItems.length >= 2 ? 'Share progress card' : 'Share photos'}
               variant="tertiary"
               size="sm"
               fullWidth={false}
@@ -1397,7 +1397,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       ) : null}
 
       {/* Visual index comparison. This is the scan-specific over-time view:
-          dated entries, visual score/band context, measured deltas, and
+          dated entries, visual index/band context, measured deltas, and
           pose-matched photos. It self-suppresses through usePhotoSuppression
           too. */}
       <Modal

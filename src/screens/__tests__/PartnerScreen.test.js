@@ -298,7 +298,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Progress card');
     expect(text).toContain('Progress photo card, 5 Jan to 20 Jun.');
-    expect(text).toContain('The visible scan score is part of that export.');
+    expect(text).toContain('The visible scan index is part of that export.');
     expect(text).toContain('Weight is off for this export.');
     expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
     expect(text).toContain('The composed progress card image, with only the details shown in its export receipt.');
@@ -321,7 +321,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
     expect(text).toContain('Progress Photos card, 5 Jan 2026 to 20 Jun 2026.');
-    expect(text).toContain('The visible scan score is part of that export.');
+    expect(text).toContain('The visible scan index is part of that export.');
     expect(text).toContain('Weight is off for this export.');
   });
 

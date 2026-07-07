@@ -1085,15 +1085,15 @@ export function estimateBodyFatFromScanAssets({ assets = [], sex = null, heightC
 
 function estimatorUnavailableCopy({ assets = [], sex = null, heightCm = null, weightKg = null } = {}) {
   if (!requiredModelBackedPosesComplete(assets)) {
-    return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful scan score.';
+    return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful visual index.';
   }
   if (!normalisedSex(sex)) {
-    return 'Scan measured and saved. The visual score can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The visual index can still be used as photo context; body fat percentages are not shown from photos.';
   }
   if (bmiFrom(heightCm, weightKg) == null) {
-    return 'Scan measured and saved. The visual score can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The visual index can still be used as photo context; body fat percentages are not shown from photos.';
   }
-  return 'Scan measured and saved. The measured signals were not complete enough for a useful score.';
+  return 'Scan measured and saved. The measured signals were not complete enough for a useful visual index.';
 }
 
 function modelEstimateValue(modelEstimate) {

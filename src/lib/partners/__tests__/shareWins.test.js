@@ -117,7 +117,7 @@ describe('partner shareable wins policy', () => {
     expect(progress.requiresExport).toBe(true);
     expect(progress.summary).toBe('Progress photo card, 5 Jan to 20 Jun.');
     expect(progress.detail).toContain('Only the composed export can be sent');
-    expect(progress.detail).toContain('The visible scan score is part of that export');
+    expect(progress.detail).toContain('The visible scan index is part of that export');
     expect(progress.detail).toContain('Weight is off for this export');
     expect(progress.detail).toContain('body metrics and the photo library stay private');
     expect(progress.dateRange).toBe('5 Jan to 20 Jun');

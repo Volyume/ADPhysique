@@ -30,7 +30,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
   if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scored'} index ${Math.round(Number(assessment.visualLeannessScore))}`;
+    return `${assessment.leannessBandLabel || 'Indexed'} index ${Math.round(Number(assessment.visualLeannessScore))}`;
   }
   const reasons = new Set([
     ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
@@ -38,7 +38,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   ]);
   if ([...reasons].some((reason) => /model_|source_unavailable|source_unusable/.test(String(reason)))) return 'Analysis unavailable';
   if (assessment?.scanConfidenceTier === 'not_enough') return 'Not enough confidence';
-  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not scored';
+  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not indexed';
 }
 
 export function scanWeightLabel(scan, { hideExact = false } = {}) {

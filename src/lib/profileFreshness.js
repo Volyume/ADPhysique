@@ -51,13 +51,13 @@ export function buildProfileFreshness({ latestMetricAt, latestScanAt, latestWork
       sub: copyForAge(
         scanDays,
         {
-          today: 'Scored today. Retake only if you are correcting photo quality.',
-          yesterday: 'Scored yesterday. Keep the next photo set 2 to 4 weeks away unless you are correcting quality.',
-          days: (days, soon, due) => days >= 28 ? due(days) : days >= 21 ? soon(days) : `Last scored ${days} days ago. Keep the next photos comparable.`,
+          today: 'Indexed today. Retake only if you are correcting photo quality.',
+          yesterday: 'Indexed yesterday. Keep the next photo set 2 to 4 weeks away unless you are correcting quality.',
+          days: (days, soon, due) => days >= 28 ? due(days) : days >= 21 ? soon(days) : `Last indexed ${days} days ago. Keep the next photos comparable.`,
         },
-        (days) => `Last scored ${days} days ago. Plan your next comparable photos soon.`,
-        (days) => `Last scored ${days} days ago. Retake when light, pose and timing are consistent.`,
-        'No score yet. Start with consistent front and back photos. Side is optional.',
+        (days) => `Last indexed ${days} days ago. Plan your next comparable photos soon.`,
+        (days) => `Last indexed ${days} days ago. Retake when light, pose and timing are consistent.`,
+        'No visual index yet. Start with consistent front and back photos. Side is optional.',
       ),
     },
     lifts: {

@@ -62,7 +62,7 @@ function confidenceLabel(scan) {
   if (state === 'retake_needed') return 'Retake needed';
   if (state === 'not_enough') return 'Not enough confidence';
   if (state === 'measured_only') return 'Measured only';
-  if (state === 'not_scored') return 'Not scored';
+  if (state === 'not_scored') return 'Not indexed';
   const assessment = assessmentFor(scan);
   return assessment?.scanConfidenceLabel || scan?.qualityLabel || 'Saved';
 }
@@ -70,7 +70,7 @@ function confidenceLabel(scan) {
 function bandLabel(scan) {
   const state = unscoredState(scan);
   if (state === 'measured_only') return 'Measured only';
-  if (state) return 'Not scored';
+  if (state) return 'Not indexed';
   const assessment = assessmentFor(scan);
   return assessment?.leannessBandLabel || 'Baseline';
 }
@@ -81,7 +81,7 @@ function signalLabel(scan, { suppressed = false } = {}) {
   if (state === 'analysis_unavailable') return 'Analysis unavailable';
   if (state === 'retake_needed') return 'Retake needed';
   if (state === 'measured_only') return 'Measured only';
-  if (state) return 'Not scored';
+  if (state) return 'Not indexed';
   const assessment = assessmentFor(scan);
   return assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || 'Baseline scan';
 }
@@ -89,8 +89,8 @@ function signalLabel(scan, { suppressed = false } = {}) {
 function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
   const score = scanScore(scan);
   if (suppressed) return 'Hidden';
-  if (hideExact) return 'Hidden';
-  return score != null ? `${Math.round(score)} index` : 'Not scored';
+  if (hideExact) return 'Trend only';
+  return score != null ? `${Math.round(score)} index` : 'Not indexed';
 }
 
 function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
@@ -100,19 +100,19 @@ function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
 }
 
 function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Score detail is hidden right now. Your photos remain private.';
+  if (suppressed) return 'Index detail is hidden right now. Your photos remain private.';
   const state = unscoredState(scan);
   if (state === 'analysis_unavailable') {
     return scan?.copySummary || 'The photos are saved, but on-device scan analysis did not run for the required front and back photos.';
   }
   if (state === 'retake_needed') {
-    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score because the read was not reliable enough. Retake with your whole body visible, even lighting and a plain background.';
+    return scan?.copySummary || 'The photos are saved, but Volyume did not create an index because the read was not reliable enough. Retake with your whole body visible, even lighting and a plain background.';
   }
   if (state === 'not_enough' || state === 'not_scored') {
-    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score from this set.';
+    return scan?.copySummary || 'The photos are saved, but Volyume did not create an index from this set.';
   }
   if (state === 'measured_only') {
-    return scan?.copySummary || 'The photos were measured as visual scan context, but Volyume did not create a score from this set.';
+    return scan?.copySummary || 'The photos were measured as visual scan context, but Volyume did not create an index from this set.';
   }
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
@@ -145,7 +145,7 @@ export default function ProgressScanHistoryCard({
           hitSlop={8}
           accessibilityRole="switch"
           accessibilityState={{ checked: hideExact }}
-          accessibilityLabel={hideExact ? 'Show score details' : 'Hide score details'}
+          accessibilityLabel={hideExact ? 'Show index details' : 'Hide index details'}
           style={styles.hideExactToggle}
         >
           <Ionicons

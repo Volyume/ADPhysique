@@ -188,7 +188,7 @@ export function buildShareWinDraft(typeKey, payload = {}) {
     const summary = dateRange ? `${label}, ${dateRange}.` : `${label}.`;
     const detail = [
       'Only the composed export can be sent.',
-      includesScanScore ? 'The visible scan score is part of that export.' : 'Scan details stay private unless they are visible on that export.',
+      includesScanScore ? 'The visible scan index is part of that export.' : 'Scan details stay private unless they are visible on that export.',
       includesWeight ? 'Weight is included because it was switched on for that export.' : 'Weight is off for this export.',
       'Raw photos, body metrics and the photo library stay private.',
     ].join(' ');
