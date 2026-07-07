@@ -35,6 +35,9 @@ function cheerFailureCode(error, data) {
     status,
   ].filter(v => v != null).join(' ').toLowerCase();
   if (status === 429 || text.includes('already_cheered') || text.includes('429')) return 'already_cheered';
+  if (status === 401 || status === 403 || text.includes('unauthorised') || text.includes('not authenticated')) return 'partner_auth_required';
+  if (status === 404 || text.includes('function not found')) return 'cheers_unavailable';
+  if (text.includes('server misconfigured') || text.includes('missing env vars')) return 'server_misconfigured';
   return data?.error || null;
 }
 
@@ -72,10 +75,12 @@ function isPartnerAuthError(error) {
 function normaliseCheerInsertError(error) {
   if (!error) return null;
   if (isDuplicateCheerError(error)) return 'already_cheered';
-  const text = [error?.code, error?.message, error?.details].filter(Boolean).join(' ').toLowerCase();
+  const text = [error?.code, error?.message, error?.details, error?.hint, error?.name].filter(Boolean).join(' ').toLowerCase();
   if (text.includes('row-level security') || text.includes('rls') || text.includes('permission denied')) return 'not_active';
   if (isPartnerAuthError(error)) return 'partner_auth_required';
   if (isPartnerSchemaDriftError(error)) return 'partner_update_needed';
+  if (text.includes('server misconfigured') || text.includes('missing env vars')) return 'server_misconfigured';
+  if (text.includes('failed to fetch') || text.includes('network request failed') || text.includes('networkerror')) return 'offline';
   return error?.message || String(error);
 }
 

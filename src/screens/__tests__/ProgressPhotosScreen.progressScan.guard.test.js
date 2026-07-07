@@ -12,7 +12,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
     expect(SCAN_HISTORY).toMatch(/Physique Score results/);
-    expect(SCAN_HISTORY).toMatch(/Photo score/);
+    expect(SCAN_HISTORY).toMatch(/Score for this set/);
     expect(SCREEN).not.toMatch(/Latest scan/);
   });
 
@@ -56,7 +56,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('capture and deletion lifecycle cleans up scan assets', () => {
-    expect(SCREEN).toMatch(/Use this photo\?/);
+    expect(SCREEN).toMatch(/setScanReview\(\{\s*name,\s*saved,\s*flow,\s*pose,\s*\}\);/);
+    expect(SCREEN).toMatch(/previewApproved/);
+    expect(SCREEN).not.toMatch(/Use this photo\?/);
     expect(SCREEN).toMatch(/cancelable: false/);
     expect(SCREEN).toMatch(/Front saved[\s\S]*cancelable: false/);
     expect(SCREEN).toMatch(/Back saved[\s\S]*cancelable: false/);
@@ -104,6 +106,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Your private physique record/);
     expect(SCREEN).toMatch(/Private on this device/);
     expect(SCREEN).toMatch(/not visible to partners, staff or anyone else/);
+    expect(SCREEN).toMatch(/How the score works/);
+    expect(SCREEN).toMatch(/visual progress measure, not a body fat estimate/);
+    expect(SCREEN).toMatch(/withheld rather than guessed/);
     expect(SCREEN).not.toMatch(/heroPlaceholder/);
     expect(SCREEN).not.toMatch(/heroImageFrame/);
     expect(SCREEN).not.toMatch(/heroScrim/);
@@ -114,6 +119,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Delete photo set\?/);
     expect(SCREEN).toMatch(/This removes every photo in this set/);
     expect(SCREEN).toMatch(/text: 'Delete set'/);
+    expect(SCREEN).toMatch(/Photo set deleted\./);
     expect(SCREEN).toMatch(/deleteProgressScanSession\(userId, scan\.id, \{ deleteFiles: true \}\)/);
   });
 

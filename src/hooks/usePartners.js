@@ -43,6 +43,13 @@ const EMPTY = {
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 const PENDING_INVITE_REFRESH_MS = 2000;
+const REDEEM_VISIBILITY_RETRY_MS = (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID)
+  ? [0]
+  : [350, 900, 1600];
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+}
 
 async function pullPartnerMirrorNow(userId) {
   if (!userId) return false;
@@ -152,6 +159,16 @@ async function isAcceptedPartnershipVisible(userId, data = {}) {
   } catch (_) {
     return false;
   }
+}
+
+async function waitForAcceptedPartnershipVisible(userId, data = {}) {
+  if (await isAcceptedPartnershipVisible(userId, data)) return true;
+  for (const ms of REDEEM_VISIBILITY_RETRY_MS) {
+    await wait(ms);
+    await pullPartnerMirrorNow(userId);
+    if (await isAcceptedPartnershipVisible(userId, data)) return true;
+  }
+  return false;
 }
 
 // Enrich one active partnership with its OWN derived view: both sides' week
@@ -410,7 +427,7 @@ export default function usePartners(userId, tier) {
       await clearPendingPartnerCode();
       const mirrored = await mirrorAcceptedPartnershipLocally(userId, r.data);
       await pullPartnerMirrorNow(userId);
-      const visible = mirrored || await isAcceptedPartnershipVisible(userId, r.data);
+      const visible = mirrored || await waitForAcceptedPartnershipVisible(userId, r.data);
       if (!visible) {
         await load();
         return { ok: false, error: 'local_mirror_pending' };

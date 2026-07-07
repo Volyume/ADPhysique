@@ -142,7 +142,7 @@ describe('load error state', () => {
     const tree = await mount();
     const text = allText(tree).join(' ');
     expect(text).toContain("Couldn't load Partners");
-    expect(text).toContain('We could not load your partner details right now.');
+    expect(text).toContain('We could not refresh your partner details right now.');
     expect(text).not.toContain('Train with a partner');
     await press(tree, 'Try again');
     expect(reload).toHaveBeenCalledTimes(1);
@@ -183,9 +183,10 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
     expect(text).toContain('What Sam can see');
+    expect(text).toContain('Private partner accountability.');
     expect(text).toContain('Shared');
     expect(text).toContain('This week\'s training status');
-    expect(text).toContain('Weekly sessions number');
+    expect(text).toContain('Your weekly session number');
     expect(text).toContain('One cheer a day');
     expect(text).toContain('Chosen wins you approve');
     expect(text).toContain('Shared block name');
@@ -193,7 +194,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Workout weights, sets and reps');
     expect(text).toContain('Food diary, coach notes and check-ins');
     expect(text).toContain('Body metrics and progress photos');
-    expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. Each side is shown on its own.');
+    expect(text).toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
     expect(text).toContain('Block name only');
     expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
     expect(text).toContain('Manage name');
@@ -204,7 +205,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     const text = allText(tree).join(' ');
     expect(text).toContain('Weekly sessions');
-    expect(text).toContain('Choose the number you expect to train this week. Sam sees that number only, not your plan.');
+    expect(text).toContain('Optional: show the number of sessions you expect to train this week. It does not change Coach or your training plan.');
     expect(text).toContain('Sam set weekly sessions too.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
@@ -226,7 +227,7 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Share a win');
-    expect(text).toContain('Pick one card. You review exactly what Sam sees before sending.');
+    expect(text).toContain('Pick one card. You review exactly what Sam sees before anything is sent.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
@@ -461,7 +462,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Could not send that cheer. Check your connection and try again.',
+      'Could not send that cheer. Open Partners again and try once more.',
       { variant: 'error' },
     );
   });
@@ -728,8 +729,8 @@ describe('manage sheet: block confirm', () => {
 
     await press(tree, 'Manage partnership with Sam');
 
-    expect(allText(tree)).toContain('Share a block name');
-    expect(findPress(tree, 'Share a block name').length).toBeGreaterThan(0);
+    expect(allText(tree)).toContain('Share current block name');
+    expect(findPress(tree, 'Share current block name').length).toBeGreaterThan(0);
   });
 
   test('block wires the real block + unpair primitives with the exact copy', async () => {

@@ -743,6 +743,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             const deleted = await deleteProgressScanSession(userId, scan.id, { deleteFiles: true });
             if (!deleted) throw new Error('progress_scan_delete_failed');
             await refresh();
+            toast.show('Photo set deleted.', { variant: 'success' });
           } catch (e) {
             logError('ProgressPhotos.deleteScan', e, { userId, scanId: scan.id });
             toast.show('Could not delete that scan. Please try again.', { variant: 'error' });
@@ -762,6 +763,15 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     if (!canWrite()) {
       await abandonLapsedScanFlow(flow, name, saved);
+      return;
+    }
+    if (!saved?.previewApproved) {
+      setScanReview({
+        name,
+        saved,
+        flow,
+        pose,
+      });
       return;
     }
     try {
@@ -792,18 +802,6 @@ export default function ProgressPhotosScreen({ navigation }) {
         await saveScanAssetAndContinue(flow, pose, name, saved, vision);
         return;
       }
-      appAlert('Use this photo?', 'Check the angle, framing and lighting. Use it only if it looks fair to compare with future scans.', [
-        { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
-        {
-          text: 'Use photo',
-          onPress: () => {
-            saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
-              logError('ProgressPhotos.scanUsePhoto', e, { userId, pose });
-              toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
-            });
-          },
-        },
-      ], { cancelable: false });
     } catch (e) {
       logError('ProgressPhotos.scanCaptured', e, { userId, pose });
       toast.show('Could not save that scan photo. Please try again.', { variant: 'error' });
@@ -1105,7 +1103,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Take or import front and back photos. Clear sets can receive Volyume Physique Score: a progress signal, confidence and leanness band, not a body fat estimate.
+              Keep dated front and back photos in one private library. When the photos are clear enough, Volyume adds a Physique Score, leanness band and progress signal. It is a visual progress measure, not a body fat estimate.
             </Text>
           </View>
 
@@ -1125,10 +1123,10 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.scoreGuideCard}>
               <View style={styles.scoreGuideHead}>
                 <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.scoreGuideTitle}>What Volyume measures</Text>
+                <Text style={styles.scoreGuideTitle}>How the score works</Text>
               </View>
               <Text style={styles.scoreGuideIntro}>
-                Use similar light and camera height each time so Volyume can compare like with like.
+                Volyume looks for repeatable visual changes from clear front and back photos taken in a similar setup. If the read is not reliable enough, the photos are still saved, but the score is withheld rather than guessed.
               </Text>
               <View style={styles.setupStandardGrid}>
                 {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
@@ -1488,7 +1486,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest date is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate photo set if these photos are from another day.`
-                    : 'Choose how to add this photo set. Both routes save to your private library; scoring only happens when front and back photos are usable.'}
+                    : 'Take new photos or import existing ones. Both routes save to the same private library; clear front and back photos can receive a Physique Score.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}

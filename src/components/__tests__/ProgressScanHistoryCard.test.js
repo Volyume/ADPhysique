@@ -52,9 +52,10 @@ describe('ProgressScanHistoryCard', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Physique Score results');
-    expect(text).toContain("Volyume's private photo score");
+    expect(text).toContain("Volyume's visual progress score");
     expect(text).toContain('not body fat percentage');
-    expect(text).toContain('Photo score');
+    expect(text).toContain('Score for this set');
+    expect(text).toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
     expect(text).toContain('Volyume score');
