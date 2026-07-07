@@ -948,7 +948,7 @@ class AppStore extends Store<AppState> {
     const actual = Math.max(1, Math.round(actualSteps));
     const rawTicks = this.getState().bandStepEstimate?.rawTicks ?? null;
     if (rawTicks == null || rawTicks <= 0) {
-      throw new Error('No WHOOP step ticks are available for today yet. Sync history after a short known walk, then calibrate.');
+      throw new Error('No WHOOP step ticks are available for the synced range yet. Sync history until the band counter range appears, then enter the real steps for that range.');
     }
     return this.setBandStepDivisor(rawTicks / actual);
   };
@@ -1288,11 +1288,11 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    const rawVitalWindowStart = sleep?.startTs ?? winStart;
-    const rawVitalWindowEnd = sleep?.endTs ?? winEnd;
-    const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(rawVitalWindowStart, rawVitalWindowEnd));
-    spo2 = rawVitals.spo2;
-    skinTempC = rawVitals.skinTempC;
+    if (sleep) {
+      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+      spo2 = rawVitals.spo2;
+      skinTempC = rawVitals.skinTempC;
+    }
 
     const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
     const debtNights = recent
@@ -2126,11 +2126,11 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    const rawVitalWindowStart = sleep?.startTs ?? winStart;
-    const rawVitalWindowEnd = sleep?.endTs ?? winEnd;
-    const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(rawVitalWindowStart, rawVitalWindowEnd));
-    spo2 = rawVitals.spo2;
-    skinTempC = rawVitals.skinTempC;
+    if (sleep) {
+      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+      spo2 = rawVitals.spo2;
+      skinTempC = rawVitals.skinTempC;
+    }
 
     // Baselines from prior days (exclude today).
     const recent = (await getRecentDailyMetrics(30)).filter((d) => d.day !== today);
@@ -2662,11 +2662,21 @@ type OvernightVitals = {
 };
 
 function averageRawVitals(rows: RawVitalSampleRow[]): { spo2: number | null; skinTempC: number | null } {
+  const MIN_RAW_VITAL_SAMPLES = 6;
   const spo2 = rows.map((r) => r.spo2).filter((v): v is number => v != null && v >= 70 && v <= 100);
   const skin = rows.map((r) => r.skinTempC).filter((v): v is number => v != null && v >= 15 && v <= 45);
+  const robustAverage = (values: number[], decimals = 0): number | null => {
+    if (values.length < MIN_RAW_VITAL_SAMPLES) return null;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const trim = sorted.length >= 12 ? Math.floor(sorted.length * 0.1) : 0;
+    const trimmed = sorted.slice(trim, sorted.length - trim);
+    const avg = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+    const factor = 10 ** decimals;
+    return Math.round(avg * factor) / factor;
+  };
   return {
-    spo2: spo2.length ? Math.round(spo2.reduce((a, b) => a + b, 0) / spo2.length) : null,
-    skinTempC: skin.length ? round1(skin.reduce((a, b) => a + b, 0) / skin.length) : null,
+    spo2: robustAverage(spo2),
+    skinTempC: robustAverage(skin, 1),
   };
 }
 
