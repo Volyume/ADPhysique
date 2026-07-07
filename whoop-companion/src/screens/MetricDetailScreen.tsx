@@ -415,17 +415,29 @@ function renderQualityCard(input: {
   }
 
   if (input.key === 'spo2' || input.key === 'skin_temp') {
+    const current = input.key === 'spo2' ? input.today?.spo2 ?? null : input.today?.skinTempC ?? null;
+    const hasRawRows = (input.historySync?.rawVitalSamples ?? 0) > 0;
+    const status = current != null ? 'candidate' : hasRawRows ? 'awaiting sleep' : 'needs raw rows';
     return (
       <>
         <SectionLabel>Decode status</SectionLabel>
         <Card>
           <View style={styles.statRow}>
-            <Stat label="Status" value="candidate" color={colors.recoveryYellow} />
+            <Stat label="Status" value={status} color={current != null ? colors.recoveryYellow : colors.textTertiary} />
             <Stat label="Raw vitals" value={input.historySync?.rawVitalSamples ?? '-'} />
             <Stat label="Sync state" value={input.historySync?.status ? shortStatus(input.historySync.status) : '-'} />
           </View>
+          <View style={[styles.statRow, styles.statRowTight]}>
+            <Stat label="Sleep confidence" value={sleepConfidenceLabel(detail?.confidence)} color={sleepConfidenceColor(detail?.confidence)} />
+            <Stat label="Sleep coverage" value={detail?.coveragePct != null ? `${detail.coveragePct}%` : '-'} color={sleepCoverageColor(detail?.coveragePct)} />
+            <Stat label="Sleep signal" value={detail?.signalMin ?? '-'} unit={detail?.signalMin != null ? 'min' : undefined} />
+          </View>
           <Text style={styles.qualityNote}>
-            This value is decoded from raw WHOOP 5 history records and shown separately until the mapping is confirmed against more captures.
+            {current != null
+              ? 'This candidate is averaged from valid raw WHOOP 5 history samples inside the confirmed sleep window and shown separately until the mapping is confirmed against more captures.'
+              : hasRawRows
+                ? 'Raw vital rows were decoded, but there are not enough valid samples inside a trusted sleep window yet. Finish auto sync or review the sleep window before trusting this metric.'
+                : 'No raw vital rows have been decoded yet. Keep the strap connected long enough for history sync to backfill the overnight raw sensor records.'}
           </Text>
         </Card>
       </>
