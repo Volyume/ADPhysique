@@ -450,9 +450,18 @@ export function computeSleep(
     timeline.push(stage);
   }
 
+  const smoothedTimeline = smoothStageTimeline(timeline);
+  if (smoothedTimeline !== timeline) {
+    stages.awake = 0;
+    stages.light = 0;
+    stages.deep = 0;
+    stages.rem = 0;
+    for (const stage of smoothedTimeline) stages[stage] += 1;
+  }
+
   // Compress the per-minute timeline into stage segments for the hypnogram.
   const hypnogram: Array<{ stage: SleepStage; minutes: number }> = [];
-  for (const stage of timeline) {
+  for (const stage of smoothedTimeline) {
     const last = hypnogram[hypnogram.length - 1];
     if (last && last.stage === stage) last.minutes += 1;
     else hypnogram.push({ stage, minutes: 1 });
@@ -512,4 +521,23 @@ export function computeSleep(
     sleepStateAsleepMin,
     sleepStateUpMin,
   };
+}
+
+function smoothStageTimeline(timeline: SleepStage[]): SleepStage[] {
+  if (timeline.length < 3) return timeline;
+  let changed = false;
+  const out = timeline.slice();
+
+  for (let i = 1; i < timeline.length - 1; i += 1) {
+    const prev = timeline[i - 1];
+    const cur = timeline[i];
+    const next = timeline[i + 1];
+    if (!prev || !cur || !next) continue;
+    if (prev === next && cur !== prev) {
+      out[i] = prev;
+      changed = true;
+    }
+  }
+
+  return changed ? out : timeline;
 }
