@@ -70,15 +70,6 @@ function buildDecisionRows(week, pairs = []) {
     }, 'training'));
   }
 
-  if (adj.steps?.target && adj.steps.change && adj.steps.note) {
-    rows.push(withOutcome({
-      type: 'changed',
-      icon: 'checkmark-circle-outline',
-      label: `Daily steps raised to ${adj.steps.target.toLocaleString()}`,
-      detail: adj.steps.note,
-    }, 'steps'));
-  }
-
   if (week.deloadSuggested && week.deloadNote) {
     rows.push({
       type: 'changed',

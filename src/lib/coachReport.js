@@ -188,9 +188,6 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
       const dir = adj.calories.change > 0 ? `up +${fmtInt(amt)}` : `down ${fmtInt(amt)}`;
       rows.push(`<tr><td>Calories</td><td>${htmlEscape(withProse(`Adjusted ${dir} kcal/day`, adj.calories.note))}</td></tr>`);
     }
-    if (Number.isFinite(adj.steps?.target) && adj.steps.target > 0) {
-      rows.push(`<tr><td>Daily steps</td><td>${htmlEscape(withProse(`Target ${fmtInt(adj.steps.target)}`, adj.steps.note))}</td></tr>`);
-    }
     if (adj.cardio && (adj.cardio.type || adj.cardio.note)) {
       const fact = adj.cardio.type || 'Cardio';
       rows.push(`<tr><td>Cardio</td><td>${htmlEscape(withProse(fact, adj.cardio.note))}</td></tr>`);
