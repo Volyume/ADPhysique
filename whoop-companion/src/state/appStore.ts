@@ -2803,6 +2803,10 @@ function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is S
   if (!sleep) return false;
   if (manual) return true;
   if (sleepStateWakeConflict(sleep)) return false;
+  if (longUncorroboratedAutoSleep(sleep, manual)) {
+    const coveragePct = sleepCoveragePct(sleep);
+    if (sleep.signalMin < 420 || coveragePct < 85) return false;
+  }
   if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
     const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
     if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
@@ -2819,11 +2823,7 @@ function sleepConfidence(
   const evidencePct = sleepEvidencePct(evidence);
   const corroborated = evidencePct >= 25;
   const stateConflict = sleepStateWakeConflict(evidence);
-  const longUncorroboratedAuto =
-    !manual &&
-    (evidence?.inBedMin ?? 0) >= 7 * 60 &&
-    evidencePct < 10 &&
-    (evidence?.sleepStateMin ?? 0) < 30;
+  const longUncorroboratedAuto = longUncorroboratedAutoSleep(evidence, manual);
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto && (signalMin < 420 || coveragePct < 85)) return 'low';
@@ -2891,6 +2891,15 @@ function sleepEvidencePct(evidence?: SleepEvidence | null): number {
   );
   const corroboratedMin = stillMin;
   return Math.round((corroboratedMin / Math.max(1, evidence.inBedMin)) * 100);
+}
+
+function longUncorroboratedAutoSleep(evidence: SleepEvidence | null | undefined, manual: boolean): boolean {
+  return (
+    !manual &&
+    (evidence?.inBedMin ?? 0) >= 7 * 60 &&
+    sleepEvidencePct(evidence) < 10 &&
+    (evidence?.sleepStateMin ?? 0) < 30
+  );
 }
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
@@ -3093,6 +3102,9 @@ function sleepCaptureNote(input: {
   }
   if (!input.hasSleep && input.hasCandidate && sleepStateWakeConflict(input.evidence) && !input.manual) {
     return 'A possible sleep window was rejected because decoded strap-state evidence is mostly wake. Review the window or let auto sync finish before trusting it.';
+  }
+  if (!input.hasSleep && input.hasCandidate && longUncorroboratedAutoSleep(input.evidence, input.manual)) {
+    return 'A long HR-only sleep window was found, but it needs stronger coverage or band-state corroboration before Pulse scores it as sleep.';
   }
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
