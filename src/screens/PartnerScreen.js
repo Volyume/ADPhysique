@@ -94,7 +94,7 @@ function weekPhrase(name, week, resting) {
 
 function cheerFailureMessage(error) {
   if (error === 'not_active') {
-    return 'That partnership is no longer active. Refresh Partners and try again.';
+    return 'Volyume could not confirm this partnership online yet. Refresh Partners and try again.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
@@ -220,7 +220,7 @@ function IntentionBlock({ pair, onSetAim }) {
         </View>
       </View>
       <Text style={styles.intentionIntro}>
-        Optional: show the number of sessions you expect to train this week. It does not change Coach or your training plan.
+        Optional: share your rough training rhythm for this week. It does not assign workouts, change Coach, or judge the week.
       </Text>
       {shared ? <Text style={styles.intentionShared}>{shared}</Text> : null}
       {mine ? <Text style={styles.intentionOwn}>{mine}</Text> : null}
@@ -245,23 +245,22 @@ function IntentionBlock({ pair, onSetAim }) {
 function PartnerSupportSnapshot({ pair, name }) {
   const hasBlock = pair.sharedBlock && (pair.sharedBlock.status === 'active' || pair.sharedBlock.status === 'proposed');
   const sharedRows = [
-    'Your first name',
-    'This week\'s training status',
-    'Your weekly sessions',
-    'One cheer a day',
-    'Chosen wins you approve',
-    hasBlock ? 'Shared block name' : null,
+    'First name',
+    'Weekly training status',
+    'Weekly sessions you set',
+    'One fixed cheer a day',
+    hasBlock ? 'Block label you approve' : 'Wins you choose to send',
   ].filter(Boolean);
   const privateRows = [
-    'Workout weights, sets and reps',
-    'Food diary, coach notes and check-ins',
+    'Full workouts and lift numbers',
+    'Food, Coach and check-ins',
     'Body metrics and progress photos',
   ];
   return (
     <View style={styles.supportSnapshot}>
       <View style={styles.supportHead}>
         <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.supportTitle}>What {name} can see</Text>
+        <Text style={styles.supportTitle}>Shared with {name}</Text>
       </View>
       <View style={styles.supportGrid}>
         <View style={styles.supportCell}>
@@ -304,7 +303,7 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       <View style={styles.shareWinsRowCopy}>
         <Text style={styles.shareWinsTitle}>Share a win</Text>
         <Text style={styles.shareWinsText}>
-          Send one workout, PR or progress card to {name}. You review the card before anything leaves.
+          Choose one workout, PR or progress update for {name}. You approve the exact preview first.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -412,9 +411,27 @@ function ConnectedIntroCard() {
     <View style={styles.connectedIntro}>
       <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
       <Text style={styles.connectedIntroText}>
-        Private partner accountability. They see weekly training status, your weekly sessions, one fixed cheer a day and wins you choose to share.
+        Private accountability with one person. They see weekly training status, weekly sessions you choose to show, one fixed cheer a day and wins you approve.
       </Text>
     </View>
+  );
+}
+
+function LocalReadNotice({ onRefresh }) {
+  return (
+    <TouchableOpacity
+      style={styles.localReadNotice}
+      onPress={onRefresh}
+      accessibilityRole="button"
+      accessibilityLabel="Refresh partner data"
+    >
+      <Ionicons name="sync-outline" size={iconSize.sm} color={colors.primary} />
+      <View style={styles.localReadNoticeCopy}>
+        <Text style={styles.localReadNoticeTitle}>Refreshing partner data</Text>
+        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to check the cloud copy again.</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
+    </TouchableOpacity>
   );
 }
 
@@ -1003,6 +1020,7 @@ export default function PartnerScreen({ route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Partners" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {p.localReadIssue ? <LocalReadNotice onRefresh={retryPartners} /> : null}
 
         {connected ? (
           <>
@@ -1116,7 +1134,7 @@ export default function PartnerScreen({ route }) {
             <Card style={styles.howItWorks}>
               <Text style={styles.howHeader}>HOW IT WORKS</Text>
               <Text style={styles.howLine}>You each see a simple weekly training status.</Text>
-              <Text style={styles.howLine}>You can send one fixed cheer a day, or one reviewed win card when you choose.</Text>
+              <Text style={styles.howLine}>You can send one fixed cheer a day, or one win you approve.</Text>
               <Text style={styles.howLine}>Rest weeks never count as a miss.</Text>
               <Text style={styles.howLine}>No feed, no followers, no public numbers.</Text>
             </Card>
@@ -1213,7 +1231,7 @@ function AimSheetBody({ value, onChange, onConfirm }) {
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Weekly sessions</Text>
       <Text style={styles.blockPitch}>
-        Choose the number of sessions you expect to train this week. Your partner sees the number only. It does not change Coach or your training plan.
+        Pick the number of workouts you expect this week. Your partner sees the number only. This is not a Coach target and it does not change your plan.
       </Text>
       <View style={styles.stepperRow}>
         <TouchableOpacity
@@ -1298,7 +1316,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Pick one card. You review exactly what {partnerName} sees before anything is sent.
+          Choose one win. You review exactly what {partnerName} sees before anything is sent.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1619,6 +1637,19 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   connectedIntroText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
+  localReadNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  localReadNoticeCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  localReadNoticeTitle: { ...type.label, color: colors.textPrimary },
+  localReadNoticeText: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   pairCard: { gap: spacing.lg },
   pairHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   partnerIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 },

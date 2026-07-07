@@ -31,11 +31,17 @@ function cheerFailureCode(error, data) {
   const dataError = String(data?.error || '').toLowerCase();
   if (dataError.includes('already_cheered')) return 'already_cheered';
   if (dataError.includes('not_active')) return 'not_active';
+  if (dataError.includes('not active') || dataError.includes('not a member') || dataError.includes('not_member')) return 'not_active';
+  if (dataError.includes('inactive') || dataError.includes('partnership not found') || dataError.includes('forbidden')) return 'not_active';
   if (dataError.includes('insert_failed')) return 'insert_failed';
   if (dataError.includes('server misconfigured') || dataError.includes('missing env vars')) return 'server_misconfigured';
   const text = [
     data?.error,
+    data?.message,
+    data?.code,
     error?.message,
+    error?.details,
+    error?.hint,
     error?.name,
     status,
   ].filter(v => v != null).join(' ').toLowerCase();
@@ -43,7 +49,8 @@ function cheerFailureCode(error, data) {
   if (status === 401 || text.includes('unauthorised') || text.includes('not authenticated')) return 'partner_auth_required';
   // partner-cheer returns 403 for stale/not-yet-visible partnerships. Keep that
   // distinct from account auth so the hook can refresh the mirror and retry.
-  if (status === 403) return 'not_active';
+  if (status === 403 || text.includes('not active') || text.includes('not_active') || text.includes('not a member') || text.includes('not_member')) return 'not_active';
+  if (text.includes('inactive') || text.includes('partnership not found') || text.includes('forbidden')) return 'not_active';
   if (status === 404 || text.includes('function not found')) return 'cheers_unavailable';
   if (text.includes('server misconfigured') || text.includes('missing env vars')) return 'server_misconfigured';
   return data?.error || null;
