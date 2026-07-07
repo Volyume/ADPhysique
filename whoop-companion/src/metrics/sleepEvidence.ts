@@ -17,8 +17,9 @@ export type SleepCorroborationEvidence = SleepStateEvidence & {
 
 const LONG_AUTO_SLEEP_MIN = 7 * 60;
 const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 18;
-const MIN_LONG_AUTO_SLEEP_STATE_MIN = 30;
-const MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO = 0.25;
+const MIN_LONG_AUTO_SLEEP_STATE_MIN = 60;
+const MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO = 0.35;
+const MIN_LONG_AUTO_SLEEP_WINDOW_PROOF_RATIO = 0.12;
 
 export function sleepStateWakeConflict(evidence: SleepStateEvidence | null | undefined): boolean {
   const stateMin = evidence?.sleepStateMin ?? 0;
@@ -61,8 +62,13 @@ export function longAutoSleepNeedsCorroboration(
 
 function hasSleepStateProof(evidence: SleepCorroborationEvidence | null | undefined): boolean {
   const stateMin = evidence?.sleepStateMin ?? 0;
+  const windowMin = evidenceWindowMin(evidence);
   const proofMin = (evidence?.sleepStateAsleepMin ?? 0) + (evidence?.sleepStateStillMin ?? 0);
-  return stateMin >= MIN_LONG_AUTO_SLEEP_STATE_MIN && proofMin / Math.max(1, stateMin) >= MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO;
+  return (
+    stateMin >= MIN_LONG_AUTO_SLEEP_STATE_MIN &&
+    proofMin / Math.max(1, stateMin) >= MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO &&
+    proofMin / Math.max(1, windowMin) >= MIN_LONG_AUTO_SLEEP_WINDOW_PROOF_RATIO
+  );
 }
 
 function evidenceWindowMin(evidence: SleepCorroborationEvidence | null | undefined): number {
