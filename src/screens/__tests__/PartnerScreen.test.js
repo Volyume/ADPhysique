@@ -141,10 +141,10 @@ describe('load error state', () => {
     mockHook.value = base({ error: true, reload });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain("Couldn't load Partners");
-    expect(text).toContain('We could not refresh your partner details right now.');
+    expect(text).toContain('Partners needs a refresh');
+    expect(text).toContain('Volyume could not read your partner space on this device.');
     expect(text).not.toContain('Train with a partner');
-    await press(tree, 'Try again');
+    await press(tree, 'Refresh Partners');
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -153,7 +153,7 @@ describe('load error state', () => {
     const refresh = jest.fn(async () => ({ ok: true }));
     mockHook.value = base({ error: true, reload, refresh });
     const tree = await mount();
-    await press(tree, 'Try again');
+    await press(tree, 'Refresh Partners');
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(reload).not.toHaveBeenCalled();
   });
@@ -553,12 +553,14 @@ describe('empty state', () => {
     const text = allText(await mount());
     expect(text).toContain('Train with a partner');
     expect(text).toContain(
-      'Pair up with one person you already train with. It is quiet accountability: someone you trust who knows whether you showed up.',
+      'Pair with one person you already train with. They see whether you trained this week, plus any win you choose to send. Everything else stays private.',
     );
     // The plain-English "how it works" explainer (founder call 2026-07-03: the
     // old pitch never said what the feature was or what a "signal" meant).
     expect(text).toContain('HOW IT WORKS');
-    expect(text).toContain('Once a week, you each see whether the other trained, and nothing else.');
+    expect(text).toContain('You each see a simple weekly training status.');
+    expect(text).toContain('You can send one fixed cheer a day, or one reviewed win card when you choose.');
+    expect(text).toContain('Rest weeks never count as a miss.');
     expect(text).toContain('No feed, no followers, no public numbers.');
     // The word "signal" is gone from the pitch.
     expect(text).not.toContain('signal');
@@ -600,7 +602,7 @@ describe('pending state', () => {
     expect(allText(tree)).toContain('Invitation sent. Waiting for your partner.');
     expect(allText(tree)).toContain('Share the same invite again if they missed it. It still only pairs one person.');
     expect(findPress(tree, 'Share invite again').length).toBeGreaterThan(0);
-    expect(findPress(tree, 'Check partner connection').length).toBeGreaterThan(0);
+    expect(findPress(tree, 'Check invite status').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Cancel invitation').length).toBeGreaterThan(0);
   });
 
@@ -608,7 +610,7 @@ describe('pending state', () => {
     const hook = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Check partner connection');
+    await press(tree, 'Check invite status');
     expect(hook.reload).toHaveBeenCalledTimes(1);
   });
 

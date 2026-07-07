@@ -103,7 +103,7 @@ function cheerFailureMessage(error) {
     return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not confirm Partners online right now. Open Partners again and try once more.';
+    return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
   }
   return 'Could not send that cheer. Open Partners again and try once more.';
 }
@@ -984,9 +984,9 @@ export default function PartnerScreen({ route }) {
         <View style={styles.errorWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load Partners"
-            text="We could not refresh your partner details right now. Try again, and Volyume will check Partners online."
-            actionLabel="Try again"
+            title="Partners needs a refresh"
+            text="Volyume could not read your partner space on this device. Refresh Partners and we will check the cloud copy without changing anything you have shared."
+            actionLabel="Refresh Partners"
             onAction={retryPartners}
           />
         </View>
@@ -1052,7 +1052,7 @@ export default function PartnerScreen({ route }) {
             <Text style={styles.emptyBody}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.'
-                : 'Pair up with one person you already train with. It is quiet accountability: someone you trust who knows whether you showed up.'}
+                : 'Pair with one person you already train with. They see whether you trained this week, plus any win you choose to send. Everything else stays private.'}
             </Text>
 
             {hasIncomingShareIntent ? (
@@ -1115,12 +1115,9 @@ export default function PartnerScreen({ route }) {
 
             <Card style={styles.howItWorks}>
               <Text style={styles.howHeader}>HOW IT WORKS</Text>
-              <Text style={styles.howLine}>
-                Once a week, you each see whether the other trained, and nothing else.
-              </Text>
-              <Text style={styles.howLine}>
-                You build a streak of weeks you both showed up. A rest week never breaks it.
-              </Text>
+              <Text style={styles.howLine}>You each see a simple weekly training status.</Text>
+              <Text style={styles.howLine}>You can send one fixed cheer a day, or one reviewed win card when you choose.</Text>
+              <Text style={styles.howLine}>Rest weeks never count as a miss.</Text>
               <Text style={styles.howLine}>No feed, no followers, no public numbers.</Text>
             </Card>
 
@@ -1422,14 +1419,14 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         hitSlop={hitSlop}
         accessibilityRole="button"
         accessibilityState={{ disabled: checking }}
-        accessibilityLabel="Check partner connection"
+        accessibilityLabel="Check invite status"
       >
         {checking ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : (
           <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
         )}
-        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check again'}</Text>
+        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check status'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
