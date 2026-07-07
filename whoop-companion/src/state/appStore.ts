@@ -2740,15 +2740,17 @@ function sleepConfidence(
   signalMin: number,
   coveragePct: number,
   manual: boolean,
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
+  evidence?: SleepEvidence | null,
 ): SleepConfidence {
   const evidencePct = sleepEvidencePct(evidence);
   const corroborated = evidencePct >= 25;
+  const stateConflict = sleepStateWakeConflict(evidence);
   const longUncorroboratedAuto =
     !manual &&
-    (evidence?.inBedMin ?? 0) >= 9 * 60 &&
+    (evidence?.inBedMin ?? 0) >= 7 * 60 &&
     evidencePct < 10 &&
     (evidence?.sleepStateMin ?? 0) < 30;
+  if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto && (signalMin < 420 || coveragePct < 85)) return 'low';
   if (signalMin >= 150 && coveragePct >= 55) return 'medium';
@@ -2759,9 +2761,10 @@ function sleepConfidence(
 function sleepPerformanceCap(
   confidence: SleepConfidence,
   coveragePct: number,
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
+  evidence?: SleepEvidence | null,
 ): number {
   if (confidence === 'high') return 100;
+  if (sleepStateWakeConflict(evidence)) return Math.max(45, Math.min(68, coveragePct + 8));
   if (confidence === 'medium') {
     const corroborated = sleepEvidencePct(evidence) >= 25;
     const ceiling = corroborated ? 92 : 86;
@@ -2773,9 +2776,10 @@ function sleepPerformanceCap(
 function sleepQualityCap(
   confidence: SleepConfidence,
   coveragePct: number,
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null,
+  evidence?: SleepEvidence | null,
 ): number {
   if (confidence === 'high') return 99;
+  if (sleepStateWakeConflict(evidence)) return Math.max(40, Math.min(62, coveragePct + 4));
   const corroborated = sleepEvidencePct(evidence) >= 25;
   if (confidence === 'medium') return Math.max(72, Math.min(corroborated ? 90 : 84, coveragePct + (corroborated ? 12 : 6)));
   return Math.max(40, Math.min(62, coveragePct + 18));
@@ -2790,11 +2794,37 @@ function applyRecoveryConfidenceCap(recovery: number | null, detail: SleepDetail
   return recovery;
 }
 
-function sleepEvidencePct(evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null): number {
+type SleepEvidence = Pick<
+  SleepResult,
+  | 'inBedMin'
+  | 'motionMin'
+  | 'stillMin'
+  | 'movingMin'
+  | 'sleepStateMin'
+  | 'sleepStateWakeMin'
+  | 'sleepStateStillMin'
+  | 'sleepStateAsleepMin'
+  | 'sleepStateUpMin'
+>;
+
+function sleepEvidencePct(evidence?: SleepEvidence | null): number {
   if (!evidence?.inBedMin) return 0;
-  const stillMin = evidence.stillMin ?? Math.max(0, (evidence.motionMin ?? 0) - (evidence.movingMin ?? 0));
+  const stillMin = Math.max(
+    evidence.stillMin ?? 0,
+    evidence.sleepStateAsleepMin ?? 0,
+    evidence.sleepStateStillMin ?? 0,
+    Math.max(0, (evidence.motionMin ?? 0) - (evidence.movingMin ?? 0)),
+  );
   const corroboratedMin = stillMin;
   return Math.round((corroboratedMin / Math.max(1, evidence.inBedMin)) * 100);
+}
+
+function sleepStateWakeConflict(evidence?: SleepEvidence | null): boolean {
+  if (!evidence?.inBedMin || (evidence.sleepStateMin ?? 0) < 30) return false;
+  const stateMin = evidence.sleepStateMin ?? 0;
+  const wakeLike = (evidence.sleepStateWakeMin ?? 0) + (evidence.sleepStateUpMin ?? 0);
+  const sleepLike = (evidence.sleepStateAsleepMin ?? 0) + (evidence.sleepStateStillMin ?? 0);
+  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
@@ -2979,10 +3009,13 @@ function sleepCaptureNote(input: {
   manual: boolean;
   signalMin: number;
   coveragePct: number;
-  evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null;
+  evidence?: SleepEvidence | null;
 }): string {
   const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
   const evidencePct = sleepEvidencePct(input.evidence);
+  if (input.hasSleep && sleepStateWakeConflict(input.evidence) && !input.manual) {
+    return 'Sleep is capped because decoded strap-state evidence is mostly wake; review the window after auto sync finishes.';
+  }
   if (input.hasSleep && confidence === 'high') {
     return 'High-confidence sleep: HR coverage is strong and corroborated by still-worn band evidence.';
   }

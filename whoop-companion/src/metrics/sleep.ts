@@ -44,6 +44,10 @@ export type SleepResult = {
   stillMin: number; // minutes where the band reports still/low motion
   movingMin: number; // minutes where the band reports movement/activity
   sleepStateMin: number; // minutes with decoded band sleep-state evidence
+  sleepStateWakeMin: number; // decoded state 0
+  sleepStateStillMin: number; // decoded state 1
+  sleepStateAsleepMin: number; // decoded state 2
+  sleepStateUpMin: number; // decoded state 3
 };
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
@@ -357,6 +361,10 @@ export function durationOnlySleep(
     stillMin: 0,
     movingMin: 0,
     sleepStateMin: 0,
+    sleepStateWakeMin: 0,
+    sleepStateStillMin: 0,
+    sleepStateAsleepMin: 0,
+    sleepStateUpMin: 0,
   };
 }
 
@@ -396,6 +404,10 @@ export function computeSleep(
   const stillMin = window.filter((s) => s.motion != null && s.motion < 0.2).length;
   const movingMin = window.filter((s) => s.motion != null && s.motion >= 0.4).length;
   const sleepStateMin = window.filter((s) => s.bandSleepState != null).length;
+  const sleepStateWakeMin = window.filter((s) => s.bandSleepState === 0).length;
+  const sleepStateStillMin = window.filter((s) => s.bandSleepState === 1).length;
+  const sleepStateAsleepMin = window.filter((s) => s.bandSleepState === 2).length;
+  const sleepStateUpMin = window.filter((s) => s.bandSleepState === 3).length;
   if (hrs.length === 0) {
     const start = opts.startTs ?? window[0]?.ts ?? 0;
     const end = opts.endTs ?? ((window[window.length - 1]?.ts ?? start) + 60000);
@@ -495,5 +507,9 @@ export function computeSleep(
     stillMin,
     movingMin,
     sleepStateMin,
+    sleepStateWakeMin,
+    sleepStateStillMin,
+    sleepStateAsleepMin,
+    sleepStateUpMin,
   };
 }
