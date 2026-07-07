@@ -2809,13 +2809,13 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
   const artifactFloor = Math.max(42, medianHr - Math.max(6, medianHr * 0.12));
   const artifactCeiling = medianHr + Math.max(10, medianHr * 0.18);
   const rolling: number[] = [];
-  const window = 10;
+  const window = 20;
   for (let i = 0; i + window <= mins.length; i += 1) {
     const slice = mins.slice(i, i + window);
     const spanMin = ((slice[slice.length - 1]?.tsMs ?? 0) - (slice[0]?.tsMs ?? 0)) / 60000;
-    if (spanMin > 14) continue;
+    if (spanMin > 28) continue;
     const cleanSlice = slice.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
-    if (cleanSlice.length < 8) continue;
+    if (cleanSlice.length < 16) continue;
     const meanHr = cleanSlice.reduce((a, hr) => a + hr, 0) / cleanSlice.length;
     if (meanHr < artifactFloor || meanHr > artifactCeiling) continue;
     rolling.push(meanHr);
@@ -2827,13 +2827,13 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
       : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
   if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.25)));
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.35)));
   const cleanMinuteHrs = mins
     .map((p) => p.hr)
     .filter((hr) => hr >= artifactFloor && hr <= artifactCeiling)
     .sort((a, b) => a - b);
-  const p20Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.2)));
-  const distributionFloor = cleanMinuteHrs[p20Idx] ?? artifactFloor;
+  const p30Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.3)));
+  const distributionFloor = cleanMinuteHrs[p30Idx] ?? artifactFloor;
   return Math.round(Math.max(artifactFloor, distributionFloor, sorted[idx] as number));
 }
 
@@ -2868,16 +2868,7 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
     });
 
   if (windows.length < 3) return null;
-  const overnightMedian = median(windows.map((w) => w.rmssd).sort((a, b) => a - b));
-  const restful = windows
-    .slice()
-    .sort((a, b) => a.avgHr - b.avgHr)
-    .slice(0, Math.min(6, Math.max(3, Math.ceil(windows.length / 3))))
-    .map((w) => w.rmssd)
-    .sort((a, b) => a - b);
-  const restfulMedian = median(restful);
-  const blended = overnightMedian * 0.75 + restfulMedian * 0.25;
-  return round1(Math.min(blended, overnightMedian * 1.12));
+  return round1(median(windows.map((w) => w.rmssd).sort((a, b) => a - b)));
 }
 
 function cleanSampleRr(sample: HrSampleRow): number[] {
