@@ -1406,7 +1406,7 @@ class AppStore extends Store<AppState> {
     const rmssdSamples = toDayValues((d) => d.rmssd);
     const rhrSamples = toDayValues((d) => d.rhr);
     const respSamples = toDayValues((d) => d.resp);
-    const recovery = recoveryEstimate({
+    const rawRecovery = recoveryEstimate({
       rmssd,
       rhr,
       resp,
@@ -1415,6 +1415,7 @@ class AppStore extends Store<AppState> {
       rhrSamples,
       respSamples,
     }).score;
+    const recovery = applyRecoveryConfidenceCap(rawRecovery, sleepDetail);
 
     await upsertDailyMetric({
       day,
@@ -2312,7 +2313,7 @@ class AppStore extends Store<AppState> {
       rhrSamples,
       respSamples,
     });
-    recovery = recoveryResult.score;
+    recovery = applyRecoveryConfidenceCap(recoveryResult.score, sleepDetail);
     recoveryParts = recoveryResult.parts;
 
     // ---- Oura-style insights (HR/R-R only) ----
@@ -2776,6 +2777,15 @@ function sleepQualityCap(
   const corroborated = sleepEvidencePct(evidence) >= 25;
   if (confidence === 'medium') return Math.max(72, Math.min(corroborated ? 90 : 84, coveragePct + (corroborated ? 12 : 6)));
   return Math.max(40, Math.min(62, coveragePct + 18));
+}
+
+function applyRecoveryConfidenceCap(recovery: number | null, detail: SleepDetail | null): number | null {
+  if (recovery == null || !detail) return recovery;
+  const coverage = detail.coveragePct ?? 100;
+  const signal = detail.signalMin ?? 999;
+  if (detail.confidence === 'low' || coverage < 60 || signal < 150) return Math.min(recovery, 66);
+  if (detail.confidence === 'medium' || coverage < 80 || signal < 240) return Math.min(recovery, 85);
+  return recovery;
 }
 
 function sleepEvidencePct(evidence?: Pick<SleepResult, 'inBedMin' | 'motionMin' | 'stillMin' | 'movingMin' | 'sleepStateMin'> | null): number {
