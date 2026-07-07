@@ -691,7 +691,7 @@ describe('invite journey', () => {
       pairs: [],
       pendingInvite: null,
       refresh,
-      redeem: jest.fn(async () => ({ ok: false, error: 'local_mirror_pending' })),
+      redeem: jest.fn(async () => ({ ok: true, pendingLocalMirror: true })),
     });
     mockHook.value = hook;
     const tree = await mount();
