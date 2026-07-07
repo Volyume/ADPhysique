@@ -36,12 +36,6 @@ export async function startKeepAlive(): Promise<boolean> {
     const fg = await Location.requestForegroundPermissionsAsync();
     if (fg.status !== 'granted') return false;
     await requestNotificationPermission();
-    try {
-      await Location.requestBackgroundPermissionsAsync();
-    } catch {
-      // some devices reject the background request — the foreground service can
-      // still run; continue.
-    }
     if (await TaskManager.isTaskRegisteredAsync(TASK)) {
       running = true;
       return true;

@@ -142,7 +142,7 @@ export type AppState = {
   frameCount: number;
   capturing: boolean;
   draining: boolean;
-  backgroundKeepAlive: boolean; // Android foreground-service guard for background connect/sync
+  backgroundKeepAlive: boolean; // Android foreground-service guard for background sync
   today: DailyMetricRow | null;
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
@@ -196,7 +196,7 @@ const initialState: AppState = {
   frameCount: 0,
   capturing: false,
   draining: false,
-  backgroundKeepAlive: true,
+  backgroundKeepAlive: false,
   today: null,
   recentDays: [],
   lastSleep: null,
@@ -278,8 +278,7 @@ class AppStore extends Store<AppState> {
     const profile = await loadProfile();
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
-    const keepAliveRaw = await kvGet('backgroundKeepAlive');
-    const keepAlive = keepAliveRaw !== '0';
+    const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
@@ -611,7 +610,6 @@ class AppStore extends Store<AppState> {
     this.setState({ error: null });
     this.connectInFlight = true;
     try {
-      await this.ensureBackgroundSyncKeepAlive('Background auto-connect');
       await this.ble?.start(this.preferredDeviceId);
     } finally {
       this.connectInFlight = false;
@@ -1121,11 +1119,11 @@ class AppStore extends Store<AppState> {
             : s.historySync,
         }));
       } else {
-      this.setState({ error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.' });
-      return;
+        this.setState({ error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.' });
+        return;
       }
     }
-    await this.ensureBackgroundSyncKeepAlive(mode === 'auto' ? 'Automatic history sync' : 'Manual history sync');
+    void this.ensureBackgroundSyncKeepAlive(mode === 'auto' ? 'Automatic history sync' : 'Manual history sync').catch(() => {});
     this.clearAutoSyncTimer();
     this.clearHistoryTimeout();
     this.eventAssemblers.forEach((asm) => asm.reset());

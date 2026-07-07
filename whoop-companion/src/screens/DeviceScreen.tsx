@@ -208,9 +208,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           />
         </View>
         <Text style={styles.hint}>
-          Keeps an Android foreground service running so auto-connect, reconnect retries and long stored-history
-          syncs can continue after the app is backgrounded or the phone is locked. Leave this on for overnight
-          sleep backfill.
+          Optional Android foreground service for long syncs while the phone is locked. Connect normally first;
+          auto sync also runs whenever the app is open and connected.
         </Text>
       </Card>
 
