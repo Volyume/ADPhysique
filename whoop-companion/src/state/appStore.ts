@@ -94,7 +94,6 @@ import { computeEnergyReserve, EnergyReserve } from '../metrics/energyReserve';
 import {
   BandStepEstimate,
   estimateBandStepsFromCounters,
-  estimateStepsFromBandCounters,
   normaliseStepDivisor,
   LEGACY_WHOOP5_STEP_TICKS_PER_STEP,
   WHOOP5_STEP_TICKS_PER_STEP,
@@ -299,6 +298,12 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const STRAP_ALARM_KEY = 'strapAlarm';
+
+function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
+  if (!estimate || estimate.steps <= 0) return false;
+  const calibrated = Math.abs(divisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
+  return calibrated || estimate.confidence === 'medium';
+}
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -666,6 +671,9 @@ class AppStore extends Store<AppState> {
         if (band > high || (!calibrated && band < low) || (!calibrated && bandConfidence === 'low')) {
           return { steps: phoneForCompare, source: 'phone' };
         }
+      }
+      if (!bandStepsAreTrusted(state.bandStepEstimate, state.bandStepDivisor)) {
+        return phoneForCompare != null ? { steps: phoneForCompare, source: 'phone' } : { steps: null, source: null };
       }
       return { steps: band, source: 'band' };
     }
@@ -1256,7 +1264,8 @@ class AppStore extends Store<AppState> {
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
-    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(sod, dayEnd), this.getState().bandStepDivisor);
+    const stepEstimate = estimateBandStepsFromCounters(await getStepSamplesBetween(sod, dayEnd), this.getState().bandStepDivisor);
+    const steps = bandStepsAreTrusted(stepEstimate, this.getState().bandStepDivisor) ? stepEstimate?.steps ?? null : null;
 
     const manualRaw = await kvGet(`manualSleep:${day}`);
     const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
@@ -1424,10 +1433,12 @@ class AppStore extends Store<AppState> {
     for (const row of rows) {
       if (row.source === 'nap') continue;
       if (row.stepSource === 'manual' || row.stepSource === 'phone') continue;
-      const bandSteps = estimateStepsFromBandCounters(
+      const estimate = estimateBandStepsFromCounters(
         await getStepSamplesBetween(row.startTs, row.endTs),
         this.getState().bandStepDivisor,
       );
+      if (!bandStepsAreTrusted(estimate, this.getState().bandStepDivisor)) continue;
+      const bandSteps = estimate?.steps ?? null;
       if (bandSteps == null || bandSteps <= 0) continue;
       if (row.steps != null && Math.abs(row.steps - bandSteps) <= 1) continue;
       const durationMin = Math.max(1 / 60, (row.endTs - row.startTs) / 60000);
@@ -1754,13 +1765,16 @@ class AppStore extends Store<AppState> {
       : input.avgHr
         ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes)
         : null;
-    const bandActivitySteps =
+    const bandActivityEstimate =
       !isNap && input.steps == null
-        ? estimateStepsFromBandCounters(
+        ? estimateBandStepsFromCounters(
             await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []),
             this.getState().bandStepDivisor,
           )
         : null;
+    const bandActivitySteps = bandStepsAreTrusted(bandActivityEstimate, this.getState().bandStepDivisor)
+      ? bandActivityEstimate?.steps ?? null
+      : null;
     const activitySteps = input.steps ?? bandActivitySteps;
     const stepSource = input.stepSource ?? (bandActivitySteps != null ? 'band' : null);
     const row: CardioRow = {
@@ -2438,7 +2452,8 @@ class AppStore extends Store<AppState> {
   };
 
   private async enrichDetectedActivity(d: DetectedActivity): Promise<DetectedActivity> {
-    const steps = estimateStepsFromBandCounters(await getStepSamplesBetween(d.startTs, d.endTs), this.getState().bandStepDivisor);
+    const estimate = estimateBandStepsFromCounters(await getStepSamplesBetween(d.startTs, d.endTs), this.getState().bandStepDivisor);
+    const steps = bandStepsAreTrusted(estimate, this.getState().bandStepDivisor) ? estimate?.steps ?? null : null;
     if (steps == null || steps <= 0) return { ...d, label: 'Workout', steps: null, cadenceSpm: null };
     const minutes = Math.max(1 / 60, (d.endTs - d.startTs) / 60000);
     const cadenceSpm = Math.round(steps / minutes);
