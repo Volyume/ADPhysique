@@ -1279,14 +1279,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Meal plan: choose this day or the week, review the meals, then add them to your diary"
+                  accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Meal plan</Text>
-                    <Text style={styles.buildPlanSub}>Plan this day or the week from your targets. You review it before anything is added.</Text>
+                    <Text style={styles.buildPlanLabel}>Build meals</Text>
+                    <Text style={styles.buildPlanSub}>Create meals from your targets for this date or the week. Nothing is logged until you add it.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1815,8 +1815,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     padding: spacing.xxs,
   },
   dayPagerNav: {
@@ -1825,6 +1825,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
+    backgroundColor: colors.surface2,
   },
   dateButton: {
     flex: 1,
@@ -1835,6 +1836,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface2,
   },
   dateCopy: { alignItems: 'center', justifyContent: 'center', minWidth: 0 },
   dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
@@ -1911,8 +1913,8 @@ const styles = StyleSheet.create({
   addMealLabel: { ...type.label, color: colors.textPrimary },
   buildPlanBtn: {
     flexDirection: 'row', alignItems: 'center',
-    gap: spacing.sm, minHeight: 64,
-    backgroundColor: colors.surface2,
+    gap: spacing.sm, minHeight: 62,
+    backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.lg,
@@ -1926,8 +1928,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   buildPlanCopy: { flex: 1, minWidth: 0 },
-  buildPlanLabel: { ...type.label, color: colors.primary },
-  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  buildPlanLabel: { ...type.label, color: colors.textPrimary },
+  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2, lineHeight: 17 },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,

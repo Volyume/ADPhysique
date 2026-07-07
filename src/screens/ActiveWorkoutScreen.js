@@ -3462,7 +3462,7 @@ const styles = StyleSheet.create({
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   targetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   targetText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
-  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
+  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
@@ -3476,9 +3476,9 @@ const styles = StyleSheet.create({
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs },
   firstSetHintText: { ...type.caption, flex: 1, color: colors.primary, lineHeight: 18 },
   // COMP-001 card header: three lines replace the old chip stack.
-  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
   orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  beatLine: { alignSelf: 'stretch', minHeight: 38, justifyContent: 'center', paddingVertical: spacing.xxs },
+  beatLine: { alignSelf: 'stretch', minHeight: 32, justifyContent: 'center', paddingVertical: 0 },
   beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
@@ -3490,7 +3490,7 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.primaryFill },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.md, minHeight: 48, paddingVertical: spacing.sm, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
@@ -3503,7 +3503,7 @@ const styles = StyleSheet.create({
   // keeping the bottom bar's CTA the single filled-amber object on screen.
   extraSetBtnPromoted: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.md,
+    gap: spacing.xs, borderRadius: radius.md, minHeight: 48, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
   },
@@ -3548,7 +3548,7 @@ const styles = StyleSheet.create({
   clusterCancel: { alignItems: 'center', paddingVertical: spacing.xs },
   clusterCancelText: { fontSize: fontSize.sm, color: colors.textMuted },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 44, borderWidth: 1, borderColor: colors.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.sm, minHeight: 44, borderWidth: 1, borderColor: colors.border },
   actionBtnText: { ...type.label, color: colors.textSecondary },
   overflowBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -3562,7 +3562,7 @@ const styles = StyleSheet.create({
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0 },
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: 24, height: 24, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },

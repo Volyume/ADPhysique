@@ -78,8 +78,9 @@ function partnerCheerFailureMessage(error) {
 
 function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
-  const firstValue = labels?.[0] ? 0 : 1;
-  const values = Array.from({ length: max - firstValue + 1 }, (_, i) => i + firstValue);
+  const values = field === 'jointDiscomfort'
+    ? [0, 1, 2, 3]
+    : Array.from({ length: max }, (_, i) => i + 1);
   return (
     <View style={styles.ratingRow}>
       <View style={styles.ratingLabelRow}>
@@ -1692,7 +1693,7 @@ const styles = StyleSheet.create({
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
-  ratingBtns: { flexDirection: 'row', gap: spacing.xs },
+  ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   ratingBtn: {
     width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
