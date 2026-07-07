@@ -32,8 +32,13 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   if (assessment?.visualLeannessScore != null) {
     return `${assessment.leannessBandLabel || 'Scored'} ${Math.round(Number(assessment.visualLeannessScore))}/100`;
   }
+  const reasons = new Set([
+    ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
+    ...(Array.isArray(scan?.signals?.abstentionReasons) ? scan.signals.abstentionReasons : []),
+  ]);
+  if ([...reasons].some((reason) => /model_|source_unavailable|source_unusable/.test(String(reason)))) return 'Analysis unavailable';
   if (assessment?.scanConfidenceTier === 'not_enough') return 'Not enough confidence';
-  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'No score';
+  return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not scored';
 }
 
 export function scanWeightLabel(scan, { hideExact = false } = {}) {

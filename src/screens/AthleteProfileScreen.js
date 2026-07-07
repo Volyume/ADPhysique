@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha, alpha } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -16,6 +16,7 @@ import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import BottomSheet from '../components/BottomSheet';
+import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
 import {
   getAllExercises,
@@ -304,7 +305,7 @@ export default function AthleteProfileScreen({ navigation }) {
       summary.scan?.leannessBandLabel || null,
       `${Math.round(summary.scan.visualLeannessScore)}/100`,
     ].filter(Boolean).join(' - '),
-    sub: `Volyume score from private photos - ${scanConfidenceLabel(summary.scan?.confidence).toLowerCase()} - not body fat`,
+    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Visual progress, not body fat.`,
   } : {
     label: 'Body fat',
     value: bodyFatText,
@@ -337,21 +338,13 @@ export default function AthleteProfileScreen({ navigation }) {
                 ? `${avatarPresetConfig.label}. Tap to change or remove.`
                 : 'Add profile picture or Volyume avatar'}
           >
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-            ) : avatarPresetConfig ? (
-              <>
-                <Ionicons name={avatarPresetConfig.icon} size={24} color={colors.primary} />
-                <Text style={styles.avatarPresetText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
-                <View style={styles.avatarEditBadge}>
-                  <Ionicons name="camera-outline" size={13} color={colors.onPrimary} />
-                </View>
-              </>
-            )}
+            <ProfileAvatarMark
+              avatarUri={avatarUri}
+              presetKey={avatarPreset}
+              displayName={displayName}
+              size={72}
+              editable
+            />
           </TouchableOpacity>
           <View style={styles.heroInfo}>
             <View style={styles.nameLine}>
@@ -460,8 +453,8 @@ export default function AthleteProfileScreen({ navigation }) {
         onClose={() => setAvatarSheetOpen(false)}
         accessibilityLabel="Select avatar"
       >
-        <Text style={styles.avatarSheetTitle}>Select avatar</Text>
-        <Text style={styles.avatarSheetIntro}>Choose a photo, or pick a Volyume avatar.</Text>
+        <Text style={styles.avatarSheetTitle}>Profile picture</Text>
+        <Text style={styles.avatarSheetIntro}>Use your own photo or choose a Volyume gym avatar.</Text>
         <TouchableOpacity
           style={styles.photoOption}
           onPress={pickAvatar}
@@ -472,11 +465,12 @@ export default function AthleteProfileScreen({ navigation }) {
             <Ionicons name="image-outline" size={20} color={colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
-            <Text style={styles.photoOptionTitle}>{avatarUri ? 'Change photo' : 'Choose photo'}</Text>
+            <Text style={styles.photoOptionTitle}>{avatarUri ? 'Update photo' : 'Choose photo'}</Text>
             <Text style={styles.photoOptionSub}>Use your own profile picture.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
+        <Text style={styles.avatarGalleryLabel}>Volyume avatars</Text>
         <View style={styles.avatarPresetGrid}>
           {AVATAR_PRESETS.map((preset) => {
             const selected = avatarPreset === preset.key && !avatarUri;
@@ -489,9 +483,12 @@ export default function AthleteProfileScreen({ navigation }) {
                 accessibilityState={{ selected }}
                 accessibilityLabel={`${preset.label} avatar`}
               >
-                <View style={[styles.avatarPresetCircle, selected && styles.avatarPresetCircleSelected]}>
-                  <Ionicons name={preset.icon} size={24} color={selected ? colors.onPrimary : colors.primary} />
-                </View>
+                <ProfileAvatarMark
+                  presetKey={preset.key}
+                  displayName={displayName}
+                  size={58}
+                  selected={selected}
+                />
                 <Text style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
                   {preset.label}
                 </Text>
@@ -518,38 +515,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: circle(72),
-    backgroundColor: colors.primaryBg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: { width: '100%', height: '100%' },
-  avatarText: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.primary },
-  avatarPresetText: {
-    ...type.caption,
-    color: colors.primary,
-    fontWeight: fontWeight.black,
-    marginTop: spacing.xxs,
-  },
-  avatarEditBadge: {
-    position: 'absolute',
-    right: 4,
-    bottom: 4,
-    width: 24,
-    height: 24,
-    borderRadius: circle(24),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
+  avatar: { width: 72, height: 72 },
   heroInfo: { flex: 1, gap: spacing.xs },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
@@ -614,6 +580,7 @@ const styles = StyleSheet.create({
   statusPillText_attention: { color: colors.error },
   avatarSheetTitle: { ...type.h3, color: colors.textPrimary },
   avatarSheetIntro: { ...type.bodySm, color: colors.textSecondary },
+  avatarGalleryLabel: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', fontWeight: fontWeight.black },
   photoOption: {
     minHeight: 64,
     flexDirection: 'row',
@@ -643,34 +610,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   avatarPresetOption: {
-    width: '23%',
-    minWidth: 72,
+    flexBasis: '30%',
+    minWidth: 88,
     alignItems: 'center',
     gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
   },
   avatarPresetOptionSelected: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryBg,
-  },
-  avatarPresetCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: circle(48),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatarPresetCircleSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   avatarPresetOptionText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
   avatarPresetOptionTextSelected: { color: colors.primary },

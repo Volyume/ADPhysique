@@ -35,6 +35,18 @@ function normaliseFastTfliteUri(uri) {
   return null;
 }
 
+function sourceProtocolForLog(source) {
+  const value = String(source?.url || '').trim();
+  if (!value) return null;
+  const match = value.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+  return match ? match[1].toLowerCase() : 'none';
+}
+
+function safeFastTfliteSource(source) {
+  const url = normaliseFastTfliteUri(source?.url);
+  return url ? { url } : null;
+}
+
 export async function resolveProgressScanModelSource() {
   try {
     const imageModule = require('progress-scan-image');
@@ -161,13 +173,22 @@ function loadProgressScanModel() {
           modelUnavailableReason = 'model_source_unavailable';
           return null;
         }
-        return await loadTensorflowModel(modelSource, []);
+        const safeSource = safeFastTfliteSource(modelSource);
+        if (!safeSource) {
+          modelUnavailableReason = 'model_source_unusable';
+          logError('progressScanVision.modelSourceRejected', new Error('progress_scan_model_source_unusable'), {
+            hasModelSource: !!modelSource,
+            modelSourceUrlProtocol: sourceProtocolForLog(modelSource),
+          });
+          return null;
+        }
+        return await loadTensorflowModel(safeSource, []);
       } catch (e) {
         if (!modelUnavailableReason) modelUnavailableReason = 'model_load_failed';
         logError('progressScanVision.loadModel', e, {
           reason: modelUnavailableReason,
           hasModelSource: !!modelSource,
-          modelSourceUrlProtocol: String(modelSource?.url || '').split(':')[0] || null,
+          modelSourceUrlProtocol: sourceProtocolForLog(modelSource),
         });
         return null;
       }

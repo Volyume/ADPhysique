@@ -11,7 +11,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
     expect(source).toMatch(/label: 'Physique score'/);
     expect(source).toMatch(/label: 'Body fat'/);
-    expect(source).toMatch(/Volyume score from private photos/);
+    expect(source).toMatch(/Visual progress, not body fat/);
     expect(source).toMatch(/not body fat/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
@@ -24,18 +24,22 @@ describe('AthleteProfileScreen physique tile', () => {
   test('keeps gym avatar presets behind the tappable profile image', () => {
     const presetSource = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'profileAvatarPresets.js'), 'utf8');
     expect(source).toMatch(/import \{ AVATAR_PRESETS, avatarPresetFor \} from '\.\.\/lib\/profileAvatarPresets';/);
+    expect(source).toMatch(/import ProfileAvatarMark from '\.\.\/components\/ProfileAvatarMark';/);
     expect(presetSource).toMatch(/key: 'volyume_lift', label: 'Strength'/);
     expect(presetSource).toMatch(/key: 'volyume_physique', label: 'Physique'/);
     expect(presetSource).toMatch(/key: 'volyume_consistency', label: 'Consistency'/);
     expect(presetSource).toMatch(/key: 'volyume_progress', label: 'Progress'/);
+    expect(presetSource).toMatch(/key: 'volyume_power', label: 'Power'/);
+    expect(presetSource).toMatch(/key: 'volyume_conditioning', label: 'Conditioning'/);
     expect(source).toMatch(/<BottomSheet[\s\S]*accessibilityLabel="Select avatar"/);
+    expect(source).toMatch(/Volyume avatars/);
     expect(source).toMatch(/styles\.avatarPresetGrid/);
     expect(source).toMatch(/AVATAR_PRESETS\.map\(\(preset\) => \{/);
     expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
     expect(source).toMatch(/Add profile picture or Volyume avatar/);
     expect(source).not.toMatch(/title="Change photo"/);
     expect(source).not.toMatch(/title="Remove profile picture"/);
-    expect(coachSource).toMatch(/import \{ avatarPresetFor \} from '\.\.\/lib\/profileAvatarPresets';/);
-    expect(coachSource).toMatch(/const avatarPresetConfig = userProfile\?\.avatarPreset \? avatarPresetFor\(userProfile\.avatarPreset\) : null;/);
+    expect(coachSource).toMatch(/import ProfileAvatarMark from '\.\.\/components\/ProfileAvatarMark';/);
+    expect(coachSource).toMatch(/presetKey=\{userProfile\?\.avatarPreset\}/);
   });
 });

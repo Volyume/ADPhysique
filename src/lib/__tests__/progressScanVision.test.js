@@ -122,6 +122,12 @@ describe('Progress Scan vision signal extraction', () => {
   });
 
   test('does not pass bare Android asset keys to the native TFLite URL loader', async () => {
+    mockResolveBundledModel.mockResolvedValueOnce('assets_ml_selfie_segmentation');
+    await expect(resolveProgressScanModelSource()).resolves.toEqual({
+      url: 'file:///cache/selfie_segmentation.tflite',
+    });
+    expect(mockDownloadAsync).toHaveBeenCalledTimes(1);
+
     mockDownloadAsync.mockResolvedValueOnce({
       localUri: null,
       uri: 'assets_ml_selfie_segmentation',
@@ -140,6 +146,7 @@ describe('Progress Scan vision signal extraction', () => {
     const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
     expect(result.modelBacked).toBe(false);
     expect(result.abstentionReasons.some((reason) => ['model_unavailable', 'model_source_unavailable', 'model_run_failed'].includes(reason))).toBe(true);
+    expect(mockLoadTensorflowModel).not.toHaveBeenCalled();
     for (const [source] of mockLoadTensorflowModel.mock.calls) {
       expect(source).not.toEqual({ url: 'assets_ml_selfie_segmentation' });
     }

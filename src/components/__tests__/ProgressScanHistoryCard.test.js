@@ -100,4 +100,30 @@ describe('ProgressScanHistoryCard', () => {
     act(() => thumb.props.onPress?.());
     expect(onOpenPhoto).not.toHaveBeenCalled();
   });
+
+  test('model unavailable results are not presented as low-confidence photos', async () => {
+    const unscored = {
+      ...scan,
+      id: 'scan-model-missing',
+      analysisStatus: 'abstained',
+      qualityLabel: 'good',
+      copySummary: 'The scan was saved, but on-device analysis was not available for the required photos.',
+      abstentionReasons: ['model_unavailable'],
+      signals: {
+        physiqueAssessment: {
+          visualLeannessScore: null,
+          scanConfidenceLabel: 'Low',
+          progressSignalLabel: 'Inconclusive',
+        },
+      },
+    };
+    let tree;
+    await act(async () => {
+      tree = create(<ProgressScanHistoryCard scans={[unscored]} />);
+    });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Confidence: Analysis unavailable');
+    expect(text).toContain('Volyume scoreNot scored');
+    expect(text).not.toContain('Confidence: Low');
+  });
 });

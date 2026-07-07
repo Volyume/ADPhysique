@@ -8,9 +8,43 @@ import {
 } from '../styles/theme';
 
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+const MODEL_UNAVAILABLE_REASONS = new Set(['model_unavailable', 'model_source_unavailable', 'model_source_unusable', 'model_load_failed', 'model_run_failed']);
+const QUALITY_REASONS = new Set([
+  'too_dark',
+  'too_blurry',
+  'whole_body_not_visible',
+  'multiple_people',
+  'segmentation_low_confidence',
+  'clothing_or_background_uncertain',
+  'pose_not_clear',
+  'camera_tilted',
+  'measured_signals_incomplete',
+]);
 
 function assessmentFor(scan) {
   return scan?.signals?.physiqueAssessment || null;
+}
+
+function scanReasons(scan) {
+  return new Set([
+    ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
+    ...(Array.isArray(scan?.signals?.abstentionReasons) ? scan.signals.abstentionReasons : []),
+  ].filter(Boolean));
+}
+
+function scanScore(scan) {
+  const score = assessmentFor(scan)?.visualLeannessScore;
+  return score == null ? null : Number(score);
+}
+
+function unscoredState(scan) {
+  if (scanScore(scan) != null) return null;
+  const reasons = scanReasons(scan);
+  if ([...reasons].some((reason) => MODEL_UNAVAILABLE_REASONS.has(reason))) return 'analysis_unavailable';
+  if ([...reasons].some((reason) => QUALITY_REASONS.has(reason))) return 'retake_needed';
+  if (assessmentFor(scan)?.scanConfidenceTier === 'not_enough') return 'not_enough';
+  if (scan?.analysisStatus === 'abstained') return 'not_scored';
+  return null;
 }
 
 function comparisonLabel(scan) {
@@ -20,26 +54,36 @@ function comparisonLabel(scan) {
 }
 
 function confidenceLabel(scan) {
+  const state = unscoredState(scan);
+  if (state === 'analysis_unavailable') return 'Analysis unavailable';
+  if (state === 'retake_needed') return 'Retake needed';
+  if (state === 'not_enough') return 'Not enough confidence';
+  if (state === 'not_scored') return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.scanConfidenceLabel || scan?.qualityLabel || 'Saved';
 }
 
 function bandLabel(scan) {
+  if (unscoredState(scan)) return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.leannessBandLabel || 'Baseline';
 }
 
 function signalLabel(scan, { suppressed = false } = {}) {
   if (suppressed) return 'Hidden';
+  const state = unscoredState(scan);
+  if (state === 'analysis_unavailable') return 'Analysis unavailable';
+  if (state === 'retake_needed') return 'Retake needed';
+  if (state) return 'Not scored';
   const assessment = assessmentFor(scan);
   return assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || 'Baseline scan';
 }
 
 function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
-  const score = assessmentFor(scan)?.visualLeannessScore;
+  const score = scanScore(scan);
   if (suppressed) return 'Hidden';
   if (hideExact) return 'Hidden';
-  return score != null ? `${Math.round(Number(score))}/100` : 'Withheld';
+  return score != null ? `${Math.round(score)}/100` : 'Not scored';
 }
 
 function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
@@ -50,6 +94,16 @@ function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
 
 function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   if (suppressed) return 'Score detail is hidden right now. Your photos remain private.';
+  const state = unscoredState(scan);
+  if (state === 'analysis_unavailable') {
+    return scan?.copySummary || 'The photos are saved, but on-device scan analysis did not run for the required front and back photos.';
+  }
+  if (state === 'retake_needed') {
+    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score because the read was not reliable enough. Retake with your whole body visible, even lighting and a plain background.';
+  }
+  if (state === 'not_enough' || state === 'not_scored') {
+    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score from this set.';
+  }
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
   if (scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;

@@ -6,16 +6,17 @@
  * an AI chat surface: every destination is a rules-based Volyume flow.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
+import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllWorkouts, getCoachOutputHistory, getLatestCoachOutput } from '../lib/database';
@@ -23,7 +24,6 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
-import { avatarPresetFor } from '../lib/profileAvatarPresets';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -98,7 +98,6 @@ export default function YouScreen({ navigation }) {
     || 'Athlete';
   const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
-  const avatarPresetConfig = userProfile?.avatarPreset ? avatarPresetFor(userProfile.avatarPreset) : null;
   const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
 
   const partners = usePartners(isPro ? user?.id : null, tier);
@@ -124,15 +123,12 @@ export default function YouScreen({ navigation }) {
           onPress={() => navigation.navigate('AthleteProfile')}
           accessibilityLabel="Open athlete profile"
         >
-          <View style={styles.avatar}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-            ) : avatarPresetConfig ? (
-              <Ionicons name={avatarPresetConfig.icon} size={22} color={colors.primary} />
-            ) : (
-              <Text style={styles.avatarText}>{(displayName?.[0] || 'A').toUpperCase()}</Text>
-            )}
-          </View>
+          <ProfileAvatarMark
+            avatarUri={avatarUri}
+            presetKey={userProfile?.avatarPreset}
+            displayName={displayName}
+            size={56}
+          />
           <View style={styles.profileInfo}>
             <View style={styles.profileNameRow}>
               <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
@@ -282,19 +278,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: circle(56),
-    backgroundColor: colors.primaryBg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: { width: '100%', height: '100%' },
-  avatarText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary },
   profileInfo: { flex: 1, gap: spacing.xxs },
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   profileName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
