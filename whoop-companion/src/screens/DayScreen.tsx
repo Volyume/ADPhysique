@@ -329,6 +329,9 @@ function daySleepReview(metric: DailyMetricRow): {
   const signal = detail.signalMin ?? 0;
   const inBed = detail.inBedMin ?? metric.sleepMin;
   const efficiency = detail.efficiency ?? (inBed > 0 ? Math.round((metric.sleepMin / inBed) * 100) : null);
+  const rawHoursVsNeeded = detail.needMin && metric.sleepMin != null
+    ? Math.round((metric.sleepMin / Math.max(1, detail.needMin)) * 100)
+    : detail.hoursVsNeeded ?? 0;
   const hasCoreVitals = metric.rmssd != null && metric.rhr != null && metric.resp != null;
   const trustTier = sleepTrustTier(detail);
 
@@ -358,7 +361,7 @@ function daySleepReview(metric: DailyMetricRow): {
     };
   }
 
-  if ((detail.hoursVsNeeded ?? 0) > 105 || (detail.performance ?? 0) > 100) {
+  if (rawHoursVsNeeded > 105) {
     return {
       label: 'NEED',
       title: 'Sleep need looks overfilled',
