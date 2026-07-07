@@ -3011,15 +3011,15 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
       : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
   if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
-  // Use a stable low-sleep percentile rather than the absolute lowest windows.
-  // The lowest slices are vulnerable to optical dropouts and were under-reading RHR.
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.45)));
+  // Use the stable middle of the resting window distribution rather than the
+  // absolute lowest slices. Low tails are vulnerable to optical dropouts.
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.5)));
   const cleanMinuteHrs = mins
     .map((p) => p.hr)
     .filter((hr) => hr >= artifactFloor && hr <= artifactCeiling)
     .sort((a, b) => a - b);
-  const p40Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.4)));
-  const distributionFloor = cleanMinuteHrs[p40Idx] ?? artifactFloor;
+  const p45Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.45)));
+  const distributionFloor = cleanMinuteHrs[p45Idx] ?? artifactFloor;
   return Math.round(Math.max(artifactFloor, distributionFloor, sorted[idx] as number));
 }
 
