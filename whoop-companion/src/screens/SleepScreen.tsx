@@ -59,6 +59,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const effectiveSync = historySync ?? lastHistorySync;
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
+  const captureAction = capture ? sleepCaptureAction(capture) : null;
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
@@ -150,6 +151,16 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               {formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs)}
             </Text>
             <Text style={styles.captureNote}>{capture.note}</Text>
+            {captureAction ? (
+              <NavRow
+                label={captureAction.label}
+                icon={captureAction.icon}
+                iconColor={captureAction.color}
+                value={captureAction.value}
+                onPress={() => nav.navigate(captureAction.route)}
+                last
+              />
+            ) : null}
           </>
         ) : (
           <Empty text="Capture quality appears after the first metric refresh." />
@@ -429,6 +440,36 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
   if (confidence === 'high') return colors.recoveryGreen;
   if (confidence === 'medium') return colors.recoveryYellow;
   return colors.textTertiary;
+}
+
+function sleepCaptureAction(capture: {
+  confidence: 'high' | 'medium' | 'low';
+  coveragePct: number;
+  signalMin: number;
+}): {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} | null {
+  if (capture.confidence === 'high') return null;
+  if (capture.coveragePct < 60 || capture.signalMin < 150) {
+    return {
+      label: 'Sync more overnight data',
+      value: `${capture.coveragePct}% coverage`,
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+  return {
+    label: 'Review sleep window',
+    value: confidenceLabel(capture.confidence),
+    icon: 'create',
+    color: colors.sleepTeal,
+    route: { name: 'editSleep' },
+  };
 }
 
 function formatDecodedRange(firstTs?: number, lastTs?: number): string {
