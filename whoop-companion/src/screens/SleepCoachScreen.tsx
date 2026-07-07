@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
+import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav, Route } from '../ui/navigation';
 import { formatDuration } from '../util/time';
@@ -101,6 +101,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
   const lastSleepTrust = sleepTrustTier(today?.sleepDetail);
+  const lastSleepTrusted = lastSleepTrust === 'high' || lastSleepTrust === 'medium';
   const lastSleepPerformancePct = displayPct(
     sleepPerformance?.score ?? today?.sleepDetail?.performance ?? (lastSleep?.performance != null ? lastSleep.performance * 100 : null),
   );
@@ -115,7 +116,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     recovery: today?.recovery ?? null,
     sleepDebtMin: need?.debtMin ?? 0,
     lastSleep,
-    lastSleepTrusted: lastSleepTrust === 'high' || lastSleepTrust === 'medium',
+    lastSleepTrusted,
     currentGoal: goal,
   });
   const alarmMeta =
@@ -211,11 +212,19 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <View style={styles.recommendStats}>
-          <Stat label="Readiness" value={readiness?.score ?? '-'} color={readyColor(readiness?.score)} />
-          <Stat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={readyColor(today?.recovery)} />
-          <Stat label="Sleep trust" value={lastSleepTrust === 'none' ? '-' : lastSleepTrust} color={trustColor(lastSleepTrust)} />
-          <Stat label="Debt" value={formatDuration(need?.debtMin ?? 0)} color={(need?.debtMin ?? 0) >= 60 ? colors.recoveryYellow : colors.sleepTeal} />
+          <PlanStat label="Readiness" value={readiness?.score ?? '-'} color={readyColor(readiness?.score)} />
+          <PlanStat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={readyColor(today?.recovery)} />
+          <PlanStat label="Sleep trust" value={lastSleepTrust === 'none' ? '-' : lastSleepTrust} color={trustColor(lastSleepTrust)} />
+          <PlanStat label="Debt" value={formatDuration(need?.debtMin ?? 0)} color={(need?.debtMin ?? 0) >= 60 ? colors.recoveryYellow : colors.sleepTeal} />
         </View>
+        {lastSleep && !lastSleepTrusted ? (
+          <View style={styles.trustCallout}>
+            <Ionicons name="sync-circle" size={18} color={colors.recoveryYellow} />
+            <Text style={styles.trustCalloutText}>
+              Sleep is still low-confidence, so this coach is holding the target steady until auto sync improves coverage.
+            </Text>
+          </View>
+        ) : null}
         {recommendation.mode.key !== goal ? (
           <SecondaryButton title={`Apply ${recommendation.mode.pct} ${recommendation.mode.name}`} onPress={() => void appStore.setSleepGoal(recommendation.mode.key)} />
         ) : (
@@ -407,6 +416,28 @@ function trustColor(tier: ReturnType<typeof sleepTrustTier>): string {
   return colors.textTertiary;
 }
 
+function PlanStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  color?: string;
+}) {
+  const empty = value === '-' || value === '' || value == null;
+  return (
+    <View style={styles.planStat}>
+      <Text style={[styles.planStatValue, { color: empty ? colors.textTertiary : color ?? colors.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>
+        {empty ? '-' : value}
+      </Text>
+      <Text style={styles.planStatLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function modeFor(key: number): GoalMode {
   return MODES.find((m) => m.key === key) ?? MODES[1]!;
 }
@@ -554,7 +585,12 @@ const styles = StyleSheet.create({
   recommendBadgeText: { color: '#000', fontSize: 15, fontFamily: fonts.black },
   recommendTitle: { color: colors.text, fontSize: 18, fontFamily: fonts.textBold },
   recommendBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4, fontFamily: fonts.text },
-  recommendStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 },
+  recommendStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14, marginBottom: 10 },
+  planStat: { width: '48%', minHeight: 58, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, justifyContent: 'center' },
+  planStatValue: { fontSize: 19, fontFamily: fonts.black, textTransform: 'capitalize' },
+  planStatLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.textBold },
+  trustCallout: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderColor: `${colors.recoveryYellow}44`, backgroundColor: `${colors.recoveryYellow}12`, borderRadius: 8, padding: 10, marginBottom: 10 },
+  trustCalloutText: { flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17, fontFamily: fonts.text },
   recommendMeta: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 10, fontFamily: fonts.text },
   modeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   modeBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
