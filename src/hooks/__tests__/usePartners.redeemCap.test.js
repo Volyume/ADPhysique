@@ -333,6 +333,50 @@ describe('usePartners redeem enforces the partner cap', () => {
     });
   });
 
+  test('share win retries after a stale partnership response once the pair is visible', async () => {
+    mockLocalPartnershipRows = [{
+      id: 'p1',
+      status: 'active',
+      memberA: 'me',
+      memberB: 'them',
+      partnerFirstName: 'Sam',
+      streakEnabled: true,
+      acceptedAt: 1,
+      createdAt: 1,
+    }];
+    service.sendPartnerWinCard
+      .mockResolvedValueOnce({ ok: false, error: 'not_active' })
+      .mockResolvedValueOnce({ ok: true, data: { id: 'win1', pair_id: 'p1' } });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.shareWin('p1', { draft: { type: 'workout_summary', title: 'Big session', summary: 'Done', detail: 'Upper body' } }); });
+    expect(r.ok).toBe(true);
+    expect(service.sendPartnerWinCard).toHaveBeenCalledTimes(2);
+    expect(db.upsertPartnerWinCardFromCloud).toHaveBeenCalledWith({ id: 'win1', pair_id: 'p1' });
+  });
+
+  test('revoke win retries after a stale partner session response when the pair id is supplied', async () => {
+    mockLocalPartnershipRows = [{
+      id: 'p1',
+      status: 'active',
+      memberA: 'me',
+      memberB: 'them',
+      partnerFirstName: 'Sam',
+      streakEnabled: true,
+      acceptedAt: 1,
+      createdAt: 1,
+    }];
+    service.revokePartnerWinCard
+      .mockResolvedValueOnce({ ok: false, error: 'partner_auth_required' })
+      .mockResolvedValueOnce({ ok: true, data: { id: 'win1', pair_id: 'p1', revoked_at: '2026-07-07T10:00:00.000Z' } });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.revokeWin('win1', 'p1'); });
+    expect(r.ok).toBe(true);
+    expect(service.revokePartnerWinCard).toHaveBeenCalledTimes(2);
+    expect(db.upsertPartnerWinCardFromCloud).toHaveBeenCalledWith({ id: 'win1', pair_id: 'p1', revoked_at: '2026-07-07T10:00:00.000Z' });
+  });
+
   test('creating an invite seeds the pending local row before background sync', async () => {
     service.createPartnerInvite.mockResolvedValueOnce({
       ok: true,

@@ -53,7 +53,7 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 }
 
-function shouldRetryCheerAfterMirrorRefresh(error) {
+function shouldRetryPartnerActionAfterMirrorRefresh(error) {
   return error === 'not_active' || error === 'partner_auth_required';
 }
 
@@ -544,7 +544,7 @@ export default function usePartners(userId, tier) {
 
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
     let r = await sendCheer(userId, { pairId, kind, reciprocal });
-    if (!r?.ok && shouldRetryCheerAfterMirrorRefresh(r?.error)) {
+    if (!r?.ok && shouldRetryPartnerActionAfterMirrorRefresh(r?.error)) {
       await pullPartnerMirrorNow(userId);
       const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
       if (visible) {
@@ -562,7 +562,14 @@ export default function usePartners(userId, tier) {
   }, [userId, load]);
 
   const shareWin = useCallback(async (pairId, preview) => {
-    const r = await sendPartnerWinCard(userId, { pairId, preview });
+    let r = await sendPartnerWinCard(userId, { pairId, preview });
+    if (!r?.ok && shouldRetryPartnerActionAfterMirrorRefresh(r?.error)) {
+      await pullPartnerMirrorNow(userId);
+      const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
+      if (visible) {
+        r = await sendPartnerWinCard(userId, { pairId, preview });
+      }
+    }
     if (r.ok && r.data) {
       try { await upsertPartnerWinCardFromCloud(r.data); } catch (_) { /* pull heals */ }
     }
@@ -570,8 +577,15 @@ export default function usePartners(userId, tier) {
     return r;
   }, [userId, load]);
 
-  const revokeWin = useCallback(async (cardId) => {
-    const r = await revokePartnerWinCard(userId, { cardId });
+  const revokeWin = useCallback(async (cardId, pairId = null) => {
+    let r = await revokePartnerWinCard(userId, { cardId });
+    if (!r?.ok && pairId && shouldRetryPartnerActionAfterMirrorRefresh(r?.error)) {
+      await pullPartnerMirrorNow(userId);
+      const visible = await waitForAcceptedPartnershipVisible(userId, { partnershipId: pairId });
+      if (visible) {
+        r = await revokePartnerWinCard(userId, { cardId });
+      }
+    }
     if (r.ok && r.data) {
       try { await upsertPartnerWinCardFromCloud(r.data); } catch (_) { /* pull heals */ }
     } else if (r.ok) {

@@ -367,6 +367,24 @@ describe('partner win cards', () => {
     expect(r).toEqual({ ok: false, error: 'win_cards_unavailable' });
   });
 
+  test('normalises stale win-card partnerships before blaming the connection', async () => {
+    const c = winCardClient({ insertError: { status: 403, message: 'new row violates row-level security policy for table "partner_win_cards"' } });
+    _setClientForTests(c);
+    const preview = buildShareWinPreview('personal_record', {
+      liftName: 'Incline press',
+      recordLabel: 'New 8-rep best',
+    });
+    const r = await sendPartnerWinCard('u1', { pairId: 'p1', preview });
+    expect(r).toEqual({ ok: false, error: 'not_active' });
+  });
+
+  test('normalises win-card auth failures before blaming the connection', async () => {
+    const c = winCardClient({ updateError: { status: 401, message: 'JWT expired' } });
+    _setClientForTests(c);
+    const r = await revokePartnerWinCard('u1', { cardId: 'win1' });
+    expect(r).toEqual({ ok: false, error: 'partner_auth_required' });
+  });
+
   test('revokes only the sender-owned win card', async () => {
     const c = winCardClient();
     _setClientForTests(c);
