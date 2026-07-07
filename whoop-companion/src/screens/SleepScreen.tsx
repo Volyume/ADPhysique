@@ -90,6 +90,11 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             <Stat label="Signal" value={capture.signalMin} unit="min" />
           </View>
         ) : null}
+        {perf?.cappedByConfidence ? (
+          <Text style={styles.capNote}>
+            Score capped at {perf.confidenceCapPct}% until overnight coverage/confidence improves.
+          </Text>
+        ) : null}
       </Card>
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
@@ -513,6 +518,7 @@ function formatDecodedRange(firstTs?: number, lastTs?: number): string {
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
+  capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
   scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
   scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
   scoreRowDetail: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },

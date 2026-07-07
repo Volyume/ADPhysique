@@ -35,6 +35,8 @@ export type SleepPerformance = {
   score: number; // 0..100 composite (estimate)
   band: Band;
   estimated: true; // never presented as WHOOP-exact
+  confidenceCapPct: number | null;
+  cappedByConfidence: boolean;
   contributors: SleepContributor[];
 };
 
@@ -62,6 +64,7 @@ export function computeSleepPerformance(input: {
   const blended = Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum);
   const confidenceCapPct = input.confidenceCapPct == null ? null : clampPct(input.confidenceCapPct);
   const score = clampPct(Math.min(blended, confidenceCapPct ?? 100));
+  const cappedByConfidence = confidenceCapPct != null && score < blended;
 
   const contributors: SleepContributor[] = [
     { key: 'hoursVsNeeded', label: 'Hours vs Needed', value: Math.round(hoursVsNeededPct), band: hoursVsNeededBand(hoursVsNeededPct), inverse: false },
@@ -70,5 +73,5 @@ export function computeSleepPerformance(input: {
     { key: 'highStress', label: 'High Sleep Stress', value: Math.round(highStressPct), band: highStressBand(highStressPct), inverse: true },
   ];
 
-  return { score, band: performanceBand(score), estimated: true, contributors };
+  return { score, band: performanceBand(score), estimated: true, confidenceCapPct, cappedByConfidence, contributors };
 }
