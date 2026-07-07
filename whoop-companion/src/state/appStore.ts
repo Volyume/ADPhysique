@@ -292,6 +292,9 @@ const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const BAND_STEP_FRESH_MS = 30 * 60 * 1000;
+const BAND_STEP_UNCALIBRATED_AGREE_RATIO = 1.35;
+const BAND_STEP_CALIBRATED_AGREE_RATIO = 1.8;
+const BAND_STEP_PHONE_COMPARE_MIN = 50;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
@@ -652,8 +655,16 @@ class AppStore extends Store<AppState> {
       if (bandIsStale && phone != null && phone > band) {
         return { steps: phone, source: 'phone' };
       }
-      if (phone != null && phone > 0 && band > phone * 2.25) {
-        return { steps: phone, source: 'phone' };
+      if (phone != null && phone >= BAND_STEP_PHONE_COMPARE_MIN) {
+        const divisor = state.bandStepDivisor;
+        const calibrated = Math.abs(divisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
+        const agreeRatio = calibrated ? BAND_STEP_CALIBRATED_AGREE_RATIO : BAND_STEP_UNCALIBRATED_AGREE_RATIO;
+        const high = phone * agreeRatio;
+        const low = phone / agreeRatio;
+        const bandConfidence = state.bandStepEstimate?.confidence ?? 'low';
+        if (band > high || (!calibrated && band < low) || (!calibrated && bandConfidence === 'low')) {
+          return { steps: phone, source: 'phone' };
+        }
       }
       return { steps: band, source: 'band' };
     }

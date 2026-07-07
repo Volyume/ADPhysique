@@ -81,6 +81,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     : 'Not yet - connect to sync';
   const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const stepRangeText = formatStepRange(bandStepEstimate?.firstTs, bandStepEstimate?.lastTs);
+  const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
+  const stepTrust = stepCalibrated ? 'calibrated' : stepSource === 'phone' && bandSteps ? 'phone verified' : 'uncalibrated';
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -308,13 +310,14 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Stat label="Today" value={steps != null ? steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
           <Stat label="Source" value={stepSource === 'band' ? 'band est.' : stepSource ?? '-'} />
-          <Stat label="Band estimate" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
+          <Stat label="Trust" value={stepTrust} />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+          <Stat label="Band estimate" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
           <Stat label="Raw counter" value={bandStepEstimate?.rawTicks ?? '-'} />
           <Stat label="Units/step" value={bandStepDivisor.toFixed(1)} />
-          <Stat label="Confidence" value={bandStepEstimate?.confidence ?? '-'} />
         </View>
+        <Text style={styles.diagText}>Band confidence: {bandStepEstimate?.confidence ?? '-'}</Text>
         <Text style={styles.diagText}>Band counter range: {stepRangeText}</Text>
         <View style={styles.calibrationRow}>
           <View style={{ flex: 1 }}>
@@ -334,8 +337,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          WHOOP history now defaults to the captured 1:1 counter-to-step mapping for this firmware. Use calibration after
-          a known short walk if your strap drifts high or low.
+          Today uses phone steps when the uncalibrated band counter disagrees. After a known walk, enter the real step
+          count to calibrate the strap counter for workouts and backfilled days.
         </Text>
       </Card>
 
