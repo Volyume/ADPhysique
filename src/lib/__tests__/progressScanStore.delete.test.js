@@ -39,7 +39,12 @@ jest.mock('../uuid', () => ({
   generateUUID: jest.fn(() => 'test-id'),
 }));
 
-const { deleteProgressScanSession, detachProgressScanPhoto, finishProgressScanSession } = require('../progressScanStore');
+const {
+  deleteProgressScanSession,
+  detachProgressScanPhoto,
+  finishProgressScanSession,
+  getProgressScanSession,
+} = require('../progressScanStore');
 const { deleteProgressPhoto } = require('../progressPhotos');
 const { deletePhotoMeta } = require('../progressPhotoMeta');
 const { logError } = require('../errorLog');
@@ -134,6 +139,50 @@ function seedCompletedSessionAssets() {
 }
 
 describe('deleteProgressScanSession cleanup', () => {
+  test('normalises stored v1 Volyume Scores when reading old local scans', async () => {
+    mockSession = {
+      id: 'scan-1',
+      user_id: 'user-1',
+      captured_at: 1000,
+      status: 'complete',
+      analysis_status: 'complete',
+      required_poses_complete: 1,
+      signals_json: JSON.stringify({
+        physiqueScoreVersion: 'volyume_physique_scan_score_v1',
+        physiqueAssessment: {
+          assessmentVersion: 'volyume_physique_scan_score_v1',
+          analysisType: 'visual_physique_score',
+          visualLeannessScore: 37,
+          leannessBand: 'athletic',
+          leannessBandLabel: 'Athletic',
+          progressSignal: 'baseline',
+          progressSignalLabel: 'Baseline scan',
+          scanConfidenceTier: 'moderate',
+          scanConfidenceLabel: 'Moderate',
+        },
+      }),
+      copy_summary: 'Baseline Volyume Score index 37. Athletic band.',
+    };
+
+    const scan = await getProgressScanSession('user-1', 'scan-1');
+
+    expect(scan.signals.physiqueScoreVersion).toBe('volyume_physique_scan_score_v2');
+    expect(scan.signals.legacyPhysiqueScoreVersion).toBe('volyume_physique_scan_score_v1');
+    expect(scan.signals.physiqueAssessment).toMatchObject({
+      assessmentVersion: 'volyume_physique_scan_score_v2',
+      legacyAssessmentVersion: 'volyume_physique_scan_score_v1',
+      visualLeannessScore: 71,
+      leannessBand: 'athletic',
+      leannessBandLabel: 'Athletic',
+    });
+    expect(scan.signals.physiqueAssessment.indexInputs).toMatchObject({
+      legacyVisualLeannessScore: 37,
+      displayScoreCalibratedFrom: 'volyume_physique_scan_score_v1',
+    });
+    expect(scan.copySummary).toMatch(/Volyume Score index 71/);
+    expect(scan.copySummary).not.toMatch(/index 37/);
+  });
+
   test('deletes scan rows first and logs when photo file cleanup fails', async () => {
     seedAsset();
     deleteProgressPhoto.mockResolvedValue(false);

@@ -11,6 +11,8 @@ import {
   explainMeasuredScanDelta,
   estimateBodyFatFromScanAssets,
   measuredSignalsSummaryFromAssets,
+  normaliseStoredProgressScanSignals,
+  progressScanAssessmentCopy,
   requiredPosesComplete,
   scanComparability,
   parseMaybeJson,
@@ -28,6 +30,10 @@ function asJson(value) {
 
 function rowToScan(row) {
   if (!row) return null;
+  const signals = normaliseStoredProgressScanSignals(parseMaybeJson(row.signals_json, null));
+  const copySummary = signals?.physiqueAssessment?.legacyAssessmentVersion
+    ? progressScanAssessmentCopy(signals.physiqueAssessment)
+    : row.copy_summary ?? null;
   return {
     id: row.id,
     userId: row.user_id,
@@ -49,13 +55,13 @@ function rowToScan(row) {
     qualityLabel: row.quality_label ?? null,
     modelVersion: row.model_version ?? null,
     estimatorVersion: row.estimator_version ?? null,
-    signals: parseMaybeJson(row.signals_json, null),
+    signals,
     abstentionReasons: parseMaybeJson(row.abstention_reasons_json, []),
     biasFlags: parseMaybeJson(row.bias_flags_json, []),
     signalsJson: row.signals_json ?? null,
     abstentionReasonsJson: row.abstention_reasons_json ?? null,
     biasFlagsJson: row.bias_flags_json ?? null,
-    copySummary: row.copy_summary ?? null,
+    copySummary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
