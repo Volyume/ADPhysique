@@ -49,8 +49,20 @@ describe('WorkoutSummaryScreen partner-beat moment wiring', () => {
     expect(src).toMatch(/result\?\.ok \|\| result\?\.error === 'already_cheered'/);
     expect(src).toMatch(/WorkoutSummaryScreen\.postWorkoutCheer/);
     expect(src).toMatch(/partnerCheerFailureMessage\(result\?\.error\)/);
+    expect(src).toContain("error === 'not_active' || error === 'partner_syncing'");
+    expect(src).toContain('Volyume is still setting up this partnership on this device.');
+    expect(src).toMatch(/variant: result\?\.error === 'partner_syncing' \|\| result\?\.error === 'not_active' \? 'warning' : 'error'/);
     expect(src).toContain('Partner cheers are not available right now. Try again later.');
     expect(src).toContain('Partner cheers need the latest partner update before they can send.');
+  });
+
+  test('post-workout cheer cannot double-send while the partner call is in flight', () => {
+    expect(src).toContain('const [postWorkoutCheerSending, setPostWorkoutCheerSending] = useState(false);');
+    expect(src).toMatch(/if \(!partners\?\.cheerEnabled \|\| postWorkoutCheerSending\) return/);
+    expect(src).toMatch(/setPostWorkoutCheerSending\(true\);/);
+    expect(src).toMatch(/finally \{\s*setPostWorkoutCheerSending\(false\);/);
+    expect(src).toMatch(/disabled=\{!partners\.cheerEnabled \|\| postWorkoutCheerSending\}/);
+    expect(src).toContain("postWorkoutCheerSending ? 'Sending' : partners.cheerEnabled ? 'Cheer' : 'Sent'");
   });
 
   test('the beat keeps its existing gating (no new beat for unpaired users)', () => {

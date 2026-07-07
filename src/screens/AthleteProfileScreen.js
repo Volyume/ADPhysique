@@ -36,6 +36,7 @@ import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athl
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
+import { formatVolyumeScore } from '../lib/progressScanDisplay';
 
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
@@ -83,7 +84,7 @@ function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
 
 function physiqueScoreTileValue(scan) {
   const score = Number(scan?.visualLeannessScore);
-  const scoreLabel = Number.isFinite(score) ? `index ${Math.round(score)}` : null;
+  const scoreLabel = Number.isFinite(score) ? formatVolyumeScore(score) : null;
   return [
     scan?.leannessBandLabel || null,
     scoreLabel,
@@ -92,7 +93,7 @@ function physiqueScoreTileValue(scan) {
 
 function physiqueScoreTileSub(scan) {
   const signal = scan?.progressSignalLabel || (scan?.progressSignal === 'baseline' ? 'Baseline scan' : null);
-  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private progress index, not body fat.`;
+  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private progress score, not body fat.`;
 }
 
 const COACHING_PHASE_LABELS = {

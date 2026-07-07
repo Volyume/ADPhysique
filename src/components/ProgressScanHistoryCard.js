@@ -5,7 +5,11 @@ import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
   colors, spacing, radius, type, fontWeight, iconSize,
 } from '../styles/theme';
-import { progressScanAssessmentForDisplay, progressScanScoreForDisplay } from '../lib/progressScanDisplay';
+import {
+  formatVolyumeScore,
+  progressScanAssessmentForDisplay,
+  progressScanScoreForDisplay,
+} from '../lib/progressScanDisplay';
 
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const MODEL_UNAVAILABLE_REASONS = new Set(['model_unavailable', 'model_source_unavailable', 'model_source_unusable', 'model_load_failed', 'model_run_failed']);
@@ -89,7 +93,7 @@ function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {
   const score = scanScore(scan);
   if (suppressed) return 'Hidden';
   if (hideExact) return 'Hidden';
-  return score != null ? `${score}` : 'Not scored';
+  return score != null ? formatVolyumeScore(score) : 'Not scored';
 }
 
 function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
@@ -145,7 +149,7 @@ export default function ProgressScanHistoryCard({
         <View style={styles.scanHeadingGroup}>
           <Text style={styles.scanTitle}>Volyume Score results</Text>
           <Text style={styles.scanSubtitle}>
-            Your private photo progress index. It compares repeatable front and back photo signals; it is not body fat percentage or a rating of your physique.
+            Your private progress score. It compares repeatable front and back photo signals; it is not body fat percentage or a rating of your physique.
           </Text>
         </View>
         <TouchableOpacity
@@ -161,7 +165,7 @@ export default function ProgressScanHistoryCard({
             size={iconSize.sm}
             color={colors.primary}
           />
-          <Text style={styles.hideExactText}>{hideExact ? 'Show index' : 'Hide index'}</Text>
+          <Text style={styles.hideExactText}>{hideExact ? 'Show score' : 'Hide score'}</Text>
         </TouchableOpacity>
       </View>
       {scans.map((scan) => {
@@ -203,7 +207,7 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Volyume index</Text>
+                <Text style={styles.scanInsightLabel}>Volyume Score</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>

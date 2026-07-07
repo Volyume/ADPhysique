@@ -243,7 +243,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toEqual([]);
     expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume index 89/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
 
     const summary = measuredSignalsSummaryFromAssets(assets, null, {
       physiqueAssessment: out.physiqueAssessment,
@@ -317,7 +317,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
     expect(out.physiqueAssessment.progressSignal).toBe('baseline');
-    expect(out.copySummary).toMatch(/Baseline Volyume index 89/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
   });
 
   test('soft vision warnings lower confidence without erasing a complete measured score', () => {
@@ -377,7 +377,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     ]));
     expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume index 89/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
@@ -424,7 +424,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Baseline Volyume index 83/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 83\/100/i);
     expect(out.copySummary).toMatch(/not a body fat percentage/i);
   });
 
@@ -512,7 +512,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.abstentionReasons).toEqual([]);
     expect(out.physiqueAssessment.visualLeannessScore).toBe(83);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
-    expect(out.copySummary).toMatch(/Baseline Volyume index/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 83\/100/i);
   });
 
   test('known bias flags concretely lower scan confidence, not just copy', () => {

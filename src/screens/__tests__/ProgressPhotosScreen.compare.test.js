@@ -483,8 +483,8 @@ describe('ProgressPhotosScreen compare entry', () => {
     const cardText = JSON.stringify(checkInFor(tree, late));
 
     expect(cardText).toContain('"children":"Score"');
-    expect(cardText).toContain('"children":"88"');
-    expect(cardText).not.toContain('"children":"22"');
+    expect(cardText).toContain('"children":"88/100"');
+    expect(cardText).not.toContain('"children":"22/100"');
   });
 
   test('withheld-score photo sets fall back to normal photo comparison', async () => {

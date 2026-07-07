@@ -179,8 +179,8 @@ describe('deleteProgressScanSession cleanup', () => {
       legacyVisualLeannessScore: 37,
       displayScoreCalibratedFrom: 'volyume_physique_scan_score_v1',
     });
-    expect(scan.copySummary).toMatch(/Volyume index 71/);
-    expect(scan.copySummary).not.toMatch(/index 37/);
+    expect(scan.copySummary).toMatch(/Volyume Score 71\/100/);
+    expect(scan.copySummary).not.toMatch(/37\/100/);
   });
 
   test('deletes scan rows first and logs when photo file cleanup fails', async () => {

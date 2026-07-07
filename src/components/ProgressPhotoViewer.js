@@ -417,32 +417,40 @@ export default function ProgressPhotoViewer({
               </View>
 
               <View style={styles.actions}>
-                <Button
-                  title="Edit date" variant="secondary" size="sm" fullWidth={false}
-                  icon="calendar-outline" onPress={() => setDatePickerOpen(true)} accessibilityLabel="Edit the date"
-                />
-                <Button
-                  title={currentMeta.note ? 'Edit note' : 'Add note'} variant="secondary" size="sm"
-                  fullWidth={false} icon="create-outline" onPress={openNoteEditor}
-                  accessibilityLabel="Add or edit a note"
-                />
-                <Button
-                  title="Set as reference" variant="secondary" size="sm" fullWidth={false}
-                  icon="pin-outline" onPress={onPressReference} accessibilityLabel="Set as reference photo"
-                />
-                <Button
-                  title="Compare from here" variant="secondary" size="sm" fullWidth={false}
-                  icon="images-outline" onPress={onPressCompare} accessibilityLabel="Compare from here"
-                />
-                <Button
-                  title={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Delete set' : 'Delete'}
-                  variant="destructive"
-                  size="sm"
-                  fullWidth={false}
-                  icon="trash-outline"
-                  onPress={onPressDelete}
-                  accessibilityLabel={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Remove this photo set' : 'Remove this photo'}
-                />
+                <View style={styles.actionRow}>
+                  <Button
+                    title="Edit date" variant="secondary" size="sm" fullWidth={false}
+                    style={styles.actionHalf}
+                    icon="calendar-outline" onPress={() => setDatePickerOpen(true)} accessibilityLabel="Edit the date"
+                  />
+                  <Button
+                    title={currentMeta.note ? 'Edit note' : 'Add note'} variant="secondary" size="sm"
+                    fullWidth={false} style={styles.actionHalf} icon="create-outline" onPress={openNoteEditor}
+                    accessibilityLabel="Add or edit a note"
+                  />
+                </View>
+                <View style={styles.actionRow}>
+                  <Button
+                    title="Set reference" variant="secondary" size="sm" fullWidth={false}
+                    style={styles.actionHalf}
+                    icon="pin-outline" onPress={onPressReference} accessibilityLabel="Set as reference photo"
+                  />
+                  <Button
+                    title="Compare" variant="secondary" size="sm" fullWidth={false}
+                    style={styles.actionHalf}
+                    icon="images-outline" onPress={onPressCompare} accessibilityLabel="Compare from here"
+                  />
+                </View>
+                <View style={styles.destructiveActionRow}>
+                  <Button
+                    title={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Delete set' : 'Delete photo'}
+                    variant="destructive"
+                    size="sm"
+                    icon="trash-outline"
+                    onPress={onPressDelete}
+                    accessibilityLabel={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Remove this photo set' : 'Remove this photo'}
+                  />
+                </View>
               </View>
             </>
           ) : null}
@@ -540,8 +548,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   poseOptionText: { ...type.label, textAlign: 'center' },
-  actions: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg,
+  actions: { gap: spacing.sm, marginTop: spacing.lg },
+  actionRow: { flexDirection: 'row', gap: spacing.sm },
+  actionHalf: { flex: 1 },
+  destructiveActionRow: {
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
   },
   sheetBackdrop: {
     flex: 1, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center',

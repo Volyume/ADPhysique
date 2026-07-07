@@ -11,7 +11,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
     expect(SCREEN).toMatch(/function latestScanScoreLabel\(\{ assessment = null, latestScan = null, suppressed = false, hideExact = false \} = \{\}\)/);
-    expect(SCREEN).toMatch(/`index \$\{score\}`/);
+    expect(SCREEN).toMatch(/formatVolyumeScore\(score\)/);
+    expect(SCREEN).not.toMatch(/`index \$\{score\}`/);
     expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
     expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(SCREEN).toMatch(/function libraryScanSummary\(scan\)/);
@@ -129,6 +130,14 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/<Text style=\{styles\.scanDateValue\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(SCREEN).toMatch(/captureRouteTitle: \{ \.\.\.type\.title/);
     expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
+  });
+
+  test('timeline controls wrap safely instead of crowding narrow devices', () => {
+    expect(SCREEN).toMatch(/controlRow: \{[\s\S]*flexWrap: 'wrap'[\s\S]*paddingHorizontal: spacing\.lg/);
+    expect(SCREEN).toMatch(/sortGroup: \{ flexDirection: 'row', gap: spacing\.xs, flexGrow: 1, flexBasis: 156, minWidth: 156 \}/);
+    expect(SCREEN).toMatch(/datesControl: \{[\s\S]*flexGrow: 1,[\s\S]*flexBasis: 148,[\s\S]*minWidth: 0/);
+    expect(SCREEN).toMatch(/datesChip: \{[\s\S]*flex: 1, minWidth: 0/);
+    expect(SCREEN).toMatch(/datesChipText: \{ \.\.\.type\.label, color: colors\.textMuted, flex: 1, minWidth: 0 \}/);
   });
 
   test('destructive scan copy says a set delete removes the full scored set', () => {

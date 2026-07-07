@@ -74,7 +74,11 @@ import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
-import { progressScanAssessmentForDisplay, progressScanScoreForDisplay } from '../lib/progressScanDisplay';
+import {
+  formatVolyumeScore,
+  progressScanAssessmentForDisplay,
+  progressScanScoreForDisplay,
+} from '../lib/progressScanDisplay';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -110,19 +114,14 @@ function localDateKey(ms) {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-function roundedScore(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.round(n) : null;
-}
-
 function latestScanScoreLabel({ assessment = null, latestScan = null, suppressed = false, hideExact = false } = {}) {
   if (suppressed) return 'Hidden';
-  const score = roundedScore(assessment?.visualLeannessScore);
+  const score = progressScanScoreForDisplay(assessment);
   if (score == null) return latestScan ? 'Saved' : 'No score yet';
   if (hideExact) return assessment?.leannessBandLabel || 'Saved';
   return [
     assessment?.leannessBandLabel || null,
-    `index ${score}`,
+    formatVolyumeScore(score),
   ].filter(Boolean).join(' - ');
 }
 
@@ -1013,7 +1012,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!scan) return null;
     const assessment = progressScanAssessmentForDisplay(scan);
     const score = progressScanScoreForDisplay(scan);
-    const scoreValue = suppressed || hideExactScans ? 'Hidden' : (score != null ? String(score) : 'Not scored');
+    const scoreValue = suppressed || hideExactScans ? 'Hidden' : (score != null ? formatVolyumeScore(score) : 'Not scored');
     const bandValue = assessment?.leannessBandLabel || (score == null ? 'Not scored' : 'Baseline');
     const signalValue = suppressed
       ? 'Hidden'
@@ -1912,10 +1911,10 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: colors.onPrimary },
   // Sort + date-range row: same chip family as the pose filter above.
   controlRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
-  sortGroup: { flexDirection: 'row', gap: spacing.xs, flex: 1 },
+  sortGroup: { flexDirection: 'row', gap: spacing.xs, flexGrow: 1, flexBasis: 156, minWidth: 156 },
   sortChip: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     minHeight: 44, paddingVertical: spacing.sm,
@@ -1925,15 +1924,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    flexShrink: 1,
+    flexGrow: 1,
+    flexBasis: 148,
+    minWidth: 0,
   },
   datesChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0,
     minHeight: 44, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     borderRadius: radius.sm, backgroundColor: colors.surface2,
   },
   datesChipActive: { backgroundColor: colors.primaryBg },
-  datesChipText: { ...type.label, color: colors.textMuted },
+  datesChipText: { ...type.label, color: colors.textMuted, flex: 1, minWidth: 0 },
   datesChipTextActive: { color: colors.primary },
   dateClearButton: {
     width: 44,

@@ -16,7 +16,11 @@
  * React behaviour and the safety gate around the weight line.
  */
 
+import fs from 'fs';
+import path from 'path';
 import { create, act } from 'react-test-renderer';
+
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'ProgressPhotoViewer.js'), 'utf8');
 
 // The bodyweight line is high-risk; control the shared gate directly.
 jest.mock('../../hooks/usePhotoSuppression', () => ({
@@ -163,6 +167,15 @@ test('withholds the bodyweight line when the parent scan context hides exact num
   usePhotoSuppression.mockReturnValue(false);
   const tree = await mount(baseProps({ hideWeight: true }));
   expect(allText(tree)).not.toContain('72.4');
+});
+
+test('groups normal viewer actions and separates destructive delete', () => {
+  expect(SOURCE).toContain('styles.actionRow');
+  expect(SOURCE).toContain('styles.actionHalf');
+  expect(SOURCE).toContain('styles.destructiveActionRow');
+  expect(SOURCE).toMatch(/title="Set reference"/);
+  expect(SOURCE).toMatch(/title="Compare"/);
+  expect(SOURCE).not.toMatch(/flexWrap: 'wrap'/);
 });
 
 test('delete calls onDelete only after the destructive confirm fires', async () => {
