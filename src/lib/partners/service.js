@@ -40,7 +40,10 @@ function cheerFailureCode(error, data) {
     status,
   ].filter(v => v != null).join(' ').toLowerCase();
   if (status === 429 || text.includes('already_cheered') || text.includes('429')) return 'already_cheered';
-  if (status === 401 || status === 403 || text.includes('unauthorised') || text.includes('not authenticated')) return 'partner_auth_required';
+  if (status === 401 || text.includes('unauthorised') || text.includes('not authenticated')) return 'partner_auth_required';
+  // partner-cheer returns 403 for stale/not-yet-visible partnerships. Keep that
+  // distinct from account auth so the hook can refresh the mirror and retry.
+  if (status === 403) return 'not_active';
   if (status === 404 || text.includes('function not found')) return 'cheers_unavailable';
   if (text.includes('server misconfigured') || text.includes('missing env vars')) return 'server_misconfigured';
   return data?.error || null;
