@@ -163,7 +163,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.steps,
     measured: true,
     blurb:
-      'Daily steps use the captured WHOOP history counter by default, with phone pedometer fallback for live/today totals when available. Calibrate after a known walk if your strap drifts high or low.',
+      'Daily steps use the captured WHOOP history counter by default, with phone pedometer fallback for live/today totals when available. Calibrate with the real step count for the synced band counter range if your strap drifts high or low.',
   },
   calories: {
     title: 'Calories',

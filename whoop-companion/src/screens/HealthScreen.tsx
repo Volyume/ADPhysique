@@ -129,9 +129,9 @@ export function HealthScreen({ nav }: { nav: Nav }) {
 
       <Text style={styles.footnote}>
         Blood Oxygen and Skin Temperature are experimental raw WHOOP 5 history candidates. They are
-        displayed for review when present, but they do not count in the headline range score until the
-        decode is confirmed against more captures. The heart rhythm screen is a wellness feature, not
-        an ECG or a medical diagnosis.
+        displayed only when enough valid candidates land inside confirmed sleep, and they do not count
+        in the headline range score until the decode is confirmed against more captures. The heart
+        rhythm screen is a wellness feature, not an ECG or a medical diagnosis.
       </Text>
     </Screen>
   );
@@ -198,7 +198,7 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
       badge: 'RAW',
       color: colors.recoveryYellow,
       title: 'Raw sensor candidates are missing',
-      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature appear only when the WHOOP history drain includes raw vital records.',
+      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature appear only after a confirmed sleep window has enough valid raw vital candidates.',
       trustedReady,
       candidatesReady,
       actionLabel: 'Check device sync',
@@ -213,7 +213,7 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
       badge: 'PART',
       color: colors.sleepTeal,
       title: 'Raw vitals partially decoded',
-      body: 'One raw sensor candidate is present. Keep syncing future nights before treating these experimental fields as trendable.',
+      body: 'One raw sensor candidate has enough sleep-window samples. Keep syncing future nights before treating these experimental fields as trendable.',
       trustedReady,
       candidatesReady,
       actionLabel: 'Review metric detail',
@@ -227,7 +227,7 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>, rawV
     badge: 'GOOD',
     color: colors.recoveryGreen,
     title: 'Health data is ready',
-    body: 'Trusted recovery vitals are populated and raw sensor candidates are available for review.',
+    body: 'Trusted recovery vitals are populated and raw sensor candidates have enough sleep-window samples for review.',
     trustedReady,
     candidatesReady,
     actionLabel: 'Open trends',
