@@ -190,6 +190,8 @@ export default function AthleteProfileScreen({ navigation }) {
     strength: null,
     keyLifts: [],
   });
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
 
   const displayName = userProfile?.firstName
@@ -202,39 +204,56 @@ export default function AthleteProfileScreen({ navigation }) {
   useFocusEffect(useCallback(() => {
     let alive = true;
     async function load() {
-      if (!user?.id) { setLoading(false); return; }
+      if (!user?.id) {
+        setLoadError(false);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const [workouts, sets, exercises, latestWeight, bodyComp, metrics, scan] = await Promise.all([
-          getAllWorkouts(user.id).catch(() => []),
-          getCompletedWorkoutSets(user.id).catch(() => []),
-          getAllExercises().catch(() => []),
-          getLatestBodyWeight(user.id).catch(() => null),
-          getLatestBodyComposition(user.id).catch(() => null),
-          getBodyMetricLog(user.id, 1).catch(() => []),
-          getProgressScanCoachSummary(user.id).catch(() => null),
+        const results = await Promise.allSettled([
+          getAllWorkouts(user.id),
+          getCompletedWorkoutSets(user.id),
+          getAllExercises(),
+          getLatestBodyWeight(user.id),
+          getLatestBodyComposition(user.id),
+          getBodyMetricLog(user.id, 1),
+          getProgressScanCoachSummary(user.id),
         ]);
         if (!alive) return;
+        const failed = results.some((r) => r.status === 'rejected');
+        if (failed) {
+          logError('AthleteProfile.load', new Error('athlete_profile_partial_load_failed'), {
+            userId: user?.id,
+            reloadKey,
+            sources: results.map((r) => r.status).join(','),
+          });
+        }
+        const valueAt = (index, fallback) => (
+          results[index].status === 'fulfilled' ? results[index].value : fallback
+        );
         setSummary(buildAthleteProfileSummary({
-          workouts,
-          sets,
-          exercises,
-          latestWeight,
-          bodyComp,
-          metrics,
-          scan,
+          workouts: valueAt(0, []),
+          sets: valueAt(1, []),
+          exercises: valueAt(2, []),
+          latestWeight: valueAt(3, null),
+          bodyComp: valueAt(4, null),
+          metrics: valueAt(5, []),
+          scan: valueAt(6, null),
           userProfile,
           units,
         }));
+        setLoadError(failed);
       } catch (e) {
-        logError('AthleteProfile.load', e, { userId: user?.id });
+        logError('AthleteProfile.load', e, { userId: user?.id, reloadKey });
+        if (alive) setLoadError(true);
       } finally {
         if (alive) setLoading(false);
       }
     }
     load();
     return () => { alive = false; };
-  }, [user?.id, userProfile, units]));
+  }, [user?.id, userProfile, units, reloadKey]));
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
@@ -364,6 +383,23 @@ export default function AthleteProfileScreen({ navigation }) {
             <Text style={styles.heroFocus} numberOfLines={2}>{focusTile.label}: {focusTile.value}</Text>
           </View>
         </Card>
+
+        {loadError ? (
+          <Card
+            style={styles.loadErrorCard}
+            onPress={() => setReloadKey((n) => n + 1)}
+            accessibilityLabel="Try loading profile data again"
+          >
+            <View style={styles.loadErrorIcon}>
+              <Ionicons name="warning-outline" size={18} color={colors.warning} />
+            </View>
+            <View style={styles.loadErrorCopy}>
+              <Text style={styles.loadErrorTitle}>Couldn&apos;t refresh profile data</Text>
+              <Text style={styles.loadErrorBody}>Some numbers may be out of date. Tap to try again.</Text>
+            </View>
+            <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
+          </Card>
+        ) : null}
 
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={summary.weight ? 'Latest logged' : 'Add in Progress'} />
@@ -528,6 +564,23 @@ const styles = StyleSheet.create({
   name: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
   heroSub: { ...type.num('caption'), color: colors.textSecondary },
   heroFocus: { ...type.captionTight, color: colors.textMuted },
+  loadErrorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderColor: colors.warning,
+  },
+  loadErrorIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.warningBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadErrorCopy: { flex: 1, minWidth: 0 },
+  loadErrorTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  loadErrorBody: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statTile: {
     flexGrow: 1,

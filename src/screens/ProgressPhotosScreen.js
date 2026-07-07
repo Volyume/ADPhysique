@@ -174,6 +174,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [photos, setPhotos] = useState([]);
   const [metaMap, setMetaMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [, setBusy] = useState(false);
   const [calm, setCalm] = useState(false);
   const suppressed = photoSuppressed || calm;
@@ -249,10 +250,16 @@ export default function ProgressPhotosScreen({ navigation }) {
       setScans(scanRows || []);
       setCalm(isCalm(mode) || mode === 'read_failed');
       setHideExactScans(!!hideExact);
+      setLoadError(false);
       if (map) setMetaMap(map);
       // A dangling reference must never point at a photo that no longer exists.
       setReferenceName((prev) => (prev && rows.some((r) => r.name === prev) ? prev : null));
-    } catch (_) { /* tolerate */ }
+    } catch (e) {
+      if (isCurrentRefresh()) {
+        setLoadError(true);
+        logError('ProgressPhotos.refresh', e, { userId });
+      }
+    }
     finally { if (isCurrentRefresh()) setLoading(false); }
   }, [userId]);
 
@@ -1143,7 +1150,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Keep dated front and back photos in one private library. Clear photo sets can receive a Volyume Score index, leanness band and progress signal. The first score is a baseline; the useful read is how repeatable photos change over time.
+              Keep dated front, side and back photos in one private library. Clear front and back photos can receive a Volyume Score index, leanness band and progress signal; the side photo helps comparison. The first score is a baseline, and the useful read is how repeatable photos change over time.
             </Text>
           </View>
 
@@ -1212,6 +1219,27 @@ export default function ProgressPhotosScreen({ navigation }) {
             ) : null}
           </View>
         </Card>
+
+        {loadError && photos.length > 0 ? (
+          <Card style={styles.loadErrorCard}>
+            <View style={styles.loadErrorTop}>
+              <Ionicons name="warning-outline" size={iconSize.sm} color={colors.warning} />
+              <Text style={styles.loadErrorTitle}>Couldn&apos;t refresh photos</Text>
+            </View>
+            <Text style={styles.loadErrorBody}>
+              Your saved photos are still here. Try again to refresh the library and latest score.
+            </Text>
+            <Button
+              title="Try again"
+              size="sm"
+              variant="secondary"
+              fullWidth={false}
+              onPress={refresh}
+              style={styles.loadErrorButton}
+              accessibilityLabel="Try loading progress photos again"
+            />
+          </Card>
+        ) : null}
 
         {!loading && visibleScans.length > 0 ? (
           <ProgressScanHistoryCard
@@ -1321,6 +1349,24 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (loading) {
       return <ActivityIndicator style={styles.loadingIndicator} color={colors.primary} />;
     }
+    if (loadError && photos.length === 0) {
+      return (
+        <View style={styles.empty}>
+          <Ionicons name="warning-outline" size={32} color={colors.warning} />
+          <Text style={styles.emptyTitle}>Couldn&apos;t load progress photos</Text>
+          <Text style={styles.emptyHint}>
+            Try again. Volyume has not deleted or changed your photo library.
+          </Text>
+          <Button
+            title="Try again"
+            variant="secondary"
+            onPress={refresh}
+            style={styles.emptyAdd}
+            accessibilityLabel="Try loading progress photos again"
+          />
+        </View>
+      );
+    }
     if (photos.length === 0) {
       return (
         <View style={styles.empty}>
@@ -1331,7 +1377,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Your first set can be new photos or older photos from your phone. Front and back are enough to create a Volyume Score when the photos are clear.
+                Your first set can be new photos or older photos from your phone. Front and back are enough for a Volyume Score when the photos are clear; add side as well for a better visual record.
               </Text>
             </>
           )}
@@ -1861,6 +1907,20 @@ const styles = StyleSheet.create({
   signalTitle: { ...type.label, color: colors.textPrimary },
   signalBody: { ...type.bodySm, color: colors.textSecondary },
   signalSupport: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  loadErrorCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+    borderColor: colors.warning,
+  },
+  loadErrorTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  loadErrorTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  loadErrorBody: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  loadErrorButton: { alignSelf: 'flex-start' },
   readOnlyNote: { ...type.caption, color: colors.textMuted },
   libraryHeader: {
     marginHorizontal: spacing.lg,

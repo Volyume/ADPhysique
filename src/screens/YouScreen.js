@@ -24,6 +24,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
+import { logError } from '../lib/errorLog';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -65,33 +66,50 @@ export default function YouScreen({ navigation }) {
   const [sessions, setSessions] = useState(null);
   const [latestReview, setLatestReview] = useState(null);
   const [hasCoachHistory, setHasCoachHistory] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
     async function load() {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setLoadError(false);
+        return;
+      }
       try {
-        const [workouts, latest, history] = await Promise.all([
-          getAllWorkouts(user.id).catch(() => []),
-          getLatestCoachOutput(user.id).catch(() => null),
-          tier !== 'pro' ? getCoachOutputHistory(user.id, 1).catch(() => []) : Promise.resolve([]),
+        const [workoutsResult, latestResult, historyResult] = await Promise.allSettled([
+          getAllWorkouts(user.id),
+          getLatestCoachOutput(user.id),
+          tier !== 'pro' ? getCoachOutputHistory(user.id, 1) : Promise.resolve([]),
         ]);
         if (!alive) return;
+        const failed = [workoutsResult, latestResult, historyResult].some((r) => r.status === 'rejected');
+        if (failed) {
+          logError('YouScreen.load', new Error('coach_hub_partial_load_failed'), {
+            reloadKey,
+            workouts: workoutsResult.status,
+            latest: latestResult.status,
+            history: historyResult.status,
+          });
+        }
+        const workouts = workoutsResult.status === 'fulfilled' ? workoutsResult.value : [];
+        const latest = latestResult.status === 'fulfilled' ? latestResult.value : null;
+        const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
         const completed = (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed));
-        setSessions(completed.length);
-        setLatestReview(latest || null);
-        setHasCoachHistory((history || []).length > 0);
-      } catch (_) {
+        if (workoutsResult.status === 'fulfilled') setSessions(completed.length);
+        if (latestResult.status === 'fulfilled') setLatestReview(latest || null);
+        if (historyResult.status === 'fulfilled') setHasCoachHistory((history || []).length > 0);
+        setLoadError(failed);
+      } catch (e) {
         if (alive) {
-          setSessions(null);
-          setLatestReview(null);
-          setHasCoachHistory(false);
+          logError('YouScreen.load', e, { userId: user?.id, reloadKey });
+          setLoadError(true);
         }
       }
     }
     load();
     return () => { alive = false; };
-  }, [user?.id, tier]));
+  }, [user?.id, tier, reloadKey]));
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -117,6 +135,23 @@ export default function YouScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Coach" subtitle="Rules-based decisions. No chat. No guesswork." />
+
+        {loadError ? (
+          <Card
+            style={styles.loadErrorCard}
+            onPress={() => setReloadKey((n) => n + 1)}
+            accessibilityLabel="Try loading coach data again"
+          >
+            <View style={styles.loadErrorIcon}>
+              <Ionicons name="warning-outline" size={18} color={colors.warning} />
+            </View>
+            <View style={styles.loadErrorCopy}>
+              <Text style={styles.loadErrorTitle}>Couldn&apos;t refresh Coach</Text>
+              <Text style={styles.loadErrorBody}>Your saved profile stays unchanged. Tap to try again.</Text>
+            </View>
+            <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
+          </Card>
+        ) : null}
 
         <Card
           style={styles.profileCard}
@@ -282,6 +317,23 @@ const styles = StyleSheet.create({
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   profileName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
   profileStat: { ...type.num('caption'), color: colors.textSecondary },
+  loadErrorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderColor: colors.warning,
+  },
+  loadErrorIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.warningBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadErrorCopy: { flex: 1, minWidth: 0 },
+  loadErrorTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  loadErrorBody: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statusCard: { gap: spacing.md },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   statusIcon: {

@@ -31,4 +31,12 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('title="Recovery and reminders"');
     expect(SOURCE).toContain('Choose your recovery rating to finish setup.');
   });
+
+  test('final submit never builds targets from fallback body data', () => {
+    expect(SOURCE).toContain('Volyume will not build targets from fallback body data.');
+    expect(SOURCE).toContain('const safeWeightKg = bwKg;');
+    expect(SOURCE).toContain('const safeAge = ageNum;');
+    expect(SOURCE).not.toContain('const safeWeightKg = (!isNaN(bwKg) && bwKg > 0) ? bwKg : 80;');
+    expect(SOURCE).not.toContain('const safeAge = ageNum || 28;');
+  });
 });

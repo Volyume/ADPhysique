@@ -9,7 +9,9 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
   test('too-soon copy never labels a mid-week baseline date as the chosen check-in day', () => {
     expect(CHECKIN).toMatch(/firstReviewUnlockDate\(earliestTs,\s*scheduledDay,\s*Date\.now\(\)\)/);
     expect(CHECKIN).toMatch(/firstCheckinLabel/);
-    expect(CHECKIN).toMatch(/Volyume waits for the first \{scheduledDayName\} after that baseline is ready/);
+    expect(CHECKIN).toMatch(/const parsedCheckinDay = Number\(prefs\.checkinDay\)/);
+    expect(CHECKIN).toMatch(/const safeFirstCheckinLabel = firstCheckinLabel\?\.startsWith\(scheduledDayName\)/);
+    expect(CHECKIN).toMatch(/Volyume waits for your next \{scheduledDayName\} after that baseline is ready/);
     expect(CHECKIN).not.toMatch(/your chosen day/);
     expect(CHECKIN).not.toMatch(/first check-in lands on \{nextDayLabel\}/);
   });

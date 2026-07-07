@@ -140,8 +140,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('refresh results are guarded before committing photo and scan state', () => {
     expect(SCREEN).toMatch(/const refreshRequestRef = useRef\(0\);/);
+    expect(SCREEN).toMatch(/const \[loadError, setLoadError\] = useState\(false\);/);
     expect(SCREEN).toMatch(/const isCurrentRefresh = \(\) => refreshRequestRef\.current === requestId;/);
-    expect(SCREEN).toMatch(/map = await getPhotoMetaMap\(rows\.map\(\(r\) => r\.name\), userId\);[\s\S]*if \(!isCurrentRefresh\(\)\) return;[\s\S]*setPhotos\(rows\);[\s\S]*setScans\(scanRows \|\| \[\]\);/);
+    expect(SCREEN).toMatch(/map = await getPhotoMetaMap\(rows\.map\(\(r\) => r\.name\), userId\);[\s\S]*if \(!isCurrentRefresh\(\)\) return;[\s\S]*setPhotos\(rows\);[\s\S]*setScans\(scanRows \|\| \[\]\);[\s\S]*setLoadError\(false\);/);
+    expect(SCREEN).toMatch(/setLoadError\(true\);[\s\S]*logError\('ProgressPhotos\.refresh'/);
     expect(SCREEN).toMatch(/finally \{ if \(isCurrentRefresh\(\)\) setLoading\(false\); \}/);
   });
 });
