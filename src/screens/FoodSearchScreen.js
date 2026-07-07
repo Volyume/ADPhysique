@@ -908,7 +908,10 @@ export default function FoodSearchScreen({ navigation, route }) {
         >
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add to {mealSlotLabel(mealSlot)}</Text>
+        <View style={styles.headerTitleBlock}>
+          <Text style={styles.headerTitle}>Add food</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>to {mealSlotLabel(mealSlot)}</Text>
+        </View>
         <View style={styles.headerActions}>
           {!isRecipePick ? (
             <TouchableOpacity
@@ -1128,7 +1131,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { ...type.title, color: colors.textPrimary },
+  headerTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    marginHorizontal: spacing.sm,
+    alignItems: 'center',
+  },
+  headerTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
+  headerSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -2, textAlign: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
 
   tabBar: {

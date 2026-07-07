@@ -165,6 +165,9 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
   });
 
   test('keeps the plate log button slot-neutral on screen', () => {
+    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.headerTitle\}>Add food<\/Text>/);
+    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.headerSubtitle\} numberOfLines=\{1\}>to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
+    expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.headerTitle\}>Add to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
     expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.plateLogText\}>Log selected<\/Text>/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel=\{`Log \$\{plate\.length\} to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.plateLogText\}>Log \{plate\.length\} to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
