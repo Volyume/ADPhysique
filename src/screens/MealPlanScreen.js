@@ -542,7 +542,7 @@ export default function MealPlanScreen({ navigation, route }) {
       ? 'varied'
       : prefs.variety === 0.5
         ? 'mixed'
-        : 'repeat-friendly';
+        : 'easy to repeat';
     const workoutMeals = prefs.periWorkoutSlots ? 'workout meals on' : 'workout meals off';
     return `${meals} meals, ${variety}, ${workoutMeals}`;
   }, [prefs.mealsPerDay, prefs.periWorkoutSlots, prefs.variety]);

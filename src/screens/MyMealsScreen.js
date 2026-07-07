@@ -1,10 +1,10 @@
 /**
  * MyMealsScreen
  *
- * The user's saved meals (My Meals templates). A saved meal is a named
+ * The user's saved meals. A saved meal is a named
  * bundle of foods logged together; tapping one logs every food in it to
  * the diary at the slot + date the screen was opened with. Reached from
- * the Search modal's "My meals" entry (custom tab), like My recipes.
+ * the food search Saved meals entry, like Recipes.
  *
  * Create happens elsewhere: from the diary multi-select toolbar's "Save
  * as meal". This screen lists, logs, renames, and deletes.
@@ -198,7 +198,7 @@ export default function MyMealsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title="My meals" />
+      <BackHeader title="Saved meals" />
 
       {loading ? (
         <View style={{ paddingHorizontal: spacing.lg }}>

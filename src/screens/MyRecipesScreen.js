@@ -195,7 +195,7 @@ export default function MyRecipesScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <BackHeader
-        title="My recipes"
+        title="Recipes"
         right={(
           <TouchableOpacity onPress={onCreate} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
             <Ionicons name="add" size={26} color={colors.primary} />

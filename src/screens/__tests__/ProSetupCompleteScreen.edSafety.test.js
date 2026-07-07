@@ -127,4 +127,9 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(SOURCE).toContain('const [planOpen, setPlanOpen] = useState(false);');
     expect(SOURCE).toContain('the user should reach Start training before reading every rationale line');
   });
+
+  test('meal-plan success copy is a full sentence, not a comma fragment', () => {
+    expect(SOURCE).toContain('First week of meals is ready in Diary &gt; Plan my week.');
+    expect(SOURCE).not.toContain('First week of meals ready in Diary, Plan my week');
+  });
 });

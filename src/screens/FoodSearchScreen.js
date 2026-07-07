@@ -696,8 +696,8 @@ export default function FoodSearchScreen({ navigation, route }) {
         out.push({ type: 'cta', key: 'cta-quick-add', label: 'Quick add calories', icon: 'flash-outline', action: 'quick' });
       }
       if (route?.params?.pickMode !== 'recipe') {
-        out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', action: 'recipes' });
-        out.push({ type: 'cta', key: 'cta-my-meals', label: 'My meals', icon: 'fast-food-outline', action: 'meals' });
+        out.push({ type: 'cta', key: 'cta-my-recipes', label: 'Recipes', icon: 'restaurant-outline', action: 'recipes' });
+        out.push({ type: 'cta', key: 'cta-my-meals', label: 'Saved meals', icon: 'fast-food-outline', action: 'meals' });
       }
     }
     for (const f of tabRows) out.push({ type: 'row', key: `${activeTab}-${f.food_ref}`, food: f });
@@ -832,7 +832,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Set nutrition targets"
           >
-            <Text style={styles.emptyActionText}>Set targets</Text>
+            <Text style={styles.emptyActionText}>Set nutrition targets</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.primary} />
           </TouchableOpacity>
         </View>

@@ -89,6 +89,7 @@ describe('MyRecipesScreen load states', () => {
     await flush();
 
     let text = flattenText(tree.toJSON());
+    expect(text).toContain('Recipes');
     expect(text).toContain("Couldn't load recipes");
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
@@ -117,6 +118,7 @@ describe('MyRecipesScreen load states', () => {
     await flush();
 
     const text = flattenText(tree.toJSON());
+    expect(text).toContain('Recipes');
     expect(text).toContain('Create your first recipe');
     expect(text).not.toContain("Couldn't load recipes");
 
