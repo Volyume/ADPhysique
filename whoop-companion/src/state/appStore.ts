@@ -74,7 +74,7 @@ import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency'
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
-import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
@@ -2708,9 +2708,6 @@ const MIN_VITAL_SIGNAL_MIN = 90;
 const MIN_VITAL_COVERAGE_PCT = 55;
 const MIN_SLEEP_SCORE_SIGNAL_MIN = 150;
 const MIN_SLEEP_SCORE_COVERAGE_PCT = 50;
-const LONG_AUTO_SLEEP_MIN = 7 * 60;
-const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 18;
-const MIN_LONG_AUTO_SLEEP_STATE_MIN = 30;
 
 function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
   sleep.neededMin = need.neededMin;
@@ -2819,7 +2816,7 @@ function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is S
   if (!sleep) return false;
   if (manual) return true;
   if (sleepStateWakeConflict(sleep)) return false;
-  if (longUncorroboratedAutoSleep(sleep, manual)) {
+  if (longAutoSleepNeedsCorroboration(sleep, manual)) {
     const coveragePct = sleepCoveragePct(sleep);
     if (sleep.signalMin < 420 || coveragePct < 85) return false;
   }
@@ -2839,7 +2836,7 @@ function sleepConfidence(
   const evidencePct = sleepEvidencePct(evidence);
   const corroborated = evidencePct >= 25;
   const stateConflict = sleepStateWakeConflict(evidence);
-  const longUncorroboratedAuto = longUncorroboratedAutoSleep(evidence, manual);
+  const longUncorroboratedAuto = longAutoSleepNeedsCorroboration(evidence, manual);
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
   if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto && (signalMin < 420 || coveragePct < 85)) return 'low';
@@ -2953,30 +2950,6 @@ function sleepCaptureEvidenceAsSleepEvidence(evidence: SleepCaptureEvidence): Sl
     sleepStateAsleepMin: evidence.sleepStateAsleepMin,
     sleepStateUpMin: evidence.sleepStateUpMin,
   };
-}
-
-function sleepEvidencePct(evidence?: SleepEvidence | null): number {
-  if (!evidence?.inBedMin) return 0;
-  const stillMin = Math.max(
-    evidence.stillMin ?? 0,
-    evidence.sleepStateAsleepMin ?? 0,
-    evidence.sleepStateStillMin ?? 0,
-    Math.max(0, (evidence.motionMin ?? 0) - (evidence.movingMin ?? 0)),
-  );
-  const corroboratedMin = stillMin;
-  return Math.round((corroboratedMin / Math.max(1, evidence.inBedMin)) * 100);
-}
-
-function longUncorroboratedAutoSleep(evidence: SleepEvidence | null | undefined, manual: boolean): boolean {
-  const stateMin = evidence?.sleepStateMin ?? 0;
-  const sleepStateProofMin = (evidence?.sleepStateAsleepMin ?? 0) + (evidence?.sleepStateStillMin ?? 0);
-  const hasStateProof = stateMin >= MIN_LONG_AUTO_SLEEP_STATE_MIN && sleepStateProofMin / Math.max(1, stateMin) >= 0.25;
-  return (
-    !manual &&
-    (evidence?.inBedMin ?? 0) >= LONG_AUTO_SLEEP_MIN &&
-    sleepEvidencePct(evidence) < MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT &&
-    !hasStateProof
-  );
 }
 
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
@@ -3186,7 +3159,7 @@ function sleepCaptureNote(input: {
   if (!input.hasSleep && input.hasCandidate && sleepStateWakeConflict(input.evidence) && !input.manual) {
     return 'A possible sleep window was rejected because decoded strap-state evidence is mostly wake. Review the window or let auto sync finish before trusting it.';
   }
-  if (!input.hasSleep && input.hasCandidate && longUncorroboratedAutoSleep(input.evidence, input.manual)) {
+  if (!input.hasSleep && input.hasCandidate && longAutoSleepNeedsCorroboration(input.evidence, input.manual)) {
     return 'A long HR-only sleep window was found, but it needs still-worn or decoded band-state corroboration before Pulse scores it as sleep.';
   }
   if (!input.hasSleep && input.hasCandidate) {

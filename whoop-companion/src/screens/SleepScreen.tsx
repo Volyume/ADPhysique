@@ -18,7 +18,7 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
-import { sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -1153,13 +1153,7 @@ function stateEvidenceColor(
 }
 
 function longHrOnlyCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
-  const stateProof =
-    capture.sleepStateMin >= 30 &&
-    (capture.sleepStateAsleepMin + capture.sleepStateStillMin) / Math.max(1, capture.sleepStateMin) >= 0.25;
-  return capture.source === 'auto_hr' &&
-    capture.windowMin >= 7 * 60 &&
-    capture.stillMin < Math.max(30, capture.windowMin * 0.18) &&
-    !stateProof;
+  return longAutoSleepNeedsCorroboration(capture, false);
 }
 
 function sleepTrustStrip(

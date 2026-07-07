@@ -12,7 +12,7 @@ import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
 import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
-import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { sleepConfidenceColor, sleepConfidenceLabel } from '../ui/sleepTrust';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
@@ -434,15 +434,7 @@ function homeSleepQuality(input: {
 }
 
 function longHrOnlyHomeCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
-  const stateProof =
-    capture.sleepStateMin >= 30 &&
-    (capture.sleepStateAsleepMin + capture.sleepStateStillMin) / Math.max(1, capture.sleepStateMin) >= 0.25;
-  return (
-    capture.source === 'auto_hr' &&
-    capture.windowMin >= 7 * 60 &&
-    capture.stillMin < Math.max(30, capture.windowMin * 0.18) &&
-    !stateProof
-  );
+  return longAutoSleepNeedsCorroboration(capture, false);
 }
 
 function energyColor(score: number | null | undefined): string {
