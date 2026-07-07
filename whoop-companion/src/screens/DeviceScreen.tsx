@@ -82,7 +82,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const stepRangeText = formatStepRange(bandStepEstimate?.firstTs, bandStepEstimate?.lastTs);
   const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
-  const stepTrust = stepCalibrated ? 'calibrated' : stepSource === 'phone' && bandSteps ? 'phone verified' : 'uncalibrated';
+  const stepTrust = stepCalibrated
+    ? 'calibrated'
+    : bandStepEstimate?.confidence === 'medium'
+      ? 'active range'
+      : stepSource === 'phone' && bandSteps
+        ? 'phone verified'
+        : 'diagnostic';
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -360,9 +366,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          Today uses phone steps when the uncalibrated band counter disagrees. To calibrate the strap, enter the real
-          step count for the synced band counter range above, not just a single walk unless the range only covers that
-          walk.
+          Low-confidence uncalibrated band steps stay diagnostic until the counter is calibrated or the synced range
+          includes active movement. To calibrate the strap, enter the real step count for the band range above.
         </Text>
       </Card>
 
