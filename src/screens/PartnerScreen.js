@@ -785,11 +785,6 @@ export default function PartnerScreen({ route }) {
         toast.show('You are at your partner limit.', { variant: 'error' });
       } else if (r.error === 'consent_failed') {
         toast.show('We could not record your agreement to share. Please try again.', { variant: 'error' });
-      } else if (r.error === 'local_mirror_pending') {
-        setCode('');
-        setCodeEntryOpen(false);
-        retryPartners?.();
-        toast.show('Invite accepted. Volyume is refreshing this device now.', { variant: 'warning' });
       } else {
         toast.show('That invite did not work. It may have expired or already been used.', { variant: 'error' });
       }
@@ -797,6 +792,11 @@ export default function PartnerScreen({ route }) {
     }
     setCode('');
     setCodeEntryOpen(false);
+    if (r.pendingLocalMirror) {
+      retryPartners?.();
+      toast.show('Invite accepted. Volyume is refreshing this device now.', { variant: 'warning' });
+      return;
+    }
     toast.show('Partner connected', { variant: 'success' });
   }
 
@@ -1397,7 +1397,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
       if (result?.ok === false) {
         setCheckLine('Could not check Partners online just now. Your invite is still safe to share again.');
       } else {
-        setCheckLine('Checked just now. If they have accepted, the partnership will appear here as soon as this device refreshes.');
+        setCheckLine('Checked just now. If they have accepted, this screen should update in a moment.');
       }
     } catch (_) {
       setCheckLine('Could not check Partners online just now. Your invite is still safe to share again.');
