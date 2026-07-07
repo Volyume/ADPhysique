@@ -245,17 +245,18 @@ function readinessLimiter(
   }
 
   if (readiness.confidence === 'low' || readiness.confidencePct < 55) {
+    const needsSync = readinessSleepNeedsSync(sleepDetail);
     return {
       badge: 'DATA',
       title: 'Confidence is the limiter',
       body: 'The training call should stay conservative until sleep/recovery inputs are complete enough to trust.',
       metric: 'Confidence',
       value: `${readiness.confidencePct}%`,
-      actionLabel: (sleepDetail?.coveragePct ?? 100) < 60 ? 'Sync overnight data' : 'Review sleep window',
+      actionLabel: needsSync ? 'Sync overnight data' : 'Review sleep window',
       actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'quality',
-      icon: (sleepDetail?.coveragePct ?? 100) < 60 ? 'sync' : 'create',
+      icon: needsSync ? 'sync' : 'create',
       color: colors.strainBlue,
-      route: (sleepDetail?.coveragePct ?? 100) < 60 ? { name: 'device' } : { name: 'editSleep' },
+      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
     };
   }
 
@@ -277,9 +278,10 @@ function readinessLimiter(
 
   const weakContributor = readiness.contributors.find((c) => c.good === false);
   if (weakContributor) {
+    const sleepTrustNeedsSync = readinessSleepNeedsSync(sleepDetail);
     const route =
       weakContributor.key === 'sleep_trust'
-        ? ((sleepDetail?.coveragePct ?? 100) < 80 ? ({ name: 'device' } as const) : ({ name: 'editSleep' } as const))
+        ? (sleepTrustNeedsSync ? ({ name: 'device' } as const) : ({ name: 'editSleep' } as const))
         : weakContributor.key === 'sleep' || weakContributor.key === 'debt'
         ? ({ name: 'sleep' } as const)
         : weakContributor.key === 'load'
@@ -294,11 +296,11 @@ function readinessLimiter(
       metric: weakContributor.label,
       value: weakContributor.value,
       actionLabel: weakContributor.key === 'sleep_trust'
-        ? (sleepDetail?.coveragePct ?? 100) < 80 ? 'Sync more data' : 'Review sleep window'
+        ? sleepTrustNeedsSync ? 'Sync more data' : 'Review sleep window'
         : 'Open detail',
       actionValue: weakContributor.label.toLowerCase(),
       icon: weakContributor.key === 'sleep_trust'
-        ? (sleepDetail?.coveragePct ?? 100) < 80 ? 'sync' : 'create'
+        ? sleepTrustNeedsSync ? 'sync' : 'create'
         : weakContributor.key === 'load' ? 'barbell' : weakContributor.key === 'sleep' || weakContributor.key === 'debt' ? 'moon' : 'pulse',
       color: weakContributor.key === 'sleep_trust' ? colors.strainBlue : colors.recoveryYellow,
       route,

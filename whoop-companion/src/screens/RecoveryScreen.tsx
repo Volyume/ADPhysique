@@ -89,6 +89,9 @@ function recoveryGuidanceForDetail(
   if (sleepStateWakeConflict(sleepDetail)) {
     return 'Recovery is capped because the sleep window conflicts with decoded strap-state evidence. Review the window before trusting today\'s training signal.';
   }
+  if (cap != null && !recoverySleepNeedsSync(sleepDetail)) {
+    return 'Recovery is capped because sleep confidence is low despite usable signal. Review the sleep window before trusting today\'s training signal.';
+  }
   return recoveryGuidance(recovery, cap);
 }
 
@@ -105,6 +108,7 @@ function recoveryQualityNote(
   ].filter((v): v is string => v != null);
   if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
   if (sleepStateWakeConflict(day.sleepDetail)) return 'Recovery is capped because decoded strap-state evidence is mostly wake.';
+  if (cap != null && !recoverySleepNeedsSync(day.sleepDetail)) return `Recovery is capped at ${cap}% until the sleep window is reviewed or corroborated.`;
   if (cap != null) return `Recovery is capped at ${cap}% until sleep confidence improves.`;
   if (confidence === 'high') return 'Recovery is backed by strong overnight coverage and still-worn evidence.';
   if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more synced data can refine it.';
