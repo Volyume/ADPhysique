@@ -48,6 +48,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const need = useStoreSelector(appStore, (s) => s.sleepNeed);
   const goal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const lastSleep = useStoreSelector(appStore, (s) => s.lastSleep);
+  const sleepPerformance = useStoreSelector(appStore, (s) => s.sleepPerformance);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -95,7 +96,9 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const wakeCountdownMin = relativeMin(nextWakeTs);
   const inSleepWindow = Date.now() >= plannedBedTs;
   const connected = status === 'connected';
-  const lastSleepPerformancePct = displayPct(lastSleep?.performance != null ? lastSleep.performance * 100 : null);
+  const lastSleepPerformancePct = displayPct(
+    sleepPerformance?.score ?? today?.sleepDetail?.performance ?? (lastSleep?.performance != null ? lastSleep.performance * 100 : null),
+  );
   const recommendation = goalRecommendation({
     readinessScore: readiness?.score ?? null,
     recovery: today?.recovery ?? null,
