@@ -1,21 +1,14 @@
 /**
- * Health Monitor — WHOOP's five overnight vitals, each shown against a personal
- * "typical range" with an in/out-of-range flag and a headline "X/N within range".
+ * Health Monitor: overnight vitals against a personal typical range.
  *
- * What we can honestly derive from the strap over BLE:
- *   - Resting Heart Rate  (lowest sustained HR in the sleep window)
- *   - Heart Rate Variability (overnight RMSSD)
- *   - Respiratory Rate    (RSA in the R-R series — see respiratory.ts)
+ * Trusted channels are derived from HR/R-R during the sleep window:
+ * - Resting Heart Rate
+ * - Heart Rate Variability
+ * - Respiratory Rate
  *
- * What we CANNOT (yet) derive — no raw optical/PPG or thermistor stream is
- * exposed over BLE without the proprietary deep-data unlock:
- *   - Blood Oxygen (SpO₂)  — needs raw red/IR PPG
- *   - Skin Temperature     — needs the raw thermistor channel
- * These are shown for parity but flagged unavailable; they don't count toward
- * the ratio. (Honest: see docs/PROTOCOL.md.)
- *
- * "Typical range" follows WHOOP's idea of a personal baseline band: the 30-day
- * mean ± natural variation (SD-scaled, with a sensible minimum width).
+ * WHOOP 5 history also exposes raw-sensor layouts in this user's captures. The
+ * SpO2 and skin-temperature fields below are labelled experimental candidates
+ * and do not count toward the headline range score until confirmed further.
  */
 
 import { stdev } from './ema';
@@ -35,7 +28,7 @@ export type Vital = {
   range: { lo: number; hi: number } | null;
   inRange: boolean | null;
   available: boolean;
-  /** Educational copy mirrored from the WHOOP app. */
+  experimental?: boolean;
   blurb: string;
 };
 
@@ -48,7 +41,7 @@ export type HealthMonitorResult = {
 
 type VitalInput = { value: number | null; history: number[] };
 
-const MIN_BAND: Record<string, number> = { rhr: 3, hrv: 8, respiratory: 1.5 };
+const MIN_BAND: Record<string, number> = { rhr: 3, hrv: 8, respiratory: 1.5, spo2: 1, skin_temp: 0.4 };
 
 function bandFor(key: string, history: number[]): { baseline: number; lo: number; hi: number } | null {
   const vals = history.filter((v) => Number.isFinite(v));
@@ -59,10 +52,16 @@ function bandFor(key: string, history: number[]): { baseline: number; lo: number
   return { baseline: round1(baseline), lo: round1(baseline - half), hi: round1(baseline + half) };
 }
 
-function measured(key: VitalKey, label: string, unit: string, blurb: string, input: VitalInput): Vital {
+function measured(
+  key: VitalKey,
+  label: string,
+  unit: string,
+  blurb: string,
+  input: VitalInput,
+  experimental = false,
+): Vital {
   const band = bandFor(key, input.history);
-  const inRange =
-    input.value != null && band ? input.value >= band.lo && input.value <= band.hi : null;
+  const inRange = input.value != null && band ? input.value >= band.lo && input.value <= band.hi : null;
   return {
     key,
     label,
@@ -71,7 +70,8 @@ function measured(key: VitalKey, label: string, unit: string, blurb: string, inp
     baseline: band?.baseline ?? null,
     range: band ? { lo: band.lo, hi: band.hi } : null,
     inRange,
-    available: true,
+    available: !experimental || input.value != null,
+    experimental,
     blurb,
   };
 }
@@ -80,6 +80,8 @@ export function computeHealthMonitor(input: {
   rhr: VitalInput;
   hrv: VitalInput;
   respiratory: VitalInput;
+  spo2: VitalInput;
+  skinTemp: VitalInput;
 }): HealthMonitorResult {
   const vitals: Vital[] = [
     measured(
@@ -100,37 +102,29 @@ export function computeHealthMonitor(input: {
       'respiratory',
       'Respiratory Rate',
       'rpm',
-      'Respiratory rate (RR) is the amount of breaths you take per minute while at rest, a general indicator of cardiovascular fitness. It is very stable night to night, so changes can be meaningful.',
+      'Respiratory rate is the amount of breaths you take per minute while at rest. It is very stable night to night, so changes can be meaningful.',
       input.respiratory,
     ),
-    {
-      key: 'spo2',
-      label: 'Blood Oxygen',
-      unit: '%',
-      value: null,
-      baseline: null,
-      range: null,
-      inRange: null,
-      available: false,
-      blurb:
-        'Blood oxygen (SpO₂) measures how much oxygen your red blood cells are carrying. Requires the raw red/infrared optical (PPG) stream, which this build cannot yet decode over Bluetooth — so it is not measured here.',
-    },
-    {
-      key: 'skin_temp',
-      label: 'Skin Temperature',
-      unit: '°C',
-      value: null,
-      baseline: null,
-      range: null,
-      inRange: null,
-      available: false,
-      blurb:
-        'Skin temperature indicates how your body is regulating heat and varies day to day. Requires the raw thermistor channel, which this build cannot yet decode over Bluetooth — so it is not measured here.',
-    },
+    measured(
+      'spo2',
+      'Blood Oxygen',
+      '%',
+      'Blood oxygen measures how much oxygen your red blood cells are carrying. This is an experimental candidate decoded from raw WHOOP 5 v21 history records and is not yet counted in the headline range score.',
+      input.spo2,
+      true,
+    ),
+    measured(
+      'skin_temp',
+      'Skin Temperature',
+      'C',
+      'Skin temperature indicates how your body is regulating heat and varies day to day. This is an experimental candidate decoded from raw WHOOP 5 v20 history records and is not yet counted in the headline range score.',
+      input.skinTemp,
+      true,
+    ),
   ];
 
   const withValues = vitals.filter((v) => v.available && v.value != null);
-  const measurable = withValues.filter((v) => v.inRange != null);
+  const measurable = withValues.filter((v) => !v.experimental && v.inRange != null);
   const inRangeCount = measurable.filter((v) => v.inRange === true).length;
   return { vitals, inRangeCount, measuredCount: measurable.length, valueCount: withValues.length };
 }

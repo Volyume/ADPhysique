@@ -24,11 +24,11 @@ const RHYTHM_LABEL: Record<string, string> = {
 };
 
 export function HealthScreen({ nav }: { nav: Nav }) {
-  // Recompute reactively when today's metrics change.
   const today = useStoreSelector(appStore, (s) => s.today);
   const recent = useStoreSelector(appStore, (s) => s.recentDays);
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
+
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
   }, [today]);
@@ -45,11 +45,11 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       <Card>
         <Text style={styles.summaryLabel}>WITHIN TYPICAL RANGE</Text>
         <Text style={[styles.summaryValue, { color: tint }]}>
-          {hm.measuredCount > 0 ? `${hm.inRangeCount} of ${hm.measuredCount}` : '—'}
+          {hm.measuredCount > 0 ? `${hm.inRangeCount} of ${hm.measuredCount}` : '-'}
         </Text>
         <Text style={styles.summarySub}>
           {hm.measuredCount > 0
-            ? 'metrics within your 30-day typical range'
+            ? 'trusted metrics within your 30-day typical range'
             : hm.valueCount > 0
             ? 'overnight values found; personal ranges are still calibrating'
             : 'Wear your strap overnight and complete a full sync to populate your vitals'}
@@ -82,9 +82,10 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.footnote}>
-        Blood Oxygen and Skin Temperature need the strap’s raw optical/thermistor stream, which this
-        build can’t yet decode over Bluetooth — they’re shown for parity but not measured. The heart
-        rhythm screen is a wellness feature, not an ECG or a medical diagnosis.
+        Blood Oxygen and Skin Temperature are experimental raw WHOOP 5 history candidates. They are
+        displayed for review when present, but they do not count in the headline range score until the
+        decode is confirmed against more captures. The heart rhythm screen is a wellness feature, not
+        an ECG or a medical diagnosis.
       </Text>
     </Screen>
   );
@@ -93,26 +94,32 @@ export function HealthScreen({ nav }: { nav: Nav }) {
 function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPress: () => void }) {
   const statusColor = !vital.available
     ? colors.textTertiary
+    : vital.experimental
+    ? colors.textSecondary
     : vital.inRange == null
     ? colors.textTertiary
     : vital.inRange
     ? colors.recoveryGreen
     : colors.recoveryYellow;
+  const rangeText = !vital.available
+    ? 'Needs decoded overnight data'
+    : vital.experimental && vital.range
+    ? `Experimental typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
+    : vital.experimental
+    ? 'Experimental raw-sensor candidate'
+    : vital.range
+    ? `Typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
+    : 'Needs overnight data';
+
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, last && styles.last, pressed && { opacity: 0.6 }]}>
       <View style={[styles.dot, { backgroundColor: statusColor }]} />
       <View style={{ flex: 1 }}>
         <Text style={styles.vLabel}>{vital.label}</Text>
-        <Text style={styles.vRange}>
-          {!vital.available
-            ? 'Not measured on this build'
-            : vital.range
-            ? `Typical ${vital.range.lo}–${vital.range.hi} ${vital.unit}`
-            : 'Needs overnight data'}
-        </Text>
+        <Text style={styles.vRange}>{rangeText}</Text>
       </View>
       <Text style={[styles.vValue, { color: vital.available ? colors.text : colors.textTertiary }]}>
-        {vital.value != null ? `${vital.value}` : '—'}
+        {vital.value != null ? `${vital.value}` : '-'}
         <Text style={styles.vUnit}>{vital.available && vital.value != null ? ` ${vital.unit}` : ''}</Text>
       </Text>
       <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} style={{ marginLeft: 6 }} />

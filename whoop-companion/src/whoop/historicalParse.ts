@@ -34,10 +34,17 @@ export type HistoricalSleepStateSample = {
   state: number; // v18 @81 high nibble: 0 wake, 1 still, 2 asleep, 3 up
 };
 
+export type HistoricalRawVitalSample = {
+  ts: number; // epoch milliseconds
+  spo2: number | null; // experimental v21 candidate
+  skinTempC: number | null; // experimental v20 candidate
+};
+
 export type HistoricalDecodeResult = {
   hr: HistoricalHrSample[];
   steps: HistoricalStepSample[];
   sleepStates: HistoricalSleepStateSample[];
+  rawVitals: HistoricalRawVitalSample[];
   records: number;
   decodedRecords: number;
   rejectedRecords: number;
@@ -60,6 +67,7 @@ export function decodeWhoop5HistoryFrames(
   const hr: HistoricalHrSample[] = [];
   const steps: HistoricalStepSample[] = [];
   const sleepStates: HistoricalSleepStateSample[] = [];
+  const rawVitals: HistoricalRawVitalSample[] = [];
   const ppg: PpgSample[] = [];
   const versions = new Set<number>();
   let records = 0;
@@ -124,7 +132,7 @@ export function decodeWhoop5HistoryFrames(
     }
 
     if (version === 20 || version === 21) {
-      const rec = decodeRawSensorHistory(frame);
+      const rec = decodeRawSensorHistory(frame, version);
       if (!rec) {
         rejectedRecords += 1;
         continue;
@@ -138,6 +146,9 @@ export function decodeWhoop5HistoryFrames(
       rawSensorRecords += 1;
       if (version === 20) v20Records += 1;
       else v21Records += 1;
+      if (rec.spo2 != null || rec.skinTempC != null) {
+        rawVitals.push({ ts: ts * 1000, spo2: rec.spo2, skinTempC: rec.skinTempC });
+      }
       continue;
     }
 
@@ -157,10 +168,12 @@ export function decodeWhoop5HistoryFrames(
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
+  rawVitals.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
     sleepStates,
+    rawVitals,
     records,
     decodedRecords,
     rejectedRecords,
@@ -228,9 +241,22 @@ function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | nul
   return samples.length ? { unix, samples } : null;
 }
 
-function decodeRawSensorHistory(frame: Uint8Array): { unix: number } | null {
+function decodeRawSensorHistory(
+  frame: Uint8Array,
+  version: number,
+): { unix: number; spo2: number | null; skinTempC: number | null } | null {
   const unix = u32(frame, 15);
-  return unix == null ? null : { unix };
+  if (unix == null) return null;
+  let spo2: number | null = null;
+  let skinTempC: number | null = null;
+  if (version === 21) {
+    const candidate = u8(frame, 24);
+    if (candidate != null && candidate >= 70 && candidate <= 100) spo2 = candidate;
+  } else if (version === 20) {
+    const candidate = i16(frame, 26);
+    if (candidate != null && candidate >= 150 && candidate <= 450) skinTempC = Math.round(candidate) / 10;
+  }
+  return { unix, spo2, skinTempC };
 }
 
 function plausibleUnix(ts: number, wallNowSec: number): number | null {

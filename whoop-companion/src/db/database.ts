@@ -17,6 +17,7 @@ import * as SQLite from 'expo-sqlite';
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 export type SleepStateSampleRow = { ts: number; state: number };
+export type RawVitalSampleRow = { ts: number; spo2: number | null; skinTempC: number | null };
 export type RawFrameExportRow = { rowId: number; ts: number; source: string; hex: string };
 /**
  * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
@@ -52,6 +53,8 @@ export type DailyMetricRow = {
   rmssd: number | null;
   rhr: number | null;
   resp: number | null; // respiratory rate (brpm), overnight
+  spo2: number | null; // experimental raw-sensor candidate (%)
+  skinTempC: number | null; // experimental raw-sensor candidate (C)
   sleepMin: number | null;
   sleepPerf: number | null;
   strain: number | null;
@@ -108,7 +111,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE TABLE IF NOT EXISTS daily_metrics (
           day TEXT PRIMARY KEY,
-          recovery INTEGER, rmssd REAL, rhr INTEGER, resp REAL,
+          recovery INTEGER, rmssd REAL, rhr INTEGER, resp REAL, spo2 REAL, skin_temp_c REAL,
           sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER,
           sleep_start INTEGER, sleep_end INTEGER,
           deep_min INTEGER, rem_min INTEGER, light_min INTEGER, awake_min INTEGER,
@@ -145,16 +148,24 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           ts INTEGER PRIMARY KEY,
           state INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS raw_vital_samples (
+          ts INTEGER PRIMARY KEY,
+          spo2 REAL,
+          skin_temp_c REAL
+        );
         CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
         CREATE INDEX IF NOT EXISTS idx_step_samples_ts ON step_samples(ts);
         CREATE INDEX IF NOT EXISTS idx_sleep_state_samples_ts ON sleep_state_samples(ts);
+        CREATE INDEX IF NOT EXISTS idx_raw_vital_samples_ts ON raw_vital_samples(ts);
       `);
       // Migrations: add columns for DBs created before these features. Each
       // ALTER is independent so a partial upgrade still completes.
       for (const col of [
         'resp REAL',
+        'spo2 REAL',
+        'skin_temp_c REAL',
         'sleep_start INTEGER',
         'sleep_end INTEGER',
         'deep_min INTEGER',
@@ -258,6 +269,30 @@ export async function getSleepStateSamplesBetween(fromTs: number, toTs: number):
   return rows;
 }
 
+// ---- Experimental raw sensor vitals ----
+export async function insertRawVitalSample(s: RawVitalSampleRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
+     ON CONFLICT(ts) DO UPDATE SET
+       spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
+       skin_temp_c=COALESCE(excluded.skin_temp_c, raw_vital_samples.skin_temp_c)`,
+    s.ts,
+    s.spo2,
+    s.skinTempC,
+  );
+}
+
+export async function getRawVitalSamplesBetween(fromTs: number, toTs: number): Promise<RawVitalSampleRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ ts: number; spo2: number | null; skin_temp_c: number | null }>(
+    'SELECT ts, spo2, skin_temp_c FROM raw_vital_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    fromTs,
+    toTs,
+  );
+  return rows.map((r) => ({ ts: r.ts, spo2: r.spo2, skinTempC: r.skin_temp_c }));
+}
+
 // ---- Daily metrics ----
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const db = await getDb();
@@ -265,11 +300,12 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const sleepPerf = cleanSleepFraction(m.sleepPerf);
   const sleepDetail = cleanSleepDetail(m.sleepDetail);
   await db.runAsync(
-    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps,
+    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, spo2, skin_temp_c, sleep_min, sleep_perf, strain, steps,
        sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(day) DO UPDATE SET
        recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr, resp=excluded.resp,
+       spo2=excluded.spo2, skin_temp_c=excluded.skin_temp_c,
        sleep_min=excluded.sleep_min, sleep_perf=excluded.sleep_perf,
        strain=excluded.strain, steps=excluded.steps,
        sleep_start=excluded.sleep_start, sleep_end=excluded.sleep_end,
@@ -282,6 +318,8 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.rmssd,
     m.rhr,
     resp,
+    cleanPct(m.spo2),
+    cleanSkinTemp(m.skinTempC),
     m.sleepMin,
     sleepPerf,
     m.strain,
@@ -304,6 +342,11 @@ function cleanRespiratoryRate(value: number | null | undefined): number | null {
 function cleanPct(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(100, value));
+}
+
+function cleanSkinTemp(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return value >= 15 && value <= 45 ? Math.round(value * 10) / 10 : null;
 }
 
 function cleanNonNegative(value: number | null | undefined): number | null {
@@ -354,6 +397,8 @@ function mapDaily(r: {
   rmssd: number | null;
   rhr: number | null;
   resp: number | null;
+  spo2: number | null;
+  skin_temp_c: number | null;
   sleep_min: number | null;
   sleep_perf: number | null;
   strain: number | null;
@@ -381,6 +426,8 @@ function mapDaily(r: {
     rmssd: r.rmssd,
     rhr: r.rhr,
     resp: cleanRespiratoryRate(r.resp),
+    spo2: cleanPct(r.spo2),
+    skinTempC: cleanSkinTemp(r.skin_temp_c),
     sleepMin: r.sleep_min,
     sleepPerf: cleanSleepFraction(r.sleep_perf),
     strain: r.strain,

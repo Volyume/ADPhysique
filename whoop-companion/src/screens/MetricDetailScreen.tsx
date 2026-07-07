@@ -8,7 +8,6 @@ import { BaselineChart, Card, Empty, Ring, Screen, SectionLabel, WeeklyBars } fr
 import { stdev } from '../metrics/ema';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
-import { formatDuration } from '../util/time';
 import { nullableClampPct } from '../util/number';
 
 type Def = {
@@ -32,7 +31,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.rmssd,
     measured: true,
     blurb:
-      'Heart rate variability (HRV), the variance in time between heartbeats, is an indicator of how well your body can perform and adapt to its environment. Higher is generally better. WHOOP measures HRV during sleep; this build derives it from the strap’s R-R intervals.',
+      "Heart rate variability (HRV), the variance in time between heartbeats, is an indicator of how well your body can perform and adapt to its environment. Higher is generally better. WHOOP measures HRV during sleep; this build derives it from the strap's R-R intervals.",
   },
   rhr: {
     title: 'Resting Heart Rate',
@@ -58,19 +57,20 @@ const DEFS: Record<string, Def> = {
     title: 'Blood Oxygen',
     unit: '%',
     color: () => NEUTRAL,
-    pick: () => null,
-    measured: false,
+    pick: (d) => d.spo2,
+    measured: true,
     blurb:
-      'Blood oxygen (SpO₂) measures how much oxygen your red blood cells are carrying. It requires the raw red/infrared optical (PPG) stream, which this build cannot yet decode over Bluetooth — so it is not measured here.',
+      'Blood oxygen (SpO2) measures how much oxygen your red blood cells are carrying. This build shows an experimental candidate decoded from WHOOP 5 v21 history records. It is displayed for review and does not yet count toward the Health Monitor headline score.',
   },
   skin_temp: {
     title: 'Skin Temperature',
-    unit: '°C',
+    unit: 'C',
     color: () => NEUTRAL,
-    pick: () => null,
-    measured: false,
+    decimals: 1,
+    pick: (d) => d.skinTempC,
+    measured: true,
     blurb:
-      'Skin temperature indicates how your body regulates heat and varies day to day, unlike core body temperature. It requires the raw thermistor channel, which this build cannot yet decode over Bluetooth — so it is not measured here.',
+      'Skin temperature indicates how your body regulates heat and varies day to day, unlike core body temperature. This build shows an experimental candidate decoded from WHOOP 5 v20 history records. It is displayed for review and does not yet count toward the Health Monitor headline score.',
   },
   recovery: {
     title: 'Recovery',
@@ -79,7 +79,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.recovery,
     measured: true,
     blurb:
-      'Recovery (0–100%) is how prepared your body is to perform, derived from HRV, resting heart rate, respiratory rate and sleep. Green (≥67%) = primed; Yellow (34–66%) = maintaining; Red (≤33%) = needs rest.',
+      'Recovery (0-100%) is how prepared your body is to perform, derived from HRV, resting heart rate, respiratory rate and sleep. Green (>=67%) = primed; Yellow (34-66%) = maintaining; Red (<=33%) = needs rest.',
   },
   strain: {
     title: 'Day Strain',
@@ -89,7 +89,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.strain,
     measured: true,
     blurb:
-      'Strain (0–21, logarithmic) is the cardiovascular load you accumulate over a day or activity, based on time spent in each heart-rate zone. It builds quickly at high heart rates and barely moves at rest.',
+      'Strain (0-21, logarithmic) is the cardiovascular load you accumulate over a day or activity, based on time spent in each heart-rate zone. It builds quickly at high heart rates and barely moves at rest.',
   },
   sleep_performance: {
     title: 'Sleep Performance',
@@ -99,7 +99,7 @@ const DEFS: Record<string, Def> = {
       nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)),
     measured: true,
     blurb:
-      'Sleep Performance is a composite of four contributors — Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
+      'Sleep Performance is a composite of four contributors: Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
   },
   steps: {
     title: 'Steps',
@@ -132,13 +132,13 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             size={196}
             color={colors.recoveryGreen}
             centerTop="HRV BALANCE"
-            centerMain={hrvBal ? `${hrvBal.ratio}×` : '—'}
+            centerMain={hrvBal ? `${hrvBal.ratio}x` : '-'}
             centerSub={hrvBal ? `${hrvBal.shortMean} vs ${hrvBal.longMean} ms` : 'needs ~1 week'}
           />
         </View>
         <Card>
           <Text style={styles.blurb}>
-            HRV Balance compares your recent (≈2-week) HRV trend to your longer (≈3-month) average. On
+            HRV Balance compares your recent (~2-week) HRV trend to your longer (~3-month) average. On
             par with or above your average is a sign your nervous system is keeping up with the load on
             it; a sustained drop can mean accumulated stress, under-recovery or oncoming illness.
           </Text>
@@ -157,18 +157,18 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             size={196}
             color={colors.strainBlue}
             centerTop="HEART AGE"
-            centerMain={cardioAge != null ? `${cardioAge}` : '—'}
+            centerMain={cardioAge != null ? `${cardioAge}` : '-'}
             centerSub={delta != null ? (delta <= 0 ? `${-delta}y younger` : `${delta}y older`) : 'estimate'}
           />
         </View>
         <Card>
           <Text style={styles.blurb}>
-            An estimate of your heart’s fitness age from your resting heart rate and overnight HRV
-            versus what’s typical for your age. A lower number than your real age is good.
+            An estimate of your heart's fitness age from your resting heart rate and overnight HRV
+            versus what is typical for your age. A lower number than your real age is good.
           </Text>
           <Text style={styles.unavail2}>
-            This is a wellness estimate, not Oura’s pulse-wave-velocity Cardiovascular Age — that needs
-            the ring’s raw optical waveform, which WHOOP doesn’t expose over Bluetooth.
+            This is a wellness estimate, not Oura's pulse-wave-velocity Cardiovascular Age. That needs
+            the ring's raw optical waveform, which WHOOP does not expose over Bluetooth.
           </Text>
         </Card>
       </Screen>
@@ -182,7 +182,6 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
   const baseline = series.length ? series.reduce((a, b) => a + b, 0) / series.length : null;
   const tint = def.color(current);
 
-  // Last 7 days for the weekly bars.
   const last7 = history.slice(-7).map((d) => ({
     label: d.day.slice(8),
     value: def.pick(d),
@@ -198,7 +197,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             value={ringFraction(metricKey, current)}
             size={176}
             color={tint}
-            centerMain={current != null ? `${current.toFixed(def.decimals ?? 0)}` : '—'}
+            centerMain={current != null ? `${current.toFixed(def.decimals ?? 0)}` : '-'}
             centerSub={current != null ? def.unit || undefined : 'awaiting data'}
           />
         ) : (
@@ -216,14 +215,14 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             <View style={styles.row}>
               <Text style={styles.k}>Baseline</Text>
               <Text style={styles.v}>
-                {baseline != null ? `${baseline.toFixed(def.decimals ?? 0)} ${def.unit}` : '—'}
+                {baseline != null ? `${baseline.toFixed(def.decimals ?? 0)} ${def.unit}` : '-'}
               </Text>
             </View>
             {series.length >= 2 ? (
               <View style={styles.row}>
                 <Text style={styles.k}>Range (30d)</Text>
                 <Text style={styles.v}>
-                  {`${Math.min(...series).toFixed(def.decimals ?? 0)}–${Math.max(...series).toFixed(
+                  {`${Math.min(...series).toFixed(def.decimals ?? 0)}-${Math.max(...series).toFixed(
                     def.decimals ?? 0,
                   )} ${def.unit}`}
                 </Text>
@@ -236,7 +235,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             {last7.some((d) => d.value != null) ? (
               <WeeklyBars data={last7} />
             ) : (
-              <Empty text="No history yet — wear the strap overnight to build this trend." />
+              <Empty text="No history yet - wear the strap overnight to build this trend." />
             )}
           </Card>
 

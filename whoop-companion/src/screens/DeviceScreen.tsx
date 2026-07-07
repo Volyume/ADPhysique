@@ -250,6 +250,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>R-R intervals backfilled: {effectiveSync?.rrSamples ?? 0}</Text>
         <Text style={styles.diagText}>Band step counters: {effectiveSync?.stepSamples ?? 0}</Text>
         <Text style={styles.diagText}>Raw sensor records: {effectiveSync?.rawSensorRecords ?? 0}</Text>
+        <Text style={styles.diagText}>Raw vital candidates: {effectiveSync?.rawVitalSamples ?? 0}</Text>
         <Text style={styles.diagText}>
           History layouts: {effectiveSync?.versions.length ? effectiveSync.versions.join(', ') : 'none yet'}
         </Text>

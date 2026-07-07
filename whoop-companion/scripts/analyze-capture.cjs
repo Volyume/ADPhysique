@@ -61,6 +61,7 @@ function main() {
   const sleepStateByDay = groupByDay(decoded.sleepStates.map((s) => s.ts));
   const sleepStateCounts = countSleepStates(decoded.sleepStates);
   const activityClassCounts = countActivityClasses(decoded.steps);
+  const rawVitalStats = summarizeRawVitals(decoded.rawVitals);
   const versions = decoded.versions.join(', ') || 'none';
   const bpm = decoded.hr.map((s) => s.bpm).filter((v) => v > 0);
   const rrCount = decoded.hr.reduce((a, s) => a + s.rr.length, 0);
@@ -85,6 +86,12 @@ function main() {
   );
   console.log(
     `sleep_state: rows=${decoded.sleepStates.length} wake=${sleepStateCounts[0] ?? 0} still=${sleepStateCounts[1] ?? 0} asleep=${sleepStateCounts[2] ?? 0} up=${sleepStateCounts[3] ?? 0} ${formatRange(sleepStateDates)}`,
+  );
+  console.log(
+    `raw_vitals: rows=${decoded.rawVitals.length} spo2=${formatStat(rawVitalStats.spo2, '%')} skin_temp=${formatStat(
+      rawVitalStats.skinTempC,
+      ' C',
+    )}`,
   );
   console.log('hr_by_day:');
   for (const [day, count] of Object.entries(hrByDay)) console.log(`  ${day}: ${count}`);
@@ -170,6 +177,7 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
   const hr = [];
   const steps = [];
   const sleepStates = [];
+  const rawVitals = [];
   const ppg = [];
   const versions = new Set();
   let records = 0;
@@ -234,7 +242,7 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
     }
 
     if (version === 20 || version === 21) {
-      const rec = decodeRawSensorHistory(frame);
+      const rec = decodeRawSensorHistory(frame, version);
       if (!rec) {
         rejectedRecords += 1;
         continue;
@@ -248,6 +256,9 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
       rawSensorRecords += 1;
       if (version === 20) v20Records += 1;
       else v21Records += 1;
+      if (rec.spo2 != null || rec.skinTempC != null) {
+        rawVitals.push({ ts: ts * 1000, spo2: rec.spo2, skinTempC: rec.skinTempC });
+      }
       continue;
     }
 
@@ -261,10 +272,12 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
+  rawVitals.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
     sleepStates,
+    rawVitals,
     records,
     decodedRecords,
     rejectedRecords,
@@ -325,9 +338,19 @@ function decodeV26(frame) {
   return samples.length ? { unix, samples } : null;
 }
 
-function decodeRawSensorHistory(frame) {
+function decodeRawSensorHistory(frame, version) {
   const unix = u32(frame, 15);
-  return unix == null ? null : { unix };
+  if (unix == null) return null;
+  let spo2 = null;
+  let skinTempC = null;
+  if (version === 21) {
+    const candidate = u8(frame, 24);
+    if (candidate != null && candidate >= 70 && candidate <= 100) spo2 = candidate;
+  } else if (version === 20) {
+    const candidate = i16(frame, 26);
+    if (candidate != null && candidate >= 150 && candidate <= 450) skinTempC = Math.round(candidate) / 10;
+  }
+  return { unix, spo2, skinTempC };
 }
 
 function summarizeMetadata(framesIn) {
@@ -620,6 +643,29 @@ function groupRowsByDay(rows) {
   return Object.fromEntries(Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])));
 }
 
+function summarizeRawVitals(rows) {
+  return {
+    spo2: summarizeValues(rows.map((r) => r.spo2).filter((v) => v != null)),
+    skinTempC: summarizeValues(rows.map((r) => r.skinTempC).filter((v) => v != null)),
+  };
+}
+
+function summarizeValues(values) {
+  if (!values.length) return null;
+  const sum = values.reduce((a, b) => a + b, 0);
+  return {
+    count: values.length,
+    min: Math.min(...values),
+    mean: sum / values.length,
+    max: Math.max(...values),
+  };
+}
+
+function formatStat(stat, unit) {
+  if (!stat) return 'n/a';
+  return `n=${stat.count} min=${round1(stat.min)} mean=${round1(stat.mean)} max=${round1(stat.max)}${unit}`;
+}
+
 function countActivityClasses(rows) {
   const counts = { unknown: 0 };
   for (const row of rows) {
@@ -688,6 +734,10 @@ function min(values) {
 
 function max(values) {
   return values.length ? Math.max(...values) : 'n/a';
+}
+
+function round1(value) {
+  return Math.round(value * 10) / 10;
 }
 
 main();

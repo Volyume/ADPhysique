@@ -29,12 +29,15 @@ import {
   CardioRow,
   DailyMetricRow,
   HrSampleRow,
+  RawVitalSampleRow,
   SleepDetail,
+  getRawVitalSamplesBetween,
   getHrSamplesBetween,
   getRecentDailyMetrics,
   getSleepStateSamplesBetween,
   insertCardio,
   insertHrSample,
+  insertRawVitalSample,
   insertSleepStateSample,
   insertStepSample,
   insertJournal,
@@ -130,6 +133,7 @@ export type HistorySyncReport = {
   rrSamples: number;
   stepSamples: number;
   rawSensorRecords: number;
+  rawVitalSamples: number;
   rejectedRecords: number;
   droppedImplausibleTs: number;
   versions: number[];
@@ -409,6 +413,7 @@ class AppStore extends Store<AppState> {
               rrSamples: 0,
               stepSamples: 0,
               rawSensorRecords: 0,
+              rawVitalSamples: 0,
               rejectedRecords: 0,
               droppedImplausibleTs: 0,
               versions: [],
@@ -865,6 +870,7 @@ class AppStore extends Store<AppState> {
               rrSamples: 0,
               stepSamples: 0,
               rawSensorRecords: 0,
+              rawVitalSamples: 0,
               rejectedRecords: 0,
               droppedImplausibleTs: 0,
               versions: [],
@@ -987,6 +993,9 @@ class AppStore extends Store<AppState> {
     for (const sample of decoded.sleepStates) {
       await insertSleepStateSample({ ts: sample.ts, state: sample.state });
     }
+    for (const sample of decoded.rawVitals) {
+      await insertRawVitalSample({ ts: sample.ts, spo2: sample.spo2, skinTempC: sample.skinTempC });
+    }
 
     this.historySessionStats = mergeHistoryStats(this.historySessionStats, decoded);
     const stats = this.historySessionStats;
@@ -999,6 +1008,7 @@ class AppStore extends Store<AppState> {
         rrSamples: stats.hr.reduce((a, s) => a + s.rr.length, 0),
         stepSamples: stats.steps.length,
         rawSensorRecords: stats.rawSensorRecords,
+        rawVitalSamples: stats.rawVitals.length,
         rejectedRecords: stats.rejectedRecords,
         droppedImplausibleTs: stats.droppedImplausibleTs,
         versions: stats.versions,
@@ -1021,6 +1031,7 @@ class AppStore extends Store<AppState> {
     }
     for (const sample of stats.steps) days.add(dayKey(sample.ts));
     for (const sample of stats.sleepStates) days.add(dayKey(sample.ts));
+    for (const sample of stats.rawVitals) days.add(dayKey(sample.ts));
     const ordered = [...days].filter((d) => d !== today).sort((a, b) => a.localeCompare(b));
     for (const day of ordered) {
       await this.backfillDailyMetric(day);
@@ -1075,12 +1086,17 @@ class AppStore extends Store<AppState> {
     let rmssd: number | null = null;
     let rhr: number | null = null;
     let resp: number | null = null;
+    let spo2: number | null = null;
+    let skinTempC: number | null = null;
     const scoredNightHr = sleep ? nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs) : [];
     if (sleep) {
       const vitals = computeOvernightVitals(scoredNightHr, sleep);
       rmssd = vitals.rmssd;
       rhr = vitals.rhr;
       resp = vitals.resp;
+      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+      spo2 = rawVitals.spo2;
+      skinTempC = rawVitals.skinTempC;
     }
 
     const recent = (await getRecentDailyMetrics(60)).filter((d) => d.day < day);
@@ -1185,6 +1201,8 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
+      spo2,
+      skinTempC,
       sleepMin: sleep?.asleepMin ?? null,
       sleepPerf: sleepDetail?.performance != null ? sleepDetail.performance / 100 : (sleep?.performance ?? null),
       strain,
@@ -1322,6 +1340,7 @@ class AppStore extends Store<AppState> {
         rrSamples: 0,
         stepSamples: 0,
         rawSensorRecords: 0,
+        rawVitalSamples: 0,
         rejectedRecords: 0,
         droppedImplausibleTs: 0,
         versions: [],
@@ -1686,12 +1705,17 @@ class AppStore extends Store<AppState> {
     let rmssd: number | null = null;
     let rhr: number | null = null;
     let resp: number | null = null;
+    let spo2: number | null = null;
+    let skinTempC: number | null = null;
     const scoredNightHr = sleep ? nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs) : [];
     if (sleep) {
       const vitals = computeOvernightVitals(scoredNightHr, sleep);
       rmssd = vitals.rmssd;
       rhr = vitals.rhr;
       resp = vitals.resp;
+      const rawVitals = averageRawVitals(await getRawVitalSamplesBetween(sleep.startTs, sleep.endTs));
+      spo2 = rawVitals.spo2;
+      skinTempC = rawVitals.skinTempC;
     }
 
     // Baselines from prior days (exclude today).
@@ -1867,6 +1891,8 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
+      spo2,
+      skinTempC,
       sleepMin: sleep?.asleepMin ?? null,
       sleepPerf: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       strain,
@@ -1916,6 +1942,8 @@ class AppStore extends Store<AppState> {
       rhr: { value: today?.rhr ?? null, history: hist((d) => d.rhr) },
       hrv: { value: today?.rmssd ?? null, history: hist((d) => d.rmssd) },
       respiratory: { value: today?.resp ?? null, history: hist((d) => d.resp) },
+      spo2: { value: today?.spo2 ?? null, history: hist((d) => d.spo2) },
+      skinTemp: { value: today?.skinTempC ?? null, history: hist((d) => d.skinTempC) },
     });
   };
 
@@ -2119,6 +2147,15 @@ type OvernightVitals = {
   rhr: number | null;
   resp: number | null;
 };
+
+function averageRawVitals(rows: RawVitalSampleRow[]): { spo2: number | null; skinTempC: number | null } {
+  const spo2 = rows.map((r) => r.spo2).filter((v): v is number => v != null && v >= 70 && v <= 100);
+  const skin = rows.map((r) => r.skinTempC).filter((v): v is number => v != null && v >= 15 && v <= 45);
+  return {
+    spo2: spo2.length ? Math.round(spo2.reduce((a, b) => a + b, 0) / spo2.length) : null,
+    skinTempC: skin.length ? round1(skin.reduce((a, b) => a + b, 0) / skin.length) : null,
+  };
+}
 
 type SleepConfidence = 'high' | 'medium' | 'low';
 
@@ -2346,7 +2383,7 @@ function historyStopStatus(
   reason: 'complete' | 'timeout' | 'disconnect',
   sync: NonNullable<AppState['historySync']>,
 ): string {
-  const summary = `${sync.hrSamples} HR, ${sync.stepSamples} step rows from ${sync.rawRecords} records`;
+  const summary = `${sync.hrSamples} HR, ${sync.stepSamples} step rows, ${sync.rawVitalSamples} raw vitals from ${sync.rawRecords} records`;
   if (reason === 'complete') {
     return sync.rawRecords > 0 ? `Complete: ${summary}` : 'Complete: no stored history returned';
   }
@@ -2371,6 +2408,7 @@ function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
       rrSamples: safeInt(r.rrSamples),
       stepSamples: safeInt(r.stepSamples),
       rawSensorRecords: safeInt(r.rawSensorRecords),
+      rawVitalSamples: safeInt(r.rawVitalSamples),
       rejectedRecords: safeInt(r.rejectedRecords),
       droppedImplausibleTs: safeInt(r.droppedImplausibleTs),
       versions: Array.isArray(r.versions) ? r.versions.filter((v): v is number => typeof v === 'number') : [],
@@ -2388,12 +2426,22 @@ function safeInt(value: unknown): number {
 }
 
 function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: HistoricalDecodeResult): HistoricalDecodeResult {
-  if (!prev) return { ...next, hr: [...next.hr], steps: [...next.steps], sleepStates: [...next.sleepStates], versions: [...next.versions] };
+  if (!prev) {
+    return {
+      ...next,
+      hr: [...next.hr],
+      steps: [...next.steps],
+      sleepStates: [...next.sleepStates],
+      rawVitals: [...next.rawVitals],
+      versions: [...next.versions],
+    };
+  }
   const versions = new Set([...prev.versions, ...next.versions]);
   return {
     hr: [...prev.hr, ...next.hr],
     steps: [...prev.steps, ...next.steps],
     sleepStates: [...prev.sleepStates, ...next.sleepStates],
+    rawVitals: [...prev.rawVitals, ...next.rawVitals],
     records: prev.records + next.records,
     decodedRecords: prev.decodedRecords + next.decodedRecords,
     rejectedRecords: prev.rejectedRecords + next.rejectedRecords,
