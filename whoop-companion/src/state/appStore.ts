@@ -2484,27 +2484,62 @@ async function buildSleepInput(
   const stepRows = await getStepSamplesBetween(winStart, winEnd).catch(() => []);
   const hrByMinute = new Map(nightPerMin.map((p) => [Math.floor(p.tsMs / 60000), p.hr]));
   const stateByMinute = minuteMode(sleepStates, (s) => s.state);
-  const activityByMinute = minuteMode(
-    stepRows.filter((s) => s.activityClass != null),
-    (s) => s.activityClass as number,
-  );
+  const motionByMinute = sleepMotionByMinute(stepRows);
   const minutes = new Set<number>([
     ...hrByMinute.keys(),
     ...stateByMinute.keys(),
-    ...activityByMinute.keys(),
+    ...motionByMinute.keys(),
   ]);
 
   return [...minutes]
     .sort((a, b) => a - b)
     .map((minute) => {
-      const activity = activityByMinute.get(minute);
       return {
         ts: minute * 60000,
         hr: hrByMinute.get(minute) ?? null,
-        motion: activity == null ? null : activity === 0 ? 0 : 1,
+        motion: motionByMinute.get(minute) ?? null,
         bandSleepState: stateByMinute.get(minute) ?? null,
       };
     });
+}
+
+function sleepMotionByMinute(rows: Array<{ ts: number; counter: number; activityClass: number | null }>): Map<number, number> {
+  const out = new Map<number, number>();
+  const mark = (minute: number, motion: number) => {
+    out.set(minute, Math.max(out.get(minute) ?? 0, motion));
+  };
+
+  const sorted = [...rows].sort((a, b) => a.ts - b.ts);
+  for (const row of sorted) {
+    const minute = Math.floor(row.ts / 60000);
+    if (row.activityClass === 0) mark(minute, 0);
+    else if (row.activityClass === 1 || row.activityClass === 2) mark(minute, 1);
+  }
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1]!;
+    const cur = sorted[i]!;
+    const gapMin = Math.max(1, Math.round((cur.ts - prev.ts) / 60000));
+    if (gapMin > 30) continue;
+
+    const delta = cur.counter - prev.counter;
+    if (delta <= 0) continue;
+
+    const stepRate = delta / gapMin;
+    if (stepRate < 1 && !(delta >= 10 && gapMin <= 15)) continue;
+
+    const motion = stepRate >= 8 ? 1 : 0.55;
+    const startMinute = Math.floor(prev.ts / 60000) + 1;
+    const endMinute = Math.floor(cur.ts / 60000);
+    const fillInterval = gapMin <= 8 || stepRate >= 5;
+    if (fillInterval) {
+      for (let minute = startMinute; minute <= endMinute; minute += 1) mark(minute, motion);
+    } else {
+      mark(endMinute, motion);
+    }
+  }
+
+  return out;
 }
 
 function minuteMode<T extends { ts: number }>(rows: T[], pick: (row: T) => number): Map<number, number> {
