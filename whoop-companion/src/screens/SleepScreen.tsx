@@ -419,7 +419,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                 label={label}
                 icon="cafe"
                 iconColor={colors.recoveryYellow}
-                value={`${formatDuration(credit)} / ${source}`}
+                value={`${formatDuration(credit)} credit / ${source}`}
                 onPress={() => nav.navigate({ name: 'activity', id: nap.id })}
                 last={i === naps.length - 1}
               />

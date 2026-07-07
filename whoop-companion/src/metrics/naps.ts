@@ -15,7 +15,8 @@ export type StoredNapDetail = {
   source: SleepResult['source'];
 };
 
-const MAX_NAP_CREDIT_MIN = 180;
+const MAX_NAP_CREDIT_MIN = 120;
+const MAX_UNVERIFIED_NAP_CREDIT_MIN = 60;
 
 export function napDetailFromSleep(sleep: SleepResult, autoDetected: boolean): StoredNapDetail {
   const coveragePct = Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
@@ -67,9 +68,21 @@ export function parseNapDetail(notes: string | null | undefined): StoredNapDetai
 export function napCreditMin(row: CardioRow): number {
   if (row.source !== 'nap') return 0;
   const detail = parseNapDetail(row.notes);
-  if (detail) return Math.min(MAX_NAP_CREDIT_MIN, Math.max(0, detail.asleepMin));
+  if (detail) {
+    const signalFactor =
+      detail.source === 'manual_duration'
+        ? 0.5
+        : detail.coveragePct >= 80
+          ? 1
+          : detail.coveragePct >= 50
+            ? 0.75
+            : 0.5;
+    const efficiencyFactor = detail.efficiency >= 80 ? 1 : detail.efficiency >= 65 ? 0.85 : 0.65;
+    const cap = detail.source === 'manual_duration' || detail.coveragePct < 50 ? MAX_UNVERIFIED_NAP_CREDIT_MIN : MAX_NAP_CREDIT_MIN;
+    return Math.min(cap, Math.max(0, Math.round(detail.asleepMin * signalFactor * efficiencyFactor)));
+  }
   const durationMin = Math.round((row.endTs - row.startTs) / 60000);
-  return Math.min(MAX_NAP_CREDIT_MIN, Math.max(0, Math.round(durationMin * 0.85)));
+  return Math.min(MAX_UNVERIFIED_NAP_CREDIT_MIN, Math.max(0, Math.round(durationMin * 0.5)));
 }
 
 function cleanMin(value: unknown): number | null {
