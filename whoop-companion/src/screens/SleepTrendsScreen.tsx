@@ -19,6 +19,7 @@ import {
   restorativeBand,
 } from '../metrics/sleepBands';
 import { nullableClampPct } from '../util/number';
+import { sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
 
 type RangeKey = 'W' | 'M' | '6M';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -168,30 +169,6 @@ function trendDeltaMeta(metric: TrendMetric, avg: number | null, priorAvg: numbe
     improved: lowerIsBetter ? delta < 0 : delta > 0,
     label: delta > 0 ? 'higher' : 'lower',
   };
-}
-
-function trendWeight(day: DailyMetricRow): number {
-  const confidence = day.sleepDetail?.confidence;
-  if (confidence === 'high') return 1;
-  if (confidence === 'medium') return 0.7;
-  if (confidence === 'low') return 0;
-  return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
-}
-
-function weightedAverage(rows: DailyMetricRow[], metric: TrendMetric): { avg: number | null; weight: number; count: number } {
-  let total = 0;
-  let weightTotal = 0;
-  let count = 0;
-  for (const row of rows) {
-    const value = metric.pick(row);
-    if (value == null) continue;
-    const weight = trendWeight(row);
-    if (weight <= 0) continue;
-    total += value * weight;
-    weightTotal += weight;
-    count += 1;
-  }
-  return { avg: weightTotal > 0 ? total / weightTotal : null, weight: weightTotal, count };
 }
 
 function trendDeltaColor(improved: boolean | null): string {
@@ -396,8 +373,8 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     const vals = period.map(metric.pick).filter((v): v is number => v != null);
     const priorVals = prior.map(metric.pick).filter((v): v is number => v != null);
     const rawAvg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    const weighted = weightedAverage(period, metric);
-    const priorWeighted = weightedAverage(prior, metric);
+    const weighted = sleepTrustWeightedAverage(period, metric.pick);
+    const priorWeighted = sleepTrustWeightedAverage(prior, metric.pick);
     const avg = weighted.avg ?? rawAvg;
     const priorAvg = priorWeighted.avg ?? (priorVals.length ? priorVals.reduce((a, b) => a + b, 0) / priorVals.length : null);
     const delta = trendDeltaMeta(metric, avg, priorAvg);

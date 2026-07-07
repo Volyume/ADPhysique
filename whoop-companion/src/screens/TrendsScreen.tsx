@@ -8,6 +8,7 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav, MetricKey } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
 import { computeEnergyReserve } from '../metrics/energyReserve';
+import { sleepTrustWeight, sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
 
 type RangeKey = 'W' | 'M' | '6M' | 'ALL';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -78,15 +79,6 @@ function confidenceForSeries(series: MetricKey, day: DailyMetricRow): 'high' | '
   return null;
 }
 
-function trendWeight(series: MetricKey, day: DailyMetricRow): number {
-  if (!confidenceForSeries(series, day)) return 1;
-  const confidence = day.sleepDetail?.confidence;
-  if (confidence === 'high') return 1;
-  if (confidence === 'medium') return 0.7;
-  if (confidence === 'low') return 0;
-  return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
-}
-
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -94,20 +86,10 @@ function round1(value: number): number {
 function weightedSeriesAvg(rows: DailyMetricRow[], series: Series): { avg: number | null; rawAvg: number | null; weighted: boolean } {
   const vals = rows.map(series.pick).filter((v): v is number => v != null && Number.isFinite(v));
   const rawAvg = vals.length ? round1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  let total = 0;
-  let weightTotal = 0;
-  let sawSleepConfidence = false;
-  for (const row of rows) {
-    const value = series.pick(row);
-    if (value == null || !Number.isFinite(value)) continue;
-    sawSleepConfidence = sawSleepConfidence || confidenceForSeries(series.key, row) != null;
-    const weight = trendWeight(series.key, row);
-    if (weight <= 0) continue;
-    total += value * weight;
-    weightTotal += weight;
-  }
-  if (weightTotal <= 0) return { avg: rawAvg, rawAvg, weighted: false };
-  return { avg: round1(total / weightTotal), rawAvg, weighted: sawSleepConfidence };
+  const weighted = rows.some((row) => confidenceForSeries(series.key, row) != null);
+  if (!weighted) return { avg: rawAvg, rawAvg, weighted: false };
+  const trusted = sleepTrustWeightedAverage(rows, series.pick);
+  return { avg: trusted.avg != null ? round1(trusted.avg) : rawAvg, rawAvg, weighted: trusted.weight > 0 };
 }
 
 export function TrendsScreen({ nav }: { nav: Nav }) {
@@ -314,7 +296,7 @@ function trustedAvg(rows: DailyMetricRow[], key: MetricKey, pick: (d: DailyMetri
     if (value == null || !Number.isFinite(value)) continue;
     rawTotal += value;
     rawCount += 1;
-    const weight = trendWeight(key, row);
+    const weight = confidenceForSeries(key, row) != null ? sleepTrustWeight(row) : 1;
     if (weight <= 0) continue;
     total += value * weight;
     weightTotal += weight;
