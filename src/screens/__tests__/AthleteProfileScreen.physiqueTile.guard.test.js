@@ -15,7 +15,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/label: 'Volyume Score'/);
     expect(source).toMatch(/label: 'Body fat'/);
     expect(source).toMatch(/label: 'Progress photos'/);
-    expect(source).toMatch(/Private progress index, not body fat/);
+    expect(source).toMatch(/Private progress score, not body fat/);
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
     expect(source).toMatch(/value: physiqueScoreTileValue\(summary\.scan\)/);
     expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);

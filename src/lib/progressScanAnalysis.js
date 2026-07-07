@@ -689,14 +689,18 @@ export function progressScanAssessmentCopy(assessment = null) {
   if (assessment.visualLeannessScore == null) {
     return 'Progress photos saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
-  const score = `${assessment.visualLeannessScore}`;
+  const numericScore = finiteNumber(assessment.visualLeannessScore);
+  if (numericScore == null) {
+    return 'Progress photos saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
+  }
+  const score = `${Math.round(numericScore)}/100`;
   const band = assessment.leannessBandLabel ? `${assessment.leannessBandLabel} band` : 'No band';
   const progress = assessment.progressSignalLabel || progressSignalLabel('baseline');
   const confidence = assessment.scanConfidenceLabel || scanConfidenceLabel(assessment.scanConfidenceTier);
   const prefix = assessment.progressSignal === 'baseline'
-    ? `Baseline Volyume index ${score}`
-    : `Volyume index ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress index for photos taken in similar conditions, not a body fat percentage or a rating of your physique.`;
+    ? `Baseline Volyume Score ${score}`
+    : `Volyume Score ${score}`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress score for photos taken in similar conditions, not a body fat percentage or a rating of your physique.`;
 }
 
 function scanPoseSet(scan = {}) {

@@ -15,7 +15,7 @@ import {
   normaliseScanCompareSelection,
   orderedScanEntries,
 } from '../lib/progressScanCompareViewModel';
-import { progressScanAssessmentForDisplay } from '../lib/progressScanDisplay';
+import { formatVolyumeScore, progressScanAssessmentForDisplay } from '../lib/progressScanDisplay';
 
 export { defaultScanPair, orderedScanEntries } from '../lib/progressScanCompareViewModel';
 
@@ -31,7 +31,7 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   const assessment = progressScanAssessmentForDisplay(scan);
   if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
   if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scored'} index ${Math.round(Number(assessment.visualLeannessScore))}`;
+    return `${assessment.leannessBandLabel || 'Scored'} ${formatVolyumeScore(assessment.visualLeannessScore)}`;
   }
   const reasons = new Set([
     ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),

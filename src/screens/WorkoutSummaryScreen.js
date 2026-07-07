@@ -63,7 +63,9 @@ function partnerRecordLabel(pr = {}) {
 }
 
 function partnerCheerFailureMessage(error) {
-  if (error === 'not_active') return 'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.';
+  if (error === 'not_active' || error === 'partner_syncing') {
+    return 'Volyume is still setting up this partnership on this device. Partners is refreshing it now; try again in a moment.';
+  }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
@@ -182,6 +184,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // applies the fail-closed ED/calm/SCOFF suppression and the frequency caps, so
   // this holds null under any suppressed state. Marked seen on cheer or unmount.
   const [partnerMoment, setPartnerMoment] = useState(null);
+  const [postWorkoutCheerSending, setPostWorkoutCheerSending] = useState(false);
   const partnerMomentRef = useRef(null);
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
@@ -736,24 +739,31 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   async function handlePostWorkoutCheer() {
-    if (!partners?.cheerEnabled) return;
+    if (!partners?.cheerEnabled || postWorkoutCheerSending) return;
     if (!partners.partnership?.id) {
       toast.show('Refresh Partners and try again.', { variant: 'error' });
       return;
     }
-    const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
-    const result = await partners.cheer(partners.partnership.id, undefined, !!reciprocal);
-    if (result?.ok || result?.error === 'already_cheered') {
-      if (partnerMoment?.id) {
-        markMomentSeen(partnerMoment.id).catch(() => {});
-        partnerMomentRef.current = null;
-        setPartnerMoment(null);
+    setPostWorkoutCheerSending(true);
+    try {
+      const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
+      const result = await partners.cheer(partners.partnership.id, undefined, !!reciprocal);
+      if (result?.ok || result?.error === 'already_cheered') {
+        if (partnerMoment?.id) {
+          markMomentSeen(partnerMoment.id).catch(() => {});
+          partnerMomentRef.current = null;
+          setPartnerMoment(null);
+        }
+        toast.show(result?.error === 'already_cheered' ? 'Cheer already sent today' : 'Cheer sent', { variant: 'success' });
+        return;
       }
-      toast.show(result?.error === 'already_cheered' ? 'Cheer already sent today' : 'Cheer sent', { variant: 'success' });
-      return;
+      logError('WorkoutSummaryScreen.postWorkoutCheer', new Error(result?.error || 'unknown'), { userId: user?.id });
+      toast.show(partnerCheerFailureMessage(result?.error), {
+        variant: result?.error === 'partner_syncing' || result?.error === 'not_active' ? 'warning' : 'error',
+      });
+    } finally {
+      setPostWorkoutCheerSending(false);
     }
-    logError('WorkoutSummaryScreen.postWorkoutCheer', new Error(result?.error || 'unknown'), { userId: user?.id });
-    toast.show(partnerCheerFailureMessage(result?.error), { variant: 'error' });
   }
 
   // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
@@ -981,15 +991,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   <Text style={styles.partnerCheerText}>Preview win</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
+                  style={[styles.partnerCheerBtn, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerBtnDone]}
                   onPress={handlePostWorkoutCheer}
-                  disabled={!partners.cheerEnabled}
+                  disabled={!partners.cheerEnabled || postWorkoutCheerSending}
                   accessibilityRole="button"
-                  accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
+                  accessibilityLabel={postWorkoutCheerSending ? 'Sending cheer' : partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
                 >
-                  <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.primary : colors.textSecondary} />
-                  <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
-                    {partners.cheerEnabled ? 'Cheer' : 'Sent'}
+                  <Ionicons name={postWorkoutCheerSending ? 'hourglass-outline' : 'hand-left-outline'} size={14} color={partners.cheerEnabled && !postWorkoutCheerSending ? colors.primary : colors.textSecondary} />
+                  <Text style={[styles.partnerCheerText, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerTextDone]}>
+                    {postWorkoutCheerSending ? 'Sending' : partners.cheerEnabled ? 'Cheer' : 'Sent'}
                   </Text>
                 </TouchableOpacity>
               </View>

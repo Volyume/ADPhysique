@@ -103,8 +103,8 @@ export function resolveProgressScanCoachNote({
 
   const body = clean([
     trendLine(scan, label, trendOnly),
-    trendOnly && label ? 'Detailed scan index and band are hidden by your preference.' : null,
-    'This is a visual progress index, not a body fat estimate.',
+    trendOnly && label ? 'Detailed score and band are hidden by your preference.' : null,
+    'This is a visual progress score, not a body fat estimate.',
     decisionLine(output),
   ].filter(Boolean).join(' '));
 
