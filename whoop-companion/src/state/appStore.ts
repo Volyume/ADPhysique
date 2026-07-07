@@ -305,6 +305,8 @@ const BAND_STEP_FRESH_MS = 30 * 60 * 1000;
 const BAND_STEP_UNCALIBRATED_AGREE_RATIO = 1.35;
 const BAND_STEP_CALIBRATED_AGREE_RATIO = 1.8;
 const BAND_STEP_PHONE_COMPARE_MIN = 50;
+const PHONE_STEP_CUMULATIVE_ANCHOR_MIN = 50;
+const PHONE_STEP_MAX_RATE_PER_SEC = 4;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
@@ -350,6 +352,7 @@ class AppStore extends Store<AppState> {
   private stepBase = 0;
   private stepLiveOffset = 0;
   private lastLiveStepCount = 0;
+  private lastLiveStepTs = 0;
   private lastAccelTs = 0;
   private preferredDeviceId: string | null = null;
   private connectInFlight = false;
@@ -636,17 +639,38 @@ class AppStore extends Store<AppState> {
       this.stepBase = this.getState().steps ?? 0;
       this.stepLiveOffset = 0;
       this.lastLiveStepCount = 0;
+      this.lastLiveStepTs = 0;
       this.stepSub = watchSteps((stepsSinceStart) => {
         const liveSteps = Math.max(0, Math.round(stepsSinceStart));
-        const today = dayKey(Date.now());
+        const now = Date.now();
+        const today = dayKey(now);
         if (this.stepDay !== today) {
           this.stepDay = today;
           this.stepBase = 0;
           this.stepLiveOffset = liveSteps;
+          this.lastLiveStepTs = now;
           void this.refreshStepCount().catch(() => {});
         }
+        let effectiveLiveSteps = liveSteps;
+        if (
+          this.lastLiveStepCount === 0 &&
+          this.stepBase > 0 &&
+          liveSteps >= PHONE_STEP_CUMULATIVE_ANCHOR_MIN
+        ) {
+          this.stepLiveOffset = liveSteps;
+          effectiveLiveSteps = liveSteps;
+        } else if (this.lastLiveStepTs > 0 && liveSteps > this.lastLiveStepCount) {
+          const dtSec = Math.max(1, (now - this.lastLiveStepTs) / 1000);
+          const delta = liveSteps - this.lastLiveStepCount;
+          const maxDelta = Math.max(20, dtSec * PHONE_STEP_MAX_RATE_PER_SEC);
+          if (delta > maxDelta) {
+            this.stepLiveOffset += delta;
+            effectiveLiveSteps = liveSteps;
+          }
+        }
         this.lastLiveStepCount = liveSteps;
-        const phone = this.stepBase + Math.max(0, liveSteps - this.stepLiveOffset);
+        this.lastLiveStepTs = now;
+        const phone = this.stepBase + Math.max(0, effectiveLiveSteps - this.stepLiveOffset);
         const band = this.getState().bandSteps;
         const chosen = this.bestStepTotal(band, phone);
         this.setState({ steps: chosen.steps, stepSource: chosen.source });
