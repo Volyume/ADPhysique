@@ -1451,7 +1451,7 @@ class AppStore extends Store<AppState> {
     let sleepPerformanceResult: SleepPerformance | null = null;
     if (sleep) {
       const priorWindows = recent
-        .filter((d) => d.sleepStart != null && d.sleepEnd != null)
+        .filter(isUsableSleepTrendNight)
         .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
       priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
       const consistency = sleepConsistency(priorWindows);
@@ -2290,7 +2290,7 @@ class AppStore extends Store<AppState> {
 
     // Sleep regularity / consistency over stored windows (prior nights + tonight).
     const priorWindows = recent
-      .filter((d) => d.sleepStart != null && d.sleepEnd != null)
+      .filter(isUsableSleepTrendNight)
       .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
     if (sleep) priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
     const sleepReg = sleepRegularity(priorWindows);
@@ -2760,6 +2760,11 @@ function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
 
 function isUsableDebtNight(day: DailyMetricRow): boolean {
   if (day.sleepMin == null) return false;
+  return sleepTrustTier(day.sleepDetail) !== 'low';
+}
+
+function isUsableSleepTrendNight(day: DailyMetricRow): boolean {
+  if (day.sleepStart == null || day.sleepEnd == null) return false;
   return sleepTrustTier(day.sleepDetail) !== 'low';
 }
 

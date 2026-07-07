@@ -88,7 +88,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   });
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
-  const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
+  const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day && sleepTrustTier(d.sleepDetail) !== 'low'));
 
   return (
     <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
@@ -502,7 +502,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
 }
 
 // Average share (% of time in bed) per stage over recent nights, for typical markers.
-function stageTypicals(days: { deepMin: number | null; remMin: number | null; lightMin: number | null; awakeMin: number | null }[]): Record<'awake' | 'light' | 'deep' | 'rem', number | null> {
+function stageTypicals(days: Pick<DailyMetricRow, 'deepMin' | 'remMin' | 'lightMin' | 'awakeMin'>[]): Record<'awake' | 'light' | 'deep' | 'rem', number | null> {
   const acc = { awake: [] as number[], light: [] as number[], deep: [] as number[], rem: [] as number[] };
   for (const d of days) {
     const t = (d.deepMin ?? 0) + (d.remMin ?? 0) + (d.lightMin ?? 0) + (d.awakeMin ?? 0);
