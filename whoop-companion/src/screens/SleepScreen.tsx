@@ -24,6 +24,7 @@ import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 import { napCreditMin, parseNapDetail } from '../metrics/naps';
 import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
+import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
 
 const BASE_NEED_MIN = 480;
 
@@ -581,18 +582,19 @@ function sleepVerdict(input: {
     };
   }
 
-  if (capture && (capture.coveragePct < 60 || capture.signalMin < 150 || input.perfCapped)) {
+  if (capture && (sleepNeedsMoreSync(capture) || input.perfCapped)) {
+    const needsSync = sleepNeedsMoreSync(capture);
     return {
       badge: 'PART',
       title: 'Treat this as partial',
       body: 'The sleep window exists, but the score is still data-limited. Let auto-sync continue or review the window if the timing looks wrong.',
       vitalsLabel,
       vitalsColor,
-      actionLabel: capture.coveragePct < 60 || capture.signalMin < 150 ? 'Sync more data' : 'Review window',
-      actionValue: `${capture.coveragePct}% coverage`,
-      icon: capture.coveragePct < 60 || capture.signalMin < 150 ? 'sync' : 'create',
+      actionLabel: needsSync ? 'Sync more data' : 'Review window',
+      actionValue: needsSync ? sleepSyncActionValue(capture) : sleepConfidenceLabel(capture.confidence),
+      icon: needsSync ? 'sync' : 'create',
       color: colors.recoveryYellow,
-      route: capture.coveragePct < 60 || capture.signalMin < 150 ? { name: 'device' } : { name: 'editSleep' },
+      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
     };
   }
 
@@ -698,16 +700,17 @@ function sleepFocus(input: {
     };
   }
 
-  if (capture && (capture.coveragePct < 60 || capture.signalMin < 150 || input.perfCapped)) {
+  if (capture && (sleepNeedsMoreSync(capture) || input.perfCapped)) {
+    const needsSync = sleepNeedsMoreSync(capture);
     return {
       badge: 'DATA',
       title: 'Improve capture confidence first',
       body: 'Tonight’s score is limited by partial overnight signal, so recovery and readiness may move once more history backfills.',
-      actionLabel: capture.coveragePct < 60 || capture.signalMin < 150 ? 'Sync more data' : 'Review sleep window',
-      actionValue: `${capture.coveragePct}% coverage`,
-      icon: capture.coveragePct < 60 || capture.signalMin < 150 ? 'sync' : 'create',
-      color: capture.coveragePct < 60 || capture.signalMin < 150 ? colors.strainBlue : colors.sleepTeal,
-      route: capture.coveragePct < 60 || capture.signalMin < 150 ? { name: 'device' } : { name: 'editSleep' },
+      actionLabel: needsSync ? 'Sync more data' : 'Review sleep window',
+      actionValue: needsSync ? sleepSyncActionValue(capture) : sleepConfidenceLabel(capture.confidence),
+      icon: needsSync ? 'sync' : 'create',
+      color: needsSync ? colors.strainBlue : colors.sleepTeal,
+      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
     };
   }
 
@@ -848,10 +851,10 @@ function sleepScoreDrivers(input: {
       label: 'Capture confidence',
       value: `${capture.coveragePct}%`,
       detail:
-        capture.coveragePct < 60 || capture.signalMin < 150
+        sleepNeedsMoreSync(capture)
           ? 'Partial overnight history is the biggest uncertainty in this result.'
           : 'Usable signal, but more synced minutes can still refine sleep and recovery.',
-      color: capture.coveragePct < 60 || capture.signalMin < 150 ? colors.recoveryRed : colors.recoveryYellow,
+      color: sleepNeedsMoreSync(capture) ? colors.recoveryRed : colors.recoveryYellow,
     });
   }
 
@@ -1246,7 +1249,7 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
       color: colors.recoveryGreen,
     };
   }
-  if (capture.coveragePct < 60 || capture.signalMin < 150) {
+  if (sleepNeedsMoreSync(capture)) {
     return {
       badge: 'SYNC',
       title: 'Evidence is still partial',
@@ -1279,10 +1282,10 @@ function sleepCaptureAction(capture: NonNullable<ReturnType<typeof appStore.getS
       route: { name: 'device' },
     };
   }
-  if (capture.coveragePct < 60 || capture.signalMin < 150) {
+  if (sleepNeedsMoreSync(capture)) {
     return {
       label: 'Sync more overnight data',
-      value: `${capture.coveragePct}% coverage`,
+      value: sleepSyncActionValue(capture),
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
