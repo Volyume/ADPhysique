@@ -75,6 +75,13 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const usesSteps = session.kind === 'workout' && activityUsesSteps(activityLabel);
   const stepSource =
     stats?.stepSource === 'band' ? 'band est.' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
+  const quality = recordingQuality({
+    session,
+    stats,
+    status,
+    elapsedSec: elapsed,
+    usesSteps,
+  });
 
   const save = () => {
     void appStore.stopSession(true);
@@ -93,6 +100,16 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
         <Text style={[styles.kind, { color: tint }]}>{session.label.toUpperCase()}</Text>
         <Text style={styles.timer}>{fmt(elapsed)}</Text>
         <Text style={styles.conn}>{status === 'connected' ? 'strap connected' : 'strap not connected'}</Text>
+
+        <View style={[styles.qualityBanner, { borderColor: quality.color }]}>
+          <View style={[styles.qualityBadge, { backgroundColor: quality.color }]}>
+            <Text style={styles.qualityBadgeText}>{quality.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.qualityTitle}>{quality.title}</Text>
+            <Text style={styles.qualityBody}>{quality.body}</Text>
+          </View>
+        </View>
 
         {plan && planState ? (
           planState.done ? (
@@ -194,6 +211,79 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function recordingQuality({
+  session,
+  stats,
+  status,
+  elapsedSec,
+  usesSteps,
+}: {
+  session: NonNullable<ReturnType<typeof appStore.getState>['session']>;
+  stats: SessionStats | null;
+  status: string;
+  elapsedSec: number;
+  usesSteps: boolean;
+}): { badge: string; title: string; body: string; color: string } {
+  const needsGps = session.kind === 'workout' && session.hasGps;
+  const hasHr = (stats?.beats ?? 0) >= Math.max(5, Math.min(60, Math.floor(elapsedSec / 3)));
+  const hasSteps = !usesSteps || stats?.steps != null;
+  const hasGps = !needsGps || (session.route.length >= 2 && (session.distanceM ?? 0) > 0);
+
+  if (status !== 'connected' && !hasHr) {
+    return {
+      badge: 'HR',
+      title: 'Waiting for strap signal',
+      body: 'Keep the strap nearby and connected so strain, zones and calories can be recorded.',
+      color: colors.recoveryRed,
+    };
+  }
+
+  if (elapsedSec >= 90 && !hasHr) {
+    return {
+      badge: 'HR',
+      title: 'Heart-rate recording is thin',
+      body: 'This workout will save, but strain and zone time need more heart-rate samples.',
+      color: colors.recoveryYellow,
+    };
+  }
+
+  if (elapsedSec >= 60 && needsGps && !hasGps) {
+    return {
+      badge: 'GPS',
+      title: 'Acquiring route and distance',
+      body: 'Keep the phone with you and allow location permission for pace, distance and the route trace.',
+      color: colors.recoveryYellow,
+    };
+  }
+
+  if (elapsedSec >= 60 && usesSteps && !hasSteps) {
+    return {
+      badge: 'STEP',
+      title: 'Waiting for step source',
+      body: 'Walking/running sessions need phone pedometer or calibrated band steps for cadence and step totals.',
+      color: colors.recoveryYellow,
+    };
+  }
+
+  if (session.kind === 'sleep' || session.kind === 'nap') {
+    return {
+      badge: 'REC',
+      title: 'Timer is running',
+      body: session.kind === 'sleep'
+        ? 'Sleep timing will be saved as a window; synced overnight history still drives the detailed score.'
+        : 'Nap timing and available HR will be saved, then credited against today’s sleep need.',
+      color: session.kind === 'sleep' ? colors.sleepTeal : colors.recoveryYellow,
+    };
+  }
+
+  return {
+    badge: 'GOOD',
+    title: 'Recording looks healthy',
+    body: 'Heart rate is coming in and available sensors are contributing to the session.',
+    color: colors.recoveryGreen,
+  };
+}
+
 /** A self-scaling polyline of the GPS route (no map tiles / API key needed). */
 function RouteTrace({ route }: { route: Array<{ lat: number; lng: number }> }) {
   const W = 320;
@@ -230,6 +320,11 @@ const styles = StyleSheet.create({
   kind: { fontSize: 13, letterSpacing: 1.4, fontFamily: fonts.textBold, marginTop: 20, textAlign: 'center' },
   timer: { color: colors.text, fontSize: 72, fontFamily: fonts.black, textAlign: 'center', marginTop: 6, letterSpacing: 1 },
   conn: { color: colors.textTertiary, fontSize: 12, textAlign: 'center', marginBottom: 24, fontFamily: fonts.text },
+  qualityBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 12, backgroundColor: colors.card, marginBottom: 8 },
+  qualityBadge: { width: 48, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  qualityBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  qualityTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  qualityBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16, marginTop: 12 },
   sectionLabel: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1.4, fontFamily: fonts.textBold, marginTop: 24, marginBottom: 4 },
   zones: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16 },
