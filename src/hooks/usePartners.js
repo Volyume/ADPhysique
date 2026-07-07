@@ -54,7 +54,7 @@ function wait(ms) {
 }
 
 function shouldRetryCheerAfterMirrorRefresh(error) {
-  return error === 'not_active';
+  return error === 'not_active' || error === 'partner_auth_required';
 }
 
 async function pullPartnerMirrorNow(userId) {

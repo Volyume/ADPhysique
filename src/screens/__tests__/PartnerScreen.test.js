@@ -431,7 +431,11 @@ describe('cheer affordance', () => {
     // D5-B1: the cheer is no longer wordless. Tapping "Send a cheer" opens the
     // fixed picker; picking a line sends the cheer WITH that acknowledgement kind
     // (never free text).
-    const hook = base({ pairs: [pair({ cheerEnabled: true })] });
+    let resolveCheer;
+    const hook = base({
+      pairs: [pair({ cheerEnabled: true })],
+      cheer: jest.fn(() => new Promise((resolve) => { resolveCheer = resolve; })),
+    });
     mockHook.value = hook;
     const tree = await mount();
     await press(tree, 'Send a cheer');
@@ -439,8 +443,13 @@ describe('cheer affordance', () => {
     expect(allText(tree).join(' ')).toContain('One tap, no free text, no pressure.');
     expect(allText(tree).join(' ')).not.toMatch(/\bchat\b|chatbot/i);
     expect(allText(tree)).toContain('Here with you.');
-    await press(tree, 'Here with you.');
+    await act(async () => { findPress(tree, 'Here with you.')[0].props.onPress(); await Promise.resolve(); });
+    expect(allText(tree)).toContain('Sending...');
+    expect(findPress(tree, 'Sending Here with you.')[0].props.disabled).toBe(true);
+    await act(async () => { resolveCheer({ ok: true }); await Promise.resolve(); await Promise.resolve(); });
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
+    expect(mockToastShow).toHaveBeenCalledWith('Cheer sent', { variant: 'success' });
+    expect(allText(tree)).not.toContain('Here with you.');
   });
 
   test('weekly sessions do not create a second cheer surface', async () => {

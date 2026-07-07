@@ -102,8 +102,11 @@ function cheerFailureMessage(error) {
   if (error === 'partner_update_needed') {
     return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
   }
-  if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not confirm Partners online just now. Open Partners again and try once more.';
+  if (error === 'partner_auth_required') {
+    return 'Volyume could not confirm this partner session. Refresh Partners, then try again.';
+  }
+  if (error === 'offline') {
+    return 'Volyume could not reach Partners just now. Try again when your connection is back.';
   }
   return 'Could not send that cheer. Open Partners again and try once more.';
 }
@@ -587,6 +590,7 @@ export default function PartnerScreen({ route }) {
   const [aimSheetPair, setAimSheetPair] = useState(null);
   const [aimValue, setAimValue] = useState(1);
   const [ackSheetPair, setAckSheetPair] = useState(null);
+  const [ackSendingKey, setAckSendingKey] = useState(null);
   const [shareWinsPair, setShareWinsPair] = useState(null);
   const [reconnectDismissed, setReconnectDismissed] = useState([]);
 
@@ -828,13 +832,18 @@ export default function PartnerScreen({ route }) {
   }
 
   async function handleSendAck(pair, kind) {
-    setAckSheetPair(null);
-    if (!pair?.cheerEnabled) return;
+    if (!pair?.cheerEnabled || ackSendingKey) return;
+    setAckSendingKey(kind);
     const reciprocal = pair.partnerWeek?.weekMet || (pair.partnerWeek?.done > 0);
     const r = await p.cheer(pair.id, kind, !!reciprocal);
+    setAckSendingKey(null);
     // Consuming the day's cheer also consumes the pair's moment, but only once
     // the send actually succeeds or the server says today's cheer exists.
-    if (r?.ok || r?.error === 'already_cheered') consumeMoment(pair);
+    if (r?.ok || r?.error === 'already_cheered') {
+      setAckSheetPair(null);
+      consumeMoment(pair);
+      if (r?.ok) toast.show('Cheer sent', { variant: 'success' });
+    }
     if (!r?.ok && r?.error !== 'already_cheered') {
       logError('PartnerScreen.handleSendAck', new Error(r?.error || 'unknown'), { userId: user?.id });
       toast.show(cheerFailureMessage(r?.error), { variant: 'error' });
@@ -1231,7 +1240,7 @@ export default function PartnerScreen({ route }) {
       {/* ── Acknowledgement picker (D5-B1) ── */}
       <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send a cheer" scroll>
         {ackSheetPair ? (
-          <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} />
+          <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} sendingKey={ackSendingKey} />
         ) : null}
       </BottomSheet>
 
@@ -1295,23 +1304,33 @@ function AimSheetBody({ value, onChange, onConfirm }) {
 }
 
 // D5-B1: the fixed acknowledgement picker. Exactly the curated set, no free text.
-function AckSheetBody({ pair, onSend }) {
+function AckSheetBody({ pair, onSend, sendingKey = null }) {
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Send a cheer</Text>
       <Text style={styles.blockPitch}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
-      {ACKNOWLEDGEMENTS.map((ack) => (
-        <TouchableOpacity
-          key={ack.key}
-          style={styles.ackRow}
-          onPress={() => onSend(pair, ack.key)}
-          accessibilityRole="button"
-          accessibilityLabel={ack.line}
-        >
-          <Ionicons name="heart-outline" size={iconSize.sm} color={colors.primary} />
-          <Text style={styles.ackRowText}>{ack.line}</Text>
-        </TouchableOpacity>
-      ))}
+      {ACKNOWLEDGEMENTS.map((ack) => {
+        const sending = sendingKey === ack.key;
+        const disabled = !!sendingKey;
+        return (
+          <TouchableOpacity
+            key={ack.key}
+            style={[styles.ackRow, disabled && styles.ackRowDisabled]}
+            onPress={() => onSend(pair, ack.key)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityState={{ disabled }}
+            accessibilityLabel={sending ? `Sending ${ack.line}` : ack.line}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="heart-outline" size={iconSize.sm} color={colors.primary} />
+            )}
+            <Text style={styles.ackRowText}>{sending ? 'Sending...' : ack.line}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -1904,6 +1923,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
+  ackRowDisabled: { opacity: 0.62 },
   ackRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
   shareWinDefault: { ...type.label, color: colors.textPrimary },
   shareWinPreviewIntro: {

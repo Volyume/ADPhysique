@@ -172,8 +172,8 @@ describe('deleteProgressScanSession cleanup', () => {
       assessmentVersion: 'volyume_physique_scan_score_v2',
       legacyAssessmentVersion: 'volyume_physique_scan_score_v1',
       visualLeannessScore: 71,
-      leannessBand: 'athletic',
-      leannessBandLabel: 'Athletic',
+      leannessBand: 'defined',
+      leannessBandLabel: 'Defined',
     });
     expect(scan.signals.physiqueAssessment.indexInputs).toMatchObject({
       legacyVisualLeannessScore: 37,
@@ -272,7 +272,7 @@ describe('finishProgressScanSession estimator persistence', () => {
       physiqueAssessment: {
         analysisType: 'visual_physique_score',
         visualLeannessScore: 83,
-        leannessBandLabel: 'Defined',
+        leannessBandLabel: 'Lean',
         scanConfidenceTier: 'moderate',
         progressSignal: 'baseline',
       },

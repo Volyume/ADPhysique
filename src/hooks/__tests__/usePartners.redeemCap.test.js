@@ -306,6 +306,33 @@ describe('usePartners redeem enforces the partner cap', () => {
     });
   });
 
+  test('cheer retries after a stale partner session response once the pair is visible', async () => {
+    mockLocalPartnershipRows = [{
+      id: 'p1',
+      status: 'active',
+      memberA: 'me',
+      memberB: 'them',
+      partnerFirstName: 'Sam',
+      streakEnabled: true,
+      acceptedAt: 1,
+      createdAt: 1,
+    }];
+    service.sendCheer
+      .mockResolvedValueOnce({ ok: false, error: 'partner_auth_required' })
+      .mockResolvedValueOnce({ ok: true, data: { delivered: 'in_app' } });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.cheer('p1', 'proud', true); });
+    expect(r.ok).toBe(true);
+    expect(service.sendCheer).toHaveBeenCalledTimes(2);
+    expect(db.setLocalPartnerCheerSent).toHaveBeenCalledWith({
+      pairId: 'p1',
+      senderId: 'me',
+      sentOn: expect.any(String),
+      kind: 'proud',
+    });
+  });
+
   test('creating an invite seeds the pending local row before background sync', async () => {
     service.createPartnerInvite.mockResolvedValueOnce({
       ok: true,

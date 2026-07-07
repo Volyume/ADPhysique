@@ -10,6 +10,7 @@ import {
   deriveProgressScanBiasFlagsFromProfile,
   explainMeasuredScanDelta,
   estimateBodyFatFromScanAssets,
+  leannessBandForScore,
   measuredSignalsSummaryFromAssets,
   scanComparability,
   scanSetupStability,
@@ -416,7 +417,7 @@ describe('Progress Scan uncertainty and abstention', () => {
       source: 'photo_scan',
       analysisType: 'visual_physique_score',
       visualLeannessScore: 83,
-      leannessBandLabel: 'Defined',
+      leannessBandLabel: 'Lean',
       scanConfidenceTier: 'moderate',
       progressSignal: 'baseline',
       calibrationStatus: 'still_calibrating_for_your_body_type',
@@ -546,6 +547,15 @@ describe('Progress Scan uncertainty and abstention', () => {
       frontBackWaistSpread: 0.01,
       sideWaistToHeight: 0.34,
     })).toBeLessThan(68);
+  });
+
+  test('Volyume Score bands are calibrated for normal users and lean athletes', () => {
+    expect(leannessBandForScore(59).label).toBe('Active');
+    expect(leannessBandForScore(60).label).toBe('Athletic');
+    expect(leannessBandForScore(71).label).toBe('Defined');
+    expect(leannessBandForScore(83).label).toBe('Lean');
+    expect(leannessBandForScore(92).label).toBe('Very Lean');
+    expect(leannessBandForScore(97).label).toBe('Peak Condition');
   });
 
   test('demographic and physique validation gaps materially widen any future internal range', () => {

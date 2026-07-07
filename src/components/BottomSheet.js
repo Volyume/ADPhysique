@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxHeight: '92%',
   },
-  scroll: { alignSelf: 'stretch', flexShrink: 1 },
+  scroll: { alignSelf: 'stretch', flex: 1, minHeight: 0 },
   scrollContent: { gap: spacing.md, paddingBottom: spacing.sm },
   handle: {
     alignSelf: 'center',
