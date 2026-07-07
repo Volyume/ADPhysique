@@ -51,6 +51,15 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
     month: 'short',
   });
   const tint = isNap ? colors.sleepTeal : colors.strainBlue;
+  const quality = activityQuality({
+    source: activity.source,
+    hrSamples: hr.length,
+    hasAvgHr: activity.avgHr != null,
+    hasStrain: activity.strain != null,
+    hasRoute: !!activity.route?.length,
+    hasSteps: activity.steps != null,
+    isNap,
+  });
 
   const remove = () =>
     Alert.alert('Delete activity', `Remove this ${activity.activity}?`, [
@@ -92,6 +101,24 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
               <Stat label="Calories" value={activity.kcal ?? '-'} color={colors.recoveryYellow} />
             </>
           )}
+        </View>
+      </Card>
+
+      <SectionLabel>Recording quality</SectionLabel>
+      <Card>
+        <View style={styles.qualityHead}>
+          <View style={[styles.qualityBadge, { backgroundColor: quality.color }]}>
+            <Text style={styles.qualityBadgeText}>{quality.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.qualityTitle}>{quality.title}</Text>
+            <Text style={styles.qualityBody}>{quality.body}</Text>
+          </View>
+        </View>
+        <View style={styles.statRow}>
+          <Stat label="Source" value={quality.sourceLabel} color={quality.color} />
+          <Stat label="HR samples" value={hr.length || '-'} />
+          <Stat label="Completeness" value={quality.completeness} color={quality.color} />
         </View>
       </Card>
 
@@ -224,6 +251,71 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   );
 }
 
+function activityQuality(input: {
+  source: string;
+  hrSamples: number;
+  hasAvgHr: boolean;
+  hasStrain: boolean;
+  hasRoute: boolean;
+  hasSteps: boolean;
+  isNap: boolean;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  sourceLabel: string;
+  completeness: string;
+  color: string;
+} {
+  const sourceLabel =
+    input.source === 'live' ? 'live' : input.source === 'manual' ? 'manual' : input.source === 'auto' ? 'auto' : input.source;
+
+  if (input.isNap) {
+    return {
+      badge: input.hrSamples > 0 || input.hasAvgHr ? 'NAP' : 'TIME',
+      title: input.hrSamples > 0 || input.hasAvgHr ? 'Nap has usable HR context' : 'Nap is mostly time-based',
+      body: input.hrSamples > 0 || input.hasAvgHr
+        ? 'Nap duration and available heart-rate signal can contribute to sleep-need credit.'
+        : 'This nap is saved from timing; sleep-need credit is estimated from duration.',
+      sourceLabel,
+      completeness: input.hrSamples > 0 || input.hasAvgHr ? 'usable' : 'limited',
+      color: input.hrSamples > 0 || input.hasAvgHr ? colors.sleepTeal : colors.recoveryYellow,
+    };
+  }
+
+  if (input.source === 'manual' && !input.hasAvgHr) {
+    return {
+      badge: 'TIME',
+      title: 'Manual log without heart rate',
+      body: 'Duration and optional steps/distance are saved, but strain, calories and training effect need real HR data.',
+      sourceLabel,
+      completeness: 'limited',
+      color: colors.recoveryYellow,
+    };
+  }
+
+  if (!input.hasStrain && input.hrSamples < 5 && !input.hasAvgHr) {
+    return {
+      badge: 'HR',
+      title: 'Heart-rate signal is missing',
+      body: 'The activity is stored, but training load and recovery impact are incomplete without HR.',
+      sourceLabel,
+      completeness: 'limited',
+      color: colors.recoveryYellow,
+    };
+  }
+
+  const extras = [input.hasRoute ? 'route' : null, input.hasSteps ? 'steps' : null].filter(Boolean).join(' + ');
+  return {
+    badge: 'GOOD',
+    title: 'Recording looks usable',
+    body: extras ? `Heart-rate based strain is present, with ${extras} captured for extra context.` : 'Heart-rate based strain is present for training load and recovery context.',
+    sourceLabel,
+    completeness: 'good',
+    color: colors.recoveryGreen,
+  };
+}
+
 function RouteTrace({ route }: { route: Array<{ lat: number; lng: number }> }) {
   const W = 320;
   const H = 180;
@@ -257,4 +349,9 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
   teNote: { color: colors.textTertiary, fontSize: 11, lineHeight: 16, marginTop: 12, fontFamily: fonts.text },
+  qualityHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  qualityBadge: { width: 50, height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  qualityBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  qualityTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  qualityBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
 });
