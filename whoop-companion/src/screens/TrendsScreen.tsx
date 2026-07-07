@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { DailyMetricRow } from '../db/database';
-import { Card, Empty, Screen, SectionLabel, WeeklyBars } from '../ui/components';
+import { Card, Empty, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav, MetricKey } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
@@ -70,8 +70,9 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
 
   const days = RANGES.find((r) => r.key === range)?.days ?? 30;
+  const chartHistory = history.slice(-days);
   useEffect(() => {
-    void appStore.loadHistory(days).then(setHistory);
+    void appStore.loadHistory(Math.max(days, 60)).then(setHistory);
   }, [days]);
 
   return (
@@ -88,17 +89,17 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
         ))}
       </View>
 
-      {history.length === 0 ? (
+      {chartHistory.length === 0 ? (
         <Card>
           <Empty text="No data to display for the selected range. Wear the strap to build your trends." />
         </Card>
       ) : (
         SERIESES.map((s) => {
-          const vals = history.map(s.pick).filter((v): v is number => v != null);
+          const vals = chartHistory.map(s.pick).filter((v): v is number => v != null);
           const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
           // Down-sample to ~14 bars for readability.
-          const step = Math.max(1, Math.ceil(history.length / 14));
-          const bars = history
+          const step = Math.max(1, Math.ceil(chartHistory.length / 14));
+          const bars = chartHistory
             .filter((_, i) => i % step === 0)
             .map((d) => ({
               label: d.day.slice(5).replace('-', '/'),
@@ -131,21 +132,112 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
       )}
 
       <SectionLabel>Performance assessments</SectionLabel>
-      <Card>
-        <Text style={styles.paTitle}>Weekly Performance Assessment</Text>
-        <Text style={styles.paSub}>
-          A weekly summary of your recovery, strain and sleep. Builds automatically as your history
-          grows (WHOOP delivers this every Monday).
-        </Text>
-      </Card>
-      <Card>
-        <Text style={styles.paTitle}>Monthly Performance Assessment</Text>
-        <Text style={styles.paSub}>
-          Monthly patterns across recovery, strain and sleep, correlated with your journal behaviours.
-        </Text>
-      </Card>
+      <AssessmentCard title="Weekly Performance Assessment" history={history} days={7} />
+      <AssessmentCard title="Monthly Performance Assessment" history={history} days={30} />
     </Screen>
   );
+}
+
+function AssessmentCard({ title, history, days }: { title: string; history: DailyMetricRow[]; days: number }) {
+  const assessment = buildAssessment(history, days);
+  if (!assessment) {
+    return (
+      <Card>
+        <Text style={styles.paTitle}>{title}</Text>
+        <Text style={styles.paSub}>
+          {days === 7
+            ? 'Needs about a week of synced sleep, recovery and strain to generate a meaningful weekly review.'
+            : 'Needs more history before monthly patterns can be separated from day-to-day noise.'}
+        </Text>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <Text style={styles.paTitle}>{title}</Text>
+      <Text style={styles.paSub}>{assessment.summary}</Text>
+      <View style={styles.assessmentStats}>
+        <Stat label="Recovery" value={assessment.recoveryAvg != null ? `${assessment.recoveryAvg}%` : '-'} color={recoveryColor(assessment.recoveryAvg)} />
+        <Stat label="Sleep" value={assessment.sleepAvg != null ? `${assessment.sleepAvg}%` : '-'} color={colors.sleepTeal} />
+        <Stat label="Strain" value={assessment.strainAvg != null ? assessment.strainAvg.toFixed(1) : '-'} color={colors.strainBlue} />
+      </View>
+      <View style={[styles.assessmentStats, { marginTop: 12 }]}>
+        <Stat label="Vs prior" value={assessment.deltaLabel} color={assessment.deltaColor} />
+        <Stat label="Sleep quality" value={assessment.qualityLabel} color={assessment.qualityColor} />
+        <Stat label="Days" value={`${assessment.daysWithData}/${days}`} />
+      </View>
+    </Card>
+  );
+}
+
+function buildAssessment(history: DailyMetricRow[], days: number): {
+  recoveryAvg: number | null;
+  sleepAvg: number | null;
+  strainAvg: number | null;
+  deltaLabel: string;
+  deltaColor: string;
+  qualityLabel: string;
+  qualityColor: string;
+  daysWithData: number;
+  summary: string;
+} | null {
+  const current = history.slice(-days);
+  const prior = history.slice(-days * 2, -days);
+  const daysWithData = current.filter((d) => d.recovery != null || d.sleepMin != null || d.strain != null).length;
+  if (daysWithData < Math.min(days, days === 7 ? 4 : 14)) return null;
+
+  const recoveryAvg = avg(current, (d) => d.recovery);
+  const sleepAvg = avg(current, (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
+  const strainAvg = avg(current, (d) => d.strain);
+  const priorRecovery = avg(prior, (d) => d.recovery);
+  const priorSleep = avg(prior, (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
+  const priorStrain = avg(prior, (d) => d.strain);
+
+  const currentScore = weightedAssessmentScore(recoveryAvg, sleepAvg, strainAvg);
+  const priorScore = weightedAssessmentScore(priorRecovery, priorSleep, priorStrain);
+  const delta = currentScore != null && priorScore != null ? Math.round(currentScore - priorScore) : null;
+  const lowConfidence = current.filter((d) => d.sleepDetail?.confidence === 'low').length;
+  const mediumConfidence = current.filter((d) => d.sleepDetail?.confidence === 'medium').length;
+  const qualityLabel = lowConfidence > 0 ? `${lowConfidence} low` : mediumConfidence > 0 ? `${mediumConfidence} usable` : 'strong';
+  const qualityColor = lowConfidence > 0 ? colors.recoveryRed : mediumConfidence > 0 ? colors.recoveryYellow : colors.recoveryGreen;
+  const strainText = strainAvg == null ? 'unknown training load' : strainAvg >= 12 ? 'high training load' : strainAvg >= 8 ? 'productive training load' : 'controlled training load';
+  const recoveryText = recoveryAvg == null ? 'recovery is still building' : recoveryAvg >= 67 ? 'recovery stayed high' : recoveryAvg >= 34 ? 'recovery was mixed' : 'recovery was low';
+  const sleepText = sleepAvg == null ? 'sleep needs more data' : sleepAvg >= 85 ? 'sleep supported the week' : sleepAvg >= 70 ? 'sleep was sufficient but improvable' : 'sleep limited recovery';
+  const deltaText =
+    delta == null
+      ? 'No prior period comparison yet'
+      : delta >= 5
+        ? `Overall trend improved by ${delta} points`
+        : delta <= -5
+          ? `Overall trend fell by ${Math.abs(delta)} points`
+          : 'Overall trend was steady';
+
+  return {
+    recoveryAvg,
+    sleepAvg,
+    strainAvg,
+    deltaLabel: delta == null ? '-' : delta > 0 ? `+${delta}` : `${delta}`,
+    deltaColor: delta == null ? colors.textTertiary : delta >= 5 ? colors.recoveryGreen : delta <= -5 ? colors.recoveryRed : colors.sleepTeal,
+    qualityLabel,
+    qualityColor,
+    daysWithData,
+    summary: `${deltaText}: ${recoveryText}, ${sleepText}, with ${strainText}.`,
+  };
+}
+
+function avg(rows: DailyMetricRow[], pick: (d: DailyMetricRow) => number | null): number | null {
+  const vals = rows.map(pick).filter((v): v is number => v != null && Number.isFinite(v));
+  if (!vals.length) return null;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+}
+
+function weightedAssessmentScore(recovery: number | null, sleep: number | null, strain: number | null): number | null {
+  if (recovery == null && sleep == null && strain == null) return null;
+  const rec = recovery ?? sleep ?? 50;
+  const slp = sleep ?? rec;
+  const strainBalance = strain == null ? 65 : strain >= 8 && strain <= 14 ? 85 : strain < 8 ? 65 : 55;
+  return Math.round(0.45 * rec + 0.35 * slp + 0.2 * strainBalance);
 }
 
 const styles = StyleSheet.create({
@@ -157,4 +249,5 @@ const styles = StyleSheet.create({
   avg: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.medium },
   paTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   paSub: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 6, fontFamily: fonts.text },
+  assessmentStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
 });
