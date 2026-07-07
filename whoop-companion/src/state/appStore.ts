@@ -1170,6 +1170,7 @@ class AppStore extends Store<AppState> {
         this.stopHistoryWatchdog();
         this.historyStopQueued = true;
         this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
+        if (this.historyDrainMode === 'auto') this.retryAutoHistoryDrain();
       });
   }
 
@@ -1190,6 +1191,7 @@ class AppStore extends Store<AppState> {
         this.stopHistoryWatchdog();
         this.historyStopQueued = true;
         this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
+        if (this.historyDrainMode === 'auto') this.retryAutoHistoryDrain();
       });
   }
 
@@ -1247,6 +1249,7 @@ class AppStore extends Store<AppState> {
         this.clearHistoryTimeout();
         this.stopHistoryWatchdog();
         this.setState({ draining: false, capturing: false, error: `History sync failed: ${String(e)}` });
+        if (mode === 'auto') this.retryAutoHistoryDrain();
       });
   }
 
