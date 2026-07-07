@@ -302,6 +302,20 @@ function readinessCall(
     };
   }
 
+  if (readiness.confidence === 'medium') {
+    return {
+      badge: 'CHECK',
+      title: 'Good enough for controlled work',
+      body: 'Readiness is usable, but not fully confident. Choose aerobic, technique or controlled strength work until the overnight signal is stronger.',
+      targetStrain: readiness.score >= 70 ? '8-12' : '5-8',
+      actionLabel: (sleepDetail?.coveragePct ?? 100) < 80 ? 'Improve sleep capture' : 'Open strain target',
+      actionValue: `${readiness.confidencePct}% confidence`,
+      icon: (sleepDetail?.coveragePct ?? 100) < 80 ? 'moon' : 'pulse',
+      color: colors.recoveryYellow,
+      route: (sleepDetail?.coveragePct ?? 100) < 80 ? { name: 'sleep' } : { name: 'strain' },
+    };
+  }
+
   if (readiness.score >= 80) {
     return {
       badge: 'PUSH',
