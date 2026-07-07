@@ -21,7 +21,7 @@ import { getMealAdditions, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib
  *   slotLabel  human meal-slot label (e.g. "Lunch") for the subtitle
  *   logging    true while the meal is being written (disables the button)
  *   energyUnit 'kcal' | 'kj' display unit
- *   onLog      () => void   log the meal
+ *   onLog      () => void   add the meal to the diary
  *   onClose    () => void
  */
 export default function CuratedMealSheet({
@@ -42,8 +42,8 @@ export default function CuratedMealSheet({
           <Text style={styles.title}>{meal.name}</Text>
           {macros ? (
             <Text style={styles.subtitle}>
-              {slotLabel ? `${slotLabel} | ` : ''}
-              {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {Math.round(macros.protein)}g protein | {Math.round(macros.carbs)}g carbs | {Math.round(macros.fat)}g fat
+              {slotLabel ? `Adds to ${slotLabel} - ` : 'Adds to diary - '}
+              {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {Math.round(macros.protein)}g protein - {Math.round(macros.carbs)}g carbs - {Math.round(macros.fat)}g fat
             </Text>
           ) : null}
 
@@ -92,11 +92,11 @@ export default function CuratedMealSheet({
               disabled={logging}
               style={({ pressed }) => [styles.logBtn, logging && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
-              accessibilityLabel={`Log ${meal.name}`}
+              accessibilityLabel={`Add ${meal.name} to ${slotLabel || 'diary'}`}
             >
               {logging
                 ? <ActivityIndicator color={colors.onPrimary} size="small" />
-                : <Text style={styles.logText}>Log meal</Text>}
+                : <Text style={styles.logText}>Add to diary</Text>}
             </Pressable>
           </View>
         </>

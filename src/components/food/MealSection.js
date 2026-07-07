@@ -42,12 +42,10 @@ export default function MealSection({
           <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
         ) : null}
       </View>
-      {showEmptyActions ? (
+      {showEmptyActions && showUsuals ? (
         <View style={styles.emptySlot}>
           <Text style={styles.emptySlotText}>
-            {showUsuals
-              ? 'Usual foods are ready below. Add something else if this meal was different.'
-              : 'Nothing logged yet.'}
+            Usual foods are ready below. Add something else if this meal was different.
           </Text>
         </View>
       ) : null}
@@ -96,45 +94,42 @@ export default function MealSection({
       {showActionHub ? (
         <View style={[styles.actionHub, hasEntries && styles.actionHubDivided]}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.actionButtonPrimary]}
+            style={styles.addFoodButton}
             onPress={onAdd}
             accessibilityRole="button"
             accessibilityLabel={`Add food to ${slot.label}`}
           >
             <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
-            <Text style={styles.actionButtonPrimaryText}>Add food</Text>
+            <Text style={styles.addFoodText}>Add food</Text>
           </TouchableOpacity>
           {onSavedMeals ? (
             <TouchableOpacity
-              style={styles.actionButton}
+              style={styles.shortcutButton}
               onPress={onSavedMeals}
               accessibilityRole="button"
               accessibilityLabel={`Add saved meal to ${slot.label}`}
             >
-              <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.actionButtonText}>Saved</Text>
+              <Ionicons name="restaurant-outline" size={17} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
           {onScan ? (
             <TouchableOpacity
-              style={styles.actionButton}
+              style={styles.shortcutButton}
               onPress={onScan}
               accessibilityRole="button"
               accessibilityLabel={`Scan barcode for ${slot.label}`}
             >
-              <Ionicons name="barcode-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.actionButtonText}>Barcode</Text>
+              <Ionicons name="barcode-outline" size={17} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
           {onQuickAdd ? (
             <TouchableOpacity
-              style={styles.actionButton}
+              style={styles.shortcutButton}
               onPress={onQuickAdd}
               accessibilityRole="button"
               accessibilityLabel={`Quick add to ${slot.label}`}
             >
-              <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.actionButtonText}>Quick add</Text>
+              <Ionicons name="flash-outline" size={17} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -177,7 +172,7 @@ const styles = StyleSheet.create({
   emptySlotText: { ...type.bodySm, color: colors.textMuted, lineHeight: 20 },
   actionHub: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
@@ -187,21 +182,28 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: spacing.md,
   },
-  actionButton: {
+  addFoodButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    flexGrow: 1,
+    flex: 1,
     minHeight: 44,
-    minWidth: 104,
     borderRadius: radius.md,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
   },
-  actionButtonPrimary: { backgroundColor: colors.primary },
-  actionButtonText: { ...type.label, color: colors.textSecondary },
-  actionButtonPrimaryText: { ...type.label, color: colors.onPrimary },
+  shortcutButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  addFoodText: { ...type.label, color: colors.onPrimary },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
