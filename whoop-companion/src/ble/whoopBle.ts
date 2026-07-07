@@ -47,6 +47,11 @@ import {
   cmdSetClock,
 } from '../whoop/commands';
 
+const DIRECT_CONNECT_TIMEOUT_MS = 9000;
+const DEVICE_CONNECT_TIMEOUT_MS = 12000;
+const DISCOVER_TIMEOUT_MS = 15000;
+const SCAN_TIMEOUT_MS = 30000;
+
 export type WhoopStatus =
   | 'idle'
   | 'unauthorized'
@@ -131,6 +136,7 @@ export class WhoopBle {
   private async ensurePermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
     try {
+      this.setStatus('connecting', 'Requesting Bluetooth permissions...');
       const sdk = Platform.Version as number;
       const wanted =
         sdk >= 31
@@ -141,9 +147,12 @@ export class WhoopBle {
             ]
           : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
       const granted = await PermissionsAndroid.requestMultiple(wanted);
-      return wanted.every(
-        (p) => granted[p] === PermissionsAndroid.RESULTS.GRANTED,
-      );
+      const denied = wanted.filter((p) => granted[p] !== PermissionsAndroid.RESULTS.GRANTED);
+      if (denied.length) {
+        this.setStatus('unauthorized', `Denied: ${denied.map(shortPermissionName).join(', ')}`);
+        return false;
+      }
+      return true;
     } catch (e) {
       this.fail(`Permission request failed: ${String(e)}`);
       return false;
@@ -176,7 +185,11 @@ export class WhoopBle {
     if (this.lastDeviceId) {
       try {
         this.setStatus('connecting', 'reconnecting…');
-        const reconnected = await this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 });
+        const reconnected = await withTimeout(
+          this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 }),
+          DIRECT_CONNECT_TIMEOUT_MS,
+          'Saved WHOOP reconnect timed out',
+        );
         await this.afterConnect(reconnected);
         return;
       } catch {
@@ -190,7 +203,7 @@ export class WhoopBle {
   private async scan(): Promise<void> {
     if (this.scanning) return;
     this.scanning = true;
-    this.setStatus('scanning');
+    this.setStatus('scanning', 'Scanning for WHOOP advertisements...');
 
     this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
       if (error) {
@@ -218,7 +231,7 @@ export class WhoopBle {
           this.scheduleReconnect();
         }
       }
-    }, 30000);
+    }, SCAN_TIMEOUT_MS);
   }
 
   private async connect(device: Device): Promise<void> {
@@ -226,7 +239,11 @@ export class WhoopBle {
       this.setStatus('connecting', device.name ?? device.id);
       this.lastDeviceId = device.id;
       this.events.onDevice?.({ id: device.id, name: device.name ?? device.localName ?? 'WHOOP' });
-      const connected = await device.connect({ requestMTU: 247 });
+      const connected = await withTimeout(
+        device.connect({ requestMTU: 247 }),
+        DEVICE_CONNECT_TIMEOUT_MS,
+        'WHOOP connect timed out',
+      );
       await this.afterConnect(connected);
     } catch (e) {
       this.clearKeepalive();
@@ -263,7 +280,11 @@ export class WhoopBle {
     });
 
     this.setStatus('discovering');
-    await connected.discoverAllServicesAndCharacteristics();
+    await withTimeout(
+      connected.discoverAllServicesAndCharacteristics(),
+      DISCOVER_TIMEOUT_MS,
+      'WHOOP service discovery timed out',
+    );
     await this.locateWriteChar(connected);
     await this.subscribeAll(connected);
     this.subscribeStandardHr(connected);
@@ -289,7 +310,11 @@ export class WhoopBle {
     if (this.lastDeviceId) {
       try {
         this.setStatus('connecting', 'reconnecting…');
-        const reconnected = await this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 });
+        const reconnected = await withTimeout(
+          this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 }),
+          DIRECT_CONNECT_TIMEOUT_MS,
+          'Saved WHOOP reconnect timed out',
+        );
         await this.afterConnect(reconnected);
         return;
       } catch {
@@ -449,12 +474,20 @@ export class WhoopBle {
     if (!this.device) return false;
     if (this.canSendCommands) return true;
     try {
-      await this.device.discoverAllServicesAndCharacteristics();
+      await withTimeout(
+        this.device.discoverAllServicesAndCharacteristics(),
+        DISCOVER_TIMEOUT_MS,
+        'WHOOP command rediscovery timed out',
+      );
       await this.locateWriteChar(this.device);
       return this.canSendCommands;
     } catch {
       return false;
     }
+  }
+
+  forgetKnownDevice(): void {
+    this.lastDeviceId = null;
   }
 
   /** True once connected and discovery has finished. */
@@ -579,4 +612,18 @@ function delay(ms: number): Promise<void> {
 
 function isCommandWriteChar(uuid: string): boolean {
   return uuid.startsWith(WHOOP_CMD_WRITE_PREFIX) || uuid.startsWith(WHOOP_CMD_WRITE_PREFIX_4);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function shortPermissionName(permission: string): string {
+  return permission.replace('android.permission.', '');
 }

@@ -635,6 +635,25 @@ class AppStore extends Store<AppState> {
     this.setState({ liveHr: null, liveRr: [] });
   };
 
+  forgetDeviceAndRescan = async (): Promise<void> => {
+    this.clearAutoSyncTimer();
+    this.autoDrainedFor = '';
+    this.commandChannelAttempts = 0;
+    this.preferredDeviceId = null;
+    await kvSet(LAST_DEVICE_ID_KEY, '');
+    this.ble?.forgetKnownDevice();
+    await this.ble?.stop();
+    this.setState({
+      device: null,
+      liveHr: null,
+      liveRr: [],
+      status: 'idle',
+      statusDetail: 'Saved strap cleared',
+      error: null,
+    });
+    setTimeout(() => this.connect(), 300);
+  };
+
   /** Start the foreground-service guard used by Android background sync. */
   private async ensureBackgroundSyncKeepAlive(context: string): Promise<boolean> {
     if (!this.getState().backgroundKeepAlive) return false;

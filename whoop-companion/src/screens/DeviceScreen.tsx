@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
@@ -134,7 +134,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {!connected ? (
-          <PrimaryButton title="Scan & connect" onPress={appStore.connect} />
+          <>
+            <PrimaryButton title="Scan & connect" onPress={appStore.connect} />
+            <SecondaryButton title="Forget strap & rescan" onPress={() => void appStore.forgetDeviceAndRescan()} />
+            {status === 'unauthorized' || status === 'error' ? (
+              <SecondaryButton title="Open app settings" onPress={() => void Linking.openSettings()} />
+            ) : null}
+          </>
         ) : (
           <SecondaryButton title="Disconnect" onPress={appStore.disconnect} />
         )}
