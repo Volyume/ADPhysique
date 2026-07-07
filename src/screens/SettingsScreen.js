@@ -130,8 +130,8 @@ export default function SettingsScreen({ navigation }) {
         ) : null}
         <SettingRow
           icon="notifications-outline"
-          label="Notifications"
-          sub="Set when Volyume nudges you to train"
+          label="Notifications and reminders"
+          sub="Training, meals, check-ins and quiet hours"
           onPress={() => navigation.navigate('NotificationSettings')}
         />
         {tier === 'pro' ? (

@@ -1776,7 +1776,14 @@ const styles = StyleSheet.create({
   },
   heroPrivacyText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
   heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  studioPanel: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.lg },
+  studioPanel: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   studioMetricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

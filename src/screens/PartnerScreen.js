@@ -1132,11 +1132,21 @@ export default function PartnerScreen({ route }) {
             ) : null}
 
             <Card style={styles.howItWorks}>
-              <Text style={styles.howHeader}>HOW IT WORKS</Text>
-              <Text style={styles.howLine}>You each see a simple weekly training status.</Text>
-              <Text style={styles.howLine}>You can send one fixed cheer a day, or one win you approve.</Text>
-              <Text style={styles.howLine}>Rest weeks never count as a miss.</Text>
-              <Text style={styles.howLine}>No feed, no followers, no public numbers.</Text>
+              <View style={styles.howHead}>
+                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+                <Text style={styles.howHeader}>What your partner sees</Text>
+              </View>
+              {[
+                ['calendar-outline', 'Whether you trained this week'],
+                ['hand-left-outline', 'One fixed cheer a day'],
+                ['trophy-outline', 'Only the wins you choose to send'],
+                ['lock-closed-outline', 'No food, photos, body metrics or private notes'],
+              ].map(([icon, line]) => (
+                <View key={line} style={styles.howLineRow}>
+                  <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} />
+                  <Text style={styles.howLine}>{line}</Text>
+                </View>
+              ))}
             </Card>
 
             <PartnerPrivacyReceipt />
@@ -2064,17 +2074,18 @@ const styles = StyleSheet.create({
   incomingShareNoticeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   incomingShareNoticeTitle: { ...type.label, color: colors.textPrimary },
   incomingShareNoticeText: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  // Plain-English "how it works", left-aligned so the three lines read as a
-  // short explainer rather than a centred paragraph. Sits between the pitch and
-  // the privacy receipt; the empty container's own xl gap spaces it.
+  // Plain-English partner receipt. Sits between the pitch and the full privacy
+  // receipt so the empty state explains the feature before the user pairs.
   howItWorks: { gap: spacing.sm },
-  howHeader: {
-    ...type.caption,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: letterSpacing.caption,
+  howHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  howHeader: { ...type.label, color: colors.textPrimary },
+  howLineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  howLine: { ...type.body, color: colors.textPrimary },
+  howLine: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20, flex: 1 },
   textRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, minHeight: 44 },
   textRowText: { ...type.body, color: colors.primary },
 
