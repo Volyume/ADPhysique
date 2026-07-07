@@ -170,7 +170,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             icon="pulse"
             color={hm.measuredCount && hm.inRangeCount === hm.measuredCount ? colors.recoveryGreen : colors.recoveryYellow}
             value={hm.measuredCount > 0 ? `${hm.inRangeCount}/${hm.measuredCount}` : hm.valueCount > 0 ? `${hm.valueCount}` : '—'}
-            sub={hm.measuredCount > 0 ? 'within range' : hm.valueCount > 0 ? 'building ranges' : 'needs full sync'}
+            sub={hm.measuredCount > 0 ? (hm.candidateCount > 0 ? `+${hm.candidateCount} raw` : 'within range') : hm.valueCount > 0 ? 'building ranges' : 'needs full sync'}
             onPress={() => nav.navigate({ name: 'health' })}
             style={styles.half}
           />

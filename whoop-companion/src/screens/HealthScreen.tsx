@@ -52,7 +52,9 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         </Text>
         <Text style={styles.summarySub}>
           {hm.measuredCount > 0
-            ? 'trusted metrics within your 30-day typical range'
+            ? hm.candidateCount > 0
+              ? `${hm.candidateCount} raw sensor candidate${hm.candidateCount === 1 ? '' : 's'} shown separately`
+              : 'trusted metrics within your 30-day typical range'
             : hm.valueCount > 0
             ? 'overnight values found; personal ranges are still calibrating'
             : 'Wear your strap overnight and complete a full sync to populate your vitals'}

@@ -37,6 +37,7 @@ export type HealthMonitorResult = {
   inRangeCount: number;
   measuredCount: number;
   valueCount: number;
+  candidateCount: number;
 };
 
 type VitalInput = { value: number | null; history: number[] };
@@ -125,6 +126,7 @@ export function computeHealthMonitor(input: {
 
   const withValues = vitals.filter((v) => v.available && v.value != null);
   const measurable = withValues.filter((v) => !v.experimental && v.inRange != null);
+  const candidateCount = withValues.filter((v) => v.experimental).length;
   const inRangeCount = measurable.filter((v) => v.inRange === true).length;
-  return { vitals, inRangeCount, measuredCount: measurable.length, valueCount: withValues.length };
+  return { vitals, inRangeCount, measuredCount: measurable.length, valueCount: withValues.length, candidateCount };
 }
