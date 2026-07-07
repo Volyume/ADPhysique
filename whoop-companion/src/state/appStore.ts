@@ -2946,13 +2946,15 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
       : mins.map((p) => p.hr).filter((hr) => hr >= artifactFloor && hr <= artifactCeiling);
   if (!candidates.length) return null;
   const sorted = candidates.slice().sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.35)));
+  // Use a stable low-sleep percentile rather than the absolute lowest windows.
+  // The lowest slices are vulnerable to optical dropouts and were under-reading RHR.
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * 0.45)));
   const cleanMinuteHrs = mins
     .map((p) => p.hr)
     .filter((hr) => hr >= artifactFloor && hr <= artifactCeiling)
     .sort((a, b) => a - b);
-  const p30Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.3)));
-  const distributionFloor = cleanMinuteHrs[p30Idx] ?? artifactFloor;
+  const p40Idx = Math.min(cleanMinuteHrs.length - 1, Math.max(0, Math.floor((cleanMinuteHrs.length - 1) * 0.4)));
+  const distributionFloor = cleanMinuteHrs[p40Idx] ?? artifactFloor;
   return Math.round(Math.max(artifactFloor, distributionFloor, sorted[idx] as number));
 }
 
@@ -2971,7 +2973,7 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
   const windows = [...buckets.values()]
     .map((b) => {
       const avgHr = b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length;
-      const hrv = b.rr.length >= 30 ? computeHrv(b.rr) : null;
+      const hrv = b.rr.length >= 90 ? computeHrv(b.rr) : null;
       if (!hrv) return null;
       if (hrv.rmssd < 5 || hrv.rmssd > 180) return null;
       if (Math.abs(hrv.meanHr - avgHr) > Math.max(8, avgHr * 0.12)) return null;
@@ -2979,15 +2981,19 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
         rmssd: hrv.rmssd,
         avgHr,
         hrSamples: b.hrs.length,
+        rrCount: hrv.count,
       };
     })
-    .filter((v): v is { rmssd: number; avgHr: number; hrSamples: number } => {
-      if (!v || v.hrSamples < 3) return false;
+    .filter((v): v is { rmssd: number; avgHr: number; hrSamples: number; rrCount: number } => {
+      if (!v || v.hrSamples < 4 || v.rrCount < 90) return false;
       return rhr == null || v.avgHr <= rhr + 18;
     });
 
   if (windows.length < 3) return null;
-  return round1(median(windows.map((w) => w.rmssd).sort((a, b) => a - b)));
+  const rmssd = windows.map((w) => w.rmssd).sort((a, b) => a - b);
+  const p90 = rmssd[Math.min(rmssd.length - 1, Math.floor((rmssd.length - 1) * 0.9))] ?? 180;
+  const filtered = rmssd.filter((v) => v <= Math.max(40, p90));
+  return round1(median((filtered.length >= 3 ? filtered : rmssd).sort((a, b) => a - b)));
 }
 
 function cleanSampleRr(sample: HrSampleRow): number[] {
