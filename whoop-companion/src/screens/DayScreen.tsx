@@ -283,9 +283,9 @@ function dayForTs(ts: number): string {
 }
 
 function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
-  if (confidence === 'high') return 'high';
-  if (confidence === 'medium') return 'medium';
-  return 'low';
+  if (confidence === 'high') return 'High';
+  if (confidence === 'medium') return 'Medium';
+  return 'Low';
 }
 
 function confidenceColor(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
