@@ -10,6 +10,7 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
 import { computeEnergyReserve } from '../metrics/energyReserve';
+import { formatDuration } from '../util/time';
 
 type Def = {
   title: string;
@@ -273,7 +274,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
   const last7 = history.slice(-7).map((d) => ({
     label: d.day.slice(8),
     value: def.pick(d),
-    display: def.pick(d) != null ? `${def.pick(d)}` : '',
+    display: def.pick(d) != null ? formatMetricValue(metricKey, def.pick(d) as number, def, false) : '',
     color: tint,
   }));
 
@@ -285,8 +286,8 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             value={ringFraction(metricKey, current)}
             size={176}
             color={tint}
-            centerMain={current != null ? `${current.toFixed(def.decimals ?? 0)}` : '-'}
-            centerSub={current != null ? def.unit || undefined : 'awaiting data'}
+            centerMain={current != null ? formatMetricMain(metricKey, current, def) : '-'}
+            centerSub={current != null ? centerSubForMetric(metricKey, current, def) : 'awaiting data'}
           />
         ) : (
           <Card style={{ width: '100%' }}>
@@ -314,16 +315,14 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             <View style={styles.row}>
               <Text style={styles.k}>Baseline</Text>
               <Text style={styles.v}>
-                {baseline != null ? `${baseline.toFixed(def.decimals ?? 0)} ${def.unit}` : '-'}
+                {baseline != null ? formatMetricValue(metricKey, baseline, def) : '-'}
               </Text>
             </View>
             {series.length >= 2 ? (
               <View style={styles.row}>
                 <Text style={styles.k}>Range (30d)</Text>
                 <Text style={styles.v}>
-                  {`${Math.min(...series).toFixed(def.decimals ?? 0)}-${Math.max(...series).toFixed(
-                    def.decimals ?? 0,
-                  )} ${def.unit}`}
+                  {`${formatMetricValue(metricKey, Math.min(...series), def, false)}-${formatMetricValue(metricKey, Math.max(...series), def)}`}
                 </Text>
               </View>
             ) : null}
@@ -461,6 +460,23 @@ function ringFraction(key: MetricKey, value: number | null): number {
     default:
       return Math.min(1, value / 100);
   }
+}
+
+function formatMetricMain(key: MetricKey, value: number, def: Def): string {
+  if (key === 'sleep_need' || key === 'sleep_debt') return formatDuration(Math.round(value));
+  return value.toFixed(def.decimals ?? 0);
+}
+
+function formatMetricValue(key: MetricKey, value: number, def: Def, includeUnit = true): string {
+  if (key === 'sleep_need' || key === 'sleep_debt') return formatDuration(Math.round(value));
+  const formatted = value.toFixed(def.decimals ?? 0);
+  return includeUnit && def.unit ? `${formatted} ${def.unit}` : formatted;
+}
+
+function centerSubForMetric(key: MetricKey, value: number, def: Def): string | undefined {
+  if (key === 'sleep_need' || key === 'sleep_debt') return def.title.toLowerCase();
+  if (key === 'steps') return value === 1 ? 'step' : 'steps';
+  return def.unit || undefined;
 }
 
 function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
