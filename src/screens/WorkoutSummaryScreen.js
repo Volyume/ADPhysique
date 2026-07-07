@@ -1390,33 +1390,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   );
 }
 
-// RevealSection, staggered fade-in + small upward translate for the
-// major sections below the stat grid. Sequences the comparison card,
-// exercise list, PRs, feedback, and finish CTA so the screen reads
-// top-to-bottom as the eye scans rather than landing all at once.
-//
-// Each section's `delay` is roughly the previous section's delay +
-// 120ms; the first reveal kicks off after the StatBox counters
-// settle (~1100ms total for the grid). Reduce-motion users see the
-// final state immediately, no opacity ramp, no transform.
-function RevealSection({ delay = 0, children }) {
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 14)).current;
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: motion.enter, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: motion.enter, delay, useNativeDriver: true }),
-    ]).start();
-  }, [delay, reduceMotion, opacity, translateY]);
-
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      {children}
-    </Animated.View>
-  );
+// Keep the summary layout stable. These sections used to fade in with staggered
+// opacity delays, but the completion controls must be available immediately on
+// tired thumbs and should never depend on native-driver animation state.
+function RevealSection({ children }) {
+  return <View>{children}</View>;
 }
 
 // StatBox renders a single stat. When the value is a pure

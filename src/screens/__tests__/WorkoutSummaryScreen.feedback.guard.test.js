@@ -10,4 +10,14 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain(': Array.from({ length: max }, (_, i) => i + 1);');
     expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs \}/);
   });
+
+  test('does not delay completed workout controls behind reveal animations', () => {
+    const revealSource = SOURCE.slice(
+      SOURCE.indexOf('function RevealSection'),
+      SOURCE.indexOf('// StatBox renders'),
+    );
+    expect(SOURCE).toContain('function RevealSection({ children })');
+    expect(SOURCE).toContain('return <View>{children}</View>;');
+    expect(revealSource).not.toContain('Animated.timing');
+  });
 });
