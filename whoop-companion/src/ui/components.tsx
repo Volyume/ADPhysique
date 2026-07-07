@@ -266,15 +266,41 @@ export function AnimatedNumber({
 
 /** Horizontal bar (e.g. HR zones). value 0..1. */
 export function Bar({ value, color, label, right }: { value: number; color: string; label: string; right?: string }) {
+  const percent = Math.max(2, Math.min(100, value * 100));
   return (
     <View style={styles.barRow}>
       <Text style={styles.barLabel}>{label}</Text>
       <View style={styles.barTrack}>
-        <View style={[styles.barFill, { width: `${Math.max(2, Math.min(100, value * 100))}%`, backgroundColor: color }]} />
+        <AnimatedFill percent={percent} color={color} style={styles.barFill} />
       </View>
       {right ? <Text style={styles.barRight}>{right}</Text> : null}
     </View>
   );
+}
+
+function AnimatedFill({
+  percent,
+  color,
+  style,
+  duration = 700,
+}: {
+  percent: number;
+  color: string;
+  style: ViewStyle;
+  duration?: number;
+}) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  const animated = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(animated, {
+      toValue: clamped,
+      duration,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [animated, clamped, duration]);
+  const width = animated.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+  return <Animated.View style={[style, { width, backgroundColor: color }]} />;
 }
 
 export function Empty({ text }: { text: string }) {
@@ -447,12 +473,7 @@ export function ContributorRow({
         </View>
       </View>
       <View style={contribStyles.track}>
-        <View
-          style={[
-            contribStyles.fill,
-            { width: `${Math.max(0, Math.min(100, percent ?? 0))}%`, backgroundColor: c },
-          ]}
-        />
+        <AnimatedFill percent={percent ?? 0} color={c} style={contribStyles.fill} />
       </View>
     </View>
   );
