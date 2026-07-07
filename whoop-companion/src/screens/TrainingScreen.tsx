@@ -44,6 +44,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   const load = trainingLoad(trimps, now);
   const statusColor = STATUS_COLOR[load.status] ?? colors.textSecondary;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
+  const sleepStateConflict = hasWakeStateConflict(today?.sleepDetail ?? null);
 
   // Weekly training load for the last 6 weeks.
   const DAY = 86400000;
@@ -65,6 +66,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     acwr: load.acwr,
     readinessScore: readiness?.score ?? null,
     readinessConfidence: readiness?.confidence ?? null,
+    sleepStateConflict,
     recovery: today?.recovery ?? null,
     intensity,
     hasFitnessInputs,
@@ -76,6 +78,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
     chronic: load.chronic,
     readinessScore: readiness?.score ?? null,
     readinessConfidence: readiness?.confidence ?? null,
+    sleepStateConflict,
   });
 
   // Personal records from logged activities.
@@ -275,6 +278,7 @@ function trainingLoadDriver(input: {
   chronic: number;
   readinessScore: number | null;
   readinessConfidence: 'high' | 'medium' | 'low' | null;
+  sleepStateConflict: boolean;
 }): {
   badge: string;
   title: string;
@@ -286,6 +290,20 @@ function trainingLoadDriver(input: {
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
+  if (input.sleepStateConflict) {
+    return {
+      badge: 'SLEEP',
+      title: 'Sleep review limits training guidance',
+      body: 'Load status can wait: decoded strap-state evidence says the sleep window is mostly wake, so training should stay conservative until that is reviewed.',
+      metric: 'Sleep state',
+      actionLabel: 'Open readiness',
+      actionValue: 'review',
+      icon: 'speedometer',
+      color: colors.recoveryRed,
+      route: { name: 'readiness' },
+    };
+  }
+
   if (input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
@@ -393,6 +411,7 @@ function trainingPlan(input: {
   acwr: number | null;
   readinessScore: number | null;
   readinessConfidence: 'high' | 'medium' | 'low' | null;
+  sleepStateConflict: boolean;
   recovery: number | null;
   intensity: { moderate: number; vigorous: number; total: number; goal: number } | null;
   hasFitnessInputs: boolean;
@@ -407,6 +426,20 @@ function trainingPlan(input: {
   color: string;
   route: Parameters<Nav['navigate']>[0];
 } {
+  if (input.sleepStateConflict) {
+    return {
+      badge: 'CHECK',
+      title: 'Review sleep before training',
+      body: 'The overnight sleep window conflicts with strap-state evidence. Keep today easy until the window is fixed or more history arrives.',
+      target: 'hold',
+      actionLabel: 'Open readiness',
+      actionValue: 'sleep state',
+      icon: 'speedometer',
+      color: colors.recoveryRed,
+      route: { name: 'readiness' },
+    };
+  }
+
   if (input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
@@ -503,6 +536,16 @@ function trainingPlan(input: {
     color: colors.recoveryGreen,
     route: { name: 'startMenu' },
   };
+}
+
+function hasWakeStateConflict(
+  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+): boolean {
+  const stateMin = sleepDetail?.sleepStateMin ?? 0;
+  if (stateMin < 30) return false;
+  const wakeLike = (sleepDetail?.sleepStateWakeMin ?? 0) + (sleepDetail?.sleepStateUpMin ?? 0);
+  const sleepLike = (sleepDetail?.sleepStateAsleepMin ?? 0) + (sleepDetail?.sleepStateStillMin ?? 0);
+  return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
 }
 
 const styles = StyleSheet.create({
