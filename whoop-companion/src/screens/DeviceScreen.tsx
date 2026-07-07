@@ -78,6 +78,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastSyncText = effectiveSyncTs
     ? new Date(effectiveSyncTs).toLocaleString()
     : 'Not yet - connect to sync';
+  const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -90,13 +91,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const applyStepCalibration = async () => {
     const actual = Number(actualSteps.replace(/,/g, '').trim());
     if (!Number.isFinite(actual) || actual <= 0) {
-      Alert.alert('Calibration needs a step count', "Enter today's actual steps for the synced WHOOP ticks.");
+      Alert.alert('Calibration needs a step count', "Enter today's actual steps for the synced WHOOP counter.");
       return;
     }
     try {
       const divisor = await appStore.calibrateBandSteps(actual);
       setActualSteps('');
-      Alert.alert('Step calibration updated', `${divisor.toFixed(1)} ticks per step`);
+      Alert.alert('Step calibration updated', `${divisor.toFixed(1)} counter units per step`);
     } catch (e) {
       Alert.alert('Calibration unavailable', String(e));
     }
@@ -105,7 +106,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const resetStepCalibration = async () => {
     const divisor = await appStore.setBandStepDivisor(WHOOP5_STEP_TICKS_PER_STEP);
     setActualSteps('');
-    Alert.alert('Step calibration reset', `${divisor.toFixed(1)} ticks per step`);
+    Alert.alert('Step calibration reset', `${divisor.toFixed(1)} counter units per step`);
   };
 
   const disableWakeAlarm = async () => {
@@ -299,8 +300,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           <Stat label="Band estimate" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-          <Stat label="Raw ticks" value={bandStepEstimate?.rawTicks ?? '-'} />
-          <Stat label="Ticks/step" value={bandStepDivisor.toFixed(1)} />
+          <Stat label="Raw counter" value={bandStepEstimate?.rawTicks ?? '-'} />
+          <Stat label="Units/step" value={bandStepDivisor.toFixed(1)} />
           <Stat label="Confidence" value={bandStepEstimate?.confidence ?? '-'} />
         </View>
         <View style={styles.calibrationRow}>
@@ -321,8 +322,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          The phone pedometer is preferred for live/today steps when available. WHOOP history is calibrated from
-          motion-counter ticks for backfilled days and workouts, so it is an estimate rather than raw step truth.
+          WHOOP history now defaults to the captured 1:1 counter-to-step mapping for this firmware. Use calibration after
+          a known short walk if your strap drifts high or low.
         </Text>
       </Card>
 
@@ -333,6 +334,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>Sync status: {effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
         <Text style={styles.diagText}>Sync mode: {draining ? 'running' : effectiveSync?.mode ?? 'none'}</Text>
         <Text style={styles.diagText}>Sync finish: {effectiveSync?.reason ?? 'none yet'}</Text>
+        <Text style={styles.diagText}>Decoded range: {historyRangeText}</Text>
         <Text style={styles.diagText}>Decoded records: {effectiveSync?.decodedRecords ?? 0}</Text>
         <Text style={styles.diagText}>HR samples backfilled: {effectiveSync?.hrSamples ?? 0}</Text>
         <Text style={styles.diagText}>R-R intervals backfilled: {effectiveSync?.rrSamples ?? 0}</Text>
@@ -502,6 +504,23 @@ function pauseForUi(): Promise<void> {
 function formatAlarmDate(ts: number | null): string {
   if (!ts) return 'unknown';
   return new Date(ts).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatHistoryRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'none yet';
+  const first = new Date(firstTs).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const last = new Date(lastTs).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${first} - ${last}`;
 }
 
 const styles = StyleSheet.create({

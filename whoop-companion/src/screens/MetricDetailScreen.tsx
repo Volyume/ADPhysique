@@ -108,7 +108,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.steps,
     measured: true,
     blurb:
-      'Daily steps prefer the phone pedometer for live/today totals when available. Synced WHOOP history is calibrated from motion-counter ticks, so it can backfill earlier days and workouts as an estimate.',
+      'Daily steps use the captured WHOOP history counter by default, with phone pedometer fallback for live/today totals when available. Calibrate after a known walk if your strap drifts high or low.',
   },
 };
 

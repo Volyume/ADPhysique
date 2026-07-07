@@ -92,6 +92,7 @@ import {
   estimateBandStepsFromCounters,
   estimateStepsFromBandCounters,
   normaliseStepDivisor,
+  LEGACY_WHOOP5_STEP_TICKS_PER_STEP,
   WHOOP5_STEP_TICKS_PER_STEP,
 } from '../metrics/bandSteps';
 import { activityGps, activityUsesSteps } from '../data/activities';
@@ -142,6 +143,8 @@ export type HistorySyncReport = {
   rejectedRecords: number;
   droppedImplausibleTs: number;
   versions: number[];
+  firstSampleTs?: number;
+  lastSampleTs?: number;
   finishedTs?: number;
   reason?: 'complete' | 'timeout' | 'disconnect';
   mode?: 'manual' | 'auto';
@@ -279,6 +282,7 @@ const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
 const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
+const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 class AppStore extends Store<AppState> {
@@ -329,7 +333,16 @@ class AppStore extends Store<AppState> {
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
     const stepDivisorRaw = await kvGet(STEP_DIVISOR_KEY);
-    const bandStepDivisor = normaliseStepDivisor(stepDivisorRaw ? Number(stepDivisorRaw) : WHOOP5_STEP_TICKS_PER_STEP);
+    const stepDivisorMigrationRaw = await kvGet(STEP_DIVISOR_MIGRATION_KEY);
+    let bandStepDivisor = normaliseStepDivisor(stepDivisorRaw ? Number(stepDivisorRaw) : WHOOP5_STEP_TICKS_PER_STEP);
+    if (
+      stepDivisorMigrationRaw !== '1' &&
+      Math.abs(bandStepDivisor - LEGACY_WHOOP5_STEP_TICKS_PER_STEP) < 0.01
+    ) {
+      bandStepDivisor = WHOOP5_STEP_TICKS_PER_STEP;
+      await kvSet(STEP_DIVISOR_KEY, String(bandStepDivisor));
+    }
+    if (stepDivisorMigrationRaw !== '1') await kvSet(STEP_DIVISOR_MIGRATION_KEY, '1');
     const strapAlarm = parseStrapAlarm(await kvGet(STRAP_ALARM_KEY));
     this.preferredDeviceId = await kvGet(LAST_DEVICE_ID_KEY);
     this.setState({
@@ -1139,6 +1152,7 @@ class AppStore extends Store<AppState> {
 
     this.historySessionStats = mergeHistoryStats(this.historySessionStats, decoded);
     const stats = this.historySessionStats;
+    const bounds = historySampleBounds(stats);
     this.setState({
       historySync: {
         status: `Stored ${decoded.hr.length} HR samples and ${decoded.sleepStates.length} sleep-state hints from ${frames.length} records`,
@@ -1152,6 +1166,7 @@ class AppStore extends Store<AppState> {
         rejectedRecords: stats.rejectedRecords,
         droppedImplausibleTs: stats.droppedImplausibleTs,
         versions: stats.versions,
+        ...bounds,
       },
     });
 
@@ -2721,6 +2736,10 @@ function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
       rejectedRecords: safeInt(r.rejectedRecords),
       droppedImplausibleTs: safeInt(r.droppedImplausibleTs),
       versions: Array.isArray(r.versions) ? r.versions.filter((v): v is number => typeof v === 'number') : [],
+      firstSampleTs:
+        typeof r.firstSampleTs === 'number' && Number.isFinite(r.firstSampleTs) ? Math.round(r.firstSampleTs) : undefined,
+      lastSampleTs:
+        typeof r.lastSampleTs === 'number' && Number.isFinite(r.lastSampleTs) ? Math.round(r.lastSampleTs) : undefined,
       finishedTs: typeof r.finishedTs === 'number' ? r.finishedTs : undefined,
       reason: r.reason,
       mode: r.mode,
@@ -2728,6 +2747,22 @@ function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
   } catch {
     return null;
   }
+}
+
+function historySampleBounds(stats: HistoricalDecodeResult): Pick<HistorySyncReport, 'firstSampleTs' | 'lastSampleTs'> {
+  let firstSampleTs = Number.POSITIVE_INFINITY;
+  let lastSampleTs = Number.NEGATIVE_INFINITY;
+  const visit = (ts: number) => {
+    if (!Number.isFinite(ts)) return;
+    firstSampleTs = Math.min(firstSampleTs, ts);
+    lastSampleTs = Math.max(lastSampleTs, ts);
+  };
+  for (const sample of stats.hr) visit(sample.ts);
+  for (const sample of stats.steps) visit(sample.ts);
+  for (const sample of stats.sleepStates) visit(sample.ts);
+  for (const sample of stats.rawVitals) visit(sample.ts);
+  if (!Number.isFinite(firstSampleTs) || !Number.isFinite(lastSampleTs)) return {};
+  return { firstSampleTs, lastSampleTs };
 }
 
 function parseStrapAlarm(raw: string | null): StrapAlarmState {

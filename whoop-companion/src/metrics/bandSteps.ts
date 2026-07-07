@@ -13,11 +13,12 @@ export type BandStepEstimate = {
   confidence: 'low' | 'medium';
 };
 
-// WHOOP 5/MG history exposes a cumulative motion counter. On the user's capture
-// it over-reports literal steps by ~7.5x, so treat it as ticks and calibrate it
-// down instead of displaying raw deltas as steps.
-export const WHOOP5_STEP_TICKS_PER_STEP = 8;
-export const MIN_STEP_TICKS_PER_STEP = 2;
+// WHOOP 5/MG history exposes a cumulative step-like counter. The later capture
+// from this firmware ended near 208 raw counter increments when the user expected
+// roughly 200 real steps, so default to 1:1 and let calibration fine-tune it.
+export const WHOOP5_STEP_TICKS_PER_STEP = 1;
+export const LEGACY_WHOOP5_STEP_TICKS_PER_STEP = 8;
+export const MIN_STEP_TICKS_PER_STEP = 0.5;
 export const MAX_STEP_TICKS_PER_STEP = 30;
 
 const MAX_INTERVAL_MS = 15 * 60 * 1000;
