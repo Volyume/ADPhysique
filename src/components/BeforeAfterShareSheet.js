@@ -526,7 +526,7 @@ export default function BeforeAfterShareSheet({
               <Text style={styles.exportReceiptLine}>Two selected photos</Text>
               <Text style={styles.exportReceiptLine}>Dates and elapsed time</Text>
               {usingScans && !hideScanRange ? (
-                <Text style={styles.exportReceiptLine}>Visible scan index</Text>
+                <Text style={styles.exportReceiptLine}>Visible Volyume Score</Text>
               ) : null}
               <Text style={styles.exportReceiptLine}>Weight: {showWeight ? 'included' : 'off'}</Text>
             </View>
@@ -538,7 +538,7 @@ export default function BeforeAfterShareSheet({
             </View>
           </View>
           <Text style={styles.privacyNote}>
-            The exported file is a single composed image. It includes only the two photos, dates, optional scan index, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
+            The exported file is a single composed image. It includes only the two photos, dates, optional Volyume Score, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
           </Text>
         </View>
 

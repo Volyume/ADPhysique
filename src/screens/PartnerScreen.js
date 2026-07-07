@@ -1401,11 +1401,12 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
-        style={styles.textRow}
+        style={styles.pendingDanger}
         hitSlop={hitSlop}
         accessibilityRole="button"
         accessibilityLabel="Cancel invitation"
       >
+        <Ionicons name="close-circle-outline" size={iconSize.sm} color={colors.error} />
         <Text style={styles.cancelText}>Cancel invitation</Text>
       </TouchableOpacity>
     </View>
@@ -1947,9 +1948,26 @@ const styles = StyleSheet.create({
   pendingSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
     gap: spacing.xs,
     minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+  },
+  pendingDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.error, alpha.edge),
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
   },
   pendingPrimaryDisabled: { opacity: 0.68 },
   pendingPrimaryText: { ...type.label, color: colors.onPrimary },
@@ -1982,7 +2000,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   howLine: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20, flex: 1 },
-  textRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, minHeight: 44 },
   secondaryFullButton: { marginTop: spacing.xs },
 
   // Code entry
@@ -2082,8 +2099,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    minHeight: 44,
+    minHeight: 48,
   },
-  moreOptionsText: { ...type.body, color: colors.primary },
+  moreOptionsText: { ...type.label, color: colors.textPrimary },
 });

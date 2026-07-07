@@ -216,7 +216,6 @@ export default function ProgressScanHistoryCard({
               </View>
             </View>
             <View style={styles.scanReasonBox}>
-              <Text style={styles.scanReasonLabel}>Result note</Text>
               {basisLabel ? <Text style={styles.scanBasis}>{basisLabel}</Text> : null}
               <Text style={styles.scanBody}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
@@ -314,7 +313,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
   },
-  scanReasonLabel: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   scanBasis: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   scanAssetRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   scanAssetThumb: { width: 72, gap: spacing.xxs },

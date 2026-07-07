@@ -89,4 +89,5 @@ test('renders the private share-card receipt', async () => {
   expect(text).toContain('Weight: off');
   expect(text).toContain('Kept private');
   expect(text).toContain('Raw photo files');
+  expect(text).not.toContain('scan index');
 });

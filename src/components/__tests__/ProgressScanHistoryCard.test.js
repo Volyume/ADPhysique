@@ -55,7 +55,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('private progress score');
     expect(text).toContain('not body fat percentage');
     expect(text).toContain('Score for this set');
-    expect(text).toContain('Result note');
+    expect(text).not.toContain('Result note');
     expect(text).toContain('Basis: front/back outline signals plus scan quality. No body fat percentage.');
     expect(text).not.toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');

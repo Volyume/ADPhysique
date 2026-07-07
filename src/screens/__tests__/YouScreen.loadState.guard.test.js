@@ -12,4 +12,16 @@ describe('YouScreen coach hub load state', () => {
     expect(source).toMatch(/setReloadKey\(\(n\) => n \+ 1\)/);
     expect(source).not.toMatch(/setSessions\(null\);[\s\S]*setLatestReview\(null\);[\s\S]*setHasCoachHistory\(false\);/);
   });
+
+  test('coach hub groups actions by user intent instead of internal labels', () => {
+    expect(source).toContain('subtitle="Rules-based weekly coaching from your logs."');
+    expect(source).toMatch(/<SectionLabel>This week<\/SectionLabel>/);
+    expect(source).toMatch(/<SectionLabel>Setup<\/SectionLabel>/);
+    expect(source).toMatch(/<SectionLabel>Support<\/SectionLabel>/);
+    expect(source).toMatch(/<SectionLabel>Safety checks<\/SectionLabel>/);
+    expect(source).toMatch(/<SectionLabel>App settings<\/SectionLabel>/);
+    expect(source).not.toMatch(/<SectionLabel>Coach actions<\/SectionLabel>/);
+    expect(source).not.toMatch(/<SectionLabel>Safety<\/SectionLabel>/);
+    expect(source).not.toMatch(/<SectionLabel>Settings<\/SectionLabel>/);
+  });
 });

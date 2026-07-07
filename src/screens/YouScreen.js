@@ -148,7 +148,7 @@ export default function YouScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader title="Coach" subtitle="Rules-based coaching decisions from your logs." />
+        <ScreenHeader title="Coach" subtitle="Rules-based weekly coaching from your logs." />
 
         {loadError ? (
           <Card
@@ -220,7 +220,7 @@ export default function YouScreen({ navigation }) {
 
         {isPro ? (
           <View style={styles.section}>
-            <SectionLabel>Coach actions</SectionLabel>
+            <SectionLabel>This week</SectionLabel>
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
@@ -233,6 +233,31 @@ export default function YouScreen({ navigation }) {
               sub="The output from your check-in: changes, holds, rationale and next steps."
               onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             />
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <SectionLabel>Coach</SectionLabel>
+            <NavRow
+              icon="sparkles-outline"
+              label="Upgrade to Pro"
+              sub="Weekly coaching, nutrition targets, body metrics and progress photos."
+              pro={!isPro}
+              onPress={() => navigation.navigate('ProUpgrade')}
+            />
+            {hasCoachHistory ? (
+              <NavRow
+                icon="book-outline"
+                label="Coaching history"
+                sub="Past Pro decisions stay readable. View-only on the free plan."
+                onPress={() => navigation.navigate('CoachHeldHistory')}
+              />
+            ) : null}
+          </View>
+        )}
+
+        {isPro ? (
+          <View style={styles.section}>
+            <SectionLabel>Setup</SectionLabel>
             <NavRow
               icon="flag-outline"
               label="Update goal and phase"
@@ -252,29 +277,10 @@ export default function YouScreen({ navigation }) {
               onPress={() => navigation.navigate('CoachingReminders')}
             />
           </View>
-        ) : (
-          <View style={styles.section}>
-            <SectionLabel>Coach actions</SectionLabel>
-            <NavRow
-              icon="sparkles-outline"
-              label="Upgrade to Pro"
-              sub="Weekly coaching, nutrition targets, body metrics and progress photos."
-              pro={!isPro}
-              onPress={() => navigation.navigate('ProUpgrade')}
-            />
-            {hasCoachHistory ? (
-              <NavRow
-                icon="book-outline"
-                label="Coaching history"
-                sub="Past Pro decisions stay readable. View-only on the free plan."
-                onPress={() => navigation.navigate('CoachHeldHistory')}
-              />
-            ) : null}
-          </View>
-        )}
+        ) : null}
 
         <View style={styles.section}>
-          <SectionLabel>Accountability</SectionLabel>
+          <SectionLabel>Support</SectionLabel>
           <NavRow
             icon="people-outline"
             label="Partners"
@@ -286,11 +292,11 @@ export default function YouScreen({ navigation }) {
 
         {isPro ? (
           <View style={styles.section}>
-            <SectionLabel>Safety</SectionLabel>
+            <SectionLabel>Safety checks</SectionLabel>
             <NavRow
               icon="shield-checkmark-outline"
               label="Goal lock"
-              sub="Set how conservative the safety check should be for aggressive cuts."
+              sub="Set the conservative limit for cutting goals."
               onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
             />
             <NavRow
@@ -303,7 +309,7 @@ export default function YouScreen({ navigation }) {
         ) : null}
 
         <View style={styles.section}>
-          <SectionLabel>Settings</SectionLabel>
+          <SectionLabel>App settings</SectionLabel>
           <NavRow
             icon="settings-outline"
             label="Settings"
