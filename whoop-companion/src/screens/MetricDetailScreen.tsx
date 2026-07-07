@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { DailyMetricRow } from '../db/database';
-import { BaselineChart, Card, Empty, Ring, Screen, SectionLabel, WeeklyBars } from '../ui/components';
+import { BaselineChart, Card, Empty, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { stdev } from '../metrics/ema';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
@@ -144,6 +144,13 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
   const hrvBal = useStoreSelector(appStore, (s) => s.hrvBal);
   const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
   const ageYears = useStoreSelector(appStore, (s) => s.profile.ageYears);
+  const sleepPerformance = useStoreSelector(appStore, (s) => s.sleepPerformance);
+  const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
+  const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
+  const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
+  const bandStepEstimate = useStoreSelector(appStore, (s) => s.bandStepEstimate);
+  const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
 
   useEffect(() => {
@@ -235,6 +242,17 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
         )}
       </View>
 
+      {renderQualityCard({
+        key: metricKey,
+        today,
+        sleepPerformance,
+        historySync: historySync ?? lastHistorySync,
+        stepSource,
+        bandSteps,
+        bandStepEstimate,
+        bandStepDivisor,
+      })}
+
       {def.measured ? (
         <>
           <SectionLabel>30-day baseline</SectionLabel>
@@ -285,6 +303,84 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
   );
 }
 
+function renderQualityCard(input: {
+  key: MetricKey;
+  today: DailyMetricRow | null;
+  sleepPerformance: ReturnType<typeof appStore.getState>['sleepPerformance'];
+  historySync: ReturnType<typeof appStore.getState>['historySync'];
+  stepSource: ReturnType<typeof appStore.getState>['stepSource'];
+  bandSteps: ReturnType<typeof appStore.getState>['bandSteps'];
+  bandStepEstimate: ReturnType<typeof appStore.getState>['bandStepEstimate'];
+  bandStepDivisor: ReturnType<typeof appStore.getState>['bandStepDivisor'];
+}) {
+  const detail = input.today?.sleepDetail ?? null;
+  if (input.key === 'sleep_performance') {
+    return (
+      <>
+        <SectionLabel>Data quality</SectionLabel>
+        <Card>
+          <View style={styles.statRow}>
+            <Stat label="Confidence" value={detail?.confidence ? confidenceLabel(detail.confidence) : '-'} color={confidenceColor(detail?.confidence)} />
+            <Stat label="Coverage" value={detail?.coveragePct != null ? `${detail.coveragePct}%` : '-'} color={coverageColor(detail?.coveragePct)} />
+            <Stat label="Signal" value={detail?.signalMin ?? '-'} unit="min" color={colors.sleepTeal} />
+          </View>
+          <Text style={styles.qualityNote}>
+            {input.sleepPerformance?.cappedByConfidence && input.sleepPerformance.confidenceCapPct != null
+              ? `Score capped at ${input.sleepPerformance.confidenceCapPct}% until the overnight capture has stronger HR coverage.`
+              : sleepQualityNote(detail)}
+          </Text>
+        </Card>
+      </>
+    );
+  }
+
+  if (input.key === 'steps') {
+    const range = formatSampleRange(input.bandStepEstimate?.firstTs, input.bandStepEstimate?.lastTs);
+    return (
+      <>
+        <SectionLabel>Step source</SectionLabel>
+        <Card>
+          <View style={styles.statRow}>
+            <Stat label="Current source" value={stepSourceLabel(input.stepSource)} color={input.stepSource === 'band' ? colors.recoveryGreen : colors.textSecondary} />
+            <Stat label="Band estimate" value={input.bandSteps != null ? input.bandSteps.toLocaleString() : '-'} color={colors.recoveryGreen} />
+            <Stat label="Confidence" value={input.bandStepEstimate?.confidence ?? '-'} color={input.bandStepEstimate?.confidence === 'medium' ? colors.recoveryYellow : colors.textTertiary} />
+          </View>
+          <View style={[styles.statRow, styles.statRowTight]}>
+            <Stat label="Raw counter" value={input.bandStepEstimate?.rawTicks ?? '-'} />
+            <Stat label="Used intervals" value={input.bandStepEstimate?.usedIntervals ?? '-'} />
+            <Stat label="Units/step" value={input.bandStepDivisor.toFixed(1)} />
+          </View>
+          <Text style={styles.qualityNote}>
+            {input.bandStepEstimate
+              ? `${range}. Calibration adjusts the counter-to-step ratio for this strap and firmware.`
+              : 'No decoded band step counter yet. Sync history or use phone pedometer fallback for today.'}
+          </Text>
+        </Card>
+      </>
+    );
+  }
+
+  if (input.key === 'spo2' || input.key === 'skin_temp') {
+    return (
+      <>
+        <SectionLabel>Decode status</SectionLabel>
+        <Card>
+          <View style={styles.statRow}>
+            <Stat label="Status" value="candidate" color={colors.recoveryYellow} />
+            <Stat label="Raw vitals" value={input.historySync?.rawVitalSamples ?? '-'} />
+            <Stat label="Sync state" value={input.historySync?.status ? shortStatus(input.historySync.status) : '-'} />
+          </View>
+          <Text style={styles.qualityNote}>
+            This value is decoded from raw WHOOP 5 history records and shown separately until the mapping is confirmed against more captures.
+          </Text>
+        </Card>
+      </>
+    );
+  }
+
+  return null;
+}
+
 function ringFraction(key: MetricKey, value: number | null): number {
   if (value == null) return 0;
   switch (key) {
@@ -308,6 +404,56 @@ function ringFraction(key: MetricKey, value: number | null): number {
   }
 }
 
+function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
+  if (confidence === 'high') return 'High';
+  if (confidence === 'medium') return 'Medium';
+  if (confidence === 'low') return 'Low';
+  return '-';
+}
+
+function confidenceColor(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
+  if (confidence === 'high') return colors.recoveryGreen;
+  if (confidence === 'medium') return colors.recoveryYellow;
+  if (confidence === 'low') return colors.recoveryRed;
+  return colors.textTertiary;
+}
+
+function coverageColor(coveragePct: number | null | undefined): string {
+  if (coveragePct == null) return colors.textTertiary;
+  if (coveragePct >= 80) return colors.recoveryGreen;
+  if (coveragePct >= 60) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {
+  if (!detail) return 'No sleep-detail breakdown has been saved for today yet.';
+  if (detail.confidence === 'high') {
+    return `Strong overnight capture: ${detail.coveragePct ?? 0}% HR coverage and ${detail.signalMin ?? 0} signal minutes.`;
+  }
+  if (detail.confidence === 'medium') {
+    return `Usable estimate: ${detail.coveragePct ?? 0}% coverage. Review the sleep window if timing feels wrong.`;
+  }
+  return `Low-confidence estimate: ${detail.coveragePct ?? 0}% coverage. Sync more history before trusting score, recovery, or readiness.`;
+}
+
+function stepSourceLabel(source: 'band' | 'phone' | null): string {
+  if (source === 'band') return 'band est.';
+  if (source === 'phone') return 'phone';
+  return '-';
+}
+
+function formatSampleRange(firstTs?: number, lastTs?: number): string {
+  if (!firstTs || !lastTs) return 'No decoded range yet';
+  const first = new Date(firstTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `Decoded ${first}-${last}`;
+}
+
+function shortStatus(status: string): string {
+  if (status.length <= 18) return status;
+  return `${status.slice(0, 17)}...`;
+}
+
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginVertical: 12 },
   unavail: { color: colors.textSecondary, fontFamily: fonts.textBold, fontSize: 15, marginBottom: 4 },
@@ -316,4 +462,7 @@ const styles = StyleSheet.create({
   k: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
   v: { color: colors.text, fontSize: 15, fontFamily: fonts.bold },
   blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  statRowTight: { marginTop: 14 },
+  qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });
