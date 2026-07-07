@@ -188,9 +188,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           disabled={!connected || draining}
         />
         <Text style={styles.hint}>
-          The strap records to its own memory. On connect and when the app returns to the foreground, auto sync
-          requests stored history, decodes v18 HR/R-R records, recognises v20/v21/v26 sensor records, backfills
-          previous days, and recomputes sleep from confirmed HR rows. Use Sync now only as a retry.
+          The strap records to its own memory. On connect, reconnect and while the background protection service is
+          running, auto sync requests stored history, decodes v18 HR/R-R records, recognises v20/v21/v26 sensor
+          records, backfills previous days, and recomputes sleep from confirmed HR rows. Use Sync now only as a retry.
         </Text>
       </Card>
 
@@ -200,7 +200,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <SectionLabel>Live diagnostics</SectionLabel>
       <Card>
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Optional live diagnostic link</Text>
+          <Text style={styles.toggleLabel}>Background auto-sync protection</Text>
           <Switch
             value={keepAlive}
             onValueChange={(v) => void appStore.setBackgroundKeepAlive(v)}
@@ -208,8 +208,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           />
         </View>
         <Text style={styles.hint}>
-          This is not required for sleep backfill. It keeps a foreground Bluetooth link open for short live
-          diagnostics, while normal sleep tracking comes from stored-history sync when the band reconnects.
+          Keeps an Android foreground service running so auto-connect, reconnect retries and long stored-history
+          syncs can continue after the app is backgrounded or the phone is locked. Leave this on for overnight
+          sleep backfill.
         </Text>
       </Card>
 

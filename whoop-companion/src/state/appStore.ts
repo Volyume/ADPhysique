@@ -142,7 +142,7 @@ export type AppState = {
   frameCount: number;
   capturing: boolean;
   draining: boolean;
-  backgroundKeepAlive: boolean; // opt-in foreground service for live diagnostics
+  backgroundKeepAlive: boolean; // Android foreground-service guard for background connect/sync
   today: DailyMetricRow | null;
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
@@ -196,7 +196,7 @@ const initialState: AppState = {
   frameCount: 0,
   capturing: false,
   draining: false,
-  backgroundKeepAlive: false,
+  backgroundKeepAlive: true,
   today: null,
   recentDays: [],
   lastSleep: null,
@@ -276,7 +276,8 @@ class AppStore extends Store<AppState> {
     const profile = await loadProfile();
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
-    const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
+    const keepAliveRaw = await kvGet('backgroundKeepAlive');
+    const keepAlive = keepAliveRaw !== '0';
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
     const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
@@ -330,9 +331,8 @@ class AppStore extends Store<AppState> {
     if (status === 'connected' && device && this.autoDrainedFor !== device.id) {
       this.scheduleAutoHistoryDrain(device.id, 3500);
     }
-    // Optional live-diagnostic keep-alive. Sleep uses stored-history backfill.
     if (status === 'connected' && this.getState().backgroundKeepAlive) {
-      void startKeepAlive();
+      void this.ensureBackgroundSyncKeepAlive('Background auto-sync');
     }
     if (status === 'connected') {
       this.startConnectedAutoSync();
@@ -572,8 +572,13 @@ class AppStore extends Store<AppState> {
   }
 
   connect = (): void => {
+    void this.connectAsync();
+  };
+
+  private async connectAsync(): Promise<void> {
     this.setState({ error: null });
-    void this.ble?.start(this.preferredDeviceId);
+    await this.ensureBackgroundSyncKeepAlive('Background auto-connect');
+    await this.ble?.start(this.preferredDeviceId);
   };
 
   disconnect = (): void => {
@@ -584,12 +589,25 @@ class AppStore extends Store<AppState> {
     this.setState({ liveHr: null, liveRr: [] });
   };
 
-  /** Opt in/out of the live-diagnostic foreground service. When turned on
-   *  while already connected, start it immediately; when turned off, stop it. */
+  /** Start the foreground-service guard used by Android background sync. */
+  private async ensureBackgroundSyncKeepAlive(context: string): Promise<boolean> {
+    if (!this.getState().backgroundKeepAlive) return false;
+    const ok = await startKeepAlive();
+    if (!ok) {
+      this.setState({
+        error:
+          `${context} needs location permission so Android can keep the WHOOP sync running in the background. ` +
+          'Grant location/notification permission and leave background sync enabled; otherwise keep the app open during sync.',
+      });
+    }
+    return ok;
+  }
+
   setBackgroundKeepAlive = async (on: boolean): Promise<void> => {
     this.setState({ backgroundKeepAlive: on });
     await kvSet('backgroundKeepAlive', on ? '1' : '0');
     if (on) {
+      await this.ensureBackgroundSyncKeepAlive('Background auto-sync');
       if (this.getState().status === 'connected') {
         const ok = await startKeepAlive();
         if (!ok) {
@@ -1053,6 +1071,7 @@ class AppStore extends Store<AppState> {
       this.setState({ error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.' });
       return;
     }
+    await this.ensureBackgroundSyncKeepAlive(mode === 'auto' ? 'Automatic history sync' : 'Manual history sync');
     this.clearAutoSyncTimer();
     this.clearHistoryTimeout();
     this.eventAssemblers.forEach((asm) => asm.reset());
