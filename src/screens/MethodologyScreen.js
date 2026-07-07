@@ -29,7 +29,7 @@ import BackHeader from '../components/BackHeader';
 
 // The always-open opener.
 const INTRO =
-  'The Coach is a rules-based system, not a chat bot. Each week it ' +
+  'The Coach is rules-based. Each week it ' +
   'reads your logged training, your morning-weight trend, your food data when ' +
   'you use Eat, and your weekly check-in answers. It then decides what should ' +
   'change, what should hold, and why.';

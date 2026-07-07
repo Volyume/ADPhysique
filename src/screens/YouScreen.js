@@ -149,7 +149,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.statusEyebrow}>Deterministic coach</Text>
+              <Text style={styles.statusEyebrow}>Rules-based coach</Text>
               <Text style={styles.statusTitle}>
                 {isPro
                   ? latestReview
@@ -164,7 +164,7 @@ export default function YouScreen({ navigation }) {
               ? latestReview
                 ? 'Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
                 : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
-              : 'The coach is not a chatbot. It is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
+              : 'The Coach is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
 
