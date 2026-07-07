@@ -40,6 +40,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const strain = today?.strain ?? null;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const energyReserve = useStoreSelector(appStore, (s) => s.energyReserve);
+  const sleepPerformance = useStoreSelector(appStore, (s) => s.sleepPerformance);
   // Composite Sleep Performance (WHOOP's headline) when available, else the
   // hours-vs-needed ratio as a fallback for older rows.
   const sleepPerf =
@@ -83,6 +84,14 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         : status === 'connected'
           ? 'Waiting for sync'
           : 'Connect strap';
+  const sleepDialSub =
+    sleepPerformance?.cappedByConfidence && sleepPerformance.confidenceCapPct != null
+      ? `capped ${sleepPerformance.confidenceCapPct}%`
+      : confidence
+        ? `${confidenceLabel(confidence).toLowerCase()} confidence`
+        : sleep
+          ? 'needs confidence'
+          : 'awaiting sleep';
 
   return (
     <View style={{ flex: 1 }}>
@@ -127,6 +136,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           <View style={styles.dialRow}>
             <Dial
               label="Sleep"
+              sub={sleepDialSub}
               main={sleepPerf != null ? `${Math.round(sleepPerf * 100)}%` : '—'}
               color={colors.sleepTeal}
               fraction={sleepPerf ?? 0}
