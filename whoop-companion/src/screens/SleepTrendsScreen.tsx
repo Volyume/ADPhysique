@@ -19,7 +19,7 @@ import {
   restorativeBand,
 } from '../metrics/sleepBands';
 import { nullableClampPct } from '../util/number';
-import { sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
+import { sleepTrustTier, sleepTrustWeightedAverage } from '../metrics/sleepTrustWeight';
 
 type RangeKey = 'W' | 'M' | '6M';
 const RANGES: Array<{ key: RangeKey; label: string; days: number }> = [
@@ -108,7 +108,7 @@ const METRICS: TrendMetric[] = [
     key: 'confidence',
     title: 'Capture Confidence',
     hours: false,
-    pick: (d) => confidenceScore(d.sleepDetail?.confidence),
+    pick: (d) => confidenceScore(d.sleepDetail),
     band: confidenceBand,
     bandLabels: ['High', 'Medium', 'Low'],
   },
@@ -141,10 +141,11 @@ function fmtVal(v: number, hours: boolean): string {
   return hours ? `${fmtHM(v)} hr` : `${Math.round(v)}%`;
 }
 
-function confidenceScore(confidence: 'high' | 'medium' | 'low' | null | undefined): number | null {
-  if (confidence === 'high') return 100;
-  if (confidence === 'medium') return 70;
-  if (confidence === 'low') return 40;
+function confidenceScore(detail: DailyMetricRow['sleepDetail'] | null | undefined): number | null {
+  const tier = sleepTrustTier(detail);
+  if (tier === 'high') return 100;
+  if (tier === 'medium') return 70;
+  if (tier === 'low') return 40;
   return null;
 }
 
@@ -394,10 +395,10 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
     let coverageTotal = 0;
     let coverageCount = 0;
     for (const d of qualityRows) {
-      const confidence = d.sleepDetail?.confidence;
-      if (confidence === 'high') qualityCounts.high += 1;
-      else if (confidence === 'medium') qualityCounts.medium += 1;
-      else if (confidence === 'low') qualityCounts.low += 1;
+      const tier = sleepTrustTier(d.sleepDetail);
+      if (tier === 'high') qualityCounts.high += 1;
+      else if (tier === 'medium') qualityCounts.medium += 1;
+      else if (tier === 'low') qualityCounts.low += 1;
       if (d.sleepDetail?.coveragePct != null) {
         coverageTotal += d.sleepDetail.coveragePct;
         coverageCount += 1;
@@ -417,12 +418,12 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
       .filter((_, i) => i % step === 0)
       .map((d) => {
         const value = metric.pick(d);
-        const confidence = d.sleepDetail?.confidence;
+        const tier = sleepTrustTier(d.sleepDetail);
         return {
           value,
           day: d.day,
           color: value != null && metric.band ? bandColors[metric.band(value)] : colors.sleepTeal,
-          opacity: confidence === 'low' ? 0.42 : confidence === 'medium' ? 0.68 : 0.88,
+          opacity: tier === 'low' ? 0.42 : tier === 'medium' ? 0.68 : 0.88,
         };
       });
     const insight = sleepTrendInsight({ period, metric, avg, priorAvg, quality });
