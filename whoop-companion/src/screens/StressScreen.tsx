@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Empty, LineChart, Ring, Screen, SectionLabel } from '../ui/components';
+import { Card, Empty, LineChart, NavRow, Ring, Screen, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts, stressColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatClock } from '../util/time';
@@ -34,6 +34,7 @@ export function StressScreen({ nav }: { nav: Nav }) {
 
   const stressValue = liveStress ?? storedStress;
   const tint = stressColor(stressValue);
+  const insight = stressInsight({ stressValue, live: liveStress != null, status, points: series.length });
 
   return (
     <Screen title="Stress Monitor" onBack={nav.back} tint={tint}>
@@ -54,6 +55,32 @@ export function StressScreen({ nav }: { nav: Nav }) {
         <Legend color={stressColors.medium} label="Medium" />
         <Legend color={stressColors.high} label="High" />
       </View>
+
+      <SectionLabel>Current state</SectionLabel>
+      <Card>
+        <View style={styles.insightHead}>
+          <View style={[styles.insightBadge, { backgroundColor: insight.color }]}>
+            <Text style={styles.insightBadgeText}>{insight.badge}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.insightTitle}>{insight.title}</Text>
+            <Text style={styles.insightBody}>{insight.body}</Text>
+          </View>
+        </View>
+        <View style={styles.statRow}>
+          <Stat label="Source" value={insight.source} color={insight.color} />
+          <Stat label="Windows" value={series.length} />
+          <Stat label="Score" value={stressValue != null ? stressValue.toFixed(1) : '-'} color={tint} />
+        </View>
+        <NavRow
+          label={insight.actionLabel}
+          icon={insight.icon}
+          iconColor={insight.color}
+          value={insight.actionValue}
+          onPress={() => nav.navigate(insight.route)}
+          last
+        />
+      </Card>
 
       <SectionLabel>Stress over today</SectionLabel>
       <Card>
@@ -89,6 +116,82 @@ export function StressScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function stressInsight(input: {
+  stressValue: number | null;
+  live: boolean;
+  status: string;
+  points: number;
+}): {
+  badge: string;
+  title: string;
+  body: string;
+  source: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} {
+  const source = input.live ? 'live' : input.stressValue != null ? 'synced' : input.status === 'connected' ? 'waiting' : 'offline';
+  if (input.stressValue == null) {
+    return {
+      badge: 'DATA',
+      title: input.status === 'connected' ? 'Waiting for clean R-R' : 'Stress needs synced R-R',
+      body: input.status === 'connected'
+        ? 'Keep the strap connected; stress appears when enough beat-to-beat intervals arrive in a clean window.'
+        : 'Reconnect the strap and let history sync before using the stress monitor.',
+      source,
+      actionLabel: 'Open device sync',
+      actionValue: input.status === 'connected' ? 'waiting' : 'connect',
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+
+  if (input.stressValue >= 2) {
+    return {
+      badge: 'HIGH',
+      title: 'Stress is elevated',
+      body: 'Treat this as a signal to downshift: breathe, hydrate, avoid stacking hard training on top of high autonomic load.',
+      source,
+      actionLabel: 'Open recovery',
+      actionValue: 'protect',
+      icon: 'pulse',
+      color: stressColors.high,
+      route: { name: 'recovery' },
+    };
+  }
+
+  if (input.stressValue >= 1) {
+    return {
+      badge: 'MED',
+      title: 'Stress is moderate',
+      body: 'Your autonomic load is not calm, but it is not a hard stop. Keep workouts controlled unless readiness is strong.',
+      source,
+      actionLabel: 'Open readiness',
+      actionValue: 'check',
+      icon: 'speedometer',
+      color: stressColors.medium,
+      route: { name: 'readiness' },
+    };
+  }
+
+  return {
+    badge: 'LOW',
+    title: 'Stress is low',
+    body: input.points >= 2
+      ? 'Current stress is calm and today has enough scored windows to show a useful curve.'
+      : 'Current stress is calm; more R-R windows will make the day curve more useful.',
+    source,
+    actionLabel: 'View trends',
+    actionValue: 'context',
+    icon: 'trending-up',
+    color: stressColors.low,
+    route: { name: 'trends' },
+  };
+}
+
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <View style={styles.legendItem}>
@@ -105,6 +208,12 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },
   legendLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
+  insightHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  insightBadge: { width: 50, height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  insightBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  insightTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  insightBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   axisLabel: { color: colors.textTertiary, fontSize: 11, fontFamily: fonts.text },
   coverage: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
