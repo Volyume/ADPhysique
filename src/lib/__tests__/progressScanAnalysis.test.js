@@ -247,6 +247,64 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
   });
 
+  test('valid front and back outline signals show a score even when confidence is only just usable', () => {
+    const weakFront = {
+      ...frontSignal,
+      quality: {
+        segmentationConfidence: 0.31,
+        framingScore: 0.31,
+        blurScore: 0.22,
+        lightingScore: 0.30,
+        poseConfidence: 0.26,
+        backgroundSeparation: 0.24,
+        cameraTiltDegrees: 12,
+        foregroundThreshold: 0.38,
+        componentDominance: 0.82,
+      },
+      mask: {
+        foregroundRatio: 0.28,
+        foregroundMeanProbability: 0.38,
+        backgroundMeanProbability: 0.13,
+      },
+      abstentionReasons: [],
+    };
+    const weakBack = {
+      ...weakFront,
+      silhouetteRatios: backSignal.silhouetteRatios,
+    };
+    const assets = [
+      {
+        pose: 'front',
+        qualityScore: 0.31,
+        lightingScore: 0.30,
+        blurScore: 0.22,
+        framingScore: 0.31,
+        landmarkConfidence: 0.26,
+        segmentationConfidence: 0.31,
+        signals: weakFront,
+      },
+      {
+        pose: 'back',
+        qualityScore: 0.31,
+        lightingScore: 0.30,
+        blurScore: 0.22,
+        framingScore: 0.31,
+        landmarkConfidence: 0.26,
+        segmentationConfidence: 0.31,
+        signals: weakBack,
+      },
+    ];
+
+    expect(abstentionReasonsForAssets(assets)).toEqual([]);
+    const out = analyseProgressScan({ assets, modelEstimate: null });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
+    expect(out.physiqueAssessment.progressSignal).toBe('baseline');
+    expect(out.copySummary).toMatch(/Volyume Physique Score 68\/100/i);
+  });
+
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
     const estimate = estimateBodyFatFromScanAssets({
       assets: modelBackedAssets,

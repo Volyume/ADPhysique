@@ -26,6 +26,49 @@ const UNAVAILABLE_RETAKE_REASONS = new Set([
 let modelPromise = null;
 let modelUnavailableReason = null;
 
+function modelTensorShape(tensor = {}) {
+  return Array.isArray(tensor.shape)
+    ? tensor.shape.map((v) => finiteNumber(v)).filter((v) => v != null)
+    : [];
+}
+
+function sameShape(actual = [], expected = []) {
+  return actual.length === expected.length && actual.every((v, i) => v === expected[i]);
+}
+
+function outputShapeSupported(shape = []) {
+  return sameShape(shape, [1, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE, 1])
+    || sameShape(shape, [1, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE])
+    || sameShape(shape, [PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE, 1])
+    || sameShape(shape, [PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE]);
+}
+
+export function validateProgressScanModelContract(model) {
+  if (!model || typeof model.run !== 'function') {
+    return { ok: false, reason: 'model_missing_run' };
+  }
+  const input = Array.isArray(model.inputs) ? model.inputs[0] : null;
+  const output = Array.isArray(model.outputs) ? model.outputs[0] : null;
+  if (!input || !output) {
+    return { ok: false, reason: 'model_tensor_metadata_missing' };
+  }
+  const inputShape = modelTensorShape(input);
+  const outputShape = modelTensorShape(output);
+  if (input.dataType && input.dataType !== 'float32') {
+    return { ok: false, reason: 'model_input_type_unsupported', inputType: input.dataType, inputShape, outputShape };
+  }
+  if (output.dataType && output.dataType !== 'float32') {
+    return { ok: false, reason: 'model_output_type_unsupported', outputType: output.dataType, inputShape, outputShape };
+  }
+  if (!sameShape(inputShape, [1, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE, 3])) {
+    return { ok: false, reason: 'model_input_shape_unsupported', inputShape, outputShape };
+  }
+  if (!outputShapeSupported(outputShape)) {
+    return { ok: false, reason: 'model_output_shape_unsupported', inputShape, outputShape };
+  }
+  return { ok: true, inputShape, outputShape };
+}
+
 function normaliseFastTfliteUri(uri) {
   const value = String(uri || '').trim();
   if (!value) return null;
@@ -267,7 +310,20 @@ function loadProgressScanModel() {
           });
           return null;
         }
-        return await loadTensorflowModel(safeSource, []);
+        const model = await loadTensorflowModel(safeSource, []);
+        const contract = validateProgressScanModelContract(model);
+        if (!contract.ok) {
+          modelUnavailableReason = contract.reason || 'model_contract_mismatch';
+          logError('progressScanVision.modelContract', new Error(modelUnavailableReason), {
+            modelSourceUrlProtocol: sourceProtocolForLog(modelSource),
+            inputShape: contract.inputShape || null,
+            outputShape: contract.outputShape || null,
+            inputType: contract.inputType || null,
+            outputType: contract.outputType || null,
+          });
+          return null;
+        }
+        return model;
       } catch (e) {
         if (!modelUnavailableReason) modelUnavailableReason = 'model_load_failed';
         logError('progressScanVision.loadModel', e, {

@@ -376,12 +376,12 @@ function biasConfidencePenalty(biasFlags = []) {
   return clamp(penalty, 0, 0.22);
 }
 
-function confidenceTier(score) {
+function confidenceTier(score, { measuredScoreReady = false } = {}) {
   const n = finiteNumber(score);
   if (n == null) return 'unknown';
   if (n >= 0.85) return 'high';
   if (n >= 0.70) return 'moderate';
-  if (n >= 0.40) return 'low';
+  if (n >= (measuredScoreReady ? 0.28 : 0.40)) return 'low';
   return 'not_enough';
 }
 
@@ -519,9 +519,10 @@ export function buildPhysiqueAssessment({
     biasFlags,
     previousScan,
   });
-  const scanConfidenceTier = confidenceTier(scanConfidenceScore);
   const measuredScore = computeVisualLeannessScore(inputs);
-  const score = scanConfidenceTier === 'not_enough' ? null : measuredScore;
+  const measuredScoreReady = measuredScore != null;
+  const scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
+  const score = measuredScoreReady ? measuredScore : null;
   const band = leannessBandForScore(score);
   const previousAssessment = previousPhysiqueAssessment(previousScan);
   const previousScore = finiteNumber(previousAssessment?.visualLeannessScore);
