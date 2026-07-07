@@ -50,19 +50,20 @@ export function computeSleepScore(sleep: SleepResult, opts?: { confidenceCapPct?
   const remPct = asleep > 0 ? (sleep.stages.rem / asleep) * 100 : 0;
   const deepPct = asleep > 0 ? (sleep.stages.deep / asleep) * 100 : 0;
   const wakeEvents = midSleepAwakeEvents(sleep.hypnogram);
+  const wakeAfterOnsetMin = midSleepAwakeMinutes(sleep.hypnogram);
 
   const total = totalSleepAdequacy(asleep, need);
   const efficiency = band(eff, 85, 95); // Oura: 85 good, 95 optimal
   const rem = ideal(remPct, 18, 26); // ~20–25% ideal
   const deep = ideal(deepPct, 13, 20); // ~13–20% ideal
-  const restfulness = clamp(100 - wakeEvents * 7); // fewer awakenings better
+  const restfulness = clamp(100 - wakeEvents * 6 - wakeAfterOnsetMin * 0.65); // fewer/shorter awakenings better
 
   const contributors: SleepContributor[] = [
     { key: 'total', label: 'Total sleep', score: Math.round(total), detail: `${Math.round(asleep)} of ${Math.round(need)} min needed` },
     { key: 'efficiency', label: 'Efficiency', score: Math.round(efficiency), detail: `${Math.round(eff)}%` },
     { key: 'rem', label: 'REM sleep', score: Math.round(rem), detail: `${Math.round(remPct)}% of sleep` },
     { key: 'deep', label: 'Deep (SWS) sleep', score: Math.round(deep), detail: `${Math.round(deepPct)}% of sleep` },
-    { key: 'restfulness', label: 'Restfulness', score: Math.round(restfulness), detail: `${wakeEvents} awakening${wakeEvents === 1 ? '' : 's'}` },
+    { key: 'restfulness', label: 'Restfulness', score: Math.round(restfulness), detail: `${wakeEvents} awakening${wakeEvents === 1 ? '' : 's'}, ${wakeAfterOnsetMin}m awake` },
   ];
 
   const rawScore = Math.round(
@@ -89,4 +90,23 @@ function midSleepAwakeEvents(hypnogram: SleepResult['hypnogram']): number {
     if (hypnogram[i]!.stage === 'awake') events += 1;
   }
   return events;
+}
+
+function midSleepAwakeMinutes(hypnogram: SleepResult['hypnogram']): number {
+  const firstSleep = hypnogram.findIndex((s) => s.stage !== 'awake');
+  if (firstSleep < 0) return 0;
+  let lastSleep = -1;
+  for (let i = hypnogram.length - 1; i >= 0; i -= 1) {
+    if (hypnogram[i]!.stage !== 'awake') {
+      lastSleep = i;
+      break;
+    }
+  }
+  if (lastSleep <= firstSleep) return 0;
+  let minutes = 0;
+  for (let i = firstSleep + 1; i < lastSleep; i += 1) {
+    const segment = hypnogram[i]!;
+    if (segment.stage === 'awake') minutes += segment.minutes;
+  }
+  return minutes;
 }
