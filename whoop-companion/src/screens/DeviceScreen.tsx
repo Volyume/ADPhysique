@@ -419,6 +419,12 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           permission so the foreground service can keep Bluetooth alive. Device sync shows whether that guard is
           actually running.
         </Text>
+        {keepAlive && !keepAliveRunning ? (
+          <View style={styles.keepAliveActions}>
+            <SecondaryButton title="Retry guard" onPress={() => void appStore.setBackgroundKeepAlive(true)} />
+            <SecondaryButton title="Open app settings" onPress={() => void Linking.openSettings()} />
+          </View>
+        ) : null}
       </Card>
 
       <SectionLabel>Diagnostics</SectionLabel>
@@ -589,6 +595,7 @@ const styles = StyleSheet.create({
   toggleLabel: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 12 },
   calibrationRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-end', marginTop: 12 },
   calibrationActions: { width: 118, gap: 8 },
+  keepAliveActions: { gap: 8, marginTop: 12 },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: {
     backgroundColor: colors.surface,
