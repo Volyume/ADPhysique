@@ -11,6 +11,7 @@ import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { activitySummary } from '../ui/activityFormat';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 
 export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -108,8 +109,8 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
                 <View style={styles.qualityGrid}>
-                  <Stat label="Confidence" value={confidenceLabel(metric.sleepDetail?.confidence)} color={confidenceColor(metric.sleepDetail?.confidence)} />
-                  <Stat label="Coverage" value={`${metric.sleepDetail?.coveragePct ?? 0}%`} color={coverageColor(metric.sleepDetail?.coveragePct ?? 0)} />
+                  <Stat label="Confidence" value={sleepConfidenceLabel(metric.sleepDetail?.confidence)} color={sleepConfidenceColor(metric.sleepDetail?.confidence)} />
+                  <Stat label="Coverage" value={`${metric.sleepDetail?.coveragePct ?? 0}%`} color={sleepCoverageColor(metric.sleepDetail?.coveragePct ?? 0)} />
                   <Stat label="Signal" value={metric.sleepDetail?.signalMin ?? 0} unit="min" />
                 </View>
                 {sleepReview ? (
@@ -281,24 +282,6 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
 function dayForTs(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
-  if (confidence === 'high') return 'High';
-  if (confidence === 'medium') return 'Medium';
-  return 'Low';
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  return colors.recoveryRed;
-}
-
-function coverageColor(coveragePct: number): string {
-  if (coveragePct >= 80) return colors.recoveryGreen;
-  if (coveragePct >= 60) return colors.recoveryYellow;
-  return colors.recoveryRed;
 }
 
 function sleepTrustNote(metric: DailyMetricRow): string {

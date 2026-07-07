@@ -8,6 +8,7 @@ import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../u
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { dayKey, formatDuration, startOfDayMs } from '../util/time';
+import { sleepConfidenceColor, sleepCoverageColor } from '../ui/sleepTrust';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -104,8 +105,8 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
         </Text>
         {metric?.sleepDetail ? (
           <View style={styles.qualityRow}>
-            <QualityPill label="Confidence" value={currentConfidence ?? '-'} color={confidenceColor(currentConfidence)} />
-            <QualityPill label="Coverage" value={currentCoverage != null ? `${currentCoverage}%` : '-'} color={coverageColor(currentCoverage)} />
+            <QualityPill label="Confidence" value={currentConfidence ?? '-'} color={sleepConfidenceColor(currentConfidence)} />
+            <QualityPill label="Coverage" value={currentCoverage != null ? `${currentCoverage}%` : '-'} color={sleepCoverageColor(currentCoverage)} />
             <QualityPill label="Signal" value={currentSignalMin != null ? `${currentSignalMin}m` : '-'} color={colors.sleepTeal} />
           </View>
         ) : null}
@@ -230,19 +231,6 @@ function QualityPill({ label, value, color }: { label: string; value: string; co
       <Text style={styles.qualityLabel}>{label}</Text>
     </View>
   );
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  return colors.recoveryRed;
-}
-
-function coverageColor(coveragePct: number | null): string {
-  if (coveragePct == null) return colors.textTertiary;
-  if (coveragePct >= 80) return colors.recoveryGreen;
-  if (coveragePct >= 60) return colors.recoveryYellow;
-  return colors.recoveryRed;
 }
 
 function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => void; onPlus: () => void }) {

@@ -23,6 +23,7 @@ import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 import { napCreditMin, parseNapDetail } from '../metrics/naps';
+import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 
 const BASE_NEED_MIN = 480;
 
@@ -104,8 +105,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
         {capture ? (
           <View style={styles.ringQuality}>
-            <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
-            <Stat label="Coverage" value={`${capture.coveragePct}%`} color={capture.coveragePct >= 80 ? colors.recoveryGreen : capture.coveragePct >= 60 ? colors.recoveryYellow : colors.recoveryRed} />
+            <Stat label="Confidence" value={sleepConfidenceLabel(capture.confidence)} color={sleepConfidenceColor(capture.confidence)} />
+            <Stat label="Coverage" value={`${capture.coveragePct}%`} color={sleepCoverageColor(capture.coveragePct)} />
             <Stat label="Signal" value={capture.signalMin} unit="min" />
           </View>
         ) : null}
@@ -253,7 +254,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                   label="HR coverage"
                   value={capture.coveragePct}
                   detail={`${capture.signalMin}/${capture.windowMin} min`}
-                  color={coverageColor(capture.coveragePct)}
+                  color={sleepCoverageColor(capture.coveragePct)}
                 />
                 <EvidenceMeter
                   label="Still corroboration"
@@ -271,12 +272,12 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               </View>
             ) : null}
             <View style={styles.grid}>
-              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={coverageColor(capture.coveragePct)} />
+              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={sleepCoverageColor(capture.coveragePct)} />
               <Stat label="R-R beats" value={capture.rrCount} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="Signal minutes" value={capture.signalMin} />
-              <Stat label="Confidence" value={confidenceLabel(capture.confidence)} color={confidenceColor(capture.confidence)} />
+              <Stat label="Confidence" value={sleepConfidenceLabel(capture.confidence)} color={sleepConfidenceColor(capture.confidence)} />
               <Stat label="Source" value={sourceLabel(capture.source)} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
@@ -1102,24 +1103,6 @@ function sourceLabel(source: 'auto_hr' | 'manual_hr' | 'manual_duration' | null)
   return 'None';
 }
 
-function confidenceLabel(confidence: 'high' | 'medium' | 'low'): string {
-  if (confidence === 'high') return 'High';
-  if (confidence === 'medium') return 'Medium';
-  return 'Low';
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  return colors.recoveryRed;
-}
-
-function coverageColor(coveragePct: number): string {
-  if (coveragePct >= 80) return colors.recoveryGreen;
-  if (coveragePct >= 60) return colors.recoveryYellow;
-  return colors.recoveryRed;
-}
-
 function stateEvidenceColor(
   capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
   key: 'wake' | 'still' | 'asleep',
@@ -1192,7 +1175,7 @@ function sleepCaptureAction(capture: {
   }
   return {
     label: 'Review sleep window',
-    value: confidenceLabel(capture.confidence),
+    value: sleepConfidenceLabel(capture.confidence),
     icon: 'create',
     color: colors.sleepTeal,
     route: { name: 'editSleep' },

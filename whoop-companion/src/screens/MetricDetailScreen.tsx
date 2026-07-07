@@ -11,6 +11,7 @@ import { MetricKey, Nav } from '../ui/navigation';
 import { nullableClampPct } from '../util/number';
 import { computeEnergyReserve } from '../metrics/energyReserve';
 import { formatDuration } from '../util/time';
+import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 
 type Def = {
   title: string;
@@ -373,8 +374,8 @@ function renderQualityCard(input: {
         <SectionLabel>Data quality</SectionLabel>
         <Card>
           <View style={styles.statRow}>
-            <Stat label="Confidence" value={detail?.confidence ? confidenceLabel(detail.confidence) : '-'} color={confidenceColor(detail?.confidence)} />
-            <Stat label="Coverage" value={detail?.coveragePct != null ? `${detail.coveragePct}%` : '-'} color={coverageColor(detail?.coveragePct)} />
+            <Stat label="Confidence" value={sleepConfidenceLabel(detail?.confidence)} color={sleepConfidenceColor(detail?.confidence)} />
+            <Stat label="Coverage" value={detail?.coveragePct != null ? `${detail.coveragePct}%` : '-'} color={sleepCoverageColor(detail?.coveragePct)} />
             <Stat label="Signal" value={detail?.signalMin ?? '-'} unit="min" color={colors.sleepTeal} />
           </View>
           <Text style={styles.qualityNote}>
@@ -477,27 +478,6 @@ function centerSubForMetric(key: MetricKey, value: number, def: Def): string | u
   if (key === 'sleep_need' || key === 'sleep_debt') return def.title.toLowerCase();
   if (key === 'steps') return value === 1 ? 'step' : 'steps';
   return def.unit || undefined;
-}
-
-function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
-  if (confidence === 'high') return 'High';
-  if (confidence === 'medium') return 'Medium';
-  if (confidence === 'low') return 'Low';
-  return '-';
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low' | null | undefined): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  if (confidence === 'low') return colors.recoveryRed;
-  return colors.textTertiary;
-}
-
-function coverageColor(coveragePct: number | null | undefined): string {
-  if (coveragePct == null) return colors.textTertiary;
-  if (coveragePct >= 80) return colors.recoveryGreen;
-  if (coveragePct >= 60) return colors.recoveryYellow;
-  return colors.recoveryRed;
 }
 
 function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {

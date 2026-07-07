@@ -10,6 +10,7 @@ import { fourTier } from '../metrics/bands';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { illnessTint } from './IllnessScreen';
 import { DayRail } from './DayScreen';
+import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 
 function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null);
@@ -28,29 +29,8 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
-function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null): string {
-  if (confidence === 'high') return 'High';
-  if (confidence === 'medium') return 'Medium';
-  if (confidence === 'low') return 'Low';
-  return '-';
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  if (confidence === 'low') return colors.recoveryRed;
-  return colors.textTertiary;
-}
-
 function barConfidence(day: DailyMetricRow): 'high' | 'medium' | 'low' | null {
   return day.sleepDetail?.confidence ?? null;
-}
-
-function coverageColor(coveragePct: number | null | undefined): string {
-  if (coveragePct == null) return colors.textTertiary;
-  if (coveragePct >= 80) return colors.recoveryGreen;
-  if (coveragePct >= 60) return colors.recoveryYellow;
-  return colors.recoveryRed;
 }
 
 function recoveryConfidenceCap(sleepDetail: DailyMetricRow['sleepDetail'] | null): number | null {
@@ -146,7 +126,7 @@ function recoveryQualityAction(input: {
   if (input.confidence && input.confidence !== 'high') {
     return {
       label: 'Review sleep window',
-      value: confidenceLabel(input.confidence),
+      value: sleepConfidenceLabel(input.confidence),
       icon: 'create',
       color: colors.sleepTeal,
       route: { name: 'editSleep' },
@@ -207,8 +187,8 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           <Stat label="Resp" value={today?.resp != null ? 'Ready' : '-'} color={today?.resp != null ? colors.recoveryGreen : colors.textTertiary} />
         </View>
         <View style={[styles.qualityGrid, { marginTop: 12 }]}>
-          <Stat label="Sleep confidence" value={confidenceLabel(confidence)} color={confidenceColor(confidence)} />
-          <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} color={coverageColor(sleepDetail?.coveragePct)} />
+          <Stat label="Sleep confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
+          <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} color={sleepCoverageColor(sleepDetail?.coveragePct)} />
           <Stat label="Signal" value={sleepDetail?.signalMin ?? '-'} unit={sleepDetail?.signalMin != null ? 'min' : undefined} />
         </View>
         <Text style={styles.qualityNote}>{recoveryQualityNote(today, confidence, confidenceCap)}</Text>
@@ -260,7 +240,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
                 <View style={styles.qualityGrid}>
                   <Stat label="Driver" value={recoveryDriver.metric} color={recoveryDriver.color} />
                   <Stat label="Score" value={recoveryDriver.value} />
-                  <Stat label="Sleep conf." value={confidenceLabel(confidence)} color={confidenceColor(confidence)} />
+                  <Stat label="Sleep conf." value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
                 </View>
                 <NavRow
                   label={recoveryDriver.actionLabel}
@@ -447,7 +427,7 @@ function recoveryDriverInsight(
       metric: 'Confidence',
       value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-',
       actionLabel: needsMoreSync ? 'Sync more data' : 'Review sleep window',
-      actionValue: confidenceLabel(confidence),
+      actionValue: sleepConfidenceLabel(confidence),
       icon: needsMoreSync ? 'sync' : 'create',
       color: colors.strainBlue,
       route: needsMoreSync ? { name: 'device' } : { name: 'editSleep' },

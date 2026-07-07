@@ -13,6 +13,7 @@ import { DayRail } from './DayScreen';
 import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { sleepConfidenceColor, sleepConfidenceLabel } from '../ui/sleepTrust';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
@@ -89,7 +90,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     sleepPerformance?.cappedByConfidence && sleepPerformance.confidenceCapPct != null
       ? `capped ${sleepPerformance.confidenceCapPct}%`
       : confidence
-        ? `${confidenceLabel(confidence).toLowerCase()} confidence`
+        ? `${sleepConfidenceLabel(confidence).toLowerCase()} confidence`
         : sleep
           ? 'needs confidence'
           : 'awaiting sleep';
@@ -135,7 +136,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           <View style={styles.liveRow}>
             <Stat label="Sleep signal" value={signalMin || '-'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
             <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining, syncProblem)} />
-            <Stat label="Confidence" value={confidenceLabel(confidence)} color={confidenceColor(confidence)} />
+            <Stat label="Confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
           </View>
           <Text style={styles.qualityMeta}>
             {decodedRange} / history {effectiveSync?.decodedRecords ?? 0} / R-R {effectiveSync?.rrSamples ?? 0} / raw vitals {effectiveSync?.rawVitalSamples ?? 0}
@@ -397,20 +398,6 @@ function qualityColor(coverage: number, signalMin: number, syncing: boolean, syn
   if (coverage >= 80 && signalMin >= 240) return colors.recoveryGreen;
   if (coverage >= 60 && signalMin >= 120) return colors.recoveryYellow;
   if (signalMin >= 30) return colors.recoveryRed;
-  return colors.textTertiary;
-}
-
-function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null): string {
-  if (confidence === 'high') return 'High';
-  if (confidence === 'medium') return 'Medium';
-  if (confidence === 'low') return 'Low';
-  return '-';
-}
-
-function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
-  if (confidence === 'high') return colors.recoveryGreen;
-  if (confidence === 'medium') return colors.recoveryYellow;
-  if (confidence === 'low') return colors.recoveryRed;
   return colors.textTertiary;
 }
 
