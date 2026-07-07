@@ -7,6 +7,8 @@ const coachSource = fs.readFileSync(path.join(__dirname, '..', 'YouScreen.js'), 
 describe('AthleteProfileScreen physique tile', () => {
   test('uses one adaptive progress-photo / Body fat / Volyume Score tile instead of a permanent Physique Scan stat', () => {
     expect(source).toMatch(/function shouldShowPhysiqueScore\(\{ scan, bodyFat, bodyFatLoggedAt \}\)/);
+    expect(source).toMatch(/function physiqueScoreTileValue\(scan\)/);
+    expect(source).toMatch(/function physiqueScoreTileSub\(scan\)/);
     expect(source).toMatch(/const showPhysiqueScore = shouldShowPhysiqueScore\(\{/);
     expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
     expect(source).toMatch(/label: 'Volyume Score'/);
@@ -14,6 +16,9 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/label: 'Progress photos'/);
     expect(source).toMatch(/Private progress index, not body fat/);
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
+    expect(source).toMatch(/value: physiqueScoreTileValue\(summary\.scan\)/);
+    expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);
+    expect(source).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
     expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>Current focus: \{focusTile\.value\}<\/Text>/);
