@@ -104,6 +104,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);
+  const recoveryDriver = recoveryDriverInsight(parts, confidence, sleepDetail);
   const qualityAction = recoveryQualityAction({
     rmssd: today?.rmssd ?? null,
     rhr: today?.rhr ?? null,
@@ -175,6 +176,36 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
       {/* Recovery contributors — Oura-style four-tier */}
       {parts ? (
         <>
+          {recoveryDriver ? (
+            <>
+              <SectionLabel>Recovery driver</SectionLabel>
+              <Card>
+                <View style={styles.driverHead}>
+                  <View style={[styles.driverBadge, { backgroundColor: recoveryDriver.color }]}>
+                    <Text style={styles.driverBadgeText}>{recoveryDriver.badge}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.driverTitle}>{recoveryDriver.title}</Text>
+                    <Text style={styles.driverBody}>{recoveryDriver.body}</Text>
+                  </View>
+                </View>
+                <View style={styles.qualityGrid}>
+                  <Stat label="Driver" value={recoveryDriver.metric} color={recoveryDriver.color} />
+                  <Stat label="Score" value={recoveryDriver.value} />
+                  <Stat label="Sleep conf." value={confidenceLabel(confidence)} color={confidenceColor(confidence)} />
+                </View>
+                <NavRow
+                  label={recoveryDriver.actionLabel}
+                  icon={recoveryDriver.icon}
+                  iconColor={recoveryDriver.color}
+                  value={recoveryDriver.actionValue}
+                  onPress={() => nav.navigate(recoveryDriver.route)}
+                  last
+                />
+              </Card>
+            </>
+          ) : null}
+
           <SectionLabel>Recovery contributors</SectionLabel>
           <Card>
             <ContributorRow
@@ -315,9 +346,103 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function recoveryDriverInsight(
+  parts: ReturnType<typeof appStore.getState>['recoveryParts'],
+  confidence: 'high' | 'medium' | 'low' | null,
+  sleepDetail: DailyMetricRow['sleepDetail'] | null,
+): {
+  badge: string;
+  title: string;
+  body: string;
+  metric: string;
+  value: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} | null {
+  if (!parts) return null;
+  if (confidence === 'low' || (sleepDetail?.coveragePct ?? 100) < 60) {
+    return {
+      badge: 'DATA',
+      title: 'Sleep confidence is limiting recovery',
+      body: 'The recovery score is intentionally cautious until the overnight window has stronger coverage or has been reviewed.',
+      metric: 'Confidence',
+      value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-',
+      actionLabel: (sleepDetail?.coveragePct ?? 100) < 60 ? 'Sync more data' : 'Review sleep window',
+      actionValue: confidenceLabel(confidence),
+      icon: (sleepDetail?.coveragePct ?? 100) < 60 ? 'sync' : 'create',
+      color: colors.strainBlue,
+      route: (sleepDetail?.coveragePct ?? 100) < 60 ? { name: 'device' } : { name: 'editSleep' },
+    };
+  }
+
+  const rows = [
+    { key: 'hrv', metric: 'HRV', score: parts.hrvSub, route: { name: 'metric', key: 'hrv' } as const, icon: 'pulse' },
+    { key: 'rhr', metric: 'Resting HR', score: parts.rhrSub, route: { name: 'metric', key: 'rhr' } as const, icon: 'heart' },
+    ...(parts.respSub != null
+      ? [{ key: 'resp', metric: 'Respiratory', score: parts.respSub, route: { name: 'metric', key: 'respiratory' } as const, icon: 'fitness' }]
+      : []),
+    { key: 'sleep', metric: 'Sleep', score: parts.sleepSub, route: { name: 'sleep' } as const, icon: 'moon' },
+  ];
+  const weakest = rows.slice().sort((a, b) => a.score - b.score)[0];
+  if (weakest && weakest.score < 70) {
+    return {
+      badge: 'DRAG',
+      title: `${weakest.metric} is dragging recovery`,
+      body: recoveryDriverBody(weakest.key, weakest.score),
+      metric: weakest.metric,
+      value: `${weakest.score}`,
+      actionLabel: 'Open detail',
+      actionValue: weakest.metric.toLowerCase(),
+      icon: weakest.icon,
+      color: weakest.score < 45 ? colors.recoveryRed : colors.recoveryYellow,
+      route: weakest.route,
+    };
+  }
+
+  const strongest = rows.slice().sort((a, b) => b.score - a.score)[0];
+  return strongest
+    ? {
+        badge: 'HELP',
+        title: `${strongest.metric} is supporting recovery`,
+        body: recoverySupportBody(strongest.key),
+        metric: strongest.metric,
+        value: `${strongest.score}`,
+        actionLabel: strongest.key === 'sleep' ? 'Open sleep' : 'Open detail',
+        actionValue: strongest.metric.toLowerCase(),
+        icon: strongest.icon,
+        color: colors.recoveryGreen,
+        route: strongest.route,
+      }
+    : null;
+}
+
+function recoveryDriverBody(key: string, score: number): string {
+  if (key === 'hrv') return `HRV is below your current baseline band (${score}), so recovery should stay conservative.`;
+  if (key === 'rhr') return `Resting heart rate is elevated relative to baseline (${score}), often a sign to ease off.`;
+  if (key === 'resp') return `Respiratory rate is away from baseline (${score}), so recovery confidence should be tempered.`;
+  if (key === 'sleep') return `Sleep performance is the lowest contributor (${score}); tonight's plan is the biggest lever.`;
+  return 'One recovery input is below its useful band today.';
+}
+
+function recoverySupportBody(key: string): string {
+  if (key === 'hrv') return 'HRV is carrying the recovery score in the right direction.';
+  if (key === 'rhr') return 'Resting heart rate is supporting recovery against your baseline.';
+  if (key === 'resp') return 'Respiratory rate is close enough to baseline to support the score.';
+  if (key === 'sleep') return 'Sleep is supporting the recovery blend today.';
+  return 'The main recovery inputs are aligned.';
+}
+
 const styles = StyleSheet.create({
   qualityGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, marginBottom: 2, fontFamily: fonts.text },
+  driverHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  driverBadge: { width: 50, height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  driverBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  driverTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  driverBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   illnessHead: { flexDirection: 'row', alignItems: 'center' },
   illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
