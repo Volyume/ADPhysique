@@ -92,6 +92,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('headerFinishButton');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.keepTrainingBtnText}>Keep training</Text>');
+    expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
     expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);

@@ -24,7 +24,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
 
   test('keeps optional post-workout ratings collapsed until the user opens them', () => {
     expect(SOURCE).toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(false);');
+    expect(SOURCE).toContain('<Text style={styles.sectionTitle}>Session feedback</Text>');
     expect(SOURCE).toContain('Rate this session');
+    expect(SOURCE).not.toContain('Tell your coach');
     expect(SOURCE).not.toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);');
     expect(SOURCE).not.toContain('Add session feedback');
   });
