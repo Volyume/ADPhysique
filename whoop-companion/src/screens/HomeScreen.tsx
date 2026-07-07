@@ -120,6 +120,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     strain,
     sleepDebtMin: today?.sleepDetail?.debtMin ?? null,
     sleepPerformanceCapped: !!sleepPerformance?.cappedByConfidence,
+    sleepLowTrust: sleepNeedsReview,
   });
 
   return (
@@ -432,6 +433,7 @@ function homeSleepQuality(input: {
   if (capture && longHrOnlyHomeCapture(capture)) {
     return { color: colors.strainBlue, status: 'Needs proof', issue: 'hr_only' };
   }
+  if (tier === 'low') return { color: colors.recoveryRed, status: 'Review sleep', issue: 'partial' };
   if (!input.hasSleep || input.capped || sleepNeedsMoreSync(capture)) {
     return { color: qualityColor(capture, false, false), status: 'Partial sleep', issue: 'partial' };
   }
@@ -484,6 +486,7 @@ function dailyFocus(input: {
   strain: number | null;
   sleepDebtMin: number | null;
   sleepPerformanceCapped: boolean;
+  sleepLowTrust: boolean;
 }): {
   badge: string;
   title: string;
@@ -511,6 +514,16 @@ function dailyFocus(input: {
       body: 'A long HR-shaped window is present, but still-worn or decoded sleep-state evidence is sparse. Let sync finish before trusting duration.',
       action: 'Open Sleep review',
       color: colors.strainBlue,
+      route: input.sleep ? { name: 'sleep' } : { name: 'device' },
+    };
+  }
+  if (input.sleepLowTrust) {
+    return {
+      badge: 'CHECK',
+      title: 'Review sleep before trusting today',
+      body: 'Today has a low-confidence sleep window. Review the timing or let auto sync add stronger coverage before using recovery, energy or readiness.',
+      action: input.sleep ? 'Open Sleep review' : 'Open Device sync',
+      color: colors.recoveryRed,
       route: input.sleep ? { name: 'sleep' } : { name: 'device' },
     };
   }
