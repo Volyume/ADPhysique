@@ -91,7 +91,7 @@ const POSES = [
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const CORE_POSES = ['front', 'side', 'back'];
-const PROGRESS_SCAN_MIN_INTERVAL_MS = 14 * 86400000;
+const PROGRESS_SCAN_MIN_INTERVAL_MS = 7 * 86400000;
 const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
 const PROGRESS_SCAN_IMAGE_QUALITY = 0.92;
 
@@ -540,7 +540,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are spaced at least 2 to 4 weeks apart. You can still save photos today, but the Volyume Score may be less useful.', [
+      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are at least 1 week apart. You can still save photos today, but the Volyume Score may be less useful.', [
         { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);

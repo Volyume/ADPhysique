@@ -1,27 +1,35 @@
 /**
  * ScreenHeader
  *
- * Unified top-of-screen header used by Train, Plans, Progress and
- * Athlete Hub. Renders the page title on the left and the full
- * Volyume wordmark (V + lettering, one logotype) on the right. The
- * V-only icon used previously had a long lower tail that dipped
- * below the title baseline at every size, making the right edge of
- * every screen look misaligned vs the title text, the wordmark sits
- * flush with the cap height of the title.
+ * Unified top-of-screen header used by Today, Train, Eat, Progress and
+ * Coach. Renders the page title on the left and the compact Volyume V on
+ * the right. Full wordmarks stay reserved for splash/login/hero moments;
+ * repeated app chrome uses the V so the page title remains the readable
+ * anchor.
  *
  * Constants:
- *   - WORDMARK_HEIGHT (22): matches the cap-height of a 24pt bold
- *     title so the right edge stays optically aligned across every
- *     screen, with or without a subtitle.
+ *   - BRAND_BOX (34): matches the compact Eat header treatment and gives
+ *     the transparent V a consistent black backing on every tab screen.
+ *   - BRAND_ICON_HEIGHT (19): keeps the V optically aligned with a 24pt
+ *     bold title without dominating the row.
  *   - paddingBottom keeps the same airy gap below the header that
  *     the previous design used.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
-import { VolyumeMark } from './BrandMark';
+import { colors, fontSize, fontWeight, spacing, circle } from '../styles/theme';
+import { VolyumeIcon } from './BrandMark';
 
-const WORDMARK_HEIGHT = 22;
+const BRAND_BOX = 34;
+const BRAND_ICON_HEIGHT = 19;
+
+function HeaderBrandMark() {
+  return (
+    <View style={styles.brandMark}>
+      <VolyumeIcon size={BRAND_ICON_HEIGHT} />
+    </View>
+  );
+}
 
 export default function ScreenHeader({ title, subtitle, right }) {
   return (
@@ -29,7 +37,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         <View style={styles.right}>
-          {right ?? <VolyumeMark size={WORDMARK_HEIGHT} />}
+          {right ?? <HeaderBrandMark />}
         </View>
       </View>
       {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
@@ -58,12 +66,14 @@ const styles = StyleSheet.create({
   },
   right: {
     marginLeft: spacing.sm,
-    // Optical centring: wordmark sits a hair below the bold cap line
-    // so its baseline aligns with the title baseline. Bumped from 2px
-    // to 6px after user feedback, the V was still riding above the
-    // title cap height at the current weight + size, especially on
-    // taller statusbar devices where the title kerns slightly taller.
-    paddingTop: 6,
+  },
+  brandMark: {
+    width: BRAND_BOX,
+    height: BRAND_BOX,
+    borderRadius: circle(BRAND_BOX),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.camera,
   },
   subtitle: {
     fontSize: fontSize.sm,

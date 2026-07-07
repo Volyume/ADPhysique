@@ -212,9 +212,6 @@ export default function HomeScreen({ navigation, route }) {
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
-  // COMP-027 Part B: open ED/wellbeing flag → the strip's weight cell drops the
-  // sparkline (value only), consistent with COMP-004's hide-the-rate rule.
-  const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -853,19 +850,11 @@ export default function HomeScreen({ navigation, route }) {
     try {
       const entry = await getMorningWeightToday(user.id);
       setTodayWeight(entry?.weightKg ?? null);
-      // Recent weights for the inline sparkline above the card. Last 14
-      // entries gives a meaningful 2-week trend without making the
-      // sparkline too dense to read at thumbnail size.
+      // Recent weights feed the "last known weight" prefill when today's
+      // weight is not logged yet.
       try {
         const recent14 = await getMorningWeights(user.id, 14);
         setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
-      } catch (_) {}
-      // COMP-027 Part B: open ED/wellbeing flag → the strip shows the weight
-      // value only (no sparkline). The strip prefills its own draft from the
-      // last known weight (passed as lastWeightKg).
-      try {
-        const flag = await getOpenEdPatternFlag(user.id);
-        setEdFlagOpen(!!flag);
       } catch (_) {}
     } catch (_) {}
   }
@@ -1561,33 +1550,20 @@ export default function HomeScreen({ navigation, route }) {
             Home, the direction COMP-027 demands: hero first, fewer stacked
             utilities). The dismissal key and gating are reused there. */}
 
-        {/* ── Today strip (COMP-027 Part B) ── */}
-        {/* Sits ABOVE the workout hero (founder 2026-06-16: the weight/steps/
-            cardio card belongs above the session, not below it). Pro only;
-            free tier shows the upgrade teaser below instead. */}
+        {/* Today strip (COMP-027 Part B): the morning-weight card sits above
+            the session hero. Meal planning/logging and cardio stay in their
+            own flows so this premium slot does one job clearly. */}
         {tier === 'pro' && user?.id && (
           <TodayStrip
-            userId={user.id}
             bwu={bwu}
             todayWeight={todayWeight}
-            recentWeights={recentWeights}
             lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
             savingWeight={savingWeight}
             onLogWeight={handleLogWeight}
             // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
             // here with a fresh timestamp; the strip opens its weight input.
             openWeightSignal={route?.params?.openWeightLog ?? null}
-            hasActiveWorkout={hasActiveWorkout}
-            edFlagOpen={edFlagOpen}
-            cardioEnabled={userProfile?.cardioEnabled !== false}
-            onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
-            // D1 (founder decision 2026-07-03): the verb-only meal chip.
-            // FoodSearch scoped to the inferred slot, recents/usuals on top;
-            // entryDate defaults to today inside FoodSearch. Pro-only by the
-            // strip's existing mount gate, so the chip is hidden, not locked,
-            // on free.
-            onLogMeal={(slot) => navigateCrossTab(navigation, 'DiaryTab', 'FoodSearch', { mealSlot: slot })}
           />
         )}
 

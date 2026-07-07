@@ -11,7 +11,7 @@
 // filtered to the meal slot being logged with last-used portions pre-filled.
 // The key stays 'recents' so state, telemetry and empty-copy keys are stable.
 export const SEARCH_TABS = [
-  { key: 'recents', label: 'Add again' },
+  { key: 'recents', label: 'Recent' },
   { key: 'suggested', label: 'Suggested' },
   { key: 'favourites', label: 'Favourites' },
   { key: 'frequents', label: 'Frequents' },

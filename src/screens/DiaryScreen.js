@@ -55,7 +55,6 @@ import MealSection from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
-import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
@@ -1036,14 +1035,7 @@ export default function DiaryScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <ScreenHeader
-          title="Eat"
-          right={(
-            <View style={styles.headerNutritionIcon}>
-              <VolyumeIcon size={19} />
-            </View>
-          )}
-        />
+        <ScreenHeader title="Eat" />
 
         {/* Day pager + compact options. Sits under the standard
             ScreenHeader so the Nutrition tab now matches Today, Train,
@@ -1804,14 +1796,6 @@ const styles = StyleSheet.create({
   savedFoodText: { flex: 1 },
   savedFoodOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
   savedFoodOptionSub: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
-  headerNutritionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: circle(34),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
   dayPagerCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -157,16 +157,18 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/plateModalBackdrop/);
   });
 
-  test('keeps saved meals as a first-class header action outside recipe-pick mode', () => {
-    expect(SCREEN_SOURCE).toMatch(/!isRecipePick \? \(/);
+  test('keeps extra food actions in the Custom tab, not as a header icon pile', () => {
+    expect(SCREEN_SOURCE).toMatch(/key: 'cta-scan-barcode'/);
+    expect(SCREEN_SOURCE).toMatch(/key: 'cta-quick-add'/);
     expect(SCREEN_SOURCE).toMatch(/navigation\.navigate\('MyMeals', \{ mealSlot, entryDate \}\)/);
-    expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Add a saved meal"/);
-    expect(SCREEN_SOURCE).toMatch(/name="restaurant-outline"/);
+    expect(SCREEN_SOURCE).not.toMatch(/accessibilityLabel="Add a saved meal"/);
+    expect(SCREEN_SOURCE).not.toMatch(/styles\.headerActions/);
   });
 
   test('keeps the plate log button slot-neutral on screen', () => {
     expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.headerTitle\}>Add food<\/Text>/);
-    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.headerSubtitle\} numberOfLines=\{1\}>to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
+    expect(SCREEN_SOURCE).not.toMatch(/headerSubtitle/);
+    expect(SCREEN_SOURCE).not.toMatch(/>to \{mealSlotLabel\(mealSlot\)\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.headerTitle\}>Add to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
     expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.plateLogText\}>Log selected<\/Text>/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel=\{`Log \$\{plate\.length\} to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
