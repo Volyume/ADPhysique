@@ -472,7 +472,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'STEP',
       title: 'Vitals ready, activity incomplete',
-      body: 'Overnight recovery inputs are present, but the daily step total is missing. Keep the strap connected or calibrate steps after a known walk.',
+      body: 'Overnight recovery inputs are present, but the daily step total is missing. Keep the strap connected or calibrate with the real steps for the synced counter range.',
       facts,
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,
