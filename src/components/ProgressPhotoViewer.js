@@ -307,13 +307,15 @@ export default function ProgressPhotoViewer({
     if (!current) return;
     const name = current.name;
     const deleteMode = deleteModeForPhoto?.(name);
-    const deletesSet = deleteMode === 'scan-set' || deleteMode === 'photo-set';
-    const deleteCopy = deletesSet
+    const deleteCopy = deleteMode === 'scan-set'
       ? {
         buttonTitle: 'Delete set',
-        message: deleteMode === 'scan-set'
-          ? 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Volyume Score.'
-          : 'Delete this full photo set from your device? This removes every photo saved for this date.',
+        message: 'Delete this full photo set from your device? This removes every photo in the set, plus its saved Volyume Score.',
+      }
+      : deleteMode === 'photo-set'
+        ? {
+          buttonTitle: 'Delete all from this date',
+          message: 'Delete every photo saved for this date from your device?',
       }
       : {
         buttonTitle: 'Delete',
@@ -443,12 +445,12 @@ export default function ProgressPhotoViewer({
                 </View>
                 <View style={styles.destructiveActionRow}>
                   <Button
-                    title={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Delete set' : 'Delete photo'}
+                    title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Delete date group' : 'Delete photo'}
                     variant="destructive"
                     size="sm"
                     icon="trash-outline"
                     onPress={onPressDelete}
-                    accessibilityLabel={['scan-set', 'photo-set'].includes(deleteModeForPhoto?.(current.name)) ? 'Remove this photo set' : 'Remove this photo'}
+                    accessibilityLabel={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Remove this photo set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Remove every photo from this date' : 'Remove this photo'}
                   />
                 </View>
               </View>

@@ -19,7 +19,7 @@ export default function ProfileAvatarMark({
 }) {
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
   const accent = colors[preset?.tone || 'primary'] || colors.primary;
-  const borderColor = selected ? accent : withAlpha(accent, alpha.edge);
+  const borderColor = selected ? colors.primary : withAlpha(accent, alpha.edge);
   const baseStyle = [
     styles.avatar,
     {
@@ -51,7 +51,7 @@ export default function ProfileAvatarMark({
     return (
       <View style={baseStyle}>
         <Ionicons name={preset.icon} size={iconSize} color={accent} />
-        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? accent : colors.surface }]}>
+        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? colors.primary : colors.surface }]}>
           <Ionicons
             name={selected ? 'checkmark' : preset.badgeIcon}
             size={Math.max(12, Math.round(size * 0.17))}

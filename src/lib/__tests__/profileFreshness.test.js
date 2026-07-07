@@ -12,7 +12,7 @@ describe('profileFreshness', () => {
     expect(freshnessTone(out.bodyMetrics.state)).toBe('attention');
   });
 
-  test('uses weekly, four-week and lift cadences without exact body fat promises', () => {
+  test('uses weekly photo cadence and lift cadences without exact body fat promises', () => {
     const out = buildProfileFreshness({
       latestMetricAt: NOW - 8 * DAY,
       latestScanAt: NOW - 29 * DAY,
@@ -25,6 +25,16 @@ describe('profileFreshness', () => {
     expect(out.progressScan.sub).toMatch(/light, pose and timing/i);
     expect(out.progressScan.sub).not.toMatch(/body fat percentage|exact/i);
     expect(out.lifts.state).toBe('fresh');
+  });
+
+  test('keeps progress photo reminders aligned to weekly sets', () => {
+    const sixDays = buildProfileFreshness({ latestScanAt: NOW - 6 * DAY }, NOW);
+    const sevenDays = buildProfileFreshness({ latestScanAt: NOW - 7 * DAY }, NOW);
+
+    expect(sixDays.progressScan.state).toBe('soon');
+    expect(sixDays.progressScan.sub).toContain('this week');
+    expect(sevenDays.progressScan.state).toBe('due');
+    expect(sevenDays.progressScan.sub).toMatch(/light, pose and timing/i);
   });
 
   test('keeps lift standards missing until enough key lifts exist', () => {

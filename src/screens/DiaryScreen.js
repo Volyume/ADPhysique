@@ -1108,6 +1108,7 @@ export default function DiaryScreen({ navigation }) {
             <TouchableOpacity
               onPress={() => navigation.navigate('ProUpgrade')}
               hitSlop={8}
+              style={styles.readOnlyCtaButton}
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log food again"
             >
@@ -1908,7 +1909,17 @@ const styles = StyleSheet.create({
   },
   readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
-  readOnlyCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, alignSelf: 'flex-end' },
+  readOnlyCtaButton: {
+    alignSelf: 'flex-end',
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.md,
+  },
+  readOnlyCta: { ...type.label, color: colors.primary },
   readOnlyEmpty: { alignItems: 'center', paddingVertical: spacing.xxl },
   readOnlyEmptyText: { ...type.bodySm, color: colors.textMuted },
   offCardText: { ...type.bodySm, color: colors.textSecondary },

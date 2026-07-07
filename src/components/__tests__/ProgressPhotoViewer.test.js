@@ -215,6 +215,25 @@ test('scan-set delete copy explains that the whole photo set is removed', async 
   expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
 });
 
+test('date-group delete copy is explicit and separate from scored scan sets', async () => {
+  const props = baseProps({ deleteModeForPhoto: jest.fn(() => 'photo-set') });
+  mockAppAlert.mockImplementation((title, message, buttons) => {
+    const del = buttons.find((b) => b.style === 'destructive');
+    del?.onPress?.();
+  });
+  const tree = await mount(props);
+
+  expect(allText(tree)).toContain('Delete date group');
+  const [delBtn] = findByLabel(tree, 'Remove every photo from this date');
+  await act(async () => { delBtn.props.onPress(); });
+
+  const [, message, buttons] = mockAppAlert.mock.calls[0];
+  expect(message).toContain('Delete every photo saved for this date');
+  expect(message).not.toContain('saved Volyume Score');
+  expect(buttons.find((b) => b.style === 'destructive').text).toBe('Delete all from this date');
+  expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
+});
+
 test('delete is blocked when the live tier is no longer pro', async () => {
   const props = baseProps();
   mockAppAlert.mockImplementation((title, message, buttons) => {

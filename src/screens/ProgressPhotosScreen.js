@@ -518,6 +518,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   function openScanImportDateStep() {
     if (!canWrite()) return;
+    if (scanDateOpen || scanDatePickerOpen || scanFlow || progressScanOpeningRef.current) return;
     setScanDateMs(Date.now());
     setScanDatePickerOpen(false);
     setScanDateOpen(true);
@@ -539,7 +540,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are at least 1 week apart. You can still save photos today, but the Volyume Score may be less useful.', [
+      appAlert('Leave more time between photo sets', 'Volyume reads physique change best when photo sets are about a week apart. You can still save photos today, and retake sooner when you are fixing photo quality, but the Volyume Score may be less useful.', [
         { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -1005,7 +1006,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   });
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
-    { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
+    { key: 'scan', icon: 'scan', label: 'Volyume Score', value: scanStatusLabel },
   ];
   const showStudioStats = !!latestPhoto || !!latestScan;
   function libraryScanSummary(scan) {
@@ -1018,7 +1019,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       ? 'Hidden'
       : (assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || (score == null ? 'Not scored' : 'Baseline'));
     return [
-      { label: 'Score', value: scoreValue },
+      { label: 'Volyume Score', value: scoreValue },
       { label: 'Leanness', value: bandValue },
       { label: 'Signal', value: signalValue },
     ];

@@ -397,7 +397,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={styles.routineTitle}>4. Check in once a week</Text>
                 <Text style={styles.routineBody}>
                   {firstReviewLabel
-                    ? `Keep logging your morning weight. Your first coaching decision lands on ${firstReviewLabel} and takes about two minutes. The Coach then explains any calorie or training change before you apply it.`
+                    ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. The Coach then explains any calorie or training change before you apply it.`
                     : 'At the end of your training week, review how it went. The Coach then explains any calorie or training change before you apply it.'}
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14

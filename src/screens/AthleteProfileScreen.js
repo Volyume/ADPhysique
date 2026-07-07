@@ -36,7 +36,11 @@ import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athl
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
-import { formatVolyumeScore } from '../lib/progressScanDisplay';
+import {
+  formatVolyumeScore,
+  progressScanAssessmentForDisplay,
+  progressScanScoreForDisplay,
+} from '../lib/progressScanDisplay';
 
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
@@ -73,7 +77,7 @@ function finiteMs(value) {
 }
 
 function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
-  if (scan?.visualLeannessScore == null) return false;
+  if (progressScanScoreForDisplay(scan) == null) return false;
   if (bodyFat == null) return true;
   const scanAt = finiteMs(scan?.capturedAt ?? scan?.captured_at);
   const bodyFatAt = finiteMs(bodyFatLoggedAt);
@@ -83,17 +87,20 @@ function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
 }
 
 function physiqueScoreTileValue(scan) {
-  const score = Number(scan?.visualLeannessScore);
-  const scoreLabel = Number.isFinite(score) ? formatVolyumeScore(score) : null;
+  const assessment = progressScanAssessmentForDisplay(scan);
+  const score = progressScanScoreForDisplay(scan);
+  const scoreLabel = score != null ? formatVolyumeScore(score) : null;
   return [
-    scan?.leannessBandLabel || null,
+    assessment?.leannessBandLabel || null,
     scoreLabel,
   ].filter(Boolean).join(' - ') || 'Scored';
 }
 
 function physiqueScoreTileSub(scan) {
-  const signal = scan?.progressSignalLabel || (scan?.progressSignal === 'baseline' ? 'Baseline scan' : null);
-  return `${[signal, scanConfidenceLabel(scan?.confidence)].filter(Boolean).join(' - ')}. Private Volyume Score, not body fat.`;
+  const assessment = progressScanAssessmentForDisplay(scan);
+  const signal = assessment?.progressSignalLabel || (assessment?.progressSignal === 'baseline' ? 'Baseline scan' : null);
+  const confidence = assessment?.scanConfidenceLabel || scanConfidenceLabel(assessment?.scanConfidenceTier ?? scan?.confidence);
+  return `${[signal, confidence].filter(Boolean).join(' - ')}. Private Volyume Score, not body fat.`;
 }
 
 const COACHING_PHASE_LABELS = {

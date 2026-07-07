@@ -180,12 +180,11 @@ export async function backfillDailySteps(userId, days = 14) {
 }
 
 /**
- * The single "connect your health data" ask used by the launch prompt and Pro
- * enrolment. Requests steps AND weight together in one system sheet, and on a
- * grant kicks the immediate reads so the user sees both straight away: today's
- * steps into daily_steps, and any new bodyweight from a scale or wearable into
- * the morning-weight log (which the weekly check-in reads). Asking for both in
- * one sheet is what links weight in without a second prompt or a Settings trip.
+ * Legacy/passive Health Connect permission plumbing. The launch and Pro
+ * onboarding flows no longer ask for steps because Play Store review makes
+ * that permission costly for the current product. Keep this helper for any
+ * future explicit Settings health-sync surface: it requests steps and weight
+ * together, then backfills only when the user has deliberately granted access.
  *
  * Returns the permission status string ('granted' | 'denied' | 'sdk_unavailable'
  * | 'unavailable') so the caller can send the user to install Health Connect
