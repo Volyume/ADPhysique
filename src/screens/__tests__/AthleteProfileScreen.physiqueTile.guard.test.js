@@ -12,7 +12,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/label: 'Volyume Score'/);
     expect(source).toMatch(/label: 'Body fat'/);
     expect(source).toMatch(/label: 'Progress photos'/);
-    expect(source).toMatch(/Comparable progress, not body fat/);
+    expect(source).toMatch(/Private progress index, not body fat/);
     expect(source).toMatch(/Add front and back photos to create your private Volyume Score/);
     expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);

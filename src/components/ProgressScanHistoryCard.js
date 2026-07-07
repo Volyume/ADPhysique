@@ -137,7 +137,7 @@ export default function ProgressScanHistoryCard({
         <View style={styles.scanHeadingGroup}>
           <Text style={styles.scanTitle}>Volyume Score results</Text>
           <Text style={styles.scanSubtitle}>
-            A private 0-100 physique progress score from your photo sets. It shows a leanness band, confidence and trend, not body fat percentage.
+            A private photo progress index. Use the band, confidence and trend together; it is not body fat percentage or a mark out of 100.
           </Text>
         </View>
         <TouchableOpacity
@@ -194,7 +194,7 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Volyume Score</Text>
+                <Text style={styles.scanInsightLabel}>Score index</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>

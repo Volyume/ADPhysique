@@ -303,9 +303,9 @@ export default function AthleteProfileScreen({ navigation }) {
     label: 'Volyume Score',
     value: [
       summary.scan?.leannessBandLabel || null,
-      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `${Math.round(summary.scan.visualLeannessScore)}`,
+      summary.scan?.progressSignal === 'baseline' ? 'baseline' : `index ${Math.round(summary.scan.visualLeannessScore)}`,
     ].filter(Boolean).join(' - '),
-    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Comparable progress, not body fat.`,
+    sub: `${scanConfidenceLabel(summary.scan?.confidence)}. Private progress index, not body fat.`,
   } : summary.bodyFatLoggedAt ? {
     label: 'Body fat',
     value: bodyFatText,

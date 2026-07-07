@@ -221,7 +221,7 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Volyume Score is our own 0-100 visual progress measure. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate.',
+    'Volyume Score is our own private visual progress index. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate or a rating of your physique.',
     'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
     'Use progress photos weekly or every couple of weeks. Daily scanning is not needed.',

@@ -47,7 +47,7 @@ describe('progress capture guide copy', () => {
     expect(prompt).toContain('confidence');
     expect(prompt).toContain('not a body fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
-    expect(how).toContain('Volyume Score is our own 0-100 visual progress measure');
+    expect(how).toContain('Volyume Score is our own private visual progress index');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
   });

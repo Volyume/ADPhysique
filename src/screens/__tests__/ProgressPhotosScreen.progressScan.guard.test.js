@@ -107,8 +107,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Private on this device/);
     expect(SCREEN).toMatch(/not visible to partners, staff or anyone else/);
     expect(SCREEN).toMatch(/What the Volyume Score means/);
-    expect(SCREEN).toMatch(/tracks visible change over time; it is not a body fat estimate/);
-    expect(SCREEN).toMatch(/withholds the score when the photos are not fair to judge/);
+    expect(SCREEN).toMatch(/The first score is a baseline/);
+    expect(SCREEN).toMatch(/private progress index, not a body fat percentage or a rating of your physique/);
     expect(SCREEN).not.toMatch(/heroPlaceholder/);
     expect(SCREEN).not.toMatch(/heroImageFrame/);
     expect(SCREEN).not.toMatch(/heroScrim/);
