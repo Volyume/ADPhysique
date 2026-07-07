@@ -186,7 +186,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Private partner accountability.');
     expect(text).toContain('Shared');
     expect(text).toContain('This week\'s training status');
-    expect(text).toContain('Your weekly session number');
+    expect(text).toContain('Your weekly sessions');
     expect(text).toContain('One cheer a day');
     expect(text).toContain('Chosen wins you approve');
     expect(text).toContain('Shared block name');

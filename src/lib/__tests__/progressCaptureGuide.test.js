@@ -41,13 +41,13 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Clear front and back photos can receive a Volyume Physique Score');
+    expect(prompt).toContain('Clear front and back photos can receive a Volyume visual index');
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
     expect(prompt).toContain('not a body fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
-    expect(how).toContain('Volyume Physique Score is our own visual progress measure');
+    expect(how).toContain('Volyume visual index is our own visual progress measure');
     expect(how).toContain('save it as a progress photo instead of guessing');
     expect(how).toContain('cannot use one photo as proof of body fat');
   });

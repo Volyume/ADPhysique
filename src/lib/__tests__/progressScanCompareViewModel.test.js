@@ -62,6 +62,6 @@ describe('progressScanCompareViewModel', () => {
     expect(model.earlier.id).toBe('old');
     expect(model.later.id).toBe('new');
     expect(model.rows.map((row) => row.pose)).toEqual(['front', 'back', 'side']);
-    expect(model.delta.summary).toContain('Volyume Physique Score is up 12 points');
+    expect(model.delta.summary).toContain('Volyume visual index is up 12 points');
   });
 });

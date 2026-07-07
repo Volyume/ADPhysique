@@ -1,7 +1,7 @@
 import { ticksLabel } from './signals';
 
 export const PARTNER_SUPPORT_PRIVACY_LINE =
-  'Only weekly training status, your weekly number, fixed cheers and approved win cards are shared.';
+  'Only weekly training status, your weekly sessions, fixed cheers and approved win cards are shared.';
 
 function hasAim(value) {
   return Math.round(Number(value) || 0) > 0;
@@ -20,8 +20,8 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   let primaryAction = { key: 'share_wins', label: 'Choose one win', accessibilityLabel: 'Choose one win to share' };
 
   if (!myAimSet) {
-    headline = `Set your weekly session number. ${name} sees the number only, never your plan.`;
-    primaryAction = { key: 'set_aim', label: 'Set weekly number', accessibilityLabel: 'Set this week\'s sessions' };
+    headline = `Set your weekly sessions. ${name} sees the number only, never your plan.`;
+    primaryAction = { key: 'set_aim', label: 'Set weekly sessions', accessibilityLabel: 'Set this week\'s sessions' };
   } else if (cheerAvailable) {
     headline = `Send ${name} one fixed cheer for today. It is private to this partnership and is not chat.`;
     primaryAction = { key: 'cheer', label: 'Choose a fixed cheer', accessibilityLabel: 'Choose a cheer for today' };
@@ -37,15 +37,15 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
     steps: Object.freeze([
       Object.freeze({
         key: 'aim',
-        label: 'Your weekly number',
+        label: 'Your weekly sessions',
         state: myAimSet ? 'Set' : 'Not set',
         copy: myAimSet
           ? `${name} sees ${Math.round(Number(pair.myAim) || 0)} planned sessions.`
-          : `Choose your weekly number. ${name} sees only that number.`,
+          : `Choose your weekly sessions. ${name} sees only that number.`,
       }),
       Object.freeze({
         key: 'partner_aim',
-        label: `${name}'s weekly number`,
+        label: `${name}'s weekly sessions`,
         state: partnerAimSet ? 'Set' : 'Not shared',
         copy: partnerAimSet
           ? `${name} shared ${Math.round(Number(pair.partnerAim) || 0)} planned sessions.`

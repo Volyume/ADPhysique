@@ -67,7 +67,7 @@ export function finiteNumber(value) {
 export function formatShareScanRange(scan) {
   const assessment = scan?.signals?.physiqueAssessment || null;
   if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scan'} ${assessment.visualLeannessScore}/100`;
+    return `${assessment.leannessBandLabel || 'Scan'} index ${assessment.visualLeannessScore}`;
   }
   return '';
 }

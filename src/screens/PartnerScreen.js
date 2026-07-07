@@ -247,7 +247,7 @@ function PartnerSupportSnapshot({ pair, name }) {
   const sharedRows = [
     'Your first name',
     'This week\'s training status',
-    'Your weekly session number',
+    'Your weekly sessions',
     'One cheer a day',
     'Chosen wins you approve',
     hasBlock ? 'Shared block name' : null,
@@ -400,7 +400,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-      <Text style={styles.blockStatusActionText}>Manage label</Text>
+        <Text style={styles.blockStatusActionText}>Manage label</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -412,7 +412,7 @@ function ConnectedIntroCard() {
     <View style={styles.connectedIntro}>
       <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
       <Text style={styles.connectedIntroText}>
-        Private partner accountability. They see weekly training status, your weekly session number, one fixed cheer a day and wins you choose to share.
+        Private partner accountability. They see weekly training status, your weekly sessions, one fixed cheer a day and wins you choose to share.
       </Text>
     </View>
   );
@@ -858,7 +858,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.setIntention(pair.id, aim);
     if (!r?.ok) {
       logError('PartnerScreen.confirmAim', new Error(r?.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not save your weekly number right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not save your weekly sessions right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
 
