@@ -258,7 +258,13 @@ export function HomeScreen({ nav }: { nav: Nav }) {
                 : colors.recoveryRed
             }
             value={readiness ? `${readiness.score}` : '—'}
-            sub={readiness ? `${readiness.label} / ${readiness.confidencePct}% conf` : 'needs recovery'}
+            sub={
+              readiness
+                ? readiness.cappedByConfidence && readiness.scoreCap != null
+                  ? `capped ${readiness.scoreCap} / ${readiness.confidencePct}% conf`
+                  : `${readiness.label} / ${readiness.confidencePct}% conf`
+                : 'needs recovery'
+            }
             onPress={() => nav.navigate({ name: 'readiness' })}
             style={styles.half}
           />
@@ -387,8 +393,9 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
 function qualityColor(coverage: number, signalMin: number, syncing: boolean, syncProblem = false): string {
   if (syncing) return colors.strainBlue;
   if (syncProblem) return colors.recoveryYellow;
-  if (coverage >= 60 && signalMin >= 120) return colors.recoveryGreen;
-  if (signalMin >= 30) return colors.recoveryYellow;
+  if (coverage >= 80 && signalMin >= 240) return colors.recoveryGreen;
+  if (coverage >= 60 && signalMin >= 120) return colors.recoveryYellow;
+  if (signalMin >= 30) return colors.recoveryRed;
   return colors.textTertiary;
 }
 
