@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { DailyMetricRow } from '../db/database';
-import { Card, Empty, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
+import { Card, Empty, NavRow, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { computeEnergyReserve, EnergyReserveEffect } from '../metrics/energyReserve';
@@ -98,6 +98,7 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
   const sleepState = inputState(todaySleepPerf != null);
   const stressState = inputState(stress != null);
   const strainState = inputState(today?.strain != null);
+  const mainDriver = energyReserve ? energyDriverInsight(energyReserve.contributors, energyReserve.score) : null;
 
   return (
     <Screen title="Energy Reserve" onBack={nav.back} tint={energyColor(energyReserve?.score)}>
@@ -151,6 +152,36 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
 
       {energyReserve ? (
         <>
+          {mainDriver ? (
+            <>
+              <SectionLabel>Main driver</SectionLabel>
+              <Card>
+                <View style={styles.driverHead}>
+                  <View style={[styles.driverBadge, { backgroundColor: mainDriver.color }]}>
+                    <Text style={styles.driverBadgeText}>{mainDriver.badge}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.driverTitle}>{mainDriver.title}</Text>
+                    <Text style={styles.driverBody}>{mainDriver.body}</Text>
+                  </View>
+                </View>
+                <View style={styles.statsTight}>
+                  <Stat label="Driver" value={mainDriver.metric} color={mainDriver.color} />
+                  <Stat label="Value" value={mainDriver.value} />
+                  <Stat label="Reserve" value={`${energyReserve.score}`} color={energyColor(energyReserve.score)} />
+                </View>
+                <NavRow
+                  label={mainDriver.actionLabel}
+                  icon={mainDriver.icon}
+                  iconColor={mainDriver.color}
+                  value={mainDriver.actionValue}
+                  onPress={() => nav.navigate(mainDriver.route)}
+                  last
+                />
+              </Card>
+            </>
+          ) : null}
+
           <SectionLabel>Drivers</SectionLabel>
           <Card>
             {energyReserve.contributors.map((c) => (
@@ -188,10 +219,92 @@ export function EnergyReserveScreen({ nav }: { nav: Nav }) {
   );
 }
 
+function energyDriverInsight(
+  contributors: NonNullable<ReturnType<typeof appStore.getState>['energyReserve']>['contributors'],
+  score: number,
+): {
+  badge: string;
+  title: string;
+  body: string;
+  metric: string;
+  value: string;
+  actionLabel: string;
+  actionValue: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} | null {
+  const drains = contributors.filter((c) => c.effect === 'drain');
+  const charges = contributors.filter((c) => c.effect === 'charge');
+  const chosen = drains[0] ?? charges[0] ?? contributors.find((c) => c.effect === 'neutral') ?? null;
+  if (!chosen) return null;
+  const isDrain = chosen.effect === 'drain';
+  const route = energyDriverRoute(chosen.key);
+  return {
+    badge: isDrain ? 'DRAIN' : chosen.effect === 'charge' ? 'CHARGE' : 'DATA',
+    title: energyDriverTitle(chosen.key, chosen.effect, score),
+    body: energyDriverBody(chosen.key, chosen.effect),
+    metric: chosen.label,
+    value: chosen.value,
+    actionLabel: isDrain ? 'Reduce drain' : chosen.effect === 'charge' ? 'Open detail' : 'Complete data',
+    actionValue: chosen.label.toLowerCase(),
+    icon: energyDriverIcon(chosen.key),
+    color: effectColor(chosen.effect),
+    route,
+  };
+}
+
+function energyDriverRoute(key: string): Parameters<Nav['navigate']>[0] {
+  if (key === 'recovery') return { name: 'recovery' };
+  if (key === 'sleep' || key === 'debt') return { name: 'sleep' };
+  if (key === 'stress') return { name: 'stress' };
+  if (key === 'strain') return { name: 'strain' };
+  return { name: 'trends' };
+}
+
+function energyDriverIcon(key: string): string {
+  if (key === 'recovery') return 'pulse';
+  if (key === 'sleep' || key === 'debt') return 'moon';
+  if (key === 'stress') return 'speedometer';
+  if (key === 'strain') return 'fitness';
+  return 'trending-up';
+}
+
+function energyDriverTitle(key: string, effect: EnergyReserveEffect, score: number): string {
+  if (effect === 'neutral') return 'Energy Reserve needs more context';
+  if (effect === 'charge') return `${energyDriverName(key)} is charging the tank`;
+  if (score < 30) return `${energyDriverName(key)} is the main drain`;
+  return `${energyDriverName(key)} is pulling energy down`;
+}
+
+function energyDriverBody(key: string, effect: EnergyReserveEffect): string {
+  if (effect === 'neutral') return 'This input is present, but not yet strong enough to be a clear charge or drain.';
+  if (key === 'recovery') return effect === 'charge' ? 'Good overnight recovery gives the day a stronger base.' : 'Low recovery limits how much usable energy you start with.';
+  if (key === 'sleep') return effect === 'charge' ? 'Sleep supported recharge overnight.' : 'Sleep held back overnight recharge.';
+  if (key === 'debt') return effect === 'charge' ? 'Sleep debt is controlled, so it is not draining today.' : 'Unpaid sleep need keeps drawing down energy until it is repaid.';
+  if (key === 'stress') return effect === 'charge' ? 'Low stress is letting energy recover.' : 'Elevated stress is draining usable energy.';
+  if (key === 'strain') return effect === 'charge' ? 'Activity load is light enough to preserve energy.' : 'Training load is drawing the reserve down.';
+  return effect === 'charge' ? 'This input is supporting today.' : 'This input is draining today.';
+}
+
+function energyDriverName(key: string): string {
+  if (key === 'recovery') return 'Recovery';
+  if (key === 'sleep') return 'Sleep';
+  if (key === 'debt') return 'Sleep debt';
+  if (key === 'stress') return 'Stress';
+  if (key === 'strain') return 'Activity';
+  return 'Data';
+}
+
 const styles = StyleSheet.create({
   stats: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 18, gap: 10 },
   statsTight: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 10, gap: 10 },
   note: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 14, textAlign: 'center', fontFamily: fonts.text },
+  driverHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  driverBadge: { width: 54, height: 50, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  driverBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
+  driverTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  driverBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
   rowText: { flex: 1, paddingRight: 10 },
