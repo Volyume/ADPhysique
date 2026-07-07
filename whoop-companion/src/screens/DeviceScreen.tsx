@@ -84,11 +84,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
   const stepTrust = stepCalibrated
     ? 'calibrated'
-    : bandStepEstimate?.confidence === 'medium'
-      ? 'active range'
-      : stepSource === 'phone' && bandSteps
+    : stepSource === 'phone' && bandSteps
         ? 'phone verified'
-        : 'diagnostic';
+        : 'needs calibration';
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -366,8 +364,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          Low-confidence uncalibrated band steps stay diagnostic until the counter is calibrated or the synced range
-          includes active movement. To calibrate the strap, enter the real step count for the band range above.
+          Uncalibrated band steps stay diagnostic. To make strap steps official, enter the real step count for the
+          synced band range above; until then the app uses phone steps when available.
         </Text>
       </Card>
 

@@ -303,7 +303,7 @@ const STRAP_ALARM_KEY = 'strapAlarm';
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
   if (!estimate || estimate.steps <= 0) return false;
   const calibrated = Math.abs(divisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
-  return calibrated || estimate.confidence === 'medium';
+  return calibrated;
 }
 
 class AppStore extends Store<AppState> {
@@ -682,7 +682,6 @@ class AppStore extends Store<AppState> {
       return { steps: phone, source: 'phone' };
     }
     if (liveSteps != null) return { steps: liveSteps, source: liveSource ?? 'phone' };
-    if (state.bandSteps != null) return { steps: state.bandSteps, source: 'band' };
     return { steps: null, source: null };
   }
 
@@ -693,7 +692,9 @@ class AppStore extends Store<AppState> {
         state.stepSource ?? (state.bandSteps != null && state.steps === state.bandSteps ? 'band' : 'phone');
       return { steps: state.steps, source };
     }
-    if (state.bandSteps != null) return { steps: state.bandSteps, source: 'band' };
+    if (bandStepsAreTrusted(state.bandStepEstimate, state.bandStepDivisor) && state.bandSteps != null) {
+      return { steps: state.bandSteps, source: 'band' };
+    }
     return { steps: null, source: null };
   }
 
