@@ -429,6 +429,8 @@ describe('cheer affordance', () => {
     const tree = await mount();
     await press(tree, 'Send a cheer');
     // The four fixed acknowledgements are offered.
+    expect(allText(tree).join(' ')).toContain('One tap, no free text, no pressure.');
+    expect(allText(tree).join(' ')).not.toMatch(/\bchat\b|chatbot/i);
     expect(allText(tree)).toContain('Here with you.');
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));

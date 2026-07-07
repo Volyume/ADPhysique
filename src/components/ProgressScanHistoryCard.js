@@ -1,7 +1,6 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from './Card';
-import { scanReadCopy, scanStatsCopy } from '../lib/progressScanCopy';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
   colors, spacing, radius, type, fontWeight, iconSize,
@@ -203,10 +202,8 @@ export default function ProgressScanHistoryCard({
               </View>
             </View>
             <View style={styles.scanReasonBox}>
-              <Text style={styles.scanReasonLabel}>Why this result</Text>
+              <Text style={styles.scanReasonLabel}>Result note</Text>
               <Text style={styles.scanBody}>{whyLabel(scan, { suppressed, hideExact })}</Text>
-              <Text style={styles.scanStats}>{scanStatsCopy(scan, { suppressed, hideExact })}</Text>
-              <Text style={styles.scanLimit}>{scanReadCopy(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
               <View style={styles.scanAssetRow}>
@@ -282,8 +279,6 @@ const styles = StyleSheet.create({
   confidencePillText: { ...type.caption, color: colors.primary, flexShrink: 1 },
   scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   scanQuality: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
-  scanStats: { ...type.caption, color: colors.textMuted },
-  scanLimit: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   scanInsightGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   scanInsightCell: {
     flex: 1,

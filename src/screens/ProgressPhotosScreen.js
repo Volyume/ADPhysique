@@ -51,7 +51,6 @@ import {
   buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
   enrichProgressPhotos,
-  progressCheckInCadenceLabel,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
@@ -64,7 +63,6 @@ import {
 import {
   buildProgressStudioCaptureRoutes,
   buildScanCaptureSubtitle,
-  PROGRESS_STUDIO_SETUP_STEPS,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -115,30 +113,6 @@ function localDateKey(ms) {
 function roundedScore(value) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.round(n) : null;
-}
-
-function progressSignalSentence(label) {
-  if (!label) return null;
-  const clean = String(label)
-    .replace(/^Progress Signal:\s*/i, '')
-    .replace(/^Progress Signal is\s*/i, '')
-    .trim();
-  const lower = clean.toLowerCase();
-  if (!clean) return null;
-  if (lower.includes('baseline')) return 'This is your baseline photo set for future comparisons.';
-  if (lower.includes('inconclusive')) return 'This photo set is saved, but the comparison is not clear enough to judge.';
-  if (lower.includes('holding') || lower.includes('steady')) return 'Your latest comparable photo set is holding steady.';
-  if (lower.includes('positive')) {
-    return lower.includes('slight')
-      ? 'Your latest comparable photo set is showing a slight positive trend.'
-      : 'Your latest comparable photo set is showing a clear positive trend.';
-  }
-  if (lower.includes('drift')) {
-    return lower.includes('slight')
-      ? 'Your latest comparable photo set shows a slight drift to watch.'
-      : 'Your latest comparable photo set shows drift to review.';
-  }
-  return `${clean}.`;
 }
 
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
@@ -981,7 +955,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, [visibleScans]);
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
-  const nextCheckInLabel = progressCheckInCadenceLabel(latestPhoto?.takenAt, Date.now(), PROGRESS_SCAN_MIN_INTERVAL_MS);
   const scanStatusLabel = suppressed
     ? 'Hidden'
     : latestAssessment?.visualLeannessScore != null
@@ -992,26 +965,11 @@ export default function ProgressPhotosScreen({ navigation }) {
           latestAssessment.progressSignal === 'baseline' ? 'baseline' : `Score ${roundedScore(latestAssessment.visualLeannessScore)}`,
         ].filter(Boolean).join(' '))
       : (latestScan ? 'Saved' : 'No score yet');
-  const latestSignalSentence = progressSignalSentence(latestAssessment?.progressSignalLabel);
-  const currentPhotoText = suppressed
-    ? 'Score details are hidden for now. Your photos are still private on this phone.'
-    : latestPartialCapture
-      ? `Latest set needs another angle. Add the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo to keep that date together.`
-      : latestSignalSentence
-        ? `${latestSignalSentence} The Volyume Score is for progress photos taken in similar conditions, not a body fat estimate.`
-      : latestScan?.copySummary || (latestPhoto
-        ? 'Your latest photos are saved. The fairest comparisons come from the same lighting, camera height and angle each time.'
-        : 'Add or import front and back photos. If they are clear enough, Volyume saves the date, bodyweight snapshot and Volyume Score together.');
-  const currentPhotoSupport = suppressed
-    ? 'Nothing is uploaded or shared unless you choose it.'
-    : latestScan
-      ? 'Use the same full-body frame, lighting and camera height whenever you take the next set.'
-      : 'Front and back are enough for a score. Side is optional, but helpful for shape and posture.';
   const studioStats = [
     { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
-    { key: 'next', icon: 'time-outline', label: 'Next useful set', value: nextCheckInLabel },
     { key: 'scan', icon: 'scan', label: 'Latest score', value: scanStatusLabel },
   ];
+  const showStudioStats = !!latestPhoto || !!latestScan;
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
     const completeness = buildCheckInCompletenessModel(item);
@@ -1146,44 +1104,28 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.heroPrivacyPill}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.heroPrivacyText}>
-                Private on this device; not visible to partners, staff or anyone else unless you choose to share or export.
+                Private by default. Nothing is shared or exported unless you choose it.
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Keep dated front, side and back photos in one private library. Clear front and back photos can receive a Volyume Score index, leanness band and progress signal; the side photo helps comparison. The first score is a baseline, and the useful read is how repeatable photos change over time.
+              Add dated front, side and back photos. Clear front and back photos can receive a Volyume Score: a private progress index for like-for-like comparisons, not body fat.
             </Text>
           </View>
 
           <View style={styles.studioPanel}>
-            <View style={styles.studioMetricsGrid}>
-              {studioStats.map((stat) => (
-                <View key={stat.key} style={styles.studioMetricCard}>
-                  <View style={styles.studioMetricHead}>
-                    <Ionicons name={stat.icon} size={iconSize.sm} color={colors.primary} />
-                    <Text style={styles.studioMetricLabel} numberOfLines={1}>{stat.label}</Text>
-                  </View>
-                  <Text style={styles.studioMetricValue}>{stat.value}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.scoreGuideCard}>
-              <View style={styles.scoreGuideHead}>
-                <Ionicons name="analytics-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.scoreGuideTitle}>What the Volyume Score means</Text>
-              </View>
-              <Text style={styles.scoreGuideIntro}>
-                Volyume compares outline signals from your own clear front and back photos. The number is a private progress index, not a body fat percentage or a rating of your physique. Use it with the band, confidence and same-setup comparisons.
-              </Text>
-              <View style={styles.setupStandardGrid}>
-                {PROGRESS_STUDIO_SETUP_STEPS.map((step) => (
-                  <View key={step.key} style={styles.setupStandardChip}>
-                    <Ionicons name={step.icon} size={iconSize.sm} color={colors.primary} />
-                    <Text style={styles.setupStandardChipText}>{step.title}</Text>
+            {showStudioStats ? (
+              <View style={styles.studioMetricsGrid}>
+                {studioStats.map((stat) => (
+                  <View key={stat.key} style={styles.studioMetricCard}>
+                    <View style={styles.studioMetricHead}>
+                      <Ionicons name={stat.icon} size={iconSize.sm} color={colors.primary} />
+                      <Text style={styles.studioMetricLabel} numberOfLines={1}>{stat.label}</Text>
+                    </View>
+                    <Text style={styles.studioMetricValue}>{stat.value}</Text>
                   </View>
                 ))}
               </View>
-            </View>
+            ) : null}
 
             <View style={styles.heroActions}>
               {!readOnly ? (
@@ -1209,11 +1151,6 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
             </View>
 
-            <View style={styles.signalCard}>
-              <Text style={styles.signalTitle}>Latest result</Text>
-              <Text style={styles.signalBody}>{currentPhotoText}</Text>
-              <Text style={styles.signalSupport}>{currentPhotoSupport}</Text>
-            </View>
             {readOnly ? (
               <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos stay yours.</Text>
             ) : null}
@@ -1257,7 +1194,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={styles.libraryHeader}>
             <Text style={styles.libraryTitle}>Photo library</Text>
             <Text style={styles.librarySubtitle}>
-              Each photo set shows its date, saved bodyweight, angles and Volyume Score index when available.
+              Each photo set shows its date, saved bodyweight, angles and Volyume Score when available.
             </Text>
           </View>
         ) : null}
@@ -1601,7 +1538,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                           <Text style={styles.captureRouteEyebrow}>{route.eyebrow}</Text>
                           {route.recommended ? (
                             <View style={styles.captureRoutePill}>
-                              <Text style={styles.captureRoutePillText}>Recommended</Text>
+                              <Text style={styles.captureRoutePillText}>{route.recommendationLabel || 'Best next'}</Text>
                             </View>
                           ) : null}
                         </View>
@@ -1859,33 +1796,6 @@ const styles = StyleSheet.create({
   },
   studioMetricLabel: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
   studioMetricValue: { ...type.label, color: colors.textPrimary, lineHeight: 20 },
-  scoreGuideCard: {
-    borderWidth: 1,
-    borderColor: colors.primaryBg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  scoreGuideHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  scoreGuideTitle: { ...type.label, color: colors.textPrimary },
-  scoreGuideIntro: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  setupStandardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  setupStandardChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 32,
-  },
-  setupStandardChipText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   heroActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1896,17 +1806,6 @@ const styles = StyleSheet.create({
   },
   heroPrimaryAction: { flexGrow: 1, flexBasis: '100%' },
   heroSecondaryAction: { flexGrow: 1, minWidth: 132 },
-  signalCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  signalTitle: { ...type.label, color: colors.textPrimary },
-  signalBody: { ...type.bodySm, color: colors.textSecondary },
-  signalSupport: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   loadErrorCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,

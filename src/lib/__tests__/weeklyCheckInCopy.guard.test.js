@@ -22,4 +22,10 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
     expect(COACH_HUB).not.toMatch(/label="This week's review"/);
     expect(COACH_HUB).not.toMatch(/Ready for your first weekly review/);
   });
+
+  test('shipped weekly check-in no longer exposes step-average collection', () => {
+    expect(CHECKIN).toContain('stepsAvg: null');
+    expect(CHECKIN).not.toMatch(/showSteps|stepsSummary|stepsManual|stepsOverride/);
+    expect(CHECKIN).not.toMatch(/Average steps a day|Steps this week|step coaching|tracked on a device/);
+  });
 });

@@ -746,7 +746,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   if (loadingExisting) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Edit Plan" />
+        <BackHeader title="Edit plan" />
         <View style={styles.page2Content}>
           <Skeleton width="55%" height={24} />
           <SkeletonCard height={140} />
@@ -761,7 +761,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   if (page === 1) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Build a Plan" />
+        <BackHeader title="Build a plan" />
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.page1Content}
@@ -848,7 +848,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title={isEditMode ? 'Edit Plan' : 'Build a Plan'} />
+      <BackHeader title={isEditMode ? 'Edit plan' : 'Build a plan'} />
       <ExercisePickerModal
         visible={showPicker}
         onClose={() => setShowPicker(false)}
@@ -1069,7 +1069,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         {/* Add day */}
         <TouchableOpacity style={styles.addDayBtn} onPress={handleAddDay} accessibilityRole="button" accessibilityLabel="Add day">
           <Ionicons name="add-circle-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.addDayText}>Add Day</Text>
+          <Text style={styles.addDayText}>Add day</Text>
         </TouchableOpacity>
 
         {/* Plan balance */}
@@ -1081,7 +1081,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         {isEditMode ? (
           <View style={styles.actionRow}>
             <Button
-              title="Save Changes"
+              title="Save changes"
               icon="checkmark-circle"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
               textStyle={styles.activateBtnText}
@@ -1095,7 +1095,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         ) : (
           <View style={styles.actionRow}>
             <Button
-              title="Save Draft"
+              title="Save draft"
               variant="secondary"
               style={[styles.draftBtn, saving && styles.btnDisabled]}
               textStyle={styles.draftBtnText}
@@ -1106,7 +1106,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               accessibilityState={{ disabled: saving }}
             />
             <Button
-              title="Save & Activate"
+              title="Save and activate"
               icon="flash"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
               textStyle={styles.activateBtnText}

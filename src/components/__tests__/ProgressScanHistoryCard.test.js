@@ -55,16 +55,16 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('private photo progress index');
     expect(text).toContain('not body fat percentage');
     expect(text).toContain('Score for this set');
-    expect(text).toContain('Why this result');
+    expect(text).toContain('Result note');
+    expect(text).not.toContain('Why this result');
     expect(text).toContain('Confidence: Moderate');
     expect(text).toContain('Leanness band');
     expect(text).toContain('Score index');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72');
     expect(text).toContain('Show details');
-    expect(text).toContain('Volyume Score index 72');
-    expect(text).toContain('private visual progress index for repeatable photos');
-    expect(text).toContain('82.5 kg weight snapshot');
+    expect(text).not.toContain('private visual progress index for repeatable photos');
+    expect(text).not.toContain('82.5 kg weight snapshot');
 
     const buttons = tree.root.findAllByType(TouchableOpacity);
     act(() => buttons.find((node) => node.props.accessibilityRole === 'switch').props.onPress());
@@ -79,14 +79,14 @@ describe('ProgressScanHistoryCard', () => {
     const hidden = await render({ hideExact: true });
     const hiddenText = flattenText(hidden.toJSON());
     expect(hiddenText).toContain('Trend only');
-    expect(hiddenText).toContain('Lean band');
+    expect(hiddenText).toContain('Leanness band');
     expect(hiddenText).toContain('Score indexTrend only');
     expect(hiddenText).not.toContain('72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
     const suppressed = await render({ suppressed: true });
     const suppressedText = flattenText(suppressed.toJSON());
-    expect(suppressedText).toContain('Photo set saved privately');
+    expect(suppressedText).toContain('Score detail is hidden right now');
     expect(suppressedText).not.toContain('82.5 kg weight snapshot');
     expect(suppressedText).not.toContain('Volyume Score is down');
   });

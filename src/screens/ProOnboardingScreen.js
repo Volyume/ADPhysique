@@ -58,7 +58,7 @@ const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Coachin
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Cloud backup' },
-    { icon: 'sync-outline', label: 'Plan restore' },
+    { icon: 'cloud-done-outline', label: 'Plan backed up' },
   ],
   2: [
     { icon: 'calculator-outline', label: 'Calorie baseline' },
@@ -1646,7 +1646,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <View style={styles.coachCard}>
             <View style={styles.coachCardHead}>
               <View style={styles.notifIconWrap}>
-                <Ionicons name="sync-outline" size={18} color={colors.primary} />
+                <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
               </View>
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>

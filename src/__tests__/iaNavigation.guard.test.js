@@ -25,8 +25,9 @@ describe('premium tab IA', () => {
   });
 
   test('Coach root is deterministic and links profile as a separate surface', () => {
-    expect(COACH).toContain('Rules-based decisions. No chat. No guesswork.');
-    expect(COACH).toContain('The coach is not a chatbot');
+    expect(COACH).toContain('Rules-based coaching decisions from your logs.');
+    expect(COACH).toContain('The Coach is a rules-based weekly system');
+    expect(COACH).not.toMatch(/chatbot|No chat|AI chat/i);
     expect(COACH).toContain("navigation.navigate('AthleteProfile')");
   });
 

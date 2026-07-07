@@ -2,8 +2,8 @@
  * Coach home.
  *
  * Historical file/route name kept as YouScreen/You for navigation stability,
- * but the visible tab is now Coach. This is a deterministic coaching hub, not
- * an AI chat surface: every destination is a rules-based Volyume flow.
+ * but the visible tab is now Coach. This is a deterministic coaching hub:
+ * every destination is a rules-based Volyume flow.
  */
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
@@ -134,7 +134,7 @@ export default function YouScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader title="Coach" subtitle="Rules-based decisions. No chat. No guesswork." />
+        <ScreenHeader title="Coach" subtitle="Rules-based coaching decisions from your logs." />
 
         {loadError ? (
           <Card
@@ -197,9 +197,9 @@ export default function YouScreen({ navigation }) {
           <Text style={styles.statusBody}>
             {isPro
               ? latestReview
-                ? 'The coach is not a chatbot. Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
-                : 'The coach is not a chatbot. Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
-              : 'The coach is not a chatbot. It is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
+                ? 'Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
+                : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
+              : 'The Coach is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
 

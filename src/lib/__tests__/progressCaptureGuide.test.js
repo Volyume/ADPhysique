@@ -64,6 +64,7 @@ describe('progress capture guide copy', () => {
       title: 'Take a new photo set',
       actionLabel: 'Start photo set',
       recommended: true,
+      recommendationLabel: 'Best baseline',
       bestFor: 'For new photos taken today.',
     });
     expect(routes[0].steps).toBeUndefined();
@@ -90,6 +91,7 @@ describe('progress capture guide copy', () => {
       actionLabel: 'Add missing photo: Add Back photo',
       bestFor: 'Adds to the existing date.',
       recommended: true,
+      recommendationLabel: 'Finish set',
     });
     expect(routes[1]).toMatchObject({
       key: 'scan',
