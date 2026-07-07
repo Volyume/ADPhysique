@@ -1153,11 +1153,13 @@ function stateEvidenceColor(
 }
 
 function longHrOnlyCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
+  const stateProof =
+    capture.sleepStateMin >= 30 &&
+    (capture.sleepStateAsleepMin + capture.sleepStateStillMin) / Math.max(1, capture.sleepStateMin) >= 0.25;
   return capture.source === 'auto_hr' &&
     capture.windowMin >= 7 * 60 &&
-    capture.stillMin < Math.max(30, capture.windowMin * 0.1) &&
-    capture.sleepStateMin < 30 &&
-    (capture.signalMin < 420 || capture.coveragePct < 85);
+    capture.stillMin < Math.max(30, capture.windowMin * 0.18) &&
+    !stateProof;
 }
 
 function sleepTrustStrip(
@@ -1192,7 +1194,7 @@ function sleepTrustStrip(
     return {
       score,
       label: 'Needs proof',
-      body: 'Long HR-only window with sparse still-state evidence. Keep sync running or adjust the window.',
+      body: 'Long HR-only window with sparse still-worn or decoded sleep-state evidence. Keep sync running or adjust the window.',
       color: colors.strainBlue,
     };
   }
@@ -1238,7 +1240,7 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
     return {
       badge: 'SYNC',
       title: 'HR-only candidate needs more proof',
-      body: 'A long overnight HR window is present, but still-state corroboration is sparse. Keep auto-sync connected or review the window before trusting duration.',
+      body: 'A long overnight HR window is present, but still-worn or decoded sleep-state corroboration is sparse. Keep auto-sync connected or review the window before trusting duration.',
       color: colors.strainBlue,
     };
   }
