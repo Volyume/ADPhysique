@@ -7,7 +7,7 @@ import { useStoreSelector } from '../state/store';
 import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { dayKey, startOfDayMs } from '../util/time';
+import { dayKey, formatDuration, startOfDayMs } from '../util/time';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -46,6 +46,12 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
   const [wake, setWake] = useState(wakeInit);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const previewStart = tsFor(targetDay, bed.h, bed.m, bed.h >= 12);
+  const previewEnd = tsFor(targetDay, wake.h, wake.m, false);
+  const previewDurationMin = Math.round((previewEnd - previewStart) / 60000);
+  const currentConfidence = metric?.sleepDetail?.confidence ?? null;
+  const currentCoverage = metric?.sleepDetail?.coveragePct ?? null;
+  const currentSignalMin = metric?.sleepDetail?.signalMin ?? null;
 
   const save = () => {
     const bedEvening = bed.h >= 12;
@@ -71,6 +77,13 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
           the strap’s heart rate over exactly that window — useful if a night was missed or detected
           with the wrong times.
         </Text>
+        {metric?.sleepDetail ? (
+          <View style={styles.qualityRow}>
+            <QualityPill label="Confidence" value={currentConfidence ?? '-'} color={confidenceColor(currentConfidence)} />
+            <QualityPill label="Coverage" value={currentCoverage != null ? `${currentCoverage}%` : '-'} color={coverageColor(currentCoverage)} />
+            <QualityPill label="Signal" value={currentSignalMin != null ? `${currentSignalMin}m` : '-'} color={colors.sleepTeal} />
+          </View>
+        ) : null}
       </Card>
 
       <SectionLabel>Bed time (previous evening)</SectionLabel>
@@ -81,6 +94,16 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
       <SectionLabel>Wake time ({formatDayLabel(targetDay)})</SectionLabel>
       <Card>
         <TimePicker value={wake} onChange={setWake} />
+      </Card>
+
+      <Card>
+        <Text style={styles.previewLabel}>Preview</Text>
+        <Text style={[styles.previewValue, { color: previewDurationMin >= 20 && previewDurationMin <= 18 * 60 ? colors.text : colors.danger }]}>
+          {previewDurationMin > 0 ? formatDuration(previewDurationMin) : 'Wake must be after bed'}
+        </Text>
+        <Text style={styles.previewMeta}>
+          {new Date(previewStart).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} - {new Date(previewEnd).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+        </Text>
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -105,6 +128,28 @@ function TimePicker({ value, onChange }: { value: { h: number; m: number }; onCh
   );
 }
 
+function QualityPill({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={styles.qualityPill}>
+      <Text style={[styles.qualityValue, { color }]}>{value}</Text>
+      <Text style={styles.qualityLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
+  if (confidence === 'high') return colors.recoveryGreen;
+  if (confidence === 'medium') return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
+function coverageColor(coveragePct: number | null): string {
+  if (coveragePct == null) return colors.textTertiary;
+  if (coveragePct >= 80) return colors.recoveryGreen;
+  if (coveragePct >= 60) return colors.recoveryYellow;
+  return colors.recoveryRed;
+}
+
 function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => void; onPlus: () => void }) {
   return (
     <View style={styles.stepperWrap}>
@@ -120,8 +165,15 @@ function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => voi
 const styles = StyleSheet.create({
   date: { color: colors.text, fontSize: 18, marginBottom: 6, fontFamily: fonts.textBold },
   intro: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
+  qualityRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  qualityPill: { flex: 1, alignItems: 'center' },
+  qualityValue: { fontSize: 17, fontFamily: fonts.black },
+  qualityLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.text },
   picker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   time: { color: colors.text, fontSize: 34, fontFamily: fonts.black },
+  previewLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4, fontFamily: fonts.textBold },
+  previewValue: { fontSize: 28, fontFamily: fonts.black },
+  previewMeta: { color: colors.textSecondary, fontSize: 13, marginTop: 3, fontFamily: fonts.text },
   stepperWrap: { alignItems: 'center' },
   stepperLabel: { color: colors.textTertiary, fontSize: 11, marginBottom: 6, fontFamily: fonts.text },
   stepperRow: { flexDirection: 'row', gap: 8 },
