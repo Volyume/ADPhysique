@@ -238,16 +238,20 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Share a win');
-    expect(text).toContain('Choose one win. You review exactly what Sam sees before anything is sent.');
+    expect(text).toContain('Pick one update. You approve the preview before Sam sees it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
-    expect(text).toContain('Partner sees');
+    expect(text).toContain('Sam sees');
     expect(text).toContain('Workout name, date and completed status.');
+    expect(text).toContain('Show what stays private');
+    expect(text).not.toContain('Stays private');
+    expect(text).not.toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
+    await press(tree, 'Show what stays private');
+    text = allText(tree).join(' ');
     expect(text).toContain('Stays private');
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
     expect(text).toContain('Not sent until you choose one partner and approve this exact card.');
-    expect(text).not.toContain('What stays off limits');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
     await press(tree, 'Preview personal record');
     text = allText(tree).join(' ');
@@ -313,7 +317,10 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Weight is off for this export.');
     expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
     expect(text).toContain('The composed progress card image, with only the details shown in its export receipt.');
-    expect(text).toContain('Raw photos, the photo library, unexported scan details and body metrics stay private.');
+    await press(tree, 'Show what stays private');
+    const expandedText = allText(tree).join(' ');
+    expect(expandedText).toContain('Stays private');
+    expect(expandedText).toContain('Raw photos, the photo library, unexported scan details and body metrics stay private.');
     expect(text).not.toContain('file:///private-card.png');
   });
 
@@ -491,7 +498,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.',
+      'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.',
       { variant: 'error' },
     );
   });
@@ -704,9 +711,11 @@ describe('invite journey', () => {
     expect(hook.redeem).toHaveBeenCalledWith('ABCD1234');
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Invite accepted. Volyume is refreshing this device now.',
+      'Invite accepted. Setting up your partner space now.',
       { variant: 'warning' },
     );
+    expect(allText(tree)).toContain('Partner invite accepted');
+    expect(allText(tree)).toContain('Volyume is setting up the private partner space on this device.');
     expect(mockToastShow).not.toHaveBeenCalledWith('Partner connected', expect.anything());
   });
 

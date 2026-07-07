@@ -94,7 +94,7 @@ function weekPhrase(name, week, resting) {
 
 function cheerFailureMessage(error) {
   if (error === 'not_active') {
-    return 'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.';
+    return 'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
@@ -103,7 +103,7 @@ function cheerFailureMessage(error) {
     return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
+    return 'Volyume could not confirm Partners online just now. Open Partners again and try once more.';
   }
   return 'Could not send that cheer. Open Partners again and try once more.';
 }
@@ -574,6 +574,7 @@ export default function PartnerScreen({ route }) {
   const [codeEntryOpen, setCodeEntryOpen] = useState(false);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [redeemSyncing, setRedeemSyncing] = useState(false);
 
   // Manage sheet + shared-block sheet, each scoped to one pair.
   const [managePair, setManagePair] = useState(null);
@@ -677,6 +678,10 @@ export default function PartnerScreen({ route }) {
   }, [incomingCode, p.loading, p.canAdd]);
 
   useEffect(() => {
+    if (redeemSyncing && (p.pairs || []).length > 0) setRedeemSyncing(false);
+  }, [redeemSyncing, p.pairs]);
+
+  useEffect(() => {
     if (!incomingShareWinType || p.loading) return;
     const firstPair = (p.pairs || [])[0];
     if (!firstPair) return;
@@ -777,6 +782,7 @@ export default function PartnerScreen({ route }) {
       return;
     }
     setCode(toRedeem);
+    setRedeemSyncing(false);
     setBusy(true);
     const r = await p.redeem(toRedeem);
     setBusy(false);
@@ -793,8 +799,9 @@ export default function PartnerScreen({ route }) {
     setCode('');
     setCodeEntryOpen(false);
     if (r.pendingLocalMirror) {
-      retryPartners?.();
-      toast.show('Invite accepted. Volyume is refreshing this device now.', { variant: 'warning' });
+      setRedeemSyncing(true);
+      await retryPartners?.();
+      toast.show('Invite accepted. Setting up your partner space now.', { variant: 'warning' });
       return;
     }
     toast.show('Partner connected', { variant: 'success' });
@@ -1131,6 +1138,16 @@ export default function PartnerScreen({ route }) {
               </View>
             ) : null}
 
+            {redeemSyncing ? (
+              <View style={styles.redeemSyncCard}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <View style={styles.redeemSyncCopy}>
+                  <Text style={styles.redeemSyncTitle}>Partner invite accepted</Text>
+                  <Text style={styles.redeemSyncText}>Volyume is setting up the private partner space on this device.</Text>
+                </View>
+              </View>
+            ) : null}
+
             <Card style={styles.howItWorks}>
               <View style={styles.howHead}>
                 <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
@@ -1310,6 +1327,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   const [selectedType, setSelectedType] = useState(initialPreview?.type || 'workout_summary');
   const [sending, setSending] = useState(false);
   const [sentType, setSentType] = useState(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const selectedPreview = examplePreviews.find((preview) => preview.type === selectedType) || examplePreviews[0];
   const receipt = selectedPreview ? buildShareWinReviewReceipt(selectedPreview) : null;
   const partnerName = pair?.partnerFirstName || 'your partner';
@@ -1326,7 +1344,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Choose one win. You review exactly what {partnerName} sees before anything is sent.
+          Pick one update. You approve the preview before {partnerName} sees it.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1357,16 +1375,32 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
           <Text style={styles.shareWinExampleTitle}>{selectedPreview.draft.title}</Text>
           <Text style={styles.shareWinExampleSummary}>{selectedPreview.draft.summary}</Text>
           <Text style={styles.shareWinExampleDetail}>{selectedPreview.draft.detail}</Text>
-          <View style={styles.shareWinBoundaryGrid}>
-            <View style={styles.shareWinBoundary}>
-              <Text style={styles.shareWinBoundaryLabel}>Partner sees</Text>
-              <Text style={styles.shareWinBoundaryText}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
+          <View style={styles.shareWinReceipt}>
+            <View style={styles.shareWinReceiptHead}>
+              <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
+              <Text style={styles.shareWinReceiptTitle}>{partnerName} sees</Text>
             </View>
-            <View style={styles.shareWinBoundary}>
-              <Text style={styles.shareWinBoundaryLabel}>Stays private</Text>
-              <Text style={styles.shareWinBoundaryText}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
-            </View>
+            <Text style={styles.shareWinReceiptBody}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
           </View>
+          <TouchableOpacity
+            style={styles.shareWinPrivacyToggle}
+            onPress={() => setPrivacyOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
+          >
+            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+            <Text style={styles.shareWinPrivacyToggleText}>
+              {privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
+            </Text>
+            <Ionicons name={privacyOpen ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {privacyOpen ? (
+            <View style={styles.shareWinPrivacyPanel}>
+              <Text style={styles.shareWinPrivacyTitle}>Stays private</Text>
+              <Text style={styles.shareWinPrivacyText}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
+              <Text style={styles.shareWinPrivacyText}>{SHARE_WIN_POLICY.excluded}</Text>
+            </View>
+          ) : null}
           <Text style={styles.shareWinExampleConsent}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
           <Button
             title={sentType === selectedPreview.type ? 'Sent' : `Send to ${partnerName}`}
@@ -1377,10 +1411,6 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
           />
         </View>
       ) : null}
-      <View style={styles.shareWinRules}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.shareWinRuleText}>{SHARE_WIN_POLICY.excluded}</Text>
-      </View>
     </View>
   );
 }
@@ -1577,7 +1607,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Shared block label</Text>
-        <Text style={styles.blockPitch}>This is only a shared label. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
+        <Text style={styles.blockPitch}>Only the block name is shared. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing this block name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1587,7 +1617,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name sent</Text>
-        <Text style={styles.blockPitch}>You suggested sharing the name {block.blockName}. Waiting for {name}. Training details and Coach changes stay private.</Text>
+        <Text style={styles.blockPitch}>You sent {block.blockName} as a shared name only. Waiting for {name}.</Text>
         <SheetRow icon="close-circle-outline" label="Withdraw block name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1597,7 +1627,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Block name suggested</Text>
-        <Text style={styles.blockPitch}>{name} suggested sharing the name {block.blockName}. Accepting shares only that label and will not change either plan.</Text>
+        <Text style={styles.blockPitch}>{name} suggested {block.blockName} as a shared name only. Accepting will not change either plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Share this block name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
@@ -1607,9 +1637,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block label</Text>
+      <Text style={styles.sheetHeading}>Share a block name</Text>
       <Text style={styles.blockPitch}>
-        Use this only if you and {name} already plan to run the same block. It shares the name only. Workouts and Coach changes stay private.
+        Choose the block name to show {name}. It does not share workouts, loads or Coach changes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1625,6 +1655,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           />
         ))
       )}
+      <Text style={styles.blockFooter}>You can stop sharing the name at any time.</Text>
     </View>
   );
 }
@@ -1660,6 +1691,19 @@ const styles = StyleSheet.create({
   localReadNoticeCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   localReadNoticeTitle: { ...type.label, color: colors.textPrimary },
   localReadNoticeText: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  redeemSyncCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface2,
+    padding: spacing.md,
+  },
+  redeemSyncCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  redeemSyncTitle: { ...type.label, color: colors.textPrimary },
+  redeemSyncText: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   pairCard: { gap: spacing.lg },
   pairHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   partnerIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 },
@@ -1912,33 +1956,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
-  shareWinBoundaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  shareWinBoundary: {
-    flexGrow: 1,
-    flexBasis: '48%',
-    minWidth: 136,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.xs,
-    gap: spacing.xxs,
-  },
-  shareWinBoundaryLabel: { ...type.caption, color: colors.textMuted },
-  shareWinBoundaryText: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
-  shareWinRules: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
-  },
-  shareWinRuleText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   shareWinReceipt: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
     padding: spacing.md,
@@ -1962,6 +1981,21 @@ const styles = StyleSheet.create({
   shareWinReceiptCopy: { flex: 1, minWidth: 0, gap: 2 },
   shareWinReceiptTitle: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   shareWinReceiptBody: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  shareWinPrivacyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
+  shareWinPrivacyToggleText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold, flex: 1 },
+  shareWinPrivacyPanel: {
+    gap: spacing.xxs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
+  },
+  shareWinPrivacyTitle: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  shareWinPrivacyText: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinReceiptFinal: {
     ...type.caption,
     color: colors.textPrimary,
@@ -2142,6 +2176,7 @@ const styles = StyleSheet.create({
   sheetRowText: { ...type.body, color: colors.textPrimary, flex: 1 },
   sheetRowDanger: { color: colors.error },
   blockPitch: { ...type.body, color: colors.textSecondary },
+  blockFooter: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   blockEmpty: { ...type.body, color: colors.textSecondary },
 
   // ── Invite journey ──
