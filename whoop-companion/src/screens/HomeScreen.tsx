@@ -45,7 +45,9 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const sleepPerf =
     today?.sleepDetail?.performance != null
       ? clampPct(today.sleepDetail.performance) / 100
-      : today?.sleepPerf ?? null;
+      : today?.sleepPerf != null
+        ? clampPct(Math.round(today.sleepPerf * 100)) / 100
+        : null;
 
   const hm = useMemo(() => appStore.healthMonitor(), [today, recentDays]);
 
