@@ -56,8 +56,8 @@ describe('A3: plan reveal names the actual first-review date (OB-4)', () => {
     expect(REVEAL).toMatch(/formatUnlockDate/);
   });
   test('the named date leads the check-in card copy, generic line as fallback', () => {
-    expect(REVEAL).toMatch(/your first review lands on \$\{firstReviewLabel\}/);
-    expect(REVEAL).toMatch(/End of your training week, two minutes/);
+    expect(REVEAL).toMatch(/Your first review lands on \$\{firstReviewLabel\} and takes about two minutes/);
+    expect(REVEAL).toMatch(/At the end of your training week, review how it went/);
   });
 });
 
