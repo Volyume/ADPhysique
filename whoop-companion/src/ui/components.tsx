@@ -385,6 +385,17 @@ export function Hypnogram({
 }) {
   const total = segments.reduce((a, b) => a + b.minutes, 0) || 1;
   const cleanSegments = segments.filter((s) => s.minutes > 0);
+  const signature = cleanSegments.map((s) => `${s.stage}:${s.minutes}`).join('|');
+  const reveal = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    reveal.setValue(0);
+    Animated.timing(reveal, {
+      toValue: 1,
+      duration: 650,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [signature, reveal]);
   if (!cleanSegments.length) return null;
 
   const rows = ['awake', 'rem', 'light', 'deep'] as const;
@@ -416,8 +427,9 @@ export function Hypnogram({
       />
     );
   });
+  const translateY = reveal.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
   return (
-    <View style={hypnogramStyles.wrap}>
+    <Animated.View style={[hypnogramStyles.wrap, { opacity: reveal, transform: [{ translateY }] }]}>
       {showLabels ? (
         <View style={[hypnogramStyles.labels, { height: H }]}>
           {rows.map((stage) => (
@@ -440,7 +452,7 @@ export function Hypnogram({
         ))}
         {rects}
       </Svg>
-    </View>
+    </Animated.View>
   );
 }
 
