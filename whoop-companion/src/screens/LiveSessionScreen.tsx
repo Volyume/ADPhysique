@@ -84,6 +84,19 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   });
 
   const save = () => {
+    if (session.kind === 'workout' && quality.badge !== 'GOOD' && elapsed >= 60) {
+      Alert.alert('Save low-quality recording?', quality.body, [
+        { text: 'Keep recording', style: 'cancel' },
+        {
+          text: 'Save anyway',
+          onPress: () => {
+            void appStore.stopSession(true);
+            nav.back();
+          },
+        },
+      ]);
+      return;
+    }
     void appStore.stopSession(true);
     nav.back();
   };
