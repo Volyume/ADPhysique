@@ -99,6 +99,12 @@ function cheerFailureMessage(error) {
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
+  if (error === 'partner_update_needed') {
+    return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
+  }
+  if (error === 'partner_auth_required' || error === 'offline') {
+    return 'Volyume could not confirm your account for Partners right now. Open Partners again and try once more.';
+  }
   return 'Could not send that cheer. Check your connection and try again.';
 }
 
@@ -1453,7 +1459,11 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
           <View style={styles.journeyHeadSpacer} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.journeyContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.journeyContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {beat === 1 ? (
             <EntranceView key="beat1" duration={motion.enter} style={styles.beat}>
               <Text style={styles.beatTitle}>A partner, not an audience</Text>
@@ -2084,7 +2094,7 @@ const styles = StyleSheet.create({
   progressDot: { width: spacing.xs2, height: spacing.xs2, borderRadius: circle(spacing.xs2) },
   progressDotOn: { backgroundColor: colors.primary },
   progressDotOff: { backgroundColor: withAlpha(colors.primary, alpha.tint) },
-  journeyContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
+  journeyContent: { flexGrow: 1, padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   beat: { gap: spacing.lg },
   beatTitle: { ...type.h2, color: colors.textPrimary },
   beatLine: { ...type.body, color: colors.textPrimary },

@@ -269,7 +269,10 @@ export default function usePartners(userId, tier) {
     try {
       let partnerships = await readPartnershipsWithCloudRepair(userId);
       if (!isCurrentRequest()) return;
-      let activeCount = await getActivePartnerCount(userId);
+      let activeCount = await optionalPartnerRead(
+        () => getActivePartnerCount(userId),
+        partnerships.filter((p) => p.status === 'active').length,
+      );
       if (!isCurrentRequest()) return;
       let canAdd = canAddPartner({ tier, activeCount });
 

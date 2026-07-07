@@ -4751,21 +4751,36 @@ export async function getLastCheerReceived(pairId, myId) {
 export async function upsertPartnershipFromCloud(row) {
   if (!row?.id) return;
   const d = await db();
-  await d.runAsync(
-    `INSERT OR REPLACE INTO partnerships
-       (id, member_a, member_b, status, streak_enabled, partner_first_name, created_at, accepted_at, ended_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      row.id, row.member_a ?? null, row.member_b ?? null, row.status ?? 'invited',
-      row.streak_enabled ? 1 : 0,
-      // The OTHER member's server-snapshotted FIRST name, resolved by the sync
-      // pull relative to this device's user. Null for legacy pairs ('Your
-      // partner' fallback holds at every consumer).
-      row.partner_first_name ?? null,
-      _toMsLocal(row.created_at), _toMsLocal(row.accepted_at), _toMsLocal(row.ended_at),
-      _toMsLocal(row.updated_at ?? row.accepted_at ?? row.created_at) ?? Date.now(),
-    ],
-  );
+  const values = [
+    row.id, row.member_a ?? null, row.member_b ?? null, row.status ?? 'invited',
+    row.streak_enabled ? 1 : 0,
+    _toMsLocal(row.created_at), _toMsLocal(row.accepted_at), _toMsLocal(row.ended_at),
+    _toMsLocal(row.updated_at ?? row.accepted_at ?? row.created_at) ?? Date.now(),
+  ];
+  try {
+    await d.runAsync(
+      `INSERT OR REPLACE INTO partnerships
+         (id, member_a, member_b, status, streak_enabled, partner_first_name, created_at, accepted_at, ended_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        values[0], values[1], values[2], values[3], values[4],
+        // The OTHER member's server-snapshotted FIRST name, resolved by the sync
+        // pull relative to this device's user. Null for legacy pairs ('Your
+        // partner' fallback holds at every consumer).
+        row.partner_first_name ?? null,
+        values[5], values[6], values[7], values[8],
+      ],
+    );
+  } catch (e) {
+    const message = String(e?.message || e || '').toLowerCase();
+    if (!message.includes('partner_first_name')) throw e;
+    await d.runAsync(
+      `INSERT OR REPLACE INTO partnerships
+         (id, member_a, member_b, status, streak_enabled, created_at, accepted_at, ended_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      values,
+    );
+  }
 }
 
 export async function upsertPartnerWeekSignalFromCloud(row) {

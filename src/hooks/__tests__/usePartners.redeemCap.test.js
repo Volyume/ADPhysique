@@ -155,6 +155,37 @@ describe('usePartners redeem enforces the partner cap', () => {
     expect(r).toEqual({ ok: false, error: 'local_mirror_pending' });
   });
 
+  test('successful cloud redeem returns ok when the pair is visible after an optional mirror write failure', async () => {
+    const visiblePair = {
+      id: 'p1',
+      status: 'active',
+      memberA: 'them',
+      memberB: 'me',
+      partnerFirstName: null,
+      streakEnabled: true,
+      acceptedAt: 1,
+    };
+    db.getActivePartnerCount.mockResolvedValue(0);
+    db.upsertPartnershipFromCloud.mockRejectedValueOnce(new Error('table partnerships has no column named partner_first_name'));
+    db.getPartnershipsLocal
+      .mockResolvedValueOnce([visiblePair])
+      .mockResolvedValueOnce([visiblePair]);
+    service.redeemPartnerInvite.mockResolvedValueOnce({
+      ok: true,
+      data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
+    });
+    const ref = renderHook('pro');
+    let r;
+    await act(async () => { r = await ref.redeem('CODE1234'); });
+    expect(r.ok).toBe(true);
+    expect(db.upsertPartnershipFromCloud).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'p1',
+      member_b: 'me',
+      status: 'active',
+      partner_first_name: 'Sam',
+    }));
+  });
+
   test('creating an invite seeds the pending local row before background sync', async () => {
     service.createPartnerInvite.mockResolvedValueOnce({
       ok: true,
