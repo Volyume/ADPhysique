@@ -151,9 +151,9 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
           <Text style={styles.hrUnit}>bpm</Text>
         </View>
         <Text style={styles.note}>
-          Activity strain is computed from your average heart rate, duration and heart-rate zones
-          (Edwards TRIMP on a 0–21 scale). If the strap is connected during the activity, log it from
-          your live heart rate for best accuracy.
+          Enter average heart rate if you know it. Activity strain is only computed from real HR data
+          (Edwards TRIMP on a 0-21 scale), so leaving this blank saves duration and details without
+          inventing strain.
         </Text>
       </Card>
 
