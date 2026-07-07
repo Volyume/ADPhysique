@@ -345,11 +345,44 @@ class ProgressScanImageModule : Module() {
       "assets/ml/$safeName",
       expoAssetKey,
       "$expoAssetKey.tflite",
+      "${expoAssetKey}_tflite",
+      "${expoAssetKey}_tflite.tflite",
     ).distinct()
   }
 
+  private fun discoveredBundledModelAssetCandidates(context: Context, safeName: String): List<String> {
+    val base = safeName.substringBeforeLast('.', safeName)
+    val matches = linkedSetOf<String>()
+    fun maybeAdd(path: String) {
+      val leaf = path.substringAfterLast('/')
+      val normalisedPath = path.replace("/", "_").replace(".", "_")
+      val normalisedLeaf = leaf.replace(".", "_")
+      val hasModelName = leaf == safeName ||
+        leaf == base ||
+        leaf == "$base.tflite" ||
+        normalisedLeaf == "${base}_tflite" ||
+        normalisedPath.endsWith("assets_ml_${base}_tflite") ||
+        normalisedPath.endsWith("assets_ml_$base")
+      if (hasModelName || (leaf.contains(base) && (leaf.endsWith(".tflite") || !leaf.contains(".")))) {
+        matches.add(path)
+      }
+    }
+    fun walk(path: String, depth: Int) {
+      if (depth > 5) return
+      val entries = try { context.assets.list(path) ?: emptyArray() } catch (_: Throwable) { emptyArray() }
+      for (entry in entries) {
+        val child = if (path.isBlank()) entry else "$path/$entry"
+        maybeAdd(child)
+        walk(child, depth + 1)
+      }
+    }
+    walk("", 0)
+    return matches.toList()
+  }
+
   private fun copyFirstBundledModelAsset(context: Context, safeName: String, target: File): Boolean {
-    for (candidate in bundledModelAssetCandidates(safeName)) {
+    val candidates = (bundledModelAssetCandidates(safeName) + discoveredBundledModelAssetCandidates(context, safeName)).distinct()
+    for (candidate in candidates) {
       try {
         context.assets.open(candidate).use { input ->
           FileOutputStream(target).use { output ->

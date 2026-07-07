@@ -103,9 +103,9 @@ function cheerFailureMessage(error) {
     return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not confirm your account for Partners right now. Open Partners again and try once more.';
+    return 'Volyume could not confirm Partners online right now. Open Partners again and try once more.';
   }
-  return 'Could not send that cheer. Check your connection and try again.';
+  return 'Could not send that cheer. Open Partners again and try once more.';
 }
 
 // ── Small motion helpers (Reanimated, reduce-motion aware) ──
@@ -220,7 +220,7 @@ function IntentionBlock({ pair, onSetAim }) {
         </View>
       </View>
       <Text style={styles.intentionIntro}>
-        Choose the number you expect to train this week. {name} sees that number only, not your plan.
+        Optional: show the number of sessions you expect to train this week. It does not change Coach or your training plan.
       </Text>
       {shared ? <Text style={styles.intentionShared}>{shared}</Text> : null}
       {mine ? <Text style={styles.intentionOwn}>{mine}</Text> : null}
@@ -247,7 +247,7 @@ function PartnerSupportSnapshot({ pair, name }) {
   const sharedRows = [
     'Your first name',
     'This week\'s training status',
-    'Weekly sessions number',
+    'Your weekly session number',
     'One cheer a day',
     'Chosen wins you approve',
     hasBlock ? 'Shared block name' : null,
@@ -284,7 +284,7 @@ function PartnerSupportSnapshot({ pair, name }) {
         </View>
       </View>
       <Text style={styles.supportFoot}>
-        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. Each side is shown on its own.
+        This week: you {ticksLabel({ done: pair.myWeek?.done, planned: pair.myWeek?.planned })}. {name} {ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })}. No weights, food, photos or Coach notes are shared.
       </Text>
     </View>
   );
@@ -407,6 +407,17 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
       </View>
     </TouchableOpacity>
+  );
+}
+
+function ConnectedIntroCard() {
+  return (
+    <View style={styles.connectedIntro}>
+      <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
+      <Text style={styles.connectedIntroText}>
+        Private partner accountability. They see weekly training status, your weekly session number, one fixed cheer a day and wins you choose to share.
+      </Text>
+    </View>
   );
 }
 
@@ -689,7 +700,7 @@ export default function PartnerScreen({ route }) {
     setMinting(false);
     if (!r.ok) {
       logError('PartnerScreen.agreeAndMint', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not create an invite. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not create an invite right now. Open Partners again and try once more.', { variant: 'error' });
       return;
     }
     setMintedInvite(r.data);
@@ -736,7 +747,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.invite();
     if (!r.ok || !r.data?.shareMessage) {
       logError('PartnerScreen.sharePendingInvite', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share the invite. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not share the invite right now. Open Partners again and try once more.', { variant: 'error' });
       return;
     }
     try { await Share.share({ message: r.data.shareMessage }); } catch (_) { /* user dismissed */ }
@@ -818,7 +829,7 @@ export default function PartnerScreen({ route }) {
     if (r?.error === 'win_cards_unavailable') {
       toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
     } else {
-      toast.show('Could not share that win. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not share that win right now. Open Partners again and try once more.', { variant: 'error' });
     }
     return r;
   }
@@ -831,7 +842,7 @@ export default function PartnerScreen({ route }) {
     } else if (r?.error === 'win_cards_unavailable') {
       toast.show('Partner win sharing needs the latest cloud update.', { variant: 'error' });
     } else {
-      toast.show('Could not delete that win. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not delete that win right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
 
@@ -850,7 +861,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.setIntention(pair.id, aim);
     if (!r?.ok) {
       logError('PartnerScreen.confirmAim', new Error(r?.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not save your aim. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not save your weekly number right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
 
@@ -866,7 +877,7 @@ export default function PartnerScreen({ route }) {
           if (r?.ok) toast.show('Partnership ended', { variant: 'success' });
           else {
             logError('PartnerScreen.confirmUnpair', new Error(r?.error || 'unknown'), { userId: user?.id });
-            toast.show('Could not end the partnership. Check your connection and try again.', { variant: 'error' });
+            toast.show('Could not end the partnership right now. Open Partners again and try once more.', { variant: 'error' });
           }
         },
       },
@@ -884,7 +895,7 @@ export default function PartnerScreen({ route }) {
           if (r?.ok) toast.show('Invitation cancelled', { variant: 'success' });
           else {
             logError('PartnerScreen.confirmCancelInvite', new Error(r?.error || 'unknown'), { userId: user?.id });
-            toast.show('Could not cancel the invitation. Check your connection and try again.', { variant: 'error' });
+            toast.show('Could not cancel the invitation right now. Open Partners again and try once more.', { variant: 'error' });
           }
         },
       },
@@ -905,7 +916,7 @@ export default function PartnerScreen({ route }) {
             const b = await p.block(pair.partnerId);
             if (!b?.ok) {
               logError('PartnerScreen.block', new Error(b?.error || 'unknown'), { userId: user?.id });
-              toast.show('Could not block right now. Check your connection and try again.', { variant: 'error' });
+              toast.show('Could not block right now. Open Partners again and try once more.', { variant: 'error' });
               return;
             }
             const r = await p.unpair(pair.id);
@@ -938,7 +949,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.proposeBlock(pair.id, name);
     if (!r.ok) {
       logError('PartnerScreen.proposeBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not suggest the block. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not share the block name right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
   async function adoptBlock(pair) {
@@ -946,7 +957,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.adoptBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.adoptBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not join the block. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not share that block name right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
   async function leaveBlock(pair) {
@@ -954,7 +965,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.leaveBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.leaveBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not update the block. Check your connection and try again.', { variant: 'error' });
+      toast.show('Could not update that block name right now. Open Partners again and try once more.', { variant: 'error' });
     }
   }
 
@@ -977,7 +988,7 @@ export default function PartnerScreen({ route }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load Partners"
-            text="We could not load your partner details right now. Check your connection and try again."
+            text="We could not refresh your partner details right now. Try again, and Volyume will check Partners online."
             actionLabel="Try again"
             onAction={retryPartners}
           />
@@ -998,6 +1009,7 @@ export default function PartnerScreen({ route }) {
 
         {connected ? (
           <>
+            <ConnectedIntroCard />
             {pairs.map((pair) => (
               <PairCard
                 key={pair.id}
@@ -1139,7 +1151,7 @@ export default function PartnerScreen({ route }) {
           <View style={styles.sheetBody}>
             <SheetRow
               icon="barbell-outline"
-              label="Share a block name"
+              label="Share current block name"
               onPress={() => { const pr = managePair; setManagePair(null); openBlockSheet(pr); }}
             />
             <SheetRow
@@ -1212,7 +1224,7 @@ function AimSheetBody({ value, onChange, onConfirm }) {
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Weekly sessions</Text>
       <Text style={styles.blockPitch}>
-        Choose how many sessions you expect to train this week. Your partner sees the number only.
+        Choose the number of sessions you expect to train this week. Your partner sees the number only. It does not change Coach or your training plan.
       </Text>
       <View style={styles.stepperRow}>
         <TouchableOpacity
@@ -1253,7 +1265,7 @@ function AckSheetBody({ pair, onSend }) {
   return (
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Send a cheer</Text>
-      <Text style={styles.blockPitch}>One fixed message for today. No chat, no free text, no pressure.</Text>
+      <Text style={styles.blockPitch}>Choose one fixed line for today. No chat, no free text, no pressure.</Text>
       {ACKNOWLEDGEMENTS.map((ack) => (
         <TouchableOpacity
           key={ack.key}
@@ -1297,7 +1309,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Pick one card. You review exactly what {partnerName} sees before sending.
+          Pick one card. You review exactly what {partnerName} sees before anything is sent.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1376,12 +1388,12 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
     try {
       const result = await onRefresh?.();
       if (result?.ok === false) {
-        setCheckLine('Could not check the cloud connection just now. Your invite is still safe to share again.');
+        setCheckLine('Could not check Partners online just now. Your invite is still safe to share again.');
       } else {
-        setCheckLine('Checked just now. If they have accepted, the connection will appear here as soon as sync catches up.');
+        setCheckLine('Checked just now. If they have accepted, the partnership will appear here as soon as this device refreshes.');
       }
     } catch (_) {
-      setCheckLine('Could not check the cloud connection just now. Your invite is still safe to share again.');
+      setCheckLine('Could not check Partners online just now. Your invite is still safe to share again.');
     } finally {
       setChecking(false);
     }
@@ -1425,7 +1437,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         ) : (
           <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
         )}
-        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check connection'}</Text>
+        <Text style={styles.pendingPrimaryText}>{checking ? 'Checking...' : 'Check again'}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onCancel(pending)}
@@ -1578,9 +1590,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block name</Text>
+      <Text style={styles.sheetHeading}>Share current block name</Text>
       <Text style={styles.blockPitch}>
-        Only useful if you and {name} are deliberately running the same block. It shares the name only. Workouts and Coach changes stay private.
+        Use this only if you and {name} already plan to run the same block. It shares the name only. Workouts and Coach changes stay private.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1607,6 +1619,17 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 
   // ── PairCard ──
+  connectedIntro: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  connectedIntroText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   pairCard: { gap: spacing.lg },
   pairHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   partnerIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 },

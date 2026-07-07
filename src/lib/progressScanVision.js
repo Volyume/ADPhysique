@@ -153,16 +153,22 @@ function loadProgressScanModel() {
   if (!modelPromise) {
     modelPromise = (async () => {
       modelUnavailableReason = null;
+      let modelSource = null;
       try {
         const { loadTensorflowModel } = require('react-native-fast-tflite');
-        const modelSource = await resolveProgressScanModelSource();
+        modelSource = await resolveProgressScanModelSource();
         if (!modelSource) {
           modelUnavailableReason = 'model_source_unavailable';
           return null;
         }
         return await loadTensorflowModel(modelSource, []);
-      } catch (_) {
+      } catch (e) {
         if (!modelUnavailableReason) modelUnavailableReason = 'model_load_failed';
+        logError('progressScanVision.loadModel', e, {
+          reason: modelUnavailableReason,
+          hasModelSource: !!modelSource,
+          modelSourceUrlProtocol: String(modelSource?.url || '').split(':')[0] || null,
+        });
         return null;
       }
     })().then((model) => {

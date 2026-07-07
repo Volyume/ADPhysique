@@ -445,6 +445,38 @@ describe('sendCheer', () => {
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
+  test('normalises cheer auth failures before blaming the user connection', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: { ok: false, error: 'Unauthorised' },
+          error: { status: 401, message: 'Edge Function returned a non-2xx status code' },
+        })),
+      },
+      cheerInsertError: { status: 401, message: 'JWT expired' },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'partner_auth_required' });
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
+
+  test('normalises a misconfigured cheer edge function as backend unavailable', async () => {
+    const client = fakeClient({
+      functions: {
+        invoke: jest.fn(() => Promise.resolve({
+          data: { ok: false, error: 'Server misconfigured' },
+          error: { status: 500, message: 'missing env vars' },
+        })),
+      },
+      cheerInsertError: { status: 500, message: 'Server misconfigured' },
+    });
+    _setClientForTests(client);
+    const r = await sendCheer('u1', { pairId: 'p1' });
+    expect(r).toEqual({ ok: false, error: 'server_misconfigured' });
+    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+  });
+
   test('normalises a missing cheer table as unavailable, not a connection fault', async () => {
     const client = fakeClient({
       functions: {

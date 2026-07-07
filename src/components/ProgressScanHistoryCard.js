@@ -73,7 +73,7 @@ export default function ProgressScanHistoryCard({
         <View style={styles.scanHeadingGroup}>
           <Text style={styles.scanTitle}>Physique Score results</Text>
           <Text style={styles.scanSubtitle}>
-            Volyume's private photo score. It shows a leanness band, confidence and trend, not body fat percentage.
+            Volyume's visual progress score from your private photo sets. It shows a leanness band, confidence and trend, not body fat percentage.
           </Text>
         </View>
         <TouchableOpacity
@@ -99,7 +99,7 @@ export default function ProgressScanHistoryCard({
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
                 <Text style={styles.scanDate}>{dateLabel}</Text>
-                <Text style={styles.scanEntryTitle}>Photo score</Text>
+                <Text style={styles.scanEntryTitle}>Score for this set</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={styles.confidencePill}>
@@ -139,7 +139,7 @@ export default function ProgressScanHistoryCard({
               </View>
             </View>
             <View style={styles.scanReasonBox}>
-              <Text style={styles.scanReasonLabel}>Why this read</Text>
+              <Text style={styles.scanReasonLabel}>Why this result</Text>
               <Text style={styles.scanBody}>{whyLabel(scan, { suppressed, hideExact })}</Text>
               <Text style={styles.scanStats}>{scanStatsCopy(scan, { suppressed, hideExact })}</Text>
               <Text style={styles.scanLimit}>{scanReadCopy(scan, { suppressed, hideExact })}</Text>

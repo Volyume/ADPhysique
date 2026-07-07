@@ -138,6 +138,8 @@ public class ProgressScanImageModule: Module {
       (base, ext),
       ("assets_ml_\(base)", ""),
       ("assets_ml_\(base)", ext),
+      ("assets_ml_\(base)_\(ext)", ""),
+      ("assets_ml_\(base)_\(ext)", ext),
     ]
     for candidate in candidates {
       if let found = Bundle.main.url(
@@ -147,6 +149,12 @@ public class ProgressScanImageModule: Module {
         return found
       }
     }
-    return nil
+    let allResources = Bundle.main.urls(forResourcesWithExtension: nil, subdirectory: nil) ?? []
+    let normalisedNeedle = base.replacingOccurrences(of: ".", with: "_")
+    return allResources.first { url in
+      let name = url.lastPathComponent
+      let normalised = name.replacingOccurrences(of: ".", with: "_")
+      return normalised.contains(normalisedNeedle) && (name.hasSuffix(".tflite") || normalised.hasSuffix("_tflite"))
+    }
   }
 }

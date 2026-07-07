@@ -210,8 +210,8 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
   expect(copy).toContain('Add photo set');
-  expect(copy).toContain('Choose how to add this photo set.');
-  expect(copy).toContain('your private library');
+  expect(copy).toContain('Take new photos or import existing ones.');
+  expect(copy).toContain('same private library');
   expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
   expect(copy).toContain("Best for today's progress check.");
@@ -257,6 +257,38 @@ test('confirming the scan date imports the first photo into the scan pipeline', 
     photoName: '1700000000000.jpg',
     takenAt: patch.takenAt,
   }));
+});
+
+test('camera scan captures show the photo preview before analysis runs', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await pressLabel(tree, 'Add photo set');
+  await flush();
+  await pressLabel(tree, 'Start photo set');
+  await flush();
+
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+  expect(capture).toBeTruthy();
+  await act(async () => {
+    capture.props.onCaptured('1700000000000.jpg', {
+      name: '1700000000000.jpg',
+      uri: 'file:///photos/1700000000000.jpg',
+      ts: 1700000000000,
+    });
+    await Promise.resolve();
+  });
+  await flush();
+
+  expect(allTexts(tree).join(' ')).toContain('Check front photo');
+  expect(tree.root.findAll(
+    (n) => n.props?.source?.uri === 'file:///photos/1700000000000.jpg',
+  ).length).toBeGreaterThan(0);
+  expect(analyseProgressScanPhoto).not.toHaveBeenCalled();
+  expect(mockAppAlert).not.toHaveBeenCalledWith(expect.stringContaining('Use this photo?'), expect.anything(), expect.anything(), expect.anything());
+
+  await pressLabel(tree, 'Use photo');
+  await flush();
+  expect(analyseProgressScanPhoto).toHaveBeenCalledWith({ uri: 'file:///photos/1700000000000.jpg', pose: 'front' });
 });
 
 test('setting the imported scan date to the past indexes the set under that day', async () => {
