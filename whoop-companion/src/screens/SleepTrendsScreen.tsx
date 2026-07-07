@@ -153,6 +153,15 @@ function confidenceBand(v: number): Band {
   return 'poor';
 }
 
+function QualityStat({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <View style={styles.qualityStat}>
+      <Text style={[styles.qualityValue, { color }]}>{value}</Text>
+      <Text style={styles.qualityLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export function SleepTrendsScreen({ nav }: { nav: Nav }) {
   const [range, setRange] = useState<RangeKey>('M');
   const [metricKey, setMetricKey] = useState('performance');
@@ -187,13 +196,34 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
         { label: metric.bandLabels[2], count: counts.poor, color: bandColors.poor },
       ];
     }
+    const qualityRows = period.filter((d) => d.sleepDetail?.confidence != null || d.sleepDetail?.coveragePct != null);
+    const qualityCounts = { high: 0, medium: 0, low: 0 };
+    let coverageTotal = 0;
+    let coverageCount = 0;
+    for (const d of qualityRows) {
+      const confidence = d.sleepDetail?.confidence;
+      if (confidence === 'high') qualityCounts.high += 1;
+      else if (confidence === 'medium') qualityCounts.medium += 1;
+      else if (confidence === 'low') qualityCounts.low += 1;
+      if (d.sleepDetail?.coveragePct != null) {
+        coverageTotal += d.sleepDetail.coveragePct;
+        coverageCount += 1;
+      }
+    }
+    const quality = {
+      total: qualityRows.length,
+      high: qualityCounts.high,
+      medium: qualityCounts.medium,
+      low: qualityCounts.low,
+      avgCoverage: coverageCount ? Math.round(coverageTotal / coverageCount) : null,
+    };
 
     // Down-sample to <=30 bars.
     const step = Math.max(1, Math.ceil(period.length / 30));
     const bars = period
       .filter((_, i) => i % step === 0)
       .map((d) => ({ value: metric.pick(d), day: d.day }));
-    return { avg, priorAvg, deltaPct, breakdown, bars };
+    return { avg, priorAvg, deltaPct, breakdown, quality, bars };
   }, [history, days, metric]);
 
   const periodWord = range === 'W' ? 'week' : range === 'M' ? 'month' : '6 months';
@@ -261,6 +291,23 @@ export function SleepTrendsScreen({ nav }: { nav: Nav }) {
           <Empty text="No data for this metric in the selected range yet." />
         )}
       </Card>
+
+      {view.quality.total > 0 ? (
+        <>
+          <SectionLabel>Capture quality</SectionLabel>
+          <Card>
+            <View style={styles.qualityGrid}>
+              <QualityStat label="High" value={view.quality.high} color={colors.recoveryGreen} />
+              <QualityStat label="Medium" value={view.quality.medium} color={colors.recoveryYellow} />
+              <QualityStat label="Low" value={view.quality.low} color={colors.recoveryRed} />
+              <QualityStat label="Coverage" value={view.quality.avgCoverage != null ? `${view.quality.avgCoverage}%` : '-'} color={colors.sleepTeal} />
+            </View>
+            <Text style={styles.qualityNote}>
+              Low-confidence nights can make sleep, recovery and readiness trends look worse or better than reality. Tap a bar to review that day.
+            </Text>
+          </Card>
+        </>
+      ) : null}
 
       {/* Breakdown */}
       {view.breakdown ? (
@@ -361,6 +408,11 @@ const styles = StyleSheet.create({
   delta: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   deltaText: { fontSize: 12, fontFamily: fonts.textBold },
   sentence: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 10, marginBottom: 6, fontFamily: fonts.text },
+  qualityGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  qualityStat: { flex: 1, alignItems: 'center' },
+  qualityValue: { fontSize: 20, fontFamily: fonts.black },
+  qualityLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 3, fontFamily: fonts.textBold },
+  qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 12, fontFamily: fonts.text },
   segBar: { flexDirection: 'row', borderRadius: 5, overflow: 'hidden', marginBottom: 12, backgroundColor: colors.surface },
   bdRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7 },
   bdSwatch: { width: 12, height: 12, borderRadius: 3, marginRight: 10 },
