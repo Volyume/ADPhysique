@@ -78,6 +78,38 @@ function confidenceForSeries(series: MetricKey, day: DailyMetricRow): 'high' | '
   return null;
 }
 
+function trendWeight(series: MetricKey, day: DailyMetricRow): number {
+  if (!confidenceForSeries(series, day)) return 1;
+  const confidence = day.sleepDetail?.confidence;
+  if (confidence === 'high') return 1;
+  if (confidence === 'medium') return 0.7;
+  if (confidence === 'low') return 0;
+  return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function weightedSeriesAvg(rows: DailyMetricRow[], series: Series): { avg: number | null; rawAvg: number | null; weighted: boolean } {
+  const vals = rows.map(series.pick).filter((v): v is number => v != null && Number.isFinite(v));
+  const rawAvg = vals.length ? round1(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  let total = 0;
+  let weightTotal = 0;
+  let sawSleepConfidence = false;
+  for (const row of rows) {
+    const value = series.pick(row);
+    if (value == null || !Number.isFinite(value)) continue;
+    sawSleepConfidence = sawSleepConfidence || confidenceForSeries(series.key, row) != null;
+    const weight = trendWeight(series.key, row);
+    if (weight <= 0) continue;
+    total += value * weight;
+    weightTotal += weight;
+  }
+  if (weightTotal <= 0) return { avg: rawAvg, rawAvg, weighted: false };
+  return { avg: round1(total / weightTotal), rawAvg, weighted: sawSleepConfidence };
+}
+
 export function TrendsScreen({ nav }: { nav: Nav }) {
   const [range, setRange] = useState<RangeKey>('M');
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
@@ -108,8 +140,7 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
         </Card>
       ) : (
         SERIESES.map((s) => {
-          const vals = chartHistory.map(s.pick).filter((v): v is number => v != null);
-          const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+          const average = weightedSeriesAvg(chartHistory, s);
           // Down-sample to ~14 bars for readability.
           const step = Math.max(1, Math.ceil(chartHistory.length / 14));
           const bars = chartHistory
@@ -126,7 +157,8 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
               <SectionLabel
                 right={
                   <Text style={styles.avg}>
-                    avg {avg != null ? avg.toFixed(s.decimals ?? 0) : '—'}
+                    {average.weighted ? 'trusted ' : 'avg '}
+                    {average.avg != null ? average.avg.toFixed(s.decimals ?? 0) : '-'}
                     {s.unit}
                   </Text>
                 }
@@ -135,7 +167,15 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
               </SectionLabel>
               <Card onPress={() => nav.navigate({ name: 'metric', key: s.key })}>
                 {bars.some((b) => b.value != null) ? (
-                  <WeeklyBars data={bars} height={150} />
+                  <>
+                    <WeeklyBars data={bars} height={150} />
+                    {average.weighted && average.rawAvg != null && average.avg != null && Math.abs(average.rawAvg - average.avg) > (s.decimals ? 0.1 : 1) ? (
+                      <Text style={styles.trustNote}>
+                        Raw avg {average.rawAvg.toFixed(s.decimals ?? 0)}
+                        {s.unit}; low-confidence sleep nights are visible but excluded from the headline.
+                      </Text>
+                    ) : null}
+                  </>
                 ) : (
                   <Empty text="No data for this metric yet." />
                 )}
@@ -201,11 +241,11 @@ function buildAssessment(history: DailyMetricRow[], days: number): {
   const daysWithData = current.filter((d) => d.recovery != null || d.sleepMin != null || d.strain != null).length;
   if (daysWithData < Math.min(days, days === 7 ? 4 : 14)) return null;
 
-  const recoveryAvg = avg(current, (d) => d.recovery);
-  const sleepAvg = avg(current, (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
+  const recoveryAvg = trustedAvg(current, 'recovery', (d) => d.recovery);
+  const sleepAvg = trustedAvg(current, 'sleep_performance', (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
   const strainAvg = avg(current, (d) => d.strain);
-  const priorRecovery = avg(prior, (d) => d.recovery);
-  const priorSleep = avg(prior, (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
+  const priorRecovery = trustedAvg(prior, 'recovery', (d) => d.recovery);
+  const priorSleep = trustedAvg(prior, 'sleep_performance', (d) => nullableClampPct(d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null)));
   const priorStrain = avg(prior, (d) => d.strain);
 
   const currentScore = weightedAssessmentScore(recoveryAvg, sleepAvg, strainAvg);
@@ -261,7 +301,26 @@ function buildAssessment(history: DailyMetricRow[], days: number): {
 function avg(rows: DailyMetricRow[], pick: (d: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null && Number.isFinite(v));
   if (!vals.length) return null;
-  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+  return round1(vals.reduce((a, b) => a + b, 0) / vals.length);
+}
+
+function trustedAvg(rows: DailyMetricRow[], key: MetricKey, pick: (d: DailyMetricRow) => number | null): number | null {
+  let total = 0;
+  let weightTotal = 0;
+  let rawTotal = 0;
+  let rawCount = 0;
+  for (const row of rows) {
+    const value = pick(row);
+    if (value == null || !Number.isFinite(value)) continue;
+    rawTotal += value;
+    rawCount += 1;
+    const weight = trendWeight(key, row);
+    if (weight <= 0) continue;
+    total += value * weight;
+    weightTotal += weight;
+  }
+  if (weightTotal > 0) return round1(total / weightTotal);
+  return rawCount ? round1(rawTotal / rawCount) : null;
 }
 
 function weightedAssessmentScore(recovery: number | null, sleep: number | null, strain: number | null): number | null {
@@ -279,6 +338,7 @@ const styles = StyleSheet.create({
   segText: { color: colors.textTertiary, fontSize: 13, fontFamily: fonts.textSemibold },
   segTextActive: { color: colors.text },
   avg: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.medium },
+  trustNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 6, fontFamily: fonts.text },
   paTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   paSub: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 6, fontFamily: fonts.text },
   assessmentStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
