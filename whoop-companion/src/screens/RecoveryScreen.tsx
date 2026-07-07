@@ -8,6 +8,7 @@ import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { fourTier } from '../metrics/bands';
 import { illnessTint } from './IllnessScreen';
+import { DayRail } from './DayScreen';
 
 function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null);
@@ -17,6 +18,13 @@ function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null)
 
 function dow(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+}
+
+function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
+  const byDay = new Map<string, DailyMetricRow>();
+  if (today) byDay.set(today.day, today);
+  for (const d of recent) byDay.set(d.day, d);
+  return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
 export function RecoveryScreen({ nav }: { nav: Nav }) {
@@ -31,9 +39,16 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const recovery = today?.recovery ?? null;
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const week = recentDays.slice(0, 7).reverse();
+  const days = orderedDays(today, recentDays);
 
   return (
     <Screen title="Recovery" onBack={nav.canBack ? nav.back : undefined} tint={recoveryColor(recovery)}>
+      <DayRail
+        days={days}
+        selected={today?.day ?? ''}
+        onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
+      />
+
       <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
         <Ring
           value={recovery != null ? recovery / 100 : 0}

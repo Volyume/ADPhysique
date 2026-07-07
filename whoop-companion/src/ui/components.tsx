@@ -108,7 +108,7 @@ export function Stat({
   unit?: string;
   color?: string;
 }) {
-  const empty = value === '—' || value === '' || value == null;
+  const empty = value === '—' || value === '-' || value === '' || value == null;
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue} numberOfLines={1}>
@@ -226,7 +226,7 @@ export function Ring({
       </Svg>
       <View style={[styles.ringCenter, { maxWidth: size - stroke * 2 - 16 }]}>
         {centerTop ? <Text style={styles.ringTop} numberOfLines={2}>{centerTop}</Text> : null}
-        {centerMain ? <Text style={[styles.ringMain, { color: centerMain === '—' ? colors.textTertiary : color }]}>{centerMain}</Text> : null}
+        {centerMain ? <Text style={[styles.ringMain, { color: isEmptyDisplay(centerMain) ? colors.textTertiary : color }]}>{centerMain}</Text> : null}
         {centerSub ? <Text style={styles.ringSub} numberOfLines={1}>{centerSub}</Text> : null}
       </View>
     </View>
@@ -328,7 +328,7 @@ export function Dial({
           />
         </Svg>
         <View style={dialStyles.center}>
-          <Text style={[dialStyles.main, { color: main === '—' ? colors.textTertiary : color }]}>{main}</Text>
+          <Text style={[dialStyles.main, { color: isEmptyDisplay(main) ? colors.textTertiary : color }]}>{main}</Text>
         </View>
       </View>
       <Text style={dialStyles.label}>{label}</Text>
@@ -410,6 +410,10 @@ export function band(percent: number | null): string {
   if (percent >= 85) return colors.recoveryGreen; // Optimal
   if (percent >= 50) return colors.recoveryYellow; // Sufficient
   return colors.recoveryRed; // Poor
+}
+
+function isEmptyDisplay(value: string): boolean {
+  return value === '—' || value === '-';
 }
 
 /** A WHOOP-style contributor row: label, progress bar (banded), right value. */

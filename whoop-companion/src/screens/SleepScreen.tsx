@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 
 import { appStore } from '../state/appStore';
@@ -18,6 +18,8 @@ import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
 import { formatClock, formatDuration } from '../util/time';
+import { DayRail } from './DayScreen';
+import type { DailyMetricRow } from '../db/database';
 
 const BASE_NEED_MIN = 480;
 
@@ -48,12 +50,19 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const tib = sleep?.inBedMin || 1;
   const neededMin = sleepNeed?.neededMin ?? BASE_NEED_MIN;
   const week = recentDays.slice(0, 7).reverse();
+  const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
   const typical = stageTypicals(recentDays.filter((d) => d.day !== today?.day));
 
   return (
     <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
+      <DayRail
+        days={days}
+        selected={today?.day ?? ''}
+        onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
+      />
+
       {/* Sleep Performance composite ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
@@ -238,6 +247,13 @@ function stageTypicals(days: { deepMin: number | null; remMin: number | null; li
   }
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
   return { awake: avg(acc.awake), light: avg(acc.light), deep: avg(acc.deep), rem: avg(acc.rem) };
+}
+
+function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
+  const byDay = new Map<string, DailyMetricRow>();
+  if (today) byDay.set(today.day, today);
+  for (const d of recent) byDay.set(d.day, d);
+  return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
 function ContribBand({ label, value, band, suffix }: { label: string; value: number | null; band: Band | null; suffix: string }) {

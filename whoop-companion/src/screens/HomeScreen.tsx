@@ -22,6 +22,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const draining = useStoreSelector(appStore, (s) => s.draining);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const sleepCapture = useStoreSelector(appStore, (s) => s.sleepCapture);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
@@ -64,6 +65,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         : 'Connect strap';
   const signalMin = sleepCapture?.signalMin ?? 0;
   const coverage = sleepCapture?.coveragePct ?? 0;
+  const effectiveSync = historySync ?? lastHistorySync;
 
   return (
     <View style={{ flex: 1 }}>
@@ -92,10 +94,11 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             <Text style={styles.qualityStatus}>{syncLabel}</Text>
           </View>
           <View style={styles.liveRow}>
-            <Stat label="Sleep signal" value={signalMin || 'â€”'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
-            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : 'â€”'} color={qualityColor(coverage, signalMin, draining)} />
-            <Stat label="History rows" value={historySync?.decodedRecords ?? 'â€”'} />
+            <Stat label="Sleep signal" value={signalMin || '-'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
+            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={qualityColor(coverage, signalMin, draining)} />
+            <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
           </View>
+          {effectiveSync?.status ? <Text style={styles.qualityNote}>{effectiveSync.status}</Text> : null}
           {sleepCapture?.note ? <Text style={styles.qualityNote}>{sleepCapture.note}</Text> : null}
         </Card>
 

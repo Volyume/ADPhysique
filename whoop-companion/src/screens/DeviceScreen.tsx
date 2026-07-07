@@ -37,6 +37,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const profile = useStoreSelector(appStore, (s) => s.profile);
   const bufferedRecords = useStoreSelector(appStore, (s) => s.bufferedRecords);
   const historySync = useStoreSelector(appStore, (s) => s.historySync);
+  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
 
@@ -59,9 +60,11 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   }, []);
 
   const connected = status === 'connected';
-  const lastSyncText = lastSyncTs
-    ? new Date(lastSyncTs).toLocaleString()
-    : 'Not yet — connect to sync';
+  const effectiveSync = historySync ?? lastHistorySync;
+  const effectiveSyncTs = effectiveSync?.finishedTs ?? lastSyncTs;
+  const lastSyncText = effectiveSyncTs
+    ? new Date(effectiveSyncTs).toLocaleString()
+    : 'Not yet - connect to sync';
 
   const exportFrames = async () => {
     try {
@@ -151,16 +154,18 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <Card>
         <Text style={styles.diagText}>Last sync: {lastSyncText}</Text>
         <Text style={styles.diagText}>Raw records archived: {bufferedRecords}</Text>
-        <Text style={styles.diagText}>Sync status: {historySync?.status ?? 'Waiting for reconnect'}</Text>
-        <Text style={styles.diagText}>Decoded records: {historySync?.decodedRecords ?? 0}</Text>
-        <Text style={styles.diagText}>HR samples backfilled: {historySync?.hrSamples ?? 0}</Text>
-        <Text style={styles.diagText}>R-R intervals backfilled: {historySync?.rrSamples ?? 0}</Text>
-        <Text style={styles.diagText}>Band step counters: {historySync?.stepSamples ?? 0}</Text>
-        <Text style={styles.diagText}>Raw sensor records: {historySync?.rawSensorRecords ?? 0}</Text>
+        <Text style={styles.diagText}>Sync status: {effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
+        <Text style={styles.diagText}>Sync mode: {draining ? 'running' : effectiveSync?.mode ?? 'none'}</Text>
+        <Text style={styles.diagText}>Sync finish: {effectiveSync?.reason ?? 'none yet'}</Text>
+        <Text style={styles.diagText}>Decoded records: {effectiveSync?.decodedRecords ?? 0}</Text>
+        <Text style={styles.diagText}>HR samples backfilled: {effectiveSync?.hrSamples ?? 0}</Text>
+        <Text style={styles.diagText}>R-R intervals backfilled: {effectiveSync?.rrSamples ?? 0}</Text>
+        <Text style={styles.diagText}>Band step counters: {effectiveSync?.stepSamples ?? 0}</Text>
+        <Text style={styles.diagText}>Raw sensor records: {effectiveSync?.rawSensorRecords ?? 0}</Text>
         <Text style={styles.diagText}>
-          History layouts: {historySync?.versions.length ? historySync.versions.join(', ') : 'none yet'}
+          History layouts: {effectiveSync?.versions.length ? effectiveSync.versions.join(', ') : 'none yet'}
         </Text>
-        <Text style={styles.diagText}>Rejected records: {historySync?.rejectedRecords ?? 0}</Text>
+        <Text style={styles.diagText}>Rejected records: {effectiveSync?.rejectedRecords ?? 0}</Text>
         <SecondaryButton
           title={draining ? 'Syncing…' : 'Sync now'}
           onPress={() => void appStore.runHistoryDrain()}

@@ -106,6 +106,22 @@ export type SessionStats = {
   beats: number;
 };
 
+export type HistorySyncReport = {
+  status: string;
+  rawRecords: number;
+  decodedRecords: number;
+  hrSamples: number;
+  rrSamples: number;
+  stepSamples: number;
+  rawSensorRecords: number;
+  rejectedRecords: number;
+  droppedImplausibleTs: number;
+  versions: number[];
+  finishedTs?: number;
+  reason?: 'complete' | 'timeout' | 'disconnect';
+  mode?: 'manual' | 'auto';
+};
+
 // Phone-GPS gating per activity comes from the unified activity catalogue
 // (mirrors WHOOP's per-sport SportDto.has_gps).
 export { activityGps as activityUsesGps } from '../data/activities';
@@ -156,18 +172,8 @@ export type AppState = {
   bandSteps: number | null; // steps counted from the strap accelerometer (beta)
   hbStepRaw: number | null; // candidate heartbeat step byte (diagnostic, unconfirmed)
   bufferedRecords: number; // raw history records drained from the strap buffer
-  historySync: {
-    status: string;
-    rawRecords: number;
-    decodedRecords: number;
-    hrSamples: number;
-    rrSamples: number;
-    stepSamples: number;
-    rawSensorRecords: number;
-    rejectedRecords: number;
-    droppedImplausibleTs: number;
-    versions: number[];
-  } | null;
+  historySync: HistorySyncReport | null;
+  lastHistorySync: HistorySyncReport | null;
   lastSyncTs: number | null; // last time the strap buffer was drained
   profile: UserProfile;
   error: string | null;
@@ -212,6 +218,7 @@ const initialState: AppState = {
   hbStepRaw: null,
   bufferedRecords: 0,
   historySync: null,
+  lastHistorySync: null,
   lastSyncTs: null,
   profile: DEFAULT_PROFILE,
   error: null,
@@ -264,15 +271,17 @@ class AppStore extends Store<AppState> {
     const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
     const lastSyncRaw = await kvGet('lastSyncTs');
     const lastSyncTs = lastSyncRaw ? Number(lastSyncRaw) : null;
+    const lastHistorySync = parseHistorySyncReport(await kvGet('lastHistorySync'));
     this.setState({
       profile,
       sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85,
       backgroundKeepAlive: keepAlive,
       lastSyncTs: Number.isFinite(lastSyncTs) ? lastSyncTs : null,
+      lastHistorySync,
     });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
-      onDevice: (device) => this.setState({ device }),
+      onDevice: (device) => this.onDevice(device),
       onBattery: (battery) => this.setState({ battery }),
       onError: (error) => this.setState({ error }),
       onHeartRate: (s) => void this.onHeartRate(s.bpm, s.rrMs),
@@ -291,6 +300,14 @@ class AppStore extends Store<AppState> {
     this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
 
     this.setState({ ready: true });
+  }
+
+  private onDevice(device: { id: string; name: string }): void {
+    this.setState({ device });
+    const state = this.getState();
+    if (state.status === 'connected' && this.autoDrainedFor !== device.id) {
+      this.scheduleAutoHistoryDrain(device.id, 1000);
+    }
   }
 
   /** Connection-status transitions. On a fresh connect, auto-drain the strap's
@@ -691,15 +708,28 @@ class AppStore extends Store<AppState> {
       .then(async () => {
         if (tail.length) await this.persistHistoryFrames(tail);
         await this.backfillHistoryDays(this.historySessionStats);
+        await this.backfillCardioStepsFromHistory();
         const syncTs = Date.now();
         await kvSet('lastSyncTs', String(syncTs));
+        const current = this.getState().historySync;
+        const finalReport = current
+          ? {
+              ...current,
+              status: historyStopStatus(reason, current),
+              finishedTs: syncTs,
+              reason,
+              mode,
+            }
+          : null;
+        if (finalReport) await kvSet('lastHistorySync', JSON.stringify(finalReport));
         this.clearHistoryTimeout();
-        this.setState((s) => ({
+        this.setState({
           draining: false,
           capturing: false,
           lastSyncTs: syncTs,
-          historySync: s.historySync ? { ...s.historySync, status: historyStopStatus(reason, s.historySync) } : null,
-        }));
+          historySync: finalReport,
+          lastHistorySync: finalReport,
+        });
         await this.refreshBandSteps();
         await this.refreshDerived();
         const stats = this.historySessionStats;
@@ -930,6 +960,27 @@ class AppStore extends Store<AppState> {
     });
   }
 
+  private async backfillCardioStepsFromHistory(): Promise<void> {
+    const rows = await listCardio(200);
+    let changed = false;
+    for (const row of rows) {
+      if (row.source === 'nap') continue;
+      if (row.stepSource === 'manual' || row.stepSource === 'phone') continue;
+      const bandSteps = estimateStepsFromCounters(await getStepSamplesBetween(row.startTs, row.endTs));
+      if (bandSteps == null || bandSteps <= 0) continue;
+      if (row.steps != null && Math.abs(row.steps - bandSteps) <= 1) continue;
+      const durationMin = Math.max(1 / 60, (row.endTs - row.startTs) / 60000);
+      await insertCardio({
+        ...row,
+        steps: bandSteps,
+        cadenceSpm: Math.round(bandSteps / durationMin),
+        stepSource: 'band',
+      });
+      changed = true;
+    }
+    if (changed) this.setState({ cardio: await listCardio() });
+  }
+
   private armHistoryTimeout(): void {
     this.clearHistoryTimeout();
     this.historyIdleTimer = setTimeout(() => this.enqueueHistoryStop('timeout'), HISTORY_IDLE_TIMEOUT_MS);
@@ -1062,6 +1113,12 @@ class AppStore extends Store<AppState> {
       : input.avgHr
         ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes)
         : null;
+    const bandActivitySteps =
+      input.steps == null
+        ? estimateStepsFromCounters(await getStepSamplesBetween(input.startTs, input.endTs).catch(() => []))
+        : null;
+    const activitySteps = input.steps ?? bandActivitySteps;
+    const stepSource = input.stepSource ?? (bandActivitySteps != null ? 'band' : null);
     const row: CardioRow = {
       id: `c_${input.startTs}`,
       startTs: input.startTs,
@@ -1074,9 +1131,9 @@ class AppStore extends Store<AppState> {
       kcal,
       distanceM: input.distanceM ?? null,
       route: input.route ?? null,
-      steps: input.steps ?? null,
-      cadenceSpm: input.cadenceSpm ?? (input.steps != null ? Math.round(input.steps / durationMin) : null),
-      stepSource: input.stepSource ?? null,
+      steps: activitySteps ?? null,
+      cadenceSpm: input.cadenceSpm ?? (activitySteps != null ? Math.round(activitySteps / durationMin) : null),
+      stepSource,
       lapCount: input.lapCount ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
@@ -1720,6 +1777,35 @@ function historyStopStatus(
   return sync.rawRecords > 0
     ? `Idle timeout after partial sync: ${summary}`
     : 'No history response before idle timeout';
+}
+
+function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
+  if (!raw) return null;
+  try {
+    const r = JSON.parse(raw) as Partial<HistorySyncReport>;
+    if (typeof r.status !== 'string') return null;
+    return {
+      status: r.status,
+      rawRecords: safeInt(r.rawRecords),
+      decodedRecords: safeInt(r.decodedRecords),
+      hrSamples: safeInt(r.hrSamples),
+      rrSamples: safeInt(r.rrSamples),
+      stepSamples: safeInt(r.stepSamples),
+      rawSensorRecords: safeInt(r.rawSensorRecords),
+      rejectedRecords: safeInt(r.rejectedRecords),
+      droppedImplausibleTs: safeInt(r.droppedImplausibleTs),
+      versions: Array.isArray(r.versions) ? r.versions.filter((v): v is number => typeof v === 'number') : [],
+      finishedTs: typeof r.finishedTs === 'number' ? r.finishedTs : undefined,
+      reason: r.reason,
+      mode: r.mode,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function safeInt(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : 0;
 }
 
 function mergeHistoryStats(prev: HistoricalDecodeResult | null, next: HistoricalDecodeResult): HistoricalDecodeResult {

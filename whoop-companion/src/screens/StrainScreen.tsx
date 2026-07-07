@@ -23,6 +23,8 @@ import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
 import { formatDistance } from '../sensors/location';
 import type { HrZone } from '../metrics/strain';
+import { DayRail } from './DayScreen';
+import type { DailyMetricRow } from '../db/database';
 
 const ACTIVITIES = ['Run', 'Cycle', 'Walk', 'Strength', 'Row', 'HIIT', 'Swim', 'Other'];
 const ZONE_COLORS = strainZoneColors;
@@ -35,6 +37,13 @@ function hm(min: number): string {
 
 function dow(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+}
+
+function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): DailyMetricRow[] {
+  const byDay = new Map<string, DailyMetricRow>();
+  if (today) byDay.set(today.day, today);
+  for (const d of recent) byDay.set(d.day, d);
+  return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
 export function StrainScreen({ nav }: { nav: Nav }) {
@@ -73,6 +82,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
     .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
   const week = recentDays.slice(0, 7).reverse();
+  const days = orderedDays(today, recentDays);
 
   const rec = today?.recovery ?? null;
   const optimal =
@@ -93,6 +103,12 @@ export function StrainScreen({ nav }: { nav: Nav }) {
 
   return (
     <Screen title="Strain" onBack={nav.canBack ? nav.back : undefined} tint={colors.strainBlue}>
+      <DayRail
+        days={days}
+        selected={today?.day ?? ''}
+        onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
+      />
+
       <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
         <Ring
           value={strain != null ? strain / 21 : 0}
