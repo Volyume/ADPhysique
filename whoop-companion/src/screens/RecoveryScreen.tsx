@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, ContributorRow, Empty, MetricRow, NavRow, Ring, Screen, SectionLabel, WeeklyBars } from '../ui/components';
+import { Card, ContributorRow, Empty, MetricRow, NavRow, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import type { DailyMetricRow } from '../db/database';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
@@ -27,6 +27,68 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
+function confidenceLabel(confidence: 'high' | 'medium' | 'low' | null): string {
+  if (confidence === 'high') return 'High';
+  if (confidence === 'medium') return 'Medium';
+  if (confidence === 'low') return 'Low';
+  return '-';
+}
+
+function confidenceColor(confidence: 'high' | 'medium' | 'low' | null): string {
+  if (confidence === 'high') return colors.recoveryGreen;
+  if (confidence === 'medium') return colors.recoveryYellow;
+  if (confidence === 'low') return colors.recoveryRed;
+  return colors.textTertiary;
+}
+
+function recoveryQualityNote(day: DailyMetricRow | null, confidence: 'high' | 'medium' | 'low' | null): string {
+  if (!day) return 'Recovery appears after a synced overnight record.';
+  const missing = [
+    day.rmssd == null ? 'HRV' : null,
+    day.rhr == null ? 'RHR' : null,
+    day.resp == null ? 'respiratory rate' : null,
+  ].filter((v): v is string => v != null);
+  if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
+  if (confidence === 'high') return 'Recovery is backed by strong overnight coverage and still-worn evidence.';
+  if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more synced data can refine it.';
+  if (confidence === 'low') return 'Recovery should be treated cautiously until sleep confidence improves.';
+  return 'Recovery is using available overnight vitals; sleep confidence is not available yet.';
+}
+
+function recoveryQualityAction(input: {
+  rmssd: number | null;
+  rhr: number | null;
+  resp: number | null;
+  confidence: 'high' | 'medium' | 'low' | null;
+  coveragePct: number | null;
+}): {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  route: Parameters<Nav['navigate']>[0];
+} | null {
+  if (input.rmssd == null || input.rhr == null || input.resp == null || (input.coveragePct ?? 0) < 60) {
+    return {
+      label: 'Sync more overnight data',
+      value: input.coveragePct != null ? `${input.coveragePct}% coverage` : 'needs sync',
+      icon: 'sync',
+      color: colors.strainBlue,
+      route: { name: 'device' },
+    };
+  }
+  if (input.confidence && input.confidence !== 'high') {
+    return {
+      label: 'Review sleep window',
+      value: confidenceLabel(input.confidence),
+      icon: 'create',
+      color: colors.sleepTeal,
+      route: { name: 'editSleep' },
+    };
+  }
+  return null;
+}
+
 export function RecoveryScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
@@ -37,9 +99,18 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
 
   const recovery = today?.recovery ?? null;
+  const sleepDetail = today?.sleepDetail ?? null;
+  const confidence = sleepDetail?.confidence ?? null;
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);
+  const qualityAction = recoveryQualityAction({
+    rmssd: today?.rmssd ?? null,
+    rhr: today?.rhr ?? null,
+    resp: today?.resp ?? null,
+    confidence,
+    coveragePct: sleepDetail?.coveragePct ?? null,
+  });
 
   return (
     <Screen title="Recovery" onBack={nav.canBack ? nav.back : undefined} tint={recoveryColor(recovery)}>
@@ -57,6 +128,31 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           centerMain={recovery != null ? `${recovery}%` : '—'}
           centerSub={recovery == null ? 'needs data' : recovery >= 67 ? 'primed' : recovery >= 34 ? 'maintaining' : 'rest needed'}
         />
+      </Card>
+
+      <SectionLabel>Recovery quality</SectionLabel>
+      <Card>
+        <View style={styles.qualityGrid}>
+          <Stat label="HRV" value={today?.rmssd != null ? 'Ready' : '-'} color={today?.rmssd != null ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="RHR" value={today?.rhr != null ? 'Ready' : '-'} color={today?.rhr != null ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="Resp" value={today?.resp != null ? 'Ready' : '-'} color={today?.resp != null ? colors.recoveryGreen : colors.textTertiary} />
+        </View>
+        <View style={[styles.qualityGrid, { marginTop: 12 }]}>
+          <Stat label="Sleep confidence" value={confidenceLabel(confidence)} color={confidenceColor(confidence)} />
+          <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} />
+          <Stat label="Signal" value={sleepDetail?.signalMin ?? '-'} unit={sleepDetail?.signalMin != null ? 'min' : undefined} />
+        </View>
+        <Text style={styles.qualityNote}>{recoveryQualityNote(today, confidence)}</Text>
+        {qualityAction ? (
+          <NavRow
+            label={qualityAction.label}
+            icon={qualityAction.icon}
+            iconColor={qualityAction.color}
+            value={qualityAction.value}
+            onPress={() => nav.navigate(qualityAction.route)}
+            last
+          />
+        ) : null}
       </Card>
 
       {/* Illness early-warning (recovery-independent) */}
@@ -220,6 +316,8 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
 }
 
 const styles = StyleSheet.create({
+  qualityGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, marginBottom: 2, fontFamily: fonts.text },
   illnessHead: { flexDirection: 'row', alignItems: 'center' },
   illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
