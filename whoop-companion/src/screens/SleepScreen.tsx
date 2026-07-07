@@ -6,6 +6,7 @@ import { useStoreSelector } from '../state/store';
 import {
   Card,
   Empty,
+  Hypnogram,
   LineChart,
   NavRow,
   Ring,
@@ -324,7 +325,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Text style={styles.headSub}>asleep · {formatDuration(sleep.inBedMin)} in bed</Text>
             </View>
             <LineChart values={nightHr} color={colors.sleepTeal} leftLabel={formatClock(sleep.startTs)} rightLabel={formatClock(sleep.endTs)} />
-            <Hypnogram segments={sleep.hypnogram} total={tib} />
+            <Hypnogram segments={sleep.hypnogram} showLabels />
             {stageQuality ? (
               <View style={[styles.stageQuality, { borderColor: stageQuality.color }]}>
                 <View style={[styles.stageQualityDot, { backgroundColor: stageQuality.color }]} />
@@ -989,62 +990,6 @@ function StageBar({ name, color, minutes, total, typicalPct }: { name: string; c
   );
 }
 
-function Hypnogram({
-  segments,
-  total,
-}: {
-  segments: Array<{ stage: 'awake' | 'light' | 'deep' | 'rem'; minutes: number }>;
-  total: number;
-}) {
-  const rows = ['awake', 'rem', 'light', 'deep'] as const;
-  const rowLabels: Record<(typeof rows)[number], string> = {
-    awake: 'Awake',
-    rem: 'REM',
-    light: 'Light',
-    deep: 'Deep',
-  };
-  const cleanSegments = segments.filter((s) => s.minutes > 0);
-  if (!cleanSegments.length) return null;
-
-  return (
-    <View style={styles.hypnogram}>
-      <View style={styles.hypnogramLabels}>
-        {rows.map((stage) => (
-          <Text key={stage} style={styles.hypnogramLabel}>{rowLabels[stage]}</Text>
-        ))}
-      </View>
-      <View style={styles.hypnogramGrid}>
-        {rows.map((stage) => (
-          <View key={stage} style={styles.hypnogramLane} />
-        ))}
-        <View style={styles.hypnogramBars}>
-          {cleanSegments.map((segment, index) => (
-            <View
-              key={`${segment.stage}-${index}`}
-              style={[
-                styles.hypnogramSegment,
-                {
-                  flexGrow: segment.minutes,
-                  flexBasis: `${Math.max(0.8, (segment.minutes / Math.max(1, total)) * 100)}%`,
-                  backgroundColor: sleepStageColors[segment.stage],
-                  marginTop: stageLaneOffset(segment.stage),
-                },
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function stageLaneOffset(stage: 'awake' | 'light' | 'deep' | 'rem'): number {
-  if (stage === 'awake') return 0;
-  if (stage === 'rem') return 20;
-  if (stage === 'light') return 40;
-  return 60;
-}
-
 function StressBar({ label, color, pct, minutes }: { label: string; color: string; pct: number; minutes: number }) {
   return (
     <View style={styles.stage}>
@@ -1339,13 +1284,6 @@ const styles = StyleSheet.create({
   stageQuality: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginTop: 12, backgroundColor: colors.surface },
   stageQualityDot: { width: 7, height: 7, borderRadius: 4, marginRight: 8 },
   stageQualityText: { flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17, fontFamily: fonts.text },
-  hypnogram: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  hypnogramLabels: { width: 42, height: 74, justifyContent: 'space-between' },
-  hypnogramLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold },
-  hypnogramGrid: { flex: 1, height: 74, position: 'relative', overflow: 'hidden' },
-  hypnogramLane: { height: 1, backgroundColor: colors.border, marginTop: 18 },
-  hypnogramBars: { position: 'absolute', left: 0, right: 0, top: 4, height: 68, flexDirection: 'row', alignItems: 'flex-start' },
-  hypnogramSegment: { height: 10, minWidth: 2, borderRadius: 3, marginRight: 1 },
   needRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
   needLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
   needValue: { color: colors.text, fontSize: 14, fontFamily: fonts.text },

@@ -376,14 +376,30 @@ const STAGE_COLOR: Record<string, string> = {
 const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3 };
 
 /** WHOOP-style sleep hypnogram: stage segments across the night, by lane. */
-export function Hypnogram({ segments }: { segments: Array<{ stage: string; minutes: number }> }) {
+export function Hypnogram({
+  segments,
+  showLabels = false,
+}: {
+  segments: Array<{ stage: string; minutes: number }>;
+  showLabels?: boolean;
+}) {
   const total = segments.reduce((a, b) => a + b.minutes, 0) || 1;
+  const cleanSegments = segments.filter((s) => s.minutes > 0);
+  if (!cleanSegments.length) return null;
+
+  const rows = ['awake', 'rem', 'light', 'deep'] as const;
+  const rowLabels: Record<(typeof rows)[number], string> = {
+    awake: 'Awake',
+    rem: 'REM',
+    light: 'Light',
+    deep: 'Deep',
+  };
   const W = 1000;
   const laneH = 18;
   const gap = 5;
   const H = 4 * laneH + 3 * gap;
   let x = 0;
-  const rects = segments.map((s, i) => {
+  const rects = cleanSegments.map((s, i) => {
     const w = (s.minutes / total) * W;
     const lane = STAGE_LANE[s.stage] ?? 2;
     const rx = x;
@@ -401,8 +417,27 @@ export function Hypnogram({ segments }: { segments: Array<{ stage: string; minut
     );
   });
   return (
-    <View>
-      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+    <View style={hypnogramStyles.wrap}>
+      {showLabels ? (
+        <View style={[hypnogramStyles.labels, { height: H }]}>
+          {rows.map((stage) => (
+            <Text key={stage} style={hypnogramStyles.label}>
+              {rowLabels[stage]}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={hypnogramStyles.chart}>
+        {rows.map((stage) => (
+          <Rect
+            key={`lane-${stage}`}
+            x={0}
+            y={(STAGE_LANE[stage] ?? 0) * (laneH + gap) + laneH / 2}
+            width={W}
+            height={1}
+            fill={colors.border}
+          />
+        ))}
         {rects}
       </Svg>
     </View>
@@ -852,6 +887,13 @@ const dialStyles = StyleSheet.create({
   main: { fontSize: 22, fontFamily: fonts.black },
   label: { color: colors.textSecondary, fontSize: 12, marginTop: 6, fontFamily: fonts.textBold },
   sub: { color: colors.textTertiary, fontSize: 11, marginTop: 1, fontFamily: fonts.text },
+});
+
+const hypnogramStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', gap: 8, marginTop: 16, alignItems: 'stretch' },
+  labels: { width: 42, justifyContent: 'space-between' },
+  label: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold },
+  chart: { flex: 1 },
 });
 
 const metricStyles = StyleSheet.create({
