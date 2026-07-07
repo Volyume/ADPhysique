@@ -171,6 +171,13 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <Card>
         {sleepScore ? (
           <>
+            <View style={styles.qualityHead}>
+              <View>
+                <Text style={styles.qualityLabel}>Sleep Quality</Text>
+                <Text style={styles.qualitySub}>Oura-style blend of duration, stages, efficiency and restfulness</Text>
+              </View>
+              <Text style={[styles.qualityScore, { color: sleepQualityColor(sleepScore.score) }]}>{sleepScore.score}</Text>
+            </View>
             {sleepScore.contributors.map((c) => (
               <ScoreRow key={c.key} label={c.label} value={c.score} detail={c.detail} />
             ))}
@@ -967,6 +974,10 @@ const styles = StyleSheet.create({
   ringQuality: { flexDirection: 'row', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 16 },
   capNote: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, textAlign: 'center', fontFamily: fonts.text },
   surplusNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
+  qualityHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 },
+  qualityLabel: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  qualitySub: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  qualityScore: { fontSize: 30, fontFamily: fonts.black },
   verdictHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   verdictBadge: { width: 52, height: 52, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   verdictBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },

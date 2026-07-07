@@ -36,7 +36,7 @@ export function computeSleepScore(sleep: SleepResult): SleepScore {
   const eff = sleep.efficiency * 100;
   const remPct = asleep > 0 ? (sleep.stages.rem / asleep) * 100 : 0;
   const deepPct = asleep > 0 ? (sleep.stages.deep / asleep) * 100 : 0;
-  const wakeEvents = sleep.hypnogram.filter((s) => s.stage === 'awake').length;
+  const wakeEvents = midSleepAwakeEvents(sleep.hypnogram);
 
   const total = clamp((asleep / need) * 100);
   const efficiency = band(eff, 85, 95); // Oura: 85 good, 95 optimal
@@ -56,4 +56,22 @@ export function computeSleepScore(sleep: SleepResult): SleepScore {
     clamp(0.35 * total + 0.2 * efficiency + 0.15 * rem + 0.15 * deep + 0.15 * restfulness, 1, 99),
   );
   return { score, contributors };
+}
+
+function midSleepAwakeEvents(hypnogram: SleepResult['hypnogram']): number {
+  const firstSleep = hypnogram.findIndex((s) => s.stage !== 'awake');
+  if (firstSleep < 0) return 0;
+  let lastSleep = -1;
+  for (let i = hypnogram.length - 1; i >= 0; i -= 1) {
+    if (hypnogram[i]!.stage !== 'awake') {
+      lastSleep = i;
+      break;
+    }
+  }
+  if (lastSleep <= firstSleep) return 0;
+  let events = 0;
+  for (let i = firstSleep + 1; i < lastSleep; i += 1) {
+    if (hypnogram[i]!.stage === 'awake') events += 1;
+  }
+  return events;
 }
