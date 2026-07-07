@@ -24,9 +24,11 @@ describe('PlanLibraryScreen shared empty states', () => {
     expect(source).not.toMatch(/chipsList: \{ height: 52/);
   });
 
-  test('the plan list sits on a surface band instead of leaving a raw black void', () => {
+  test('the plan list keeps empty states centred without leaving a heavy surface void', () => {
     expect(source).toMatch(/<View style=\{styles\.listBand\}>[\s\S]*<FlashList/);
-    expect(source).toMatch(/listBand: \{ flex: 1, backgroundColor: colors\.surface \}/);
+    expect(source).toMatch(/listBand: \{ flex: 1, backgroundColor: colors\.background \}/);
+    expect(source).toMatch(/<View style=\{styles\.listEmptyWrap\}>[\s\S]*<EmptyState/);
+    expect(source).toMatch(/listEmptyWrap: \{[\s\S]*minHeight: 340/);
     expect(source).toMatch(/ItemSeparatorComponent=\{\(\) => <View style=\{styles\.planSeparator\} \/>/);
     expect(source).toMatch(/listContent: \{ paddingHorizontal: spacing\.lg, paddingTop: spacing\.md, paddingBottom: spacing\.xl \}/);
   });

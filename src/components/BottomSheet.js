@@ -89,7 +89,8 @@ export default function BottomSheet({
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
       keyboardShouldPersistTaps="handled"
     >
       {children}

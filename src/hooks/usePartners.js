@@ -138,7 +138,7 @@ async function mirrorAcceptedPartnershipLocally(userId, data = {}) {
   const now = nowIso();
   const row = data?.partnership || (data?.partnershipId ? {
     id: data.partnershipId,
-    member_a: null,
+    member_a: data.memberA ?? data.member_a ?? null,
     member_b: userId,
     status: 'active',
     streak_enabled: true,
@@ -148,6 +148,9 @@ async function mirrorAcceptedPartnershipLocally(userId, data = {}) {
     updated_at: now,
   } : null);
   if (!row?.id) return false;
+  const memberA = row.member_a ?? row.memberA ?? null;
+  const memberB = row.member_b ?? row.memberB ?? null;
+  if (!memberA || !memberB) return false;
   try {
     await upsertPartnershipFromCloud(row);
     return true;
@@ -160,7 +163,13 @@ async function isAcceptedPartnershipVisible(userId, data = {}) {
   const expectedId = data?.partnership?.id || data?.partnershipId || null;
   try {
     const rows = await getPartnershipsLocal(userId);
-    return rows.some((p) => p.status === 'active' && (!expectedId || p.id === expectedId));
+    return rows.some((p) => (
+      p.status === 'active'
+      && (!expectedId || p.id === expectedId)
+      && !!p.memberA
+      && !!p.memberB
+      && (p.memberA === userId || p.memberB === userId)
+    ));
   } catch (_) {
     return false;
   }
@@ -272,11 +281,14 @@ function localActivePartnershipFromRedeem(userId, data = {}) {
   const cloud = data?.partnership || null;
   const id = cloud?.id || data?.partnershipId || null;
   if (!id) return null;
+  const memberA = cloud?.member_a ?? data?.memberA ?? data?.member_a ?? null;
+  const memberB = cloud?.member_b ?? data?.memberB ?? data?.member_b ?? userId;
+  if (!memberA || !memberB) return null;
   return {
     id,
     status: 'active',
-    memberA: cloud?.member_a ?? null,
-    memberB: cloud?.member_b ?? userId,
+    memberA,
+    memberB,
     partnerFirstName: cloud?.partner_first_name ?? data?.partnerFirstName ?? null,
     streakEnabled: cloud?.streak_enabled !== false,
     acceptedAt: cloud?.accepted_at ? new Date(cloud.accepted_at).getTime() : now,
@@ -434,7 +446,7 @@ export default function usePartners(userId, tier) {
         if (hasUsablePartnerState) {
           return { ...prev, loading: false, error: false, localReadIssue: true, reload: load };
         }
-        return { ...EMPTY, loading: false, error: false, localReadIssue: true, reload: load };
+        return { ...EMPTY, loading: false, error: true, localReadIssue: false, reload: load };
       });
     }
   }, [userId, tier]);

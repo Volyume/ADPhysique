@@ -67,6 +67,8 @@ describe('BottomSheet', () => {
     });
     const scroll = tree.root.findByProps({ keyboardShouldPersistTaps: 'handled' });
     expect(scroll.props.style).toMatchObject({ flexShrink: 1 });
+    expect(scroll.props.nestedScrollEnabled).toBe(true);
+    expect(scroll.props.showsVerticalScrollIndicator).toBe(true);
     expect(JSON.stringify(tree.toJSON())).toContain('Long sheet body');
   });
 

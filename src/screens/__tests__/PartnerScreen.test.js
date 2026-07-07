@@ -489,7 +489,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume could not confirm this partnership online yet. Refresh Partners and try again.',
+      'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.',
       { variant: 'error' },
     );
   });
@@ -519,7 +519,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Send a cheer');
     await press(tree, 'Here with you.');
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.',
+      'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.',
       { variant: 'error' },
     );
   });
@@ -611,7 +611,7 @@ describe('pending state', () => {
     mockHook.value = base({ pairs: [], pendingInvite: { id: 'pend1', status: 'invited' } });
     const tree = await mount();
     expect(allText(tree)).toContain('Invitation sent. Waiting for your partner.');
-    expect(allText(tree)).toContain('Share the same invite again if they missed it. It still only pairs one person.');
+    expect(allText(tree)).toContain('This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.');
     expect(findPress(tree, 'Share invite again').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Check invite status').length).toBeGreaterThan(0);
     expect(findPress(tree, 'Cancel invitation').length).toBeGreaterThan(0);

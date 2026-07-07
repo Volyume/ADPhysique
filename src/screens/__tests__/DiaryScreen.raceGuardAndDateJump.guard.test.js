@@ -164,12 +164,13 @@ describe('DiaryScreen meal-planning entry point', () => {
 
 describe('DiaryScreen date navigation polish', () => {
   test('date navigation renders as one coherent rail, not separate dark chevrons around a grey box', () => {
+    const dateClusterStyle = SRC.match(/dateCluster: \{[\s\S]*?\n  \},/)?.[0] || '';
     expect(SRC).toMatch(/<View style=\{styles\.dateCluster\}>/);
     expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
     expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
-    expect(SRC).toMatch(/dateCluster: \{[\s\S]*backgroundColor: colors\.surface/);
+    expect(dateClusterStyle).not.toMatch(/backgroundColor: colors\.surface/);
     expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: 'transparent'/);
-    expect(SRC).toMatch(/dateButton: \{[\s\S]*backgroundColor: 'transparent'/);
+    expect(SRC).toMatch(/dateButton: \{[\s\S]*borderWidth: 1[\s\S]*backgroundColor: colors\.surface/);
   });
 });
 

@@ -504,13 +504,15 @@ export default function PlanLibraryScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           loadError ? (
-            <EmptyState
-              icon="cloud-offline-outline"
-              title="Couldn't load plans"
-              text="Something went wrong loading the plan library."
-              actionLabel="Try again"
-              onAction={handleRetry}
-            />
+            <View style={styles.listEmptyWrap}>
+              <EmptyState
+                icon="cloud-offline-outline"
+                title="Couldn't load plans"
+                text="Something went wrong loading the plan library."
+                actionLabel="Try again"
+                onAction={handleRetry}
+              />
+            </View>
           ) : !loaded ? (
             <View style={styles.skeletonWrap}>
               <SkeletonCard height={96} />
@@ -518,15 +520,17 @@ export default function PlanLibraryScreen({ navigation, route }) {
               <SkeletonCard height={96} />
             </View>
           ) : (
-            <EmptyState
-              icon="library-outline"
-              title="No plans found"
-              text={queryLower
-                ? 'Try a different search term.'
-                : activeCollection === 'division' && selectedDivision
-                  ? 'No plans for this division yet.'
-                  : 'No plans match this filter yet.'}
-            />
+            <View style={styles.listEmptyWrap}>
+              <EmptyState
+                icon="library-outline"
+                title="No plans found"
+                text={queryLower
+                  ? 'Try a different search term.'
+                  : activeCollection === 'division' && selectedDivision
+                    ? 'No plans for this division yet.'
+                    : 'No plans match this filter yet.'}
+              />
+            </View>
           )
         }
         renderItem={({ item: plan }) => {
@@ -758,8 +762,14 @@ const styles = StyleSheet.create({
   divisionDescText: { ...type.bodySm, color: colors.textSecondary },
 
   // Plan list
-  listBand: { flex: 1, backgroundColor: colors.surface },
+  listBand: { flex: 1, backgroundColor: colors.background },
   listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl },
+  listEmptyWrap: {
+    minHeight: 340,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
   planSeparator: { height: spacing.sm },
 
   // Quiz banner. Card owns background/radius/padding/border here.

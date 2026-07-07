@@ -63,12 +63,12 @@ function partnerRecordLabel(pr = {}) {
 }
 
 function partnerCheerFailureMessage(error) {
-  if (error === 'not_active') return 'That partnership is no longer active. Refresh Partners and try again.';
+  if (error === 'not_active') return 'Volyume has not confirmed this partnership on this device yet. Refresh Partners, then try again.';
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
   if (error === 'partner_update_needed') {
-    return 'Partner cheers need the latest partner update before they can send. Try again after the app has refreshed.';
+    return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
     return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
@@ -1691,9 +1691,9 @@ const styles = StyleSheet.create({
   ratingRow: { gap: spacing.xs2 },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
-  ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, minHeight: 44 },
   ratingBtn: {
-    width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.surface2,
+    width: 44, height: 44, minWidth: 44, borderRadius: radius.md, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   // D3: selected state uses the app-wide chip grammar (tint + amber edge,

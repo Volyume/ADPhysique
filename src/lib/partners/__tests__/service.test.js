@@ -476,11 +476,11 @@ describe('sendCheer', () => {
     _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1' });
     expect(r).toEqual({ ok: false, error: 'not_active' });
-    expect(client._calls.cheerRows).toHaveLength(0);
+    expect(client._calls.cheerRows).toHaveLength(1);
     expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
-  test('normalises a bare edge 403 as stale partnership state so the hook can retry', async () => {
+  test('recovers from a bare edge 403 when the direct RLS insert confirms the partnership', async () => {
     const client = fakeClient({
       functions: {
         invoke: jest.fn(() => Promise.resolve({
@@ -491,12 +491,12 @@ describe('sendCheer', () => {
     });
     _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1' });
-    expect(r).toEqual({ ok: false, error: 'not_active' });
-    expect(client._calls.cheerRows).toHaveLength(0);
-    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+    expect(r.ok).toBe(true);
+    expect(client._calls.cheerRows).toHaveLength(1);
+    expect(postEvent).toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
-  test('normalises edge membership wording as stale partnership state so the hook can retry', async () => {
+  test('recovers from edge membership wording when the direct RLS insert confirms the partnership', async () => {
     const client = fakeClient({
       functions: {
         invoke: jest.fn(() => Promise.resolve({
@@ -507,9 +507,9 @@ describe('sendCheer', () => {
     });
     _setClientForTests(client);
     const r = await sendCheer('u1', { pairId: 'p1' });
-    expect(r).toEqual({ ok: false, error: 'not_active' });
-    expect(client._calls.cheerRows).toHaveLength(0);
-    expect(postEvent).not.toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
+    expect(r.ok).toBe(true);
+    expect(client._calls.cheerRows).toHaveLength(1);
+    expect(postEvent).toHaveBeenCalledWith('u1', 'partner_cheer_sent', expect.any(Object));
   });
 
   test('normalises a misconfigured cheer edge function as backend unavailable', async () => {
