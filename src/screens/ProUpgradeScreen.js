@@ -21,7 +21,7 @@ import { skuFor } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 const PRO_PERKS = [
-  { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
+  { icon: 'barbell-outline', text: 'A plan built around your schedule, goals, and experience level' },
   { icon: 'calendar-outline', text: 'Your training and nutrition adjust as your body responds' },
   { icon: 'nutrition-outline', text: 'Personalised calorie and protein targets, updated as your goals change' },
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
@@ -338,7 +338,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </Text>
           {needsSetup ? (
             <>
-              <Button title="Set up your training" icon="sparkles" size="lg" onPress={startSetup} />
+              <Button title="Set up your training" icon="barbell-outline" size="lg" onPress={startSetup} />
               <Button
                 title="Skip for now"
                 variant="outline"
@@ -365,7 +365,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.iconWrap}>
-            <Ionicons name="sparkles" size={30} color={colors.primary} />
+            <Ionicons name="barbell-outline" size={30} color={colors.primary} />
           </View>
           <Text style={styles.title}>Go Pro</Text>
           <Text style={styles.subtitle}>
@@ -420,7 +420,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 title={PRO_BETA_ACTIVE
                   ? 'Activate Pro'
                   : canTrial ? 'Start your free trial' : 'Subscribe to Pro'}
-                icon="sparkles"
+                icon="barbell-outline"
                 size="lg"
                 loading={busy}
                 onPress={confirmExistingAccount}

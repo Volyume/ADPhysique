@@ -8,7 +8,7 @@ import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme
  * Adherence-neutral, no shame copy, purely directional ("here's what to do next").
  *
  * Props:
- *   icon       - Ionicons name (default 'sparkles-outline')
+ *   icon       - Ionicons name (default 'information-circle-outline')
  *   title      - short headline
  *   text       - one or two sentence explanation
  *   actionLabel / onAction         - primary CTA (optional)
@@ -18,7 +18,7 @@ import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme
  *   compact    - tighter padding for inline use
  */
 export default function EmptyState({
-  icon = 'sparkles-outline',
+  icon = 'information-circle-outline',
   title,
   text,
   actionLabel,
