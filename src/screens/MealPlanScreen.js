@@ -582,9 +582,9 @@ export default function MealPlanScreen({ navigation, route }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Build meals</Text>
+          <Text style={styles.emptyTitle}>Create meals</Text>
           <Text style={styles.emptyBody}>
-            Build meals from your targets, review them, then add the ones you want to your diary.
+            Create meals from your targets, review them, then add the ones you want to your diary.
           </Text>
           <View style={styles.emptySteps} accessibilityLabel="Meal builder steps">
             <View style={styles.emptyStep}>
@@ -623,9 +623,9 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build meals for today only. Good when you want it organised quickly.
+              Create meals for today only. Good when you want it organised quickly.
             </Text>
-            <Button title="Build this day" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Create this day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -634,9 +634,9 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build seven dated days and a shopping list. Existing logged food is left alone.
+              Create seven dated days and a shopping list. Existing logged food is left alone.
             </Text>
-            <Button title="Build the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Create the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </ScrollView>
       ) : (
@@ -883,10 +883,10 @@ export default function MealPlanScreen({ navigation, route }) {
                 onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel={isDayPlan ? 'Build a week instead' : 'Build one day instead'}
+                accessibilityLabel={isDayPlan ? 'Create a week instead' : 'Create one day instead'}
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Build week' : 'Build day'}</Text>
+                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Create week' : 'Create day'}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -28,7 +28,7 @@ const FEATURE_BENEFIT = {
   'Food search': 'Search a full food database and log straight to your day against your targets.',
   'Barcode scanning': 'Scan a barcode to log a food in seconds, with its macros filled in for you.',
   'Label scanning': 'Snap a nutrition label to capture its macros without typing them in.',
-  'Meal plan': 'Build a day of food around your own calories and macros, swap anything you like.',
+  'Meal plan': 'Create a day of food around your own calories and macros, swap anything you like.',
   'Food insights': 'See how your eating tracks against your targets over the week, not just day by day.',
   Recipes: 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
   'Saved meals': 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
@@ -44,7 +44,7 @@ const FEATURE_BENEFIT = {
   'Coaching decision': 'See the weekly decision, what changed, what held, and the signals behind it.',
   'Coaching reminders': 'Set reminders for your check-ins so the weekly coaching loop never slips.',
   'Pro goal setup': 'Set a division-specific goal so your plan and targets are built around it.',
-  'Update training': 'Let coaching update your training each week from how your sessions and weight are going.',
+  'Adjust training': 'Change your schedule, equipment and training details while keeping the Coach in sync.',
 };
 
 // Sensible default for any unmapped feature: the coaching-layer pitch the lock

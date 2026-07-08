@@ -3,8 +3,8 @@
  *
  * Locked in SUBSCRIPTION_AND_PAYMENT_LOCKED.md lines 328-333.
  * You → Subscription → Restore calls `Purchases.restorePurchases()`.
- * Google Play Billing returns the user's active subscriptions via
- * getPurchaseHistory; we sync trial_state accordingly.
+ * The active store provider returns the user's active subscriptions; we sync
+ * trial_state accordingly.
  *
  * Restore is idempotent and never charges the user. It just makes
  * the device aware of an existing subscription the user already

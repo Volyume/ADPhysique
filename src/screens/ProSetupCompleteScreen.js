@@ -298,7 +298,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <View style={styles.eduLearnRow}>
                   <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                   <Text style={[styles.eduLearnText, { color: colors.textSecondary }]}>
-                    Your first week of meals is ready in Meal Builder.
+                    Your first week of meals is ready in Meal planning.
                   </Text>
                 </View>
               ) : (

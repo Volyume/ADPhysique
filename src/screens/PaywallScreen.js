@@ -47,7 +47,7 @@ export default function PaywallScreen({ navigation, route }) {
 
   // Billing period the user is buying. COMP-007: annual is the default. Health
   // and fitness is the only category where annual dominates (~60-68% of
-  // revenue) and the saving is honest (50%); monthly stays fully visible as the
+  // revenue) and the saving is honest (44%); monthly stays fully visible as the
   // escape hatch (anchor, don't hide). Caller can force monthly via param.
   const [period, setPeriod] = useState(route?.params?.period === 'monthly' ? 'monthly' : 'annual');
 

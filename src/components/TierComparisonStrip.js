@@ -23,7 +23,7 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 // neither of which exists, plus an unverified "90 days history" gate).
 const COMPARISON_ROWS = [
   { free: 'Workout logging',      pro: 'Food diary, macros & barcode' },
-  { free: 'Build your own plans', pro: 'Division-specific plans' },
+  { free: 'Create your own plans', pro: 'Division-specific plans' },
   { free: 'Progress stats',       pro: 'Weekly Coach decisions' },
 ];
 

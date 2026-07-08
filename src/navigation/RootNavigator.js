@@ -193,7 +193,7 @@ const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../
 const GatedPartner          = lazyScreen(() => withProGuard(require('../screens/PartnerScreen').default, 'Training partner'));
 const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Coaching decision'));
 const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/ProGoalSetupScreen').default, 'Pro goal setup'));
-const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Update training'));
+const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Adjust training'));
 const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
 // Diary domain is Pro (free is Plan Library, custom training, Progress, You).
 // Gating the Nutrition tab root covers the food sub-screens, which are only reached

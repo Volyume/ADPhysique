@@ -130,7 +130,7 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
   });
 
   test('meal-plan success copy is a full sentence, not a comma fragment', () => {
-    expect(SOURCE).toContain('Your first week of meals is ready in Meal Builder.');
+    expect(SOURCE).toContain('Your first week of meals is ready in Meal planning.');
     expect(SOURCE).not.toContain('First week of meals ready in Diary, Plan my week');
   });
 

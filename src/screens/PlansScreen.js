@@ -48,8 +48,8 @@ const ACTION_CARDS_DEFAULT = [
   {
     id: 'manual',
     icon: 'create-outline',
-    title: 'Manual builder',
-    description: 'Build a custom multi-day plan and choose every exercise yourself.',
+    title: 'Create your own',
+    description: 'Create a custom multi-day plan and choose every exercise yourself.',
     screen: 'ManualBuilder',
   },
 ];
@@ -77,7 +77,7 @@ const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'manual',
     icon: 'create-outline',
-    title: 'Build your own',
+    title: 'Create your own',
     description: 'Create your own plan and choose every exercise. The Coach keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },

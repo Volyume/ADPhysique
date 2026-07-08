@@ -106,8 +106,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
     refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
   }
 
-  // Post-beta subscribe: the real Google Play purchase. Mirrors
-  // PaywallScreen.handlePay so there's one purchase path. Google's offer
+  // Post-beta subscribe: the real store purchase. Mirrors
+  // PaywallScreen.handlePay so there's one purchase path. Store offer
   // eligibility decides 7-days-free (used the in-app trial, never paid) vs
   // pay now (already used the Play trial and cancelled).
   async function subscribePro() {
@@ -130,7 +130,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       // loading state until the server confirms, and a failed grant is seen
       // rather than swallowed. The optimistic unlock from payAt still holds, so
       // a confirm failure does not deny the access they just paid for: the
-      // Google Play RTDN push and the next cloud refresh reconcile it. We
+      // the store verification path and the next cloud refresh reconcile it. We
       // surface the delay rather than silently showing a Pro screen on a server
       // that never granted it.
       const confirm = await cascade.confirmPurchase({

@@ -40,7 +40,7 @@ export default function SubscriptionPolicyScreen() {
           <Bullet>Full workout logger with rest timer, beeps and haptics.</Bullet>
           <Bullet>400+ exercise library with form notes.</Bullet>
           <Bullet>31 ready-made plans you can pick from.</Bullet>
-          <Bullet>Build your own routines from scratch.</Bullet>
+          <Bullet>Create your own routines from scratch.</Bullet>
           <Bullet>Workout history kept on your phone.</Bullet>
           <Bullet>Personal records and strength standing.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>

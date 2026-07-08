@@ -142,7 +142,7 @@ export async function startCascade() {
     } catch (_) { /* tolerate; refreshTierFromCloud reconciles next read */ }
     _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
     // Lay the local trial-end reminders from the trial end date the RPC just
-    // returned (the 14-day in-app trial; the 7-day Play intro offer is a
+    // returned (the 14-day in-app trial; the 7-day store intro offer is a
     // separate store subscription phase that begins only if the user subscribes
     // afterwards). scheduleCascadeGateNotifications derives the reminder times
     // from this end date. Fire-and-forget: the cascade transition is the
@@ -168,8 +168,8 @@ export async function startCascade() {
 // C-1 (2026-06-06): the paid 'pro' grant is server-authoritative. The client no
 // longer writes its own tier (the authenticated upgrade_tier rejects 'pro',
 // migration 067), which closes the self-grant hole. On a confirmed purchase we
-// unlock Pro optimistically in-memory for instant UX; the Google Play RTDN
-// (after Play Developer API verification) writes the real tier via
+// unlock Pro optimistically in-memory for instant UX; the per-store verifier
+// (Google Play Developer API or App Store Server API) writes the real tier via
 // upgrade_tier_for_user, and refreshTierFromCloud reconciles to it within the
 // optimistic window. A purchase that never reached the server reverts to free.
 export async function payAt(targetTier, paymentRef, sourceSurface = null) {
@@ -380,8 +380,8 @@ export async function skipToPro(_sourceSurface = null) {
 
 export async function autoDowngrade(targetTier, sourceSurface = null) {
   // 2-tier model: only the end of the 14-day in-app trial transitions to free.
-  // (The 7-day Play intro offer is a separate store subscription phase, handled
-  // by Play, not this client cascade.) The old 3-tier Complete→Pro
+  // (The 7-day store intro offer is a separate store subscription phase, handled
+  // by the store, not this client cascade.) The old 3-tier Complete→Pro
   // auto-downgrade no longer exists.
   if (targetTier !== 'free') {
     return { ok: false, error: 'invalid_auto_downgrade_target' };
@@ -457,8 +457,8 @@ export function stageOf(profile) {
 /**
  * True iff the user has not yet used their one-time trial
  * entitlement. Used by paywall surfaces to choose between the
- * trial CTA ("Try Pro free for 7 days", the Play intro offer that
- * follows the 14 cardless in-app days) and "Get Pro for £X/month".
+ * trial CTA ("Try Pro free for 7 days", the store intro offer that
+ * follows the 14 cardless in-app days) and the paid subscribe CTA.
  */
 export function canStillTrial(profile) {
   const ts = profile?.trialState ?? profile?.trial_state ?? 'unstarted';

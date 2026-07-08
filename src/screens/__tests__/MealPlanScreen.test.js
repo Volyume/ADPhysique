@@ -181,11 +181,11 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('<Text style={styles.emptyTitle}>Build meals</Text>');
+    expect(source).toContain('<Text style={styles.emptyTitle}>Create meals</Text>');
     expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
-    expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
-    expect(source).toContain('title="Build this day"');
-    expect(source).toContain('title="Build the week"');
+    expect(source).toContain('Create meals from your targets, review them, then add the ones you want to your diary.');
+    expect(source).toContain('title="Create this day"');
+    expect(source).toContain('title="Create the week"');
     expect(source).not.toContain('title="Plan this day"');
     expect(source).not.toContain('title="Plan the week"');
     expect(source).toContain('Nothing is logged until you add it');
@@ -210,7 +210,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
     expect(source).toContain('Adds these meals to today. Existing logged food is left alone.');
     expect(source).toContain('accessibilityLabel="Refresh meals"');
-    expect(source).toContain("isDayPlan ? 'Build week' : 'Build day'");
+    expect(source).toContain("isDayPlan ? 'Create week' : 'Create day'");
     expect(source).toMatch(/swapBtn: \{[\s\S]*borderWidth: 1,[\s\S]*backgroundColor: colors\.surface2/);
     expect(source).toMatch(/swapText: \{ color: colors\.textPrimary/);
   });

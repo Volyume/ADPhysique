@@ -1,19 +1,15 @@
 /**
- * Google Play Billing provider wrapper.
+ * Store billing provider wrapper.
  *
- * Founder override 2026-05-25: the original locked spec
- * (SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 49) chose RevenueCat as
- * the abstraction layer. With iOS deferred indefinitely per the
- * Android-only Phase B decision, RevenueCat's main value
- * (cross-platform identity) is moot. Going direct against Google
- * Play Billing removes the 1%-above-£2.5k-MRR fee and one third-party
- * dependency. Logged in CURRENT_STATUS.md.
+ * Founder override 2026-07-08: Volyume uses direct store billing through
+ * react-native-iap. Android goes through Google Play Billing; iOS goes through
+ * StoreKit. RevenueCat stays out of the runtime path, so store prices and
+ * offers remain controlled in Google Play Console and App Store Connect.
  *
  * This module exposes the API surface the cascade module and UI
  * call against, with a default stub provider that returns safe no-op
- * results. At Phase A exit we swap in the real provider, which wraps
- * `react-native-iap` (or `expo-in-app-purchases`) and talks directly
- * to Google Play Billing.
+ * results. Production swaps in the platform provider, both wrapping
+ * `react-native-iap` and exposing the same contract to the app.
  *
  * Provider contract (identical regardless of underlying SDK):
  *   {
@@ -31,12 +27,9 @@
  *     activeSku: string | null,
  *   }
  *
- * Receipt validation lives server-side in the Supabase Edge Function
- * (supabase/functions/google-iap-rtdn/). The client passes the
- * purchase token; the function calls Google Play Developer API's
- * verifyPurchase endpoint, then fires `upgrade_tier` with the verified
- * transaction. Same flow shape as if RevenueCat had been chosen, just
- * fewer middlemen.
+ * Receipt validation lives server-side in Supabase Edge Functions. Android
+ * passes the Play purchase token to the Google verifier; iOS passes the StoreKit
+ * JWS to the App Store verifier. Both paths fire the verified tier upgrade.
  */
 
 import { Platform } from 'react-native';
@@ -811,8 +804,8 @@ export function currentAppUserID() {
 /**
  * Initialise the underlying IAP SDK with the user's Volyume
  * auth.uid() as the SDK-side userID. The locked spec used appUserID
- * for cross-platform reconciliation; on Play-only that's our local
- * key for tying purchaseTokens back to the right Supabase user.
+ * for cross-platform reconciliation; here it is the local key for tying
+ * purchase tokens or StoreKit JWS values back to the right Supabase user.
  *
  * Safe to call repeatedly; re-init with the same appUserID is a
  * no-op. Switching users requires logOut() first.
@@ -841,11 +834,10 @@ export async function getCustomerInfo() {
 /**
  * Initiate a purchase. The cascade module wraps this with the
  * Volyume-side tier_history write via the upgrade_tier RPC after
- * the platform confirms the purchase. Google Play Billing's
- * Real-Time Developer Notification (RTDN) Pub/Sub topic, processed
- * by our Supabase Edge Function, is the authoritative source of
- * truth for renewals / cancellations / refunds; this client-side
- * call gives the user immediate feedback at purchase time.
+ * the platform confirms the purchase. Store-side renewal / cancellation /
+ * refund notifications, processed by Supabase Edge Functions, remain the
+ * authoritative source of truth; this client-side call gives the user immediate
+ * feedback at purchase time.
  */
 export async function purchasePackage(skuId, opts = {}) {
   return _active().purchasePackage(skuId, opts);
