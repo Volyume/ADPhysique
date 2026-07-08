@@ -39,7 +39,7 @@ export function scanStatsCopy(scan, { suppressed = false, hideExact = false } = 
   const stats = scan?.stats || {};
   const parts = [];
   if (Number.isFinite(stats.photoCount)) parts.push(`${stats.photoCount} photo${stats.photoCount === 1 ? '' : 's'}`);
-  if (!suppressed && !hideExact && Number.isFinite(stats.weightKg)) parts.push(`${stats.weightKg} kg weight snapshot`);
+  if (!suppressed && !hideExact && Number.isFinite(stats.weightKg)) parts.push(`Weight ${stats.weightKg} kg`);
   if (Array.isArray(stats.poses) && stats.poses.length) {
     parts.push(stats.poses.map((p) => POSE_LABEL[p] || p).join(', '));
   }

@@ -1013,9 +1013,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     comparedSignalCount += 1;
     const delta = rounded1(curWeight - prevWeight);
     if (Math.abs(delta) >= 0.2) {
-      lines.push(`Bodyweight snapshot is ${delta < 0 ? 'down' : 'up'} ${Math.abs(delta)} kg from the nearest logged weigh-in.`);
+      lines.push(`Weight for this photo set is ${delta < 0 ? 'down' : 'up'} ${Math.abs(delta)} kg from the nearest logged weigh-in.`);
     } else {
-      lines.push('Bodyweight snapshot is broadly level against the nearest logged weigh-in.');
+      lines.push('Weight for this photo set is broadly level against the nearest logged weigh-in.');
     }
   }
 

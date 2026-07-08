@@ -53,7 +53,7 @@ describe('progressScanCopy', () => {
   });
 
   test('scanStatsCopy includes weight only when not suppressed and not hide-exact', () => {
-    expect(scanStatsCopy(scoredScan)).toBe('2 photos | 82.4 kg weight snapshot | Front, Back');
+    expect(scanStatsCopy(scoredScan)).toBe('2 photos | Weight 82.4 kg | Front, Back');
     expect(scanStatsCopy(scoredScan, { hideExact: true })).toBe('2 photos | Front, Back');
     expect(scanStatsCopy(scoredScan, { suppressed: true })).toBe('2 photos | Front, Back');
   });

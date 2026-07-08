@@ -1464,7 +1464,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             >
               <Text style={styles.scanDateTitle}>Date for this photo set</Text>
               <Text style={styles.scanDateIntro}>
-                Pick the day these photos were taken. Volyume uses that date for the library entry and weight snapshot.
+                Pick the day these photos were taken. Volyume uses that date for the library entry and the weight shown with the set.
               </Text>
               <TouchableOpacity
                 style={styles.scanDateField}
