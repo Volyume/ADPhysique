@@ -18,4 +18,23 @@ async function getRandomBytesAsync(count) {
   return getRandomValues(new Uint8Array(count));
 }
 
-module.exports = { getRandomValues, getRandomBytes, getRandomBytesAsync };
+// digestStringAsync backs progressScanStore's duplicate-pose content hash (SHA-256 of a saved
+// photo's base64 bytes). Node's built-in `crypto` gives a real SHA-256 here, so tests exercise
+// genuine hash-equality semantics rather than a fake stand-in.
+const nodeCrypto = require('crypto');
+const CryptoDigestAlgorithm = { SHA1: 'SHA-1', SHA256: 'SHA-256', SHA384: 'SHA-384', SHA512: 'SHA-512', MD5: 'MD5' };
+const CryptoEncoding = { HEX: 'hex', BASE64: 'base64' };
+async function digestStringAsync(algorithm, data, options = {}) {
+  const nodeAlgo = String(algorithm || 'SHA-256').replace('SHA-', 'sha');
+  const encoding = options.encoding === CryptoEncoding.BASE64 ? 'base64' : 'hex';
+  return nodeCrypto.createHash(nodeAlgo).update(String(data ?? '')).digest(encoding);
+}
+
+module.exports = {
+  getRandomValues,
+  getRandomBytes,
+  getRandomBytesAsync,
+  digestStringAsync,
+  CryptoDigestAlgorithm,
+  CryptoEncoding,
+};

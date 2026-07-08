@@ -34,6 +34,7 @@ const SCORE_WITHHOLD_REASONS = new Set([
   'multiple_people',
   'pose_not_clear',
   'estimate_out_of_range',
+  'duplicate_pose_content',
 ]);
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
@@ -180,10 +181,38 @@ export function aggregateQuality(assets = []) {
   return { score: rounded1(rawScore), label };
 }
 
+// Duplicate-content defence (scoring-accuracy-and-validation-blueprint.md §4/§6): a duplicated
+// front/back photo previously scored as MORE consistent (frontBackWaistSpread ~0), rewarding a
+// degenerate input. `contentHash` is a SHA-256 digest of the saved photo's bytes, computed at
+// asset-add time (progressScanStore.addProgressScanAsset) and stored in the asset's existing
+// signals_json column (no schema change). Two or more DIFFERENT poses sharing the same hash
+// within one scan session means the same photo file was reused across poses.
+function contentHashForAsset(asset = {}) {
+  const hash = assetSignals(asset)?.contentHash;
+  return typeof hash === 'string' && hash.length > 0 ? hash : null;
+}
+
+function hasDuplicateContentAcrossPoses(assets = []) {
+  const posesByHash = new Map();
+  for (const asset of assets || []) {
+    const pose = normalisePose(asset?.pose);
+    const hash = contentHashForAsset(asset);
+    if (!pose || !hash) continue;
+    const poses = posesByHash.get(hash) ?? new Set();
+    poses.add(pose);
+    posesByHash.set(hash, poses);
+  }
+  for (const poses of posesByHash.values()) {
+    if (poses.size >= 2) return true;
+  }
+  return false;
+}
+
 export function abstentionReasonsForAssets(assets = []) {
   const reasons = new Set();
   if (!requiredPosesComplete(assets)) reasons.add('missing_required_pose');
   else if (!requiredModelBackedPosesComplete(assets)) reasons.add('model_unavailable');
+  if (hasDuplicateContentAcrossPoses(assets)) reasons.add('duplicate_pose_content');
   for (const asset of requiredPoseAssets(assets)) {
     const signals = assetSignals(asset);
     if (signals?.modelBacked && !hasRequiredScoreRatios(asset)) reasons.add('measured_signals_incomplete');
@@ -527,6 +556,20 @@ const ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS = 8;
 const ESTIMATOR_ANCHOR_LARGE_BODY_DOWNWARD_POINTS = 24;
 const ESTIMATOR_ANCHOR_NEAR_LARGE_BODY_BMI = 29.25;
 
+// F1(a) (scoring-accuracy-and-validation-blueprint.md §5, founder-approved 2026-07-08): while
+// the provisional regressor's validation is pending, its influence on the VISIBLE (blended)
+// score is bounded far tighter than the pre-existing clamps above (+20 / up to -26), and
+// engaging that tighter bound by more than a few points caps confidence at Moderate and flags
+// `anchorEngaged`. `estimatorIsProvisional()` reads bfEstimatorAsset.status fresh on every call
+// (not cached), so if the asset's status ever becomes 'validated' the pre-existing clamps above
+// apply again unchanged, with no further code change.
+const PROVISIONAL_ANCHOR_MAX_POINTS = 8;
+const PROVISIONAL_ANCHOR_CONFIDENCE_CAP_THRESHOLD_POINTS = 4;
+
+function estimatorIsProvisional() {
+  return bfEstimatorAsset.status === 'provisional_validation_pending';
+}
+
 export function calibrateVolyumeScore(rawScore) {
   const n = finiteNumber(rawScore);
   if (n == null) return null;
@@ -627,11 +670,17 @@ function blendedVisualLeannessScore(inputs = {}, modelEstimate = null, biasFlags
     estimateWeight = Math.max(estimateWeight, 0.67);
   }
   const weighted = silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight;
-  const downwardLimit = estimatorAnchorDownwardLimit(inputs, anchorBiasFlags);
+  const provisional = estimatorIsProvisional();
+  const downwardLimit = provisional
+    ? PROVISIONAL_ANCHOR_MAX_POINTS
+    : estimatorAnchorDownwardLimit(inputs, anchorBiasFlags);
+  const upwardLimit = provisional
+    ? PROVISIONAL_ANCHOR_MAX_POINTS
+    : ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS;
   return rounded0(clamp(
     weighted,
     silhouetteScore - downwardLimit,
-    silhouetteScore + ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS,
+    silhouetteScore + upwardLimit,
   ));
 }
 
@@ -759,7 +808,15 @@ export function buildPhysiqueAssessment({
   });
   const measuredScore = blendedVisualLeannessScore(inputs, modelEstimate, biasFlags);
   const measuredScoreReady = measuredScore != null;
-  const scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
+  let scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
+  // F1(a): the clamped anchor still shifted the calibrated silhouette score by more than the
+  // confidence-cap threshold, so confidence is capped at Moderate and the shift is surfaced as a
+  // machine-readable flag (persisted via the existing signals_json pathway; no new table).
+  const anchorEngaged = estimatorIsProvisional()
+    && measuredScore != null
+    && calibratedSilhouetteScore != null
+    && Math.abs(measuredScore - calibratedSilhouetteScore) > PROVISIONAL_ANCHOR_CONFIDENCE_CAP_THRESHOLD_POINTS;
+  if (anchorEngaged) scanConfidenceTier = lowerConfidenceTier(scanConfidenceTier, 'moderate');
   const score = measuredScoreReady ? measuredScore : null;
   const band = leannessBandForScore(score);
   const previousAssessment = previousPhysiqueAssessment(previousScan);
@@ -801,6 +858,7 @@ export function buildPhysiqueAssessment({
         : null,
     },
     biasFlags,
+    anchorEngaged,
     calibrationStatus: 'still_calibrating_for_your_body_type',
     limitations: [
       'not_body_fat_estimate',
@@ -828,7 +886,13 @@ export function progressScanAssessmentCopy(assessment = null) {
   const prefix = assessment.progressSignal === 'baseline'
     ? `Baseline Volyume Score ${score}`
     : `Volyume Score ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. Score from photos taken in similar conditions.`;
+  // F1(a): when the provisional anchor engaged, reflect it in the receipt with the safety
+  // blueprint's exact calibration honesty line (safety-privacy-blueprint.md §3), so reduced
+  // confidence is explained by the model's own validation state, not the person or the photos.
+  const calibrationNote = assessment.anchorEngaged
+    ? ' Scoring is still being calibrated for your build, so confidence is reduced. Your comparisons over time are still meaningful.'
+    : '';
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. Score from photos taken in similar conditions.${calibrationNote}`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -1415,6 +1479,7 @@ export function analyseProgressScan({
 
   if (withholdingReasons.length > 0) {
     const modelUnavailable = withholdingReasons.includes('model_unavailable');
+    const duplicateContent = withholdingReasons.includes('duplicate_pose_content');
     return {
       analysisStatus: 'abstained',
       qualityScore: quality.score,
@@ -1434,16 +1499,22 @@ export function analyseProgressScan({
       trend: {
         direction: 'uncertain',
         magnitudePctPoints: null,
-        explanation: modelUnavailable
-          ? 'On-device scan analysis was not available for the required photos.'
-          : 'The scan quality was not strong enough for a useful measured trend.',
+        explanation: duplicateContent
+          ? 'Two poses used the same photo, so this set was not scored.'
+          : modelUnavailable
+            ? 'On-device scan analysis was not available for the required photos.'
+            : 'The scan quality was not strong enough for a useful measured trend.',
       },
       abstentionReasons: withholdingReasons,
       qualityWarnings: softQualityWarnings,
       biasFlags,
-      copySummary: modelUnavailable
-        ? 'The scan was saved, but on-device analysis was not available for the required photos.'
-        : 'The scan was saved, but measured analysis was withheld because the data was not reliable enough.',
+      // Exact copy per safety-privacy-blueprint.md §3 (duplicate) and the scoring blueprint's
+      // withheld example (model-unavailable / generic quality withhold).
+      copySummary: duplicateContent
+        ? 'Two poses used the same photo, so this set was not scored. Retake each pose separately and the set will score.'
+        : modelUnavailable
+          ? 'The scan was saved, but on-device analysis was not available for the required photos.'
+          : 'The scan was saved, but measured analysis was withheld because the data was not reliable enough.',
     };
   }
 

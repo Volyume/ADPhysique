@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import {
   analyseProgressScan,
   abstentionReasonsForAssets,
@@ -18,6 +20,9 @@ import {
   scanSetupStability,
   uncertaintyMarginPctPoints,
 } from '../progressScanAnalysis';
+// Same JSON file the engine imports (progressScanAnalysis.js resolves to the identical absolute
+// path), so mutating `.status` here mutates the exact object the engine reads from at runtime.
+import bfEstimatorAsset from '../../../assets/ml/progress_scan_bf_estimator_v1.json';
 
 const goodAssets = [
   { pose: 'front', qualityScore: 0.9, lightingScore: 0.9, blurScore: 0.9, framingScore: 0.9, landmarkConfidence: 0.9, segmentationConfidence: 0.9 },
@@ -430,6 +435,19 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.copySummary).toMatch(/Score from photos taken in similar conditions/i);
   });
 
+  // F1(a) (scoring-accuracy-and-validation-blueprint.md §5, founder-approved 2026-07-08):
+  // while the estimator's status is provisional_validation_pending, the anchor's influence on
+  // the visible score is bounded to +/-8 points (was +20/-26). The four tests below whose
+  // pre-clamp blend already exceeded the new +/-8 bound have their expected scores/bands
+  // updated to the new, tighter clamp; the maths (silhouette/estimate weighting) is unchanged,
+  // only how far the result may move from the calibrated silhouette score. Old -> new:
+  //   'private estimator anchor keeps a lean scan...'          86 (Lean)     -> 74 (Defined)
+  //   'large-body anthropometric signal can pull...'           57 (Athletic) -> 75 (Defined)
+  //   'large-body male signal is not protected...'             68 (Athletic) -> 80 (Lean)
+  //   'near-large-body signal does not stay defined...'        69 (Defined)  -> 76 (Defined)
+  // ('provisional estimator cannot drag a strong silhouette...' is UNCHANGED: that case was
+  // already lean-anchor-protected at the old +/-8 downward limit, so the tighter provisional
+  // bound does not move it further.)
   test('private estimator anchor keeps a lean scan from looking falsely low', () => {
     const leanEstimate = {
       source: 'photo_scan',
@@ -464,8 +482,11 @@ describe('Progress Scan uncertainty and abstention', () => {
       calibratedSilhouetteScore: 66,
       estimatorAnchorScore: 92,
     });
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(86);
-    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+    // Was 86/Lean under the pre-F1(a) +20 clamp; the anchor still pulls the score up off the
+    // silhouette (66 -> 74), but is now bounded to +8 while the estimator is provisional.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(74);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Defined');
+    expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
   test('provisional estimator cannot drag a strong silhouette into a demoralising score', () => {
@@ -537,8 +558,12 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 26,
       boundedEstimatorAnchorScore: 57,
     });
-    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(64);
-    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+    // Was <=64/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -26); the anchor
+    // still pulls the score down off the silhouette (83 -> 75), but is now bounded to -8 while
+    // the estimator is provisional, so the visible score stays inside Defined this time.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(75);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Defined');
+    expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
   test('large-body male signal is not protected by a deceptively lean silhouette without muscular context', () => {
@@ -574,8 +599,11 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 26,
       boundedEstimatorAnchorScore: 62,
     });
-    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(69);
-    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+    // Was <=69/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -26); now bounded
+    // to -8 while the estimator is provisional, so the visible score only moves 88 -> 80.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(80);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+    expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
   test('near-large-body signal does not stay defined when the estimator disagrees with a lean silhouette', () => {
@@ -611,8 +639,12 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 16,
       boundedEstimatorAnchorScore: 68,
     });
-    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(69);
-    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+    // Was <=69/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -16); now bounded
+    // to -8 while the estimator is provisional, so the visible score only moves 84 -> 76 and
+    // stays in Defined.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(76);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Defined');
+    expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
   test('stored v2 raw scores recover to the calibrated display score when available', () => {
@@ -1062,5 +1094,166 @@ describe('Progress Scan uncertainty and abstention', () => {
       rangeHigh: null,
     });
     expect(JSON.stringify(coachSummaryFromScan(scan, { suppressed: false }))).not.toMatch(/estimateBodyFatPercent|midpoint|rangeLow":\d|rangeHigh":\d/i);
+  });
+});
+
+// F1(a) — scoring-accuracy-and-validation-blueprint.md §5, founder-approved 2026-07-08: while
+// the estimator's own status is provisional_validation_pending, its influence on the visible
+// score is bounded to +/-8 points (was +20/-26), and engaging that bound by more than 4 points
+// caps confidence at Moderate and sets `anchorEngaged`. If status ever becomes 'validated', the
+// pre-existing wider clamps apply again with no code change (estimatorIsProvisional() re-reads
+// the JSON's status on every call rather than caching it at import time).
+describe('F1(a) provisional anchor gating', () => {
+  const originalStatus = bfEstimatorAsset.status;
+
+  afterEach(() => {
+    bfEstimatorAsset.status = originalStatus;
+  });
+
+  // Deliberately mismatched estimator input (large-body context, silhouette reads very lean)
+  // whose pre-F1(a) blend would move the score ~26 points off the silhouette — the same case as
+  // the calibration test 'large-body anthropometric signal can pull an over-lean silhouette out
+  // of defined bands', reused here as a standalone invariant fixture.
+  const largeBodyEstimate = {
+    source: 'photo_scan',
+    estimatorVersion: 'progress_scan_bf_estimator_v1',
+    value: 40,
+    inputs: {
+      sex: 'female',
+      bmi: 37.5,
+      waistToShoulder: 0.644,
+      waistToHip: 1.354,
+      waistToHeight: 0.232,
+      bodyAreaRatio: 0.21,
+      frontBackWaistSpread: 0,
+      sideWaistToHeight: 0.166,
+    },
+    biasFlags: ['large_body'],
+  };
+
+  function largeBodyScan() {
+    return analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: largeBodyEstimate,
+      sex: 'female',
+      heightCm: 165,
+      weightKg: 102,
+    });
+  }
+
+  test('the anchor cannot move the visible score beyond 8 points off the calibrated silhouette score while validation is pending', () => {
+    expect(bfEstimatorAsset.status).toBe('provisional_validation_pending');
+    const out = largeBodyScan();
+    const { calibratedSilhouetteScore } = out.physiqueAssessment.indexInputs;
+    const shift = out.physiqueAssessment.visualLeannessScore - calibratedSilhouetteScore;
+    expect(Math.abs(shift)).toBeLessThanOrEqual(8);
+    // This fixture's uncapped blend moves further than 8 points downward (pre-F1(a) it clamped
+    // to -26), so the bound is actually engaged here, not just technically satisfied.
+    expect(shift).toBe(-8);
+  });
+
+  test('confidence caps at moderate exactly when the clamped anchor moves the score by more than 4 points, and not otherwise', () => {
+    // High-quality, complete (front/back/side) assets with no penalising abstention reasons, so
+    // the natural confidence tier is High absent any anchor effect.
+    const highQualitySignal = (ratios) => ({
+      modelBacked: true,
+      quality: {
+        segmentationConfidence: 0.97, framingScore: 0.97, blurScore: 0.96, lightingScore: 0.97,
+        poseConfidence: 0.97, backgroundSeparation: 0.97, cameraTiltDegrees: 0,
+      },
+      silhouetteRatios: ratios,
+      abstentionReasons: [],
+    });
+    const highQualityAssets = [
+      { pose: 'front', qualityScore: 0.97, lightingScore: 0.97, blurScore: 0.96, framingScore: 0.97, segmentationConfidence: 0.97, landmarkConfidence: 0.97, signals: highQualitySignal({ waistToShoulder: 0.64, waistToHip: 0.78, waistToHeight: 0.19, bodyAreaRatio: 0.30 }) },
+      { pose: 'back', qualityScore: 0.97, lightingScore: 0.97, blurScore: 0.96, framingScore: 0.97, segmentationConfidence: 0.97, landmarkConfidence: 0.97, signals: highQualitySignal({ waistToShoulder: 0.62, waistToHip: 0.76, waistToHeight: 0.18, bodyAreaRatio: 0.29 }) },
+      { pose: 'side', qualityScore: 0.97, lightingScore: 0.97, blurScore: 0.96, framingScore: 0.97, segmentationConfidence: 0.97, landmarkConfidence: 0.97, signals: highQualitySignal({ waistToHeight: 0.185 }) },
+    ];
+    const anchorGapEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 10,
+      inputs: {
+        sex: 'male', bmi: 24, waistToShoulder: 0.72, waistToHip: 0.94, waistToHeight: 0.27, bodyAreaRatio: 0.37, frontBackWaistSpread: 0.01,
+      },
+      biasFlags: [],
+    };
+
+    const withoutAnchor = analyseProgressScan({
+      assets: highQualityAssets, modelEstimate: null, sex: 'male', heightCm: 180, weightKg: 78,
+    });
+    expect(withoutAnchor.physiqueAssessment.anchorEngaged).toBe(false);
+    expect(withoutAnchor.physiqueAssessment.scanConfidenceTier).toBe('high');
+
+    const withAnchor = analyseProgressScan({
+      assets: highQualityAssets, modelEstimate: anchorGapEstimate, sex: 'male', heightCm: 180, weightKg: 78,
+    });
+    expect(withAnchor.physiqueAssessment.anchorEngaged).toBe(true);
+    expect(withAnchor.physiqueAssessment.scanConfidenceTier).toBe('moderate');
+    expect(withAnchor.copySummary).toMatch(/Scoring is still being calibrated for your build, so confidence is reduced\. Your comparisons over time are still meaningful\./);
+  });
+
+  test('status-keyed: once the estimator is validated, the pre-existing wider clamps apply again unchanged, and anchorEngaged never fires', () => {
+    bfEstimatorAsset.status = 'validated';
+    const out = largeBodyScan();
+    // Matches the pre-F1(a) expectation for this exact fixture (see the calibration test of the
+    // same name in the describe block above): downward limit reverts to 26, upward to 20.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(57);
+    expect(out.physiqueAssessment.anchorEngaged).toBe(false);
+  });
+});
+
+// Duplicate-content defence (scoring-accuracy-and-validation-blueprint.md §4/§6, safety-privacy-
+// blueprint.md §3): a byte-identical photo reused across two poses previously scored as MORE
+// consistent (frontBackWaistSpread ~0). `contentHash` is populated by
+// progressScanStore.addProgressScanAsset at asset-add time (SHA-256 of the saved file's bytes)
+// and lives in the asset's existing signals_json column; these tests exercise the pure engine
+// logic directly against a fabricated hash, per house style.
+describe('duplicate-pose content withhold', () => {
+  test('identical photo content used for two poses withholds the score, keeps the photos, and abstains with the exact calm copy', () => {
+    const duplicateAssets = [
+      { ...modelBackedAssets[0], signals: { ...modelBackedAssets[0].signals, contentHash: 'same-file-hash' } },
+      { ...modelBackedAssets[1], signals: { ...modelBackedAssets[1].signals, contentHash: 'same-file-hash' } },
+    ];
+    const out = analyseProgressScan({ assets: duplicateAssets, modelEstimate: null });
+
+    expect(out.analysisStatus).toBe('abstained');
+    expect(out.abstentionReasons).toContain('duplicate_pose_content');
+    expect(out.physiqueAssessment.visualLeannessScore).toBeNull();
+    expect(out.copySummary).toBe('Two poses used the same photo, so this set was not scored. Retake each pose separately and the set will score.');
+    // A pure analysis function never deletes or touches storage; withholding a score never
+    // implies losing the photos (QUALITY_FIRST_CAPTURE_NOTE invariant), which here means the
+    // input assets are simply passed through untouched.
+    expect(duplicateAssets).toHaveLength(2);
+  });
+
+  test('distinct photo content across poses never triggers the duplicate withhold', () => {
+    const distinctAssets = [
+      { ...modelBackedAssets[0], signals: { ...modelBackedAssets[0].signals, contentHash: 'front-file-hash' } },
+      { ...modelBackedAssets[1], signals: { ...modelBackedAssets[1].signals, contentHash: 'back-file-hash' } },
+    ];
+    const out = analyseProgressScan({ assets: distinctAssets, modelEstimate: null });
+
+    expect(out.abstentionReasons).not.toContain('duplicate_pose_content');
+    expect(out.analysisStatus).toBe('complete');
+  });
+
+  test('assets with no content hash at all (older scans, or a hash read failure) never falsely trigger the duplicate withhold', () => {
+    // modelBackedAssets carries no contentHash field; a missing hash must never equal another
+    // missing hash, since that would make every incomplete/old scan a false-positive duplicate.
+    const reasons = abstentionReasonsForAssets(modelBackedAssets);
+    expect(reasons).not.toContain('duplicate_pose_content');
+  });
+});
+
+describe('duplicate_pose_content withhold-reason source guard', () => {
+  test('duplicate_pose_content is a pinned member of SCORE_WITHHOLD_REASONS', () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, '..', 'progressScanAnalysis.js'),
+      'utf8',
+    );
+    const setMatch = source.match(/const SCORE_WITHHOLD_REASONS = new Set\(\[([\s\S]*?)\]\);/);
+    expect(setMatch).not.toBeNull();
+    expect(setMatch[1]).toMatch(/'duplicate_pose_content'/);
   });
 });

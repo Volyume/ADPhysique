@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Crypto from 'expo-crypto';
 import { db } from './database';
 import { generateUUID } from './uuid';
 import { logError } from './errorLog';
@@ -179,11 +181,33 @@ export async function getProgressScanSession(userId, scanId) {
   return rowToScan(row);
 }
 
+// Duplicate-pose defence (progress-photos scoring-accuracy wave): a SHA-256 digest of the saved
+// photo's bytes, computed once at asset-add time and stored inside the asset's existing
+// signals_json column (no schema change), so progressScanAnalysis.abstentionReasonsForAssets can
+// spot the same photo file reused across two poses within one scan session. Hashing the base64
+// text of the file is equivalent to hashing its bytes for equality purposes here (identical
+// bytes encode to an identical base64 string). Best-effort: a read/hash failure leaves the hash
+// null, which never matches another null, so a failure only ever narrows detection and never
+// produces a false positive or blocks the save.
+async function contentHashForAssetUri(uri) {
+  if (!uri) return null;
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+    if (!base64) return null;
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, base64);
+  } catch (e) {
+    logError('progressScanStore.contentHash', e, { uri });
+    return null;
+  }
+}
+
 export async function addProgressScanAsset(userId, scanId, asset = {}) {
   if (!userId || !scanId || !asset.photoName || !asset.uri || !asset.pose) return null;
   const d = await db();
   const id = generateUUID();
   const t = nowMs();
+  const contentHash = await contentHashForAssetUri(asset.uri);
+  const signals = { ...(asset.signals ?? null), contentHash };
   await d.runAsync(
     `INSERT INTO progress_scan_assets
       (id, scan_id, user_id, pose, photo_name, uri, taken_at, quality_score,
@@ -195,7 +219,7 @@ export async function addProgressScanAsset(userId, scanId, asset = {}) {
       asset.takenAt ?? t, asset.qualityScore ?? null, asset.landmarkConfidence ?? null,
       asset.segmentationConfidence ?? null, asset.blurScore ?? null,
       asset.lightingScore ?? null, asset.framingScore ?? null,
-      asset.cameraTiltDegrees ?? null, asJson(asset.signals ?? null), t,
+      asset.cameraTiltDegrees ?? null, asJson(signals), t,
     ],
   );
   return getProgressScanAsset(userId, id);
