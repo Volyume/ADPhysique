@@ -212,7 +212,7 @@ export default function YouScreen({ navigation }) {
               <Text style={styles.statusTitle}>
                 {isPro
                   ? latestReview
-                    ? `Latest coaching decision${reviewDate ? `: ${reviewDate}` : ''}`
+                    ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
                     : 'Ready for your first check-in'
                   : 'Coach is available on Pro'}
               </Text>
@@ -221,7 +221,7 @@ export default function YouScreen({ navigation }) {
           <Text style={styles.statusBody}>
             {isPro
               ? latestReview
-                ? 'Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
+                ? 'Open it to see what changed, what was held, and the exact signals behind it.'
                 : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
               : 'The Coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>

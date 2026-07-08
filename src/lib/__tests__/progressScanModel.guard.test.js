@@ -109,5 +109,6 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(read('package.json')).toMatch(/verify:android:16kb/);
     expect(read('.github/workflows/build-android.yml')).toMatch(/verify:android:16kb/);
     expect(read('.github/workflows/build-android.yml')).toMatch(/app-release\.aab/);
+    expect(read('.github/workflows/build-android.yml')).toMatch(/timeout-minutes:\s*45/);
   });
 });

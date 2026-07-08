@@ -152,7 +152,7 @@ export default function TodayStrip({
     const hasTrendDoor = typeof onOpenTrend === 'function';
     return (
       <TouchableOpacity
-        style={styles.cellInner}
+        style={styles.metricRow}
         onPress={hasTrendDoor ? onOpenTrend : startEdit}
         onLongPress={startEdit}
         delayLongPress={300}
@@ -161,10 +161,18 @@ export default function TodayStrip({
           ? `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to see your trend, long press to edit.`
           : `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to edit.`}
       >
-        <Text style={styles.cellLabel}>Morning weight</Text>
-        <View style={styles.loggedRow}>
-          <Text style={styles.cellValue}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
+        <View style={styles.metricLeft}>
+          <View style={styles.metricIcon}>
+            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
+          </View>
+          <View style={styles.metricCopy}>
+            <Text style={styles.cellLabel}>Morning weight</Text>
+            <Text style={styles.cellValue} numberOfLines={1}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
+          </View>
+        </View>
+        <View style={styles.loggedPill}>
           <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+          <Text style={styles.loggedPillText}>Logged</Text>
         </View>
       </TouchableOpacity>
     );
@@ -173,20 +181,22 @@ export default function TodayStrip({
   function WeightEmpty() {
     return (
       <TouchableOpacity
-        style={styles.cellInner}
+        style={styles.metricRow}
         onPress={startEdit}
         accessibilityRole="button"
         accessibilityLabel="Log morning weight"
       >
-        <Text style={styles.cellLabel}>Morning weight</Text>
-        <View style={styles.emptyLogBox}>
-          <View style={styles.emptyLogMain}>
-            <Ionicons name="scale-outline" size={15} color={colors.textSecondary} />
-            <Text style={styles.logPrompt}>Add weight</Text>
+        <View style={styles.metricLeft}>
+          <View style={styles.metricIcon}>
+            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
           </View>
-          <View style={styles.emptyLogAction}>
-            <Text style={styles.emptyLogActionText}>Log</Text>
+          <View style={styles.metricCopy}>
+            <Text style={styles.cellLabel}>Morning weight</Text>
+            <Text style={styles.logPrompt} numberOfLines={1}>Not logged yet</Text>
           </View>
+        </View>
+        <View style={styles.metricAction}>
+          <Text style={styles.metricActionText}>Log</Text>
         </View>
       </TouchableOpacity>
     );
@@ -195,7 +205,12 @@ export default function TodayStrip({
   if (editing) {
     return (
       <View style={styles.card}>
-        <Text style={styles.cellLabel}>Morning weight</Text>
+        <View style={styles.editHeader}>
+          <View style={styles.metricIcon}>
+            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
+          </View>
+          <Text style={styles.cellLabel}>Morning weight</Text>
+        </View>
         <WeightInputRow />
       </View>
     );
@@ -214,11 +229,29 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     gap: spacing.sm,
   },
-  cellInner: { gap: spacing.xs, minHeight: 48, justifyContent: 'center' },
+  metricRow: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  metricLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  metricIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   cellLabel: {
     ...type.caption,
     color: colors.textMuted,
@@ -228,24 +261,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
-  loggedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  emptyLogBox: {
-    minHeight: 42,
-    alignSelf: 'stretch',
+  loggedPill: {
+    minHeight: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.xs,
+    gap: spacing.xxs,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.success,
     backgroundColor: colors.surface2,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
-  emptyLogMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0, flex: 1 },
+  loggedPillText: { ...type.caption, color: colors.textPrimary },
   logPrompt: { ...type.label, color: colors.textPrimary },
-  emptyLogAction: {
+  metricAction: {
     minHeight: 30,
     borderRadius: radius.sm,
     backgroundColor: colors.primaryFill,
@@ -253,7 +282,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyLogActionText: { ...type.label, color: colors.onPrimary },
+  metricActionText: { ...type.label, color: colors.onPrimary },
+  editHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },
   kgField: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flex: 1 },
@@ -275,7 +305,7 @@ const styles = StyleSheet.create({
   unit: { ...type.caption, color: colors.textMuted },
   logBtn: {
     borderRadius: radius.sm,
-    minWidth: 84,
+    minWidth: 76,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

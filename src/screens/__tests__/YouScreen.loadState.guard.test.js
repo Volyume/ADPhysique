@@ -19,6 +19,8 @@ describe('YouScreen coach hub load state', () => {
     expect(source).toMatch(/Number\(checkin\?\.weekStart\) === Number\(output\.weekStart\)/);
     expect(source).toMatch(/checkin\?\.energyScore != null/);
     expect(source).toMatch(/const latestDecision = isCompletedCoachDecision\(latest, checkin\) \? latest : null;/);
+    expect(source).toContain('Weekly coach update');
+    expect(source).not.toContain('Latest coaching decision');
   });
 
   test('coach hub groups actions by user intent instead of internal labels', () => {
