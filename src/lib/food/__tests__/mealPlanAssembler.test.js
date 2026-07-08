@@ -493,6 +493,100 @@ describe('assembleDayPlan', () => {
   });
 });
 
+describe('peri-workout composition timing (audit §15 item 5 — RP-style timing, no rigidity)', () => {
+  const periPrefs = { mealsPerDay: 4, periWorkoutSlots: true };
+  const sumSlots = (day) => day.slots.reduce((acc, s) => ({
+    kcal: acc.kcal + s.totals.kcal,
+    protein: acc.protein + s.totals.protein,
+    carbs: acc.carbs + s.totals.carbs,
+    fat: acc.fat + s.totals.fat,
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  test('(a) the day total is unchanged: slot totals sum back to the day total', () => {
+    [1, 5, 9, 20].forEach((seed) => {
+      const day = assembleDayPlan({
+        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'training', seed,
+      });
+      const summed = sumSlots(day);
+      expect(summed.kcal).toBeCloseTo(day.totals.kcal, 0);
+      expect(summed.protein).toBeCloseTo(day.totals.protein, 1);
+      expect(summed.carbs).toBeCloseTo(day.totals.carbs, 1);
+      expect(summed.fat).toBeCloseTo(day.totals.fat, 1);
+    });
+  });
+
+  test('(b) a training day weights the post-workout slot above the flat even share; a rest day has no such slot at all', () => {
+    const seeds = [1, 5, 9, 20, 33, 47, 58, 61];
+    let trainingSkewSum = 0;
+    let restMaxSkewSum = 0;
+
+    seeds.forEach((seed) => {
+      const training = assembleDayPlan({
+        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'training', seed,
+      });
+      const rest = assembleDayPlan({
+        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'rest', seed,
+      });
+
+      const post = training.slots.find((s) => s.slot === 'post_workout');
+      expect(post).toBeTruthy();
+      const evenCarbTraining = training.totals.carbs / training.slots.length;
+      const evenProteinTraining = training.totals.protein / training.slots.length;
+      // Post-workout carries MORE carbs AND protein than a flat even split of the
+      // (unchanged) day total, on every single seed — this is the deliberate lift,
+      // not incidental noise.
+      expect(post.totals.carbs).toBeGreaterThan(evenCarbTraining);
+      expect(post.totals.protein).toBeGreaterThan(evenProteinTraining);
+
+      // A rest day never creates a pre_workout/post_workout slot at all
+      // (buildSlotList): the mechanism has no anchor there, so it never fires.
+      expect(rest.slots.map((s) => s.slot)).not.toContain('post_workout');
+      expect(rest.slots.map((s) => s.slot)).not.toContain('pre_workout');
+
+      const evenCarbRest = rest.totals.carbs / rest.slots.length;
+      const restSkews = rest.slots.map((s) => (s.totals.carbs - evenCarbRest) / evenCarbRest);
+      trainingSkewSum += (post.totals.carbs - evenCarbTraining) / evenCarbTraining;
+      restMaxSkewSum += Math.max(...restSkews);
+    });
+
+    // Curated real-food meals vary enough that a single seed's incidental rest-day
+    // skew can occasionally out-run the deliberate lift (real food isn't a dial),
+    // so the robust claim is on AVERAGE across seeds: the training day's deliberate
+    // post-workout weighting is a bigger skew than the biggest incidental skew a
+    // rest day (which has no weighting mechanism at all) produces by chance.
+    expect(trainingSkewSum / seeds.length).toBeGreaterThan(restMaxSkewSum / seeds.length);
+  });
+
+  test('(c) the day target, band and floor fields are untouched by the redistribution', () => {
+    const want = dayTarget();
+    const day = assembleDayPlan({
+      target: want, band: BAND, prefs: periPrefs, variant: 'training', seed: 5,
+    });
+    expect(day.target).toEqual({ kcal: want.kcal, protein: want.proteinG, carbs: want.carbsG, fat: want.fatG });
+    expect(day.kcalWithinBand).toBe(true);
+    expect(day.targetFloored).toBe(false);
+
+    // Near a FLOORED target (ED-safety): the lift must never fight the floor —
+    // the target passed in is echoed back verbatim and the day never drops below it.
+    const floored = { kcal: 1500, proteinG: 130, carbsG: 130, fatG: 45 };
+    const flooredBand = { kcalMin: 1350, kcalMax: 1650 };
+    const dayFloored = assembleDayPlan({
+      target: floored, band: flooredBand, prefs: periPrefs, variant: 'training', seed: 5, targetFloored: true,
+    });
+    expect(dayFloored.target).toEqual({ kcal: 1500, protein: 130, carbs: 130, fat: 45 });
+    expect(dayFloored.totals.kcal).toBeGreaterThanOrEqual(flooredBand.kcalMin);
+    expect(dayFloored.targetFloored).toBe(true);
+  });
+
+  test('a training day with peri-workout slots switched OFF has no anchor and is unaffected', () => {
+    const day = assembleDayPlan({
+      target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4, periWorkoutSlots: false }, variant: 'training', seed: 5,
+    });
+    expect(day.slots.map((s) => s.slot)).not.toContain('post_workout');
+    expect(day.slots.map((s) => s.slot)).not.toContain('pre_workout');
+  });
+});
+
 describe('assembleWeekPlan', () => {
   const schedule = ['training', 'rest', 'training', 'rest', 'training', 'training', 'rest'];
 

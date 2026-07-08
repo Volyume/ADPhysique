@@ -349,6 +349,34 @@ const PER_MEAL_BALANCE = Object.freeze({
 // The protein ceiling is a touch tighter than the non-floored 1.6 because the even
 // mean is already high near the floor, so a smaller multiple still clears every
 // plate's real protein need; the anchor floor and carb ceiling are unchanged.
+// PERI-WORKOUT COMPOSITION TIMING (audit §15 item 5, founder-specified: RP-style
+// nutrient timing WITHOUT RP's rigid ratios). This app has no workout-clock
+// signal to time meals against; the pre_workout/post_workout slot — opt-in via
+// prefs.periWorkoutSlots, and only ever present on a 'training' variant day
+// (see buildSlotList) — is the best existing proxy, so it is the only anchor
+// this table keys off. It lifts the carb/protein FLOOR the per-meal solver
+// gives those specific meals above the flat even-share floor every other meal
+// gets, so the day's carbs/protein lean toward the workout-adjacent plate
+// (post-workout: refeed protein + carbs; pre-workout: a smaller carb lift,
+// fat is already discouraged there by the candidate-pick score above).
+//
+// AGGREGATE-SAFE BY CONSTRUCTION, same reasoning as PER_MEAL_BALANCE: this is
+// a floor on at most TWO of the day's 3-8 composable meals, and every factor
+// here stays below both balance profiles' own carbCeilFactor (1.7) and
+// proteinCeilFactor (1.4-1.6), so it can never conflict with that same meal's
+// own ceiling, and the lifted floors summed across (at most) two meals stay
+// far under the day total for any mealsPerDay in [3,6] — the day-level solve
+// still targets the SAME want.kcal/protein/carbs/fat, so any extra grams
+// pulled into the workout meal are drawn from the other meals' free range,
+// never from the day's target or a floor. A rest day (or a training day with
+// peri-workout slots switched off) never creates a pre_workout/post_workout
+// slot at all, so this table is never consulted there and the day stays
+// exactly as evenly balanced as before this change.
+const PERI_WORKOUT_FLOOR_LIFT = Object.freeze({
+  post_workout: { carbFactor: 1.3, proteinFactor: 1.25 },
+  pre_workout: { carbFactor: 1.15, proteinFactor: 1.0 },
+});
+
 const FLOORED_PER_MEAL_BALANCE = Object.freeze({
   proteinCeilFactor: 1.4,
   proteinFloorFactor: 0.5,
@@ -383,6 +411,12 @@ const FLOORED_PER_MEAL_BALANCE = Object.freeze({
  * selects the per-meal factor set: PER_MEAL_BALANCE for a normal target, the
  * tighter FLOORED_PER_MEAL_BALANCE near a floored target (M-2). It defaults to
  * PER_MEAL_BALANCE so the non-floored call is unchanged.
+ *
+ * When `perMeal` is true, a meal sitting in the pre_workout/post_workout slot
+ * (§15 item 5) ALSO gets its carb/protein floor lifted per PERI_WORKOUT_FLOOR_LIFT,
+ * so RP-style nutrient timing pulls carbs/protein toward the workout-adjacent
+ * plate on a training day — a redistribution within the SAME day.kcal/protein/
+ * carbs/fat objective (`want`, `terms`), never a change to it.
  */
 function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEAL_BALANCE }) {
   const staples = [];
@@ -430,7 +464,6 @@ function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEA
   const evenP = want.protein / nMeals;
   const evenC = want.carbs / nMeals;
   const pCeilG = evenP * balance.proteinCeilFactor;
-  const pFloorG = evenP * balance.proteinFloorFactor;
   const cCeilG = evenC * balance.carbCeilFactor;
   // Only a meal's largest protein source carries the anchor floor (a second,
   // small protein staple should not be forced up).
@@ -484,16 +517,26 @@ function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEA
       if (perMeal) {
         // Tighten the box with this meal's per-macro budget (coordinate descent
         // with a projected coupled bound; deterministic and convergent).
+        // Peri-workout timing lift (§15 item 5): only meals sitting in the
+        // pre_workout/post_workout slot get a raised floor below; every other
+        // meal's bounds are untouched (periLift is null for them).
+        const periLift = PERI_WORKOUT_FLOOR_LIFT[placed[st.pi]?.slot] || null;
         if (st.role === 'protein' && st.per.protein > 0) {
           // Floored: cap by the meal's WHOLE protein (M-2); else the role-only cap.
           const other = balance.mealProteinCeilTotal
             ? otherProteinInMeal(st.pi, k)
             : otherMacroInMeal(byMealProtein.get(st.pi) || [], k, 'protein');
           hi = Math.min(hi, (pCeilG - other) / st.per.protein);
-          if (anchorIdx.has(k)) lo = Math.max(lo, pFloorG / st.per.protein);
+          if (anchorIdx.has(k)) {
+            const floorFactor = periLift
+              ? Math.max(balance.proteinFloorFactor, periLift.proteinFactor)
+              : balance.proteinFloorFactor;
+            lo = Math.max(lo, (evenP * floorFactor) / st.per.protein);
+          }
         } else if (st.role === 'carb' && st.per.carbs > 0) {
           const other = otherMacroInMeal(byMealCarb.get(st.pi) || [], k, 'carbs');
           hi = Math.min(hi, (cCeilG - other) / st.per.carbs);
+          if (periLift) lo = Math.max(lo, (evenC * periLift.carbFactor - other) / st.per.carbs);
         }
       }
       lo = Math.ceil(lo); hi = Math.floor(hi);
@@ -657,9 +700,15 @@ export function assembleDayPlan({
         }
         // 3-3-3 rotation pool: a soft pull towards the user's chosen staples.
         score += 0.15 * poolAffinity(cand, prefs.rotationPool);
-        // Peri-workout slot character: low fat going in; protein + carbs out.
+        // Peri-workout slot character (audit §15 item 5: RP-style timing
+        // WITHOUT RP rigidity — a soft candidate-pick nudge, not a rule): low
+        // fat going in; protein AND carbs out (the comment always said "carbs
+        // out" but only protein was scored — completed here so a genuinely
+        // carb-bearing meal, not just a protein-bearing one, is preferred for
+        // the post-workout slot, matching what the per-meal solver below then
+        // has room to size up).
         if (slot.kind === 'pre_workout') score -= (cand.totals.fat / 100);
-        if (slot.kind === 'post_workout') score += (cand.totals.protein / 200);
+        if (slot.kind === 'post_workout') score += (cand.totals.protein / 200) + (cand.totals.carbs / 300);
         // Seeded jitter: small enough never to outrank a clearly better fit,
         // large enough that regeneration reshuffles near-ties.
         score += (rng() - 0.5) * 0.08;
