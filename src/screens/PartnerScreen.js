@@ -848,7 +848,7 @@ export default function PartnerScreen({ route }) {
   async function handleSendWin(pair, preview) {
     const r = await p.shareWin(pair.id, preview);
     if (r?.ok) {
-      toast.show('Win shared with your partner', { variant: 'success' });
+      toast.show('Update shared with your partner', { variant: 'success' });
       return r;
     }
     toast.show(partnerWinFailureMessage(r?.error, 'share'), { variant: r?.error === 'partner_syncing' ? 'warning' : 'error' });

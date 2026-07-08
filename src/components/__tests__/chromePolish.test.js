@@ -34,6 +34,10 @@ const SCREEN_HEADER = require('fs').readFileSync(
   require('path').resolve(__dirname, '../ScreenHeader.js'),
   'utf8',
 );
+const BRAND_MARK = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../BrandMark.js'),
+  'utf8',
+);
 const TAB_BAR = require('fs').readFileSync(
   require('path').resolve(__dirname, '../VolyumeTabBar.js'),
   'utf8',
@@ -87,5 +91,11 @@ describe('shared chrome polish', () => {
     expect(CHIP).not.toContain('fontWeight: fontWeight.semibold');
     expect(SCREEN_HEADER).toContain('...type.h3');
     expect(TAB_BAR).toContain('label: { ...type.caption, fontFamily: type.label.fontFamily }');
+  });
+
+  test('tab-screen chrome uses the clean compact V, not the splash flare asset', () => {
+    expect(BRAND_MARK).toContain("const V_ICON_COMPACT = require('../../assets/volyume-v-compact.png');");
+    expect(BRAND_MARK).toContain('source={V_ICON_COMPACT}');
+    expect(SCREEN_HEADER).toContain('backgroundColor: colors.camera');
   });
 });

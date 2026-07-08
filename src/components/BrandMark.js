@@ -12,13 +12,13 @@ try {
 } catch (_) { /* expo-image not installed yet, use RN Image */ }
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
-const V_ICON = require('../../assets/volyume-v.png');
+const V_ICON_COMPACT = require('../../assets/volyume-v-compact.png');
 // Both assets ship with a transparent background so they blend with
 // any surface colour. size prop drives the HEIGHT in each component;
 // width derives from the asset's aspect so letterforms stay correctly
 // proportioned at any scale.
 const WORDMARK_ASPECT = 1032 / 277;
-const V_ICON_ASPECT = 685 / 741;
+const V_ICON_COMPACT_ASPECT = 1;
 
 /**
  * VolyumeMark renders the chrome Volyume wordmark (V + lettering) as a
@@ -51,10 +51,10 @@ export function VolyumeMark({ size = 28, style }) {
  */
 export function VolyumeIcon({ size = 28, style }) {
   const height = size;
-  const width = Math.round(height * V_ICON_ASPECT);
+  const width = Math.round(height * V_ICON_COMPACT_ASPECT);
   return (
     <ImageComp
-      source={V_ICON}
+      source={V_ICON_COMPACT}
       style={[{ width, height }, style]}
       contentFit="contain"
       resizeMode="contain"

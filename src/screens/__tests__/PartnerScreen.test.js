@@ -269,6 +269,8 @@ describe('connected state: isolated pair cards', () => {
     await press(tree, 'Share an update');
     await press(tree, 'Send workout complete to Sam');
     expect(hook.shareWin).toHaveBeenCalledWith('p1', expect.objectContaining({ type: 'workout_summary' }));
+    expect(mockToastShow).toHaveBeenCalledWith('Update shared with your partner', { variant: 'success' });
+    expect(mockToastShow).not.toHaveBeenCalledWith('Win shared with your partner', expect.anything());
   });
 
   test('win sharing cloud-schema failures do not blame the user connection', async () => {
