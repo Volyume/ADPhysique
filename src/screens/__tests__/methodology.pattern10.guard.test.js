@@ -25,6 +25,11 @@ describe('MethodologyScreen honours locked Pattern 10', () => {
     expect(CODE).toMatch(/30 calories per kilogram of lean\s*'?\s*\+?\s*'?\s*mass/);
   });
 
+  test('user-facing hold explanation does not use UI-card jargon', () => {
+    expect(CODE).toContain('held-decision section in your coaching decision');
+    expect(CODE).not.toContain('held-decision card in your coaching decision');
+  });
+
   test('entry-point deep-linking maps sources onto sections', () => {
     expect(RAW).toMatch(/SOURCE_SECTION/);
     expect(RAW).toMatch(/held_decisions:\s*'holds'/);

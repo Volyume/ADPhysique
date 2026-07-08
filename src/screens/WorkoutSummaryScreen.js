@@ -1357,7 +1357,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               style={styles.shareFooterBtn}
               textStyle={styles.shareFooterBtnText}
               onPress={handleShareCard}
-              accessibilityLabel="Share session card"
+              accessibilityLabel="Share session"
             />
           )}
         </View>

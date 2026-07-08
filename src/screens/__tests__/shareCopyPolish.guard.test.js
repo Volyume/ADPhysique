@@ -9,9 +9,11 @@ describe('share copy polish', () => {
     const bodyMetrics = read('BodyMetricsScreen.js');
     const yearOfLifts = read('YearOfLiftsScreen.js');
     const subscriptionPolicy = read('SubscriptionPolicyScreen.js');
-    const combined = `${analytics}\n${bodyMetrics}\n${yearOfLifts}\n${subscriptionPolicy}`;
+    const workoutSummary = read('WorkoutSummaryScreen.js');
+    const combined = `${analytics}\n${bodyMetrics}\n${yearOfLifts}\n${subscriptionPolicy}\n${workoutSummary}`;
 
     expect(combined).toContain('Create share image');
+    expect(combined).toContain('accessibilityLabel="Share session"');
     expect(combined).toContain('shareable review of your training year');
     expect(combined).toContain('accessibilityLabel="Previous slide"');
     expect(combined).toContain('accessibilityLabel="Next slide"');
@@ -20,6 +22,7 @@ describe('share copy polish', () => {
     expect(combined).not.toContain('your training year in one card');
     expect(combined).not.toContain('accessibilityLabel="Previous card"');
     expect(combined).not.toContain('accessibilityLabel="Next card"');
+    expect(combined).not.toContain('Share session card');
   });
 
   test('Analytics share CTAs are contained controls, not loose amber text links', () => {
