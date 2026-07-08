@@ -192,6 +192,10 @@ const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
 const GatedPartner          = lazyScreen(() => withProGuard(require('../screens/PartnerScreen').default, 'Training partner'));
 const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Coaching decision'));
+// §15 item 1: the connected weekly story surface. Narrates nutrition/coach
+// content (targets, weight trend, the coach's decision), so it is gated the
+// same way as CoachOutput/WeeklyCheckIn.
+const GatedWeeklyStory      = lazyScreen(() => withProGuard(require('../screens/WeeklyStoryScreen').default, 'Your week'));
 const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/ProGoalSetupScreen').default, 'Pro goal setup'));
 const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Adjust training'));
 const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
@@ -474,6 +478,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ headerShown: false }} />
+      <Stack.Screen name="WeeklyStory" component={GatedWeeklyStory} options={{ headerShown: false }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />

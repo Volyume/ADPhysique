@@ -353,6 +353,12 @@ export default function YouScreen({ navigation }) {
               sub="See what changed, what stayed the same, and why."
               onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             />
+            <NavRow
+              icon="book-outline"
+              label="Your week"
+              sub="Training, eating, weighing in and the coach's decision, in one place."
+              onPress={() => navigation.navigate('WeeklyStory')}
+            />
           </View>
         ) : (
           <View style={styles.section}>
