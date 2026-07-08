@@ -33,6 +33,17 @@ describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
     expect(CARD).toMatch(/row\.done \? 'checkmark-circle' : 'ellipse-outline'/);
     expect(HOME).toMatch(/trialBanner=\{trialBanner\}/);
   });
+
+  test('attention-card coach CTAs use contained neutral buttons, not loose amber text links', () => {
+    const CARD = read('../../components/AttentionCard.js');
+    expect(CARD).toMatch(/accessibilityLabel="How the Coach works"[\s\S]*style=\{styles\.trialMethodologyButton\}/);
+    expect(CARD).toMatch(/accessibilityLabel="Pro reads the full story\. Learn about Pro coaching\."[\s\S]*style=\{styles\.freeCoachFooterButton\}/);
+    expect(CARD).toMatch(/trialMethodologyButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(CARD).toMatch(/freeCoachFooterButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(CARD).toContain('trialBannerLink: { ...type.label, color: colors.textPrimary, flex: 1 }');
+    expect(CARD).toContain('freeCoachFooter: {');
+    expect(CARD).not.toContain('trialBannerLink: { ...type.caption, color: colors.primary');
+  });
 });
 
 describe('A3: CoachOutput hold renders as a full receipt', () => {
@@ -47,6 +58,22 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
     expect(COACH).toMatch(/receipt\?\.unlockLine/);
     // The engine's own hold message stays the rule when present.
     expect(COACH).toMatch(/receipt\?\.rule \?\? dataNote/);
+  });
+
+  test('next-week meal planning actions render as contained neutral buttons', () => {
+    expect(COACH).toContain('Ionicons name="sparkles-outline" size={14} color={colors.textSecondary}');
+    expect(COACH).toContain('Ionicons name="repeat-outline" size={14} color={colors.textSecondary}');
+    expect(COACH).toContain('Ionicons name="restaurant-outline" size={14} color={colors.textSecondary}');
+    expect(COACH).toMatch(/planEditLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(COACH).toContain('planEditLinkText: { ...type.label, color: colors.textPrimary }');
+    expect(COACH).not.toContain('planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary }');
+  });
+
+  test('held-decision explainer renders as a contained neutral control', () => {
+    expect(COACH).toContain('Ionicons name="information-circle-outline" size={14} color={colors.textSecondary}');
+    expect(COACH).toMatch(/heldLearnMore: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(COACH).toContain('heldLearnMoreText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(COACH).not.toMatch(/heldLearnMoreText: \{[\s\S]*textDecorationLine: 'underline'/);
   });
 });
 

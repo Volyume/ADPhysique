@@ -106,7 +106,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
     <View style={styles.header}>
       <View style={styles.headerCopy}>
         <Text style={styles.title}>Compare photo sets</Text>
-        <Text style={styles.subtitle}>Compare two photo sets with their Volyume Score, confidence and matched poses. Not body fat.</Text>
+        <Text style={styles.subtitle}>Compare two photo sets by score, confidence and matched poses.</Text>
       </View>
       <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close photo-set comparison">
         <Ionicons name="close" size={26} color={colors.textPrimary} />
@@ -120,7 +120,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Volyume Score comparison is hidden for now.</Text>
+          <Text style={styles.placeholderText}>Score comparison is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -140,7 +140,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 onPress={() => toggleSelect(scan.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={`Volyume Score from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
+                accessibilityLabel={`Photo score from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
                 style={[styles.scanChip, active && styles.scanChipActive]}
               >
                 <Text style={[styles.scanChipDate, active && styles.scanChipDateActive]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
@@ -164,7 +164,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
             {deltaText ? (
               <View style={styles.deltaBox}>
-                <Text style={styles.deltaLabel}>Why this comparison reads this way</Text>
+                <Text style={styles.deltaLabel}>Why this looks different</Text>
                 <Text style={styles.deltaText}>{deltaText}</Text>
               </View>
             ) : null}

@@ -11,7 +11,7 @@ const scan = {
   deltaExplanation: {
     comparisonStatus: 'comparable',
     summary: 'Volyume Score is down 4 points against the last comparable photo set.',
-    trendSummary: 'Progress Signal is positive against the last comparable photo set.',
+    trendSummary: 'Progress change is positive against the last comparable photo set.',
   },
   trendDirection: 'down',
   stats: { photoCount: 2, weightKg: 82.5, poses: ['front', 'back'] },
@@ -45,33 +45,29 @@ async function render(props = {}) {
 
 describe('ProgressScanHistoryCard', () => {
   test('renders detailed scan copy and callbacks in editable mode', async () => {
-    const onToggleHideExact = jest.fn();
     const onDeleteScan = jest.fn();
     const onOpenPhoto = jest.fn();
-    const tree = await render({ onToggleHideExact, onDeleteScan, onOpenPhoto });
+    const tree = await render({ onDeleteScan, onOpenPhoto });
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Score history');
-    expect(text).toContain('Private Volyume Score trend');
-    expect(text).toContain('Not body fat');
-    expect(text).toContain('Score for this set');
+    expect(text).toContain('Photo results');
+    expect(text).toContain('Like-for-like');
+    expect(text).not.toContain('Score for this set');
     expect(text).not.toContain('Result note');
-    expect(text).toContain('Basis: front/back outline signals plus scan quality. No body fat percentage.');
+    expect(text).not.toContain('Basis: front/back outline signals plus scan quality.');
     expect(text).not.toContain('Why this result');
-    expect(text).toContain('Confidence: Moderate');
-    expect(text).toContain('Leanness band');
+    expect(text).toContain('Read quality: Moderate');
+    expect(text).toContain('Leanness');
     expect(text).toContain('Volyume Score');
     expect(text).toContain('Slight positive trend');
     expect(text).toContain('72/100');
-    expect(text).toContain('Hide score');
+    expect(text).not.toContain('Hide score');
     expect(text).not.toContain('private visual progress score for repeatable photos');
     expect(text).not.toContain('82.5 kg weight snapshot');
 
     const buttons = tree.root.findAllByType(TouchableOpacity);
-    act(() => buttons.find((node) => node.props.accessibilityRole === 'switch').props.onPress());
     act(() => buttons.find((node) => /Delete photo set/.test(node.props.accessibilityLabel)).props.onPress());
     act(() => buttons.find((node) => /Front photo/.test(node.props.accessibilityLabel)).props.onPress());
-    expect(onToggleHideExact).toHaveBeenCalled();
     expect(onDeleteScan).toHaveBeenCalledWith(scan);
     expect(onOpenPhoto).toHaveBeenCalledWith('front.jpg');
   });
@@ -79,16 +75,15 @@ describe('ProgressScanHistoryCard', () => {
   test('hide-exact and suppression remove detailed score and weight copy', async () => {
     const hidden = await render({ hideExact: true });
     const hiddenText = flattenText(hidden.toJSON());
-    expect(hiddenText).toContain('Show score');
-    expect(hiddenText).toContain('Leanness band');
-    expect(hiddenText).toContain('Volyume ScoreHidden');
+    expect(hiddenText).toContain('Leanness');
+    expect(hiddenText).toContain('ScoreHidden');
     expect(hiddenText).not.toContain('72/100');
-    expect(hiddenText).not.toContain('Volyume Score72/100');
+    expect(hiddenText).not.toContain('Score72/100');
     expect(hiddenText).not.toContain('82.5 kg weight snapshot');
 
     const suppressed = await render({ suppressed: true });
     const suppressedText = flattenText(suppressed.toJSON());
-    expect(suppressedText).toContain('Score detail is hidden right now');
+    expect(suppressedText).toContain('Score details are hidden');
     expect(suppressedText).not.toContain('Basis: front/back outline signals');
     expect(suppressedText).not.toContain('82.5 kg weight snapshot');
     expect(suppressedText).not.toContain('Volyume Score is down');
@@ -97,7 +92,7 @@ describe('ProgressScanHistoryCard', () => {
   test('read-only mode hides delete and disables thumbnail opening', async () => {
     const onOpenPhoto = jest.fn();
     const tree = await render({ readOnly: true, onOpenPhoto });
-    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Score history');
+    expect(tree.root.findAllByType(Text).map((node) => node.props.children).join('')).toContain('Photo results');
     expect(tree.root.findAllByType(TouchableOpacity).some((node) => /Delete photo set/.test(node.props.accessibilityLabel))).toBe(false);
     const thumb = tree.root.findAllByType(TouchableOpacity).find((node) => /Front photo/.test(node.props.accessibilityLabel));
     expect(thumb.props.disabled).toBe(true);
@@ -126,9 +121,9 @@ describe('ProgressScanHistoryCard', () => {
       tree = create(<ProgressScanHistoryCard scans={[unscored]} />);
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Confidence: Analysis unavailable');
-    expect(text).toContain('Volyume ScoreNot scored');
-    expect(text).not.toContain('Confidence: Low');
+    expect(text).toContain('Read quality: Analysis unavailable');
+    expect(text).toContain('ScoreNot scored');
+    expect(text).not.toContain('Read quality: Low');
   });
 
   test('measured-only scans are not displayed as baseline scored results', async () => {
@@ -137,7 +132,7 @@ describe('ProgressScanHistoryCard', () => {
       id: 'scan-measured-only',
       analysisStatus: 'measured',
       qualityLabel: 'usable',
-      copySummary: 'The photos were measured as visual scan context, but Volyume did not create a score from this set.',
+      copySummary: 'Measured, but Volyume could not create a score from this set.',
       signals: {
         physiqueAssessment: {
           visualLeannessScore: null,
@@ -151,11 +146,11 @@ describe('ProgressScanHistoryCard', () => {
       tree = create(<ProgressScanHistoryCard scans={[measuredOnly]} />);
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Confidence: Measured only');
-    expect(text).toContain('Leanness bandMeasured only');
-    expect(text).toContain('SignalMeasured only');
-    expect(text).toContain('Volyume ScoreNot scored');
-    expect(text).not.toContain('Leanness bandBaseline');
+    expect(text).toContain('Read quality: Measured only');
+    expect(text).toContain('LeannessMeasured only');
+    expect(text).toContain('ChangeMeasured only');
+    expect(text).toContain('ScoreNot scored');
+    expect(text).not.toContain('LeannessBaseline');
     expect(text).not.toContain('Baseline scan');
   });
 
@@ -178,7 +173,7 @@ describe('ProgressScanHistoryCard', () => {
       tree = create(<ProgressScanHistoryCard scans={[legacyScan]} />);
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Volyume Score71/100');
-    expect(text).not.toContain('Volyume Score37/100');
+    expect(text).toContain('Score71/100');
+    expect(text).not.toContain('Score37/100');
   });
 });

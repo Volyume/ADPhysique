@@ -137,7 +137,7 @@ function winCardClient({ insertError = null, updateError = null } = {}) {
     summary: 'Pull session completed on 6 July 2026.',
     detail: 'Exercises, sets, reps, loads, notes and effort stay private.',
     visible_to_partner: 'Workout name, date and completed status.',
-    remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+    remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless you choose to share them later.',
     created_at: '2026-07-06T10:00:00.000Z',
     updated_at: calls.updated[0]?.updated_at,
     revoked_at: calls.updated[0]?.revoked_at,
@@ -340,7 +340,7 @@ describe('partner win cards', () => {
       summary: 'Pull session completed on 6 July 2026.',
       detail: expect.stringContaining('sets, reps, loads, notes and effort stay private'),
       visible_to_partner: 'Workout name, date and completed status.',
-      remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+      remains_private: 'Exercises, sets, reps, loads, notes and effort stay private unless you choose to share them later.',
     });
     expect(JSON.stringify(c._calls.inserted[0])).not.toContain('90');
   });

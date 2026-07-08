@@ -14,6 +14,9 @@ describe('Eat meal-card polish', () => {
   test('empty meal cards keep one centred add-food CTA without an icon pile', () => {
     expect(MEAL_SECTION).toContain('style={styles.addFoodButton}');
     expect(MEAL_SECTION).toContain('<Text style={styles.addFoodText}>Add food</Text>');
+    expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={colors.textSecondary} />');
+    expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');
     expect(MEAL_SECTION).not.toContain('style={styles.shortcutButton}');
     expect(MEAL_SECTION).not.toContain('accessibilityLabel={`Add saved meal to ${slot.label}`}');
     expect(MEAL_SECTION).not.toContain('accessibilityLabel={`Scan barcode for ${slot.label}`}');
@@ -22,6 +25,7 @@ describe('Eat meal-card polish', () => {
     expect(MEAL_SECTION).not.toContain('<Text style={styles.actionButtonText}>Saved</Text>');
     expect(MEAL_SECTION).not.toContain('<Text style={styles.actionButtonText}>Barcode</Text>');
     expect(MEAL_SECTION).not.toContain('<Text style={styles.actionButtonText}>Quick add</Text>');
+    expect(MEAL_SECTION).not.toContain('addFoodText: { ...type.label, color: colors.onPrimary }');
   });
 
   test('curated meal sheet says it adds to the diary, not Log Meal 4 style copy', () => {

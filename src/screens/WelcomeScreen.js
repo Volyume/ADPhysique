@@ -168,7 +168,9 @@ export default function WelcomeScreen({ navigation }) {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeIn }}>
-          <TouchableOpacity accessibilityRole="button"
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Already have an account? Sign in"
             style={styles.signInLink}
             onPress={() => navigation.navigate('Login')}
             hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
@@ -269,11 +271,20 @@ const styles = StyleSheet.create({
   freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },
 
   signInLink: {
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    minHeight: 44,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   signInText: { fontSize: fontSize.sm, color: colors.textMuted },
-  signInAction: { ...type.label, color: colors.primary },
+  signInAction: { ...type.label, color: colors.textPrimary },
 
 
 });

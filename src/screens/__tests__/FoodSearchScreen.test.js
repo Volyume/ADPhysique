@@ -177,7 +177,7 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
 
   test('does not duplicate the custom-food CTA while already on the custom tab', () => {
     expect(SCREEN_SOURCE).toMatch(/if \(activeTab === 'custom'\) \{/);
-    expect(SCREEN_SOURCE).toMatch(/label: 'New custom food'/);
+    expect(SCREEN_SOURCE).toMatch(/label: 'Add custom food'/);
     expect(SCREEN_SOURCE).toMatch(/activeTab !== 'custom' && query\.trim\(\)\.length >= 2 && results\.length > 0/);
   });
 
@@ -187,6 +187,7 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionTargets'\)/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Set nutrition targets"/);
     expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.emptyActionText\}>Set nutrition targets<\/Text>/);
+    expect(SCREEN_SOURCE).toMatch(/emptyActionText: \{ \.\.\.type\.label, color: colors\.onPrimary \}/);
   });
 
   test('the custom tab labels saved meal surfaces plainly', () => {
@@ -199,6 +200,12 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
   test('suggested empty copy uses meal wording, not internal slot jargon', () => {
     expect(SCREEN_SOURCE).toContain('No suggestions ready for this meal');
     expect(SCREEN_SOURCE).not.toContain('No suggestions ready for this slot');
+  });
+
+  test('custom-food fallback uses a bordered button surface, not an orange text link', () => {
+    expect(SCREEN_SOURCE).toMatch(/style=\{styles\.footerBtn\}/);
+    expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.md[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SCREEN_SOURCE).toMatch(/footerBtnText: \{ \.\.\.type\.bodyStrong, color: colors\.textPrimary \}/);
   });
 });
 

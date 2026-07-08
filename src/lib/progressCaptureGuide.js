@@ -40,7 +40,7 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
-  'If the photo is not clear enough, save it as a progress photo instead of forcing a Volyume Score.';
+  'If a set is not clear enough for a score, it still stays in your photo library.';
 
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
@@ -91,9 +91,9 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Take new photos or import existing ones. Both routes save a dated photo set to your private library.',
-    'Clear front and back photos can receive a Volyume Score, leanness band, progress signal and confidence. It is not a body fat estimate.',
-    'Use the same room, light, distance and camera height each time. Side is optional.',
+    'Add a dated photo set from the camera or your photo library.',
+    'Clear front and back photos can earn a private Volyume Score, leanness band, progress signal and confidence.',
+    'Use the same room, light, distance and camera height each week. Side is optional.',
     QUALITY_FIRST_CAPTURE_NOTE,
   ].join('\n\n');
 }
@@ -115,9 +115,8 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'checkmark-circle-outline',
       eyebrow: 'Latest set',
       title: 'Latest set needs another angle',
-      body: `Keep the latest date together by adding its missing ${missingPoseLabel.toLowerCase()} photo.`,
-      bestFor: 'Adds to the existing date.',
-      actionLabel: `Add missing photo: Add ${missingPoseLabel} photo`,
+      body: `Add the missing ${missingPoseLabel.toLowerCase()} photo to the same date.`,
+      actionLabel: `Add ${missingPoseLabel} photo`,
       recommended: true,
       recommendationLabel: 'Add missing angle',
     });
@@ -129,11 +128,10 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'scan',
       eyebrow: 'New set',
       title: 'Take a new photo set',
-      body: 'Guided front and back photos. Side is optional. Clear sets can receive a Volyume Score.',
-      bestFor: 'For new photos taken today.',
+      body: 'Guided front and back photos, with an optional side photo.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
-      recommendationLabel: 'Best baseline',
+      recommendationLabel: 'Recommended',
       disabled: !canScan,
       disabledReason: 'Sign in to save a photo set.',
     });
@@ -142,8 +140,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'images-outline',
       eyebrow: 'Existing set',
       title: 'Import a photo set',
-      body: 'Choose existing front and back photos, set the real date, and save them to the same library.',
-      bestFor: 'For older photos already on your phone.',
+      body: 'Choose existing front and back photos, then set the date.',
       actionLabel: 'Import photo set',
       disabled: !canScan,
       disabledReason: 'Sign in to save imported photo sets.',
@@ -158,7 +155,6 @@ export function buildProgressStudioCaptureRoutes({
       eyebrow: 'Best next',
       title: `Add ${missingPoseLabel.toLowerCase()} photo`,
       body: `Your latest date is missing the ${missingPoseLabel.toLowerCase()} photo.`,
-      bestFor: 'Adding the missing photo for the same date.',
       steps: Object.freeze([
         `Capture ${missingPoseLabel} relaxed`,
         'Match the same room, distance and camera height',
@@ -176,7 +172,6 @@ export function buildProgressStudioCaptureRoutes({
     eyebrow: 'Guided photo',
     title: 'Guided single photo',
     body: 'Use the guide on screen and the timer to match an older photo.',
-    bestFor: 'Replacing a poor photo or adding one missing pose.',
     steps: Object.freeze([
       'Pick or remember the pose you are matching',
       'Use the timer and previous-photo guide',
@@ -191,7 +186,6 @@ export function buildProgressStudioCaptureRoutes({
     eyebrow: 'Quick capture',
     title: 'Take a quick photo',
     body: 'Take a photo now, then set its date and pose before saving.',
-    bestFor: 'Fast capture when you do not need the overlay.',
     steps: Object.freeze([
       'Set the phone down at mid-torso height',
       'Keep the full body in frame',
@@ -206,7 +200,6 @@ export function buildProgressStudioCaptureRoutes({
     eyebrow: 'Import',
     title: 'Import from photos',
     body: 'Add an existing photo, then set the correct date and pose.',
-    bestFor: 'Adding older photos in the right order.',
     steps: Object.freeze([
       'Choose the clearest full-body photo',
       'Set the real capture date',
@@ -224,9 +217,9 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Volyume Score is our own private visual progress score. It can show a leanness band, progress signal, confidence, and why that confidence changed. It is not a body fat estimate or a rating of your physique.',
-    'If the photo is not clear enough, Volyume should save it as a progress photo instead of guessing.',
-    'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of body fat, hydration, or readiness.',
+    'Volyume Score is our own private visual progress score. It can show a leanness band, progress signal, confidence, and why that confidence changed.',
+    'If a set is not clear enough for a score, Volyume should still save it to the photo library.',
+    'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of readiness or a reason to make aggressive changes.',
     'Use progress photos about once a week. Retake sooner only when you are fixing a poor photo set.',
   ].join('\n\n');
 }

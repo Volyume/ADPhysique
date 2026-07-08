@@ -179,7 +179,7 @@ function allTexts(tree) {
 }
 
 async function openImportScanDateStep(tree) {
-  await pressLabel(tree, 'Add photo set');
+  await pressLabel(tree, 'Add photos');
   await flush();
   await pressLabel(tree, 'Import photo set');
 }
@@ -205,17 +205,17 @@ beforeEach(() => jest.clearAllMocks());
 test('add photos sheet presents guided capture and import as the two scan paths', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Add photo set');
+  await pressLabel(tree, 'Add photos');
 
   expect(mockAppAlert).not.toHaveBeenCalled();
   const copy = allTexts(tree).join(' ');
-  expect(copy).toContain('Add photo set');
-  expect(copy).toContain('Take new photos or import existing ones.');
-  expect(copy).toContain('same private library');
+  expect(copy).toContain('Add photos');
+  expect(copy).toContain('Add a new set from the camera or your photo library.');
+  expect(copy).toContain('Clear front and back photos can be scored.');
   expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
-  expect(copy).toContain('For new photos taken today.');
-  expect(copy).toContain('For older photos already on your phone.');
+  expect(copy).not.toContain('For new photos taken today.');
+  expect(copy).not.toContain('For older photos already on your phone.');
   expect(copy).not.toContain('Choose the front relaxed photo');
   expect(hasPressableLabel(tree, 'Start photo set')).toBe(true);
   expect(hasPressableLabel(tree, 'Import photo set')).toBe(true);
@@ -262,7 +262,7 @@ test('confirming the photo set date imports the first photo into the scan pipeli
 test('camera scan captures show the photo preview before analysis runs', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Add photo set');
+  await pressLabel(tree, 'Add photos');
   await flush();
   await pressLabel(tree, 'Start photo set');
   await flush();
@@ -294,7 +294,7 @@ test('camera scan captures show the photo preview before analysis runs', async (
 test('rapid route taps only start one guided photo set', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
-  await pressLabel(tree, 'Add photo set');
+  await pressLabel(tree, 'Add photos');
   await flush();
   const start = tree.root.findAll(
     (n) => n.props?.accessibilityLabel === 'Start photo set' && typeof n.props.onPress === 'function',
@@ -319,7 +319,7 @@ test('retake warning save action cannot insert the same scan asset twice', async
     resolveAsset = () => resolve({ id: 'asset-1' });
   }));
   const tree = await render();
-  await pressLabel(tree, 'Add photo set');
+  await pressLabel(tree, 'Add photos');
   await flush();
   await pressLabel(tree, 'Start photo set');
   await flush();

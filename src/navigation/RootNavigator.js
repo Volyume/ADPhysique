@@ -12,7 +12,7 @@ const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, resolvedTheme, motion } from '../styles/theme';
+import { colors, spacing, resolvedTheme, motion, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -1549,10 +1549,8 @@ const splashStyles = StyleSheet.create({
     marginTop: spacing.md,
   },
   tagline: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textMuted,
-    letterSpacing: 0.4,
-    fontWeight: fontWeight.regular,
     textAlign: 'center',
     marginTop: spacing.md,
   },

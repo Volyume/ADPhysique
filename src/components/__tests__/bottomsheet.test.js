@@ -66,8 +66,13 @@ describe('BottomSheet', () => {
       );
     });
     const scroll = tree.root.findByProps({ keyboardShouldPersistTaps: 'handled' });
-    expect(scroll.props.style).toMatchObject({ alignSelf: 'stretch', maxHeight: '100%' });
-    expect(scroll.props.style).not.toHaveProperty('flex');
+    const scrollStyle = Array.isArray(scroll.props.style)
+      ? Object.assign({}, ...scroll.props.style)
+      : scroll.props.style;
+    expect(scrollStyle.alignSelf).toBe('stretch');
+    expect(scrollStyle.flexShrink).toBe(1);
+    expect(typeof scrollStyle.maxHeight).toBe('number');
+    expect(scrollStyle).not.toHaveProperty('flex');
     expect(scroll.props.nestedScrollEnabled).toBe(true);
     expect(scroll.props.showsVerticalScrollIndicator).toBe(true);
     expect(JSON.stringify(tree.toJSON())).toContain('Long sheet body');

@@ -113,7 +113,7 @@ function cheerFailureMessage(error) {
   if (error === 'offline') {
     return 'Volyume could not reach Partners just now. Try again when your connection is back.';
   }
-  return 'Could not send that cheer. Open Partners again and try once more.';
+  return 'Could not send that cheer. Refresh Partners, then try once more.';
 }
 
 function partnerWinFailureMessage(error, action = 'share') {
@@ -133,8 +133,8 @@ function partnerWinFailureMessage(error, action = 'share') {
     return 'Volyume could not reach Partners just now. Try again when your connection is back.';
   }
   return action === 'delete'
-    ? 'Could not delete that win right now. Open Partners again and try once more.'
-    : 'Could not share that win right now. Open Partners again and try once more.';
+    ? 'Could not delete that win right now. Refresh Partners, then try once more.'
+    : 'Could not share that win right now. Refresh Partners, then try once more.';
 }
 
 // ── Small motion helpers (Reanimated, reduce-motion aware) ──
@@ -208,20 +208,20 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Shared block label',
-      copy: `${block.blockName} is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.`,
+      title: 'Shared training phase',
+      copy: `${block.blockName} is shared as a phase name only. Workouts, exercises, loads, notes and Coach changes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
     return {
-      title: 'Block name sent',
-      copy: `Waiting for ${name}. Only the name would be visible. Nothing changes in either plan.`,
+      title: 'Phase name sent',
+      copy: `Waiting for ${name}. Only the phase name would be visible. Nothing changes in either plan.`,
     };
   }
   if (block.status === 'proposed') {
     return {
-      title: 'Block name suggested',
-      copy: `${name} suggested ${block.blockName}. Accepting shares the name only; it will not change either plan.`,
+      title: 'Phase name suggested',
+      copy: `${name} suggested ${block.blockName}. Accepting shares the phase name only; it will not change either plan.`,
     };
   }
   return null;
@@ -236,7 +236,6 @@ function PartnerGuidedWeekCard({
   const actionIcon = action?.key === 'cheer'
     ? 'hand-left-outline'
     : 'trophy-outline';
-  const steps = (supportPlan.steps || []).slice(0, 3);
   function pressAction() {
     if (action?.key === 'cheer') onCheer(pair);
     else onShareWins(pair);
@@ -245,7 +244,7 @@ function PartnerGuidedWeekCard({
     <View style={styles.supportPlanCard}>
       <View style={styles.supportPlanHead}>
         <View style={styles.supportPlanTitleRow}>
-          <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+          <Ionicons name="eye-outline" size={iconSize.sm} color={colors.textSecondary} />
           <Text style={styles.supportPlanTitle}>{supportPlan.title}</Text>
         </View>
         <Text style={styles.supportPlanHeadline}>{supportPlan.headline}</Text>
@@ -262,15 +261,6 @@ function PartnerGuidedWeekCard({
           <Text style={styles.supportPlanActionText}>{action.label}</Text>
         </TouchableOpacity>
       ) : null}
-      <View style={styles.supportPlanSteps}>
-        {steps.map((step) => (
-          <View key={step.key} style={styles.supportPlanStep}>
-            <Text style={styles.supportPlanStepLabel}>{step.label}</Text>
-            <Text style={styles.supportPlanStepState}>{step.state}</Text>
-            <Text style={styles.supportPlanStepCopy} numberOfLines={2}>{step.copy}</Text>
-          </View>
-        ))}
-      </View>
       <Text style={styles.supportPlanPrivacy}>{supportPlan.privacyLine}</Text>
     </View>
   );
@@ -331,7 +321,7 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Delete shared win ${card.title}`}
                 >
-                  <Ionicons name="trash-outline" size={iconSize.sm} color={colors.primary} />
+                  <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
                   <Text style={styles.partnerWinDelete}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
@@ -358,7 +348,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
         accessibilityRole="button"
         accessibilityLabel="Start a new run together"
       >
-        <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
+        <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.textSecondary} />
         <Text style={styles.reconnectText}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -382,7 +372,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       style={styles.blockStatusCard}
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`Block name sharing, ${status.title}`}
+      accessibilityLabel={`Training phase sharing, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
@@ -391,8 +381,8 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-        <Text style={styles.blockStatusActionText}>Manage label</Text>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+        <Text style={styles.blockStatusActionText}>Sharing settings</Text>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
       </View>
     </TouchableOpacity>
   );
@@ -408,8 +398,8 @@ function LocalReadNotice({ onRefresh }) {
     >
       <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
       <View style={styles.localReadNoticeCopy}>
-        <Text style={styles.localReadNoticeTitle}>Refreshing partner data</Text>
-        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to check the cloud copy again.</Text>
+        <Text style={styles.localReadNoticeTitle}>Refresh partner data</Text>
+        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh the cloud copy.</Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
     </TouchableOpacity>
@@ -586,7 +576,9 @@ export default function PartnerScreen({ route }) {
   const incomingShareWinType = route?.params?.shareWinType;
   const incomingShareWinPayload = route?.params?.shareWinPayload;
   const incomingProgressCardPayload = route?.params?.progressCardSharePayload;
-  const hasIncomingShareIntent = !!(incomingShareWinType || incomingProgressCardPayload);
+  const incomingShareType = incomingShareWinType || (incomingProgressCardPayload ? 'progress_card' : null);
+  const incomingSharePairId = route?.params?.pairId || route?.params?.partnerPairId || null;
+  const hasIncomingShareIntent = !!incomingShareType;
   const incomingCode = route?.params?.code ? parseInviteCode(route.params.code) : null;
   const handledCodeRef = useRef(null);
   const shareWinsRouteHandledRef = useRef(null);
@@ -676,11 +668,15 @@ export default function PartnerScreen({ route }) {
   }, [redeemSyncing, retryPartners]);
 
   useEffect(() => {
-    if (!incomingShareWinType || p.loading) return;
-    const firstPair = (p.pairs || [])[0];
-    if (!firstPair) return;
+    if (!incomingShareType || p.loading) return;
+    const pairsForShare = p.pairs || [];
+    const targetPair = incomingSharePairId
+      ? pairsForShare.find((pair) => pair.id === incomingSharePairId)
+      : (pairsForShare.length === 1 ? pairsForShare[0] : null);
+    if (!targetPair) return;
     const marker = [
-      incomingShareWinType,
+      targetPair.id,
+      incomingShareType,
       incomingShareWinPayload?.workoutName || incomingShareWinPayload?.liftName || incomingShareWinPayload?.recordLabel || '',
       incomingProgressCardPayload?.dateRange || '',
       incomingProgressCardPayload?.format || '',
@@ -690,8 +686,8 @@ export default function PartnerScreen({ route }) {
     ].join('|');
     if (shareWinsRouteHandledRef.current === marker) return;
     shareWinsRouteHandledRef.current = marker;
-    setShareWinsPair(firstPair);
-  }, [incomingShareWinType, incomingShareWinPayload, incomingProgressCardPayload, p.loading, p.pairs]);
+    setShareWinsPair(targetPair);
+  }, [incomingShareType, incomingShareWinPayload, incomingProgressCardPayload, incomingSharePairId, p.loading, p.pairs]);
 
   // ── Invite journey ──
   function openJourney() {
@@ -713,7 +709,7 @@ export default function PartnerScreen({ route }) {
     setMinting(false);
     if (!r.ok) {
       logError('PartnerScreen.agreeAndMint', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not create an invite right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not create an invite right now. Refresh Partners, then try once more.', { variant: 'error' });
       return;
     }
     setMintedInvite(r.data);
@@ -760,7 +756,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.invite();
     if (!r.ok || !r.data?.shareMessage) {
       logError('PartnerScreen.sharePendingInvite', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share the invite right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not share the invite right now. Refresh Partners, then try once more.', { variant: 'error' });
       return;
     }
     try { await Share.share({ message: r.data.shareMessage }); } catch (_) { /* user dismissed */ }
@@ -872,7 +868,7 @@ export default function PartnerScreen({ route }) {
           if (r?.ok) toast.show('Partnership ended', { variant: 'success' });
           else {
             logError('PartnerScreen.confirmUnpair', new Error(r?.error || 'unknown'), { userId: user?.id });
-            toast.show('Could not end the partnership right now. Open Partners again and try once more.', { variant: 'error' });
+            toast.show('Could not end the partnership right now. Refresh Partners, then try once more.', { variant: 'error' });
           }
         },
       },
@@ -890,7 +886,7 @@ export default function PartnerScreen({ route }) {
           if (r?.ok) toast.show('Invitation cancelled', { variant: 'success' });
           else {
             logError('PartnerScreen.confirmCancelInvite', new Error(r?.error || 'unknown'), { userId: user?.id });
-            toast.show('Could not cancel the invitation right now. Open Partners again and try once more.', { variant: 'error' });
+            toast.show('Could not cancel the invitation right now. Refresh Partners, then try once more.', { variant: 'error' });
           }
         },
       },
@@ -911,7 +907,7 @@ export default function PartnerScreen({ route }) {
             const b = await p.block(pair.partnerId);
             if (!b?.ok) {
               logError('PartnerScreen.block', new Error(b?.error || 'unknown'), { userId: user?.id });
-              toast.show('Could not block right now. Open Partners again and try once more.', { variant: 'error' });
+              toast.show('Could not block right now. Refresh Partners, then try once more.', { variant: 'error' });
               return;
             }
             const r = await p.unpair(pair.id);
@@ -944,7 +940,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.proposeBlock(pair.id, name);
     if (!r.ok) {
       logError('PartnerScreen.proposeBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share the block name right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not share the phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
   async function adoptBlock(pair) {
@@ -952,7 +948,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.adoptBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.adoptBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share that block name right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not share that phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
   async function leaveBlock(pair) {
@@ -960,7 +956,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.leaveBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.leaveBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not update that block name right now. Open Partners again and try once more.', { variant: 'error' });
+      toast.show('Could not update that phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
 
@@ -1005,6 +1001,18 @@ export default function PartnerScreen({ route }) {
 
         {connected ? (
           <>
+            {hasIncomingShareIntent && pairs.length > 1 && !incomingSharePairId ? (
+              <Card style={styles.incomingShareNotice}>
+                <View style={styles.incomingShareNoticeHead}>
+                  <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
+                  <Text style={styles.incomingShareNoticeTitle}>Choose who receives it</Text>
+                </View>
+                <Text style={styles.incomingShareNoticeText}>
+                  Nothing has been sent. Pick Share a win under the right partner and approve the preview first.
+                </Text>
+              </Card>
+            ) : null}
+
             {pairs.map((pair) => (
               <PairCard
                 key={pair.id}
@@ -1045,7 +1053,7 @@ export default function PartnerScreen({ route }) {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="people-outline" size={iconSize.xl} color={colors.primary} />
             </View>
-            <Text style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this' : 'Train with a partner'}</Text>
+            <Text style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
             <Text style={styles.emptyBody}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.'
@@ -1056,10 +1064,10 @@ export default function PartnerScreen({ route }) {
               <Card style={styles.incomingShareNotice}>
                 <View style={styles.incomingShareNoticeHead}>
                   <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.incomingShareNoticeTitle}>Your card stays private</Text>
+                  <Text style={styles.incomingShareNoticeTitle}>Your update stays private</Text>
                 </View>
                 <Text style={styles.incomingShareNoticeText}>
-                  Invite your partner first. Once they accept, you can choose exactly which card to send.
+                  Invite your partner first. Once they accept, you can choose exactly which update to send.
                 </Text>
               </Card>
             ) : null}
@@ -1079,7 +1087,7 @@ export default function PartnerScreen({ route }) {
               fullWidth
               style={styles.secondaryFullButton}
               onPress={() => setCodeEntryOpen((v) => !v)}
-              accessibilityLabel="I have a code"
+              accessibilityLabel={codeEntryOpen ? 'Hide code entry' : 'I have a code'}
             />
 
             {codeEntryOpen ? (
@@ -1139,7 +1147,6 @@ export default function PartnerScreen({ route }) {
               ))}
             </Card>
 
-            <PartnerPrivacyReceipt />
           </View>
         )}
       </ScrollView>
@@ -1177,7 +1184,13 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Shared-block sheet ── */}
-      <BottomSheet visible={!!blockSheetPair} onClose={closeBlockSheet} accessibilityLabel="Block name sharing" scroll>
+      <BottomSheet
+        visible={!!blockSheetPair}
+        onClose={closeBlockSheet}
+        accessibilityLabel="Training phase sharing"
+        scroll
+        sheetStyle={styles.partnerActionSheet}
+      >
         {blockSheetPair ? (
           <BlockSheetBody
             pair={blockSheetPair}
@@ -1191,17 +1204,29 @@ export default function PartnerScreen({ route }) {
       </BottomSheet>
 
       {/* ── Acknowledgement picker (D5-B1) ── */}
-      <BottomSheet visible={!!ackSheetPair} onClose={() => setAckSheetPair(null)} accessibilityLabel="Send a cheer" scroll>
+      <BottomSheet
+        visible={!!ackSheetPair}
+        onClose={() => setAckSheetPair(null)}
+        accessibilityLabel="Send a cheer"
+        scroll
+        sheetStyle={styles.partnerActionSheet}
+      >
         {ackSheetPair ? (
           <AckSheetBody pair={ackSheetPair} onSend={handleSendAck} sendingKey={ackSendingKey} />
         ) : null}
       </BottomSheet>
 
-      <BottomSheet visible={!!shareWinsPair} onClose={() => setShareWinsPair(null)} accessibilityLabel="Choose a win to share" scroll>
+      <BottomSheet
+        visible={!!shareWinsPair}
+        onClose={() => setShareWinsPair(null)}
+        accessibilityLabel="Choose a win to share"
+        scroll
+        sheetStyle={styles.partnerActionSheet}
+      >
         {shareWinsPair ? (
           <ShareWinsSheetBody
             pair={shareWinsPair}
-            initialType={route?.params?.shareWinType}
+            initialType={incomingShareType}
             shareWinPayload={route?.params?.shareWinPayload}
             progressCardPayload={route?.params?.progressCardSharePayload}
             onSend={(preview) => handleSendWin(shareWinsPair, preview)}
@@ -1272,7 +1297,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
-          Choose one update. Volyume shows the exact preview before {partnerName} sees it.
+          Pick one update, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
       <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
@@ -1316,7 +1341,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
             accessibilityRole="button"
             accessibilityLabel={privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
           >
-            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
+            <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.textSecondary} />
             <Text style={styles.shareWinPrivacyToggleText}>
               {privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
             </Text>
@@ -1522,7 +1547,7 @@ function ChannelButton({ icon, label, onPress, primary = false }) {
       accessibilityRole="button"
       accessibilityLabel={`Send by ${label}`}
     >
-      <Ionicons name={icon} size={iconSize.md} color={primary ? colors.onPrimary : colors.primary} />
+      <Ionicons name={icon} size={iconSize.md} color={primary ? colors.onPrimary : colors.textSecondary} />
       <Text style={[styles.channelBtnText, primary && styles.channelBtnTextPrimary]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -1535,9 +1560,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Shared block label</Text>
-        <Text style={styles.blockPitch}>Only the block name is shared. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
-        <SheetRow icon="exit-outline" label="Stop sharing this block name" onPress={() => onLeave(pair)} />
+        <Text style={styles.sheetHeading}>Shared training phase</Text>
+        <Text style={styles.blockPitch}>Your partner can see the phase name only. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
+        <SheetRow icon="exit-outline" label="Stop sharing this phase name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1545,9 +1570,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Block name sent</Text>
-        <Text style={styles.blockPitch}>You sent {block.blockName} as a shared name only. Waiting for {name}.</Text>
-        <SheetRow icon="close-circle-outline" label="Withdraw block name" onPress={() => onLeave(pair)} />
+        <Text style={styles.sheetHeading}>Phase name sent</Text>
+        <Text style={styles.blockPitch}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
+        <SheetRow icon="close-circle-outline" label="Withdraw phase name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1555,9 +1580,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Block name suggested</Text>
-        <Text style={styles.blockPitch}>{name} suggested {block.blockName} as a shared name only. Accepting will not change either plan.</Text>
-        <SheetRow icon="checkmark-circle-outline" label="Share this block name" onPress={() => onAdopt(pair)} />
+        <Text style={styles.sheetHeading}>Phase name suggested</Text>
+        <Text style={styles.blockPitch}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
+        <SheetRow icon="checkmark-circle-outline" label="Share this phase name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1566,9 +1591,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a block name</Text>
+      <Text style={styles.sheetHeading}>Share phase name</Text>
       <Text style={styles.blockPitch}>
-        Choose the block name to show {name}. It does not share workouts, loads or Coach changes.
+        Choose the phase name to show {name}. This does not share workouts, loads or Coach changes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
@@ -1584,7 +1609,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           />
         ))
       )}
-      <Text style={styles.blockFooter}>You can stop sharing the name at any time.</Text>
+      <Text style={styles.blockFooter}>You can stop sharing the phase name at any time.</Text>
     </View>
   );
 }
@@ -1602,7 +1627,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
     backgroundColor: colors.surface,
     padding: spacing.md,
   },
@@ -1699,22 +1724,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   supportPlanActionText: { ...type.label, color: colors.onPrimary },
-  supportPlanSteps: {
-    gap: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.sm,
-  },
-  supportPlanStep: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  supportPlanStepLabel: { ...type.caption, color: colors.textSecondary, width: 62 },
-  supportPlanStepState: { ...type.label, color: colors.textPrimary, width: 58 },
-  supportPlanStepCopy: { ...type.caption, color: colors.textMuted, lineHeight: 17, flex: 1 },
-  supportPlanPrivacy: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
+  supportPlanPrivacy: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   shareWinsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1758,11 +1768,11 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: withAlpha(colors.error, alpha.edge),
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
   },
-  partnerWinDelete: { ...type.label, color: colors.primary },
+  partnerWinDelete: { ...type.label, color: colors.error },
   partnerWinTitle: { ...type.label, color: colors.textPrimary },
   partnerWinSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
   partnerWinDetail: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
@@ -1778,7 +1788,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   reconnectMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  reconnectText: { ...type.body, color: colors.primary, flexShrink: 1 },
+  reconnectText: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
   reconnectDismiss: { paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
   reconnectDismissText: { ...type.label, color: colors.textSecondary },
 
@@ -1873,8 +1883,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
   },
-  shareWinPrivacyToggleText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold, flex: 1 },
+  shareWinPrivacyToggleText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold, flex: 1 },
   shareWinPrivacyPanel: {
     gap: spacing.xxs,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -1894,7 +1909,7 @@ const styles = StyleSheet.create({
   shareWinExampleTitle: { ...type.label, color: colors.textPrimary },
   shareWinExampleSummary: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20 },
   shareWinExampleDetail: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
-  shareWinExampleConsent: { ...type.caption, color: colors.primary, lineHeight: 18 },
+  shareWinExampleConsent: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   shareWinFooter: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
 
   // Moment card
@@ -1924,9 +1939,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
-    minHeight: 36,
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
   },
-  blockStatusActionText: { ...type.label, color: colors.primary },
+  blockStatusActionText: { ...type.label, color: colors.textPrimary },
 
   // Cheer pill
   cheerWrap: { alignSelf: 'flex-start' },
@@ -2058,6 +2078,7 @@ const styles = StyleSheet.create({
   primaryBtnText: { ...type.label, color: colors.onPrimary },
 
   // ── Sheets ──
+  partnerActionSheet: { minHeight: 520, height: '76%' },
   sheetBody: { gap: spacing.xs },
   sheetHeading: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   sheetRow: {
@@ -2109,8 +2130,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.border,
     borderRadius: radius.md,
+    backgroundColor: colors.surface2,
     paddingVertical: spacing.md,
     minHeight: 48,
   },
@@ -2118,7 +2140,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     borderColor: colors.primaryFill,
   },
-  channelBtnText: { ...type.label, color: colors.primary },
+  channelBtnText: { ...type.label, color: colors.textPrimary },
   channelBtnTextPrimary: { color: colors.onPrimary },
   moreOptions: {
     flexDirection: 'row',

@@ -8,13 +8,13 @@ const SOURCE = fs.readFileSync(
 
 describe('ProOnboardingScreen premium polish guards', () => {
   test('final setup copy stays plain, British and rule-based', () => {
-    expect(SOURCE).toContain('rule-based coaching system');
+    expect(SOURCE).toContain('Volyume uses your morning weigh-ins and weekly check-in to shape coaching.');
     expect(SOURCE).toContain('Recovery affects your plan volume. Reminders keep coaching consistent.');
   });
 
-  test('optional body composition points users towards Volyume Score, not body fat guessing', () => {
-    expect(SOURCE).toContain('Volyume Score for progress');
-    expect(SOURCE).toContain('without asking you to estimate exact body fat');
+  test('optional body composition points users towards Volyume Score without guessing', () => {
+    expect(SOURCE).toContain('Progress Photos can track physique change later with your Volyume Score.');
+    expect(SOURCE).toContain('Use a measured value if you have one. If not, leave it blank. Do not guess it.');
     expect(SOURCE).toContain('const BODY_FAT_SOURCE_OPTIONS = [');
     expect(SOURCE).not.toContain("{ label: 'Visual', value: 'visual' }");
   });
@@ -34,9 +34,15 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('Choose your recovery rating to finish setup.');
   });
 
+  test('plan-generation failure copy points to the current Today flow', () => {
+    expect(SOURCE).toContain('Open Today and choose "Start with a plan" to retry.');
+    expect(SOURCE).not.toContain('Open Home and tap "Build my plan" to retry.');
+  });
+
   test('coaching reminders are required timing choices, not break-the-loop toggles', () => {
     expect(SOURCE).toContain('Pick a morning time and weekly check-in day.');
-    expect(SOURCE).toContain('Settings &gt; Coaching reminders');
+    expect(SOURCE).toContain('your coaching reminder settings');
+    expect(SOURCE).not.toContain('Settings &gt; Coaching reminders');
     expect(SOURCE).toContain('morningEnabled: true');
     expect(SOURCE).toContain('checkinEnabled: true');
     expect(SOURCE).toContain('styles.requiredPill');

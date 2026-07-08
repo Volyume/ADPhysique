@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 
 /**
  * Shared empty-state component used across screens.
@@ -48,11 +48,13 @@ export default function EmptyState({
         </TouchableOpacity>
       )}
 
-      <Ionicons
-        name={icon}
-        size={compact ? 32 : 40}
-        color={ghost ? colors.surface3 : colors.primary}
-      />
+      <View style={[styles.iconWrap, compact && styles.iconWrapCompact, ghost && styles.iconWrapGhost]}>
+        <Ionicons
+          name={icon}
+          size={compact ? 24 : 28}
+          color={ghost ? colors.textMuted : colors.primary}
+        />
+      </View>
 
       {!!title && (
         <Text style={[styles.title, ghost && styles.titleGhost]}>{title}</Text>
@@ -81,10 +83,10 @@ export default function EmptyState({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing.xxl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     alignItems: 'center',
     gap: spacing.md,
   },
@@ -92,20 +94,34 @@ const styles = StyleSheet.create({
   cardGhost: {
     backgroundColor: 'transparent',
     borderStyle: 'dashed',
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     opacity: 0.75,
   },
   dismiss: { position: 'absolute', top: spacing.md, right: spacing.md, padding: spacing.xxs },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+  },
+  iconWrapCompact: { width: 44, height: 44 },
+  iconWrapGhost: {
+    backgroundColor: colors.surface2,
+    borderColor: colors.borderSubtle,
+  },
   title: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
+    ...type.title,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   titleGhost: { color: colors.textMuted },
   text: {
     ...type.bodySm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs, flexWrap: 'wrap', justifyContent: 'center' },

@@ -18,7 +18,6 @@ export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet.';
 export default function EmptyDiary({
   onAdd,
   onCopyYesterday,
-  onSuggested,
   onPlanDay,
   addLabel = 'Add food',
   addAccessibilityLabel = 'Add food',
@@ -36,7 +35,7 @@ export default function EmptyDiary({
           accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"
         >
           <View style={styles.planIcon}>
-            <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+            <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
           </View>
           <View style={styles.planCopy}>
             <Text style={styles.planTitle}>Build meals</Text>
@@ -65,20 +64,6 @@ export default function EmptyDiary({
             icon="copy-outline"
             onPress={onCopyYesterday}
             accessibilityLabel="Copy yesterday's entries"
-            fullWidth={false}
-            style={styles.actionButton}
-          />
-        ) : onSuggested ? (
-          // A3 (first-week trust): a day-0 diary has no yesterday to copy, so
-          // "Copy yesterday" would be a dead tap. Point at a suggested meal
-          // instead, the one action that works with zero history.
-          <Button
-            title="Try a suggested meal"
-            variant="secondary"
-            size="sm"
-            icon="bulb-outline"
-            onPress={onSuggested}
-            accessibilityLabel="Try a suggested meal"
             fullWidth={false}
             style={styles.actionButton}
           />
@@ -129,11 +114,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
     flexShrink: 0,
   },
   planCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
-  planTitle: { ...type.label, color: colors.primary },
+  planTitle: { ...type.label, color: colors.textPrimary },
   planText: { ...type.caption, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
   actionButton: { minHeight: 44 },
 });

@@ -245,13 +245,12 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(dateText).toBeTruthy();
   });
 
-  test('partial progress photo cards show setup quality and can add the next missing pose', async () => {
+  test('partial progress photo cards stay compact and can add the next missing pose', async () => {
     const tree = await render([NEW]);
     const card = checkInFor(tree, NEW);
-    const quality = findElement(card, (n) => n.props && n.props.children === 'Partial setup');
     const complete = findElement(card, (n) => n.props?.accessibilityLabel === 'Add a Front photo for this date');
 
-    expect(quality).toBeTruthy();
+    expect(JSON.stringify(card)).not.toContain('Partial setup');
     expect(complete).toBeTruthy();
     await act(async () => { complete.props.onPress(); });
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
@@ -261,7 +260,8 @@ describe('ProgressPhotosScreen timeline', () => {
   test('partial-set prompt guides the user to add a missing pose to the latest photo set', async () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Partial setup');
+    expect(text).not.toContain('Partial setup');
+    expect(text).toContain('0/3 poses');
     expect(text).toContain('Add front photo');
     await press(tree, 'Add a Front photo for this date');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);
@@ -272,14 +272,13 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Private by default');
-    expect(text).toContain('Nothing is shared or exported unless you choose it.');
-    expect(text).toContain('private Volyume Score for weekly comparison');
+    expect(text).toContain('Private unless you choose to share or export.');
+    expect(text).toContain('Clear sets can be scored and compared over time.');
     expect(text).not.toContain('Latest result');
     expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');
-    expect(text).toContain('Add photo set');
-    expect(text).toContain('Start with front and back photos.');
+    expect(text).toContain('Add photos');
+    expect(text).toContain('Add front and back photos to start your private photo record.');
     expect(text).not.toContain('Suggested next step');
   });
 });
@@ -356,6 +355,17 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
     expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('viewer Compare opens the compare surface seeded from the current photo', async () => {
+    const tree = await render();
+    await pressCheckIn(tree, MID);
+    const viewer = hostNode(tree, 'ProgressPhotoViewer');
+    await act(async () => { viewer.props.onCompareFrom(MID.name); });
+    const compare = hostNode(tree, 'ProgressPhotoCompare');
+    expect(compare).toBeDefined();
+    expect(compare.props.initialName).toBe(MID.name);
+    expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
   test('viewer onDelete removes the file AND its meta, then refreshes (live-tier checked)', async () => {
@@ -482,7 +492,7 @@ describe('ProgressPhotosScreen compare entry', () => {
     const tree = await render([late, early], { scans });
     const cardText = JSON.stringify(checkInFor(tree, late));
 
-    expect(cardText).toContain('"children":"Volyume Score"');
+    expect(cardText).toContain('"children":"Score"');
     expect(cardText).toContain('"children":"88/100"');
     expect(cardText).not.toContain('"children":"22/100"');
   });
@@ -512,7 +522,7 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
   test('under suppression the Compare and Share entries are withheld (fail-closed double guard)', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: true });
     expect(findPressable(tree, 'Compare two photo sets')).toBeUndefined();
-    expect(findPressable(tree, 'Share progress')).toBeUndefined();
+    expect(findPressable(tree, 'Share photos')).toBeUndefined();
     // Viewing the dated timeline stays available.
     expect(flashList(tree).props.data.length).toBeGreaterThan(0);
   });
@@ -520,16 +530,16 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
   test('not suppressed and Pro: both Compare and Share are offered', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
     expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
-    expect(findPressable(tree, 'Share progress')).toBeDefined();
+    expect(findPressable(tree, 'Share photos')).toBeDefined();
   });
 
   test('share sheet can preview the progress card with Partners', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
-    await press(tree, 'Share progress');
+    await press(tree, 'Share photos');
     const sheet = hostNode(tree, 'BeforeAfterShareSheet');
     expect(sheet.props.onPreviewForPartner).toEqual(expect.any(Function));
     const progressCardSharePayload = {
-      label: 'Progress Photos card',
+      label: 'Progress photo image',
       dateRange: '5 Jan 2026 to 20 Jun 2026',
       format: 'Square',
       includesWeight: false,
@@ -545,7 +555,7 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
 
   test('Share is Pro-gated: never offered on the free plan even when unsuppressed', async () => {
     const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'free' });
-    expect(findPressable(tree, 'Share progress')).toBeUndefined();
+    expect(findPressable(tree, 'Share photos')).toBeUndefined();
   });
 });
 
@@ -553,7 +563,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Private by default');
+    expect(text).toContain('Private unless you choose to share or export.');
     expect(text).not.toContain('Latest result');
     expect(findPressable(tree, 'Compare two photo sets')).toBeUndefined();
   });
@@ -561,8 +571,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Private by default');
-    expect(text).toContain('Nothing is shared or exported unless you choose it.');
+    expect(text).toContain('Private unless you choose to share or export.');
     expect(text).not.toContain('Not synced, not shared');
   });
 });
@@ -573,7 +582,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
 describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('free tier hides the add button and says the state plainly', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Add photo set')).toBeUndefined();
+    expect(findPressable(tree, 'Add photos')).toBeUndefined();
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
@@ -596,7 +605,7 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
 
   test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
-    expect(findPressable(tree, 'Add photo set')).toBeDefined();
+    expect(findPressable(tree, 'Add photos')).toBeDefined();
     await pressCheckIn(tree, NEW);
     expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });

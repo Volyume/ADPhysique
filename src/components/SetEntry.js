@@ -6,6 +6,7 @@ import { calculate1RM } from '../lib/algorithms';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { workoutLoggerSize } from '../styles/layout';
 
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs2,
   },
   fieldLabelRow: {
-    width: 90,
+    width: workoutLoggerSize.setEntryLabelWidth,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
-    width: 86,
+    width: workoutLoggerSize.setEntryLabelWidth,
     flexShrink: 0,
     gap: 1,
   },
@@ -439,8 +440,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stepBtn: {
-    width: 36,
-    height: 36,
+    width: workoutLoggerSize.setEntryStepperButton,
+    height: workoutLoggerSize.setEntryStepperButton,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface3,

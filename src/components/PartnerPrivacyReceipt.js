@@ -27,7 +27,7 @@ const CROSSES = [
   'Your shared streak in weeks',
   'Rest weeks shown as resting',
   'One fixed cheer a day',
-  'A block name you choose to share',
+  'A training phase name you choose to share',
 ];
 const NEVER = [
   'Your sets, reps or loads',
@@ -78,7 +78,7 @@ export default function PartnerPrivacyReceipt() {
       </View>
 
       <Text style={styles.footer}>
-        Either of you can end this at any time. Shared partner data is deleted.
+        Either of you can end this at any time.
       </Text>
     </>
   );

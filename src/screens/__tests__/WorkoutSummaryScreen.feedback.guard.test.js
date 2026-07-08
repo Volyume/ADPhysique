@@ -18,6 +18,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>');
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
+    expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);
+    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108/);
+    expect(SOURCE).not.toMatch(/shareFooterBtn: \{\s*flex: 1,/);
     expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
     expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);
   });
@@ -39,5 +42,20 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('function RevealSection({ children })');
     expect(SOURCE).toContain('return <View>{children}</View>;');
     expect(revealSource).not.toContain('Animated.timing');
+  });
+
+  test('keeps optional explanation and calm recap actions neutral, not cheap amber links', () => {
+    const whyToggleStyle = SOURCE.match(/volumeWhyToggle: \{[\s\S]*?\n  \},/)?.[0] || '';
+    const whyToggleTextStyle = SOURCE.match(/volumeWhyToggleText: \{[\s\S]*?\n  \},/)?.[0] || '';
+    const recapStyle = SOURCE.match(/blockRecapRow: \{[\s\S]*?\n  \},/)?.[0] || '';
+    expect(SOURCE).toMatch(/volumeWhyToggle: \{[\s\S]*minHeight: 40,[\s\S]*backgroundColor: colors\.surface2,[\s\S]*borderColor: colors\.border/);
+    expect(SOURCE).toContain('volumeWhyToggleText: {');
+    expect(SOURCE).toContain('...type.caption, color: colors.textSecondary');
+    expect(SOURCE).toContain('name="film-outline" size={16} color={colors.textSecondary}');
+    expect(SOURCE).toMatch(/blockRecapRow: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*borderColor: colors\.border/);
+    expect(SOURCE).toContain('blockRecapText: { flex: 1, ...type.label, color: colors.textPrimary }');
+    expect(whyToggleStyle).not.toContain('colors.primary');
+    expect(whyToggleTextStyle).not.toContain('colors.primary');
+    expect(recapStyle).not.toContain('colors.primaryBg');
   });
 });

@@ -14,9 +14,17 @@ describe('Coach and weekly check-in copy polish', () => {
   test('weekly check-in avoids fragile punctuation and gives a direct reminders action', () => {
     expect(weeklyCheckInSource).not.toMatch(/\u2026|\u2192/);
     expect(weeklyCheckInSource).toContain('Anything Volyume should take into account this week...');
-    expect(weeklyCheckInSource).toContain('Settings &gt; Coaching reminders');
+    expect(weeklyCheckInSource).toContain('your coaching reminder settings');
+    expect(weeklyCheckInSource).not.toContain('Settings &gt; Coaching reminders');
     expect(weeklyCheckInSource).toContain("navigation.navigate('CoachingReminders')");
     expect(weeklyCheckInSource).toContain('Change check-in day');
-    expect(weeklyCheckInSource).toContain('accessibilityLabel="Open coaching reminders"');
+    expect(weeklyCheckInSource).toContain('accessibilityLabel="Change check-in day"');
+  });
+
+  test('fast check-in detail escape is a contained secondary action, not an amber text link', () => {
+    expect(weeklyCheckInSource).toContain('<Ionicons name="create-outline" size={16} color={colors.textSecondary} />');
+    expect(weeklyCheckInSource).toMatch(/fastExpandBtn: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(weeklyCheckInSource).toContain('fastExpandText: { ...type.label, color: colors.textPrimary }');
+    expect(weeklyCheckInSource).not.toMatch(/fastExpandText: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
   });
 });

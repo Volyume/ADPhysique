@@ -700,7 +700,7 @@ export function progressScanAssessmentCopy(assessment = null) {
   const prefix = assessment.progressSignal === 'baseline'
     ? `Baseline Volyume Score ${score}`
     : `Volyume Score ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress score for photos taken in similar conditions, not a body fat percentage or a rating of your physique.`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress score for photos taken in similar conditions.`;
 }
 
 function scanPoseSet(scan = {}) {
@@ -1055,7 +1055,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     progressSignalLabel: progressSignal?.label ?? null,
     progressDirection: progressSignal?.direction ?? null,
     lines,
-    summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal, not a body fat estimate or target-setting input.`,
+    summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal for progress context only.`,
     trendSummary,
     coachSummary: `${trendSummary} I am treating it as photo context only.`,
   };
@@ -1075,7 +1075,7 @@ export function explainProgressScan(scan) {
   if (scan.analysisStatus === 'measured') {
     return signals.deltaExplanation?.trendSummary
       || scan.copySummary
-      || 'The scan measured outline signals only. It is not a body fat estimate.';
+      || 'The scan measured outline signals only.';
   }
   return 'The scan is saved. Physique scan analysis is not available for this scan.';
 }
@@ -1196,10 +1196,10 @@ function estimatorUnavailableCopy({ assets = [], sex = null, heightCm = null, we
     return 'Scan measured and saved. Volyume needs model-backed front and back photos for a useful score.';
   }
   if (!normalisedSex(sex)) {
-    return 'Scan measured and saved. The Volyume Score can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The Volyume Score can still be used as photo context.';
   }
   if (bmiFrom(heightCm, weightKg) == null) {
-    return 'Scan measured and saved. The Volyume Score can still be used as photo context; body fat percentages are not shown from photos.';
+    return 'Scan measured and saved. The Volyume Score can still be used as photo context.';
   }
   return 'Scan measured and saved. The measured signals were not complete enough for a useful score.';
 }

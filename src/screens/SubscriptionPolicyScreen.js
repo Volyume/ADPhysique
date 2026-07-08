@@ -42,7 +42,7 @@ export default function SubscriptionPolicyScreen() {
           <Bullet>Workout history kept on your phone.</Bullet>
           <Bullet>Personal records and strength standing.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>
-          <Bullet>Year of Lifts: your training year in one card.</Bullet>
+          <Bullet>Year of Lifts: a shareable review of your training year.</Bullet>
           <Bullet>Plate calculator.</Bullet>
           <Bullet>Training reminders.</Bullet>
           <Bullet>Export your training history to CSV anytime.</Bullet>

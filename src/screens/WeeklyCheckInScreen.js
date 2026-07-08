@@ -802,7 +802,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <View style={styles.plannedBackstop}>
                 <Text style={styles.plannedBackstopText}>
                   You had a meal plan on {unconfirmedPlannedDays.length} {unconfirmedPlannedDays.length === 1 ? 'day' : 'days'} this
-                  week but didn&apos;t confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
+                  week but didn't confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
                   above. If you stuck to your plan, confirm so it counts.
                 </Text>
                 <Button
@@ -975,7 +975,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   } on last week`
                 : ''}
               {autoDerived.trainingPerformance ? `, ${PERF_VERDICT_TEXT[autoDerived.trainingPerformance]}` : ''}.
-              Tap a card to override.
+              Tap an option to change it.
             </Text>
           ) : (
             <Text style={styles.autoDerivedNote}>
@@ -1153,7 +1153,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
             </Text>
             <Text style={styles.gateBody}>
-              You can change the day in Settings &gt; Coaching reminders. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
+              You can change the day in your coaching reminder settings. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
           <TouchableOpacity
@@ -1161,7 +1161,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             onPress={() => navigation.navigate('CoachingReminders')}
             activeOpacity={0.75}
             accessibilityRole="button"
-            accessibilityLabel="Open coaching reminders"
+            accessibilityLabel="Change check-in day"
           >
             <Text style={styles.gateDeferBtnText}>Change check-in day</Text>
           </TouchableOpacity>
@@ -1448,6 +1448,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               disabled={busy || submitSuccess}
               accessibilityState={{ disabled: busy || submitSuccess }}
             >
+              <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.fastExpandText}>Add more detail</Text>
             </TouchableOpacity>
           )}
@@ -1742,8 +1743,20 @@ const styles = StyleSheet.create({
   fastSummaryValue: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary },
   // Wave A B6: muted provenance line under the fast summary rows.
   fastSummaryProvenance: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs },
-  fastExpandBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  fastExpandText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  fastExpandBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  fastExpandText: { ...type.label, color: colors.textPrimary },
 
   bottomPad: { height: spacing.xxl },
 

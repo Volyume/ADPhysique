@@ -239,7 +239,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 style={[styles.eduLearnRow, styles.eduLearnRowTop]}
                 onPress={() => navigation.navigate('NutritionEducation')}
                 activeOpacity={0.7}
-                accessibilityRole="link"
+                accessibilityRole="button"
                 accessibilityLabel="New to calories and macros? Open the five-minute guide"
               >
                 <Ionicons name="book-outline" size={14} color={colors.primary} />
@@ -298,7 +298,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <View style={styles.eduLearnRow}>
                   <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                   <Text style={[styles.eduLearnText, { color: colors.textSecondary }]}>
-                    First week of meals is ready in Diary &gt; Plan my week.
+                    Your first week of meals is ready in Meal Builder.
                   </Text>
                 </View>
               ) : (
@@ -343,7 +343,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </Text>
                 ) : (
                   <Text style={styles.routineBody}>
-                    Open Plans to build or pick a routine, then start from Train.
+                    Build or choose a routine before your first session.
                   </Text>
                 )}
               </View>
@@ -415,7 +415,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               style={styles.eduLearnRow}
               onPress={() => navigation.navigate('Methodology', { source: 'setup_complete' })}
               activeOpacity={0.7}
-              accessibilityRole="link"
+              accessibilityRole="button"
                 accessibilityLabel="How the Coach works"
             >
               <Ionicons name="bulb-outline" size={14} color={colors.primary} />
@@ -537,10 +537,21 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  eduLearnRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    borderRadius: radius.md,
+  },
   // Variant for a primer offered ABOVE content (B5): no divider, tighter.
-  eduLearnRowTop: { borderTopWidth: 0, paddingTop: 0, marginTop: spacing.xs, marginBottom: spacing.xs },
-  eduLearnText: { color: colors.primary, ...type.label, flex: 1 },
+  eduLearnRowTop: { borderTopWidth: 0, paddingTop: 0, marginTop: spacing.xs, marginBottom: spacing.xs, backgroundColor: colors.surface2 },
+  eduLearnText: { color: colors.textPrimary, ...type.label, flex: 1 },
   targetsNote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },

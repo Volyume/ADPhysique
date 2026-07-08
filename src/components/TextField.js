@@ -1,6 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight, lineHeight, type, withAlpha } from '../styles/theme';
+import { fontFamily } from '../styles/fontFamily';
 
 const SURFACES = {
   surface: colors.surface,
@@ -98,6 +99,7 @@ export default TextField;
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   label: {
+    fontFamily: fontFamily.semibold,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     lineHeight: Math.round(fontSize.xs * lineHeight.snug),

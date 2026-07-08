@@ -250,7 +250,7 @@ describe('buildProgressCardSharePayload', () => {
       after: { date: '20 Jun 2026', weight: '', scanRange: 'Lean index 66' },
     });
     expect(payload).toEqual({
-      label: 'Progress Photos card',
+      label: 'Progress photo image',
       dateRange: '5 Jan 2026 to 20 Jun 2026',
       format: 'Portrait',
       includesWeight: false,

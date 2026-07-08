@@ -41,15 +41,15 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Clear front and back photos can receive a Volyume Score');
+    expect(prompt).toContain('Clear front and back photos can earn a private Volyume Score');
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
-    expect(prompt).toContain('not a body fat estimate');
+    expect(prompt).not.toContain('not a body fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
     expect(how).toContain('Volyume Score is our own private visual progress score');
-    expect(how).toContain('save it as a progress photo instead of guessing');
-    expect(how).toContain('cannot use one photo as proof of body fat');
+    expect(how).toContain('still save it to the photo library');
+    expect(how).toContain('cannot use one photo as proof of readiness');
     expect(how).toContain('about once a week');
     expect(how).not.toContain('every couple of weeks');
   });
@@ -66,15 +66,15 @@ describe('progress capture guide copy', () => {
       title: 'Take a new photo set',
       actionLabel: 'Start photo set',
       recommended: true,
-      recommendationLabel: 'Best baseline',
-      bestFor: 'For new photos taken today.',
+      recommendationLabel: 'Recommended',
     });
+    expect(routes[0].bestFor).toBeUndefined();
     expect(routes[0].steps).toBeUndefined();
     expect(routes[1]).toMatchObject({
       title: 'Import a photo set',
       actionLabel: 'Import photo set',
-      bestFor: 'For older photos already on your phone.',
     });
+    expect(routes[1].bestFor).toBeUndefined();
     expect(routes[1].steps).toBeUndefined();
   });
 
@@ -90,11 +90,11 @@ describe('progress capture guide copy', () => {
     ]);
     expect(routes[0]).toMatchObject({
       title: 'Latest set needs another angle',
-      actionLabel: 'Add missing photo: Add Back photo',
-      bestFor: 'Adds to the existing date.',
+      actionLabel: 'Add Back photo',
       recommended: true,
       recommendationLabel: 'Add missing angle',
     });
+    expect(routes[0].bestFor).toBeUndefined();
     expect(routes[1]).toMatchObject({
       key: 'scan',
       recommended: false,

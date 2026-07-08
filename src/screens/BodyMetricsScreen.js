@@ -809,11 +809,13 @@ export default function BodyMetricsScreen() {
               </Text>
             </View>
             <TouchableOpacity
+              style={styles.readOnlyCtaButton}
               onPress={() => navigation.navigate('ProUpgrade')}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log weight again"
             >
+              <Ionicons name="lock-open-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.readOnlyCta}>Log weight again with Pro</Text>
             </TouchableOpacity>
           </View>
@@ -1250,7 +1252,7 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
     : vm.lift ? 'strength' : 'shape';
   const sentence = `Your weight has held while your ${moved} kept moving.`;
 
-  // S4 (world-class audit 04a): "Make a card" extended to this insight, the
+  // S4 (world-class audit 04a): share image extended to this insight, the
   // most only-Volyume read in the app, previously unshareable. Privacy gate
   // lives in buildRecompShareParams: it returns null unless the strength
   // signal fired, so a share card NEVER carries a body fat or measurement
@@ -1271,10 +1273,11 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
           style={styles.recompCtaRow}
           onPress={() => onMakeCard(shareParams)}
           accessibilityRole="button"
-          accessibilityLabel="Make a card"
+          accessibilityLabel="Create share image"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.recompCta}>Make a card</Text>
+          <Ionicons name="image-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.recompCta}>Create share image</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -1319,7 +1322,20 @@ const styles = StyleSheet.create({
   },
   readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
-  readOnlyCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, alignSelf: 'flex-end' },
+  readOnlyCtaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  readOnlyCta: { ...type.label, color: colors.textPrimary },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   optInCard: {
     alignItems: 'center', gap: spacing.lg,
@@ -1367,8 +1383,20 @@ const styles = StyleSheet.create({
   recompHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   recompRead: { ...type.bodyStrong, color: colors.textPrimary },
   recompNote: { ...type.bodySm, color: colors.textMuted },
-  recompCtaRow: { alignSelf: 'flex-start', marginTop: spacing.xxs },
-  recompCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  recompCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  recompCta: { ...type.label, color: colors.textPrimary },
   bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },

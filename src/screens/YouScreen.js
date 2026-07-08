@@ -19,7 +19,7 @@ import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllWorkouts, getCoachOutputHistory, getLatestCoachOutput } from '../lib/database';
+import { getAllWorkouts, getCoachOutputHistory, getLatestCheckin, getLatestCoachOutput } from '../lib/database';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
@@ -70,6 +70,11 @@ function profileFocusLine(profile = {}) {
   ].filter(Boolean).join(' - ');
 }
 
+function isCompletedCoachDecision(output, checkin) {
+  if (!output?.weekStart || output.hasEnoughData === false) return false;
+  return Number(checkin?.weekStart) === Number(output.weekStart) && checkin?.energyScore != null;
+}
+
 export default function YouScreen({ navigation }) {
   const { user, userProfile, tier } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -90,27 +95,31 @@ export default function YouScreen({ navigation }) {
         return;
       }
       try {
-        const [workoutsResult, latestResult, historyResult] = await Promise.allSettled([
+        const [workoutsResult, latestResult, checkinResult, historyResult] = await Promise.allSettled([
           getAllWorkouts(user.id),
           getLatestCoachOutput(user.id),
+          getLatestCheckin(user.id),
           tier !== 'pro' ? getCoachOutputHistory(user.id, 1) : Promise.resolve([]),
         ]);
         if (!alive) return;
-        const failed = [workoutsResult, latestResult, historyResult].some((r) => r.status === 'rejected');
+        const failed = [workoutsResult, latestResult, checkinResult, historyResult].some((r) => r.status === 'rejected');
         if (failed) {
           logError('YouScreen.load', new Error('coach_hub_partial_load_failed'), {
             reloadKey,
             workouts: workoutsResult.status,
             latest: latestResult.status,
+            checkin: checkinResult.status,
             history: historyResult.status,
           });
         }
         const workouts = workoutsResult.status === 'fulfilled' ? workoutsResult.value : [];
         const latest = latestResult.status === 'fulfilled' ? latestResult.value : null;
+        const checkin = checkinResult.status === 'fulfilled' ? checkinResult.value : null;
+        const latestDecision = isCompletedCoachDecision(latest, checkin) ? latest : null;
         const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
         const completed = (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed));
         if (workoutsResult.status === 'fulfilled') setSessions(completed.length);
-        if (latestResult.status === 'fulfilled') setLatestReview(latest || null);
+        if (latestResult.status === 'fulfilled' && checkinResult.status === 'fulfilled') setLatestReview(latestDecision);
         if (historyResult.status === 'fulfilled') setHasCoachHistory((history || []).length > 0);
         setLoadError(failed);
       } catch (e) {
@@ -160,7 +169,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text style={styles.loadErrorTitle}>Couldn&apos;t refresh Coach</Text>
+              <Text style={styles.loadErrorTitle}>Couldn't refresh Coach</Text>
               <Text style={styles.loadErrorBody}>Your saved profile stays unchanged. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
@@ -188,7 +197,7 @@ export default function YouScreen({ navigation }) {
             ) : user?.id ? (
               <Skeleton width={110} height={12} />
             ) : null}
-            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={1}>{profileFocus}</Text> : null}
+            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </Card>
@@ -320,7 +329,7 @@ export default function YouScreen({ navigation }) {
 
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
-          <Text style={styles.aboutVersion}>Less thinking. More lifting.</Text>
+          <Text style={styles.aboutVersion}>Rules-based coaching, private by design.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

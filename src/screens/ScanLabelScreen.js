@@ -319,7 +319,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             </Text>
             <Text style={styles.missBody}>
               {!ocrAvailable
-                ? 'Type the nutrition in. The barcode is saved with it, so next time it scans straight away.'
+                ? 'Enter the nutrition facts. The barcode is saved with them, so next time it scans straight away.'
                 : onFront
                   ? 'Snap the front for the name, then the nutrition panel.'
                   : 'Frame the nutrition panel and tap the shutter.'}

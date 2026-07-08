@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import Button from './Button';
 import { getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
@@ -41,7 +41,8 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
         <Ionicons name="heart-outline" size={18} color={colors.primary} />
         <Text style={styles.cardioTitle}>Cardio this week</Text>
         {done > 0 ? (
-          <TouchableOpacity onPress={onHistory} hitSlop={8} accessibilityLabel="Cardio history">
+          <TouchableOpacity style={styles.cardioHistoryBtn} onPress={onHistory} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cardio history">
+            <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
             <Text style={styles.cardioHistoryLink}>History</Text>
           </TouchableOpacity>
         ) : null}
@@ -73,7 +74,20 @@ const styles = StyleSheet.create({
   },
   cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cardioTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
-  cardioHistoryLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  cardioHistoryBtn: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  cardioHistoryLink: { ...type.caption, color: colors.textPrimary },
   cardioSub: { ...type.bodySm, color: colors.textSecondary },
   cardioFootnote: { ...type.captionTight, color: colors.textMuted },
 });

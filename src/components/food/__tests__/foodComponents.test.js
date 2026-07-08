@@ -38,6 +38,7 @@ import ServingPicker from '../ServingPicker';
 import MealSection from '../MealSection';
 import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
+import { colors } from '../../../styles/theme';
 
 describe('EmptyDiary', () => {
   // Redesigned 2026-06-01 (supersedes the locked single-sentence copy): a calm
@@ -58,22 +59,19 @@ describe('EmptyDiary', () => {
     expect(txt).not.toContain('Try a suggested meal');
   });
 
-  // A3 (first-week trust): a day-0 diary has no yesterday to copy, so the
-  // screen passes onSuggested instead of onCopyYesterday and the CTA changes.
-  test('shows "Try a suggested meal" instead of "Copy yesterday" when only onSuggested is passed', () => {
-    const onSuggested = jest.fn();
-    const tree = create(<EmptyDiary onAdd={() => {}} onSuggested={onSuggested} />);
-    const txt = JSON.stringify(tree.toJSON());
-    expect(txt).toContain('Try a suggested meal');
+  test('keeps the premium empty state focused when there is no yesterday to copy', () => {
+    const tree = create(<EmptyDiary onAdd={() => {}} onPlanDay={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Build meals');
+    expect(txt).toContain('Add food');
+    expect(txt).toContain(`"backgroundColor":"${colors.surface}"`);
     expect(txt).not.toContain('Copy yesterday');
-    const btn = tree.root.findByProps({ accessibilityLabel: 'Try a suggested meal' });
-    btn.props.onPress();
-    expect(onSuggested).toHaveBeenCalledTimes(1);
+    expect(txt).not.toContain('Try a suggested meal');
   });
 
-  test('prefers Copy yesterday over Try a suggested meal when both are passed', () => {
+  test('shows Copy yesterday when a real yesterday handler is passed', () => {
     const tree = create(
-      <EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} onSuggested={() => {}} />,
+      <EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} onPlanDay={() => {}} />,
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Copy yesterday');

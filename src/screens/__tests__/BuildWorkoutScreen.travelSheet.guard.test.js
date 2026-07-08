@@ -16,4 +16,12 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
     expect(source).not.toMatch(/styles\.travelOverlay/);
     expect(source).not.toMatch(/styles\.travelOpt[\],)]/);
   });
+
+  test('keeps travel and empty-search actions neutral rather than amber text links', () => {
+    expect(source).toMatch(/<Ionicons name="airplane-outline" size=\{15\} color=\{colors\.textSecondary\} \/>/);
+    expect(source).toMatch(/travelChip: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(source).toContain('travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 }');
+    expect(source).toContain('pickerEmptyBtnText: { ...type.label, color: colors.textPrimary }');
+    expect(source).not.toMatch(/travelChipText: \{[\s\S]*color: colors\.primary/);
+  });
 });

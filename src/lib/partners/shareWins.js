@@ -3,7 +3,7 @@ export const SHARE_WIN_TYPES = Object.freeze([
     key: 'workout_summary',
     title: 'Workout summary',
     shared: 'Workout name, date and completed status.',
-    private: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+    private: 'Exercises, sets, reps, loads, notes and effort stay private unless you choose to share them later.',
   }),
   Object.freeze({
     key: 'personal_record',
@@ -13,14 +13,14 @@ export const SHARE_WIN_TYPES = Object.freeze([
   }),
   Object.freeze({
     key: 'block_milestone',
-    title: 'Block milestone',
-    shared: 'The block name and milestone you choose to share.',
+    title: 'Training phase milestone',
+    shared: 'The phase name and milestone you choose to share.',
     private: 'Programme contents, exercise selection and loading stay private.',
   }),
   Object.freeze({
     key: 'progress_card',
-    title: 'Progress card',
-    shared: 'The composed progress card image, with only the details shown in its export receipt.',
+    title: 'Progress comparison',
+    shared: 'The composed progress image, with only the details shown before you send it.',
     private: 'Raw photos, the photo library, unexported scan details and body metrics stay private.',
   }),
 ]);
@@ -49,7 +49,7 @@ export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
   Object.freeze({
     key: 'choose',
     title: 'Choose the moment',
-    body: 'Pick one workout, record, block milestone or exported progress card.',
+    body: 'Pick one workout, record, training phase milestone or progress comparison.',
   }),
   Object.freeze({
     key: 'preview',
@@ -64,7 +64,7 @@ export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
   Object.freeze({
     key: 'control',
     title: 'Keep control',
-    body: 'Sent cards keep a delete control for the sender.',
+    body: 'Sent updates keep a delete control for the sender.',
   }),
 ]);
 
@@ -104,7 +104,7 @@ const EXAMPLE_PAYLOADS = Object.freeze({
     milestone: 'Block complete',
   }),
   progress_card: Object.freeze({
-    label: 'Exported Progress Photos card',
+    label: 'Exported progress photo image',
     dateRange: 'selected dates',
     format: 'chosen export format',
     includesWeight: false,
@@ -169,11 +169,11 @@ export function buildShareWinDraft(typeKey, payload = {}) {
   }
 
   if (typeKey === 'block_milestone') {
-    const blockName = cleanText(safePayload.blockName || 'Training block');
+    const blockName = cleanText(safePayload.blockName || 'Training phase');
     const milestone = cleanText(safePayload.milestone || safePayload.milestoneLabel || 'Milestone reached', 64);
     return baseDraft(
       typeKey,
-      'Block milestone',
+      'Training phase milestone',
       `${blockName}: ${milestone}.`,
       'Programme contents, exercise selection and loading stay private.',
     );
@@ -182,7 +182,7 @@ export function buildShareWinDraft(typeKey, payload = {}) {
   if (typeKey === 'progress_card') {
     const dateRange = cleanText(safePayload.dateRange || safePayload.range || '', 64);
     const format = cleanText(safePayload.format || safePayload.aspect || '', 32);
-    const label = cleanText(safePayload.label || 'Progress photo card', 64);
+    const label = cleanText(safePayload.label || 'Progress comparison', 64);
     const includesScanScore = safePayload.includesScanScore === true;
     const includesWeight = safePayload.includesWeight === true;
     const summary = dateRange ? `${label}, ${dateRange}.` : `${label}.`;
@@ -194,7 +194,7 @@ export function buildShareWinDraft(typeKey, payload = {}) {
     ].join(' ');
     return baseDraft(
       typeKey,
-      'Progress card',
+      'Progress comparison',
       summary,
       detail,
       { requiresExport: true, dateRange: dateRange || null, format: format || null },

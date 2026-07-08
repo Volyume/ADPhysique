@@ -50,6 +50,11 @@ import useAppStore from '../../store/useAppStore';
 import { createRecipe, getRecipeWithIngredients, setRecipeIngredients } from '../../lib/food/db';
 import RecipeBuilderScreen from '../RecipeBuilderScreen';
 
+const RECIPE_BUILDER_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../RecipeBuilderScreen.js'),
+  'utf8',
+);
+
 const store = { user: { id: 'u1' }, accessibility: { energyUnit: 'kcal' } };
 
 function makeNav() {
@@ -145,5 +150,15 @@ describe('RecipeBuilderScreen edit load recovery', () => {
     expect(retryText.length).toBeGreaterThan(0);
     expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Name')).toHaveLength(0);
     expect(createRecipe).not.toHaveBeenCalled();
+  });
+});
+
+describe('RecipeBuilderScreen polish guards', () => {
+  test('add ingredient renders as a contained neutral control', () => {
+    expect(RECIPE_BUILDER_SOURCE).toContain('<Ionicons name="add" size={15} color={colors.textSecondary} />');
+    expect(RECIPE_BUILDER_SOURCE).toContain('<Text style={styles.addLink}>Add ingredient</Text>');
+    expect(RECIPE_BUILDER_SOURCE).toMatch(/addIngredientBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(RECIPE_BUILDER_SOURCE).toContain('addLink: { ...type.label, color: colors.textPrimary }');
+    expect(RECIPE_BUILDER_SOURCE).not.toContain('<Text style={styles.addLink}>+ Add ingredient</Text>');
   });
 });

@@ -594,7 +594,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Goal section */}
         {!goal && (
           <TouchableOpacity style={styles.goalSetLink} onPress={openGoalSheet} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Set a target weight">
-            <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+            <Ionicons name="flag-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.goalSetLinkText}>Set a target weight</Text>
           </TouchableOpacity>
         )}
@@ -919,6 +919,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             {goal && (
               <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Remove goal">
+                <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
                 <Text style={styles.removeGoalLinkText}>Remove goal</Text>
               </TouchableOpacity>
             )}
@@ -1209,16 +1210,22 @@ const styles = StyleSheet.create({
   },
   // Goal section
   goalSetLink: {
+    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
     alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   goalSetLinkText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textPrimary,
   },
   goalCard: {
     backgroundColor: colors.surface,
@@ -1355,12 +1362,21 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
   },
   removeGoalLink: {
+    minHeight: 40,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   removeGoalLinkText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textPrimary,
   },
 });

@@ -16,4 +16,12 @@ describe('Pro gate feature copy', () => {
     expect(PRO_GATE).not.toContain("'Progress photos and Physique Scan'");
     expect(PRO_GATE).not.toContain("'Your week'");
   });
+
+  test('restore purchase action is contained chrome, not an underlined text link', () => {
+    expect(PRO_GATE).toContain('Ionicons name="refresh-outline" size={14} color={colors.textSecondary}');
+    expect(PRO_GATE).toMatch(/lockedRestore: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(PRO_GATE).toContain('lockedRestoreText: { ...type.caption, color: colors.textSecondary }');
+    expect(PRO_GATE).not.toContain("textDecorationLine: 'underline'");
+    expect(PRO_GATE).not.toContain('Restoringâ');
+  });
 });

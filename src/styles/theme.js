@@ -1,3 +1,5 @@
+import { fontFamily } from './fontFamily';
+
 // Base tokens. `colors` and `fontSize` are exported as MUTABLE objects so
 // applyAccessibility() can swap values in place at app boot before any
 // screen module evaluates its StyleSheet.create. After that point the
@@ -407,7 +409,7 @@ export const fontWeight = {
   semibold: '600',
   bold: '700',
   heavy: '800',
-  black: '900',
+  black: '800',
 };
 
 // Line-height multipliers (USWDS-style). Absolute line height is
@@ -420,14 +422,14 @@ export const lineHeight = {
   relaxed: 1.6,
 };
 
-// Letter-spacing scale: tighter on large display type, looser on micro
-// labels, neutral on body. Values in px (RN letterSpacing is absolute).
+// Letter-spacing stays neutral on Android. Negative tracking and loose
+// micro-copy made the default system font look blocky on real devices.
 export const letterSpacing = {
-  display: -0.5,
-  heading: -0.25,
+  display: 0,
+  heading: 0,
   body: 0,
-  label: 0.2,
-  caption: 0.4,
+  label: 0,
+  caption: 0,
 };
 
 // Semantic type roles. Getters (like volumeColors) so they reflect the
@@ -436,43 +438,43 @@ export const letterSpacing = {
 // StyleSheet.create time. Usage: style={{ ...type.body, color: ... }}.
 export const type = {
   get display() {
-    return { fontSize: fontSize.display, fontWeight: fontWeight.black,
+    return { fontFamily: fontFamily.displayBold, fontSize: fontSize.display,
       lineHeight: Math.round(fontSize.display * lineHeight.tight), letterSpacing: letterSpacing.display };
   },
   get h1() {
-    return { fontSize: fontSize.xxxl, fontWeight: fontWeight.bold,
+    return { fontFamily: fontFamily.displayBold, fontSize: fontSize.xxxl,
       lineHeight: Math.round(fontSize.xxxl * lineHeight.tight), letterSpacing: letterSpacing.heading };
   },
   get h2() {
-    return { fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
+    return { fontFamily: fontFamily.semibold, fontSize: fontSize.xxl,
       lineHeight: Math.round(fontSize.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
   },
   get h3() {
-    return { fontSize: fontSize.xl, fontWeight: fontWeight.semibold,
+    return { fontFamily: fontFamily.medium, fontSize: fontSize.xl,
       lineHeight: Math.round(fontSize.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
   },
   get title() {
-    return { fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+    return { fontFamily: fontFamily.medium, fontSize: fontSize.lg,
       lineHeight: Math.round(fontSize.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
   },
   get body() {
-    return { fontSize: fontSize.md, fontWeight: fontWeight.regular,
+    return { fontFamily: fontFamily.regular, fontSize: fontSize.md,
       lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
   },
   get bodyStrong() {
-    return { fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    return { fontFamily: fontFamily.medium, fontSize: fontSize.md,
       lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
   },
   get label() {
-    return { fontSize: fontSize.sm, fontWeight: fontWeight.medium,
+    return { fontFamily: fontFamily.medium, fontSize: fontSize.sm,
       lineHeight: Math.round(fontSize.sm * lineHeight.snug), letterSpacing: letterSpacing.label };
   },
   get overline() {
-    return { fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    return { fontFamily: fontFamily.medium, fontSize: fontSize.xs,
       lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: 0, textTransform: 'uppercase' };
   },
   get caption() {
-    return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
+    return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,
       lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
   },
   // Small body copy: 13px with a body-comfort line height (13 × 1.5 ≈ 20).
@@ -480,13 +482,13 @@ export const type = {
   // fontSize.sm + lineHeight 18-20 (~177 sites) because no token carried it —
   // `label` is too tight (18) for multi-line copy. Adopt in later sweeps.
   get bodySm() {
-    return { fontSize: fontSize.sm, fontWeight: fontWeight.regular,
+    return { fontFamily: fontFamily.regular, fontSize: fontSize.sm,
       lineHeight: Math.round(fontSize.sm * lineHeight.normal), letterSpacing: letterSpacing.body };
   },
   // Caption with a slightly roomier line (11 × 1.45 ≈ 16) for two-line
   // caption copy; absorbs the hand-rolled xs + lineHeight 16/17 sites (D0).
   get captionTight() {
-    return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
+    return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,
       lineHeight: Math.round(fontSize.xs * 1.45), letterSpacing: letterSpacing.caption };
   },
 };

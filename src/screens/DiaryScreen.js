@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import {
@@ -125,11 +125,9 @@ export default function DiaryScreen({ navigation }) {
   // The safe per-day floor banking must never breach: max(sex floor, FFM floor)
   // (CB-1 blueprint line 90). Computed on load from latest weight + body comp.
   const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
-  // A3 (first-week trust): whether the day before the one in view has any food
-  // logged. Drives EmptyDiary's second action: "Copy yesterday" only when
-  // there is something to copy, "Try a suggested meal" otherwise (a day-0
-  // diary has no yesterday, so the copy CTA used to be a dead tap until
-  // pressed).
+  // Whether the day before the one in view has any food logged. Drives
+  // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
+  // now owns planning for a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
 
   // BUG-1 (elite audit 2026-07-04): the day-load had no in-flight guard, so
@@ -979,20 +977,13 @@ export default function DiaryScreen({ navigation }) {
     }
     appAlert(
       `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
-      'They\'ll land in this day\'s diary at the same meal slots.',
+      'They\'ll land in this day\'s diary under the same meals.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Copy', onPress: () => copyFromDate(yesterday) },
       ],
     );
   }, [userId, selectedDate, copyFromDate, toast]);
-
-  // A3 (first-week trust): the empty-diary CTA for a day with no yesterday to
-  // copy. Lands on FoodSearch's Suggested tab (the one browse list that works
-  // with zero logging history) rather than the dead "Copy yesterday" tap.
-  const goToSuggested = useCallback(() => {
-    navigation.navigate('FoodSearch', { mealSlot: likelyMealSlot || 'meal_1', entryDate: selectedDate, initialTab: 'suggested' });
-  }, [navigation, selectedDate, likelyMealSlot]);
 
   // "Copy a previous day" picker (food audit F-3): open a list of recent days
   // with food logged, before the day in view; tapping one copies it in.
@@ -1061,7 +1052,7 @@ export default function DiaryScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel={`${dateHeading}, ${dateSubCopy}. Jump to a date`}
             >
-              <Ionicons name="calendar-outline" size={15} color={colors.primary} />
+              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
               <View style={styles.dateCopy}>
                 <Text style={styles.dateLabel}>{dateHeading}</Text>
                 <Text style={styles.dateSubLabel}>{dateSubCopy}</Text>
@@ -1207,7 +1198,6 @@ export default function DiaryScreen({ navigation }) {
               addLabel="Add food"
               addAccessibilityLabel="Add food"
               onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
-              onSuggested={!yesterdayHasFood ? goToSuggested : undefined}
               onPlanDay={() => navigation.navigate('MealPlan', { entryDate: selectedDate })}
             />
           )
@@ -1299,7 +1289,7 @@ export default function DiaryScreen({ navigation }) {
                   accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"
                 >
                   <View style={styles.buildPlanIcon}>
-                    <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+                    <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Build meals</Text>
@@ -1324,7 +1314,7 @@ export default function DiaryScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Plan a higher-calorie day"
           >
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Ionicons name="restaurant-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.bankRowText}>
               Plan a higher-calorie day
             </Text>
@@ -1450,7 +1440,7 @@ export default function DiaryScreen({ navigation }) {
             <Text style={styles.selCount}>{selectedIds.size} selected</Text>
           </View>
           <View style={styles.selActions}>
-            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to a meal slot">
+            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to another meal">
               <Ionicons name="swap-vertical" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>Move</Text>
             </TouchableOpacity>
@@ -1819,7 +1809,7 @@ const styles = StyleSheet.create({
   dateCluster: {
     flex: 1,
     minWidth: 0,
-    minHeight: 46,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.md,
@@ -1829,8 +1819,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxs,
   },
   dayPagerNav: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
@@ -1860,7 +1850,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  todayPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  todayPillText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   dayPagerMore: {
     width: 42,
     height: 42,
@@ -1877,10 +1867,11 @@ const styles = StyleSheet.create({
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,
-    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    backgroundColor: colors.surface2,
     marginBottom: spacing.md,
   },
-  bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  bankRowText: { ...type.label, color: colors.textPrimary },
   // NU-2: quiet mode rows under the rings and the banking-paused note.
   targetModeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -1915,11 +1906,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
   },
-  readOnlyCta: { ...type.label, color: colors.primary },
+  readOnlyCta: { ...type.label, color: colors.textPrimary },
   readOnlyEmpty: { alignItems: 'center', paddingVertical: spacing.xxl },
   readOnlyEmptyText: { ...type.bodySm, color: colors.textMuted },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
@@ -1929,8 +1920,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
   },
   offCardButtonMuted: {
@@ -1938,7 +1929,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
-  offCardCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  offCardCta: { ...type.label, color: colors.textPrimary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,
@@ -1961,7 +1952,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
   },
   buildPlanCopy: { flex: 1, minWidth: 0 },
   buildPlanLabel: { ...type.label, color: colors.textPrimary },
@@ -1985,15 +1976,15 @@ const styles = StyleSheet.create({
   plannedBtnGhostButton: {
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plannedBtnGhost: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBtnGhost: { ...type.label, color: colors.textPrimary },
   waterRow: {
     marginBottom: spacing.lg,
     gap: spacing.sm,

@@ -17,7 +17,7 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, circle } from '../styles/theme';
+import { colors, spacing, circle, type } from '../styles/theme';
 import { VolyumeIcon } from './BrandMark';
 
 const BRAND_BOX = 34;
@@ -59,8 +59,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
     flex: 1,
   },
@@ -76,7 +75,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.camera,
   },
   subtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
   },
 });

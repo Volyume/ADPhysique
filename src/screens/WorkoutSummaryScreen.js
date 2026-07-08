@@ -73,9 +73,9 @@ function partnerCheerFailureMessage(error) {
     return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
-    return 'Volyume could not reach Partners online just now. Open Partners again and try once more.';
+    return 'Volyume could not reach Partners online just now. Refresh Partners, then try once more.';
   }
-  return 'Could not send that cheer. Open Partners again and try once more.';
+  return 'Could not send that cheer. Refresh Partners, then try once more.';
 }
 
 function RatingRow({ label, field, value, max, onChange }) {
@@ -1138,14 +1138,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                         accessibilityLabel={isExpanded ? `Hide why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here` : `Why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here`}
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         style={styles.volumeWhyToggle}
-                      >
+                        >
                         <Text style={styles.volumeWhyToggleText}>
                           {isExpanded ? 'Hide explanation' : 'Why this status?'}
                         </Text>
                         <Ionicons
                           name={isExpanded ? 'chevron-up' : 'chevron-down'}
                           size={14}
-                          color={colors.primary}
+                          color={colors.textSecondary}
                         />
                       </TouchableOpacity>
                       {isExpanded && (
@@ -1172,9 +1172,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Watch your block story"
             >
-              <Ionicons name="sparkles" size={16} color={colors.primary} />
+              <Ionicons name="film-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.blockRecapText}>You&apos;ve finished this block. Have a look back at how it went.</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </RevealSection>
         )}
@@ -1654,10 +1654,12 @@ const styles = StyleSheet.create({
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   volumeWhyToggle: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', paddingVertical: spacing.xxs,
+    alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs, borderRadius: radius.full,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
   },
   volumeWhyToggleText: {
-    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
+    ...type.caption, color: colors.textSecondary,
   },
   volumeWhyBody: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 19,
@@ -1692,12 +1694,11 @@ const styles = StyleSheet.create({
   // COMP-005 block-end recap row
   blockRecapRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    // D3: tinted edge, not a solid amber border (amber-inflation rule).
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
-  blockRecapText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  blockRecapText: { flex: 1, ...type.label, color: colors.textPrimary },
   ratingRow: { gap: spacing.xs2 },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
@@ -1753,9 +1754,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
-  // D3: quiet close, the summary's job is done, so leaving it is not the
-  // screen's hero. The tonnage numeral carries the one amber; the footer
-  // actions are neutral (Close) and amber-outline (share).
+  // D3: Close owns the footer. Share stays available, but compact, so the
+  // completion action does not become two competing large buttons.
   doneBtn: {
     flex: 1,
     backgroundColor: colors.surface2,
@@ -1771,7 +1771,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   shareFooterBtn: {
-    flex: 1,
+    flexShrink: 0,
+    minWidth: 108,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.strong),

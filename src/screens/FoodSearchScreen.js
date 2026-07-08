@@ -690,7 +690,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   const listData = useMemo(() => {
     const out = [];
     if (activeTab === 'custom') {
-      out.push({ type: 'cta', key: 'cta-new-custom', label: 'New custom food', icon: 'add-circle-outline', action: 'custom' });
+      out.push({ type: 'cta', key: 'cta-new-custom', label: 'Add custom food', icon: 'add-circle-outline', action: 'custom' });
       if (!isRecipePick) {
         out.push({ type: 'cta', key: 'cta-scan-barcode', label: 'Scan barcode', icon: 'barcode-outline', action: 'scan' });
         out.push({ type: 'cta', key: 'cta-quick-add', label: 'Quick add calories', icon: 'flash-outline', action: 'quick' });
@@ -794,9 +794,9 @@ export default function FoodSearchScreen({ navigation, route }) {
               style={styles.noResultsBtn}
               onPress={gotoCustomReplace}
               accessibilityRole="button"
-              accessibilityLabel="Create a custom food"
+              accessibilityLabel="Add custom food"
             >
-              <Text style={styles.noResultsBtnText}>Create a custom food</Text>
+              <Text style={styles.noResultsBtnText}>Add custom food</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -833,7 +833,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityLabel="Set nutrition targets"
           >
             <Text style={styles.emptyActionText}>Set nutrition targets</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.onPrimary} />
           </TouchableOpacity>
         </View>
       );
@@ -965,7 +965,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           results. */}
       {query.trim().length < 2 ? (
         <Text style={styles.provenanceNote}>
-          UK foods saved on this phone, with trusted generics and UK branded products. Search works offline.
+          Saved foods work offline. Live search can also check trusted UK generics and branded products.
         </Text>
       ) : null}
 
@@ -988,9 +988,9 @@ export default function FoodSearchScreen({ navigation, route }) {
               style={styles.footerBtn}
               onPress={gotoCustomReplace}
               accessibilityRole="button"
-              accessibilityLabel="Create a custom food"
+              accessibilityLabel="Add custom food"
             >
-              <Ionicons name="add" size={18} color={colors.primary} />
+              <Ionicons name="add" size={18} color={colors.textPrimary} />
               <Text style={styles.footerBtnText}>Add custom food</Text>
             </TouchableOpacity>
           ) : null
@@ -1179,14 +1179,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.md,
+    minHeight: 44,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
   },
-  emptyActionText: { ...type.label, color: colors.primary },
+  emptyActionText: { ...type.label, color: colors.onPrimary },
 
   suggestHint: {
     ...type.caption, color: colors.textMuted,
@@ -1241,10 +1242,18 @@ const styles = StyleSheet.create({
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs,
-    padding: spacing.lg, marginTop: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    minHeight: 48,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
-  footerBtnText: { ...type.bodyStrong, color: colors.primary },
+  footerBtnText: { ...type.bodyStrong, color: colors.textPrimary },
 
   plateBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

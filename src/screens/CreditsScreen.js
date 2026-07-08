@@ -19,7 +19,10 @@ import {
   Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, type } from '../styles/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  colors, spacing, fontSize, type, radius, iconSize,
+} from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 
@@ -47,8 +50,10 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Data licensed under the Open Database License (ODbL) 1.0. Derivative works are licensed under the same terms.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://world.openfoodfacts.org/')} accessibilityRole="link" accessibilityLabel="Open Food Facts website">
+          <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://world.openfoodfacts.org/')} accessibilityRole="link" accessibilityLabel="Open Food Facts website">
+            <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
             <Text style={styles.link}>world.openfoodfacts.org</Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
@@ -61,8 +66,10 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Contains public sector information licensed under the Open Government Licence v3.0.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')} accessibilityRole="link" accessibilityLabel="CoFID dataset on gov.uk">
-            <Text style={styles.link}>gov.uk · CoFID</Text>
+          <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')} accessibilityRole="link" accessibilityLabel="CoFID dataset on gov.uk">
+            <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
+            <Text style={styles.link}>gov.uk - CoFID</Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
@@ -75,8 +82,10 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Public domain data published by the U.S. Department of Agriculture, Agricultural Research Service.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
+          <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
+            <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
             <Text style={styles.link}>fdc.nal.usda.gov</Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
@@ -117,8 +126,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   link: {
-    color: colors.primary,
-    fontSize: fontSize.sm,
+    ...type.label,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  linkButton: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
   },
   footnote: {
     ...type.bodySm,

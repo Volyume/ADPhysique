@@ -80,11 +80,11 @@ async function flush() {
   await act(async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); });
 }
 
-async function render(photos = [NEW, MID, OLD], { reduceMotion = false, suppressed = false } = {}) {
+async function render(photos = [NEW, MID, OLD], { reduceMotion = false, suppressed = false, initialName = null } = {}) {
   useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion } }));
   usePhotoSuppression.mockReturnValue(suppressed);
   let tree;
-  await act(async () => { tree = create(<ProgressPhotoCompare photos={photos} onClose={jest.fn()} />); });
+  await act(async () => { tree = create(<ProgressPhotoCompare photos={photos} onClose={jest.fn()} initialName={initialName} />); });
   await flush();
   return tree;
 }
@@ -145,6 +145,17 @@ describe('ProgressPhotoCompare, calm default', () => {
     expect(texts).toContain('Later');
     expect(texts).toContain(fmt(OLD.ts));
     expect(texts).toContain(fmt(NEW.ts));
+  });
+
+  test('viewer-seeded compare includes the chosen photo and its nearest earlier pair', async () => {
+    const tree = await render([NEW, MID, OLD], { initialName: MID.name });
+    const imgs = paneImages(tree);
+    expect(imgs).toHaveLength(2);
+    expect(imgs.map((i) => i.props.source.uri)).toEqual([OLD.uri, MID.uri]);
+    expect(imgs.map((i) => i.props.accessibilityLabel)).toEqual([
+      `Earlier photo, ${fmt(OLD.ts)}`,
+      `Later photo, ${fmt(MID.ts)}`,
+    ]);
   });
 
   test('panes decode at explicit bounded dimensions with resize downscaling', async () => {

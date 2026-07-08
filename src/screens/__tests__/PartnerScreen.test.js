@@ -7,8 +7,8 @@
  * Pins:
  *  - multiple active pairs render as isolated cards, in paired-at order;
  *  - free tier never shows the "invite another" affordance (cap = 1);
- *  - the empty state carries the exact two sentences + the full privacy
- *    receipt (both columns, exact copy, incl. the first-name line);
+ *  - the empty state carries the short pitch, while the invite consent step
+ *    carries the full privacy receipt (both columns, exact copy);
  *  - the invite journey mints exactly ONE code and every channel reuses it;
  *  - the block-confirm wires the real block + unpair primitives with the
  *    exact spec copy;
@@ -141,7 +141,7 @@ describe('load error state', () => {
     mockHook.value = base({ localReadIssue: true, reload });
     const tree = await mount();
     const text = allText(tree).join(' ');
-    expect(text).toContain('Refreshing partner data');
+    expect(text).toContain('Refresh partner data');
     expect(text).toContain('Your partner space is safe.');
     expect(text).toContain('Train with a partner');
     await press(tree, 'Refresh partner data');
@@ -194,20 +194,17 @@ describe('connected state: isolated pair cards', () => {
   test('active pairs show one guided partner-week card with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('What Sam can see');
-    expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
-    expect(text).toContain('Training status from your current plan.');
-    expect(text).toContain('Their workout details stay private too.');
-    expect(text).toContain('Wins');
-    expect(text).toContain('You choose');
-    expect(text).toContain('Private');
-    expect(text).toContain('workout details, food, Coach check-ins, body metrics and photos');
+    expect(text).toContain('Visible to Sam');
+    expect(text).toContain('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(text).toContain('Private: full workouts, food, Coach check-ins, body metrics and photos');
+    expect(text).toContain('workouts, food, Coach check-ins, body metrics and photos');
     expect(text).not.toContain('Shared with Sam');
     expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
-    expect(text).toContain('Shared block label');
-    expect(text).toContain('Upper Lower is shared as a label only. Workouts, exercises, loads, notes and Coach changes stay private.');
-    expect(text).toContain('Manage label');
+    expect(text).toContain('Shared training phase');
+    expect(text).toContain('Upper Lower is shared as a phase name only. Workouts, exercises, loads, notes and Coach changes stay private.');
+    expect(text).toContain('Sharing settings');
+    expect(text).not.toContain('Manage label');
   });
 
   test('active pairs do not ask users to set weekly sessions', async () => {
@@ -217,11 +214,11 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('weekly sessions');
     expect(text).not.toContain("Set this week's sessions. Sam sees only the number, not your plan.");
     expect(text).not.toContain("Sam's weekly sessions");
-    expect(text).toContain('What Sam can see');
-    expect(text).toContain('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
+    expect(text).toContain('Visible to Sam');
+    expect(text).toContain('Sam can see whether you trained this week, plus any win you send yourself.');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
-    expect(text).toContain('Training status from your current plan.');
+    expect(text).not.toContain('Training status from your current plan.');
     expect(findPress(tree, "Set this week's sessions")).toHaveLength(0);
     expect(findPress(tree, 'Decrease sessions')).toHaveLength(0);
     expect(findPress(tree, 'Increase sessions')).toHaveLength(0);
@@ -238,19 +235,18 @@ describe('connected state: isolated pair cards', () => {
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
     expect(text).toContain('Share a win');
-    expect(text).toContain('Choose one update. Volyume shows the exact preview before Sam sees it.');
+    expect(text).toContain('Pick one update, check exactly what Sam will see, then send it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Upper body session completed on chosen date.');
     expect(text).toContain('Sam will see');
     expect(text).toContain('Workout name, date and completed status.');
     expect(text).toContain('Show what stays private');
-    expect(text).not.toContain('Stays private');
     expect(text).not.toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
     await press(tree, 'Show what stays private');
     text = allText(tree).join(' ');
     expect(text).toContain('Stays private');
-    expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.');
+    expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private unless you choose to share them later.');
     expect(text).toContain('Not sent until you choose one partner and approve this exact update.');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
     await press(tree, 'Preview personal record');
@@ -260,8 +256,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Your wider lift history and other records stay private.');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Personal record');
-    expect(text).toContain('Block milestone');
-    expect(text).toContain('Progress card');
+    expect(text).toContain('Training phase milestone');
+    expect(text).toContain('Progress comparison');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
   });
 
@@ -392,7 +388,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount({
       shareWinType: 'progress_card',
       progressCardSharePayload: {
-        label: 'Progress photo card',
+        label: 'Progress comparison',
         dateRange: '5 Jan to 20 Jun',
         format: 'Square',
         includesWeight: false,
@@ -402,12 +398,12 @@ describe('connected state: isolated pair cards', () => {
     });
     await press(tree, 'Share a win');
     const text = allText(tree).join(' ');
-    expect(text).toContain('Progress card');
-    expect(text).toContain('Progress photo card, 5 Jan to 20 Jun.');
+    expect(text).toContain('Progress comparison');
+    expect(text).toContain('Progress comparison, 5 Jan to 20 Jun.');
     expect(text).toContain('The visible Volyume Score is part of that export.');
     expect(text).toContain('Weight is off for this export.');
     expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
-    expect(text).toContain('The composed progress card image, with only the details shown in its export receipt.');
+    expect(text).toContain('The composed progress image, with only the details shown before you send it.');
     await press(tree, 'Show what stays private');
     const expandedText = allText(tree).join(' ');
     expect(expandedText).toContain('Stays private');
@@ -420,7 +416,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount({
       shareWinType: 'progress_card',
       progressCardSharePayload: {
-        label: 'Progress Photos card',
+        label: 'Progress comparison',
         dateRange: '5 Jan 2026 to 20 Jun 2026',
         format: 'Square',
         includesWeight: false,
@@ -429,9 +425,73 @@ describe('connected state: isolated pair cards', () => {
     });
     const text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
-    expect(text).toContain('Progress Photos card, 5 Jan 2026 to 20 Jun 2026.');
+    expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
     expect(text).toContain('The visible Volyume Score is part of that export.');
     expect(text).toContain('Weight is off for this export.');
+  });
+
+  test('incoming progress-card payload infers the preview type when the route omits it', async () => {
+    mockHook.value = base({ pairs: [pair()] });
+    const tree = await mount({
+      progressCardSharePayload: {
+        label: 'Progress comparison',
+        dateRange: '5 Jan 2026 to 20 Jun 2026',
+        format: 'Square',
+        includesWeight: false,
+        includesScanScore: true,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Sam will see');
+    expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
+    expect(text).toContain('The visible Volyume Score is part of that export.');
+  });
+
+  test('incoming progress-card route with multiple partners asks the user to choose', async () => {
+    mockHook.value = base({
+      pairs: [
+        pair({ id: 'p1', partnerFirstName: 'Sam', pairedAt: 1 }),
+        pair({ id: 'p2', partnerFirstName: 'Alex', partnerId: 'alex-id', pairedAt: 2 }),
+      ],
+    });
+    const tree = await mount({
+      shareWinType: 'progress_card',
+      progressCardSharePayload: {
+        label: 'Progress comparison',
+        dateRange: '5 Jan 2026 to 20 Jun 2026',
+        format: 'Square',
+        includesWeight: false,
+        includesScanScore: true,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Choose who receives it');
+    expect(text).toContain('Nothing has been sent. Pick Share a win under the right partner and approve the preview first.');
+    expect(text).not.toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
+  });
+
+  test('incoming progress-card route opens a named partner directly', async () => {
+    mockHook.value = base({
+      pairs: [
+        pair({ id: 'p1', partnerFirstName: 'Sam', pairedAt: 1 }),
+        pair({ id: 'p2', partnerFirstName: 'Alex', partnerId: 'alex-id', pairedAt: 2 }),
+      ],
+    });
+    const tree = await mount({
+      pairId: 'p2',
+      shareWinType: 'progress_card',
+      progressCardSharePayload: {
+        label: 'Progress comparison',
+        dateRange: '5 Jan 2026 to 20 Jun 2026',
+        format: 'Square',
+        includesWeight: false,
+        includesScanScore: true,
+      },
+    });
+    const text = allText(tree).join(' ');
+    expect(text).toContain('Alex will see');
+    expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
+    expect(text).not.toContain('Choose who receives it');
   });
 
   test('incoming workout-summary route opens a narrow partner preview', async () => {
@@ -479,10 +539,10 @@ describe('connected state: isolated pair cards', () => {
       },
     });
     const text = allText(tree).join(' ');
-    expect(text).toContain('Add a partner to share this');
+    expect(text).toContain('Add a partner to share this update');
     expect(text).toContain('Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.');
-    expect(text).toContain('Your card stays private');
-    expect(text).toContain('Invite your partner first. Once they accept, you can choose exactly which card to send.');
+    expect(text).toContain('Your update stays private');
+    expect(text).toContain('Invite your partner first. Once they accept, you can choose exactly which update to send.');
     expect(text).toContain('Invite someone you train with');
     expect(text).not.toContain('Share a win');
   });
@@ -582,7 +642,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Could not send that cheer. Open Partners again and try once more.',
+      'Could not send that cheer. Refresh Partners, then try once more.',
       { variant: 'error' },
     );
   });
@@ -706,7 +766,11 @@ describe('empty state', () => {
 
   test('renders the privacy receipt with the exact copy of both columns', async () => {
     mockHook.value = base({ pairs: [] });
-    const text = allText(await mount());
+    const tree = await mount();
+    expect(allText(tree)).not.toContain('THEY WILL SEE');
+    await press(tree, 'Invite someone you train with');
+    await press(tree, 'Continue');
+    const text = allText(tree);
     expect(text).toContain('What your partner can see');
     expect(text).toContain('THEY WILL SEE');
     expect(text).toContain('THEY NEVER SEE');
@@ -717,7 +781,7 @@ describe('empty state', () => {
       'Your shared streak in weeks',
       'Rest weeks shown as resting',
       'One fixed cheer a day',
-      'A block name you choose to share',
+      'A training phase name you choose to share',
     ]) expect(text).toContain(line);
     // Right column (never).
     for (const line of [
@@ -727,7 +791,8 @@ describe('empty state', () => {
       'Coach notes or check-ins',
       'Your location',
     ]) expect(text).toContain(line);
-    expect(text).toContain('Either of you can end this at any time. Shared partner data is deleted.');
+    expect(text).toContain('Either of you can end this at any time.');
+    expect(text).not.toContain('Shared partner data is deleted.');
   });
 });
 
@@ -870,10 +935,40 @@ describe('manage sheet: block confirm', () => {
   test('partner bottom sheets that can overflow opt into internal scrolling', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Manage partnership" scroll/);
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/accessibilityLabel="This week's sessions" scroll/);
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer" scroll/);
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share" scroll/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerActionSheet: \{ minHeight: 520, height: '76%' \}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);
+  });
+
+  test('shared phase status uses a contained neutral action instead of a text link', () => {
+    expect(PARTNER_SCREEN_SOURCE).toContain('<Text style={styles.blockStatusActionText}>Sharing settings</Text>');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('<Text style={styles.blockStatusActionText}>Manage label</Text>');
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/blockStatusAction: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(PARTNER_SCREEN_SOURCE).toContain('blockStatusActionText: { ...type.label, color: colors.textPrimary }');
+  });
+
+  test('shared-win delete action is destructive, not amber-positive', () => {
+    expect(PARTNER_SCREEN_SOURCE).toContain('Ionicons name="trash-outline" size={iconSize.sm} color={colors.error}');
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerWinDeleteButton: \{[\s\S]*borderColor: withAlpha\(colors\.error, alpha\.edge\),[\s\S]*backgroundColor: colors\.surface2/);
+    expect(PARTNER_SCREEN_SOURCE).toContain('partnerWinDelete: { ...type.label, color: colors.error }');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('partnerWinDelete: { ...type.label, color: colors.primary }');
+  });
+
+  test('share-win utility rows use neutral contained chrome, not amber links', () => {
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/shareWinPrivacyToggle: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(PARTNER_SCREEN_SOURCE).toContain('shareWinPrivacyToggleText: { ...type.caption, color: colors.textPrimary');
+    expect(PARTNER_SCREEN_SOURCE).toContain('shareWinExampleConsent: { ...type.caption, color: colors.textSecondary');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinPrivacyToggleText: { ...type.caption, color: colors.primary');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinExampleConsent: { ...type.caption, color: colors.primary');
+  });
+
+  test('invite channels keep secondary options neutral, with one filled primary', () => {
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/channelBtn: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(PARTNER_SCREEN_SOURCE).toContain('channelBtnPrimary: {\n    backgroundColor: colors.primaryFill,');
+    expect(PARTNER_SCREEN_SOURCE).toContain('channelBtnText: { ...type.label, color: colors.textPrimary }');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('channelBtnText: { ...type.label, color: colors.primary }');
   });
 
   test('manage sheet keeps new block-label sharing out of the main path', async () => {

@@ -100,7 +100,7 @@ function physiqueScoreTileSub(scan) {
   const assessment = progressScanAssessmentForDisplay(scan);
   const signal = assessment?.progressSignalLabel || (assessment?.progressSignal === 'baseline' ? 'Baseline scan' : null);
   const confidence = assessment?.scanConfidenceLabel || scanConfidenceLabel(assessment?.scanConfidenceTier ?? scan?.confidence);
-  return `${[signal, confidence].filter(Boolean).join(' - ')}. Private Volyume Score, not body fat.`;
+  return [signal, confidence].filter(Boolean).join(' - ') || 'Latest photo set saved';
 }
 
 const COACHING_PHASE_LABELS = {
@@ -127,7 +127,7 @@ function currentFocusTile(profile = {}) {
   return {
     label: 'Current goal',
     value: phaseLabel,
-    sub: detail || 'Set in profile details',
+    sub: detail || 'Add your goal details',
   };
 }
 
@@ -280,7 +280,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
-      toast.show('Profile pictures need a rebuild on this device.', { variant: 'warning' });
+      toast.show('Profile pictures are not available in this app build.', { variant: 'warning' });
       return;
     }
     try {
@@ -336,7 +336,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   const weightText = summary.weight ? formatBodyWeightShort(summary.weight, bodyWeightUnits || 'st') : 'Not logged';
   const weightTileSub = summary.weight
-    ? (summary.weightLoggedAt ? `${formatDate(summary.weightLoggedAt)} - latest logged` : 'Profile body weight')
+    ? (summary.weightLoggedAt ? `Logged ${formatDate(summary.weightLoggedAt)}` : 'Current profile weight')
     : 'Open Progress to add body weight';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
   const showPhysiqueScore = shouldShowPhysiqueScore({
@@ -351,7 +351,7 @@ export default function AthleteProfileScreen({ navigation }) {
   } : summary.bodyFatLoggedAt ? {
     label: 'Body fat',
     value: bodyFatText,
-    sub: `${formatDate(summary.bodyFatLoggedAt)} - manual entry`,
+    sub: `Logged ${formatDate(summary.bodyFatLoggedAt)}`,
   } : {
     label: 'Progress photos',
     value: 'Not scored yet',
@@ -403,7 +403,7 @@ export default function AthleteProfileScreen({ navigation }) {
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text style={styles.heroFocus} numberOfLines={2}>Current focus: {focusTile.value}</Text>
+            <Text style={styles.heroFocus} numberOfLines={2}>{focusTile.value}</Text>
           </View>
         </Card>
 
@@ -417,7 +417,7 @@ export default function AthleteProfileScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text style={styles.loadErrorTitle}>Couldn&apos;t refresh profile data</Text>
+              <Text style={styles.loadErrorTitle}>Couldn't refresh profile data</Text>
               <Text style={styles.loadErrorBody}>Some numbers may be out of date. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
@@ -427,7 +427,7 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
           <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
-          <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add body weight and main lifts'} />
+          <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
           <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
         </View>
 
@@ -493,7 +493,7 @@ export default function AthleteProfileScreen({ navigation }) {
           <Row
             icon="person-outline"
             label="Edit profile details"
-            sub="Name, biological sex and diet preference."
+            sub="Name, sex and diet preference."
             onPress={() => navigation.navigate('SettingsProfile')}
           />
           <Row
@@ -518,7 +518,7 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.avatarSheetHeader}>
           <View style={styles.avatarSheetCopy}>
             <Text style={styles.avatarSheetTitle}>Profile picture</Text>
-            <Text style={styles.avatarSheetIntro}>Choose a phone photo or a Volyume gym avatar.</Text>
+            <Text style={styles.avatarSheetIntro}>Choose a photo from your phone or pick a Volyume avatar.</Text>
           </View>
           {avatarUri || avatarPreset ? (
             <TouchableOpacity
@@ -546,7 +546,7 @@ export default function AthleteProfileScreen({ navigation }) {
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
-        <Text style={styles.avatarGalleryLabel}>Volyume avatars</Text>
+        <Text style={styles.avatarGalleryLabel}>Choose an avatar</Text>
         <View style={styles.avatarPresetGrid}>
           {AVATAR_PRESETS.map((preset) => {
             const selected = avatarPreset === preset.key && !avatarUri;
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorBg,
   },
   avatarClearText: { ...type.label, color: colors.error },
-  avatarGalleryLabel: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', fontWeight: fontWeight.black },
+  avatarGalleryLabel: { ...type.label, color: colors.textSecondary },
   photoOption: {
     minHeight: 64,
     flexDirection: 'row',
@@ -708,24 +708,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    justifyContent: 'space-between',
   },
   avatarPresetOption: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 92,
+    flexBasis: '30.5%',
+    minWidth: 86,
     alignItems: 'center',
     gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
   avatarPresetOptionSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surfaceElevated,
   },
-  avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary, fontWeight: fontWeight.semibold },
-  avatarPresetOptionTextSelected: { color: colors.primary },
+  avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary },
+  avatarPresetOptionTextSelected: { color: colors.textPrimary },
 });

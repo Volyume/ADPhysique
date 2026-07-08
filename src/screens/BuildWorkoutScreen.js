@@ -7,7 +7,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SearchBar from '../components/SearchBar';
@@ -211,7 +211,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
         {/* Travel Mode quick-fill */}
         <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
-          <Ionicons name="airplane-outline" size={15} color={colors.primary} />
+          <Ionicons name="airplane-outline" size={15} color={colors.textSecondary} />
           <Text style={styles.travelChipText}>Travel / hotel gym</Text>
           <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
         </TouchableOpacity>
@@ -632,17 +632,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pickerEmptyBtnText: { ...type.label, color: colors.primary },
+  pickerEmptyBtnText: { ...type.label, color: colors.textPrimary },
 
   // Travel mode chip + modal
   travelChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     minHeight: 44,
     backgroundColor: colors.surface, alignSelf: 'stretch',
   },
-  travelChipText: { ...type.label, color: colors.primary, flex: 1 },
+  travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 },
   travelTitle: { ...type.title, color: colors.textPrimary },
   travelSub: { ...type.bodySm, color: colors.textSecondary },
   travelOptions: { gap: spacing.sm },

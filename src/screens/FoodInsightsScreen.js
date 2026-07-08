@@ -527,7 +527,7 @@ export default function FoodInsightsScreen({ navigation }) {
           ) : (
             <View style={styles.emptyActionStack}>
               <Text style={styles.emptyText}>
-                Log food on a few days to fill this view.
+                Log food on a few days to see this view fill out.
               </Text>
               <Button
                 title="Open diary"

@@ -141,7 +141,7 @@ export function buildPhysiqueStudioNextAction({
       reason: `${scoredScans.length} scored photo sets are ready.`,
       detailItems: [
         'The Volyume Score shows broad change, not an exact number.',
-        'This is not an exact body fat percentage.',
+        'Matched setup makes the result easier to trust.',
       ],
       cta: 'Compare photo sets',
     };

@@ -19,15 +19,15 @@ const scoredScan = {
 };
 
 describe('progressScanCopy', () => {
-  test('scanReadCopy explains Volyume Score without presenting body fat percentage', () => {
+  test('scanReadCopy explains Volyume Score as a private visual progress score', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Score 72/100. Lean band. Scan Confidence: High. Progress Signal: Slight positive trend. This is a private visual progress score for repeatable photos, not a body fat percentage or a rating of your physique.',
+      'Volyume Score 72/100. Lean band. Result confidence: High. Progress change: Slight positive trend. Private visual progress score from repeatable photos.',
     );
   });
 
   test('hide-exact keeps the trend and hides the detailed score', () => {
     expect(scanReadCopy(scoredScan, { hideExact: true })).toBe(
-      'Lean band. Progress Signal: Slight positive trend. Detailed score is hidden. This is not a body fat percentage.',
+      'Lean band. Progress change: Slight positive trend. Detailed score is hidden.',
     );
   });
 
@@ -42,14 +42,14 @@ describe('progressScanCopy', () => {
       analysisStatus: 'measured',
       trendDirection: 'steady',
       copySummary: 'Measured and saved.',
-    }, { hideExact: true })).toBe('Progress Signal: holding steady.');
+    }, { hideExact: true })).toBe('Progress change: holding steady.');
   });
 
   test('trendOnlyScanCopy handles not-comparable and baseline states', () => {
     expect(trendOnlyScanCopy({ deltaExplanation: { comparisonStatus: 'not_comparable' } })).toBe(
-      'Trend context: saved, but not compared because the setup changed too much.',
+      'Saved, but not compared because the setup changed too much.',
     );
-    expect(trendOnlyScanCopy({})).toBe('Trend context: baseline photo set saved.');
+    expect(trendOnlyScanCopy({})).toBe('Baseline photo set saved.');
   });
 
   test('scanStatsCopy includes weight only when not suppressed and not hide-exact', () => {

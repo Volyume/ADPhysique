@@ -122,11 +122,12 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
 });
 
 describe('DiaryScreen empty-day add flow', () => {
-  test('the empty diary uses the same inferred meal slot as barcode scanning', () => {
+  test('the empty diary uses the same inferred meal slot as barcode scanning and keeps meal planning primary', () => {
     expect(SRC).toMatch(/const likelyMealSlot = useMemo\(\(\) => \{/);
     expect(SRC).toMatch(/inferMealSlotForHour\(new Date\(\)\.getHours\(\), keys\)/);
     expect(SRC).toMatch(/onAdd=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
-    expect(SRC).toMatch(/navigation\.navigate\('FoodSearch', \{ mealSlot: likelyMealSlot \|\| 'meal_1', entryDate: selectedDate, initialTab: 'suggested' \}\)/);
+    expect(SRC).toMatch(/onPlanDay=\{\(\) => navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)\}/);
+    expect(SRC).not.toMatch(/initialTab: 'suggested'/);
     expect(SRC).toMatch(/addLabel="Add food"/);
     expect(SRC).not.toMatch(/likelyMealLabel/);
     expect(SRC).toMatch(/navigation\.navigate\('ScanBarcode', \{ entryDate: selectedDate, mealSlot: likelyMealSlot \}\)/);
@@ -157,17 +158,31 @@ describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"/);
-    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.primary\} \/>/);
+    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.textSecondary\} \/>/);
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Build meals<\/Text>/);
     expect(SRC).toMatch(/Build meals from your targets for this date or the week\. Nothing is logged until you add it\./);
+    expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface2/);
   });
 
   test('small diary actions use button chrome instead of loose text links', () => {
     expect(SRC).toMatch(/style=\{\[styles\.offCardButton, styles\.offCardButtonMuted\]\}/);
     expect(SRC).toMatch(/style=\{styles\.offCardButton\}/);
     expect(SRC).toMatch(/style=\{styles\.plannedBtnGhostButton\}/);
+    expect(SRC).toMatch(/readOnlyCtaButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toMatch(/offCardButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toMatch(/plannedBtnGhostButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toContain('readOnlyCta: { ...type.label, color: colors.textPrimary }');
+    expect(SRC).toContain('offCardCta: { ...type.label, color: colors.textPrimary }');
+    expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
     expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
+    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{16\} color=\{colors\.textSecondary\} \/>/);
+    expect(SRC).toMatch(/bankRow: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toContain('bankRowText: { ...type.label, color: colors.textPrimary }');
+    expect(SRC).not.toMatch(/bankRowText: \{ color: colors\.primary/);
+    expect(SRC).not.toMatch(/readOnlyCta: \{[\s\S]*color: colors\.primary/);
+    expect(SRC).not.toMatch(/offCardCta: \{[\s\S]*color: colors\.primary/);
+    expect(SRC).not.toMatch(/plannedBtnGhost: \{[\s\S]*color: colors\.primary/);
   });
 });
 
@@ -177,10 +192,14 @@ describe('DiaryScreen date navigation polish', () => {
     const dateButtonStyle = SRC.match(/dateButton: \{[\s\S]*?\n  \},/)?.[0] || '';
     expect(SRC).toMatch(/<View style=\{styles\.dateCluster\}>/);
     expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
+    expect(SRC).toMatch(/Ionicons name="calendar-outline" size=\{15\} color=\{colors\.textSecondary\}/);
     expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
     expect(dateClusterStyle).toMatch(/borderWidth: 1/);
     expect(dateClusterStyle).toMatch(/backgroundColor: colors\.surface/);
+    expect(dateClusterStyle).toMatch(/minHeight: 44/);
+    expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*width: 42,[\s\S]*height: 42/);
     expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: 'transparent'/);
+    expect(SRC).toMatch(/todayPillText: \{ \.\.\.type\.caption, color: colors\.textPrimary/);
     expect(dateButtonStyle).toMatch(/backgroundColor: 'transparent'/);
     expect(dateButtonStyle).not.toMatch(/borderWidth: 1/);
     expect(dateButtonStyle).not.toMatch(/backgroundColor: colors\.surface/);

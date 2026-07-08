@@ -870,7 +870,7 @@ export default function ProOnboardingScreen({ navigation }) {
           planFailed = true;
           appAlert(
             'Plan setup didn\'t finish',
-            `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
+            `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Today and choose "Start with a plan" to retry.`,
           );
         } else if (planResult.partial) {
           // FF-003: the plan generated but couldn't fulfil every requested move
@@ -889,7 +889,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // Plan generation failed, but the profile + targets are saved. Abort the
     // sequence's celebratory hold instantly (no min-display pad, no completion
     // tick) and still go to the completion screen, which handles the no-plan
-    // state and whose alert ("Open Home and tap Build my plan") then reads
+    // state and whose alert ("Open Today and choose Start with a plan") then reads
     // correctly. Stranding the user on the step-5 form would not.
     // OB-3: the wizard is complete either way from here, so drop the resume
     // draft (and any queued save) before leaving the screen.
@@ -1252,12 +1252,12 @@ export default function ProOnboardingScreen({ navigation }) {
             <QuestionGroup
               icon="analytics-outline"
               title="Measured body composition"
-              sub="Leave this blank unless you have a recent measured figure. Volyume Score handles visual progress later from your progress photos."
+              sub="Leave this blank unless you have a recent measured figure. Progress Photos can track physique change later with your Volyume Score."
             >
               <View style={styles.sectionLast}>
                 <Text style={styles.fieldLabel}>Measured body fat % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  A measured value can sharpen calorie targets. Do not guess: Progress Photos can create a Volyume Score for progress without asking you to estimate exact body fat.
+                  Use a measured value if you have one. If not, leave it blank. Do not guess it.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}
@@ -1645,7 +1645,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Volyume uses a rule-based coaching system. Morning weights and your weekly check-in drive the coaching decision; food logging sharpens it, and the app stays cautious when data is missing.
+              Volyume uses your morning weigh-ins and weekly check-in to shape coaching. Food logging helps refine it, and the app stays cautious when data is missing.
             </Text>
           </View>
 
@@ -1669,7 +1669,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in Settings &gt; Coaching reminders.</Text>
+            <Text style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>

@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Modal, Animated, Easing, Pressable, View, StyleSheet, Platform, Keyboard,
-  KeyboardAvoidingView, ScrollView,
+  KeyboardAvoidingView, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
@@ -44,6 +44,9 @@ export default function BottomSheet({
   accessibilityLabel,
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const { height: windowHeight } = useWindowDimensions();
+  const numericSheetMaxHeight = Math.max(360, Math.round((Number(windowHeight) || 760) * 0.92));
+  const numericScrollMaxHeight = Math.max(280, Math.round(numericSheetMaxHeight - 96));
   // The sheet is a Modal anchored to the PHYSICAL screen bottom, it
   // overlays the tab band, so nothing absorbs the system inset for it.
   // Every consumer gets this for free (edge-to-edge sweep, 2026-07-03).
@@ -87,7 +90,7 @@ export default function BottomSheet({
 
   const body = scroll ? (
     <ScrollView
-      style={styles.scroll}
+      style={[styles.scroll, { maxHeight: numericScrollMaxHeight }]}
       contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
       showsVerticalScrollIndicator
       nestedScrollEnabled
@@ -121,7 +124,10 @@ export default function BottomSheet({
         <Animated.View
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
+            {
+              paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg),
+              maxHeight: numericSheetMaxHeight,
+            },
             sheetStyle,
             { transform: [{ translateY }] },
           ]}
@@ -151,11 +157,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxHeight: '92%',
   },
-  // Do not use flex: 1 here. The sheet panel is content-sized with maxHeight,
-  // and a flex child can collapse to a tiny strip on Android when the parent
-  // is not given an explicit height.
-  scroll: { alignSelf: 'stretch', maxHeight: '100%' },
-  scrollContent: { gap: spacing.md, paddingBottom: spacing.sm },
+  // Do not use flex: 1 here. The sheet panel is content-sized; a flex child can
+  // collapse to a tiny strip on Android inside an animated Modal. The numeric
+  // maxHeight above gives long sheets a stable viewport on real devices.
+  scroll: { alignSelf: 'stretch', flexShrink: 1 },
+  scrollContent: { gap: spacing.md, paddingBottom: spacing.lg },
   handle: {
     alignSelf: 'center',
     width: 36,

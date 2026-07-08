@@ -14,7 +14,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
 import TextField from './TextField';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import {
   stoneLbsToKg,
   parseBodyWeightToKg,
@@ -161,7 +161,7 @@ export default function TodayStrip({
           ? `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to see your trend, long press to edit.`
           : `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to edit.`}
       >
-        <Text style={styles.cellLabel}>WEIGHT</Text>
+        <Text style={styles.cellLabel}>Morning weight</Text>
         <View style={styles.loggedRow}>
           <Text style={styles.cellValue}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
           <Ionicons name="checkmark-circle" size={14} color={colors.success} />
@@ -178,10 +178,10 @@ export default function TodayStrip({
         accessibilityRole="button"
         accessibilityLabel="Log morning weight"
       >
-        <Text style={styles.cellLabel}>WEIGHT</Text>
-        <View style={styles.loggedRow}>
-          <Ionicons name="scale-outline" size={15} color={colors.primary} />
-          <Text style={styles.logPrompt}>Log</Text>
+        <Text style={styles.cellLabel}>Morning weight</Text>
+        <View style={styles.emptyLogBox}>
+          <Ionicons name="scale-outline" size={15} color={colors.textSecondary} />
+          <Text style={styles.logPrompt}>Log weight</Text>
         </View>
       </TouchableOpacity>
     );
@@ -190,7 +190,7 @@ export default function TodayStrip({
   if (editing) {
     return (
       <View style={styles.card}>
-        <Text style={styles.cellLabel}>MORNING WEIGHT</Text>
+        <Text style={styles.cellLabel}>Morning weight</Text>
         <WeightInputRow />
       </View>
     );
@@ -213,21 +213,30 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  cellInner: { gap: 2, minHeight: 40, justifyContent: 'center' },
+  cellInner: { gap: spacing.xs, minHeight: 48, justifyContent: 'center' },
   cellLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
-    letterSpacing: 0,
-    fontWeight: fontWeight.semibold,
   },
   cellValue: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
   loggedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  emptyLogBox: {
+    minHeight: 42,
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+  },
+  logPrompt: { ...type.label, color: colors.textPrimary },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },
   kgField: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flex: 1 },
@@ -242,16 +251,17 @@ const styles = StyleSheet.create({
   weightInput: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    fontSize: fontSize.md,
+    ...type.bodyStrong,
     minWidth: 64,
     fontVariant: ['tabular-nums'],
   },
-  unit: { fontSize: fontSize.sm, color: colors.textMuted },
+  unit: { ...type.caption, color: colors.textMuted },
   logBtn: {
     borderRadius: radius.sm,
-    paddingHorizontal: spacing.lg,
+    minWidth: 84,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   logBtnDisabled: { opacity: 0.5 },
-  logBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  logBtnText: { ...type.label, color: colors.onPrimary },
 });

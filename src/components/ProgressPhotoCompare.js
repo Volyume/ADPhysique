@@ -305,7 +305,21 @@ function CompareOverlay({
   );
 }
 
-export default function ProgressPhotoCompare({ photos, onClose }) {
+function seededPairFor(initialName, enriched, fallback) {
+  if (!initialName || enriched.length < 2) return fallback;
+  const seed = enriched.find((p) => p.name === initialName);
+  if (!seed) return fallback;
+  const byDate = [...enriched].sort((a, b) => a.takenAt - b.takenAt);
+  const samePose = seed.pose ? byDate.filter((p) => p.pose === seed.pose) : byDate;
+  const pool = (samePose.length >= 2 ? samePose : byDate).filter((p) => p.name !== seed.name);
+  if (pool.length < 1) return fallback;
+  const earlier = pool.filter((p) => p.takenAt <= seed.takenAt).pop();
+  const later = pool.find((p) => p.takenAt > seed.takenAt);
+  const partner = earlier || later;
+  return partner ? [seed.name, partner.name] : fallback;
+}
+
+export default function ProgressPhotoCompare({ photos, onClose, initialName = null }) {
   const suppressed = usePhotoSuppression();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
 
@@ -350,8 +364,9 @@ export default function ProgressPhotoCompare({ photos, onClose }) {
     const latest = asc[asc.length - 1];
     const samePose = latest.pose ? asc.filter((p) => p.pose === latest.pose) : asc;
     const pool = samePose.length >= 2 ? samePose : asc;
-    return [pool[0].name, pool[pool.length - 1].name];
-  }, [enriched]);
+    const fallback = [pool[0].name, pool[pool.length - 1].name];
+    return seededPairFor(initialName, enriched, fallback);
+  }, [enriched, initialName]);
 
   // Seed the selection once a valid default is known, and never leave the
   // selection pointing at a photo that has gone away.

@@ -464,7 +464,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               accessibilityLabel="View summary"
             >
               <Text style={styles.fullSummaryBtnText}>View summary</Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+              <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -500,7 +500,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Repeat session"
           >
-            <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+            <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.repeatBtnText}>Repeat</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -699,6 +699,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           {renderCalendarGrid()}
           {selectedDay && (
             <TouchableOpacity onPress={() => setSelectedDay(null)} style={styles.clearDayBtn} accessibilityRole="button" accessibilityLabel="Show all this month">
+              <Ionicons name="calendar-clear-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.clearDayText}>Show all this month</Text>
             </TouchableOpacity>
           )}
@@ -890,13 +891,22 @@ const styles = StyleSheet.create({
   },
   clearDayBtn: {
     marginTop: spacing.xs,
+    alignSelf: 'center',
+    minHeight: 40,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   clearDayText: {
-    fontSize: fontSize.xs,
-    color: colors.primaryDim,
-    fontWeight: fontWeight.medium,
+    ...type.label,
+    color: colors.textPrimary,
   },
 
   // ── Cards ──────────────────────────────────────────────────────────────────
@@ -1011,14 +1021,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   fullSummaryBtnText: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textPrimary,
   },
 
   cardActions: {
@@ -1047,7 +1060,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   repeatBtnFull: {
     flex: 1,
@@ -1066,7 +1080,7 @@ const styles = StyleSheet.create({
   },
   repeatBtnText: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   empty: {
     alignItems: 'center',

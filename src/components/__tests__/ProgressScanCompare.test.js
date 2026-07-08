@@ -91,7 +91,8 @@ describe('ProgressScanCompare component', () => {
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Compare photo sets');
-    expect(text).toContain('Not body fat');
+    expect(text).toContain('matched poses');
+    expect(text).not.toContain('Not body fat');
     expect(text).toContain('Defined 54/100');
     expect(text).toContain('Lean 66/100');
     expect(text).toContain('Volyume Score is up 12 points');
@@ -114,7 +115,7 @@ describe('ProgressScanCompare component', () => {
     usePhotoSuppression.mockReturnValue(true);
     const tree = await render([scan('new', 20), scan('old', 1)]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Volyume Score comparison is hidden for now.');
+    expect(text).toContain('Score comparison is hidden for now.');
     expect(text).not.toContain('66/100');
   });
 

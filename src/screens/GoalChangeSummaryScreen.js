@@ -279,8 +279,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
             <Text style={styles.nextText}>
               {planRerolled
-                ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Open Plans to see the full breakdown.'
-                : 'Your goal is saved, but the training plan didn\'t reroll this time. Open Plans and tap "Build my plan" to retry.'}
+                ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
+                : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}
             </Text>
           </View>
           <View style={styles.nextRow}>

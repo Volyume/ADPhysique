@@ -18,9 +18,9 @@ describe('PlanLibraryScreen shared empty states', () => {
   test('keeps search and category chips in one compact filter band', () => {
     expect(source).toMatch(/<View style=\{styles\.filterPanel\}>[\s\S]*<SearchBar[\s\S]*<FlatList/);
     expect(source).toMatch(/filterPanel: \{[\s\S]*backgroundColor: colors\.surface[\s\S]*borderBottomColor: colors\.borderSubtle/);
-    expect(source).toMatch(/paddingTop: spacing\.xs/);
-    expect(source).toMatch(/paddingBottom: spacing\.sm/);
-    expect(source).toMatch(/chipsList: \{ minHeight: 44, maxHeight: 48, flexShrink: 0 \}/);
+    expect(source).toMatch(/paddingTop: spacing\.xxs/);
+    expect(source).toMatch(/paddingBottom: spacing\.xs/);
+    expect(source).toMatch(/chipsList: \{ minHeight: 40, maxHeight: 42, flexShrink: 0 \}/);
     expect(source).not.toMatch(/chipsList: \{ height: 52/);
   });
 
@@ -30,6 +30,6 @@ describe('PlanLibraryScreen shared empty states', () => {
     expect(source).toMatch(/<View style=\{styles\.listEmptyWrap\}>[\s\S]*<EmptyState/);
     expect(source).toMatch(/listEmptyWrap: \{[\s\S]*minHeight: 340/);
     expect(source).toMatch(/ItemSeparatorComponent=\{\(\) => <View style=\{styles\.planSeparator\} \/>/);
-    expect(source).toMatch(/listContent: \{ paddingHorizontal: spacing\.lg, paddingTop: spacing\.md, paddingBottom: spacing\.xl \}/);
+    expect(source).toMatch(/listContent: \{ paddingHorizontal: spacing\.lg, paddingTop: spacing\.sm, paddingBottom: spacing\.xl \}/);
   });
 });

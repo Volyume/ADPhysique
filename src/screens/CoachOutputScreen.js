@@ -568,6 +568,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
               accessibilityRole="button"
               accessibilityLabel="See how the Coach decides"
             >
+              <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.heldLearnMoreText}>See how the Coach decides</Text>
             </TouchableOpacity>
           ) : null}
@@ -752,7 +753,7 @@ function LoadErrorView({ onRetry, onClose }) {
         <View style={styles.insufficientIconRow}>
           <Ionicons name="cloud-offline-outline" size={32} color={colors.textMuted} />
         </View>
-        <Text style={styles.insufficientTitle}>Couldn&apos;t load your coach.</Text>
+        <Text style={styles.insufficientTitle}>Couldn't load your coach.</Text>
         <Text style={styles.insufficientBody}>
           Something went wrong fetching this week&apos;s data, usually a
           dropped connection. Your logs are safe. Try again in a moment.
@@ -2110,7 +2111,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Plan a fresh week of meals"
             >
-              <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+              <Ionicons name="sparkles-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.planEditLinkText}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -2120,7 +2121,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Repeat last week's meals"
             >
-              <Ionicons name="repeat-outline" size={14} color={colors.primary} />
+              <Ionicons name="repeat-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.planEditLinkText}>Repeat last week</Text>
             </TouchableOpacity>
           </View>
@@ -2131,7 +2132,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={planEditNote.deepLink.label}
             >
-              <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
+              <Ionicons name="restaurant-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
             </TouchableOpacity>
           ) : null}
@@ -2292,7 +2293,7 @@ const styles = StyleSheet.create({
   },
   cardioNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   // A1 one-amber rule (03 gap #1 named this card): a static utility card no
-  // longer wears the hero's amber border; plain outline, links keep the tint.
+  // longer wears the hero's amber border; plain outline, quiet contained actions.
   planEditCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -2301,9 +2302,23 @@ const styles = StyleSheet.create({
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
-  planEditLink: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, minHeight: 40, paddingVertical: spacing.xs, marginTop: spacing.xs },
-  planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.lg },
+  planEditLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  planEditLinkText: { ...type.label, color: colors.textPrimary },
+  nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -2616,11 +2631,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   // U-B-1 §5: ≥44px tap target for the quiet held-decision link.
-  heldLearnMore: { marginTop: spacing.sm, minHeight: 44, justifyContent: 'center' },
+  heldLearnMore: {
+    marginTop: spacing.sm,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
   heldLearnMoreText: {
-    ...type.caption,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textPrimary,
   },
 
 

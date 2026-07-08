@@ -276,11 +276,6 @@ export default function PlansScreen({ navigation }) {
     setCollapsedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
   }
 
-  function openCreateFolder() {
-    setFolderName('');
-    setFolderPrompt({ mode: 'create', folder: null });
-  }
-
   function openRenameFolder(folder) {
     setFolderName(folder.name);
     setFolderPrompt({ mode: 'rename', folder });
@@ -375,7 +370,6 @@ export default function PlansScreen({ navigation }) {
       label: 'No folder',
       onPress: () => handleMovePlanToFolder(plan, null),
     });
-    items.push({ icon: 'add-outline', label: 'New folder…', onPress: openCreateFolder });
     peekRef.current?.open({ title: `Move ${plan.name}`, items });
   }
 
@@ -785,31 +779,12 @@ export default function PlansScreen({ navigation }) {
           </Card>
         )}
 
-        {/* Folders (Hevy teardown R1). Collapsible sections atop the plans
-            list, each holding its filed plans. FREE feature, no Pro gate.
-            Deleting a folder unfiles its plans (they reappear under My plans);
-            it never deletes a plan. Shown whenever the user has any plan at all
-            (incl. the active one, which My plans filters out) or folders already
-            exist, so the "New folder" entry point never vanishes for someone
-            who wants to start organising. */}
-        {(myPlans.length > 0 || folders.length > 0 || !!activePlan) && (
+        {/* Folders are only shown when they already exist. Folder creation is
+            intentionally hidden from the main Train surface to keep the core
+            coaching flow clean. */}
+        {folders.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.foldersHeaderRow}>
-              <SectionLabel>Folders</SectionLabel>
-              <TouchableOpacity
-                onPress={openCreateFolder}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="New folder"
-              >
-                <Text style={styles.foldersNewLink}>New folder</Text>
-              </TouchableOpacity>
-            </View>
-            {folders.length === 0 ? (
-              <Text style={styles.sectionSubtitle}>
-                Group your plans into folders to keep the list tidy.
-              </Text>
-            ) : null}
+            <SectionLabel>Folders</SectionLabel>
             {folders.map(folder => {
               const filed = plansByFolder[folder.id] || [];
               const collapsed = !!collapsedFolders[folder.id];
@@ -1044,9 +1019,7 @@ export default function PlansScreen({ navigation }) {
         >
           <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
             <Pressable style={styles.folderSheet} onPress={() => {}} accessible={false}>
-              <Text style={styles.folderSheetTitle}>
-                {folderPrompt?.mode === 'rename' ? 'Rename folder' : 'New folder'}
-              </Text>
+              <Text style={styles.folderSheetTitle}>Rename folder</Text>
               <TextField
                 fieldStyle={styles.folderInputField}
                 inputStyle={styles.folderInput}
@@ -1073,7 +1046,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityLabel="Cancel"
                 />
                 <Button
-                  title={folderPrompt?.mode === 'rename' ? 'Save' : 'Create'}
+                  title="Save"
                   size="sm"
                   fullWidth={false}
                   style={styles.folderSheetSaveButton}
@@ -1081,7 +1054,7 @@ export default function PlansScreen({ navigation }) {
                   onPress={handleSaveFolder}
                   disabled={!folderName.trim() || savingFolder}
                   loading={savingFolder}
-                  accessibilityLabel={folderPrompt?.mode === 'rename' ? 'Save folder name' : 'Create folder'}
+                  accessibilityLabel="Save folder name"
                   accessibilityState={{ disabled: !folderName.trim() || savingFolder }}
                 />
               </View>
@@ -1104,7 +1077,6 @@ const styles = StyleSheet.create({
   foldersHeaderRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  foldersNewLink: { ...type.label, color: colors.primary },
   folderBlock: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     backgroundColor: colors.surface, overflow: 'hidden',

@@ -292,4 +292,21 @@ describe('WorkoutHistoryScreen summary polish', () => {
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View Details');
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View full summary');
   });
+
+  test('summary and repeat actions use contained neutral controls, not amber text links', () => {
+    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="arrow-forward" size={14} color={colors.textSecondary}');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="refresh-outline" size={16} color={colors.textSecondary}');
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/fullSummaryBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/repeatBtn: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(WORKOUT_HISTORY_SOURCE).toContain('fullSummaryBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('repeatBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(WORKOUT_HISTORY_SOURCE).not.toMatch(/repeatBtnText: \{[\s\S]*color: colors\.primary/);
+  });
+
+  test('calendar reset uses a contained neutral control', () => {
+    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="calendar-clear-outline" size={14} color={colors.textSecondary}');
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/clearDayBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(WORKOUT_HISTORY_SOURCE).toContain('clearDayText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(WORKOUT_HISTORY_SOURCE).not.toMatch(/clearDayText: \{[\s\S]*color: colors\.primary/);
+  });
 });

@@ -339,15 +339,15 @@ export default function ProUpgradeScreen({ navigation, route }) {
           {needsSetup ? (
             <>
               <Button title="Set up your training" icon="sparkles" size="lg" onPress={startSetup} />
-              <TouchableOpacity
+              <Button
+                title="Skip for now"
+                variant="outline"
+                size="sm"
+                fullWidth={false}
                 style={styles.secondaryLink}
                 onPress={() => navigation.goBack()}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
                 accessibilityLabel="Skip for now"
-              >
-                <Text style={styles.secondaryLinkText}>Skip for now</Text>
-              </TouchableOpacity>
+              />
             </>
           ) : (
             <Button title="Done" size="lg" onPress={() => navigation.goBack()} />
@@ -463,7 +463,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Subscription terms"
           >
-            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.policyLinkText}>
               What stays if you switch back to Free later
             </Text>
@@ -499,8 +499,21 @@ const styles = StyleSheet.create({
   },
 
   perks: { gap: spacing.md, marginBottom: spacing.md },
-  policyLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.lg },
-  policyLinkText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium, textDecorationLine: 'underline' },
+  policyLink: {
+    minHeight: 40,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  policyLinkText: { ...type.caption, color: colors.textSecondary },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
@@ -577,9 +590,7 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 22,
   },
   secondaryLink: {
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-  },
-  secondaryLinkText: {
-    fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center',
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
   },
 });

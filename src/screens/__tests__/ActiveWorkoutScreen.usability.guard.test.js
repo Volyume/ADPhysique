@@ -17,6 +17,13 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('<View style={styles.headerTapTarget} />');
   });
 
+  test('finish-workout confirmation and retry copy use the same action name', () => {
+    expect(ACTIVE_WORKOUT).toContain("text: 'Finish workout'");
+    expect(ACTIVE_WORKOUT).toContain('tap Finish workout again');
+    expect(ACTIVE_WORKOUT).not.toContain("text: 'Finish',");
+    expect(ACTIVE_WORKOUT).not.toContain('tap Finish again');
+  });
+
   test('stored workout name uses the same full-title rule as summary sharing', () => {
     expect(ACTIVE_WORKOUT).toContain("import { shareSessionName } from '../lib/sessionShareData';");
     expect(ACTIVE_WORKOUT).toContain('const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);');
@@ -39,7 +46,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain('return \'Enter weight and reps, then tap Log set when done.\';');
-    expect(ACTIVE_WORKOUT).toContain('Open More for form tips, warm-ups, swaps and session options.');
+    expect(ACTIVE_WORKOUT).toContain('Tap More for form tips, warm-ups, swaps and session options.');
   });
 
   test('previous performance cues use a compact control instead of inline link copy', () => {
@@ -56,8 +63,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
     expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };');
-    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: 86,\s*flexShrink: 0,\s*gap: 1,/);
-    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: 36,\s*height: 36,/);
+    expect(SET_ENTRY).toContain("import { workoutLoggerSize } from '../styles/layout';");
+    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: workoutLoggerSize\.setEntryLabelWidth,\s*flexShrink: 0,\s*gap: 1,/);
+    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: workoutLoggerSize\.setEntryStepperButton,\s*height: workoutLoggerSize\.setEntryStepperButton,/);
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');
@@ -65,7 +73,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.targetText} numberOfLines={1}>');
     expect(ACTIVE_WORKOUT).toMatch(/targetText: \{ flex: 1, fontSize: fontSize\.xs,/);
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);
-    expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: 36/);
+    expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
   });
 
@@ -86,11 +94,17 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('menu and secondary actions are plain under fatigue', () => {
-    expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: 44,\s*height: 44,/);
+    expect(ACTIVE_WORKOUT).toContain("import { workoutLoggerSize } from '../styles/layout';");
+    expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: workoutLoggerSize\.overflowButton,\s*height: workoutLoggerSize\.overflowButton,/);
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.swapBtn}');
     expect(ACTIVE_WORKOUT).not.toContain('swapBtnText');
     expect(ACTIVE_WORKOUT).toContain('headerFinishButton');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
+    expect(ACTIVE_WORKOUT).toMatch(/completeBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
+    expect(ACTIVE_WORKOUT).toMatch(/extraSetBtnPromoted: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
+    expect(ACTIVE_WORKOUT).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
+    expect(ACTIVE_WORKOUT).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
     expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
     expect(ACTIVE_WORKOUT).toMatch(/autoAdvanceRowActionBtn: \{[\s\S]*minHeight: 44/);
     expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
@@ -102,11 +116,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('long workout utility sheets are scroll-safe on phone screens', () => {
+    expect(ACTIVE_WORKOUT).toContain("import BottomSheet from '../components/BottomSheet';");
     expect(ACTIVE_WORKOUT).toContain('function WorkoutSheetScroll');
-    expect(ACTIVE_WORKOUT.match(/<WorkoutSheetScroll>/g)?.length).toBeGreaterThanOrEqual(5);
-    expect(ACTIVE_WORKOUT).toContain("sheetHost: { flex: 1, justifyContent: 'flex-end' }");
-    expect(ACTIVE_WORKOUT.match(/<View style=\{styles\.sheetHost\}>/g)?.length).toBeGreaterThanOrEqual(5);
-    expect(ACTIVE_WORKOUT).toMatch(/sheet: \{[^}]*maxHeight: '92%'/);
+    expect(ACTIVE_WORKOUT).toContain('function WorkoutBottomSheet');
+    expect(ACTIVE_WORKOUT).toContain('<BottomSheet');
+    expect(ACTIVE_WORKOUT.match(/<WorkoutBottomSheet/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetOverlay}');
+    expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetHost}');
+    expect(ACTIVE_WORKOUT).not.toContain('styles.sheetHandle');
     expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
   });
 });

@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -178,7 +178,6 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 function PlanBadge({ label, amber }) {
   return (
     <View style={[styles.badge, amber && styles.badgeAmber]}>
-      {amber && <Ionicons name="sparkles" size={9} color={colors.onPrimary} style={{ marginRight: spacing.xxs }} />}
       <Text style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
     </View>
   );
@@ -715,20 +714,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-    gap: spacing.xs,
+    paddingTop: spacing.xxs,
+    paddingBottom: spacing.xs,
+    gap: spacing.xxs,
   },
   searchRow: {
     margin: 0,
   },
 
-  chipsList: { minHeight: 44, maxHeight: 48, flexShrink: 0 },
+  chipsList: { minHeight: 40, maxHeight: 42, flexShrink: 0 },
   chipsContent: {
     paddingVertical: spacing.xxs,
     gap: spacing.sm, alignItems: 'center',
   },
-  collectionChip: { minHeight: 40, justifyContent: 'center', paddingVertical: spacing.xs },
+  collectionChip: { minHeight: 36, justifyContent: 'center', paddingVertical: spacing.xxs },
   collectionChipText: { ...type.label, color: colors.textSecondary },
   collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
@@ -763,7 +762,7 @@ const styles = StyleSheet.create({
 
   // Plan list
   listBand: { flex: 1, backgroundColor: colors.background },
-  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl },
+  listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
   listEmptyWrap: {
     minHeight: 340,
     justifyContent: 'center',
@@ -800,21 +799,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.border,
   },
-  badgeAmber: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.376) },
+  badgeAmber: { backgroundColor: colors.surface2, borderColor: withAlpha(colors.primary, alpha.edge) },
   badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold },
   badgeTextAmber: { color: colors.primary },
   workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },
   planName: { ...type.bodyStrong, color: colors.textPrimary },
   planDesc: { ...type.bodySm, color: colors.textSecondary },
   planCardFooter: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   previewText: { ...type.label, color: colors.textSecondary },
-  previewBtn: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },
-  addBtn: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
-  addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
+  previewBtn: {
+    flex: 1,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  addBtn: {
+    flex: 1,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  addBtnText: { ...type.label, color: colors.onPrimary },
 
   skeletonWrap: { gap: spacing.md },
 

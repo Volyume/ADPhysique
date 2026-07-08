@@ -10,46 +10,23 @@ describe('partner accountability copy', () => {
 
   test('starts from Coach-plan status, not a manual session target', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
-    expect(plan.title).toBe('What Sam can see');
-    expect(plan.headline).toBe('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
-    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer' });
-    expect(plan.steps.find((step) => step.key === 'you')).toMatchObject({
-      label: 'You',
-      state: '2 of 4',
-      copy: 'Training status from your current plan.',
-    });
-    expect(plan.steps.find((step) => step.key === 'partner_week')).toMatchObject({
-      label: 'Sam',
-      state: '3 of 5',
-      copy: 'Their workout details stay private too.',
-    });
-    expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
-      label: 'Wins',
-      state: 'You choose',
-      copy: 'Wins ask before anything is sent.',
-    });
+    expect(plan.title).toBe('Visible to Sam');
+    expect(plan.headline).toBe('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
     expect(plan.privacyLine).toBe(PARTNER_SUPPORT_PRIVACY_LINE);
-    expect(plan.steps).toHaveLength(3);
+    expect(plan.steps).toBeUndefined();
   });
 
   test('routes to cheer when the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Sam can see whether you trained this week. They do not see your workouts, food, photos or Coach check-ins.');
-    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer' });
-    expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
-      label: 'Wins',
-      state: 'You choose',
-      copy: 'Wins ask before anything is sent.',
-    });
+    expect(plan.headline).toBe('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
   });
 
   test('leaves win sharing to the stable card when cheer is already sent', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, cheerEnabled: false }, 'Sam');
     expect(plan.primaryAction).toBeNull();
-    expect(plan.steps.find((step) => step.key === 'wins')).toMatchObject({
-      state: 'You choose',
-      copy: 'Today\'s cheer is sent. Wins still ask first.',
-    });
+    expect(plan.privacyLine).toBe(PARTNER_SUPPORT_PRIVACY_LINE);
   });
 
   test('keeps the privacy language narrow', () => {
@@ -59,9 +36,9 @@ describe('partner accountability copy', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('Share one win with Sam only when you want to. You approve the preview first.');
+    expect(plan.headline).toBe('You choose if you want to share a workout, PR or progress update. Nothing detailed is sent automatically.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Private: workout details, food, Coach check-ins, body metrics and photos. Shared only when you press a button.');
+    expect(copy).toContain('Private: full workouts, food, Coach check-ins, body metrics and photos.');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
     expect(copy).not.toMatch(/\bchat\b|chatbot|AI chat/i);
   });

@@ -130,7 +130,17 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
   });
 
   test('meal-plan success copy is a full sentence, not a comma fragment', () => {
-    expect(SOURCE).toContain('First week of meals is ready in Diary &gt; Plan my week.');
+    expect(SOURCE).toContain('Your first week of meals is ready in Meal Builder.');
     expect(SOURCE).not.toContain('First week of meals ready in Diary, Plan my week');
+  });
+
+  test('setup-complete actions avoid route breadcrumbs and link styling', () => {
+    expect(SOURCE).toContain('accessibilityRole="button"');
+    expect(SOURCE).not.toContain('accessibilityRole="link"');
+    expect(SOURCE).not.toContain('Diary &gt; Plan my week');
+    expect(SOURCE).not.toContain('Open Plans to build or pick a routine');
+    expect(SOURCE).toContain('Build or choose a routine before your first session.');
+    expect(SOURCE).toMatch(/eduLearnRow: \{[\s\S]*minHeight: 44/);
+    expect(SOURCE).toMatch(/eduLearnText: \{ color: colors\.textPrimary/);
   });
 });

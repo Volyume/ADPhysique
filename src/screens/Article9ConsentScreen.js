@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
@@ -190,7 +190,7 @@ export default function Article9ConsentScreen({ navigation }) {
         ]} />
 
         <Text style={styles.body}>
-          Volyume Score is a visual progress tool, not a medical assessment, DEXA scan, or exact body fat percentage. It may abstain or ask for a retake when photo quality is poor.
+          Volyume Score is a visual progress tool, not a medical assessment, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
         <Text style={styles.subhead}>An automated safety check:</Text>
@@ -239,7 +239,9 @@ export default function Article9ConsentScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={openPrivacyPolicy} style={styles.ctaGhost} accessibilityRole="link">
+          <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.ctaGhostText}>Read the full privacy policy</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* OB-6: a factual exit affordance for a hesitant user, whose only
@@ -257,7 +259,9 @@ export default function Article9ConsentScreen({ navigation }) {
           accessibilityState={{ expanded: declineInfoOpen }}
           accessibilityLabel="What if I don't agree?"
         >
+          <Ionicons name="help-circle-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.declineLinkText}>What if I don't agree?</Text>
+          <Ionicons name={declineInfoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {declineInfoOpen ? (
@@ -355,25 +359,39 @@ const styles = StyleSheet.create({
   ctaPrimaryText: { ...type.bodyStrong, color: colors.onPrimary },
   ctaGhost: {
     marginTop: spacing.sm,
-    paddingVertical: spacing.md,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'center',
   },
   ctaGhostText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textPrimary,
+    flex: 1,
   },
   // OB-6 "What if I don't agree?" affordance. Deliberately quieter than the
   // policy link so it reads as information, not a competing call to action.
   declineLink: {
     marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'center',
   },
   declineLinkText: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textSecondary,
+    flex: 1,
   },
   declineBox: {
     backgroundColor: colors.surface,
@@ -391,12 +409,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
   },
   declineActionText: {
+    ...type.label,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
   },
 });

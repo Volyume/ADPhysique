@@ -74,6 +74,32 @@ describe('Button', () => {
       expect.arrayContaining([expect.objectContaining({ color: colors.onPrimary })]),
     );
   });
+
+  test('tertiary renders as a contained ghost button, not a bare orange text link', () => {
+    let tree;
+    act(() => { tree = create(<Button title="Not now" variant="tertiary" onPress={() => {}} />); });
+    const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
+    const flattenedStyle = Array.isArray(pressable.props.style)
+      ? Object.assign({}, ...pressable.props.style)
+      : pressable.props.style;
+    expect(flattenedStyle.backgroundColor).toBe(colors.primaryBg);
+    expect(flattenedStyle.borderWidth).toBe(1);
+  });
+
+  test('outline is neutral chrome, not an amber text-link button', () => {
+    let tree;
+    act(() => { tree = create(<Button title="Compare" variant="outline" onPress={() => {}} />); });
+    const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
+    const flattenedStyle = Array.isArray(pressable.props.style)
+      ? Object.assign({}, ...pressable.props.style)
+      : pressable.props.style;
+    const label = tree.root.findByType(Text);
+    expect(flattenedStyle.backgroundColor).toBe(colors.surface);
+    expect(flattenedStyle.borderColor).toBe(colors.border);
+    expect(label.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ color: colors.textPrimary })]),
+    );
+  });
 });
 
 describe('Card', () => {
@@ -145,6 +171,11 @@ describe('Card', () => {
   test('elevated sits the card on the raised surface tier', () => {
     const tree = create(<Card elevated><Text>x</Text></Card>).toJSON();
     expect(JSON.stringify(tree)).toContain(colors.surfaceElevated);
+  });
+
+  test('default card treatment is quiet and tighter than primary controls', () => {
+    const tree = create(<Card><Text>x</Text></Card>).toJSON();
+    expect(JSON.stringify(tree)).toContain(colors.borderSubtle);
   });
 });
 

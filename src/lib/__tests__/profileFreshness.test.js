@@ -33,8 +33,11 @@ describe('profileFreshness', () => {
 
     expect(sixDays.progressScan.state).toBe('soon');
     expect(sixDays.progressScan.sub).toContain('this week');
+    expect(sixDays.progressScan.sub).toContain('Last photo set');
+    expect(sixDays.progressScan.sub).not.toMatch(/indexed/i);
     expect(sevenDays.progressScan.state).toBe('due');
     expect(sevenDays.progressScan.sub).toMatch(/light, pose and timing/i);
+    expect(sevenDays.progressScan.sub).not.toMatch(/indexed/i);
   });
 
   test('keeps lift standards missing until enough key lifts exist', () => {

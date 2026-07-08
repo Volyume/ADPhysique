@@ -156,9 +156,11 @@ describe('phase rendering and the disabled contract', () => {
     let tree;
     act(() => { tree = create(<Button title="Apply" variant="outline" onPress={() => {}} />); });
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
-    // The border colour is the amber accent and the fill is transparent.
+    // Quiet secondary chrome: neutral surface + border, not amber link styling.
     const flat = JSON.stringify(pressable.props.style ?? tree.toJSON());
-    expect(flat).toContain('transparent');
+    expect(flat).toContain('#191917');
+    expect(flat).toContain('#6E6E6E');
+    expect(flat).not.toContain('transparent');
   });
 
   test('outline stays silent on press (only filled primary ticks, M1)', () => {

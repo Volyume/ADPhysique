@@ -9,9 +9,8 @@
  * Variants:
  *   primary     amber fill, dark text (default)
  *   secondary   raised surface, light text, subtle border
- *   tertiary    text-only, amber label (no fill)
- *   outline     transparent fill, amber border + label (the "quiet" CTA the
- *               A1 one-amber rule demotes non-hero actions to)
+ *   tertiary    quiet ghost button, amber label and subtle contained surface
+ *   outline     quiet bordered surface with neutral text for secondary CTAs
  *   destructive solid error fill, light text
  *
  * Sizes: sm | md (default) | lg. `loading` shows an inline spinner and
@@ -38,15 +37,16 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
-import { colors, fontSize, fontWeight, spacing, radius, motion } from '../styles/theme';
+import { colors, fontSize, spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
+import { fontFamily } from '../styles/fontFamily';
 
 const VARIANTS = {
   // fg uses onPrimary (always-dark ink, theme.js:42), NOT `background`, which flips
   // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
   primary: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
   secondary: { bg: colors.surface2, fg: colors.textPrimary, border: colors.border },
-  tertiary: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
-  outline: { bg: 'transparent', fg: colors.primary, border: colors.primary },
+  tertiary: { bg: colors.primaryBg, fg: colors.primary, border: withAlpha(colors.primary, alpha.edge) },
+  outline: { bg: colors.surface, fg: colors.textPrimary, border: colors.border },
   // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
   // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
   destructive: { bg: colors.error, fg: colors.onError, border: 'transparent' },
@@ -150,7 +150,7 @@ export default function Button({
     <>
       <Ionicons name="checkmark" size={s.icon} color={v.fg} />
       {successLabel ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font }, textStyle]}>
+        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {successLabel}
         </Text>
       ) : null}
@@ -159,7 +159,7 @@ export default function Button({
     <>
       {icon ? <Ionicons name={icon} size={s.icon} color={v.fg} /> : null}
       {title != null ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font }, textStyle]}>
+        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {title}
         </Text>
       ) : null}
@@ -243,5 +243,8 @@ const styles = StyleSheet.create({
   // loading/success phases are busy states, not "unavailable" states, and
   // dimming them would read as a fault at the exact committing moment.
   disabled: { opacity: 0.5 },
-  label: { fontWeight: fontWeight.bold },
+  label: {
+    fontFamily: fontFamily.semibold,
+    letterSpacing: 0,
+  },
 });

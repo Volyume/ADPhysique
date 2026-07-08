@@ -43,6 +43,11 @@ jest.mock('../../lib/swapEngine', () => ({ rankSwaps: jest.fn(() => []) }));
 import ExerciseDetailScreen from '../ExerciseDetailScreen';
 import { getExerciseById } from '../../lib/database';
 
+const EXERCISE_DETAIL_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../ExerciseDetailScreen.js'),
+  'utf8',
+);
+
 function flattenText(node) {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -91,5 +96,18 @@ describe('ExerciseDetailScreen load states', () => {
     expect(getExerciseById).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load exercise details");
+  });
+});
+
+describe('ExerciseDetailScreen polish guards', () => {
+  test('goal actions use contained neutral controls instead of underlined links', () => {
+    expect(EXERCISE_DETAIL_SOURCE).toContain('Ionicons name="flag-outline" size={14} color={colors.textSecondary}');
+    expect(EXERCISE_DETAIL_SOURCE).toContain('Ionicons name="trash-outline" size={14} color={colors.textSecondary}');
+    expect(EXERCISE_DETAIL_SOURCE).toMatch(/goalSetLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(EXERCISE_DETAIL_SOURCE).toMatch(/removeGoalLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(EXERCISE_DETAIL_SOURCE).toContain('goalSetLinkText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(EXERCISE_DETAIL_SOURCE).toContain('removeGoalLinkText: {\n    ...type.label,\n    color: colors.textPrimary,');
+    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/goalSetLinkText: \{[\s\S]*textDecorationLine: 'underline'/);
+    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/removeGoalLinkText: \{[\s\S]*textDecorationLine: 'underline'/);
   });
 });

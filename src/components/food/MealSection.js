@@ -96,10 +96,10 @@ export default function MealSection({
           <TouchableOpacity
             style={styles.addFoodButton}
             onPress={onAdd}
-            accessibilityRole="button"
-            accessibilityLabel={`Add food to ${slot.label}`}
-          >
-            <Ionicons name="search-outline" size={16} color={colors.onPrimary} />
+          accessibilityRole="button"
+          accessibilityLabel={`Add food to ${slot.label}`}
+        >
+            <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.addFoodText}>Add food</Text>
           </TouchableOpacity>
         </View>
@@ -160,10 +160,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
   },
-  addFoodText: { ...type.label, color: colors.onPrimary },
+  addFoodText: { ...type.label, color: colors.textPrimary },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,

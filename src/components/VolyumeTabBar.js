@@ -41,7 +41,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
-import { colors, fontSize, fontWeight, radius, spacing, motion } from '../styles/theme';
+import { colors, radius, spacing, motion, type } from '../styles/theme';
 
 // Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
 // review 2026-07-03: a pill behind only the icon left the label hanging
@@ -190,5 +190,5 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.surfaceElevated,
   },
-  label: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  label: { ...type.caption, fontFamily: type.label.fontFamily },
 });

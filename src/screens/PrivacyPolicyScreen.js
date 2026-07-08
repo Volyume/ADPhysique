@@ -24,7 +24,7 @@ export default function PrivacyPolicyScreen() {
             If you use Progress Photos or Volyume Score analysis, the photo files stay on this device unless you choose
             to share or export them. The app may store local metadata and analysis outputs such as photo quality,
             confidence, leanness band, Volyume Score and progress signal. Volyume Score is a visual
-            progress feature, not an exact body fat percentage, DEXA scan, diagnosis, or medical assessment.
+            progress feature, not a DEXA scan, diagnosis, medical assessment, or medical advice.
           </Body>
           <Body>
             We do not sell your data. We do not share it with third parties for advertising purposes.

@@ -6,7 +6,11 @@
  * goal-change receipt stays honest. These pin both registers and the
  * fail-closed default.
  */
+import fs from 'fs';
+import path from 'path';
 import { create, act } from 'react-test-renderer';
+
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'GoalChangeSummaryScreen.js'), 'utf8');
 
 const mockGetOpenEdPatternFlag = jest.fn();
 jest.mock('../../lib/database', () => ({
@@ -80,5 +84,12 @@ describe('GoalChangeSummary with no flag', () => {
     const t = textsOf(await render(CUT_PARAMS));
     expect(t).toMatch(/controlled calorie deficit/i);
     expect(t).toMatch(/diet break/i);
+  });
+
+  test('next-step copy uses current navigation names and avoids internal plan terms', () => {
+    expect(SOURCE).toContain('Review the full plan from Train.');
+    expect(SOURCE).toContain('Open Train and choose "Start with a plan" to retry.');
+    expect(SOURCE).not.toContain('Open Plans');
+    expect(SOURCE).not.toContain("didn't reroll");
   });
 });

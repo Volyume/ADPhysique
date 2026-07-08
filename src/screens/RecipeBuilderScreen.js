@@ -25,7 +25,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
@@ -404,8 +404,9 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         <View style={styles.section}>
           <View style={styles.ingHeader}>
             <Text style={styles.label}>Ingredients</Text>
-            <TouchableOpacity onPress={onPickIngredient} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add ingredient">
-              <Text style={styles.addLink}>+ Add ingredient</Text>
+            <TouchableOpacity style={styles.addIngredientBtn} onPress={onPickIngredient} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add ingredient">
+              <Ionicons name="add" size={15} color={colors.textSecondary} />
+              <Text style={styles.addLink}>Add ingredient</Text>
             </TouchableOpacity>
           </View>
 
@@ -492,7 +493,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
-  addLink: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  addIngredientBtn: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  addLink: { ...type.label, color: colors.textPrimary },
   ingEmpty: { color: colors.textMuted, fontSize: fontSize.sm, paddingVertical: spacing.md },
   ingRow: {
     flexDirection: 'row', alignItems: 'center',

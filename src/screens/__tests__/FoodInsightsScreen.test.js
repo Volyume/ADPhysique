@@ -146,7 +146,7 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     expect(text).toContain("Couldn't load nutrition insights");
     expect(text).toContain('Check your connection and try again.');
     expect(text).toContain('Try again');
-    expect(text).not.toContain('Log food on a few days to fill this view.');
+    expect(text).not.toContain('Log food on a few days to see this view fill out.');
   });
 
   test('reports days hit of days logged using the existing 10% band', async () => {
@@ -172,7 +172,7 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     const text = await mountWith([]);
     expect(text).not.toContain('You hit your protein on');
     // The macro-block empty copy still shows (window-aware since NUT-05; default 7).
-    expect(text).toContain('Log food on a few days to fill this view.');
+    expect(text).toContain('Log food on a few days to see this view fill out.');
   });
 
   test('carries no praise or streak language (locked voice)', async () => {
@@ -216,7 +216,7 @@ describe('FoodInsightsScreen — analytics windows 14/30/90d (ULTIMATE-NUT-05)',
     await tapWindow(tree, 90);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Export 90 days as CSV');
-    expect(text).toContain('Log food on a few days to fill this view.');
+    expect(text).toContain('Log food on a few days to see this view fill out.');
     expect(text).toContain('Open diary');
     const openDiary = tree.root.findByProps({ accessibilityLabel: 'Open diary' });
     await act(async () => { openDiary.props.onPress(); });

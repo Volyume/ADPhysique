@@ -248,27 +248,31 @@ export default function PaywallScreen({ navigation, route }) {
             onPress={handleRestore}
             disabled={busy}
             hitSlop={hitSlop}
+            style={[styles.legalButton, busy && styles.legalButtonDisabled]}
             accessibilityRole="button"
             accessibilityLabel="Restore purchases"
           >
+            <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.legalLink}>Restore purchases</Text>
           </TouchableOpacity>
-          <Text style={styles.legalDot}>-</Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('SubscriptionPolicy')}
             hitSlop={hitSlop}
+            style={styles.legalButton}
             accessibilityRole="button"
             accessibilityLabel="Subscription terms"
           >
+            <Ionicons name="document-text-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.legalLink}>Subscription terms</Text>
           </TouchableOpacity>
-          <Text style={styles.legalDot}>-</Text>
           <TouchableOpacity
             onPress={() => Linking.openURL(LINKS.privacyPolicy).catch(() => {})}
             hitSlop={hitSlop}
+            style={styles.legalButton}
             accessibilityRole="button"
             accessibilityLabel="Privacy policy"
           >
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.legalLink}>Privacy</Text>
           </TouchableOpacity>
         </View>
@@ -322,9 +326,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   legalLink: {
+    ...type.caption,
     color: colors.textSecondary,
-    fontSize: fontSize.xs,
-    textDecorationLine: 'underline',
   },
-  legalDot: { color: colors.textMuted, fontSize: fontSize.xs },
+  legalButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+  },
+  legalButtonDisabled: { opacity: 0.5 },
 });

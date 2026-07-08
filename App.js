@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as Font from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
@@ -116,6 +117,7 @@ import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
 import { applyAccessibility, resolvedTheme } from './src/styles/theme';
+import { appFonts, installTextDefaults } from './src/styles/fonts';
 import { loadA11yPrefs } from './src/lib/accessibilityPrefs';
 import * as Updates from 'expo-updates';
 
@@ -136,6 +138,12 @@ async function bootstrapAccessibility() {
     const { Appearance } = require('react-native');
     Appearance.setColorScheme?.(resolvedTheme === 'light' ? 'light' : 'dark');
   } catch (_) { /* native surfaces fall back to app.json */ }
+}
+
+async function bootstrapVisualSystem() {
+  await bootstrapAccessibility();
+  await Font.loadAsync(appFonts);
+  installTextDefaults();
 }
 
 // Shown when an auth email link fails to establish a session (expired or
@@ -402,7 +410,7 @@ export default function App() {
   // finally, regardless of whether the bootstrap resolved or rejected —
   // a failed pref read just means the default palette renders.
   useEffect(() => {
-    bootstrapAccessibility()
+    bootstrapVisualSystem()
       .catch(() => {})
       .finally(() => setThemeReady(true));
   }, []);

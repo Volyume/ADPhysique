@@ -11,6 +11,7 @@ import TextField from '../TextField';
 import Chip from '../Chip';
 import Stepper from '../Stepper';
 import { colors } from '../../styles/theme';
+import { fontFamily } from '../../styles/fontFamily';
 
 describe('SearchBar', () => {
   test('renders the placeholder as the input a11y label', () => {
@@ -71,6 +72,7 @@ describe('SearchBar', () => {
     const input = tree.root.findByProps({ accessibilityLabel: 'Search' });
     const flat = Array.isArray(input.props.style) ? Object.assign({}, ...input.props.style) : input.props.style;
     expect(flat.fontSize).toBeGreaterThanOrEqual(16);
+    expect(flat.fontFamily).toBe(fontFamily.regular);
   });
 });
 

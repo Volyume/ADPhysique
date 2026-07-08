@@ -47,10 +47,10 @@ export default function Card({
   // 'surfaceElevated' | 'surface2' | 'surface3'. Lets the one Card absorb the
   // surface2/3 boxes the app used to hand-roll.
   surface,
-  // `radius` overrides the corner radius token: 'hair'|'xs'|'sm'|'md'|'lg'
-  // (default)|'xl'. Lets Card express the tighter-cornered boxes (radius.md etc.)
+  // `radius` overrides the corner radius token: 'hair'|'xs'|'sm'|'md'
+  // (default)|'lg'|'xl'. Lets Card express tighter or more rounded boxes
   // that previously had to stay hand-rolled to avoid a corner-radius regression.
-  radius: radiusKey = 'lg',
+  radius: radiusKey = 'md',
   borderless = false,
   // `padding` is a spacing token key, or 'none' for a full-bleed card whose
   // children self-pad (e.g. list sections with edge-to-edge rows).
@@ -117,10 +117,11 @@ export default function Card({
 const styles = StyleSheet.create({
   // backgroundColor / borderRadius / padding are set per-instance in the
   // component (so surface + radius + padding props can override); base only
-  // owns the hairline border, which every tier shares.
+  // owns the hairline border, which every tier shares. Cards use the quiet
+  // borderSubtle token; inputs/buttons keep the stronger border token.
   base: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   borderless: { borderWidth: 0 },
 });

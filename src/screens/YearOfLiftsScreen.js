@@ -704,13 +704,13 @@ export default function YearOfLiftsScreen({ navigation, route }) {
               style={({ pressed }) => [styles.tapLeft, pressed && styles.tapPressed]}
               onPress={() => { haptics.selection(); rewind(); }}
               accessibilityRole="button"
-              accessibilityLabel="Previous card"
+              accessibilityLabel="Previous slide"
             />
             <Pressable
               style={({ pressed }) => [styles.tapRight, pressed && styles.tapPressed]}
               onPress={() => { haptics.selection(); advance(); }}
               accessibilityRole="button"
-              accessibilityLabel="Next card"
+              accessibilityLabel="Next slide"
             />
           </View>
         </>

@@ -78,6 +78,10 @@ function setInput(tree, label, value) {
   act(() => { nodes[0].props.onChangeText(value); });
 }
 
+function allText(tree) {
+  return JSON.stringify(tree.toJSON());
+}
+
 // Renders the form, fills a valid name (so canSave is satisfied) and sets the
 // eaten amount, then presses Save and returns after the async work settles.
 async function renderAndSave(eatenValue) {
@@ -95,6 +99,17 @@ async function renderAndSave(eatenValue) {
 }
 
 describe('AddCustomFoodScreen eaten-quantity guard (FOOD-001)', () => {
+  test('uses plain diary copy instead of meal-number context', async () => {
+    const route = { params: { mealSlot: 'meal_2', entryDate: '2026-07-04' } };
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    const text = allText(tree);
+    expect(text).toContain('Save this food, then add it to your diary.');
+    expect(text).not.toContain('Logging to');
+    expect(text).not.toContain('Meal 2');
+  });
+
   test.each([
     ['a negative amount', '-50'],
     ['zero', '0'],

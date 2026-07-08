@@ -5,6 +5,8 @@
  * guard against cardio, meal, or step shortcuts returning to this slot.
  */
 import { create, act } from 'react-test-renderer';
+import fs from 'fs';
+import path from 'path';
 
 jest.mock('../../lib/database', () => ({}));
 jest.mock('../Sparkline', () => 'Sparkline');
@@ -17,6 +19,8 @@ jest.mock('expo-haptics', () => ({
 }));
 
 import TodayStrip from '../TodayStrip';
+
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'TodayStrip.js'), 'utf8');
 
 let lastTree = null;
 async function render(props = {}) {
@@ -41,7 +45,7 @@ afterEach(() => {
 describe('weight cell', () => {
   test('logged: shows the value and confirmation tick, no sparkline', async () => {
     const tree = await render({ todayWeight: 82.4 });
-    expect(json(tree)).toContain('WEIGHT');
+    expect(json(tree)).toContain('Morning weight');
     expect(json(tree)).toContain('82.4 kg');
     expect(json(tree)).not.toContain('Sparkline');
     expect(tree.root.findAll((n) => n.props.accessibilityLabel?.startsWith('Weight ')).length).toBeGreaterThan(0);
@@ -55,7 +59,7 @@ describe('weight cell', () => {
     act(() => cell.props.onPress());
     expect(onOpenTrend).toHaveBeenCalled();
     act(() => cell.props.onLongPress());
-    expect(json(tree)).toContain('MORNING WEIGHT');
+    expect(json(tree)).toContain('Morning weight');
   });
 
   test('logged without a trend door: tap still edits', async () => {
@@ -63,13 +67,22 @@ describe('weight cell', () => {
     const cell = tree.root.findAll((n) => n.props.accessibilityLabel?.includes('Tap to edit'))[0];
     expect(cell).toBeTruthy();
     act(() => cell.props.onPress());
-    expect(json(tree)).toContain('MORNING WEIGHT');
+    expect(json(tree)).toContain('Morning weight');
   });
 
   test('no log: compact weight prompt, not auto-expanded', async () => {
     const tree = await render({ todayWeight: null, lastWeightKg: 80 });
-    expect(json(tree)).not.toContain('MORNING WEIGHT');
+    expect(json(tree)).toContain('Morning weight');
     expect(findByLabel(tree, 'Log morning weight')).toBeTruthy();
+    expect(findByLabel(tree, 'Morning weight in stones')).toBeFalsy();
+  });
+
+  test('empty weight prompt uses neutral contained chrome, not an amber text link', () => {
+    expect(SOURCE).toContain('emptyLogBox: {');
+    expect(SOURCE).toContain('borderColor: colors.border');
+    expect(SOURCE).toContain('backgroundColor: colors.surface2');
+    expect(SOURCE).toContain('logPrompt: { ...type.label, color: colors.textPrimary }');
+    expect(SOURCE).not.toContain('logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }');
   });
 
   test('tapping weight opens input; submitting calls onLogWeight with parsed kg', async () => {
@@ -87,7 +100,7 @@ describe('weight-only top slot', () => {
   test('does not render cardio, meal or step shortcuts', async () => {
     const tree = await render({ todayWeight: 80 });
     const txt = json(tree);
-    expect(txt).toContain('WEIGHT');
+    expect(txt).toContain('Morning weight');
     expect(txt).not.toContain('CARDIO');
     expect(txt).not.toContain('MEAL');
     expect(txt).not.toContain('STEPS');

@@ -10,28 +10,30 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCREEN).toMatch(/function latestScanScoreLabel\(\{ assessment = null, latestScan = null, suppressed = false, hideExact = false \} = \{\}\)/);
+    expect(SCREEN).toMatch(/function latestScanScoreLabel\(\{ assessment = null, latestScan = null, suppressed = false \} = \{\}\)/);
     expect(SCREEN).toMatch(/formatVolyumeScore\(score\)/);
     expect(SCREEN).not.toMatch(/`index \$\{score\}`/);
     expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
     expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(SCREEN).toMatch(/function libraryScanSummary\(scan\)/);
-    expect(SCREEN).toMatch(/label: 'Volyume Score'/);
+    expect(SCREEN).toMatch(/label: 'Score'/);
     expect(SCREEN).toMatch(/label: 'Leanness'/);
-    expect(SCREEN).toMatch(/label: 'Signal'/);
+    expect(SCREEN).toMatch(/label: 'Change'/);
+    expect(SCREEN).not.toMatch(/label: 'Signal'/);
     expect(SCREEN).not.toMatch(/Latest scan|Latest score/);
   });
 
-  test('has trend-only display preference and one-week scan cadence', () => {
-    expect(SCREEN).toMatch(/getProgressScanHideExactPreference/);
-    expect(SCREEN).toMatch(/setProgressScanHideExactPreference/);
+  test('has no score-hiding switch and keeps one-week scan cadence', () => {
+    expect(SCREEN).not.toMatch(/getProgressScanHideExactPreference/);
+    expect(SCREEN).not.toMatch(/setProgressScanHideExactPreference/);
+    expect(SCREEN).not.toMatch(/Hide score/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*7 \* 86400000/);
-    expect(SCREEN).toMatch(/Leave more time between photo sets/);
+    expect(SCREEN).toMatch(/Leave more time between sets/);
     expect(SCREEN).toMatch(/about a week apart/);
-    expect(SCREEN).toMatch(/retake sooner when you are fixing photo quality/);
+    expect(SCREEN).toMatch(/retake sooner if you are fixing photo quality/);
     expect(SCREEN).toMatch(/save photos today/);
-    expect(SCREEN).toMatch(/Volyume Score may be less useful/);
-    expect(SCREEN).toMatch(/without forcing a Volyume Score/);
+    expect(SCREEN).toMatch(/score may be less useful/);
+    expect(SCREEN).toMatch(/Clear front and back photos can be scored/);
     expect(SCREEN).not.toMatch(/at least a week apart|at least 1 week apart/);
   });
 
@@ -47,13 +49,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/Compare two photo sets/);
     expect(SCREEN).toMatch(/scanShareItemsFromEntries/);
     expect(SCREEN).toMatch(/scanShareItems\.length >= 2 \? scanShareItems : photos/);
-    expect(SCREEN).toMatch(/hideScanRange=\{hideExactScans\}/);
-    expect(SCREEN).toMatch(/hideWeight=\{hideExactScans && scanPhotoNames\.has\(viewerName\)\}/);
-    expect(SCREEN).toMatch(/Share progress card/);
+    expect(SCREEN).toMatch(/hideScanRange=\{false\}/);
+    expect(SCREEN).toMatch(/hideWeight=\{false\}/);
+    expect(SCREEN).toMatch(/Share comparison/);
   });
 
-  test('hide-exact and suppression gate scan deltas and weight stats', () => {
-    expect(SCREEN).toMatch(/const scoreValue = suppressed \|\| hideExactScans \? 'Hidden'/);
+  test('suppression gates scan deltas while scores stay visible otherwise', () => {
+    expect(SCREEN).toMatch(/const scoreValue = suppressed \? 'Hidden'/);
     expect(SCREEN).toMatch(/assessment\?\.progressSignalLabel \|\| scan\?\.deltaExplanation\?\.trendSummary/);
     expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
   });
@@ -108,10 +110,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
-    expect(SCREEN).toMatch(/Your private physique record/);
-    expect(SCREEN).toMatch(/Private by default/);
-    expect(SCREEN).toMatch(/Nothing is shared or exported unless you choose it/);
-    expect(SCREEN).toMatch(/Volyume scans them into a private Volyume Score for weekly comparison/);
+    expect(SCREEN).toMatch(/Private physique photos/);
+    expect(SCREEN).toMatch(/Private unless you choose to share or export/);
+    expect(SCREEN).toMatch(/Add front and back photos once a week/);
+    expect(SCREEN).toMatch(/Clear sets can be scored and compared over time/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);
@@ -123,8 +125,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('compare action copy is specific without adding another prompt card', () => {
-    expect(SCREEN).toMatch(/const compareButtonTitle = 'Compare photo sets';/);
-    expect(SCREEN).toMatch(/title=\{compareButtonTitle\}/);
+    expect(SCREEN).toMatch(/title="Compare"/);
+    expect(SCREEN).not.toMatch(/const compareButtonTitle = 'Compare photo sets';/);
     expect(SCREEN).toMatch(/accessibilityLabel="Compare two photo sets"/);
   });
 
@@ -142,6 +144,15 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/datesChipText: \{ \.\.\.type\.label, color: colors\.textMuted, flex: 1, minWidth: 0 \}/);
   });
 
+  test('missing-pose and route recommendation controls avoid loose amber links', () => {
+    expect(SCREEN).toContain('Ionicons name="camera-outline" size={iconSize.sm} color={colors.textSecondary}');
+    expect(SCREEN).toMatch(/completeCheckInButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SCREEN).toContain('completeCheckInText: { ...type.label, color: colors.textPrimary }');
+    expect(SCREEN).toContain("route.recommendationLabel || 'Recommended'");
+    expect(SCREEN).not.toContain("route.recommendationLabel || 'Best next'");
+    expect(SCREEN).not.toContain('completeCheckInText: { ...type.label, color: colors.primary }');
+  });
+
   test('destructive scan copy says a set delete removes the full scored set', () => {
     expect(SCREEN).toMatch(/const owningScan = findScanForPhotoName\(visibleScans, name\);/);
     expect(SCREEN).toMatch(/deleteProgressScanSession\(uid, owningScan\.id, \{ deleteFiles: true \}\)/);
@@ -156,7 +167,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('library scan imports abandon unfinished draft sessions on every failed path', () => {
     expect(SCREEN).toMatch(/async function pickScanPoseFromLibrary\(flow = scanFlow, pose = capturePose\)/);
-    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photos need a rebuild on this device/);
+    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photo library is not available in this app build/);
     expect(SCREEN).toMatch(/if \(result\?\.canceled\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/if \(!uri\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/let savedPhoto = null;[\s\S]*savedPhoto = saved;/);

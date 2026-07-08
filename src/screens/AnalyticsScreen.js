@@ -109,7 +109,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   // Landmark telemetry fires once per landmark per app run (a render-time event,
   // deduped here); the "seen" record is written only when the user actually taps
-  // "Make a card", so a share CTA never vanishes before it can be used.
+  // "Create share image", so a share CTA never vanishes before it can be used.
   const firedLandmarks = useRef(new Set());
   function fireLandmarkOnce(key, userId, event, payload) {
     if (!userId || firedLandmarks.current.has(key)) return;
@@ -259,7 +259,7 @@ export default function AnalyticsScreen({ navigation, route }) {
     [allSets, exerciseTypeById],
   );
 
-  // S4 (world-class audit 04a): "Make a card" extended to training load. A
+  // S4 (world-class audit 04a): share image extended to training load. A
   // pure training-volume read (kg lifted), never ED-gated (same reasoning as
   // makeTonnageCard above) and never a comparison to anyone else, just this
   // week's number against the plain average of the weeks already on screen.
@@ -330,7 +330,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   // Re-check the lifetime-tonnage landmark whenever the workout count changes
   // (tonnage only grows when a session is logged). The CTA persists until the
-  // user taps "Make a card" (markTonnageMilestoneSeen on tap), so it never
+  // user taps the share-image CTA (markTonnageMilestoneSeen on tap), so it never
   // vanishes before it can be used; telemetry fires once per app run.
   useEffect(() => {
     let cancelled = false;
@@ -419,12 +419,13 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Text style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
                 {pendingMilestone >= 12 ? (
                   <TouchableOpacity
+                    style={styles.milestoneCtaButton}
                     onPress={() => makeStreakCard(pendingMilestone)}
                     accessibilityRole="button"
-                    accessibilityLabel="Make a card"
+                    accessibilityLabel="Create share image"
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.milestoneCta}>Make a card</Text>
+                    <Text style={styles.milestoneCta}>Create share image</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -434,12 +435,13 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
                 <Text style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
                 <TouchableOpacity
+                  style={styles.milestoneCtaButton}
                   onPress={makePerfectMonthCard}
                   accessibilityRole="button"
-                  accessibilityLabel="Make a card"
+                  accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.milestoneCta}>Make a card</Text>
+                  <Text style={styles.milestoneCta}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -450,12 +452,13 @@ export default function AnalyticsScreen({ navigation, route }) {
                   {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
                 <TouchableOpacity
+                  style={styles.milestoneCtaButton}
                   onPress={makeLongestRunPbCard}
                   accessibilityRole="button"
-                  accessibilityLabel="Make a card"
+                  accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.milestoneCta}>Make a card</Text>
+                  <Text style={styles.milestoneCta}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -474,12 +477,13 @@ export default function AnalyticsScreen({ navigation, route }) {
                 {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
               <TouchableOpacity
+                style={styles.milestoneCtaButton}
                 onPress={makeTonnageCard}
                 accessibilityRole="button"
-                accessibilityLabel="Make a card"
+                accessibilityLabel="Create share image"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.milestoneCta}>Make a card</Text>
+                <Text style={styles.milestoneCta}>Create share image</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -601,10 +605,12 @@ export default function AnalyticsScreen({ navigation, route }) {
             <View style={styles.rowBetween}>
               <SectionLabel>Recent sessions</SectionLabel>
               <TouchableOpacity
+                style={styles.seeAllButton}
                 onPress={() => navigation.navigate('WorkoutHistory')}
                 accessibilityRole="button"
                 accessibilityLabel="See all sessions"
               >
+                <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
                 <Text style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
             </View>
@@ -908,16 +914,16 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         <Text style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
         <Text style={styles.heroAxisLabel}>this week</Text>
       </View>
-      {/* S4: "Make a card" extended to training load, reflective and factual,
+      {/* S4: share image extended to training load, reflective and factual,
           never a comparison to anyone else. */}
       <TouchableOpacity
-        style={styles.trainingLoadCtaRow}
+        style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton]}
         onPress={onMakeCard}
         accessibilityRole="button"
-        accessibilityLabel="Make a card"
+        accessibilityLabel="Create share image"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text style={styles.milestoneCta}>Make a card</Text>
+        <Text style={styles.milestoneCta}>Create share image</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -1037,9 +1043,32 @@ const styles = StyleSheet.create({
   section:     { gap: spacing.md },
   milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  milestoneCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  milestoneCtaButton: {
+    minHeight: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  milestoneCta: { ...type.label, color: colors.textPrimary },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seeAll:      { ...type.label, color: colors.primary },
+  seeAllButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  seeAll:      { ...type.label, color: colors.textPrimary },
 
   // ── Insight rows ──
   recapCard: {
@@ -1063,7 +1092,7 @@ const styles = StyleSheet.create({
   heroUnit:      { ...type.title, color: colors.textSecondary },
   heroSub:       { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
   heroChartSlot: { marginTop: spacing.md, minHeight: 64 },
-  // S4: "Make a card" extended to training load, same text style as the
+  // S4: share image extended to training load, same text style as the
   // milestone CTAs (milestoneCta) but right-aligned under the axis row.
   trainingLoadCtaRow: { alignSelf: 'flex-end', marginTop: spacing.sm },
   heroAxisLabel: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },

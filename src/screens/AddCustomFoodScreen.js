@@ -28,7 +28,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
-import { mealSlotLabel } from '../lib/food/mealSlots';
 
 
 export default function AddCustomFoodScreen({ navigation, route }) {
@@ -235,7 +234,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       <ModalHeader title="New food" onClose={() => navigation.goBack()} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={styles.contextLabel}>Logging to {mealSlotLabel(mealSlot)}</Text>
+        <Text style={styles.contextLabel}>Save this food, then add it to your diary.</Text>
         {prefillBarcode ? (
           <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}

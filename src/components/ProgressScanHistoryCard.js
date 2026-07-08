@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from './Card';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
-  colors, spacing, radius, type, fontWeight, iconSize,
+  colors, spacing, radius, type, iconSize,
 } from '../styles/theme';
 import {
   formatVolyumeScore,
@@ -103,19 +103,19 @@ function weightLabel(scan, { suppressed = false, hideExact = false } = {}) {
 }
 
 function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Score detail is hidden right now. Your photos remain private.';
+  if (suppressed) return 'Score details are hidden. Your photos remain private.';
   const state = unscoredState(scan);
   if (state === 'analysis_unavailable') {
-    return scan?.copySummary || 'The photos are saved, but on-device scan analysis did not run for the required front and back photos.';
+    return scan?.copySummary || 'Saved, but Volyume needs front and back photos to score the set.';
   }
   if (state === 'retake_needed') {
-    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score because the read was not reliable enough. Retake with your whole body visible, even lighting and a plain background.';
+    return scan?.copySummary || 'Saved, but the read was not clear enough to score. Retake with your whole body visible, even lighting and a plain background.';
   }
   if (state === 'not_enough' || state === 'not_scored') {
-    return scan?.copySummary || 'The photos are saved, but Volyume did not create a score from this set.';
+    return scan?.copySummary || 'Saved, but Volyume could not create a score from this set.';
   }
   if (state === 'measured_only') {
-    return scan?.copySummary || 'The photos were measured as visual scan context, but Volyume did not create a score from this set.';
+    return scan?.copySummary || 'Measured, but Volyume could not create a score from this set.';
   }
   if (hideExact && scan?.deltaExplanation?.trendSummary) return scan.deltaExplanation.trendSummary;
   if (scan?.deltaExplanation?.summary) return scan.deltaExplanation.summary;
@@ -124,21 +124,11 @@ function whyLabel(scan, { suppressed = false, hideExact = false } = {}) {
   return 'Use the same pose, lighting and framing next time for the cleanest read.';
 }
 
-function scoreBasisLabel(scan, { suppressed = false } = {}) {
-  if (suppressed || scanScore(scan) == null) return null;
-  const assessment = assessmentFor(scan);
-  const signals = Array.isArray(assessment?.measuredSignalsUsed) ? assessment.measuredSignalsUsed : [];
-  return signals.includes('side_depth')
-    ? 'Basis: front, back and side outline signals plus scan quality. No body fat percentage.'
-    : 'Basis: front/back outline signals plus scan quality. No body fat percentage.';
-}
-
 export default function ProgressScanHistoryCard({
   scans = [],
   hideExact = false,
   suppressed = false,
   readOnly = false,
-  onToggleHideExact,
   onDeleteScan,
   onOpenPhoto,
 }) {
@@ -147,41 +137,22 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text style={styles.scanTitle}>Score history</Text>
-          <Text style={styles.scanSubtitle}>
-            Private Volyume Score trend from repeatable photo sets. Not body fat.
-          </Text>
+          <Text style={styles.scanTitle}>Photo results</Text>
         </View>
-        <TouchableOpacity
-          onPress={onToggleHideExact}
-          hitSlop={8}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: hideExact }}
-          accessibilityLabel={hideExact ? 'Show score details' : 'Hide score details'}
-          style={styles.hideExactToggle}
-        >
-          <Ionicons
-            name={hideExact ? 'eye-off-outline' : 'eye-outline'}
-            size={iconSize.sm}
-            color={colors.primary}
-          />
-          <Text style={styles.hideExactText}>{hideExact ? 'Show score' : 'Hide score'}</Text>
-        </TouchableOpacity>
       </View>
       {scans.map((scan) => {
         const dateLabel = formatProgressPhotoDay(scan.capturedAt);
-        const basisLabel = scoreBasisLabel(scan, { suppressed });
         return (
           <View key={scan.id} style={styles.scanEntry}>
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
                 <Text style={styles.scanDate}>{dateLabel}</Text>
-                <Text style={styles.scanEntryTitle}>Score for this set</Text>
+                <Text style={styles.scanEntryTitle}>{comparisonLabel(scan)}</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={styles.confidencePill}>
                   <Text style={styles.confidencePillText} numberOfLines={1}>
-                    Confidence: {confidenceLabel(scan)}
+                    Read quality: {confidenceLabel(scan)}
                   </Text>
                 </View>
                 {!readOnly ? (
@@ -199,11 +170,11 @@ export default function ProgressScanHistoryCard({
             </View>
             <View style={styles.scanInsightGrid}>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Leanness band</Text>
+                <Text style={styles.scanInsightLabel}>Leanness</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{bandLabel(scan)}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Signal</Text>
+                <Text style={styles.scanInsightLabel}>Change</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
@@ -211,13 +182,12 @@ export default function ProgressScanHistoryCard({
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Bodyweight</Text>
+                <Text style={styles.scanInsightLabel}>Weight</Text>
                 <Text style={styles.scanInsightValue} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
               </View>
             </View>
             <View style={styles.scanReasonBox}>
-              {basisLabel ? <Text style={styles.scanBasis}>{basisLabel}</Text> : null}
-              <Text style={styles.scanBody}>{whyLabel(scan, { suppressed, hideExact })}</Text>
+              <Text style={styles.scanBody} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
               <View style={styles.scanAssetRow}>
@@ -227,7 +197,7 @@ export default function ProgressScanHistoryCard({
                     onPress={readOnly ? undefined : () => onOpenPhoto?.(asset.photoName)}
                     disabled={readOnly}
                     accessibilityRole={readOnly ? 'image' : 'button'}
-                    accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${formatProgressPhotoDay(asset.takenAt)}.`}
+                    accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Progress'} photo from ${formatProgressPhotoDay(asset.takenAt)}.`}
                     style={styles.scanAssetThumb}
                   >
                     <Image source={{ uri: asset.uri }} style={styles.scanAssetImage} />
@@ -236,7 +206,6 @@ export default function ProgressScanHistoryCard({
                 ))}
               </View>
             ) : null}
-            <Text style={styles.scanQuality}>{comparisonLabel(scan)}</Text>
           </View>
         );
       })}
@@ -255,18 +224,8 @@ const styles = StyleSheet.create({
   },
   scanHeadingGroup: { flex: 1, minWidth: 0, gap: spacing.xxs },
   scanTitle: { ...type.h3, color: colors.textPrimary },
-  scanSubtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   scanDate: { ...type.caption, color: colors.textMuted },
   scanBody: { ...type.bodySm, color: colors.textMuted },
-  hideExactToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xxs,
-    minHeight: 40,
-    paddingHorizontal: spacing.xs,
-  },
-  hideExactText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   scanEntry: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
@@ -292,7 +251,6 @@ const styles = StyleSheet.create({
   },
   confidencePillText: { ...type.caption, color: colors.primary, flexShrink: 1 },
   scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  scanQuality: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
   scanInsightGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   scanInsightCell: {
     flex: 1,
@@ -313,7 +271,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
   },
-  scanBasis: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   scanAssetRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   scanAssetThumb: { width: 72, gap: spacing.xxs },
   scanAssetImage: { width: 72, height: 72, borderRadius: radius.sm, backgroundColor: colors.surface2 },

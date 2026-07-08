@@ -5,7 +5,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
+import {
+  colors, fontSize, fontWeight, spacing, radius, circle, type,
+} from '../styles/theme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import useAppStore from '../store/useAppStore';
@@ -249,8 +251,9 @@ export function ProLocked({ feature = 'This' }) {
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
         >
+          <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
           <Text style={styles.lockedRestoreText}>
-            {restoring ? 'Restoring…' : 'Restore purchases'}
+            {restoring ? 'Restoring...' : 'Restore purchases'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -402,8 +405,19 @@ const styles = StyleSheet.create({
   lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
-  lockedRestore: { paddingVertical: spacing.sm },
-  lockedRestoreText: { fontSize: fontSize.xs, color: colors.textSecondary, textDecorationLine: 'underline' },
+  lockedRestore: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+  },
+  lockedRestoreText: { ...type.caption, color: colors.textSecondary },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,

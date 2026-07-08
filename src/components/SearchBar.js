@@ -12,7 +12,7 @@
 
 import { ActivityIndicator, View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, radius, iconSize } from '../styles/theme';
+import { colors, fontSize, spacing, radius, iconSize, type } from '../styles/theme';
 
 export default function SearchBar({
   value,
@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   input: {
+    ...type.body,
     flex: 1,
     // 16 keeps iOS from auto-zooming the field on focus.
     fontSize: Math.max(16, fontSize.md),

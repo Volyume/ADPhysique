@@ -19,6 +19,7 @@ import {
   applyAccessibility,
   resolvedTheme,
 } from '../theme';
+import { fontFamily } from '../fontFamily';
 
 describe('withAlpha', () => {
   test('6-digit hex → rgba', () => {
@@ -58,26 +59,36 @@ describe('scrim token', () => {
 });
 
 describe('type roles', () => {
-  test('body bundles size + weight + lineHeight + letterSpacing', () => {
+  test('body bundles family + size + lineHeight + letterSpacing', () => {
     expect(type.body).toEqual({
+      fontFamily: fontFamily.regular,
       fontSize: 16,
-      fontWeight: '400',
       lineHeight: Math.round(16 * lineHeight.normal),
       letterSpacing: letterSpacing.body,
     });
   });
-  test('display uses the tightest tracking', () => {
+  test('display stays sharp without synthetic Android weight or tracking', () => {
     expect(type.display.letterSpacing).toBe(letterSpacing.display);
-    expect(type.display.fontWeight).toBe('900');
+    expect(type.display.fontWeight).toBeUndefined();
+    expect(type.display.fontFamily).toBe(fontFamily.displayBold);
   });
   test('overline is the shared section-label role and adds no tracking drift', () => {
     expect(type.overline).toEqual({
+      fontFamily: fontFamily.medium,
       fontSize: 11,
-      fontWeight: '600',
       lineHeight: Math.round(11 * lineHeight.snug),
       letterSpacing: 0,
       textTransform: 'uppercase',
     });
+  });
+
+  test('core hierarchy avoids blocky synthetic bold weights on Android', () => {
+    expect(type.h2.fontFamily).toBe(fontFamily.semibold);
+    expect(type.h3.fontFamily).toBe(fontFamily.medium);
+    expect(type.title.fontFamily).toBe(fontFamily.medium);
+    expect(type.bodyStrong.fontFamily).toBe(fontFamily.medium);
+    expect(type.h2.fontWeight).toBeUndefined();
+    expect(type.title.fontWeight).toBeUndefined();
   });
 
   test('roles reflect the larger-text swap (getters, not snapshots)', () => {
@@ -207,9 +218,12 @@ describe('lineHeight / letterSpacing scales', () => {
     expect(lineHeight.snug).toBeLessThan(lineHeight.normal);
     expect(lineHeight.normal).toBeLessThan(lineHeight.relaxed);
   });
-  test('letterSpacing tightens for display, loosens for caption', () => {
-    expect(letterSpacing.display).toBeLessThan(letterSpacing.body);
-    expect(letterSpacing.caption).toBeGreaterThan(letterSpacing.body);
+  test('letterSpacing stays neutral across type roles', () => {
+    expect(letterSpacing.display).toBe(0);
+    expect(letterSpacing.heading).toBe(0);
+    expect(letterSpacing.body).toBe(0);
+    expect(letterSpacing.label).toBe(0);
+    expect(letterSpacing.caption).toBe(0);
   });
 });
 

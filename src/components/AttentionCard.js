@@ -25,7 +25,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  colors, spacing, radius, fontSize, fontWeight, type, withAlpha,
+  colors, spacing, radius, fontWeight, type, withAlpha, iconSize,
 } from '../styles/theme';
 import DifferentialBadge from './DifferentialBadge';
 
@@ -91,11 +91,14 @@ export default function AttentionCard({
             to the methodology page, from day 0. */}
         <TouchableOpacity
           onPress={onMethodology}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="link"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessibilityRole="button"
           accessibilityLabel="How the Coach works"
+          style={styles.trialMethodologyButton}
         >
+          <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textSecondary} />
           <Text style={styles.trialBannerLink}>How the Coach works</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -121,8 +124,11 @@ export default function AttentionCard({
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
           accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
+          style={styles.freeCoachFooterButton}
         >
+          <Ionicons name="lock-open-outline" size={iconSize.sm} color={colors.textSecondary} />
           <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     );
@@ -164,7 +170,19 @@ const styles = StyleSheet.create({
   trialLedgerRowTextDone: {
     color: colors.textPrimary,
   },
-  trialBannerLink: { ...type.caption, color: colors.primary, marginTop: spacing.xs },
+  trialMethodologyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  trialBannerLink: { ...type.label, color: colors.textPrimary, flex: 1 },
   freeCoachCard: {
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
@@ -178,7 +196,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   freeCoachFooter: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.primary, marginLeft: spacing.sm + 16,
+    ...type.label,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  freeCoachFooterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
   },
 });

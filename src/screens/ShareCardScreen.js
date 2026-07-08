@@ -233,7 +233,7 @@ export default function ShareCardScreen({ route }) {
   // so no photo-library permission is needed.
   const takeGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show('Photo backgrounds need a rebuild with the image-picker package', { variant: 'error', duration: 5000 });
+      toast.show('Photo backgrounds are not available in this app build.', { variant: 'error', duration: 5000 });
       return;
     }
     try {
@@ -274,7 +274,7 @@ export default function ShareCardScreen({ route }) {
   // never a crash.
   async function handleSaveToGallery() {
     if (!Skia || !FileSystem || !MediaLibrary) {
-      toast.show('Saving to your gallery needs a rebuild with the media-library package', { variant: 'error', duration: 5000 });
+      toast.show('Saving to gallery is not available in this app build.', { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
@@ -285,15 +285,15 @@ export default function ShareCardScreen({ route }) {
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (!perm.granted) {
-        toast.show('Gallery access is needed to save the card. You can still use Share.', { variant: 'warning', duration: 5000 });
+        toast.show('Gallery access is needed to save the image. You can still use Share.', { variant: 'warning', duration: 5000 });
         return;
       }
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
       await MediaLibrary.saveToLibraryAsync(uri);
       toast.show('Saved to your gallery', { variant: 'success' });
     } catch (_e) {
-      toast.show("Couldn't save the card, try again", { variant: 'error' });
+      toast.show("Couldn't save the image, try again", { variant: 'error' });
     } finally {
       setSavingToGallery(false);
     }
@@ -309,7 +309,7 @@ export default function ShareCardScreen({ route }) {
   // as a Story share with both app icons.
   async function handleShareToStories() {
     if (!Skia || !FileSystem || !Sharing) {
-      toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
+      toast.show('Story sharing is not available in this app build.', { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
@@ -319,7 +319,7 @@ export default function ShareCardScreen({ route }) {
     setSharingToStories(true);
     try {
       const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
+      if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
       await Sharing.shareAsync(uri, {
@@ -336,7 +336,7 @@ export default function ShareCardScreen({ route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Share card" />
+      <BackHeader title="Share image" />
       <ScrollView contentContainerStyle={styles.content}>
 
         {/* Card type: shown per the data the screen was opened with. */}

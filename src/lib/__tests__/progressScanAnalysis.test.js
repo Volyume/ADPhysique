@@ -425,7 +425,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
     expect(out.copySummary).toMatch(/Baseline Volyume Score 83\/100/i);
-    expect(out.copySummary).toMatch(/not a body fat percentage/i);
+    expect(out.copySummary).toMatch(/private visual progress score/i);
   });
 
   test('private estimator anchor keeps a lean scan from looking falsely low', () => {
@@ -657,7 +657,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
     expect(out.measuredSignalsOnly).toBe(true);
     expect(out.comparisonStatus).toBe('comparable');
-    expect(out.summary).toMatch(/not a body fat estimate/i);
+    expect(out.summary).toMatch(/progress context/i);
     expect(out.summary).not.toMatch(/estimate moved|estimate is/i);
     expect(out.summary).toMatch(/waist-to-height/i);
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);

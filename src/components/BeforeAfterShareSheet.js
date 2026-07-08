@@ -78,7 +78,7 @@ export function buildProgressCardSharePayload(params = {}) {
   const includesWeight = !!(params?.before?.weight || params?.after?.weight);
   const includesScanScore = !!(params?.before?.scanRange || params?.after?.scanRange);
   return Object.freeze({
-    label: 'Progress Photos card',
+    label: 'Progress photo image',
     dateRange,
     format: SHARE_FORMAT_LABELS[params?.aspect] || SHARE_FORMAT_LABELS.square,
     includesWeight,
@@ -339,7 +339,7 @@ export default function BeforeAfterShareSheet({
   const withGeneratedFile = useCallback(async (consume) => {
     if (useAppStore.getState().tier !== 'pro' || suppressed) return;
     if (!Skia || !FileSystem || !typefaces) {
-      toast.show('Sharing needs a rebuild with the Skia and sharing packages', { variant: 'error', duration: 5000 });
+      toast.show('Progress image sharing is not available in this app build.', { variant: 'error', duration: 5000 });
       return;
     }
     if (!pairReady) { toast.show('Choose two photos first', { variant: 'info' }); return; }
@@ -355,7 +355,7 @@ export default function BeforeAfterShareSheet({
     } catch (e) {
       logError('ProgressCard.export', e, { aspect });
     }
-    if (!uri) { toast.show("Couldn't generate the card, try again", { variant: 'error' }); return; }
+    if (!uri) { toast.show("Couldn't generate the image, try again", { variant: 'error' }); return; }
     await consume(uri);
   }, [suppressed, typefaces, pairReady, beforeImg, afterImg, renderCardToFile, aspect, toast]);
 
@@ -363,11 +363,11 @@ export default function BeforeAfterShareSheet({
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
       setSharing(true);
       try {
-        if (!Sharing) { toast.show('Sharing needs a rebuild with the sharing package', { variant: 'error', duration: 5000 }); return; }
+        if (!Sharing) { toast.show('Sharing is not available in this app build.', { variant: 'error', duration: 5000 }); return; }
         const canShare = await Sharing.isAvailableAsync();
         if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
         // ONE composited file, never a multi-attach (S2 §1).
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share progress' });
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share progress image' });
       } catch (_e) {
         toast.show("Couldn't open the share sheet, try again", { variant: 'error' });
       } finally {
@@ -378,7 +378,7 @@ export default function BeforeAfterShareSheet({
 
   const onSaveToGallery = useCallback(() => {
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
-      if (!MediaLibrary) { toast.show('Saving needs a rebuild with the media-library package', { variant: 'error', duration: 5000 }); return; }
+      if (!MediaLibrary) { toast.show('Saving to gallery is not available in this app build.', { variant: 'error', duration: 5000 }); return; }
       setSavingToGallery(true);
       try {
         const perm = await MediaLibrary.requestPermissionsAsync();
@@ -386,7 +386,7 @@ export default function BeforeAfterShareSheet({
         await MediaLibrary.saveToLibraryAsync(uri);
         toast.show('Saved to your gallery', { variant: 'success' });
       } catch (_e) {
-        toast.show("Couldn't save the card, try again", { variant: 'error' });
+        toast.show("Couldn't save the image, try again", { variant: 'error' });
       } finally {
         setSavingToGallery(false);
       }
@@ -420,7 +420,7 @@ export default function BeforeAfterShareSheet({
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Private Share Card</Text>
+          <Text style={styles.title}>Private share image</Text>
           <Text style={styles.subtitle}>One composed image. No raw photo files. You choose share or save.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
@@ -474,7 +474,7 @@ export default function BeforeAfterShareSheet({
           <Text style={styles.hint}>
             {pairReady
               ? `Ready with two ${usingScans ? 'scans' : 'photos'}.`
-              : `Choose two ${usingScans ? 'scans' : 'photos'} for the card.`}
+              : `Choose two ${usingScans ? 'scans' : 'photos'} for the image.`}
           </Text>
         </View>
 
@@ -558,7 +558,7 @@ export default function BeforeAfterShareSheet({
             icon="people-outline"
             onPress={onPartnerPreview}
             disabled={!pairReady}
-            accessibilityLabel="Preview this progress card for a partner"
+            accessibilityLabel="Preview this progress comparison for a partner"
             variant="secondary"
             size="lg"
             style={styles.partnerBtn}

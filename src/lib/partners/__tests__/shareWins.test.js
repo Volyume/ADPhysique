@@ -27,8 +27,8 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_TYPES.map((type) => type.title)).toEqual([
       'Workout summary',
       'Personal record',
-      'Block milestone',
-      'Progress card',
+      'Training phase milestone',
+      'Progress comparison',
     ]);
   });
 
@@ -75,7 +75,7 @@ describe('partner shareable wins policy', () => {
   test('validates and resolves shareable win types', () => {
     expect(isValidShareWinType('personal_record')).toBe(true);
     expect(isValidShareWinType('body_metrics')).toBe(false);
-    expect(shareWinTypeByKey('progress_card')?.title).toBe('Progress card');
+    expect(shareWinTypeByKey('progress_card')?.title).toBe('Progress comparison');
     expect(shareWinTypeByKey('coach_notes')).toBeNull();
   });
 
@@ -106,7 +106,7 @@ describe('partner shareable wins policy', () => {
     expect(validateShareWinDraft(pr)).toBe(true);
 
     const progress = buildShareWinDraft('progress_card', {
-      label: 'Progress photo card',
+      label: 'Progress comparison',
       dateRange: '5 Jan to 20 Jun',
       format: 'Square',
       includesWeight: false,
@@ -115,7 +115,7 @@ describe('partner shareable wins policy', () => {
       photoUri: 'file:///private-photo.jpg',
     });
     expect(progress.requiresExport).toBe(true);
-    expect(progress.summary).toBe('Progress photo card, 5 Jan to 20 Jun.');
+    expect(progress.summary).toBe('Progress comparison, 5 Jan to 20 Jun.');
     expect(progress.detail).toContain('Only the composed export can be sent');
     expect(progress.detail).toContain('The visible Volyume Score is part of that export');
     expect(progress.detail).toContain('Weight is off for this export');
@@ -153,10 +153,10 @@ describe('partner shareable wins policy', () => {
     expect(examples.map((draft) => draft.summary).join(' ')).not.toContain('file://');
   });
 
-  test('builds progress-card previews from a sanitized exported-card payload', () => {
+  test('builds progress-comparison previews from a sanitized exported image payload', () => {
     const previews = buildShareWinExamplePreviews({
       progress_card: {
-        label: 'Progress photo card',
+        label: 'Progress comparison',
         dateRange: '1 Jan to 1 Apr',
         format: 'Portrait',
         includesWeight: true,
@@ -165,7 +165,7 @@ describe('partner shareable wins policy', () => {
       },
     });
     const progress = previews.find((preview) => preview.type === 'progress_card');
-    expect(progress.draft.summary).toBe('Progress photo card, 1 Jan to 1 Apr.');
+    expect(progress.draft.summary).toBe('Progress comparison, 1 Jan to 1 Apr.');
     expect(progress.draft.detail).toContain('Scan details stay private unless they are visible on that export.');
     expect(progress.draft.detail).toContain('Weight is included because it was switched on for that export.');
     expect(progress.draft.format).toBe('Portrait');
@@ -173,7 +173,7 @@ describe('partner shareable wins policy', () => {
     expect(validateShareWinDraft(progress.draft)).toBe(true);
   });
 
-  test('builds explicit preview receipts for one-card partner sharing', () => {
+  test('builds explicit preview receipts for one-update partner sharing', () => {
     const preview = buildShareWinPreview('personal_record', {
       liftName: 'Deadlift',
       recordLabel: 'New triple best',
@@ -203,7 +203,7 @@ describe('partner shareable wins policy', () => {
       title: 'Review before sending',
       status: 'Preview only',
       visibleToPartner: 'Workout name, date and completed status.',
-      remainsPrivate: 'Exercises, sets, reps, loads, notes and effort stay private unless that card asks again.',
+      remainsPrivate: 'Exercises, sets, reps, loads, notes and effort stay private unless you choose to share them later.',
       consentLine: 'Not sent until you choose one partner and approve this exact update.',
     });
     expect(receipt.steps).toBe(SHARE_WIN_REVIEW_STEPS);

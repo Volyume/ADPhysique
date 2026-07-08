@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize } from '../../styles/theme';
 
 export function SectionHeader({ title }) {
   return <SectionLabel style={styles.sectionHeader}>{title}</SectionLabel>;
@@ -71,7 +71,9 @@ export function WhyBlock({ text, onLearnMore }) {
           accessibilityRole="button"
           accessibilityLabel="Understand how this decision was made"
         >
+          <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textSecondary} />
           <Text style={styles.whyLearnMore}>Understand how this decision was made</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -153,14 +155,22 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   whyLearnMore: {
-    ...type.caption,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    textDecorationLine: 'underline',
+    ...type.label,
+    color: colors.textSecondary,
+    flex: 1,
   },
   link44: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     minHeight: 44,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xs,
   },
   rapidLossCard: {
     backgroundColor: colors.errorBg ?? colors.warningBg,

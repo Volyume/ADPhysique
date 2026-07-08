@@ -11,6 +11,8 @@ import path from 'path';
 const read = rel => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
 const HOME = read('screens/HomeScreen.js');
 const PLANS = read('screens/PlansScreen.js');
+const PROGRESS_SECTIONS = read('components/ProgressSections.js');
+const FREE_STARTER = read('screens/FreeStarterScreen.js');
 
 describe('no-plan / start-plan copy', () => {
   test('HomeScreen uses one no-plan title and the shared start CTA', () => {
@@ -20,6 +22,13 @@ describe('no-plan / start-plan copy', () => {
     expect(block).toContain('Browse plans');
     expect(block).not.toContain('Find my plan');
     expect(block).not.toContain('Build my plan');
+  });
+
+  test('HomeScreen blank-workout fallback is a contained neutral control', () => {
+    expect(HOME).toContain('Ionicons name="play-outline" size={14} color={colors.textSecondary}');
+    expect(HOME).toMatch(/blankSessionLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(HOME).toContain('blankSessionLinkText: { ...type.label, color: colors.textPrimary }');
+    expect(HOME).not.toContain('blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');
   });
 
   test('PlansScreen free no-plan copy matches the shared verb', () => {
@@ -40,5 +49,20 @@ describe('no-plan / start-plan copy', () => {
     const block = PLANS.slice(PLANS.indexOf('<Card style={styles.noActivePlanRow}>'), PLANS.indexOf('{/* Folders'));
     expect(block).toContain('Start with a plan');
     expect(block).not.toContain('Build one');
+  });
+
+  test('Progress no-plan card uses a contained neutral Browse plans control', () => {
+    expect(PROGRESS_SECTIONS).toContain('Ionicons name="compass-outline" size={14} color={colors.textSecondary}');
+    expect(PROGRESS_SECTIONS).toMatch(/mesoEmptyBtn:     \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border/);
+    expect(PROGRESS_SECTIONS).toContain('mesoEmptyBtnText: { ...type.label, color: colors.textPrimary }');
+    expect(PROGRESS_SECTIONS).not.toContain('mesoEmptyBtnText: { ...type.label, color: colors.primary }');
+  });
+
+  test('FreeStarter fallback choices are quiet contained controls, not footnote links', () => {
+    expect(FREE_STARTER).toContain('Ionicons name="library-outline" size={14} color={colors.textSecondary}');
+    expect(FREE_STARTER).toContain('Ionicons name="arrow-forward" size={14} color={colors.textSecondary}');
+    expect(FREE_STARTER).toMatch(/skipLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(FREE_STARTER).toContain('skipLinkText: { ...type.label, color: colors.textPrimary }');
+    expect(FREE_STARTER).not.toContain('skipLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');
   });
 });

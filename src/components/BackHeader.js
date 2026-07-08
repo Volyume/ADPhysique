@@ -20,9 +20,9 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import { colors, spacing, type, hitSlop } from '../styles/theme';
 
-const HIT = { top: 12, bottom: 12, left: 12, right: 12 };
+const SIDE_WIDTH = 44;
 
 export default function BackHeader({ title, onBack, right }) {
   // useNavigation throws when rendered outside a navigation container
@@ -37,7 +37,13 @@ export default function BackHeader({ title, onBack, right }) {
   const goBack = onBack ?? (() => navigation?.goBack?.());
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={goBack} hitSlop={HIT} accessibilityRole="button" accessibilityLabel="Go back">
+      <TouchableOpacity
+        onPress={goBack}
+        hitSlop={hitSlop}
+        style={styles.backButton}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+      >
         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -53,17 +59,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+  },
+  backButton: {
+    width: SIDE_WIDTH,
+    minHeight: SIDE_WIDTH,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   title: {
     flex: 1,
+    ...type.title,
     textAlign: 'center',
     color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
     marginHorizontal: spacing.sm,
   },
   // Matches the 24px back chevron so the title sits optically centred.
-  right: { minWidth: 24, alignItems: 'flex-end' },
+  right: { minWidth: SIDE_WIDTH, alignItems: 'flex-end', justifyContent: 'center' },
 });

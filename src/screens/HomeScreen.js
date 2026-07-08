@@ -1809,8 +1809,9 @@ export default function HomeScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Just want to log? Start a blank workout"
               >
+                <Ionicons name="play-outline" size={14} color={colors.textSecondary} />
                 <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank workout</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -2536,9 +2537,17 @@ const styles = StyleSheet.create({
   },
   blankSessionLink: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.md,
+    alignSelf: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
-  blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
+  blankSessionLinkText: { ...type.label, color: colors.textPrimary },
 
   // B2: free no-plan starter card. One calm card, quiz first, library second.
   starterCard: {

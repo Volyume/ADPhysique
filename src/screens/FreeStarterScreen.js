@@ -242,6 +242,7 @@ export default function FreeStarterScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Browse all plans instead"
           >
+            <Ionicons name="library-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.skipLinkText}>Browse all plans instead</Text>
           </TouchableOpacity>
         ) : null}
@@ -253,6 +254,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Skip, I'll choose a plan myself"
         >
+          <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
           <Text style={styles.skipLinkText}>Skip, I'll choose myself</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -315,6 +317,19 @@ const styles = StyleSheet.create({
     ...type.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 17,
   },
 
-  skipLink: { alignSelf: 'center', paddingVertical: spacing.sm },
-  skipLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
+  skipLink: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  skipLinkText: { ...type.label, color: colors.textPrimary },
 });

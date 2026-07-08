@@ -24,6 +24,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
         <Text style={styles.mesoEmptyTitle}>No plan running yet</Text>
         <Text style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={styles.mesoEmptyBtn}>
+          <Ionicons name="compass-outline" size={14} color={colors.textSecondary} />
           <Text style={styles.mesoEmptyBtnText}>Browse plans</Text>
         </View>
       </TouchableOpacity>
@@ -301,11 +302,12 @@ const styles = StyleSheet.create({
   mesoEmptyTitle:   { ...type.bodyStrong, color: colors.textPrimary },
   mesoEmptySub:     { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   mesoEmptyBtn:     {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
     paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.primary, marginTop: spacing.xs,
+    borderWidth: 1, borderColor: colors.border, marginTop: spacing.xs,
   },
-  mesoEmptyBtnText: { ...type.label, color: colors.primary },
+  mesoEmptyBtnText: { ...type.label, color: colors.textPrimary },
   mesoTop:          { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   mesoName:         { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   mesoWeek:         { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },

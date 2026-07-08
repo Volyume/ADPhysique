@@ -13,4 +13,16 @@ describe('BodyMetricsScreen empty-state design guard', () => {
     expect(source).not.toMatch(/<EmptyBodyIllustration/);
     expect(source).not.toMatch(/styles\.emptyCard/);
   });
+
+  test('read-only and recomposition CTAs are contained controls, not loose amber text', () => {
+    expect(source).toContain('style={styles.readOnlyCtaButton}');
+    expect(source).toContain('<Ionicons name="lock-open-outline" size={16} color={colors.textSecondary} />');
+    expect(source).toContain('<Ionicons name="image-outline" size={16} color={colors.textSecondary} />');
+    expect(source).toMatch(/readOnlyCtaButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(source).toMatch(/recompCtaRow: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(source).toContain('readOnlyCta: { ...type.label, color: colors.textPrimary }');
+    expect(source).toContain('recompCta: { ...type.label, color: colors.textPrimary }');
+    expect(source).not.toMatch(/readOnlyCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
+    expect(source).not.toMatch(/recompCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
+  });
 });

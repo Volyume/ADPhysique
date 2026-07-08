@@ -355,8 +355,8 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
     if (!planResult.ok) {
       // Don't block navigation, the goal is saved, nutrition updated. Just
-      // tell the user the plan side didn't reroll so they can retry from Home.
-      toast.show(`Goal and targets saved, but the plan didn't reroll (${planResult.error}). On Home, tap Build my plan to retry`, { variant: 'warning', duration: 5000 });
+      // tell the user the training plan was not rebuilt so they can retry.
+      toast.show(`Goal and targets saved, but the training plan didn't rebuild (${planResult.error}). Open Today and choose Start with a plan to retry`, { variant: 'warning', duration: 5000 });
     }
 
     // Navigate to the change-summary screen instead of just popping back so

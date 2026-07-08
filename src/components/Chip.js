@@ -11,7 +11,7 @@
 import { Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 
 export default function Chip({
   label,
@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
   },
   chipDisabled: { opacity: 0.5 },
   icon: { marginRight: spacing.xs },
-  label: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  labelSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
+  label: { ...type.label, color: colors.textSecondary },
+  labelSelected: { color: colors.primary },
 });
