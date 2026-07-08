@@ -71,7 +71,18 @@ import { parseLocalDay } from '../lib/dayKey';
 // (showCoachBanner), so "recent" reads consistently across the app.
 const TARGETS_CHANGED_WINDOW_MS = 7 * 86400000;
 
-export default function DiaryScreen({ navigation }) {
+// §15 item 8 (deep-link expansion): validates an incoming `route.params.date`
+// from the volyume://diary/:date link or a future diary_day notification
+// (both a local day-key, YYYY-MM-DD, `src/lib/dayKey.js`). Guards against a
+// malformed external value ever producing an Invalid Date / NaN-keyed day;
+// the caller falls back to today (or the current selection) instead.
+function isValidDayKey(value) {
+  return typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && !Number.isNaN(parseLocalDay(value).getTime());
+}
+
+export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
     user: s.user,
@@ -107,7 +118,22 @@ export default function DiaryScreen({ navigation }) {
   // card still hosts on Progress/Analytics and the Home strip tap-through;
   // only the Diary mount is gone.
 
-  const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const paramDate = route?.params?.date;
+    return isValidDayKey(paramDate) ? paramDate : isoDate(new Date());
+  });
+  // Diary is DiaryTab's root screen, so it stays mounted across tab
+  // switches; a diary-day link/notification tapped while it's already
+  // focused updates route.params on the existing instance rather than
+  // remounting it, so the initializer above alone would miss it. Ignores an
+  // absent/invalid date (leaves the current selection alone), never crashes.
+  useEffect(() => {
+    const paramDate = route?.params?.date;
+    if (isValidDayKey(paramDate) && paramDate !== selectedDate) {
+      setSelectedDate(paramDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.params?.date]);
   const [entries, setEntries] = useState([]);
   // Whether the first load for the current day has resolved. Until then we show
   // a skeleton instead of the empty state, so a day that DOES have food never

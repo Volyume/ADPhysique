@@ -168,7 +168,8 @@ describe('deep-link linking config', () => {
 
   test('every nested screen mapped to a path is a registered Stack.Screen', () => {
     // Match `ScreenName: 'some/path'` pairs inside the nested screens objects.
-    const pairs = [...block.matchAll(/(\w+):\s*['"][\w:/-]+['"]/g)].map(m => m[1]);
+    // `?` is allowed so an optional path param (`diary/:date?`) still parses.
+    const pairs = [...block.matchAll(/(\w+):\s*['"][\w:/?-]+['"]/g)].map(m => m[1]);
     expect(pairs.length).toBeGreaterThan(0);
     for (const screen of pairs) {
       expect(registered.has(screen)).toBe(true);

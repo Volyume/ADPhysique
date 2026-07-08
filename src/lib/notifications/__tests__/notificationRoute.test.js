@@ -72,6 +72,24 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('§15 item 8: diary_day with a valid local day-key opens that exact diary day', () => {
+    expect(routeForNotificationType('diary_day', { date: '2026-07-05' })).toEqual({
+      tab: 'DiaryTab', screen: 'Diary', params: { date: '2026-07-05' },
+    });
+  });
+
+  test('§15 item 8: diary_day with a missing or non-day-key-shaped date falls back to the Diary root, not a dead-end', () => {
+    expect(routeForNotificationType('diary_day')).toEqual({
+      tab: 'DiaryTab', screen: 'Diary',
+    });
+    expect(routeForNotificationType('diary_day', { date: 'not-a-date' })).toEqual({
+      tab: 'DiaryTab', screen: 'Diary',
+    });
+    expect(routeForNotificationType('diary_day', { date: '5 July 2026' })).toEqual({
+      tab: 'DiaryTab', screen: 'Diary',
+    });
+  });
+
   test('OPP-C03: the same-evening missed check-in nudge opens the check-in wizard', () => {
     expect(routeForNotificationType('checkin_missed', { slot: 'evening' })).toEqual({
       tab: 'ProfileTab', screen: 'WeeklyCheckIn',

@@ -619,10 +619,12 @@ function ProOnboardingStack() {
   );
 }
 
-// Deep-linking (U3 R5 / 09-navigation-ia.md). React Navigation's BUILT-IN
-// `linking` config, no new dependency. Maps a few `volyume://` paths to
-// existing routes inside the signed-in MainTabs tree. The scheme `volyume`
-// is already registered in app.json (android.intentFilters + ios scheme).
+// Deep-linking (U3 R5 / 09-navigation-ia.md; expanded per
+// docs/volyume-launch-audit-2026-07-08/00-full-audit.md §15 item 8). React
+// Navigation's BUILT-IN `linking` config, no new dependency. Maps
+// `volyume://` paths to existing routes inside the signed-in MainTabs tree.
+// The scheme `volyume` is already registered in app.json (android.intentFilters
+// + ios scheme).
 //
 // Auth gating is implicit and safe: this config only names screens that live
 // inside MainTabs. When the user is signed out (WelcomeStack mounted) or
@@ -652,8 +654,13 @@ const linking = {
       },
       DiaryTab: {
         screens: {
-          // volyume://diary → Nutrition tab root (Pro-gated screen).
-          Diary: 'diary',
+          // volyume://diary(/:date) → Nutrition tab root (Pro-gated screen).
+          // The trailing `:date?` is OPTIONAL (react-navigation path syntax):
+          // volyume://diary still opens today, volyume://diary/2026-07-08
+          // opens that specific day. DiaryScreen reads route.params.date as a
+          // local day-key (YYYY-MM-DD, src/lib/dayKey.js) and ignores an
+          // absent/invalid value rather than crashing (§15 item 8).
+          Diary: 'diary/:date?',
         },
       },
       PlansTab: {
@@ -670,6 +677,23 @@ const linking = {
         screens: {
           // volyume://progress → Progress tab root (Analytics screen).
           Analytics: 'progress',
+        },
+      },
+      // §15 item 8: coach output + weekly check-in, the two most-requested
+      // notification re-engagement targets (Scout 1's "only 4 deep-link
+      // paths" gap). Both screens are already withProGuard-wrapped at
+      // registration (RootNavigator ProfileStack), so a free user tapping
+      // either link lands on the normal Pro upgrade prompt, never the
+      // screen itself, exactly as when reached via the Coach tab.
+      ProfileTab: {
+        screens: {
+          // volyume://coach → Coach tab → latest coaching decision.
+          // CoachOutputScreen defaults route.params.weekStart to the
+          // current week when absent, so this always opens the LATEST
+          // output, matching the weekly_coach_ready notification target.
+          CoachOutput: 'coach',
+          // volyume://checkin → Coach tab → weekly check-in.
+          WeeklyCheckIn: 'checkin',
         },
       },
     },
