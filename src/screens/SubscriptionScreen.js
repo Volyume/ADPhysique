@@ -187,7 +187,7 @@ export default function SubscriptionScreen({ navigation, route }) {
         </View>
 
         <Text style={styles.footnote}>
-          Subscriptions are billed by {Platform.OS === 'ios' ? 'Apple' : 'Google Play'}.
+          Billing is handled by {Platform.OS === 'ios' ? 'Apple' : 'Google Play'}.
           To change your payment method or cancel, open subscription settings in
           the {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}.
         </Text>

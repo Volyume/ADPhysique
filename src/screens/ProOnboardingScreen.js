@@ -82,7 +82,7 @@ const STEP_OUTCOMES = {
   ],
 };
 
-// COMP-013 "Building your plan" sequence. Four honest stage lines, each mapped
+// COMP-013 plan setup sequence. Four honest stage lines, each mapped
 // to a real _generatePlanInner phase, displayed for a minimum 800ms dwell while
 // the real plan generation + DB writes run underneath. 3.2s total sits inside
 // the evidence band (>2s informative, ~3-5s the working range of plan-build
@@ -1588,7 +1588,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     const canContinue = !!recoveryRating;
 
-    // COMP-013: the staged "Building your plan" sequence replaces the dead
+    // COMP-013: the staged setup sequence replaces the dead
     // button spinner. Same header furniture (brand row + a now-full progress
     // bar), no new route, so a failure can fall back to the form below.
     if (sequenceActive) {
@@ -1606,7 +1606,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: '100%' }]} />
               </View>
-              <Text style={styles.seqHeading}>Building your plan</Text>
+              <Text style={styles.seqHeading}>Setting up your plan</Text>
               <View style={styles.seqList} accessibilityLiveRegion="polite">
                 {lines.slice(0, sequenceStage).map((line, i) => {
                   const isCurrent = i === sequenceStage - 1;
@@ -1866,7 +1866,7 @@ const styles = StyleSheet.create({
   },
   outcomeChipText: { ...type.caption, color: colors.textPrimary, flexShrink: 1 },
 
-  // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
+  // COMP-013 plan setup sequence (replaces the step-5 button spinner).
   seqScroll: {
     flexGrow: 1,
     padding: spacing.xl,

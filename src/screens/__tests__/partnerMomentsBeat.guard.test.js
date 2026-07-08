@@ -50,10 +50,10 @@ describe('WorkoutSummaryScreen partner-beat moment wiring', () => {
     expect(src).toMatch(/WorkoutSummaryScreen\.postWorkoutCheer/);
     expect(src).toMatch(/partnerCheerFailureMessage\(result\?\.error\)/);
     expect(src).toContain("error === 'not_active' || error === 'partner_syncing'");
-    expect(src).toContain('Volyume is still setting up this partnership on this device.');
+    expect(src).toContain('This partner link is still being prepared.');
     expect(src).toMatch(/variant: result\?\.error === 'partner_syncing' \|\| result\?\.error === 'not_active' \? 'warning' : 'error'/);
     expect(src).toContain('Partner cheers are not available right now. Try again later.');
-    expect(src).toContain('Partner cheers need the latest partner update before they can send.');
+    expect(src).toContain('Partner cheers need the latest app update before they can send.');
   });
 
   test('post-workout cheer cannot double-send while the partner call is in flight', () => {

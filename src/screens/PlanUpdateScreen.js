@@ -135,7 +135,7 @@ export default function PlanUpdateScreen({ navigation }) {
     }
   }
 
-  // Step 1 (NEW): "Rebuild my plan" runs a dry-run + diff and opens the preview.
+  // Step 1 (NEW): the review button runs a dry-run + diff and opens the preview.
   // Nothing is written until the user confirms, the active plan and profile are
   // untouched if they back out.
   async function handleRebuildPress() {
@@ -202,7 +202,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Update training" />
+      <BackHeader title="Adjust training" />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -305,11 +305,11 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         <Button
-          title="Rebuild my plan"
+          title="Review my plan changes"
           onPress={handleRebuildPress}
           loading={previewing}
           disabled={previewing || saving}
-          accessibilityLabel="Rebuild my plan"
+          accessibilityLabel="Review my plan changes"
           style={styles.saveBtn}
         />
       </ScrollView>

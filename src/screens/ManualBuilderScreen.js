@@ -761,7 +761,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   if (page === 1) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Build a plan" />
+        <BackHeader title="Create a plan" />
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.page1Content}
@@ -848,7 +848,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title={isEditMode ? 'Edit plan' : 'Build a plan'} />
+      <BackHeader title={isEditMode ? 'Edit plan' : 'Create a plan'} />
       <ExercisePickerModal
         visible={showPicker}
         onClose={() => setShowPicker(false)}

@@ -50,7 +50,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'I subscribed before. How do I get Pro back?',
-    a: `Tap Restore purchases on any Pro lock screen and your subscription is read back from ${storeName()}. Restoring never charges you.`,
+    a: `Tap Restore purchases on any Pro lock screen and we will check your subscription in ${storeName()}. Restoring never charges you.`,
   },
 ];
 
@@ -384,7 +384,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.credentialNote}>
-            The Coach is deterministic and explainable. It uses training research, your recovery, your food, and your progress.
+            The Coach follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks

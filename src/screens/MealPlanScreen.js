@@ -951,7 +951,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={styles.swapSheetTitle}>Shopping list</Text>
             {grocerySheet.isEmpty ? (
               <Text style={styles.swapSheetSub}>
-                Nothing to shop for yet. Build a plan and your list fills in.
+                Nothing to shop for yet. Create a plan and your list fills in.
               </Text>
             ) : (
               <>

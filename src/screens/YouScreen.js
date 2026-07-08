@@ -2,8 +2,8 @@
  * Coach home.
  *
  * Historical file/route name kept as YouScreen/You for navigation stability,
- * but the visible tab is now Coach. This is a deterministic coaching hub:
- * every destination is a rules-based Volyume flow.
+ * but the visible tab is now Coach. This is the coaching hub: every
+ * destination is a clear Volyume flow with its own guardrails.
  */
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';

@@ -204,7 +204,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Build workout" />
+      <BackHeader title="Create workout" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>

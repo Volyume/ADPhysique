@@ -296,7 +296,7 @@ describe('connected state: isolated pair cards', () => {
     await press(tree, 'Share a win');
     await press(tree, 'Send workout complete to Sam');
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      'This partner link is still being prepared. We are refreshing it now; try again in a moment.',
       { variant: 'warning' },
     );
     expect(mockToastShow).not.toHaveBeenCalledWith(
@@ -374,7 +374,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     await press(tree, 'Delete shared win Personal record');
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      'This partner link is still being prepared. We are refreshing it now; try again in a moment.',
       { variant: 'warning' },
     );
     expect(mockToastShow).not.toHaveBeenCalledWith(
@@ -658,7 +658,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.',
+      'This partner link is not ready yet. Refresh Partners, then try again.',
       { variant: 'error' },
     );
   });
@@ -674,7 +674,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Here with you.');
     expect(hook.cheer).toHaveBeenCalledWith('p1', 'here', expect.any(Boolean));
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.',
+      'This partner link is still being prepared. We are refreshing it now; try again in a moment.',
       { variant: 'warning' },
     );
   });
@@ -704,7 +704,7 @@ describe('cheer affordance', () => {
     await press(tree, 'Send a cheer');
     await press(tree, 'Here with you.');
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.',
+      'Partner cheers need the latest app update before they can send. Refresh Partners, then try again.',
       { variant: 'error' },
     );
   });
@@ -909,7 +909,7 @@ describe('invite journey', () => {
       { variant: 'warning' },
     );
     expect(allText(tree)).toContain('Partner invite accepted');
-    expect(allText(tree)).toContain('Volyume is setting up the private partner space on this device.');
+    expect(allText(tree)).toContain('We are finishing the private link on this device.');
     expect(mockToastShow).not.toHaveBeenCalledWith('Partner connected', expect.anything());
   });
 

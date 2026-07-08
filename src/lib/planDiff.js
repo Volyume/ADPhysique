@@ -1,6 +1,6 @@
 // Plan diff/preview (ULTIMATE-PLANDIFF-01). Pure, deterministic helpers that
 // turn the current active plan and a prospective (dry-run) plan into a plain
-// before/after view-model, so a Pro user sees what "Rebuild my plan" would
+// before/after view-model, so a Pro user sees what plan changes would
 // change BEFORE the active mesocycle is overwritten.
 //
 // No DB, no writes — the screen reads the current plan (getActivePlan ->

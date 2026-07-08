@@ -55,7 +55,7 @@ const ACTION_CARDS_DEFAULT = [
 ];
 
 // Pro users with an active plan see "switch your active plan" framings.
-// "Update training and rebuild" sits at the top: it rebuilds the plan via the
+// "Adjust training plan" sits at the top: it rebuilds the plan via the
 // training-only PlanUpdate screen. Goal and calorie/macro changes live in the
 // Coach tab (Update goal and phase / Nutrition targets), so this Train-side flow never
 // touches nutrition targets.
@@ -63,7 +63,7 @@ const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'goals',
     icon: 'flag-outline',
-    title: 'Update training and rebuild',
+    title: 'Adjust training plan',
     description: 'Change schedule, equipment, experience, division or weak points. Volyume previews the rebuild before it replaces your active plan.',
     screen: 'PlanUpdate',
   },
@@ -78,7 +78,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'manual',
     icon: 'create-outline',
     title: 'Build your own',
-    description: 'Hand-pick every exercise and day. The Coach keeps reading your training the same way.',
+    description: 'Create your own plan and choose every exercise. The Coach keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },
 ];

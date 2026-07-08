@@ -96,16 +96,16 @@ function weekPhrase(name, week, resting) {
 
 function cheerFailureMessage(error) {
   if (error === 'not_active') {
-    return 'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.';
+    return 'This partner link is not ready yet. Refresh Partners, then try again.';
   }
   if (error === 'partner_syncing') {
-    return 'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.';
+    return 'This partner link is still being prepared. We are refreshing it now; try again in a moment.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
   if (error === 'partner_update_needed') {
-    return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
+    return 'Partner cheers need the latest app update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required') {
     return 'Volyume could not confirm this partner session. Refresh Partners, then try again.';
@@ -121,10 +121,10 @@ function partnerWinFailureMessage(error, action = 'share') {
     return 'Partner win sharing needs the latest cloud update.';
   }
   if (error === 'not_active') {
-    return 'Volyume has not finished setting up this partnership on this device yet. Refresh Partners, then try again.';
+    return 'This partner link is not ready yet. Refresh Partners, then try again.';
   }
   if (error === 'partner_syncing') {
-    return 'Volyume is still setting up this partnership on this device. We are refreshing it now; try again in a moment.';
+    return 'This partner link is still being prepared. We are refreshing it now; try again in a moment.';
   }
   if (error === 'partner_auth_required') {
     return 'Volyume could not confirm this partner session. Refresh Partners, then try again.';
@@ -1124,7 +1124,7 @@ export default function PartnerScreen({ route }) {
                 <ActivityIndicator size="small" color={colors.primary} />
                 <View style={styles.redeemSyncCopy}>
                   <Text style={styles.redeemSyncTitle}>Partner invite accepted</Text>
-                  <Text style={styles.redeemSyncText}>Volyume is setting up the private partner space on this device.</Text>
+                  <Text style={styles.redeemSyncText}>We are finishing the private link on this device.</Text>
                 </View>
               </View>
             ) : null}

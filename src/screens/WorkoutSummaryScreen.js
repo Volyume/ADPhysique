@@ -64,13 +64,13 @@ function partnerRecordLabel(pr = {}) {
 
 function partnerCheerFailureMessage(error) {
   if (error === 'not_active' || error === 'partner_syncing') {
-    return 'Volyume is still setting up this partnership on this device. Partners is refreshing it now; try again in a moment.';
+    return 'This partner link is still being prepared. Partners is refreshing it now; try again in a moment.';
   }
   if (error === 'insert_failed' || error === 'server_misconfigured' || error === 'cheers_unavailable') {
     return 'Partner cheers are not available right now. Try again later.';
   }
   if (error === 'partner_update_needed') {
-    return 'Partner cheers need the latest partner update before they can send. Refresh Partners, then try again.';
+    return 'Partner cheers need the latest app update before they can send. Refresh Partners, then try again.';
   }
   if (error === 'partner_auth_required' || error === 'offline') {
     return 'Volyume could not reach Partners online just now. Refresh Partners, then try once more.';

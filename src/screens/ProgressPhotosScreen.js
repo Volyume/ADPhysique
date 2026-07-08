@@ -1652,7 +1652,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
             <View style={styles.scanReviewFooter}>
               <Text style={styles.scanReviewCopy}>
-                Use it if your whole body is visible, the photo is sharp, and the camera or source photo looks upright.
+                Use it if your whole body is visible, the photo is sharp, and the picture is upright.
               </Text>
               <View style={styles.scanReviewActions}>
                 <Button

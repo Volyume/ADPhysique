@@ -32,7 +32,7 @@ const TRIAL_BULLETS = [
 const AFTER_TRIAL_BULLETS = [
   'Unlimited workout logging',
   'Exercise library and Personal Records',
-  'Plan library and custom plan builder',
+  'Plan library and create your own plans',
   'Training blocks and full progress stats',
 ];
 
@@ -90,7 +90,7 @@ export default function WelcomeScreen({ navigation }) {
                 <View style={styles.proTitleRow}>
                   <Text style={styles.proTitle}>The full app, free for 14 days</Text>
                 </View>
-                <Text style={styles.proSubtitle}>A deterministic coaching system that adjusts from your logged training.</Text>
+                <Text style={styles.proSubtitle}>Clear coaching that adjusts from your logged training.</Text>
               </View>
             </View>
 

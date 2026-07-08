@@ -29,7 +29,7 @@ import BackHeader from '../components/BackHeader';
 
 // The always-open opener.
 const INTRO =
-  'The Coach is rules-based. Each week it ' +
+  'The Coach follows clear rules. Each week it ' +
   'reads your logged training, your morning-weight trend, your food data when ' +
   'you use Eat, and your weekly check-in answers. It then decides what should ' +
   'change, what should hold, and why.';
@@ -41,7 +41,7 @@ const SECTIONS = [
     key: 'inputs',
     title: 'What the coach reads',
     body:
-      'The main signals are your completed sessions, your morning-weight trend, ' +
+      'The main inputs are your completed sessions, your morning-weight trend, ' +
       'your nutrition target and diary data if you use Eat, and the weekly ' +
       'check-in. The check-in is where you add the context numbers cannot see: ' +
       'energy, soreness, sleep, stress, joint pain, illness, travel and anything ' +
@@ -63,18 +63,18 @@ const SECTIONS = [
     title: 'Why holds happen',
     body:
       'When the trend is on target, when there is not enough data yet, when ' +
-      'recovery is low, or when a safety signal fires, the Coach holds ' +
+      'recovery is low, or when a safety check applies, the Coach holds ' +
       'rather than acts. The held-decision card in your coaching decision shows exactly ' +
       'which of these applied. A held week is the Coach working, not asleep.',
   },
   {
     key: 'training',
-    title: 'Training signals',
+    title: 'Training inputs',
     body:
       'Volume changes by removing up to 2 sets or adding up to 3 sets per muscle ' +
       'each week, based on how your energy, soreness and completed sessions scored ' +
       'together. If recovery is low, volume holds or drops. If recovery is strong ' +
-      'and you hit your sessions, it adds. The same scoring runs every week.',
+      'and you hit your sessions, it adds. The same checks run every week.',
   },
   {
     key: 'safety',

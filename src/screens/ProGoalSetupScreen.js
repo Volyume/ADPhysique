@@ -598,10 +598,10 @@ export default function ProGoalSetupScreen({ navigation }) {
         </View>
 
         <Button
-          title="Rebuild my plan"
+          title="Review my plan changes"
           onPress={handleSave}
           disabled={!canSave}
-          accessibilityLabel="Rebuild my plan"
+          accessibilityLabel="Review my plan changes"
         />
       </ScrollView>
     </SafeAreaView>
