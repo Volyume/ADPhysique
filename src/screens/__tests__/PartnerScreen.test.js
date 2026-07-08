@@ -930,6 +930,18 @@ describe('invite journey', () => {
     });
     expect(redeem).toHaveBeenCalledWith('ABCD1234');
   });
+
+  test('deep-linked invite at the partner limit explains why it cannot join', async () => {
+    mockState.tier = 'free';
+    const redeem = jest.fn(async () => ({ ok: true }));
+    mockHook.value = base({ pairs: [pair()], canAdd: false, redeem });
+    await mount({ code: 'abcd1234' });
+    expect(redeem).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Your partner spaces are full. Remove a partner before using this invite code.',
+      { variant: 'warning' },
+    );
+  });
 });
 
 describe('manage sheet: block confirm', () => {
@@ -941,6 +953,12 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerActionSheet: \{\s*alignSelf: 'stretch',\s*maxHeight: '86%',\s*\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);
+  });
+
+  test('invite code row can wrap on narrow screens', () => {
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/codeRow: \{[\s\S]*flexWrap: 'wrap'/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/codeFieldContainer: \{[\s\S]*flexBasis: 180,[\s\S]*minWidth: 180/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/codeBtn: \{[\s\S]*minWidth: 88,[\s\S]*flexShrink: 0/);
   });
 
   test('shared phase status uses a contained neutral action instead of a text link', () => {

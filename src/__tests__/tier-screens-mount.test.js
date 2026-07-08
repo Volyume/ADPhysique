@@ -49,7 +49,7 @@ jest.mock('../lib/payments/cascade', () => ({
 }));
 
 jest.mock('../lib/payments/playBilling', () => ({
-  purchasePackage: jest.fn(async () => ({ transactionId: 'txn_test', sku: 'pro_monthly_open_beta' })),
+  purchasePackage: jest.fn(async () => ({ transactionId: 'txn_test', sku: 'pro_monthly' })),
   // usePlayPrices reads these; return empty so the screens render their
   // price-free loading state (PLAY-002: no hardcoded fallback).
   ensureDisplayPrices: jest.fn(async () => ({})),

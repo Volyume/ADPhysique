@@ -65,7 +65,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/import \{ SafeAreaView, useSafeAreaInsets \} from 'react-native-safe-area-context';/);
     expect(SCREEN).toMatch(/const insets = useSafeAreaInsets\(\);/);
     expect(SCREEN).toMatch(/contentContainerStyle=\{\[\s*styles\.captureRouteList,[\s\S]*insets\.bottom \+ spacing\.lg/);
-    expect(SCREEN).toMatch(/contentContainerStyle=\{\[\s*styles\.scanReviewContent,[\s\S]*insets\.bottom \+ spacing\.lg/);
+    expect(SCREEN).toMatch(/<\/ScrollView>\s*<View style=\{\[styles\.scanReviewFooter, \{ paddingBottom: Math\.max\(spacing\.lg, insets\.bottom \+ spacing\.md\) \}\]\}>/);
+    expect(SCREEN).toMatch(/scanReviewImageWrap: \{[\s\S]*minHeight: 220,[\s\S]*maxHeight: 460/);
     expect(SCREEN).toMatch(/setScanReview\(\{\s*name,\s*saved,\s*flow,\s*pose,\s*\}\);/);
     expect(SCREEN).toMatch(/previewApproved/);
     expect(SCREEN).not.toMatch(/Use this photo\?/);
@@ -82,6 +83,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/const scanSaveInFlightRef = useRef\(new Set\(\)\);/);
     expect(SCREEN).toMatch(/if \(saveKey && scanSaveInFlightRef\.current\.has\(saveKey\)\) return;/);
     expect(SCREEN).toMatch(/if \(saveKey && !committed\) scanSaveInFlightRef\.current\.delete\(saveKey\);/);
+  });
+
+  test('scan finish refreshes visible photos even when scoring or list refresh fails', () => {
+    expect(SCREEN).toMatch(/let finished = false;/);
+    expect(SCREEN).toMatch(/await finishProgressScanSession\(userId, scanId, buildProgressScanFinishPayload\(profile, bodyProfile, userSex\)\);[\s\S]*finished = true;/);
+    expect(SCREEN).toMatch(/ProgressPhotos\.finishScan\.refreshScans/);
+    expect(SCREEN).toMatch(/ProgressPhotos\.finishScan\.refreshPhotos/);
   });
 
   test('post-capture scan writes re-check the live tier and abandon drafts on lapse', () => {

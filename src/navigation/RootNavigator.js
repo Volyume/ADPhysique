@@ -879,11 +879,12 @@ export default function RootNavigator() {
                 .then(() => _reconcilePaidEntitlement(session.user.id))
                 .catch(() => {});
 
-              // Initialise Google Play Billing with the user's auth uid
-              // as the obfuscated account ID. No-op if the native
-              // module isn't linked in this build; the stub provider
-              // stays in place and purchase taps surface a clean
-              // "provider not injected" error rather than crashing.
+              // Initialise the active store billing provider with the user's
+              // auth uid. Android uses it as the obfuscated account ID; iOS
+              // binds it into StoreKit as the app account token. No-op if the
+              // native module isn't linked in this build; the stub provider
+              // stays in place and purchase taps surface a clean error rather
+              // than crashing.
               try {
                 // eslint-disable-next-line global-require
                 const playBilling = require('../lib/payments/playBilling');

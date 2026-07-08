@@ -588,6 +588,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       await abandonLapsedScanFlow({ scanId });
       return;
     }
+    let finished = false;
     try {
       const profile = useAppStore.getState().userProfile || {};
       const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
@@ -596,11 +597,20 @@ export default function ProgressPhotosScreen({ navigation }) {
         return;
       }
       await finishProgressScanSession(userId, scanId, buildProgressScanFinishPayload(profile, bodyProfile, userSex));
-      setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
-      await refresh();
+      finished = true;
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
       toast.show('The photo set was saved, but the Volyume Score could not be created.', { variant: 'warning' });
+    }
+    try {
+      setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
+    } catch (e) {
+      logError('ProgressPhotos.finishScan.refreshScans', e, { userId, scanId, finished });
+    }
+    try {
+      await refresh();
+    } catch (e) {
+      logError('ProgressPhotos.finishScan.refreshPhotos', e, { userId, scanId, finished });
     }
   }
 
@@ -1641,7 +1651,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             style={styles.scanReviewScroll}
             contentContainerStyle={[
               styles.scanReviewContent,
-              { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.lg) },
+              { paddingBottom: spacing.lg },
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -1657,27 +1667,27 @@ export default function ProgressPhotosScreen({ navigation }) {
                 />
               ) : null}
             </View>
-            <View style={styles.scanReviewFooter}>
-              <Text style={styles.scanReviewCopy}>
-                Use it if your whole body is visible, the photo is sharp, and the picture is upright.
-              </Text>
-              <View style={styles.scanReviewActions}>
-                <Button
-                  title="Retake"
-                  variant="secondary"
-                  onPress={retakeScanReview}
-                  fullWidth={false}
-                  style={styles.scanReviewButton}
-                />
-                <Button
-                  title="Use photo"
-                  onPress={approveScanReview}
-                  fullWidth={false}
-                  style={styles.scanReviewButton}
-                />
-              </View>
-            </View>
           </ScrollView>
+          <View style={[styles.scanReviewFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md) }]}>
+            <Text style={styles.scanReviewCopy}>
+              Use it if your whole body is visible, the photo is sharp, and the picture is upright.
+            </Text>
+            <View style={styles.scanReviewActions}>
+              <Button
+                title="Retake"
+                variant="secondary"
+                onPress={retakeScanReview}
+                fullWidth={false}
+                style={styles.scanReviewButton}
+              />
+              <Button
+                title="Use photo"
+                onPress={approveScanReview}
+                fullWidth={false}
+                style={styles.scanReviewButton}
+              />
+            </View>
+          </View>
         </SafeAreaView>
       </Modal>
 
@@ -1726,8 +1736,8 @@ const styles = StyleSheet.create({
   scanReviewImageWrap: {
     marginHorizontal: spacing.lg,
     marginVertical: spacing.md,
-    minHeight: 320,
-    maxHeight: 560,
+    minHeight: 220,
+    maxHeight: 460,
     aspectRatio: 3 / 4,
     borderRadius: radius.md,
     backgroundColor: colors.camera,
@@ -1739,10 +1749,10 @@ const styles = StyleSheet.create({
   scanReviewFooter: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
     gap: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    backgroundColor: colors.background,
   },
   scanReviewCopy: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanReviewActions: { flexDirection: 'row', gap: spacing.sm },

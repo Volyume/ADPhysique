@@ -650,11 +650,20 @@ export default function PartnerScreen({ route }) {
     if (!incomingCode || p.loading) return;
     if (handledCodeRef.current === incomingCode) return;
     setCode(incomingCode);
-    if (!p.canAdd) return;
+    if (!p.canAdd) {
+      const visiblePairs = (p.pairs || []).length;
+      const limit = tier === 'pro' ? PRO_MAX_PAIRS : 1;
+      if (visiblePairs >= limit) {
+        handledCodeRef.current = incomingCode;
+        setCodeEntryOpen(true);
+        toast.show('Your partner spaces are full. Remove a partner before using this invite code.', { variant: 'warning' });
+      }
+      return;
+    }
     handledCodeRef.current = incomingCode;
     handleRedeem(incomingCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomingCode, p.loading, p.canAdd]);
+  }, [incomingCode, p.loading, p.canAdd, p.pairs, tier]);
 
   useEffect(() => {
     if (redeemSyncing && (p.pairs || []).length > 0) setRedeemSyncing(false);
@@ -2049,9 +2058,17 @@ const styles = StyleSheet.create({
   secondaryFullButton: { marginTop: spacing.xs },
 
   // Code entry
-  codeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  codeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
   codeFieldContainer: {
     flex: 1,
+    flexGrow: 1,
+    flexBasis: 180,
+    minWidth: 180,
     gap: 0,
   },
   codeField: {
@@ -2067,6 +2084,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     minHeight: 44,
+    minWidth: 88,
+    flexShrink: 0,
   },
   codeBtnText: { ...type.label },
 
