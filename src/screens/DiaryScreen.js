@@ -31,7 +31,7 @@ import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '..
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
+import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition, getLatestCoachOutput } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
@@ -66,6 +66,10 @@ import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
+
+// Audit item 6: same 7-day freshness window HomeScreen's coach banner uses
+// (showCoachBanner), so "recent" reads consistently across the app.
+const TARGETS_CHANGED_WINDOW_MS = 7 * 86400000;
 
 export default function DiaryScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -129,6 +133,12 @@ export default function DiaryScreen({ navigation }) {
   // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
   // now owns planning for a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
+  // Audit item 6 (coach receipt chip): the latest coach output, read only for
+  // Pro (free never reaches CoachOutputScreen so never has an applied
+  // adjustment to point at). Used solely to detect a recent coach-applied
+  // calorie/diet-break change and link to the exact week's receipt; nothing
+  // else on this screen reads it.
+  const [latestCoachOutput, setLatestCoachOutput] = useState(null);
 
   // BUG-1 (elite audit 2026-07-04): the day-load had no in-flight guard, so
   // rapid date navigation (or a focus-triggered load landing mid-flight)
@@ -144,7 +154,7 @@ export default function DiaryScreen({ navigation }) {
   const load = useCallback(async () => {
     if (!userId) return;
     const loadToken = loadGuardRef.current.next();
-    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries] = await Promise.all([
+    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
@@ -159,6 +169,9 @@ export default function DiaryScreen({ navigation }) {
       getLatestBodyWeight(userId).catch(() => null),
       getLatestBodyComposition(userId).catch(() => null),
       getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
+      // Audit item 6: Pro-only, best-effort. A read failure just hides the
+      // "Targets updated" chip, it never blocks the rest of the diary load.
+      !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
     ]);
     // A newer load has started since this one began; drop this stale result
     // before doing any more work with it (never mind committing it).
@@ -207,8 +220,9 @@ export default function DiaryScreen({ navigation }) {
     setEdFlagOpen(!!edFlag);
     setFloorKcal(floor);
     setYesterdayHasFood((yEntries?.length ?? 0) > 0);
+    setLatestCoachOutput(coachOut ?? null);
     setLoaded(true);
-  }, [userId, selectedDate, macroCycle, refeed, sex]);
+  }, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
@@ -360,6 +374,22 @@ export default function DiaryScreen({ navigation }) {
   );
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
+
+  // Audit item 6 (coach receipt chip, size S): a quiet "Targets updated" link
+  // shown ONLY when the COACH itself changed the calorie target recently, so
+  // it never mis-attributes a self-made edit (Nutrition Targets screen,
+  // ProGoalSetup) to the coach. `appliedAdjustments` is only ever written by
+  // CoachOutputScreen's confirm-then-apply handlers (markApplied in
+  // coachApply.js), so its presence IS the receipt: tapping the chip opens
+  // that exact week's decision, the real "why", not a guess. No new
+  // explanation engine, no new persistence, this reads the same coach_outputs
+  // row YouScreen already reads via getLatestCoachOutput.
+  const coachTargetsChange = latestCoachOutput?.appliedAdjustments?.calories
+    ?? latestCoachOutput?.appliedAdjustments?.dietBreak
+    ?? null;
+  const targetsChangedRecently = !readOnly
+    && !!coachTargetsChange?.appliedAt
+    && (Date.now() - coachTargetsChange.appliedAt) < TARGETS_CHANGED_WINDOW_MS;
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
@@ -1126,6 +1156,22 @@ export default function DiaryScreen({ navigation }) {
         ) : null}
 
         <View style={styles.macroRingsWrap}>
+          {/* Audit item 6: quiet coach receipt chip. Shown only when the coach
+              itself recently changed the calorie target; links to that exact
+              week's decision in CoachOutputScreen, the real "why". */}
+          {targetsChangedRecently ? (
+            <TouchableOpacity
+              style={styles.targetsChangedRow}
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Targets updated. See why."
+            >
+              <Ionicons name="information-circle-outline" size={13} color={colors.textSecondary} />
+              <Text style={styles.targetsChangedText}>Targets updated. See why</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
           <MacroRings
             rollup={rollup}
             targets={effectiveTargets}
@@ -1900,6 +1946,14 @@ const styles = StyleSheet.create({
     gap: spacing.xxs, marginTop: spacing.sm,
   },
   targetModeText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  // Audit item 6: the quiet coach-receipt chip, same row shape as
+  // targetModeRow but sits ABOVE the rings and is always a link (never just
+  // informational), so it reads distinctly from the NU-2 exit rows below.
+  targetsChangedRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xxs, marginBottom: spacing.sm,
+  },
+  targetsChangedText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   bankOffNote: {
     color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'center',
     marginTop: spacing.sm, paddingHorizontal: spacing.lg,

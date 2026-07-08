@@ -6,7 +6,7 @@
  * destination is a clear Volyume flow with its own guardrails.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -275,7 +275,21 @@ export default function YouScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader title="Coach" subtitle="Weekly coaching from your logs." />
+        <ScreenHeader
+          title="Coach"
+          subtitle="Weekly coaching from your logs."
+          right={(
+            <Pressable
+              onPress={() => navigation.navigate('Settings')}
+              hitSlop={10}
+              style={styles.settingsGear}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+            >
+              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+            </Pressable>
+          )}
+        />
 
         {loadError ? (
           <Card
@@ -294,32 +308,11 @@ export default function YouScreen({ navigation }) {
           </Card>
         ) : null}
 
-        <Card
-          style={styles.profileCard}
-          onPress={() => navigation.navigate('AthleteProfile')}
-          accessibilityLabel="Open athlete profile"
-        >
-          <ProfileAvatarMark
-            avatarUri={avatarUri}
-            presetKey={userProfile?.avatarPreset}
-            displayName={displayName}
-            size={56}
-          />
-          <View style={styles.profileInfo}>
-            <View style={styles.profileNameRow}>
-              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
-              {isPro ? <ProBadge size="sm" /> : null}
-            </View>
-            {sessions != null ? (
-              <Text style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
-            ) : user?.id ? (
-              <Skeleton width={110} height={12} />
-            ) : null}
-            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Card>
-
+        {/* Audit item 3 (Coach-tab root reorder, 2026-07-08): the coach's own
+            read leads the screen, latest decision first, then this week's
+            check-in/decision entry points, THEN the athlete-profile card.
+            Account/settings is demoted to the header gear above, so nothing
+            about the app itself outranks the coaching content. */}
         <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
           <View style={styles.statusTop}>
             <View style={styles.statusIcon}>
@@ -382,6 +375,32 @@ export default function YouScreen({ navigation }) {
           </View>
         )}
 
+        <Card
+          style={styles.profileCard}
+          onPress={() => navigation.navigate('AthleteProfile')}
+          accessibilityLabel="Open athlete profile"
+        >
+          <ProfileAvatarMark
+            avatarUri={avatarUri}
+            presetKey={userProfile?.avatarPreset}
+            displayName={displayName}
+            size={56}
+          />
+          <View style={styles.profileInfo}>
+            <View style={styles.profileNameRow}>
+              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              {isPro ? <ProBadge size="sm" /> : null}
+            </View>
+            {sessions != null ? (
+              <Text style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+            ) : user?.id ? (
+              <Skeleton width={110} height={12} />
+            ) : null}
+            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Card>
+
         {isPro ? (
           <View style={styles.section}>
             <SectionLabel>Setup</SectionLabel>
@@ -435,16 +454,6 @@ export default function YouScreen({ navigation }) {
           </View>
         ) : null}
 
-        <View style={styles.section}>
-          <SectionLabel>App settings</SectionLabel>
-          <NavRow
-            icon="settings-outline"
-            label="Settings"
-            sub="Account, units, notifications, data, billing and privacy."
-            onPress={() => navigation.navigate('Settings')}
-          />
-        </View>
-
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
           <Text style={styles.aboutVersion}>Private coaching based on your logs.</Text>
@@ -457,6 +466,18 @@ export default function YouScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
+  // Audit item 3: account/settings is demoted to this header gear (a
+  // secondary entry point, not removed) so the coaching content leads the
+  // scrollable body. Sized to match the ScreenHeader brand-mark box it
+  // replaces on this one tab.
+  settingsGear: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+  },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
