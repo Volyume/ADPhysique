@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import {
   analyseProgressScan,
   estimateBodyFatFromScanAssets,
@@ -230,8 +232,31 @@ const CONFIDENCE_RANK = {
   high: 3,
 };
 
+function loadExternalCalibrationCases() {
+  const file = process.env.PROGRESS_SCAN_CALIBRATION_FILE;
+  if (!file) return [];
+  const resolved = path.resolve(file);
+  if (!fs.existsSync(resolved)) {
+    throw new Error(`PROGRESS_SCAN_CALIBRATION_FILE was set but does not exist: ${resolved}`);
+  }
+  const parsed = JSON.parse(fs.readFileSync(resolved, 'utf8').replace(/^\uFEFF/, ''));
+  if (!Array.isArray(parsed)) {
+    throw new Error('PROGRESS_SCAN_CALIBRATION_FILE must contain an array of calibration cases.');
+  }
+  return parsed.map((testCase, index) => ({
+    ...testCase,
+    id: testCase.id || `external_case_${index + 1}`,
+    label: testCase.label || 'External real-photo scan case',
+  }));
+}
+
+const ALL_CALIBRATION_CASES = [
+  ...CALIBRATION_CASES,
+  ...loadExternalCalibrationCases(),
+];
+
 describe('Progress Scan calibration corpus', () => {
-  test.each(CALIBRATION_CASES)('$id: $label scores inside the release calibration band', (testCase) => {
+  test.each(ALL_CALIBRATION_CASES)('$id: $label scores inside the release calibration band', (testCase) => {
     const out = scoreCase(testCase);
     const assessment = out.physiqueAssessment;
     const score = assessment?.visualLeannessScore;

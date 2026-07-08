@@ -10,6 +10,12 @@ Run:
 npm run progress-scan:calibration
 ```
 
+To add non-committed real-photo cases from APK testing, save a JSON array outside Git and run the same gate with:
+
+```bash
+PROGRESS_SCAN_CALIBRATION_FILE=/path/to/real-progress-scan-cases.json npm run progress-scan:calibration
+```
+
 The calibration corpus checks representative score bands for:
 
 - lean and very lean muscular users
@@ -34,6 +40,44 @@ Do not commit user photos, downloaded comparison photos, or copyrighted guide im
 - notes about the test condition, such as bright room, darker clothing, tall frame, stocky frame, lean muscular, or softer starting point
 
 The app can then be tuned against real measured signals without storing private photos in Git.
+
+Example real-case shape:
+
+```json
+[
+  {
+    "id": "real_lean_male_s23_bright_room",
+    "label": "Real APK scan, lean male, S23, bright room",
+    "sex": "male",
+    "heightCm": 180,
+    "weightKg": 82,
+    "ratios": {
+      "waistToShoulder": 0.63,
+      "waistToHip": 0.78,
+      "waistToHeight": 0.19,
+      "bodyAreaRatio": 0.30,
+      "frontBackWaistSpread": 0.01,
+      "bboxHeightRatio": 0.74,
+      "bboxWidthRatio": 0.34
+    },
+    "quality": {
+      "qualityScore": 0.9,
+      "segmentationConfidence": 0.9,
+      "framingScore": 0.88,
+      "blurScore": 0.86,
+      "lightingScore": 0.92,
+      "poseConfidence": 0.9,
+      "backgroundSeparation": 0.9
+    },
+    "expected": {
+      "min": 80,
+      "max": 94,
+      "bands": ["Lean", "Very Lean"],
+      "minConfidence": "moderate"
+    }
+  }
+]
+```
 
 ## Interpreting failures
 
