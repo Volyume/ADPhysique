@@ -45,13 +45,20 @@ the current wave. Every item in §14 cites the scout that surfaced it.
 
 Founder clarified (2026-07-08): the follow-on "final wave" is **§15, the
 premium-later top 10** in `00-full-audit.md`, run under the same criteria and
-process after the §14 top-10 wave lands. Two §15 items are **founder-gated in
-the audit** and must be surfaced as structured decisions before any build,
-never auto-built:
+process after the §14 top-10 wave lands. Two §15 items were **founder-gated in the audit**; both were put to the founder
+on 2026-07-08 and decided:
 
-- §15 #2 — MN-1 micronutrients, tiered (marked *Founder-gated — decision, then
-  build*; matches CLAUDE.md decision-gated item MN-1).
-- §15 #9 — Raw/cooked toggle (marked *founder-gated item 12*).
+- §15 #2 — MN-1 micronutrients/NRV: **DECIDED — full schema build.** New
+  micronutrient columns across local SQLite + Supabase (migrate_088+, additive
+  and idempotent, run manually by the founder), CoFID micro import, UK NRV
+  reference table, opt-in diary panel behind a tap. Schema is safety-adjacent,
+  so this is written **hands-on in the main loop**, not by a subagent, during
+  the final wave. Blueprint: `docs/ultimate-audit-2026-06-13/pass4-blueprints-micronutrients.md`.
+- §15 #9 — Raw/cooked toggle (gated item 12): **DECIDED — keep stored grams
+  as-is, no toggle.** No conversion factor exists in code and the register
+  forbids inventing one; curated names already carry the weight state
+  ("White rice (cooked)"). Nothing to build. Confirms the existing NUT-01
+  decision.
 
 The other eight §15 items build under the standard wave process.
 
