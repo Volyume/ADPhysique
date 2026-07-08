@@ -67,7 +67,7 @@ export function installNotificationListeners({ onTap } = {}) {
       });
     } catch (_) { /* telemetry must never break the tap handler */ }
 
-    // Rest-timer action buttons (Complete set / ±15s / Skip rest) are
+    // Rest-timer action buttons (Log set / ±15s / Skip rest) are
     // handled here, not via onTap's navigation routing: the response
     // carries an actionIdentifier for the button pressed. The handler is
     // a no-op unless there's a live workout + running rest, so a stale

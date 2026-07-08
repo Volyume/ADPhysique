@@ -1285,7 +1285,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   inputStyle={styles.notesInput}
                   value={notes}
                   onChangeText={setNotes}
-                  placeholder="Anything notable from this session..."
+                  placeholder="Anything notable from this session"
                   placeholderTextColor={colors.textMuted}
                   multiline
                 />
@@ -1298,7 +1298,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               inputStyle={styles.nextTimeNoteInput}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
-              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume..."
+              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -1336,29 +1336,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         ) : null}
         <View style={styles.footerRow}>
-          <Button
-            title={saving ? 'Saving' : 'Close'}
-            variant="secondary"
-            size="lg"
-            style={styles.doneBtn}
-            textStyle={styles.doneBtnText}
+          <TouchableOpacity
+            style={[styles.doneBtn, saving && styles.footerBtnDisabled]}
             onPress={handleDone}
             disabled={saving}
+            accessibilityRole="button"
             accessibilityLabel="Close"
             accessibilityState={{ disabled: saving }}
-          />
+          >
+            <Text style={styles.doneBtnText}>{saving ? 'Saving' : 'Close'}</Text>
+          </TouchableOpacity>
           {!readOnly && (
-            <Button
-              title="Share"
-              variant="outline"
-              size="lg"
-              icon="share-social-outline"
-              fullWidth={false}
+            <TouchableOpacity
               style={styles.shareFooterBtn}
-              textStyle={styles.shareFooterBtnText}
               onPress={handleShareCard}
+              accessibilityRole="button"
               accessibilityLabel="Share session"
-            />
+            >
+              <Ionicons name="share-social-outline" size={16} color={colors.primary} />
+              <Text style={styles.shareFooterBtnText}>Share</Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -1511,7 +1508,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
   completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  completionTitle: { ...type.h2, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
   firstSessionLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
   // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
@@ -1758,6 +1755,7 @@ const styles = StyleSheet.create({
   // completion action does not become two competing large buttons.
   doneBtn: {
     flex: 1,
+    minHeight: 44,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1771,17 +1769,21 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   shareFooterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
     flexShrink: 0,
     minWidth: 108,
+    minHeight: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  footerBtnDisabled: { opacity: 0.55 },
   shareFooterBtnText: {
     ...type.label,
     color: colors.primary,
@@ -1836,7 +1838,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, width: '100%', gap: spacing.md,
   },
   templateModalTitle: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    ...type.title, color: colors.textPrimary,
   },
   templateModalField: { borderRadius: radius.md },
   templateModalInput: { ...type.body, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
@@ -1845,10 +1847,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
-  templateModalCancelText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  templateModalCancelText: { ...type.label, color: colors.textSecondary },
   templateModalSave: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.md, backgroundColor: colors.primary,
+    borderRadius: radius.md, backgroundColor: colors.primaryFill,
   },
   templateModalSaveText: { ...type.label, color: colors.onPrimary },
 });

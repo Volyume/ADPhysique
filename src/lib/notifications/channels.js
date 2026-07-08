@@ -64,7 +64,7 @@ export async function ensureNotifChannels() {
       showBadge: false,
     });
     // Register the rest-timer notification CATEGORY + its four action
-    // buttons here too, so the live rest notification's Complete set /
+    // buttons here too, so the live rest notification's Log set /
     // ±15s / Skip rest buttons are available. Requires a fresh native
     // build to take effect (categories are not OTA-updatable).
     await registerRestTimerCategory();

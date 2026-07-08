@@ -1,6 +1,6 @@
 /**
  * gymBasics.guard.test.js — source guards for B8 (keep-awake, warm-up
- * helper, plate calculator) in ActiveWorkoutScreen.
+ * helper) in ActiveWorkoutScreen.
  *
  * What this suite pins and why:
  *
@@ -84,10 +84,16 @@ describe('B8 warm-up helper stays pull-only', () => {
     expect(SCREEN).toMatch(/setCurrentSet\(s => \(\{ \.\.\.s, weight: row\.weight, reps: row\.reps, setType: 'warmup', isGhost: false \}\)\)/);
     // …and the warm-up helper never calls the set-logging pipeline itself.
     const sheetStart = SCREEN.indexOf('B8: warm-up set helper');
-    const sheetEnd = SCREEN.indexOf('B8: plate calculator sheet');
+    const sheetEnd = SCREEN.indexOf('Exercise overflow sheet');
     expect(sheetStart).toBeGreaterThanOrEqual(0);
     expect(sheetEnd).toBeGreaterThan(sheetStart);
     const sheet = SCREEN.slice(sheetStart, sheetEnd);
     expect(sheet).not.toMatch(/handleCompleteSetPress|createWorkoutSet|addSetToCurrentExercise/);
+  });
+
+  test('the active logger does not surface a plate calculator utility', () => {
+    expect(SCREEN).not.toContain('Plate calculator');
+    expect(SCREEN).not.toContain('showPlates');
+    expect(SCREEN).not.toContain('calculatePlates');
   });
 });

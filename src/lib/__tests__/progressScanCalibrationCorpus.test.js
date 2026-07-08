@@ -6,23 +6,24 @@ import {
 } from '../progressScanAnalysis';
 
 function assetForCase(testCase, pose, overrides = {}) {
+  const qualityOverrides = overrides.quality || {};
   const ratios = {
     ...testCase.ratios,
     ...(testCase.poseRatios?.[pose] || {}),
     ...(overrides.ratios || {}),
   };
   const quality = {
-    segmentationConfidence: testCase.quality?.segmentationConfidence ?? 0.9,
-    framingScore: testCase.quality?.framingScore ?? 0.9,
-    blurScore: testCase.quality?.blurScore ?? 0.9,
-    lightingScore: testCase.quality?.lightingScore ?? 0.9,
-    poseConfidence: testCase.quality?.poseConfidence ?? 0.9,
-    backgroundSeparation: testCase.quality?.backgroundSeparation ?? 0.9,
-    cameraTiltDegrees: testCase.quality?.cameraTiltDegrees ?? 0,
+    segmentationConfidence: qualityOverrides.segmentationConfidence ?? testCase.quality?.segmentationConfidence ?? 0.9,
+    framingScore: qualityOverrides.framingScore ?? testCase.quality?.framingScore ?? 0.9,
+    blurScore: qualityOverrides.blurScore ?? testCase.quality?.blurScore ?? 0.9,
+    lightingScore: qualityOverrides.lightingScore ?? testCase.quality?.lightingScore ?? 0.9,
+    poseConfidence: qualityOverrides.poseConfidence ?? testCase.quality?.poseConfidence ?? 0.9,
+    backgroundSeparation: qualityOverrides.backgroundSeparation ?? testCase.quality?.backgroundSeparation ?? 0.9,
+    cameraTiltDegrees: qualityOverrides.cameraTiltDegrees ?? testCase.quality?.cameraTiltDegrees ?? 0,
   };
   return {
     pose,
-    qualityScore: testCase.quality?.qualityScore ?? 0.9,
+    qualityScore: qualityOverrides.qualityScore ?? testCase.quality?.qualityScore ?? 0.9,
     segmentationConfidence: quality.segmentationConfidence,
     framingScore: quality.framingScore,
     blurScore: quality.blurScore,
@@ -46,17 +47,21 @@ function assetForCase(testCase, pose, overrides = {}) {
   };
 }
 
-function assetsForCase(testCase) {
+function assetsForCase(testCase, overrides = {}) {
+  const poseOverride = (pose) => ({
+    ...(overrides.all || {}),
+    ...(overrides[pose] || {}),
+  });
   const assets = [
-    assetForCase(testCase, 'front'),
-    assetForCase(testCase, 'back'),
+    assetForCase(testCase, 'front', poseOverride('front')),
+    assetForCase(testCase, 'back', poseOverride('back')),
   ];
-  if (testCase.includeSide) assets.push(assetForCase(testCase, 'side'));
+  if (testCase.includeSide) assets.push(assetForCase(testCase, 'side', poseOverride('side')));
   return assets;
 }
 
-function scoreCase(testCase) {
-  const assets = assetsForCase(testCase);
+function scoreCase(testCase, assetOverrides = {}) {
+  const assets = assetsForCase(testCase, assetOverrides);
   const modelEstimate = estimateBodyFatFromScanAssets({
     assets,
     sex: testCase.sex,
@@ -82,6 +87,25 @@ function withHeightAtSameBmi(testCase, heightCm) {
     id: `${testCase.id}_${heightCm}cm_same_bmi`,
     heightCm,
     weightKg: Math.round(bmi * nextHeightM * nextHeightM * 10) / 10,
+  };
+}
+
+function withRatios(testCase, idSuffix, ratios) {
+  return {
+    ...testCase,
+    id: `${testCase.id}_${idSuffix}`,
+    ratios: {
+      ...testCase.ratios,
+      ...ratios,
+    },
+  };
+}
+
+function withoutOptionalSide(testCase) {
+  return {
+    ...testCase,
+    id: `${testCase.id}_without_side`,
+    includeSide: false,
   };
 }
 
@@ -243,6 +267,8 @@ const CONFIDENCE_RANK = {
   moderate: 2,
   high: 3,
 };
+const SHOULD_REPORT = process.env.PROGRESS_SCAN_CALIBRATION_REPORT === '1';
+const REPORT_ROWS = [];
 
 function loadExternalCalibrationCases() {
   const file = process.env.PROGRESS_SCAN_CALIBRATION_FILE;
@@ -267,11 +293,49 @@ const ALL_CALIBRATION_CASES = [
   ...loadExternalCalibrationCases(),
 ];
 
+function reportRowForCase(testCase, out) {
+  const assessment = out.physiqueAssessment || {};
+  return {
+    id: testCase.id,
+    label: testCase.label,
+    sex: testCase.sex ?? null,
+    heightCm: testCase.heightCm ?? null,
+    weightKg: testCase.weightKg ?? null,
+    score: assessment.visualLeannessScore ?? null,
+    band: assessment.leannessBandLabel ?? null,
+    confidence: assessment.scanConfidenceTier ?? null,
+    expected: testCase.expected,
+    pass: (
+      out.analysisStatus === 'complete'
+      && assessment.visualLeannessScore >= testCase.expected.min
+      && assessment.visualLeannessScore <= testCase.expected.max
+      && testCase.expected.bands.includes(assessment.leannessBandLabel)
+      && (CONFIDENCE_RANK[assessment.scanConfidenceTier] ?? 0)
+        >= CONFIDENCE_RANK[testCase.expected.minConfidence]
+    ),
+    inputs: assessment.inputs ?? null,
+    indexInputs: assessment.indexInputs ?? null,
+    biasFlags: out.biasFlags ?? [],
+  };
+}
+
 describe('Progress Scan calibration corpus', () => {
+  afterAll(() => {
+    if (!SHOULD_REPORT) return;
+    // eslint-disable-next-line no-console
+    console.info(JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      caseCount: REPORT_ROWS.length,
+      failures: REPORT_ROWS.filter((row) => !row.pass).length,
+      cases: REPORT_ROWS,
+    }, null, 2));
+  });
+
   test.each(ALL_CALIBRATION_CASES)('$id: $label scores inside the release calibration band', (testCase) => {
     const out = scoreCase(testCase);
     const assessment = out.physiqueAssessment;
     const score = assessment?.visualLeannessScore;
+    if (SHOULD_REPORT) REPORT_ROWS.push(reportRowForCase(testCase, out));
 
     expect(out.analysisStatus).toBe('complete');
     expect(score).toBeGreaterThanOrEqual(testCase.expected.min);
@@ -299,6 +363,70 @@ describe('Progress Scan calibration corpus', () => {
     )).toBeLessThanOrEqual(2);
     expect(shorter.physiqueAssessment.leannessBandLabel).toBe(taller.physiqueAssessment.leannessBandLabel);
   });
+
+  test.each(CALIBRATION_CASES.filter((testCase) => !testCase.quality))(
+    '$id: usable capture quality changes confidence, not the physique score',
+    (testCase) => {
+      const strong = scoreCase(testCase);
+      const usable = scoreCase({
+        ...testCase,
+        id: `${testCase.id}_usable_capture`,
+        quality: {
+          qualityScore: 0.58,
+          segmentationConfidence: 0.52,
+          framingScore: 0.56,
+          blurScore: 0.54,
+          lightingScore: 0.46,
+          poseConfidence: 0.58,
+          backgroundSeparation: 0.52,
+        },
+      });
+
+      expect(usable.analysisStatus).toBe('complete');
+      expect(Math.abs(
+        strong.physiqueAssessment.visualLeannessScore - usable.physiqueAssessment.visualLeannessScore,
+      )).toBeLessThanOrEqual(2);
+      expect(CONFIDENCE_RANK[usable.physiqueAssessment.scanConfidenceTier])
+        .toBeLessThanOrEqual(CONFIDENCE_RANK[strong.physiqueAssessment.scanConfidenceTier]);
+    },
+  );
+
+  test.each(CALIBRATION_CASES.filter((testCase) => testCase.includeSide))(
+    '$id: optional side photo improves context but is not required for scoring',
+    (testCase) => {
+      const withSide = scoreCase(testCase);
+      const noSide = scoreCase(withoutOptionalSide(testCase));
+
+      expect(noSide.analysisStatus).toBe('complete');
+      expect(noSide.biasFlags).toContain('side_pose_missing');
+      expect(Math.abs(
+        withSide.physiqueAssessment.visualLeannessScore - noSide.physiqueAssessment.visualLeannessScore,
+      )).toBeLessThanOrEqual(5);
+      expect(CONFIDENCE_RANK[noSide.physiqueAssessment.scanConfidenceTier])
+        .toBeLessThanOrEqual(CONFIDENCE_RANK[withSide.physiqueAssessment.scanConfidenceTier]);
+    },
+  );
+
+  test.each(CALIBRATION_CASES.filter((testCase) => !testCase.quality))(
+    '$id: realistic camera-distance framing does not create a fake progress jump',
+    (testCase) => {
+      const farther = scoreCase(withRatios(testCase, 'farther_framing', {
+        bboxHeightRatio: Math.max(0.62, (testCase.ratios.bboxHeightRatio ?? 0.74) - 0.07),
+        bboxWidthRatio: Math.max(0.24, (testCase.ratios.bboxWidthRatio ?? 0.34) - 0.04),
+      }));
+      const closer = scoreCase(withRatios(testCase, 'closer_framing', {
+        bboxHeightRatio: Math.min(0.84, (testCase.ratios.bboxHeightRatio ?? 0.74) + 0.07),
+        bboxWidthRatio: Math.min(0.48, (testCase.ratios.bboxWidthRatio ?? 0.34) + 0.04),
+      }));
+
+      expect(farther.analysisStatus).toBe('complete');
+      expect(closer.analysisStatus).toBe('complete');
+      expect(Math.abs(
+        farther.physiqueAssessment.visualLeannessScore - closer.physiqueAssessment.visualLeannessScore,
+      )).toBeLessThanOrEqual(3);
+      expect(farther.physiqueAssessment.leannessBandLabel).toBe(closer.physiqueAssessment.leannessBandLabel);
+    },
+  );
 
   test('weaker lighting lowers confidence without making the same measured physique look worse', () => {
     const base = CALIBRATION_CASES.find((testCase) => testCase.id === 'male_lean_broad_frame');

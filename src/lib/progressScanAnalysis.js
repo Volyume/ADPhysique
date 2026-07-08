@@ -524,6 +524,8 @@ function visualIndexFromEstimatedBodyFat(value, sex = null) {
 
 const ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS = 20;
 const ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS = 8;
+const ESTIMATOR_ANCHOR_LARGE_BODY_DOWNWARD_POINTS = 24;
+const ESTIMATOR_ANCHOR_NEAR_LARGE_BODY_BMI = 29.25;
 
 export function calibrateVolyumeScore(rawScore) {
   const n = finiteNumber(rawScore);
@@ -536,16 +538,61 @@ export function calibrateVolyumeScore(rawScore) {
   return rounded0(clamp(interpolateBodyFatIndex(n, curve), 0, 100));
 }
 
-function boundedEstimatorAnchorScore(silhouetteScore, estimateScore) {
+function isLeanSilhouetteForAnchorProtection(inputs = {}) {
+  const waistToHeight = finiteNumber(inputs?.waistToHeight);
+  const waistToShoulder = finiteNumber(inputs?.waistToShoulder);
+  const sideWaistToHeight = finiteNumber(inputs?.sideWaistToHeight);
+  return waistToHeight != null
+    && waistToShoulder != null
+    && waistToHeight <= 0.205
+    && waistToShoulder <= 0.66
+    && (sideWaistToHeight == null || sideWaistToHeight <= 0.145);
+}
+
+function hasExplicitLeanAnchorProtection(flags = new Set()) {
+  return flags.has('very_muscular')
+    || flags.has('stage_lean_or_prep')
+    || flags.has('physique_competition_context');
+}
+
+function estimatorAnchorDownwardLimit(inputs = {}, biasFlags = []) {
+  const flags = new Set(biasFlags || []);
+  const bmi = finiteNumber(inputs?.bmi);
+  if (hasExplicitLeanAnchorProtection(flags)) {
+    return ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS;
+  }
+  if (
+    (bmi == null || bmi < ESTIMATOR_ANCHOR_NEAR_LARGE_BODY_BMI)
+    && isLeanSilhouetteForAnchorProtection(inputs)
+  ) {
+    return ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS;
+  }
+  const waistToHeight = finiteNumber(inputs?.waistToHeight);
+  const sideWaistToHeight = finiteNumber(inputs?.sideWaistToHeight);
+  let limit = ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS;
+  if (flags.has('large_body')) limit = ESTIMATOR_ANCHOR_LARGE_BODY_DOWNWARD_POINTS;
+  if (bmi != null && bmi >= 34) limit = Math.max(limit, 26);
+  else if (bmi != null && bmi >= 30) limit = Math.max(limit, ESTIMATOR_ANCHOR_LARGE_BODY_DOWNWARD_POINTS);
+  else if (bmi != null && bmi >= ESTIMATOR_ANCHOR_NEAR_LARGE_BODY_BMI) limit = Math.max(limit, 16);
+  else if (bmi != null && bmi >= 28 && waistToHeight != null && waistToHeight >= 0.22) {
+    limit = Math.max(limit, 16);
+  }
+  if (waistToHeight != null && waistToHeight >= 0.23 && sideWaistToHeight != null && sideWaistToHeight >= 0.16) {
+    limit = Math.max(limit, 18);
+  }
+  return limit;
+}
+
+function boundedEstimatorAnchorScore(silhouetteScore, estimateScore, inputs = {}, biasFlags = []) {
   const silhouette = finiteNumber(silhouetteScore);
   const estimate = finiteNumber(estimateScore);
   if (silhouette == null || estimate == null) return estimate;
-  const lower = silhouette - ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS;
+  const lower = silhouette - estimatorAnchorDownwardLimit(inputs, biasFlags);
   const upper = silhouette + ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS;
   return rounded0(clamp(estimate, lower, upper));
 }
 
-function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
+function blendedVisualLeannessScore(inputs = {}, modelEstimate = null, biasFlags = []) {
   const rawSilhouetteScore = computeVisualLeannessScore(inputs);
   const silhouetteScore = calibrateVolyumeScore(rawSilhouetteScore);
   const estimateScore = visualIndexFromEstimatedBodyFat(
@@ -555,11 +602,35 @@ function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
   if (silhouetteScore == null) return estimateScore;
   if (estimateScore == null) return silhouetteScore;
   const gap = Math.abs(silhouetteScore - estimateScore);
-  const estimateWeight = estimateScore >= 80 && gap >= 15 ? 0.75 : gap >= 20 ? 0.60 : 0.50;
+  const anchorBiasFlags = [
+    ...biasFlags,
+    ...(Array.isArray(modelEstimate?.biasFlags) ? modelEstimate.biasFlags : []),
+  ];
+  const flags = new Set(anchorBiasFlags);
+  const bmi = finiteNumber(inputs?.bmi);
+  let estimateWeight = estimateScore >= 80 && gap >= 15 ? 0.75 : gap >= 20 ? 0.60 : 0.50;
+  if (
+    !hasExplicitLeanAnchorProtection(flags)
+    && flags.has('large_body')
+    && estimateScore < silhouetteScore
+    && bmi != null
+    && bmi >= 34
+  ) {
+    estimateWeight = Math.max(estimateWeight, 0.67);
+  } else if (
+    !hasExplicitLeanAnchorProtection(flags)
+    && estimateScore < silhouetteScore
+    && gap >= 15
+    && bmi != null
+    && bmi >= ESTIMATOR_ANCHOR_NEAR_LARGE_BODY_BMI
+  ) {
+    estimateWeight = Math.max(estimateWeight, 0.67);
+  }
   const weighted = silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight;
+  const downwardLimit = estimatorAnchorDownwardLimit(inputs, anchorBiasFlags);
   return rounded0(clamp(
     weighted,
-    silhouetteScore - ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS,
+    silhouetteScore - downwardLimit,
     silhouetteScore + ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS,
   ));
 }
@@ -669,14 +740,24 @@ export function buildPhysiqueAssessment({
     modelEstimateValue(modelEstimate),
     modelEstimate?.inputs?.sex,
   );
-  const boundedEstimatorAnchor = boundedEstimatorAnchorScore(calibratedSilhouetteScore, estimatorAnchorScore);
+  const anchorBiasFlags = [
+    ...biasFlags,
+    ...(Array.isArray(modelEstimate?.biasFlags) ? modelEstimate.biasFlags : []),
+  ];
+  const estimatorAnchorMaxDownwardPoints = estimatorAnchorDownwardLimit(inputs, anchorBiasFlags);
+  const boundedEstimatorAnchor = boundedEstimatorAnchorScore(
+    calibratedSilhouetteScore,
+    estimatorAnchorScore,
+    inputs,
+    anchorBiasFlags,
+  );
   const scanConfidenceScore = computeScanConfidenceScore({
     assets,
     quality,
     biasFlags,
     previousScan,
   });
-  const measuredScore = blendedVisualLeannessScore(inputs, modelEstimate);
+  const measuredScore = blendedVisualLeannessScore(inputs, modelEstimate, biasFlags);
   const measuredScoreReady = measuredScore != null;
   const scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
   const score = measuredScoreReady ? measuredScore : null;
@@ -711,6 +792,7 @@ export function buildPhysiqueAssessment({
       calibratedSilhouetteScore,
       estimatorAnchorScore,
       boundedEstimatorAnchorScore: boundedEstimatorAnchor,
+      estimatorAnchorMaxDownwardPoints,
       estimatorAnchorAdjustment: (
         finiteNumber(estimatorAnchorScore) != null
         && finiteNumber(boundedEstimatorAnchor) != null
@@ -823,7 +905,7 @@ export function scanSetupStability(currentScan = null, previousScan = null) {
   const issues = [];
   let comparedSignalCount = 0;
 
-  for (const pose of REQUIRED_SCAN_POSES) {
+  for (const pose of [...REQUIRED_SCAN_POSES, ...OPTIONAL_SCAN_POSES]) {
     const current = scanAssetForPose(currentScan, pose);
     const previous = scanAssetForPose(previousScan, pose);
     if (!current || !previous) continue;
@@ -929,7 +1011,7 @@ export function scanComparability(currentScan = null, previousScan = null) {
   return {
     comparable: true,
     status: 'comparable',
-    reason: 'Comparable front and back photo set.',
+    reason: 'Comparable photo set.',
     comparableCount: REQUIRED_SCAN_POSES.length,
     scanConfidenceTier: lowerConfidenceTier(currentConfidence, previousConfidence),
     setupComparedSignalCount: setup.comparedSignalCount,

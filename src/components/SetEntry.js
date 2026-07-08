@@ -26,7 +26,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     // default). Gym weights are kg-only.
     const steps = { weight: Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5, reps: 1 };
     // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
-    // snap back to 100 when the user taps −.
+    // snap back to 100 when the user taps -.
     const limits = { weight: [0, 500], reps: [1, 200] };
     const fieldLimits = limits[field] || [0, 9999];
     // Coerce in case a previous code path wrote a string like '' or '.'
@@ -47,7 +47,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
   }
 
   // CL-6.3: long-press repeat on the weight/reps steppers (the RestTimer
-  // ±15 pattern): hold to keep adjusting at 200ms, cleared on release and
+  // plus/minus 15 pattern): hold to keep adjusting at 200ms, cleared on release and
   // unmount. `adjust` reads the CURRENT value from props each call via the
   // ref below, so a held button never clamps against a stale closure.
   const valueRef = useRef(value);
@@ -115,7 +115,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
@@ -180,7 +180,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-duration-input"
@@ -233,7 +233,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-input"
@@ -279,7 +279,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-time-input"
@@ -320,7 +320,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           <Text style={styles.fieldLabel}>Reps</Text>
           {live1RM != null && live1RM > 0 && (
             <View style={styles.e1rmRow}>
-              <Text style={styles.e1rmHint}>Est. max ≈{Math.round(live1RM)}{units}</Text>
+              <Text style={styles.e1rmHint}>Est. max ~{Math.round(live1RM)}{units}</Text>
               {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
               <InfoTooltip text={GLOSSARY.estMax} size={13} />
             </View>
@@ -338,7 +338,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   fieldLabelWrap: {
     minWidth: workoutLoggerSize.setEntryLabelWidth,
     flexBasis: workoutLoggerSize.setEntryLabelWidth,
-    maxWidth: 88,
+    maxWidth: 74,
     flexShrink: 0,
     gap: 1,
   },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -446,19 +446,20 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.surface2,
   },
   stepBtnText: {
-    ...type.title,
+    ...type.bodyStrong,
     color: colors.primary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   valueInput: {
     flex: 1,
     textAlign: 'center',
     ...type.num('bodyStrong'),
     color: colors.textPrimary,
-    paddingVertical: 1,
+    paddingVertical: 0,
+    minHeight: workoutLoggerSize.setEntryStepperButton,
   },
   valueInputGhost: {
     color: colors.textMuted,

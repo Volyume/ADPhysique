@@ -46,7 +46,7 @@ import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
-import { calculatePlates, DEFAULT_BAR_KG } from '../lib/plateMath';
+import { DEFAULT_BAR_KG } from '../lib/plateMath';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 
@@ -64,32 +64,9 @@ const IS_JEST = typeof process !== 'undefined'
   && process.env
   && !!process.env.JEST_WORKER_ID;
 
-// Equipment whose load is plates on a bar, the only exercises where the
-// plate calculator makes sense. Seeded rows use snake_case ('barbell',
-// 'smith_machine', 'ez_bar'); CUSTOM exercises store the picker's display
-// spellings ('Barbell', 'Smith Machine', 'EZ Bar', ExercisePickerModal),
-// so the match is case-insensitive with a flexible separator.
-const PLATE_LOADED_EQUIPMENT = /(barbell|smith[\s_-]?machine|ez[\s_-]?bar)/i;
-
 // Barbell test for the warm-up ramp's empty-bar row, same custom-spelling
 // caveat as above ('barbell' seeded, 'Barbell' custom).
 const BARBELL_EQUIPMENT = /barbell/i;
-
-// Real-world plate colours by kg weight. These are physical equipment
-// standards (red 25, blue 20, yellow 15, green 10, white 5), not theme
-// colours, so they are deliberately literal, same recorded exception as
-// the original calculator.
-/* eslint-disable no-restricted-syntax */
-const PLATE_COLOURS = {
-  25: '#E53935',
-  20: '#1565C0',
-  15: '#F9A825',
-  10: '#2E7D32',
-  5: '#FAFAFA',
-  2.5: '#757575',
-  1.25: '#BDBDBD',
-};
-/* eslint-enable no-restricted-syntax */
 
 
 
@@ -163,6 +140,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       // F7: the row binds its own set so the parent can pass ONE stable
       // handler; an inline closure per row was defeating this memo.
       onPress={() => onEdit(set)}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       accessibilityRole="button"
       accessibilityLabel={spokenSetLabel}
       accessibilityHint="Opens a sheet to change or delete this logged set"
@@ -182,7 +160,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       {!isWarmup && est1RM > 0 && (
         <Text style={styles.loggedEst1RM}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
-      <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
+      <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
     </TouchableOpacity>
   );
 });
@@ -292,10 +270,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
-  // B8 gym basics: both sheets open ONLY from the exercise overflow menu,
+  // B8 gym basics: the warm-up helper opens ONLY from the exercise overflow menu,
   // pull, never push (the recorded no-auto-suggest decision below stands).
   const [showWarmupRamp, setShowWarmupRamp] = useState(false);
-  const [showPlates, setShowPlates] = useState(false);
   // The working weight the ramp is built from. Tapping a ramp row
   // overwrites the entry with the warm-up weight, so without this anchor a
   // reopened ramp would recompute from the WARM-UP weight and collapse
@@ -304,11 +281,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // while the entry holds a working (non-warm-up) weight; cleared on
   // exercise change and whenever the entry shows a working weight again.
   const rampAnchorRef = useRef(null);
-  // Plate sheet inputs are sheet-local strings, seeded on open from the
-  // current entry weight and the profile bar weight. Deliberately NOT
-  // persisted back to the store (parity with the original calculator).
-  const [plateTarget, setPlateTarget] = useState('');
-  const [plateBar, setPlateBar] = useState(String(DEFAULT_BAR_KG));
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
@@ -604,11 +576,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       sets: [],
     };
     store.setWorkoutExercises(updatedExercises);
+    cancelAutoAdvance();
     setSwapCandidates([]);
     setShowSwapModal(false);
     setPrevSets([]);
     setAllTimeSets([]);
     setLoggedSets([]);
+    setCurrentSet({
+      ...DEFAULT_SET,
+      reps: newRepMax || DEFAULT_SET.reps,
+    });
+    setGhostSet(null);
+    setCluster(null);
+    setClusterReps('');
+    setExtraSetArmed(false);
+    setNoteText('');
+    setShowNoteInput(false);
+    setNotesExpanded(false);
     sessionSetsRef.current = [];
   }
 
@@ -630,6 +614,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function closeExercisePicker() {
     setShowExercisePicker(false);
     setPickerMode('add');
+  }
+
+  function openAddExercisePicker() {
+    setPickerMode('add');
+    setShowExercisePicker(true);
   }
 
   function handleCancelWorkout() {
@@ -832,7 +821,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     dismissActiveWorkoutNotification().catch(() => {});
   }, []);
 
-  // Lock-screen rest-timer "Complete set" action. The ±15s / Skip-rest
+  // Lock-screen rest-timer "Log set" action. The ±15s / Skip-rest
   // buttons are handled in the notifications listener (they only touch the
   // store), but completing a set runs through the shared in-app path
   // (cluster vs normal handling), so it must fire here on the screen. The
@@ -842,7 +831,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // closure without re-installing the listener every render.
   const handleCompleteSetPressRef = useRef(null);
   // Tracks whether the current set is still an unconfirmed ghost prefill, so the
-  // lock-screen "Complete set" action below can refuse to log values the user
+  // lock-screen "Log set" action below can refuse to log values the user
   // hasn't actually entered.
   const currentSetGhostRef = useRef(false);
   useEffect(() => {
@@ -857,7 +846,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (!st.activeWorkout?.id || !st.restTimerActive) return;
       // Don't blind-log from the lock screen. If the current set is still a
       // ghost (the suggested next-set prefill the user hasn't confirmed),
-      // tapping "Complete set" would log a set they may not have performed,
+      // tapping "Log set" would log a set they may not have performed,
       // so just let opensAppToForeground bring them in to confirm. When they've
       // entered real values (not a ghost), complete it one-tap as before.
       if (currentSetGhostRef.current) return;
@@ -876,6 +865,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setAllTimeSets([]);
     setCurrentSet({ ...DEFAULT_SET });
     setGhostSet(null);
+    setNoteText('');
+    setShowNoteInput(false);
+    setNotesExpanded(false);
     // An unfinished cluster belongs to the exercise it was started on;
     // abandon it on any exercise change (incl. superset auto-jump) so
     // its banner can't carry stale reps onto the next exercise.
@@ -1502,7 +1494,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return handleCompleteSet();
   }
   // Keep the ref pointed at the latest closure so the rest-notification
-  // "Complete set" action listener (installed once) always calls current state.
+  // "Log set" action listener (installed once) always calls current state.
   handleCompleteSetPressRef.current = handleCompleteSetPress;
   // Mirror the current set's ghost flag for that same listener's guard.
   currentSetGhostRef.current = !!currentSet?.isGhost;
@@ -1621,7 +1613,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       compoundIsolation:  e.exercise?.compoundIsolation ?? 'isolation',
     }));
 
-    // Target: fit remaining in half of a standard session (≈ 25 min max)
+    // Target: fit remaining in half of a standard session (~25 min max)
     const targetMins = 25;
     const { exercises: trimmed, restReduction, dropped } = applyTimeCrunch(
       asExercises,
@@ -1889,10 +1881,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
   const firstSetPrompt = (() => {
     if (activeExerciseType === 'duration') return 'Enter the time, then tap Log set when done.';
-            if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
-            if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
-            return 'Enter weight and reps, then tap Log set when done.';
+    if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
+    if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
+    return 'Enter weight and reps, then tap Log set when done.';
   })();
+  const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
@@ -1903,7 +1896,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <EmptyExerciseView
-          onAdd={() => setShowExercisePicker(true)}
+          onAdd={openAddExercisePicker}
           onFinish={handleFinishWorkout}
           onCancel={handleCancelWorkout}
           elapsed={elapsedStr}
@@ -2030,7 +2023,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="More options for this exercise"
+                accessibilityLabel="Exercise options"
               >
                 <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
                   <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
@@ -2127,7 +2120,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               );
             }
             if (notes.length === 0) return null;
-            const noteCount = notes.length;
+            const cueCount = notes.length;
             return (
               <View style={styles.notesRail}>
                 <TouchableOpacity
@@ -2136,10 +2129,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: notesExpanded }}
-                  accessibilityLabel={`${noteCount} note${noteCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
+                  accessibilityLabel={`${cueCount} training cue${cueCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
                 >
-                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-                  <Text style={styles.notesChipText}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.notesChipText}>{cueCount} cue{cueCount !== 1 ? 's' : ''}</Text>
                   <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {notesExpanded && <View style={styles.notesExpanded}>{notes}</View>}
@@ -2192,7 +2185,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
             </TouchableOpacity>
 
-            {/* Target line (U-A-1): the sets · reps prescription, moved off
+            {/* Target line (U-A-1): the sets/reps prescription, moved off
                 the pre-card banner stack into the card header beside the
                 orientation/beat lines. */}
             {routineExercise && (
@@ -2333,7 +2326,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  {firstSetPrompt} Tap More for form tips, warm-ups, swaps and session options.
+                  {firstSetPrompt} Use exercise options for form tips, warm-ups, swaps and session settings.
                 </Text>
               </View>
             )}
@@ -2358,7 +2351,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.noteInput}
                 value={noteText}
                 onChangeText={setNoteText}
-                placeholder="Add a note..."
+                placeholder="Add a note for this set"
                 placeholderTextColor={colors.textMuted}
                 accessibilityLabel="Add a note"
                 multiline
@@ -2418,7 +2411,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* Action Buttons */}
           {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
               bar (thumb zone, stable position). In the scroll, only the
               "Log another set" affordance remains, promoted to a full-size
@@ -2484,35 +2476,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Action row (COMP-001): two legible buttons. Swap, info, pair,
-              time crunch and remove live in the ⋯ overflow sheet. */}
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity
-              testID="volyume-btn-add-mid-workout"
-              style={styles.actionBtn}
-              onPress={() => setShowExercisePicker(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Add exercise to workout"
-            >
-              <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Add exercise</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setShowNoteInput(v => !v)}
-              accessibilityRole="button"
-              accessibilityLabel="Add note to set"
-            >
-              <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Add note</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Secondary exercise utilities live in Exercise options so the
+              logger surface stays focused on entering and reviewing sets. */}
 
           {/* Ghost navigation deleted (COMP-001): Next exercise / Finish
               live in the CTA state-swap when the target completes; the
               exercise navigator covers moving on early. Time-crunch active
               state is the timer glyph in the header; revert lives in the
-              ⋯ overflow sheet. */}
+              exercise options sheet. */}
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
@@ -2853,93 +2824,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
         </WorkoutBottomSheet>
 
-        {/* B8: plate calculator sheet. Sheet-local inputs seeded from the
-            current entry weight and the profile bar weight on open; edits
-            here deliberately persist nowhere (parity with the original
-            calculator). kg-only by design, like every gym weight. */}
-        <WorkoutBottomSheet
-          visible={showPlates}
-          onClose={() => setShowPlates(false)}
-          accessibilityLabel="Plate calculator"
-          keyboardAvoiding
-        >
-          {showPlates ? (
-            <>
-              <Text style={styles.sheetTitle}>Plate calculator</Text>
-              <View style={styles.plateInputsRow}>
-                <View style={styles.plateInputGroup}>
-                  <Text style={styles.plateInputLabel}>{`Target (${units})`}</Text>
-                  <TextInput
-                    style={styles.plateInput}
-                    value={plateTarget}
-                    onChangeText={setPlateTarget}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus
-                    placeholder="0"
-                    placeholderTextColor={colors.textMuted}
-                    accessibilityLabel={`Target weight in ${units}`}
-                  />
-                </View>
-                <View style={styles.plateInputGroup}>
-                  <Text style={styles.plateInputLabel}>{`Bar (${units})`}</Text>
-                  <TextInput
-                    style={styles.plateInput}
-                    value={plateBar}
-                    onChangeText={setPlateBar}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus
-                    placeholder={String(DEFAULT_BAR_KG)}
-                    placeholderTextColor={colors.textMuted}
-                    accessibilityLabel={`Bar weight in ${units}`}
-                  />
-                </View>
-              </View>
-              {(() => {
-                const calc = calculatePlates(parseFloat(plateTarget), parseFloat(plateBar));
-                if (!calc.ok) {
-                  return <Text style={styles.sheetExplainer}>Enter the weight you want on the bar.</Text>;
-                }
-                if (calc.belowBar) {
-                  return (
-                    <Text style={styles.sheetExplainer}>
-                      {`That is below the bar itself. The empty bar is ${parseFloat(plateBar)} ${units}.`}
-                    </Text>
-                  );
-                }
-                return (
-                  <>
-                    {calc.perSide.length === 0 ? (
-                      <Text style={styles.sheetExplainer}>Just the empty bar. Nothing to load.</Text>
-                    ) : (
-                      <>
-                        <Text style={styles.plateSectionLabel}>Each side, heaviest first</Text>
-                        {calc.perSide.map(({ plate, count }) => (
-                          <View key={plate} style={styles.plateRow} accessible accessibilityLabel={`${count} of ${plate} ${units} each side`}>
-                            <View style={[styles.plateDot, { backgroundColor: PLATE_COLOURS[plate] || colors.textMuted }]} />
-                            <Text style={styles.plateRowText}>{`${count} x ${plate} ${units}`}</Text>
-                          </View>
-                        ))}
-                      </>
-                    )}
-                    <Text style={styles.plateTotalLine}>
-                      {calc.remainderKg === 0
-                        ? `Loads exactly ${calc.loadedKg} ${units}.`
-                        : `Closest bar load is ${calc.loadedKg} ${units}, ${calc.remainderKg} ${units} short of the target.`}
-                    </Text>
-                  </>
-                );
-              })()}
-            </>
-          ) : null}
-        </WorkoutBottomSheet>
-
         {/* Exercise overflow sheet (COMP-001): secondary and destructive
             exercise actions, off the permanent surface. Remove keeps its
             own confirm alert inside handleRemoveExercise. */}
         <WorkoutBottomSheet
           visible={showOverflow}
           onClose={() => setShowOverflow(false)}
-          accessibilityLabel="Exercise actions"
+          accessibilityLabel="Exercise options"
         >
           {showOverflow ? (
             <>
@@ -2957,6 +2848,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.sheetOption}
+                onPress={() => {
+                  setShowOverflow(false);
+                  openAddExercisePicker();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Add exercise to workout"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>Add exercise</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => {
+                  setShowOverflow(false);
+                  setShowNoteInput(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${noteActionLabel} for this set`}
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>{noteActionLabel}</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sheetOption}
                 onPress={() => { setShowOverflow(false); setShowExecution(true); }}
                 accessibilityRole="button"
                 accessibilityLabel="Exercise info"
@@ -2966,8 +2885,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={styles.sheetOptionLabel}>Exercise info</Text>
                 </View>
               </TouchableOpacity>
-              {/* B8 gym basics. Both live here in the overflow, secondary
-                  utilities off the permanent surface (COMP-001), and strictly
+              {/* B8 gym basics. The warm-up helper lives here in the overflow,
+                  off the permanent surface (COMP-001), and strictly
                   pull: the warm-up helper NEVER auto-appears (recorded decision
                   at the set-entry card). */}
               {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
@@ -2993,28 +2912,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <View style={styles.sheetOptionText}>
                     <Text style={styles.sheetOptionLabel}>Warm-up sets</Text>
                     <Text style={styles.sheetOptionDesc}>Suggested light sets up to today's working weight.</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              )}
-              {PLATE_LOADED_EQUIPMENT.test(exercise?.equipment || '') && (
-              <TouchableOpacity
-                style={styles.sheetOption}
-                onPress={() => {
-                  setShowOverflow(false);
-                  const w = parseFloat(currentSet.weight);
-                  setPlateTarget(Number.isFinite(w) && w > 0 ? String(w) : '');
-                  setPlateBar(String(barWeight || DEFAULT_BAR_KG));
-                  setShowPlates(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Plate calculator"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="barbell-outline" size={18} color={colors.textSecondary} />
-                  <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Plate calculator</Text>
-                    <Text style={styles.sheetOptionDesc}>What to load on each side of the bar.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3176,33 +3073,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <SafeAreaProvider>
           <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
             <View style={styles.swapHeader}>
-              <Text style={styles.swapTitle}>Swap exercise</Text>
-              <TouchableOpacity onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <View style={styles.swapHeaderCopy}>
+                <Text style={styles.swapTitle}>Swap exercise</Text>
+                <Text style={styles.swapSubtitle} numberOfLines={1}>
+                  {exercise?.name}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.swapCloseBtn} onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
+                <Ionicons name="close" size={20} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.swapSubtitle}>
-              Replacing: <Text style={{ color: colors.primary }}>{exercise?.name}</Text>
-            </Text>
-            <Text style={styles.swapNote}>This changes this workout only. Your plan stays the same.</Text>
+            <Text style={styles.swapNote}>Choose a close match for today. Your plan is not changed.</Text>
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
-              contentContainerStyle={{ padding: spacing.lg }}
-              ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+              contentContainerStyle={styles.swapListContent}
+              ItemSeparatorComponent={() => <View style={styles.swapItemGap} />}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.swapItem} onPress={() => handleConfirmSwap(item.exercise)} accessibilityRole="button" accessibilityLabel={`Swap in ${item.exercise.name}`}>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.swapItemIcon}>
+                    <Ionicons name="swap-horizontal" size={16} color={colors.textSecondary} />
+                  </View>
+                  <View style={styles.swapItemCopy}>
                     <Text style={styles.swapItemName}>{item.exercise.name}</Text>
                     <Text style={styles.swapItemReason}>{item.reason}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                  No close matches yet.
-                </Text>
+                <View style={styles.swapEmpty}>
+                  <Text style={styles.swapEmptyTitle}>No close matches yet</Text>
+                  <Text style={styles.swapEmptyText}>Search the full library instead.</Text>
+                </View>
               }
               ListFooterComponent={
                 // Escape hatch from the ranked suggestions: search the whole
@@ -3216,10 +3119,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     setShowExercisePicker(true);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Search all exercises or add your own"
+                  accessibilityLabel="Search exercise library"
                 >
-                  <Ionicons name="search" size={18} color={colors.primary} />
-                  <Text style={styles.swapBrowseText}>Search all exercises or add your own</Text>
+                  <Ionicons name="search" size={16} color={colors.textSecondary} />
+                  <Text style={styles.swapBrowseText}>Search exercise library</Text>
                 </TouchableOpacity>
               }
             />
@@ -3340,14 +3243,20 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
   return (
     <View style={styles.emptyView}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
-          <Ionicons name="close" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.timerText}>{elapsed}</Text>
-        <TouchableOpacity onPress={onFinish} style={[styles.headerTapTarget, styles.headerFinishButton]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
-          <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
-          <Text style={styles.headerFinishText}>Finish</Text>
-        </TouchableOpacity>
+        <View style={styles.headerSide}>
+          <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenter}>
+          <Text style={styles.timerText}>{elapsed}</Text>
+        </View>
+        <View style={styles.headerSideRight}>
+          <TouchableOpacity onPress={onFinish} style={[styles.headerTapTarget, styles.headerFinishButton]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
+            <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
+            <Text style={styles.headerFinishText}>Finish</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {workoutExercises.length > 0 && (
@@ -3433,9 +3342,12 @@ const styles = StyleSheet.create({
   notesRail: { gap: spacing.xs },
   notesChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', minHeight: 44,
+    alignSelf: 'flex-start', minHeight: workoutLoggerSize.primaryActionMinHeight,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   notesChipText: { ...type.label, color: colors.textSecondary },
   notesExpanded: { gap: spacing.sm },
@@ -3443,15 +3355,61 @@ const styles = StyleSheet.create({
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   exerciseName: { flex: 1, ...type.title, color: colors.textPrimary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
-  swapHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  swapTitle: { ...type.h3, color: colors.textPrimary },
-  swapSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  swapNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-  swapItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
-  swapItemName: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
+  swapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  swapHeaderCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  swapTitle: { ...type.title, color: colors.textPrimary },
+  swapSubtitle: { ...type.caption, color: colors.textMuted },
+  swapCloseBtn: {
+    width: workoutLoggerSize.headerButtonMin,
+    height: workoutLoggerSize.headerButtonMin,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  swapNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs },
+  swapListContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  swapItemGap: { height: spacing.sm },
+  swapItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 62,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  swapItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+    flexShrink: 0,
+  },
+  swapItemCopy: { flex: 1, minWidth: 0 },
+  swapItemName: { ...type.label, color: colors.textPrimary, marginBottom: spacing.xxs },
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
-  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: 44, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
   swapBrowseText: { ...type.label, color: colors.textPrimary },
+  swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
+  swapEmptyTitle: { ...type.label, color: colors.textPrimary },
+  swapEmptyText: { ...type.caption, color: colors.textMuted },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 20 },
   targetText: { flex: 1, ...type.captionTight, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs2, borderWidth: 1, borderColor: colors.border, gap: spacing.xxs },
@@ -3465,12 +3423,12 @@ const styles = StyleSheet.create({
   warmupOneTimeHint: {
     ...type.bodySm, color: colors.textMuted, paddingTop: spacing.xs,
   },
-  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs },
-  firstSetHintText: { ...type.caption, flex: 1, color: colors.primary, lineHeight: 18 },
+  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.sm, marginBottom: spacing.xs },
+  firstSetHintText: { ...type.caption, flex: 1, color: colors.textSecondary, lineHeight: 18 },
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
   orientationText: { ...type.label, color: colors.textSecondary },
-  beatLine: { alignSelf: 'stretch', minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, paddingVertical: 0 },
+  beatLine: { alignSelf: 'stretch', minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, paddingVertical: 0 },
   beatLineLabel: { flex: 1, minWidth: 0, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
@@ -3544,25 +3502,22 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
-  clusterTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0 },
+  clusterTitle: { ...type.label, color: colors.primary, letterSpacing: 0 },
   clusterReps: { ...type.bodyStrong, color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   clusterInput: {
     flex: 1, backgroundColor: colors.background, color: colors.textPrimary,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...type.body,
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  clusterAddBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: 38, paddingHorizontal: spacing.lg, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  clusterCancelText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  secondaryActions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.sm, minHeight: 44, borderWidth: 1, borderColor: colors.border },
-  actionBtnText: { ...type.label, color: colors.textSecondary },
+  clusterAddBtnText: { ...type.label, color: colors.primary },
+  clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  clusterCancelText: { ...type.label, color: colors.textPrimary },
   overflowBtn: {
     width: workoutLoggerSize.overflowButton,
     height: workoutLoggerSize.overflowButton,
@@ -3595,24 +3550,15 @@ const styles = StyleSheet.create({
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl, gap: spacing.md, paddingHorizontal: spacing.xl },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptySubtitle: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
-  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
+  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
   addFirstBtnText: { ...type.label, color: colors.onPrimary },
   sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetExplainer: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
   sheetScroll: { flexShrink: 1, minHeight: 0 },
   sheetScrollBody: { paddingBottom: spacing.xs },
   sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: workoutLoggerSize.compactSheetOptionMinHeight, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  // B8 gym-basics sheets
+  // B8 gym-basics sheet
   rampBarTag: { ...type.caption, color: colors.textMuted },
-  plateInputsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
-  plateInputGroup: { flex: 1, gap: spacing.xxs },
-  plateInputLabel: { ...type.caption, color: colors.textMuted },
-  plateInput: { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...type.num('title'), color: colors.textPrimary, textAlign: 'center' },
-  plateSectionLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs },
-  plateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  plateDot: { width: 18, height: 18, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
-  plateRowText: { ...type.bodyStrong, color: colors.textPrimary },
-  plateTotalLine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.md },
   sheetOptionText: { flex: 1, gap: spacing.xxs },
   sheetOptionLabel: { ...type.bodyStrong, color: colors.textPrimary },
   sheetOptionLabelActive: { color: colors.primary },
@@ -3643,9 +3589,9 @@ const styles = StyleSheet.create({
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal
   supOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, maxHeight: '88%', borderTopWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '88%', borderTopWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   supSheetScroll: { flexShrink: 1, minHeight: 0 },
-  supSheetContent: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },
+  supSheetContent: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supTitle: { ...type.h3, color: colors.textPrimary },
   supSubtitle: { ...type.bodySm, color: colors.textSecondary },
@@ -3660,40 +3606,40 @@ const styles = StyleSheet.create({
   supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-  supPrimaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  supPrimaryBtnText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  supPrimaryBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { ...type.label, color: colors.textSecondary },
 
-  staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', maxHeight: '88%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   staleTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   staleBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
-  staleResume: { width: '100%', backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
-  staleResumeText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
-  staleFinishText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  staleResume: { width: '100%', backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  staleResumeText: { ...type.bodyStrong, color: colors.onPrimary },
+  staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderSubtle },
+  staleFinishText: { ...type.label, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
   staleDiscardText: { ...type.label, color: colors.error },
-  discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
-  keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  keepTrainingBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
   editSetKeyboard: { flex: 1 },
-  editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, width: '100%', maxHeight: '88%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, width: '100%', maxHeight: '88%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   editSetScroll: { flexShrink: 1, minHeight: 0 },
-  editSetContent: { padding: spacing.xl, gap: spacing.md },
+  editSetContent: { padding: spacing.lg, gap: spacing.md },
   editSetTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  editSetSaveBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
-  editSetSaveText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  editSetSaveBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  editSetSaveText: { ...type.bodyStrong, color: colors.onPrimary },
   editSetCancelBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  editSetCancelText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  editSetCancelText: { ...type.label, color: colors.textSecondary },
   editSetDivider: { height: 1, backgroundColor: colors.border },
   editSetDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   editSetDeleteText: { ...type.label, color: colors.error },

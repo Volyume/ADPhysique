@@ -94,8 +94,8 @@ try { Sharing = require('expo-sharing'); } catch (_) { Sharing = null; }
 const POSES = [
   { key: 'all', label: 'All', a11y: 'Show all photo sets' },
   { key: 'front', label: 'Front', a11y: 'Show front photos' },
-  { key: 'side', label: 'Side', a11y: 'Show side photos' },
   { key: 'back', label: 'Back', a11y: 'Show back photos' },
+  { key: 'side', label: 'Side', a11y: 'Show side photos' },
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const SCORE_POSES = ['front', 'back'];
@@ -117,16 +117,6 @@ function localDateKey(ms) {
   if (!Number.isFinite(n)) return null;
   const d = new Date(n);
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-
-function latestScanScoreLabel({ assessment = null, latestScan = null, suppressed = false } = {}) {
-  if (suppressed) return 'Hidden';
-  const score = progressScanScoreForDisplay(assessment);
-  if (score == null) return latestScan ? 'Saved' : 'No score yet';
-  return [
-    assessment?.leannessBandLabel || null,
-    formatVolyumeScore(score),
-  ].filter(Boolean).join(' - ');
 }
 
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
@@ -970,10 +960,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   const canCompare = !loading && photos.length >= 2 && !suppressed;
   const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
-  const latestPhoto = useMemo(() => {
-    if (!Array.isArray(enriched) || enriched.length === 0) return null;
-    return [...enriched].sort((a, b) => (Number(b.takenAt) || 0) - (Number(a.takenAt) || 0))[0] || null;
-  }, [enriched]);
   const latestScan = useMemo(() => {
     if (!Array.isArray(visibleScans) || visibleScans.length === 0) return null;
     return [...visibleScans].sort((a, b) => (Number(b.capturedAt) || Number(b.captured_at) || 0) - (Number(a.capturedAt) || Number(a.captured_at) || 0))[0] || null;
@@ -1007,7 +993,6 @@ export default function ProgressPhotosScreen({ navigation }) {
         - Math.abs((Number(b?.capturedAt ?? b?.captured_at) || 0) - (Number(item?.takenAt) || 0))
     ))[0] || null;
   }
-  const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
   const canExportCalibration = isProgressScanCalibrationExportAllowed(user);
   const exportLatestScanCalibration = useCallback(async () => {
     if (!canExportCalibration) return;
@@ -1043,17 +1028,6 @@ export default function ProgressPhotosScreen({ navigation }) {
       toast.show('Could not export scan signals. Please try again.', { variant: 'error' });
     }
   }, [canExportCalibration, latestScan, toast, userId, userSex]);
-  const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
-  const scanStatusLabel = latestScanScoreLabel({
-    assessment: latestAssessment,
-    latestScan,
-    suppressed,
-  });
-  const studioStats = [
-    { key: 'last', icon: 'calendar-outline', label: 'Last photo', value: lastCheckInLabel },
-    { key: 'scan', icon: 'scan', label: 'Score', value: scanStatusLabel },
-  ];
-  const showStudioStats = !!latestPhoto || !!latestScan;
   function libraryScanSummary(scan) {
     if (!scan) return null;
     const assessment = progressScanAssessmentForDisplay(scan);
@@ -1189,36 +1163,22 @@ export default function ProgressPhotosScreen({ navigation }) {
               activeOpacity={canExportCalibration ? 0.75 : 1}
               accessibilityLabel="Progress photos privacy note"
             >
-              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-              <Text style={styles.heroPrivacyText}>
-                Private on this device unless you choose to share or export.
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.textSecondary} />
+              <Text style={styles.heroPrivacyText} numberOfLines={1}>
+                Private on this device
               </Text>
             </TouchableOpacity>
             <Text style={styles.heroTextSubtitle}>
               Take clear front, back and side photos once a week. Volyume scores the set and saves it to your library.
             </Text>
-          </View>
-
-          <View style={styles.studioPanel}>
-            {showStudioStats ? (
-              <View style={styles.studioMetricsGrid}>
-                {studioStats.map((stat) => (
-                  <View key={stat.key} style={styles.studioMetricCard}>
-                    <View style={styles.studioMetricHead}>
-                      <Ionicons name={stat.icon} size={iconSize.sm} color={colors.primary} />
-                      <Text style={styles.studioMetricLabel} numberOfLines={1}>{stat.label}</Text>
-                    </View>
-                    <Text style={styles.studioMetricValue}>{stat.value}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
 
             <View style={styles.heroActions}>
               {!readOnly ? (
                 <Button
                   title="Add photos"
                   icon="camera-outline"
+                  variant="outline"
+                  size="sm"
                   onPress={onAdd}
                   fullWidth={false}
                   style={styles.heroActionButton}
@@ -1230,6 +1190,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   title="Compare"
                   icon="git-compare-outline"
                   variant="outline"
+                  size="sm"
                   onPress={canCompareScans ? openScanCompare : openCompare}
                   fullWidth={false}
                   style={styles.heroActionButton}
@@ -1266,73 +1227,80 @@ export default function ProgressPhotosScreen({ navigation }) {
         ) : null}
 
         {!loading && photos.length > 0 ? (
-          <View style={styles.libraryHeader}>
+          <View style={styles.libraryControls}>
+            <View style={styles.libraryHeader}>
               <Text style={styles.libraryTitle}>Photo library</Text>
-          </View>
-        ) : null}
-
-        {!loading && photos.length > 0 ? (
-          <View style={styles.filterRow}>
-            {POSES.map((p) => {
-              const active = p.key === poseFilter;
-              return (
-                <TouchableOpacity
-                  key={p.key}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                  onPress={() => setPoseFilter(p.key)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={p.a11y}
-                >
-                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{p.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
-
-        {!loading && photos.length > 0 ? (
-          <View style={styles.controlRow}>
-            <View style={styles.sortGroup}>
-              {SORTS.map((s) => {
-                const active = s.key === sortOrder;
+            </View>
+            <View
+              style={styles.segmentTrack}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Photo library view"
+            >
+              {POSES.map((p) => {
+                const active = p.key === poseFilter;
                 return (
                   <TouchableOpacity
-                    key={s.key}
-                    style={[styles.sortChip, active && styles.filterChipActive]}
-                    onPress={() => setSortOrder(s.key)}
+                    key={p.key}
+                    style={[styles.segment, active && styles.segmentActive]}
+                    onPress={() => setPoseFilter(p.key)}
                     hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={s.a11y}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: active }}
+                    accessibilityLabel={p.a11y}
                   >
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{s.label}</Text>
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{p.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-            <View style={styles.datesControl}>
-              <TouchableOpacity
-                style={[styles.datesChip, hasRange && styles.datesChipActive]}
-                onPress={() => setRangeOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
+
+            <View style={styles.libraryToolsRow}>
+              <View
+                style={[styles.segmentTrack, styles.sortTrack]}
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Photo library sort order"
               >
-                <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.primary : colors.textMuted} />
-                <Text style={[styles.datesChipText, hasRange && styles.datesChipTextActive]} numberOfLines={1}>{rangeLabel}</Text>
-              </TouchableOpacity>
-              {hasRange ? (
+                {SORTS.map((s) => {
+                  const active = s.key === sortOrder;
+                  return (
+                    <TouchableOpacity
+                      key={s.key}
+                      style={[styles.segment, styles.sortSegment, active && styles.segmentActive]}
+                      onPress={() => setSortOrder(s.key)}
+                      hitSlop={8}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: active }}
+                      accessibilityLabel={s.a11y}
+                    >
+                      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{s.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.dateGroup}>
                 <TouchableOpacity
-                  style={styles.dateClearButton}
-                  onPress={() => { setRangeFrom(null); setRangeTo(null); }}
-                  hitSlop={8}
+                  style={[styles.dateButton, hasRange && styles.dateButtonActive]}
+                  onPress={() => setRangeOpen(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Clear the date filter"
+                  accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
                 >
-                  <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
+                  <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.textPrimary : colors.textMuted} />
+                  <Text style={[styles.dateButtonText, hasRange && styles.dateButtonTextActive]} numberOfLines={1}>{rangeLabel}</Text>
                 </TouchableOpacity>
-              ) : null}
+
+                {hasRange ? (
+                  <TouchableOpacity
+                    style={styles.dateClearButton}
+                    onPress={() => { setRangeFrom(null); setRangeTo(null); }}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear the date filter"
+                  >
+                    <Ionicons name="close-circle" size={iconSize.sm} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           </View>
         ) : null}
@@ -1820,7 +1788,7 @@ const styles = StyleSheet.create({
   heroTextHeader: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
@@ -1831,12 +1799,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   heroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.full,
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     flexShrink: 0,
   },
   heroTitleCopy: { flex: 1, minWidth: 0 },
@@ -1844,56 +1814,25 @@ const styles = StyleSheet.create({
   heroTextTitle: { ...type.title, color: colors.textPrimary },
   heroPrivacyPill: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  heroPrivacyText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
-  heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  studioPanel: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    gap: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  studioMetricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  studioMetricCard: {
-    flexGrow: 1,
-    flexBasis: '31%',
-    minWidth: 142,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
-    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    maxWidth: '100%',
   },
-  studioMetricHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minWidth: 0,
-  },
-  studioMetricLabel: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
-  studioMetricValue: { ...type.label, color: colors.textPrimary, lineHeight: 20 },
+  heroPrivacyText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flexShrink: 1 },
+  heroTextSubtitle: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   heroActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    marginTop: spacing.xs,
   },
-  heroActionButton: { flexGrow: 1, flexBasis: 140, minWidth: 0 },
+  heroActionButton: { flex: 1, minWidth: 0 },
   loadErrorCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
@@ -1913,58 +1852,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
-  libraryTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
-  filterRow: {
-    flexDirection: 'row', gap: spacing.xs,
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  libraryTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  libraryControls: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
   },
-  filterChip: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    minHeight: 44, paddingVertical: spacing.sm,
-    borderRadius: radius.sm, backgroundColor: colors.surface2,
-  },
-  filterChipActive: { backgroundColor: colors.primaryFill },
-  filterChipText: { ...type.label, color: colors.textMuted },
-  filterChipTextActive: { color: colors.onPrimary },
-  // Sort + date-range row: same chip family as the pose filter above.
-  controlRow: {
-    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
-  },
-  sortGroup: { flexDirection: 'row', gap: spacing.xs, flexGrow: 1, flexBasis: 156, minWidth: 156 },
-  sortChip: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    minHeight: 44, paddingVertical: spacing.sm,
-    borderRadius: radius.sm, backgroundColor: colors.surface2,
-  },
-  datesControl: {
+  segmentTrack: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xxs,
-    flexGrow: 1,
-    flexBasis: 148,
-    minWidth: 0,
+    gap: 2,
+    padding: 3,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.background,
   },
-  datesChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0,
-    minHeight: 44, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderRadius: radius.sm, backgroundColor: colors.surface2,
-  },
-  datesChipActive: { backgroundColor: colors.primaryBg },
-  datesChipText: { ...type.label, color: colors.textMuted, flex: 1, minWidth: 0 },
-  datesChipTextActive: { color: colors.primary },
-  dateClearButton: {
-    width: 44,
-    minHeight: 44,
+  segment: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
+    minHeight: 34,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.sm - 1,
+  },
+  segmentActive: {
+    backgroundColor: colors.surfaceElevated,
+  },
+  segmentText: { ...type.label, color: colors.textMuted },
+  segmentTextActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  libraryToolsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+  },
+  sortTrack: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sortSegment: {
+    minHeight: 38,
+  },
+  dateGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.xs,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.background,
+  },
+  dateButtonActive: { backgroundColor: colors.surfaceElevated },
+  dateButtonText: { ...type.label, color: colors.textMuted, flex: 1, minWidth: 0 },
+  dateButtonTextActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  dateClearButton: {
+    width: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.background,
   },
   actionRow: {
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm,

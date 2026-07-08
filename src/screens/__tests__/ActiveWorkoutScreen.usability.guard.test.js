@@ -46,8 +46,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain('return \'Enter weight and reps, then tap Log set when done.\';');
-    expect(ACTIVE_WORKOUT).toContain('Tap More for form tips, warm-ups, swaps and session options.');
+    expect(ACTIVE_WORKOUT).toContain('Use exercise options for form tips, warm-ups, swaps and session settings.');
+    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Exercise options"');
+    expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="More options for this exercise"');
+    expect(ACTIVE_WORKOUT).toContain('placeholder="Add a note for this set"');
+    expect(ACTIVE_WORKOUT).not.toContain('placeholder="Add a note..."');
     expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={colors.primary}');
+    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={16} color={colors.textSecondary}');
+    expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
+    expect(ACTIVE_WORKOUT).toMatch(/firstSetHint: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
     expect(ACTIVE_WORKOUT).not.toContain('sparkles');
   });
 
@@ -57,10 +64,45 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('beatLineCueText');
   });
 
+  test('exercise swaps reset stale in-progress logger state', () => {
+    const swapWindow = ACTIVE_WORKOUT.match(/function handleConfirmSwap\(newExercise\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+
+    expect(swapWindow).toContain('cancelAutoAdvance();');
+    expect(swapWindow).toContain('setCurrentSet({');
+    expect(swapWindow).toContain('reps: newRepMax || DEFAULT_SET.reps');
+    expect(swapWindow).toContain('setGhostSet(null);');
+    expect(swapWindow).toContain('setCluster(null);');
+    expect(swapWindow).toContain("setClusterReps('');");
+    expect(swapWindow).toContain('setExtraSetArmed(false);');
+    expect(swapWindow).toContain("setNoteText('');");
+    expect(swapWindow).toContain('setShowNoteInput(false);');
+    expect(swapWindow).toContain('setNotesExpanded(false);');
+  });
+
+  test('exercise changes clear stale per-exercise note UI', () => {
+    const loadWindow = ACTIVE_WORKOUT.match(/\/\/ Load previous performance and set defaults when exercise changes[\s\S]*?async function loadHistory/)?.[0] ?? '';
+
+    expect(loadWindow).toContain("setNoteText('');");
+    expect(loadWindow).toContain('setShowNoteInput(false);');
+    expect(loadWindow).toContain('setNotesExpanded(false);');
+  });
+
+  test('empty workout state uses the same fixed header layout as the logger', () => {
+    const emptyWindow = ACTIVE_WORKOUT.match(/function EmptyExerciseView[\s\S]*?const styles = StyleSheet\.create/)?.[0] ?? '';
+
+    expect(emptyWindow).toContain('style={styles.headerSide}');
+    expect(emptyWindow).toContain('style={styles.headerCenter}');
+    expect(emptyWindow).toContain('style={styles.headerSideRight}');
+    expect(emptyWindow).not.toContain('<Text style={styles.timerText}>{elapsed}</Text>\n        <TouchableOpacity');
+  });
+
   test('logged set edit rows include the set content in the spoken label', () => {
     expect(ACTIVE_WORKOUT).toContain('const spokenSetLabel = [');
     expect(ACTIVE_WORKOUT).toContain("isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`");
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel={spokenSetLabel}');
+    const loggedRowWindow = ACTIVE_WORKOUT.match(/const LoggedSetRow[\s\S]*?\n\}\);/)?.[0] ?? '';
+    expect(loggedRowWindow).toContain('name="chevron-forward"');
+    expect(loggedRowWindow).not.toContain('name="checkmark-circle"');
   });
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
@@ -76,16 +118,19 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.targetText} numberOfLines={1}>');
     expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
-    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);
+    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
     expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
+    expect(SET_ENTRY).toContain('>Est. max ~{Math.round(live1RM)}{units}</Text>');
+    expect(SET_ENTRY).not.toContain('>−</Text>');
+    expect(SET_ENTRY).not.toContain('Est. max ≈');
   });
 
   test('high-impact workout text uses the semantic Inter type roles', () => {
     expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.primary }");
     expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.onPrimary, letterSpacing: 0 }');
     expect(ACTIVE_WORKOUT).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
-    expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.h3, color: colors.textPrimary }');
+    expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toMatch(/exerciseName: \{ flex: 1, fontSize: fontSize\.lg,[\s\S]*fontWeight: fontWeight\.black/);
     expect(ACTIVE_WORKOUT).not.toMatch(/completeBtnText: \{ fontSize: fontSize\.md,[\s\S]*fontWeight: fontWeight\.bold/);
@@ -116,12 +161,23 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     expect(ACTIVE_WORKOUT).toMatch(/completeBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
     expect(ACTIVE_WORKOUT).toMatch(/extraSetBtnPromoted: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
-    expect(ACTIVE_WORKOUT).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
+    expect(ACTIVE_WORKOUT).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
     expect(ACTIVE_WORKOUT).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
     expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
-    expect(ACTIVE_WORKOUT).toMatch(/autoAdvanceRowActionBtn: \{[\s\S]*minHeight: 44/);
-    expect(ACTIVE_WORKOUT).toContain("<Text style={styles.actionBtnText}>Add note</Text>");
+    expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toMatch(/clusterCancel: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toMatch(/autoAdvanceRowActionBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toContain('function openAddExercisePicker()');
+    expect(ACTIVE_WORKOUT).toContain("setPickerMode('add');");
+    expect(ACTIVE_WORKOUT).toContain('onAdd={openAddExercisePicker}');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>Add exercise</Text>');
+    expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>{noteActionLabel}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('cue{cueCount !== 1 ? \'s\' : \'\'}');
+    expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');
+    expect(ACTIVE_WORKOUT).not.toContain('secondaryActions: {');
+    expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.keepTrainingBtnText}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
@@ -134,7 +190,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('function WorkoutSheetScroll');
     expect(ACTIVE_WORKOUT).toContain('function WorkoutBottomSheet');
     expect(ACTIVE_WORKOUT).toContain('<BottomSheet');
-    expect(ACTIVE_WORKOUT.match(/<WorkoutBottomSheet/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(ACTIVE_WORKOUT.match(/<WorkoutBottomSheet/g)?.length).toBeGreaterThanOrEqual(4);
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetOverlay}');
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.sheetHost}');
     expect(ACTIVE_WORKOUT).not.toContain('styles.sheetHandle');
@@ -161,5 +217,18 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toMatch(/editSetSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
     expect(ACTIVE_WORKOUT).toContain('editSetScroll');
     expect(ACTIVE_WORKOUT).toContain('editSetContent');
+  });
+
+  test('modal actions use the same compact logger button system', () => {
+    expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toMatch(/editSetSaveBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).toContain('keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).toContain('editSetSaveText: { ...type.bodyStrong, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).not.toContain('staleResumeText: { fontSize: fontSize.md');
+    expect(ACTIVE_WORKOUT).not.toContain('editSetSaveText: { fontSize: fontSize.md');
+    expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
   });
 });

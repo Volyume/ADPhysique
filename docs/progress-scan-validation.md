@@ -10,6 +10,12 @@ Run:
 npm run progress-scan:calibration
 ```
 
+For a diagnostic table of the same cases, run:
+
+```bash
+npm run progress-scan:calibration-report
+```
+
 For an optional external real-silhouette smoke test, run:
 
 ```bash
@@ -18,11 +24,53 @@ npm run progress-scan:bodym
 
 This downloads a small sample from the public BodyM dataset at run time. It is intentionally not part of normal CI because it depends on network access and a third-party dataset.
 
+For a deeper external diagnostic pass across every usable public BodyM subject,
+run:
+
+```bash
+npm run progress-scan:bodym-report
+```
+
+That full report is slower. It prints score distribution, sex split, lean-vs-large
+reference averages and any large/high-waist subjects that still land in a lean
+band. Treat those rows as tuning evidence, not as a body-fat accuracy claim.
+
+To run the calibration corpus report and the full BodyM report back to back,
+use:
+
+```bash
+npm run progress-scan:full-audit
+```
+
+That is the quickest way to regenerate the current external evidence bundle
+before a release discussion.
+
 To add non-committed real-photo cases from APK testing, save a JSON array outside Git and run the same gate with:
 
 ```bash
 PROGRESS_SCAN_CALIBRATION_FILE=/path/to/real-progress-scan-cases.json npm run progress-scan:calibration
 ```
+
+To inspect those real APK cases without waiting for a failing assertion to tell
+you what moved, run:
+
+```bash
+npm run progress-scan:calibration-report -- /path/to/real-progress-scan-cases.json
+```
+
+The report prints each case's displayed score, band, confidence, measured
+inputs, score internals and pass/fail state. Use it for tuning discussion; use
+`npm run progress-scan:calibration` as the release gate.
+
+If you have a JSON export produced by `getProgressScanCalibrationJson` from the
+app, you can replay it directly with:
+
+```bash
+npm run progress-scan:replay -- /path/to/export.json
+```
+
+That is the simplest path for real APK photos or on-device scan exports when
+you want to inspect the exact measured ratios and score internals again.
 
 On a release APK signed in as a founder test account, open Progress Photos and
 long-press the privacy note at the top of the page. Volyume writes a sanitized
@@ -60,7 +108,24 @@ Use `getProgressScanCalibrationJson(userId, scanId, opts)` from `src/lib/progres
 
 ## External shape-smoke checks
 
-The BodyM smoke test uses public real-subject silhouette masks, height, weight, gender and body measurements to check that Volyume can extract finite silhouette ratios and bounded scores across varied body sizes. It is useful for shape robustness, PNG/mask decoding, and guarding against obvious score inversions across height and waist differences.
+The BodyM smoke test uses public real-subject silhouette masks, height, weight, gender and body measurements to check that Volyume can extract finite silhouette ratios and bounded scores across varied body sizes. It is useful for shape robustness, PNG/mask decoding, guarding against obvious score inversions across height and waist differences, and checking that camera-distance changes inside usable framing do not swing the Volyume Score by more than a few points.
+
+Current coverage:
+
+- thirteen bucketed public BodyM subjects spanning male and female users,
+  underweight through obese BMI ranges, and measured waist-to-height extremes
+- finite front/back/side silhouette ratios and bounded scores
+- high-BMI or high-waist subjects must not remain in a "Defined" or leaner
+  band simply because the silhouette ratios look deceptively narrow
+- lower-waist reference subjects must score clearly above the large/high-waist
+  reference group
+- scaling the same silhouette within usable framing must keep the displayed
+  score within five points
+- a too-close/cropped silhouette must be withheld instead of forced into a score
+- weaker-but-usable quality must reduce confidence without materially changing
+  the body read
+- optional full-audit mode scores every usable BodyM subject and reports any
+  large/high-waist subject that still lands too lean
 
 It is not body-fat ground truth. BodyM does not provide DXA or validated body-fat labels, so it must not be used to claim exact body-fat accuracy. Treat it as one layer beneath real APK scan exports and controlled validation photos.
 

@@ -69,11 +69,11 @@ export const REST_TIMER_ACTION = Object.freeze({
  * Action descriptors for setNotificationCategoryAsync. Exported so the
  * test can assert exactly four actions with the right ids without
  * reaching into expo. opensAppToForeground:false on ±15/skip lets the
- * user adjust without yanking the app open; complete-set opens the app
+ * user adjust without yanking the app open; Log set opens the app
  * because logging a set runs through the in-app completion path.
  */
 export const REST_TIMER_ACTIONS = Object.freeze([
-  { identifier: REST_TIMER_ACTION.COMPLETE_SET, buttonTitle: 'Complete set', options: { opensAppToForeground: true } },
+  { identifier: REST_TIMER_ACTION.COMPLETE_SET, buttonTitle: 'Log set', options: { opensAppToForeground: true } },
   { identifier: REST_TIMER_ACTION.PLUS_15, buttonTitle: '+15s', options: { opensAppToForeground: false } },
   { identifier: REST_TIMER_ACTION.MINUS_15, buttonTitle: '−15s', options: { opensAppToForeground: false } },
   { identifier: REST_TIMER_ACTION.SKIP, buttonTitle: 'Skip rest', options: { opensAppToForeground: false } },

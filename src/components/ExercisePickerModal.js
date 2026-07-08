@@ -4,7 +4,7 @@ import {
   Platform, TouchableOpacity, ScrollView,
 } from 'react-native';
 // E8 perf: the full library is ~450 rows with no render cap; FlashList
-// recycles rows instead of mounting them all (audit/perf-baseline.md §2).
+// recycles rows instead of mounting them all (audit/perf-baseline.md section 2).
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -33,6 +33,8 @@ const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight
 export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel, actionLabel }) {
   const toast = useToast();
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
+  const isSwapAction = buttonLabel.toLowerCase().includes('swap');
+  const showBrowseFilters = !isSwapAction;
   const [query, setQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState('');
   const [equipmentFilter, setEquipmentFilter] = useState('');
@@ -126,7 +128,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               >
                 <Ionicons name="arrow-back" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={styles.createTitle} numberOfLines={1} ellipsizeMode="tail">New Exercise</Text>
+              <Text style={styles.createTitle} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
                 onPress={onClose}
@@ -150,7 +152,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 fieldStyle={styles.createNameInputField}
                 inputStyle={styles.createNameInputText}
               />
-              <Text style={styles.createLabel}>Muscle Group</Text>
+              <Text style={styles.createLabel}>Muscle group</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.map(m => (
                   <Chip
@@ -178,7 +180,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 onPress={handleCreate}
                 disabled={creating}
               >
-                <Ionicons name="add-circle" size={20} color={colors.onPrimary} />
+                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={colors.onPrimary} />
                 <Text style={styles.createSaveBtnText} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -190,7 +192,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 style={styles.pickerSearchBar}
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search exercises..."
+                placeholder="Search exercises"
                 autoFocus
               />
               <TouchableOpacity accessibilityRole="button"
@@ -203,48 +205,51 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </TouchableOpacity>
             </View>
 
-            {/* Browse filters: tap a muscle and/or equipment chip to narrow the
-                448-exercise library without typing. Each row is single-select
-                and toggles off on a second tap; the two compose with the search
-                box (see the filter effect above). */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.filterRow}
-            >
-              {PICKER_MUSCLES.map(m => (
-                <Chip
-                  key={m}
-                  label={MUSCLE_DISPLAY_NAMES[m]}
-                  selected={muscleFilter === m}
-                  onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
-                  accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
-                  style={styles.filterChip}
-                  labelStyle={styles.filterChipText}
-                  selectedLabelStyle={styles.filterChipTextActive}
-                />
-              ))}
-            </ScrollView>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.filterRow}
-            >
-              {PICKER_EQUIPMENT.map(eq => (
-                <Chip
-                  key={eq}
-                  label={eq}
-                  selected={equipmentFilter === eq}
-                  onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
-                  accessibilityLabel={`Filter by ${eq}`}
-                  style={styles.filterChip}
-                  labelStyle={styles.filterChipText}
-                  selectedLabelStyle={styles.filterChipTextActive}
-                />
-              ))}
-            </ScrollView>
+            {showBrowseFilters ? (
+              <>
+                {/* Browse filters are for adding exercises. Swap mode stays
+                    search-and-select so it does not bury the replacement list
+                    under two rows of unrelated chips mid-workout. */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {PICKER_MUSCLES.map(m => (
+                    <Chip
+                      key={m}
+                      label={MUSCLE_DISPLAY_NAMES[m]}
+                      selected={muscleFilter === m}
+                      onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
+                      accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
+                      style={styles.filterChip}
+                      labelStyle={styles.filterChipText}
+                      selectedLabelStyle={styles.filterChipTextActive}
+                    />
+                  ))}
+                </ScrollView>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {PICKER_EQUIPMENT.map(eq => (
+                    <Chip
+                      key={eq}
+                      label={eq}
+                      selected={equipmentFilter === eq}
+                      onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
+                      accessibilityLabel={`Filter by ${eq}`}
+                      style={styles.filterChip}
+                      labelStyle={styles.filterChipText}
+                      selectedLabelStyle={styles.filterChipTextActive}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
 
             <FlashList
               data={filtered}
@@ -253,7 +258,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               contentContainerStyle={styles.pickerList}
               renderItem={({ item }) => (
                 <TouchableOpacity accessibilityRole="button"
-                  accessibilityLabel={`Select ${item.name}`}
+                  accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}`}
                   style={styles.pickerRow}
                   onPress={() => { onSelect(item); onClose(); }}
                 >
@@ -263,11 +268,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       <Text style={styles.pickerMuscle}>{item.primaryMuscle}</Text>
                     ) : null}
                   </View>
-                  <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+                  <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListFooterComponent={
+              ListFooterComponent={!isSwapAction ? (
                 // Always offer "create custom", with or without a query, so the
                 // option to add your own exercise is never hidden behind an
                 // empty search result.
@@ -286,11 +291,13 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       : 'Create a custom exercise'}
                   </Text>
                 </TouchableOpacity>
-              }
+              ) : null}
               ListEmptyComponent={
                 <View style={styles.pickerEmpty}>
                   <Ionicons name="search-outline" size={32} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
-                  <Text style={styles.pickerEmptyText}>No matches found. Try a different search.</Text>
+                  <Text style={styles.pickerEmptyText}>
+                    {isSwapAction ? 'No swaps found. Try a different search.' : 'No matches found. Try a different search.'}
+                  </Text>
                 </View>
               }
             />
@@ -305,27 +312,37 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
 const styles = StyleSheet.create({
   pickerSafe: { flex: 1, backgroundColor: colors.background },
   pickerHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   pickerSearchBar: { flex: 1 },
-  pickerClose: { padding: spacing.xs },
-  pickerList: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
+  pickerClose: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  pickerList: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxl },
+  pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 54, paddingVertical: spacing.sm },
   pickerRowContent: { flex: 1, gap: spacing.xxs },
-  pickerExName: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  pickerExName: { ...type.label, color: colors.textPrimary },
   pickerMuscle: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
-  separator: { height: 1, backgroundColor: colors.border },
+  separator: { height: 1, backgroundColor: colors.borderSubtle },
   createNewBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderWidth: 1, borderColor: colors.primary,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    minHeight: 44,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  createNewBtnText: { ...type.label, color: colors.primary, flex: 1 },
+  createNewBtnText: { ...type.label, color: colors.textPrimary, flex: 1 },
   createTitle: { ...type.title, flex: 1, color: colors.textPrimary, textAlign: 'center' },
   createContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   createNameInputContainer: { gap: 0 },
@@ -334,15 +351,16 @@ const styles = StyleSheet.create({
   createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 0.3 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterRow: {
-    flexDirection: 'row', gap: spacing.sm, flexGrow: 0,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.md,
+    flexDirection: 'row', gap: spacing.xs, flexGrow: 0,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm,
   },
-  filterChip: { paddingVertical: spacing.sm },
+  filterChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   filterChipText: { ...type.label, color: colors.textSecondary },
   filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   createSaveBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    minHeight: 48,
+    backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.sm, marginTop: spacing.sm,
   },
   createSaveBtnText: { ...type.label, color: colors.onPrimary },
 });

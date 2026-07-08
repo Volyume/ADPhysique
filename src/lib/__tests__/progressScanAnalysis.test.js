@@ -504,6 +504,117 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
   });
 
+  test('large-body anthropometric signal can pull an over-lean silhouette out of defined bands', () => {
+    const largeBodyEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 40,
+      inputs: {
+        sex: 'female',
+        bmi: 37.5,
+        waistToShoulder: 0.644,
+        waistToHip: 1.354,
+        waistToHeight: 0.232,
+        bodyAreaRatio: 0.21,
+        frontBackWaistSpread: 0,
+        sideWaistToHeight: 0.166,
+      },
+      biasFlags: ['large_body'],
+    };
+
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: largeBodyEstimate,
+      sex: 'female',
+      heightCm: 165,
+      weightKg: 102,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.indexInputs).toMatchObject({
+      calibratedSilhouetteScore: 83,
+      estimatorAnchorScore: 40,
+      estimatorAnchorMaxDownwardPoints: 26,
+      boundedEstimatorAnchorScore: 57,
+    });
+    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(64);
+    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+  });
+
+  test('large-body male signal is not protected by a deceptively lean silhouette without muscular context', () => {
+    const largeMaleEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 25,
+      inputs: {
+        sex: 'male',
+        bmi: 35,
+        waistToShoulder: 0.558,
+        waistToHip: 1.228,
+        waistToHeight: 0.203,
+        bodyAreaRatio: 0.23,
+        frontBackWaistSpread: 0,
+        sideWaistToHeight: 0.132,
+      },
+      biasFlags: ['large_body'],
+    };
+
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: largeMaleEstimate,
+      sex: 'male',
+      heightCm: 178,
+      weightKg: 111,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.indexInputs).toMatchObject({
+      calibratedSilhouetteScore: 88,
+      estimatorAnchorScore: 58,
+      estimatorAnchorMaxDownwardPoints: 26,
+      boundedEstimatorAnchorScore: 62,
+    });
+    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(69);
+    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+  });
+
+  test('near-large-body signal does not stay defined when the estimator disagrees with a lean silhouette', () => {
+    const nearLargeEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 30,
+      inputs: {
+        sex: 'female',
+        bmi: 29.5,
+        waistToShoulder: 0.64,
+        waistToHip: 1.22,
+        waistToHeight: 0.203,
+        bodyAreaRatio: 0.23,
+        frontBackWaistSpread: 0,
+        sideWaistToHeight: 0.132,
+      },
+      biasFlags: [],
+    };
+
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: nearLargeEstimate,
+      sex: 'female',
+      heightCm: 165,
+      weightKg: 80,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.indexInputs).toMatchObject({
+      calibratedSilhouetteScore: 84,
+      estimatorAnchorScore: 62,
+      estimatorAnchorMaxDownwardPoints: 16,
+      boundedEstimatorAnchorScore: 68,
+    });
+    expect(out.physiqueAssessment.visualLeannessScore).toBeLessThanOrEqual(69);
+    expect(['Foundation', 'Active', 'Athletic']).toContain(out.physiqueAssessment.leannessBandLabel);
+  });
+
   test('stored v2 raw scores recover to the calibrated display score when available', () => {
     const assessment = normaliseStoredPhysiqueAssessment({
       assessmentVersion: PROGRESS_SCAN_SCORE_VERSION,
@@ -825,12 +936,12 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.summary).not.toMatch(/quad|abs|separation|vascular|looks|appears|visible/i);
   });
 
-  test('scan comparability ignores optional side-pose changes but still refuses setup changes before reporting progress', () => {
+  test('scan comparability tolerates legacy front-back sets but refuses setup changes before reporting progress', () => {
     const previous = comparableScan({ id: 'old', side: true });
     const withoutSide = comparableScan({ id: 'new', side: false });
     expect(scanComparability(withoutSide, previous)).toMatchObject({
       comparable: true,
-      reason: 'Comparable front and back photo set.',
+      reason: 'Comparable photo set.',
     });
     expect(scanSetupStability(withoutSide, previous).issues).not.toContain('side_pose_set_changed');
 
@@ -843,6 +954,25 @@ describe('Progress Scan uncertainty and abstention', () => {
       'front_camera_angle_changed',
     ]));
     expect(scanComparability(movedCamera, previous).comparable).toBe(false);
+  });
+
+  test('side-photo setup drift is checked when both photo sets include side', () => {
+    const previous = comparableScan({ id: 'old', side: true });
+    const current = comparableScan({ id: 'new', side: true });
+    const sideAsset = current.signals.assets.find((asset) => asset.pose === 'side');
+    sideAsset.bodyBox.height = 0.62;
+    sideAsset.bodyBox.centerX = 0.66;
+
+    const setup = scanSetupStability(current, previous);
+    expect(setup.stable).toBe(false);
+    expect(setup.issues).toEqual(expect.arrayContaining([
+      'side_camera_distance_changed',
+      'side_body_position_changed',
+    ]));
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: false,
+      reason: 'The photo setup changed too much for a fair comparison.',
+    });
   });
 
   test('scan comparability supports weekly photo sets and refuses shorter intervals', () => {

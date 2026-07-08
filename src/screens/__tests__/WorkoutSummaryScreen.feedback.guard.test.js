@@ -16,19 +16,33 @@ describe('WorkoutSummaryScreen feedback controls', () => {
   test('keeps completed-workout footer compact and stable', () => {
     expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
     expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>');
+    expect(SOURCE).toContain('<TouchableOpacity');
+    expect(SOURCE).toContain('<Text style={styles.doneBtnText}>{saving ? \'Saving\' : \'Close\'}</Text>');
+    expect(SOURCE).toContain('<Ionicons name="share-social-outline" size={16} color={colors.primary} />');
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);
-    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108/);
+    expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*minHeight: 44/);
+    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108,[\s\S]*minHeight: 44/);
     expect(SOURCE).not.toMatch(/shareFooterBtn: \{\s*flex: 1,/);
     expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
     expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);
+  });
+
+  test('save-template modal follows the same compact completion styling', () => {
+    expect(SOURCE).toContain('templateModalTitle: {');
+    expect(SOURCE).toContain('...type.title, color: colors.textPrimary');
+    expect(SOURCE).toContain('templateModalCancelText: { ...type.label, color: colors.textSecondary }');
+    expect(SOURCE).toMatch(/templateModalSave: \{[\s\S]*backgroundColor: colors\.primaryFill/);
+    expect(SOURCE).not.toContain('templateModalSave: {\n    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,\n    borderRadius: radius.md, backgroundColor: colors.primary,');
   });
 
   test('keeps optional post-workout ratings collapsed until the user opens them', () => {
     expect(SOURCE).toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(false);');
     expect(SOURCE).toContain('<Text style={styles.sectionTitle}>Session feedback</Text>');
     expect(SOURCE).toContain('Rate this session');
+    expect(SOURCE).toContain('placeholder="Anything notable from this session"');
+    expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');
     expect(SOURCE).not.toContain('Tell your coach');
     expect(SOURCE).not.toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);');
     expect(SOURCE).not.toContain('Add session feedback');

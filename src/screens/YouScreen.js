@@ -7,6 +7,7 @@
  */
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,13 +20,22 @@ import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllWorkouts, getCoachOutputHistory, getLatestCheckin, getLatestCoachOutput } from '../lib/database';
+import {
+  getAllWorkouts,
+  getCoachOutputHistory,
+  getLatestCheckin,
+  getLatestCoachOutput,
+  getMorningWeightsLast14Days,
+  getOpenEdPatternFlag,
+} from '../lib/database';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
 import { partnerRowLine } from '../lib/partners/signals';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { logError } from '../lib/errorLog';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
+import { buildCoachLedger } from '../lib/coachLedger';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -75,6 +85,67 @@ function isCompletedCoachDecision(output, checkin) {
   return Number(checkin?.weekStart) === Number(output.weekStart) && checkin?.energyScore != null;
 }
 
+function parseCheckinDay(rawPrefs) {
+  try {
+    const prefs = rawPrefs ? JSON.parse(rawPrefs) : null;
+    return Number.isFinite(prefs?.checkinDay) ? prefs.checkinDay : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function localMidnightMs(ms = Date.now()) {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function buildPendingCoachCopy(readiness) {
+  if (!readiness) {
+    return {
+      title: 'First check-in not open yet',
+      body: 'Log your morning weight and train as normal. Volyume will open the check-in once the baseline is ready.',
+    };
+  }
+  if (readiness.edSuppressed) {
+    return {
+      title: readiness.unlockLabel
+        ? `First check-in opens on ${readiness.unlockLabel}`
+        : 'First check-in not open yet',
+      body: 'Volyume is keeping this calm and will not push weigh-in counts here. Use the check-in when it opens.',
+    };
+  }
+  if (!readiness.firstWeightAt) {
+    return {
+      title: 'First check-in starts after your first morning weight',
+      body: 'Log your first morning weight from Today to start the baseline. The Coach will not change targets until enough data is in.',
+    };
+  }
+  const rows = readiness.ledger?.rows || [];
+  const weighInsReady = rows.find(r => r.key === 'weighIns')?.done === true;
+  const daysReady = rows.find(r => r.key === 'days')?.done === true;
+  const unlockIsTodayOrPast = readiness.unlockDateMs != null
+    && readiness.unlockDateMs <= localMidnightMs();
+  if (unlockIsTodayOrPast && weighInsReady && daysReady) {
+    return {
+      title: 'Weekly check-in is open',
+      body: 'Answer the weekly check-in to produce your coaching decision. Until you do, targets stay unchanged.',
+    };
+  }
+  if (daysReady && !weighInsReady) {
+    return {
+      title: 'First check-in needs more morning weights',
+      body: 'Keep logging your morning weight. Volyume needs enough weigh-ins before it trusts the first weekly read.',
+    };
+  }
+  return {
+    title: readiness.unlockLabel
+      ? `First check-in opens on ${readiness.unlockLabel}`
+      : 'First check-in not open yet',
+    body: 'Keep logging morning weight and training. Volyume waits for enough baseline data before it changes targets.',
+  };
+}
+
 export default function YouScreen({ navigation }) {
   const { user, userProfile, tier } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -84,6 +155,7 @@ export default function YouScreen({ navigation }) {
   const [sessions, setSessions] = useState(null);
   const [latestReview, setLatestReview] = useState(null);
   const [hasCoachHistory, setHasCoachHistory] = useState(false);
+  const [coachReadiness, setCoachReadiness] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -92,14 +164,30 @@ export default function YouScreen({ navigation }) {
     async function load() {
       if (!user?.id) {
         setLoadError(false);
+        setCoachReadiness(null);
         return;
       }
       try {
-        const [workoutsResult, latestResult, checkinResult, historyResult] = await Promise.allSettled([
+        const [
+          workoutsResult,
+          latestResult,
+          checkinResult,
+          historyResult,
+          weightsResult,
+          prefsResult,
+          edFlagResult,
+          wellbeingResult,
+        ] = await Promise.allSettled([
           getAllWorkouts(user.id),
           getLatestCoachOutput(user.id),
           getLatestCheckin(user.id),
           tier !== 'pro' ? getCoachOutputHistory(user.id, 1) : Promise.resolve([]),
+          tier === 'pro' ? getMorningWeightsLast14Days(user.id) : Promise.resolve([]),
+          tier === 'pro' ? AsyncStorage.getItem('@volyume_notification_prefs') : Promise.resolve(null),
+          tier === 'pro' ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
+          tier === 'pro'
+            ? AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified')
+            : Promise.resolve('unspecified'),
         ]);
         if (!alive) return;
         const failed = [workoutsResult, latestResult, checkinResult, historyResult].some((r) => r.status === 'rejected');
@@ -117,10 +205,39 @@ export default function YouScreen({ navigation }) {
         const checkin = checkinResult.status === 'fulfilled' ? checkinResult.value : null;
         const latestDecision = isCompletedCoachDecision(latest, checkin) ? latest : null;
         const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
+        const weights = weightsResult.status === 'fulfilled' ? weightsResult.value : [];
+        const checkinDay = parseCheckinDay(prefsResult.status === 'fulfilled' ? prefsResult.value : null);
+        const wellbeing = wellbeingResult.status === 'fulfilled' ? (wellbeingResult.value || 'unspecified') : 'read_failed';
+        const edFlag = edFlagResult.status === 'fulfilled' ? edFlagResult.value : 'read_failed';
         const completed = (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed));
+        const weekAgo = Date.now() - 7 * 86400000;
+        const weighIns7d = (weights || []).filter(w => (w.loggedAt ?? w.logged_at ?? 0) >= weekAgo).length;
+        const firstWeightAt = weights.length
+          ? Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity))
+          : null;
+        const edSuppressed = !!edFlag
+          || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
+          || wellbeing === 'read_failed'
+          || isCalm(wellbeing);
+        const ledger = tier === 'pro'
+          ? buildCoachLedger({
+              weighIns7d,
+              completedSessions: completed.length,
+              firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
+              checkinDay,
+              edFlagOpen: edSuppressed,
+            })
+          : null;
         if (workoutsResult.status === 'fulfilled') setSessions(completed.length);
         if (latestResult.status === 'fulfilled' && checkinResult.status === 'fulfilled') setLatestReview(latestDecision);
         if (historyResult.status === 'fulfilled') setHasCoachHistory((history || []).length > 0);
+        setCoachReadiness(ledger ? {
+          ledger,
+          unlockLabel: ledger.unlockLabel,
+          unlockDateMs: ledger.unlockDate ? ledger.unlockDate.getTime() : null,
+          firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
+          edSuppressed,
+        } : null);
         setLoadError(failed);
       } catch (e) {
         if (alive) {
@@ -131,7 +248,7 @@ export default function YouScreen({ navigation }) {
     }
     load();
     return () => { alive = false; };
-  }, [user?.id, tier, reloadKey]));
+  }, [user?.id, tier, reloadKey, userProfile?.scoffScore]));
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -140,6 +257,7 @@ export default function YouScreen({ navigation }) {
   const avatarUri = userProfile?.avatarUri || null;
   const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
   const profileFocus = profileFocusLine(userProfile);
+  const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
 
   const partners = usePartners(isPro ? user?.id : null, tier);
   const partnersSub = isPro
@@ -213,7 +331,7 @@ export default function YouScreen({ navigation }) {
                 {isPro
                   ? latestReview
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
-                    : 'First check-in not open yet'
+                    : pendingCoachCopy.title
                   : 'Coach is available on Pro'}
               </Text>
             </View>
@@ -222,7 +340,7 @@ export default function YouScreen({ navigation }) {
             {isPro
               ? latestReview
                 ? 'Open it to see what changed, what was held, and the exact signals behind it.'
-                : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
+                : pendingCoachCopy.body
               : 'The Coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>

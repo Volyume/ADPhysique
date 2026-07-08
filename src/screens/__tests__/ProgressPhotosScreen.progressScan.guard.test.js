@@ -10,10 +10,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/listProgressScanEntries/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_LIBRARY_LIMIT\s*=\s*100/);
     expect(SCREEN).toMatch(/listProgressScanEntries\(userId, PROGRESS_SCAN_LIBRARY_LIMIT\)/);
-    expect(SCREEN).toMatch(/function latestScanScoreLabel\(\{ assessment = null, latestScan = null, suppressed = false \} = \{\}\)/);
     expect(SCREEN).toMatch(/formatVolyumeScore\(score\)/);
     expect(SCREEN).not.toMatch(/`index \$\{score\}`/);
-    expect(SCREEN).toMatch(/const scanStatusLabel = latestScanScoreLabel\(\{/);
+    expect(SCREEN).not.toMatch(/latestScanScoreLabel/);
+    expect(SCREEN).not.toMatch(/const scanStatusLabel/);
+    expect(SCREEN).not.toMatch(/label: 'Last photo'/);
     expect(SCREEN).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
     expect(SCREEN).toMatch(/function libraryScanSummary\(scan\)/);
     expect(SCREEN).toMatch(/label: 'Score'/);
@@ -124,7 +125,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Physique progress/);
-    expect(SCREEN).toMatch(/Private on this device unless you choose to share or export/);
+    expect(SCREEN).toMatch(/Private on this device/);
+    expect(SCREEN).not.toMatch(/Private on this device unless you choose to share or export/);
     expect(SCREEN).toMatch(/Take clear front, back and side photos once a week/);
     expect(SCREEN).toMatch(/Volyume scores the set and saves it to your library/);
     expect(SCREEN).not.toMatch(/Add side too if you can/);
@@ -158,12 +160,16 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
   });
 
-  test('timeline controls wrap safely instead of crowding narrow devices', () => {
-    expect(SCREEN).toMatch(/controlRow: \{[\s\S]*flexWrap: 'wrap'[\s\S]*paddingHorizontal: spacing\.lg/);
-    expect(SCREEN).toMatch(/sortGroup: \{ flexDirection: 'row', gap: spacing\.xs, flexGrow: 1, flexBasis: 156, minWidth: 156 \}/);
-    expect(SCREEN).toMatch(/datesControl: \{[\s\S]*flexGrow: 1,[\s\S]*flexBasis: 148,[\s\S]*minWidth: 0/);
-    expect(SCREEN).toMatch(/datesChip: \{[\s\S]*flex: 1, minWidth: 0/);
-    expect(SCREEN).toMatch(/datesChipText: \{ \.\.\.type\.label, color: colors\.textMuted, flex: 1, minWidth: 0 \}/);
+  test('timeline controls use compact segmented tracks instead of loose chips', () => {
+    expect(SCREEN).toMatch(/libraryControls: \{[\s\S]*marginHorizontal: spacing\.lg,[\s\S]*gap: spacing\.sm/);
+    expect(SCREEN).toMatch(/segmentTrack: \{[\s\S]*borderRadius: radius\.md,[\s\S]*backgroundColor: colors\.surface/);
+    expect(SCREEN).toMatch(/segmentActive: \{[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SCREEN).toMatch(/libraryToolsRow: \{[\s\S]*flexDirection: 'row'/);
+    expect(SCREEN).toMatch(/dateGroup: \{[\s\S]*flex: 1,[\s\S]*minWidth: 0/);
+    expect(SCREEN).toMatch(/dateButtonText: \{ \.\.\.type\.label, color: colors\.textMuted, flex: 1, minWidth: 0 \}/);
+    expect(SCREEN).not.toMatch(/filterChipActive/);
+    expect(SCREEN).not.toMatch(/sortChip/);
+    expect(SCREEN).not.toMatch(/datesChip/);
   });
 
   test('real APK scan-signal export is hidden behind a founder-gated long press', () => {

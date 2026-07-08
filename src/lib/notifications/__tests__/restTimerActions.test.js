@@ -42,11 +42,14 @@ describe('rest-timer category actions', () => {
       MINUS_15: 'rest_minus_15',
       SKIP: 'rest_skip',
     });
-    // every action carries a non-empty British-English title
+    // every action carries a non-empty British-English title; the visible
+    // set action follows the in-app CTA wording.
     REST_TIMER_ACTIONS.forEach((a) => {
       expect(typeof a.buttonTitle).toBe('string');
       expect(a.buttonTitle.length).toBeGreaterThan(0);
     });
+    expect(REST_TIMER_ACTIONS[0].buttonTitle).toBe('Log set');
+    expect(REST_TIMER_ACTIONS.map(a => a.buttonTitle)).not.toContain('Complete set');
   });
 
   test('registerRestTimerCategory registers the four actions on the rest_timer id', async () => {

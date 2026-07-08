@@ -272,7 +272,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
-    expect(text).toContain('Private on this device unless you choose to share or export.');
+    expect(text).toContain('Private on this device');
     expect(text).toContain('Take clear front, back and side photos once a week.');
     expect(text).toContain('Volyume scores the set and saves it to your library.');
     expect(text).not.toContain('Latest result');
@@ -564,7 +564,7 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('suppressed mode keeps the calm guidance and hides analysis pressure', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Private on this device unless you choose to share or export.');
+    expect(text).toContain('Private on this device');
     expect(text).not.toContain('Latest result');
     expect(findPressable(tree, 'Compare two photo sets')).toBeUndefined();
   });
@@ -572,7 +572,8 @@ describe('ProgressPhotosScreen suppression copy', () => {
   test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Private on this device unless you choose to share or export.');
+    expect(text).toContain('Private on this device');
+    expect(text).not.toContain('Private on this device unless you choose to share or export.');
     expect(text).not.toContain('Not synced, not shared');
   });
 });

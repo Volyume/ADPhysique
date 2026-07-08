@@ -19,7 +19,10 @@ describe('weekly check-in copy stays aligned with the gate rules', () => {
   test('Coach hub separates the input check-in from the output coaching decision', () => {
     expect(COACH_HUB).toMatch(/label="Weekly check-in"/);
     expect(COACH_HUB).toMatch(/label="Coaching decision"/);
-    expect(COACH_HUB).toMatch(/First check-in not open yet/);
+    expect(COACH_HUB).toMatch(/buildPendingCoachCopy/);
+    expect(COACH_HUB).toMatch(/First check-in opens on/);
+    expect(COACH_HUB).toMatch(/Weekly check-in is open/);
+    expect(COACH_HUB).toMatch(/First check-in starts after your first morning weight/);
     expect(COACH_HUB).not.toMatch(/label="This week's review"/);
     expect(COACH_HUB).not.toMatch(/Ready for your first weekly review/);
     expect(COACH_HUB).not.toMatch(/Ready for your first check-in/);
