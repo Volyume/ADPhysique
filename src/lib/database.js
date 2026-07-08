@@ -5701,15 +5701,40 @@ export async function getBlockReflectionData(userId, mesocycleId) {
 
 // ─── Pro: Coach Outputs ───────────────────────────────────────────────────────
 
+/**
+ * Preserve confirm-then-apply state across CoachOutputScreen.load()'s remount
+ * re-save. load() writes a fresh runWeeklyCoach() result on every mount, and
+ * that result never carries appliedAdjustments (only markApplied writes them,
+ * at the moment of an Apply tap). saveCoachOutput keys on (user_id, week_start),
+ * so its UPDATE only ever hits the SAME week's row; carrying that row's
+ * already-applied map forward keeps the "Applied" history and everything that
+ * reads it (isApplied, the diary coach-receipt chip) intact. A genuine apply
+ * still lands, because markApplied's own save DOES carry the map, and an
+ * incoming map wins outright over the stored one.
+ *
+ * Pure and exported so the merge is regression-testable without a SQL engine
+ * (repo convention: raw CRUD is exercised on device).
+ * @param {string} existingOutputJson the stored row's output_json (may be null)
+ * @param {object} data the incoming coach output about to be written
+ * @returns {object} the object to persist
+ */
+export function preserveAppliedAdjustments(existingOutputJson, data) {
+  if (data?.appliedAdjustments) return data;
+  let prevApplied = null;
+  try { prevApplied = JSON.parse(existingOutputJson)?.appliedAdjustments ?? null; }
+  catch { prevApplied = null; } // unreadable stored JSON: keep data as-is
+  return prevApplied ? { ...data, appliedAdjustments: prevApplied } : data;
+}
+
 export async function saveCoachOutput(userId, data) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    'SELECT id FROM coach_outputs WHERE user_id = ? AND week_start = ?',
+    'SELECT id, output_json FROM coach_outputs WHERE user_id = ? AND week_start = ?',
     [userId, data.weekStart],
   );
-  const json = JSON.stringify(data);
   if (existing?.id) {
+    const toStore = preserveAppliedAdjustments(existing.output_json, data);
     await d.runAsync(
       `UPDATE coach_outputs SET
         goal_phase = ?, volume_signal = ?, load_signal = ?, recovery_flag = ?,
@@ -5720,12 +5745,13 @@ export async function saveCoachOutput(userId, data) {
         data.recoveryFlag ?? null,
         data.adjustments?.calories?.change ?? null,
         data.adjustments?.steps?.target ?? null,
-        data.whyThisWeek ?? null, json, existing.id,
+        data.whyThisWeek ?? null, JSON.stringify(toStore), existing.id,
       ],
     );
     _scheduleSync();
     return existing.id;
   }
+  const json = JSON.stringify(data);
   const id = uid();
   await d.runAsync(
     `INSERT INTO coach_outputs
