@@ -16,6 +16,8 @@ import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { scaleMacros, scaleSugarG, scaleSodiumMg } from '../../lib/food/macros';
 import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
+import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
+import { refetchStaleFood } from '../../lib/food/waterfall';
 
 // Display-shaped wrapper over the shared scaling helper (food review U-M2):
 // the preview render reads .protein/.carbs/.fat, the engine returns .*G.
@@ -46,6 +48,7 @@ export default function FoodDetailSheet({
   onSave, onDelete, onClose,
 }) {
   const toast = useToast();
+  const userId = useAppStore((s) => s.user?.id ?? null);
   // Energy DISPLAY unit (kcal | kj). Display-only: macros.kcal stays kcal (the
   // stored/scaled value scaleMacros returns); only the rendered energy number +
   // label convert at the point of display.
@@ -88,6 +91,17 @@ export default function FoodDetailSheet({
     setSubmitting(false);
     setSaved(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opportunistic re-fetch (audit §15 item 4): viewing a promoted off/usda
+  // food whose foods.fetched_at ("last verified") is past the staleness
+  // threshold triggers a silent, best-effort refresh from its source. Fire
+  // and forget: never awaited, never blocks the sheet, and any failure
+  // leaves the cached row (and this render) exactly as it was.
+  useEffect(() => {
+    if (!visible || !food?.food_ref) return;
+    refetchStaleFood(userId, food).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, food?.food_ref, food?.fetched_at]);
 
   // Switching unit keeps the gram total roughly constant (so the macros don't
   // jump), just re-expressed in the new unit.
@@ -171,6 +185,12 @@ export default function FoodDetailSheet({
               CoFID rows carry their verified treatment + "what is CoFID?"
               gloss at the point of use. */}
           {food.source ? <SourceChip source={food.source} /> : null}
+          {/* Audit §15 item 4: a calm "last verified" line for network-sourced
+              (off/usda) rows only, reusing foods.fetched_at. Never implies the
+              food is wrong -- it only states when it was last checked. */}
+          {isNetworkSourced(food.source) && food.fetched_at ? (
+            <Text style={styles.lastVerified}>{formatLastVerified(food.fetched_at)}</Text>
+          ) : null}
 
           <Text style={styles.fieldLabel}>Amount</Text>
           {units.length > 1 ? (
@@ -306,6 +326,7 @@ function MacroPill({ label, value }) {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
+  lastVerified: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0, fontWeight: fontWeight.semibold,

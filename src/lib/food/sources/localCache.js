@@ -73,6 +73,7 @@ async function _searchFts(d, userId, q, match, limit) {
     `SELECT
        'global:' || f.id AS food_ref, f.source, f.name, f.brand,
        ${foodColsAs('f')},
+       f.source_id, f.barcode_ean, f.fetched_at,
        CASE WHEN lower(f.name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM foods_fts
      JOIN foods f ON f.rowid = foods_fts.rowid
@@ -105,6 +106,7 @@ async function _searchLike(d, userId, q, limit) {
     `SELECT
        'global:' || id AS food_ref, source, name, brand,
        ${FOOD_COLS},
+       source_id, barcode_ean, fetched_at,
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM foods
      WHERE lower(name) LIKE ?
@@ -164,7 +166,8 @@ export async function findLocalByBarcode(ean, userId = null) {
        'global:' || id AS food_ref, source, name, brand,
        serving_g, serving_label,
        kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-       sodium_100g, sugar_100g
+       sodium_100g, sugar_100g,
+       source_id, barcode_ean, fetched_at
      FROM foods
      WHERE barcode_ean = ?
      ORDER BY verified DESC,
@@ -215,7 +218,8 @@ export async function resolveFoodRef(userId, foodRef) {
       `SELECT 'global:' || id AS food_ref, source, name, brand,
               serving_g, serving_label,
               kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-              sodium_100g, sugar_100g, ${microSqlColumns}
+              sodium_100g, sugar_100g, ${microSqlColumns},
+              source_id, barcode_ean, fetched_at
        FROM foods WHERE id = ? LIMIT 1`,
       [id]
     );

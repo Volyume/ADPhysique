@@ -21,11 +21,19 @@
 import { db, uid } from '../database';
 import { searchLocalByName, findLocalByBarcode } from './sources/localCache';
 import { searchOff, lookupBarcodeOff } from './sources/liveOff';
-import { searchUsda, lookupBarcodeUsda } from './sources/usda';
+import { searchUsda, lookupBarcodeUsda, lookupUsdaById } from './sources/usda';
 import { track as trackEvent } from '../engineTelemetry';
+import { isEligibleForRefetch } from './freshness';
+import { logWarn } from '../errorLog';
 
 const MIN_QUERY_LEN = 2;
 const NETWORK_SEARCH_FANOUT_LIMIT = 10;
+
+// Audit §15 item 4: within one app session, never attempt the opportunistic
+// re-fetch for the same food_ref twice (e.g. the detail sheet re-mounting on
+// a fast re-open). Cheap in-memory dedupe only -- not persisted, so a fresh
+// app session re-evaluates staleness normally.
+const _refetchAttempted = new Set();
 
 // E3 defect fix (dossier C7): below this many local hits the local answer is
 // treated as weak and live results are MERGED IN below it, instead of any
@@ -62,8 +70,15 @@ function _localIsStrong(local, limit) {
  *
  * Returns the local food_ref (`global:<uuid>`) replacing the
  * source-prefixed ref so downstream callers store a stable id.
+ *
+ * `refresh` (audit §15 item 4): when the (source, source_id) row already
+ * exists AND refresh is true, this re-uses the same promote path to
+ * refresh that row's macros/name/brand/serving + `fetched_at` from a
+ * fresh source read, instead of the normal "already cached, no-op"
+ * return. This is the opportunistic re-fetch's only write path -- there
+ * is no separate SQL statement for it.
  */
-async function _promoteToLocal(row, userId = null) {
+async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
   if (!row?.source) return row;
   const d = await db();
   const sourceId = (row.food_ref || '').split(':')[1] || null;
@@ -81,6 +96,31 @@ async function _promoteToLocal(row, userId = null) {
     [source, sourceId]
   );
   if (existing?.id) {
+    if (refresh) {
+      // Best-effort: a failed UPDATE leaves the existing cached row exactly
+      // as it was -- a stale row is always better than a crash or a silent
+      // data loss, so nothing here is allowed to throw outward.
+      try {
+        const now = Date.now();
+        await d.runAsync(
+          `UPDATE foods SET
+             name = ?, brand = ?, serving_g = ?, serving_label = ?,
+             kcal_100g = ?, protein_100g = ?, carbs_100g = ?, fat_100g = ?,
+             fibre_100g = ?, sodium_100g = ?, sugar_100g = ?,
+             fetched_at = ?, updated_at = ?
+           WHERE id = ?`,
+          [
+            row.name ?? 'Unknown', row.brand ?? null,
+            row.serving_g ?? 100, row.serving_label ?? null,
+            row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
+            row.fibre_100g ?? null, row.sodium_100g ?? null, row.sugar_100g ?? null,
+            now, now, existing.id,
+          ]
+        );
+      } catch (e) {
+        try { logWarn('food.waterfall.refetchUpdate', e?.message ?? 'unknown', { source }); } catch (_) { /* tolerate */ }
+      }
+    }
     return { ...row, food_ref: `global:${existing.id}` };
   }
   const id = uid();
@@ -233,4 +273,44 @@ export async function resolveBarcode(ean, userId = null) {
 
   if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'miss', ms: Date.now() - t0 });
   return null;
+}
+
+/**
+ * Opportunistic re-fetch of a stale promoted network food (audit §15
+ * item 4). Called from the food-detail sheet on view, never awaited by
+ * the caller: it re-checks a promoted off/usda row against its source
+ * when `foods.fetched_at` (reused as "last verified", no new column) is
+ * older than freshness.STALE_THRESHOLD_MS, and refreshes the cached row
+ * on a hit via the same `_promoteToLocal` write path (refresh: true).
+ *
+ * Best-effort and silent throughout: ineligible rows, network misses,
+ * timeouts and write failures all resolve to a no-op leaving the
+ * existing cached row exactly as it was -- a stale row beats a crash or
+ * a blocked UI. Never called for custom/curated/cofid/user_ocr/recipe
+ * rows (freshness.isNetworkSourced gates it to off/usda only).
+ */
+export async function refetchStaleFood(userId, food) {
+  try {
+    if (!isEligibleForRefetch(food)) return { refetched: false, reason: 'not_eligible' };
+    if (_refetchAttempted.has(food.food_ref)) return { refetched: false, reason: 'already_attempted' };
+    _refetchAttempted.add(food.food_ref);
+
+    const lookupId = food.source_id || food.barcode_ean;
+    let fresh = null;
+    if (food.source === 'off') {
+      fresh = await lookupBarcodeOff(lookupId);
+    } else if (food.source === 'usda') {
+      fresh = await lookupUsdaById(lookupId);
+    }
+    const hasMacros = fresh
+      && fresh.kcal_100g != null && fresh.protein_100g != null
+      && fresh.carbs_100g != null && fresh.fat_100g != null;
+    if (!hasMacros) return { refetched: false, reason: 'source_miss' };
+
+    await _promoteToLocal(fresh, userId, { refresh: true });
+    return { refetched: true };
+  } catch (e) {
+    try { logWarn('food.waterfall.refetchStaleFood', e?.message ?? 'unknown', { source: food?.source }); } catch (_) { /* tolerate */ }
+    return { refetched: false, reason: 'error' };
+  }
 }

@@ -61,6 +61,27 @@ export async function searchUsda(query, limit = 25) {
 }
 
 /**
+ * Look up a single USDA item by its fdcId (the id promoted rows carry
+ * as `foods.source_id`). Used for the opportunistic re-fetch of a stale
+ * promoted USDA row (audit §15 item 4) -- a direct id lookup instead of
+ * a name/GTIN search, since we already know exactly which record to
+ * re-check.
+ */
+export async function lookupUsdaById(fdcId) {
+  const key = _apiKey();
+  if (!key || !fdcId) return null;
+  const url = `${USDA_BASE}/food/${encodeURIComponent(fdcId)}`;
+  try {
+    const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS, { 'X-Api-Key': key });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return normaliseUsdaFood(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Look up a USDA item by GTIN/UPC. USDA's Branded dataset carries
  * GTINs for many North American supermarket items, providing a
  * fallback for the OFF gap on US-only products.
