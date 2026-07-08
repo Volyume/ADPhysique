@@ -78,4 +78,41 @@ preferred order.
 
 ## Wave log
 
-(filled in as waves complete)
+### Wave 1 — scoring accuracy foundation (COMPLETE, commit `2badeea`)
+
+Agent: Sonnet. Reviewed hands-on by Fable (full diff read; symbols verified;
+`normaliseStoredPhysiqueAssessment` checked — stored historical scores are NOT re-blended on
+read, so the tighter clamp affects only newly analysed scans; no silent historical shift).
+
+Files changed:
+- `src/lib/progressScanAnalysis.js` — F1(a) ±8 provisional anchor clamp (status-keyed via
+  fresh read of the estimator JSON's `status`), `anchorEngaged` flag + Moderate confidence cap
+  when the shift exceeds 4 points, calibration-honesty receipt line, `duplicate_pose_content`
+  withhold reason + cross-pose content-hash check + exact blueprint copy.
+- `src/lib/progressScanStore.js` — SHA-256 content hash of photo bytes at asset-add time,
+  stored in existing `signals_json` (no schema change; best-effort, null on failure, nulls never
+  match).
+- `__mocks__/expo-crypto.js` — real Node SHA-256 backing for tests.
+- `src/lib/__tests__/progressScanAnalysis.test.js` — F1(a) invariant suite (bound, cap,
+  status-keyed reversion), duplicate withhold positive/negative/no-hash tests, source guard on
+  `SCORE_WITHHOLD_REASONS`; 4 pre-existing mismatched-anchor expectations updated to the tighter
+  clamp, each documented old→new in the test header.
+- `src/lib/__tests__/progressScanStore.contentHash.test.js` (new) — hash wiring pins.
+
+Tests: `npx jest --testPathPattern="progressScanAnalysis|progressScanCalibrationCorpus|progressScanStore"`
+→ 4 suites, 83 tests, all passed (corpus replay needed ZERO expectation changes). Broader
+targeted sweep by the agent: 19 suites passed, 228 tests; 1 pre-existing unrelated failure
+(`progressScanVision.test.js`, missing `react-native-fast-tflite` build artifact in this
+sandbox, confirmed present on base branch via stash). `npm run lint` clean.
+
+Decisions/risks recorded:
+- The four changed test expectations are the intended consequence of founder-approved F1(a):
+  large-body cases the old −16/−26 anchor pulled down now move at most −8, with confidence
+  capped at Moderate and the calibration honesty line shown. Accepted per founder approval 1.
+- Diagnostic-only fields `boundedEstimatorAnchorScore`/`estimatorAnchorAdjustment` in
+  `indexInputs` still reflect the old clamps; they render nowhere. Revisit only if a surface
+  ever displays them.
+- Duplicate defence is byte-identical only (per spec; perceptual hashing is premium-later).
+- Manual Android EAS device checklist written (in the wave 1 agent report, mirrored into the
+  final status): duplicate-import withhold, retake-scores path, anchor-engaged Moderate receipt,
+  no-anchor path, old-scan render, ED-suppression check.
