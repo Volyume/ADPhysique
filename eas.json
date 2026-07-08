@@ -29,7 +29,7 @@
       }
     },
     "production": {
-      "node": "22.22.2",
+      "node": "20.19.4",
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
