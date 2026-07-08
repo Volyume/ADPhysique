@@ -10,8 +10,8 @@ describe('partner accountability copy', () => {
 
   test('starts from Coach-plan status, not a manual session target', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
-    expect(plan.title).toBe('Visible to Sam');
-    expect(plan.headline).toBe('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(plan.title).toBe('What Sam sees');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
     expect(plan.privacyLine).toBe(PARTNER_SUPPORT_PRIVACY_LINE);
     expect(plan.steps).toBeUndefined();
@@ -19,7 +19,7 @@ describe('partner accountability copy', () => {
 
   test('routes to cheer when the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
   });
 
@@ -36,9 +36,11 @@ describe('partner accountability copy', () => {
       cheerEnabled: false,
       sharedBlock: { status: 'active', blockName: 'Upper Lower' },
     }, 'Sam');
-    expect(plan.headline).toBe('You choose if you want to share a workout, PR or progress update. Nothing detailed is sent automatically.');
+    expect(plan.headline).toBe('You decide whether to share a workout, PR or progress update. Nothing detailed is sent automatically.');
     const copy = JSON.stringify(plan);
-    expect(copy).toContain('Private: full workouts, food, Coach check-ins, body metrics and photos.');
+    expect(copy).toContain('Private: full workout details, food, Coach check-ins, body metrics and photos.');
+    expect(copy).not.toContain('Visible to');
+    expect(copy).not.toContain('You choose if you want');
     expect(copy).not.toMatch(/leaderboard|ahead|behind|workout history|food diary/i);
     expect(copy).not.toMatch(/\bchat\b|chatbot|AI chat/i);
   });

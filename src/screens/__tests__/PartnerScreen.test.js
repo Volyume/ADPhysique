@@ -194,10 +194,10 @@ describe('connected state: isolated pair cards', () => {
   test('active pairs show one guided partner-week card with shared and private boundaries', async () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
-    expect(text).toContain('Visible to Sam');
-    expect(text).toContain('Sam can see whether you trained this week, plus any win you send yourself.');
-    expect(text).toContain('Private: full workouts, food, Coach check-ins, body metrics and photos');
-    expect(text).toContain('workouts, food, Coach check-ins, body metrics and photos');
+    expect(text).toContain('What Sam sees');
+    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(text).toContain('Private: full workout details, food, Coach check-ins, body metrics and photos');
+    expect(text).toContain('full workout details, food, Coach check-ins, body metrics and photos');
     expect(text).not.toContain('Shared with Sam');
     expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
@@ -214,8 +214,9 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('weekly sessions');
     expect(text).not.toContain("Set this week's sessions. Sam sees only the number, not your plan.");
     expect(text).not.toContain("Sam's weekly sessions");
-    expect(text).toContain('Visible to Sam');
-    expect(text).toContain('Sam can see whether you trained this week, plus any win you send yourself.');
+    expect(text).toContain('What Sam sees');
+    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(text).not.toContain('Visible to Sam');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
     expect(text).not.toContain('Training status from your current plan.');
