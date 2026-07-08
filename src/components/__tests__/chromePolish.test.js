@@ -94,7 +94,11 @@ describe('shared chrome polish', () => {
   });
 
   test('tab-screen chrome uses the clean compact V, not the splash flare asset', () => {
-    expect(BRAND_MARK).toContain("const V_ICON_COMPACT = require('../../assets/volyume-v-compact.png');");
+    const compactIconRequire = [
+      'const V_ICON_COMPACT = require',
+      "('../../assets/volyume-v-compact.png');",
+    ].join('');
+    expect(BRAND_MARK).toContain(compactIconRequire);
     expect(BRAND_MARK).toContain('source={V_ICON_COMPACT}');
     expect(SCREEN_HEADER).toContain('backgroundColor: colors.camera');
   });

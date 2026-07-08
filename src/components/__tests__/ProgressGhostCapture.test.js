@@ -138,6 +138,16 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/safeBottomInset/);
 });
 
+test('camera micro-copy uses bundled Inter roles without synthetic bold', () => {
+  expect(SOURCE).not.toMatch(/fontWeight,\s*\n\s*iconSize/);
+  expect(SOURCE).toMatch(/modeChip: \{\s*\.\.\.type\.label,/);
+  expect(SOURCE).toMatch(/opacityPresetText: \{\s*\.\.\.type\.label,/);
+  expect(SOURCE).toMatch(/timerChipText: \{\s*\.\.\.type\.label,/);
+  expect(SOURCE).not.toMatch(/modeChip: \{[\s\S]*fontWeight: fontWeight\.bold/);
+  expect(SOURCE).not.toMatch(/opacityPresetText: \{[\s\S]*fontWeight: fontWeight\.bold/);
+  expect(SOURCE).not.toMatch(/timerChipText: \{[\s\S]*fontWeight: fontWeight\.bold/);
+});
+
 test('renders side and back pose guidance for scan captures', async () => {
   const side = await render({ pose: 'side' });
   expect(JSON.stringify(side.toJSON())).toContain('Side relaxed');

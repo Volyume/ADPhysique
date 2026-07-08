@@ -2099,7 +2099,6 @@ const styles = StyleSheet.create({
   // ── Sheets ──
   partnerActionSheet: {
     alignSelf: 'stretch',
-    maxHeight: '86%',
   },
   sheetBody: { gap: spacing.xs },
   sheetHeading: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },

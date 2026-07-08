@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as haptics from '../lib/haptics';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import { calculate1RM } from '../lib/algorithms';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import InfoTooltip from './InfoTooltip';
@@ -410,9 +410,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   fieldLabel: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
     minWidth: workoutLoggerSize.setEntryLabelWidth,
@@ -423,12 +422,11 @@ const styles = StyleSheet.create({
   },
   e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   e1rmHint: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
   },
   perSideHint: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: -spacing.xs,
   },
@@ -451,19 +449,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3,
   },
   stepBtnText: {
-    fontSize: fontSize.lg,
+    ...type.title,
     color: colors.primary,
-    fontWeight: fontWeight.bold,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   valueInput: {
     flex: 1,
     textAlign: 'center',
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.num('bodyStrong'),
     color: colors.textPrimary,
-    paddingVertical: 2,
-    fontVariant: ['tabular-nums'],
+    paddingVertical: 1,
   },
   valueInputGhost: {
     color: colors.textMuted,
@@ -488,9 +483,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   rirBtnText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.semibold,
   },
   rirBtnTextActive: {
     color: colors.primary,

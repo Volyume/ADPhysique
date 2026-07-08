@@ -68,6 +68,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).toContain("import { workoutLoggerSize } from '../styles/layout';");
     expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*minWidth: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexBasis: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexShrink: 0,/);
     expect(SET_ENTRY).toMatch(/stepBtn: \{\s*minWidth: workoutLoggerSize\.setEntryStepperButton,[\s\S]*minHeight: workoutLoggerSize\.setEntryStepperButton,[\s\S]*aspectRatio: 1,/);
+    expect(SET_ENTRY).toContain("...type.num('bodyStrong')");
+    expect(SET_ENTRY).not.toContain('fontWeight: fontWeight.bold');
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');

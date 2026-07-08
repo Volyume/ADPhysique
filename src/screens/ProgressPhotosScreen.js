@@ -1057,7 +1057,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <View style={styles.checkInCover}>
           <Image source={{ uri: cover.uri }} style={styles.checkInCoverImage} resizeMethod="resize" />
           <View pointerEvents="none" style={styles.checkInCoverBadge}>
-            <Ionicons name="images-outline" size={13} color={colors.onPrimary} />
+            <Ionicons name="images-outline" size={13} color={colors.textPrimary} />
             <Text style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
           </View>
         </View>
@@ -1961,7 +1961,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xxs,
   },
-  checkInCoverBadgeText: { ...type.caption, color: colors.onPrimary },
+  checkInCoverBadgeText: { ...type.caption, color: colors.textPrimary },
   checkInBody: { flex: 1, minWidth: 0, gap: spacing.sm, paddingVertical: spacing.xs },
   checkInTopRow: {
     flexDirection: 'row',

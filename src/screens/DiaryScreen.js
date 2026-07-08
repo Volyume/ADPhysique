@@ -1293,7 +1293,7 @@ export default function DiaryScreen({ navigation }) {
                   </View>
                   <View style={styles.buildPlanCopy}>
                     <Text style={styles.buildPlanLabel}>Meal builder</Text>
-                    <Text style={styles.buildPlanSub}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
+                    <Text style={styles.buildPlanSub}>Create today or the week from your targets. You review everything before it is logged.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1940,10 +1940,11 @@ const styles = StyleSheet.create({
   addMealLabel: { ...type.label, color: colors.textPrimary },
   buildPlanBtn: {
     flexDirection: 'row', alignItems: 'center',
-    gap: spacing.sm, minHeight: 62,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    gap: spacing.sm, minHeight: 70,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
   },
   buildPlanIcon: {
@@ -1952,11 +1953,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   buildPlanCopy: { flex: 1, minWidth: 0 },
-  buildPlanLabel: { ...type.label, color: colors.textPrimary },
-  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2, lineHeight: 17 },
+  buildPlanLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,

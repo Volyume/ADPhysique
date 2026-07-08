@@ -176,6 +176,11 @@ describe('usePartners redeem enforces the partner cap', () => {
       status: 'active',
       partner_first_name: 'Sam',
     }));
+    expect(ref.pairs[0]).toEqual(expect.objectContaining({
+      id: 'p1',
+      partnerFirstName: 'Sam',
+      cheerEnabled: true,
+    }));
   });
 
   test('successful cloud redeem reports success while the local mirror catches up', async () => {

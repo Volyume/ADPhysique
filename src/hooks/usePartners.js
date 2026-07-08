@@ -271,7 +271,7 @@ function minimalActivePair(partnership, userId) {
     myAim: 0,
     partnerAim: 0,
     weekKept: false,
-    cheerEnabled: false,
+    cheerEnabled: true,
     streakEnabled: !!partnership.streakEnabled,
     pairedAt: pairedAtMs(partnership),
     winCards: [],

@@ -138,6 +138,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/name="body-outline"/);
   });
 
+  test('photo-count badge stays legible over the dark thumbnail scrim', () => {
+    expect(SCREEN).toContain('Ionicons name="images-outline" size={13} color={colors.textPrimary}');
+    expect(SCREEN).toContain('checkInCoverBadgeText: { ...type.caption, color: colors.textPrimary }');
+    expect(SCREEN).not.toContain('Ionicons name="images-outline" size={13} color={colors.onPrimary}');
+    expect(SCREEN).not.toContain('checkInCoverBadgeText: { ...type.caption, color: colors.onPrimary }');
+  });
+
   test('compare action copy is specific without adding another prompt card', () => {
     expect(SCREEN).toMatch(/title="Compare"/);
     expect(SCREEN).not.toMatch(/const compareButtonTitle = 'Compare photo sets';/);

@@ -160,8 +160,8 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.textSecondary\} \/>/);
     expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal builder<\/Text>/);
-    expect(SRC).toMatch(/Build a day or week from your targets\. Nothing is logged until you add it\./);
-    expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface2/);
+    expect(SRC).toMatch(/Create today or the week from your targets\. You review everything before it is logged\./);
+    expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.border/);
   });
 
   test('small diary actions use button chrome instead of loose text links', () => {

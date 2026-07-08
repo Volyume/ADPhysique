@@ -60,7 +60,6 @@ import {
   spacing,
   radius,
   type,
-  fontWeight,
   iconSize,
   hitSlop,
   withAlpha,
@@ -732,9 +731,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   modeChip: {
-    ...type.caption,
+    ...type.label,
     color: withAlpha(colors.textPrimary, 0.82),
-    fontWeight: fontWeight.bold,
   },
   subtitle: {
     ...type.bodySm,
@@ -829,9 +827,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   opacityPresetText: {
-    ...type.caption,
+    ...type.label,
     color: withAlpha(colors.textPrimary, 0.86),
-    fontWeight: fontWeight.bold,
   },
   opacityPresetTextActive: {
     color: colors.onPrimary,
@@ -863,9 +860,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
   },
   timerChipText: {
-    ...type.caption,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.bold,
   },
   timerChipTextActive: {
     color: colors.onPrimary,
