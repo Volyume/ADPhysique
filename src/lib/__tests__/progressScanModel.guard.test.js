@@ -94,7 +94,7 @@ describe('Progress Scan on-device TFLite model guard', () => {
     const block = screen.slice(screen.indexOf('async function onScanCaptured'));
     expect(block).toMatch(/analyseProgressScanPhoto\(\{ uri: saved\.uri, pose \}\)/);
     expect(block.indexOf('analyseProgressScanPhoto({ uri: saved.uri, pose })'))
-      .toBeLessThan(block.indexOf('saveScanAssetAndContinue(flow, pose, name, saved, vision)'));
+      .toBeLessThan(block.indexOf('saveScanAssetAndContinue(flow, pose, name, saved, vision, isFirstPose)'));
     expect(block).toMatch(/retakeCopyForVisionResult/);
   });
 

@@ -223,8 +223,21 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/const scanByPhotoName = useMemo/);
     expect(SCREEN).toMatch(/const scansByDateKey = useMemo/);
     expect(SCREEN).toMatch(/function scanForCheckIn\(item\)/);
-    expect(SCREEN).toMatch(/if \(coverName && scanByPhotoName\.has\(coverName\)\) return scanByPhotoName\.get\(coverName\);/);
+    expect(SCREEN).toMatch(/return resolveScanForCheckIn\(item, scanByPhotoName, scansByDateKey\);/);
     expect(SCREEN).toMatch(/const scanForDay = scanForCheckIn\(item\);/);
+  });
+
+  // Quick-add fence (progress-photos wave 2, founder gate F2 = tag route):
+  // the set-matching function itself must reference the origin marker, so a
+  // refactor cannot silently drop the fence and let a quick-add (permanently
+  // unscored) photo borrow an unrelated scan's score via same-day
+  // coincidence. resolveScanForCheckIn moved into progressPhotosController.js
+  // for unit-testability; behavioural coverage lives in that module's test.
+  test('quick-add fence: the set-matching function references the origin marker', () => {
+    expect(SCREEN).toMatch(/resolveScanForCheckIn,/);
+    expect(CONTROLLER).toMatch(/export function resolveScanForCheckIn\(item, scanByPhotoName, scansByDateKey\)/);
+    expect(CONTROLLER).toMatch(/const hasUnscoredPhoto = \(item\?\.photos \|\| \[\]\)\.some\(\(photo\) => photo\?\.unscored\);/);
+    expect(CONTROLLER).toMatch(/if \(hasUnscoredPhoto\) return null;/);
   });
 
   test('refresh results are guarded before committing photo and scan state', () => {

@@ -42,6 +42,21 @@ export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
 export const QUALITY_FIRST_CAPTURE_NOTE =
   'If a set is not clear enough for a score, it still stays in your photo library.';
 
+// Baseline framing (progress-photos wave 2, founder gate F3, world-class
+// blueprint §2 item 2): the exact one-extra-sentence framing shown once, the
+// first time a pose is ever saved for this user, because it seeds every
+// future ghost-overlay reference. Never a hard block.
+export const BASELINE_FIRST_POSE_SENTENCE = 'These become your reference set.';
+
+// A flagged first-ever pose gets a firmer (still advisory, never blocking)
+// retake nudge on top of the existing analysis copy, because a poorly framed
+// first photo propagates its own error into every future comparison. Offered
+// as an invitation, not a warning; "Save without score" stays available.
+export function firstPoseRetakeCopy(baseCopy) {
+  if (!baseCopy) return baseCopy;
+  return `This first photo becomes your reference for every future comparison, so it is worth getting right. ${baseCopy}`;
+}
+
 export const POSE_CAPTURE_GUIDANCE = Object.freeze({
   front: Object.freeze({
     title: 'Front relaxed',

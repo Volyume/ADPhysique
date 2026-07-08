@@ -10,8 +10,22 @@ export function enrichProgressPhotos(photos = [], metaMap = {}) {
       pose: (meta && meta.pose) || null,
       weightKg: meta && Number.isFinite(meta.weightKg) ? meta.weightKg : null,
       note: meta && meta.note ? meta.note : null,
+      // Permanent quick-add origin marker (progress-photos wave 2, founder
+      // gate F2). true for photos saved through the quick camera/library
+      // route; never re-derived, only ever true or false from stored meta.
+      unscored: !!(meta && meta.unscored),
     };
   });
+}
+
+// True when `pose` has never been saved before for this user (progress-photos
+// wave 2, founder gate F3 baseline framing). `existingPhotos` is the current
+// enriched library BEFORE the photo being saved now, so the photo in flight
+// must not be included in the list passed here. A falsy pose is never a
+// "first ever" case (nothing to seed a reference set for).
+export function isFirstPoseCapture(existingPhotos = [], pose) {
+  if (!pose) return false;
+  return !(Array.isArray(existingPhotos) ? existingPhotos : []).some((p) => p?.pose === pose);
 }
 
 export function visibleCompletedScans(scans = []) {
@@ -46,6 +60,42 @@ export function buildScanPhotoNameSet(scans = []) {
     (Array.isArray(scans) ? scans : [])
       .flatMap((scan) => (scan.assets || []).map((asset) => asset?.photoName).filter(Boolean)),
   );
+}
+
+// Shared local-day key for scan/check-in matching. The screen builds its
+// scansByDateKey map with THIS function and resolveScanForCheckIn looks up
+// with it, so the two sides can never drift apart on key format.
+export function localDayKeyForScanMatch(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n)) return null;
+  const d = new Date(n);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+// Resolve which scan (if any) a dated check-in should show a score summary
+// for. Matches by photo identity first (the only safe signal: the photo's
+// own name is literally one of that scan's assets). Same-day proximity is a
+// fallback for the edge case where none of the check-in's own photos carry a
+// scan asset name (e.g. the scan's own photos were since removed from the
+// day). Quick-add fence (progress-photos wave 2, founder gate F2 = tag
+// route): once photo-identity fails, a check-in holding a permanently
+// unscored (quick-add) photo must NEVER borrow an unrelated scan's score
+// display via that day-only coincidence — quick-add photos can never become
+// scored-comparison material.
+export function resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey) {
+  const coverName = item?.cover?.name;
+  if (coverName && scanByPhotoName?.has?.(coverName)) return scanByPhotoName.get(coverName);
+  for (const photo of item?.photos || []) {
+    if (photo?.name && scanByPhotoName?.has?.(photo.name)) return scanByPhotoName.get(photo.name);
+  }
+  const hasUnscoredPhoto = (item?.photos || []).some((photo) => photo?.unscored);
+  if (hasUnscoredPhoto) return null;
+  const candidates = scansByDateKey?.get?.(localDayKeyForScanMatch(item?.takenAt)) || [];
+  if (!candidates.length) return null;
+  return [...candidates].sort((a, b) => (
+    Math.abs((Number(a?.capturedAt ?? a?.captured_at) || 0) - (Number(item?.takenAt) || 0))
+      - Math.abs((Number(b?.capturedAt ?? b?.captured_at) || 0) - (Number(item?.takenAt) || 0))
+  ))[0] || null;
 }
 
 export function findScanForPhotoName(scans = [], photoName) {

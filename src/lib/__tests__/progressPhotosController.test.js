@@ -9,7 +9,10 @@ import {
   deleteViewerProgressPhotoSet,
   enrichProgressPhotos,
   findScanForPhotoName,
+  isFirstPoseCapture,
+  localDayKeyForScanMatch,
   progressCheckInCadenceLabel,
+  resolveScanForCheckIn,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
@@ -21,12 +24,81 @@ describe('progressPhotosController transforms', () => {
       { name: 'a.jpg', uri: 'file:///a.jpg', ts: 100 },
       { name: 'b.jpg', uri: 'file:///b.jpg', ts: 200 },
     ];
-    const metaMap = { 'a.jpg': { takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup' } };
+    const metaMap = {
+      'a.jpg': {
+        takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup', unscored: true,
+      },
+    };
 
     expect(enrichProgressPhotos(photos, metaMap)).toEqual([
-      { name: 'a.jpg', uri: 'file:///a.jpg', ts: 100, takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup' },
-      { name: 'b.jpg', uri: 'file:///b.jpg', ts: 200, takenAt: 200, pose: null, weightKg: null, note: null },
+      {
+        name: 'a.jpg', uri: 'file:///a.jpg', ts: 100, takenAt: 123, pose: 'front', weightKg: 82.4, note: 'Same setup', unscored: true,
+      },
+      {
+        name: 'b.jpg', uri: 'file:///b.jpg', ts: 200, takenAt: 200, pose: null, weightKg: null, note: null, unscored: false,
+      },
     ]);
+  });
+
+  test('isFirstPoseCapture is true only the first time a pose is ever saved', () => {
+    expect(isFirstPoseCapture([], 'front')).toBe(true);
+    expect(isFirstPoseCapture([{ pose: 'back' }], 'front')).toBe(true);
+    expect(isFirstPoseCapture([{ pose: 'front' }], 'front')).toBe(false);
+    expect(isFirstPoseCapture([{ pose: 'front' }, { pose: 'back' }], 'back')).toBe(false);
+    // No pose assigned is never a "first ever" case.
+    expect(isFirstPoseCapture([], null)).toBe(false);
+    expect(isFirstPoseCapture([{ pose: 'front' }], undefined)).toBe(false);
+  });
+
+  describe('resolveScanForCheckIn (quick-add fence, founder gate F2)', () => {
+    // Local-constructed timestamps so the day-key match is independent of the
+    // test runner's timezone. The fixture map is built with the SAME exported
+    // localDayKeyForScanMatch the screen uses, so a key-format drift between
+    // map build and lookup fails here instead of silently missing in the app.
+    const DAY_MS = new Date(2026, 6, 1, 10).getTime();
+    const DAY_KEY = localDayKeyForScanMatch(DAY_MS);
+    const OTHER_DAY_MS = new Date(2026, 0, 1, 10).getTime();
+    const scan = { id: 'scan-1', capturedAt: DAY_MS - 3_600_000, assets: [{ photoName: 'front.jpg' }, { photoName: 'back.jpg' }] };
+    const scanByPhotoName = new Map([['front.jpg', scan], ['back.jpg', scan]]);
+    const scansByDateKey = new Map([[DAY_KEY, [scan]]]);
+
+    test('matches by cover photo identity first', () => {
+      const item = { cover: { name: 'front.jpg' }, photos: [{ name: 'front.jpg' }], takenAt: DAY_MS };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBe(scan);
+    });
+
+    test('matches by any photo identity when the cover itself is not a scan asset', () => {
+      const item = { cover: { name: 'quick.jpg' }, photos: [{ name: 'quick.jpg' }, { name: 'back.jpg' }], takenAt: DAY_MS };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBe(scan);
+    });
+
+    test('falls back to same-day proximity only when no photo in the check-in is scored and none is unscored', () => {
+      const item = { cover: { name: 'unrelated.jpg' }, photos: [{ name: 'unrelated.jpg' }], takenAt: DAY_MS };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBe(scan);
+    });
+
+    test('a quick-add (unscored) photo never borrows an unrelated scan via same-day coincidence', () => {
+      const item = {
+        cover: { name: 'quickadd.jpg', unscored: true },
+        photos: [{ name: 'quickadd.jpg', unscored: true }],
+        takenAt: DAY_MS,
+      };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBeNull();
+    });
+
+    test('a mixed check-in with any unscored photo is fenced even if other photos are unrelated', () => {
+      const item = {
+        cover: { name: 'unrelated.jpg' },
+        photos: [{ name: 'unrelated.jpg' }, { name: 'quickadd.jpg', unscored: true }],
+        takenAt: DAY_MS,
+      };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBeNull();
+    });
+
+    test('no candidates on that day resolves to null regardless of the fence', () => {
+      const item = { cover: { name: 'unrelated.jpg' }, photos: [{ name: 'unrelated.jpg' }], takenAt: OTHER_DAY_MS };
+      expect(resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey)).toBeNull();
+    });
   });
 
   test('visibleCompletedScans and buildScanPhotoNameSet mirror the screen scan filters', () => {

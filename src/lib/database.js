@@ -1677,6 +1677,24 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE foods ADD COLUMN ${c} REAL`,
     `ALTER TABLE custom_foods ADD COLUMN ${c} REAL`,
   ]),
+  // v59, progress-photos quick-add fence (progress-photos audit, scoring
+  // blueprint §4 "uniform pipeline rule", founder gate F2 = tag route).
+  // Purpose: a persistent, permanent origin marker on progress_photo_meta so
+  // quick-add photos (camera/library routes in ProgressPhotosScreen.pickFrom)
+  // can never be treated as scored-comparison material. Existing rows default
+  // to 0 (not quick-add), which is correct back-compat: every photo saved
+  // before this migration went through a route that is not the quick-add
+  // fence's concern, and the fence only ever needs to SET this flag going
+  // forward from pickFrom. Applied: LOCALLY only, once, via this
+  // user_version bump. No cloud counterpart: progress_photo_meta is
+  // device-local and deliberately NOT in SYNC_REGISTRY (see v54/v56 notes).
+  // Safe to re-run: yes (duplicate-column errors are tolerated by the runner).
+  // Rollback: ALTER TABLE progress_photo_meta DROP COLUMN unscored (SQLite
+  // 3.35+; data loss confined to this on-device flag, photo files and the
+  // rest of the metadata row are untouched).
+  [
+    'ALTER TABLE progress_photo_meta ADD COLUMN unscored INTEGER NOT NULL DEFAULT 0',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

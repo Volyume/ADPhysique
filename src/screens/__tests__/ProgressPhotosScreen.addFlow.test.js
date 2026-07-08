@@ -48,7 +48,8 @@ jest.mock('@shopify/flash-list', () => ({
     }, children);
   },
 }));
-jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
+const mockToastShow = jest.fn();
+jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: (...a) => mockToastShow(...a) }) }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/wellbeing', () => ({
   WELLBEING_KEY: jest.requireActual('../../lib/wellbeing').WELLBEING_KEY,
@@ -128,9 +129,9 @@ jest.mock('../../components/ProgressGhostCapture', () => stub('ProgressGhostCapt
 jest.mock('../../components/BeforeAfterShareSheet', () => stub('BeforeAfterShareSheet'));
 
 import useAppStore from '../../store/useAppStore';
-import { saveProgressPhoto } from '../../lib/progressPhotos';
-import { upsertPhotoMeta } from '../../lib/progressPhotoMeta';
-import { createProgressScanSession, addProgressScanAsset } from '../../lib/progressScanStore';
+import { listProgressPhotos, saveProgressPhoto } from '../../lib/progressPhotos';
+import { getPhotoMetaMap, upsertPhotoMeta } from '../../lib/progressPhotoMeta';
+import { createProgressScanSession, addProgressScanAsset, finishProgressScanSession } from '../../lib/progressScanStore';
 import { analyseProgressScanPhoto, retakeCopyForVisionResult } from '../../lib/progressScanVision';
 import ProgressPhotosScreen from '../ProgressPhotosScreen';
 
@@ -399,4 +400,207 @@ test('a pro-to-free flip with the photo set date sheet open blocks the import', 
   expect(createProgressScanSession).not.toHaveBeenCalled();
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(upsertPhotoMeta).not.toHaveBeenCalled();
+});
+
+// Progress-photos wave 2 (founder gate F2 = tag route, F3 baseline framing).
+// The quick camera/library route is reached today via the guided ghost
+// camera's fallback (onFallback -> pickFrom('library') when no scan flow is
+// active), which is exactly the pickFrom() code path these pin.
+async function quickAddViaFallback(tree, uri = 'file:///picked.jpg') {
+  mockLaunchLibrary.mockImplementationOnce(async () => ({ canceled: false, assets: [{ uri }] }));
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+  expect(capture).toBeTruthy();
+  await act(async () => {
+    capture.props.onFallback();
+    await Promise.resolve();
+  });
+  await flush();
+}
+
+test('quick-add photos are permanently tagged unscored and never run analysis', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await quickAddViaFallback(tree);
+
+  expect(allTexts(tree).join(' ')).toContain('Photo details');
+  await pressLabel(tree, 'Set pose to Front');
+  await pressLabel(tree, 'Save the progress photo');
+  await flush();
+
+  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///picked.jpg', undefined, USER_ID);
+  expect(upsertPhotoMeta).toHaveBeenCalledTimes(1);
+  const [uid, name, patch] = upsertPhotoMeta.mock.calls[0];
+  expect(uid).toBe(USER_ID);
+  expect(name).toBe('1700000000000.jpg');
+  expect(patch.pose).toBe('front');
+  expect(patch.unscored).toBe(true);
+  // The uniform pipeline rule (scoring blueprint §4): a quick-add photo never
+  // runs the vision pipeline and never becomes a scan asset.
+  expect(analyseProgressScanPhoto).not.toHaveBeenCalled();
+  expect(addProgressScanAsset).not.toHaveBeenCalled();
+  expect(createProgressScanSession).not.toHaveBeenCalled();
+});
+
+test('a quick-add photo saved without a pose is not tagged for a pose and skips the baseline sentence', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await quickAddViaFallback(tree);
+  await pressLabel(tree, 'Save the progress photo');
+  await flush();
+
+  const patch = upsertPhotoMeta.mock.calls[0][2];
+  expect(patch.pose).toBeNull();
+  expect(patch.unscored).toBe(true);
+  expect(mockToastShow).not.toHaveBeenCalledWith(expect.stringContaining('These become your reference set.'), expect.anything());
+});
+
+test('the first-ever photo of a pose shows the baseline framing sentence exactly once', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await quickAddViaFallback(tree);
+  await pressLabel(tree, 'Set pose to Front');
+  await pressLabel(tree, 'Save the progress photo');
+  await flush();
+
+  expect(mockToastShow).toHaveBeenCalledWith(
+    'Saved. These become your reference set.',
+    { variant: 'success' },
+  );
+});
+
+test('a second photo of an already-saved pose does not repeat the baseline sentence', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  listProgressPhotos.mockResolvedValueOnce([
+    { name: 'existing-front.jpg', uri: 'file:///existing-front.jpg', ts: 1690000000000 },
+  ]);
+  getPhotoMetaMap.mockResolvedValueOnce({
+    'existing-front.jpg': {
+      takenAt: 1690000000000, pose: 'front', weightKg: null, note: null, unscored: false,
+    },
+  });
+  const tree = await render();
+  await quickAddViaFallback(tree);
+  await pressLabel(tree, 'Set pose to Front');
+  await pressLabel(tree, 'Save the progress photo');
+  await flush();
+
+  expect(upsertPhotoMeta.mock.calls[0][2].pose).toBe('front');
+  expect(mockToastShow).not.toHaveBeenCalledWith(
+    'Saved. These become your reference set.',
+    expect.anything(),
+  );
+});
+
+test('finishScan re-entrancy guard: rapid double-tap on Finish without side produces exactly one session mutation', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await pressLabel(tree, 'Add photos');
+  await flush();
+  await pressLabel(tree, 'Start photo set');
+  await flush();
+
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+
+  await act(async () => {
+    capture.props.onCaptured('front.jpg', { name: 'front.jpg', uri: 'file:///photos/front.jpg', ts: 1700000000000 });
+    await Promise.resolve();
+  });
+  await flush();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+
+  const frontSavedAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Front saved');
+  expect(frontSavedAlert).toBeTruthy();
+  await act(async () => {
+    frontSavedAlert[2].find((b) => b.text === 'Continue').onPress();
+    await Promise.resolve();
+  });
+  await flush();
+
+  await act(async () => {
+    capture.props.onCaptured('back.jpg', { name: 'back.jpg', uri: 'file:///photos/back.jpg', ts: 1700000000001 });
+    await Promise.resolve();
+  });
+  await flush();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+
+  const backSavedAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Back saved');
+  expect(backSavedAlert).toBeTruthy();
+  const finishButton = backSavedAlert[2].find((b) => b.text === 'Finish without side');
+  expect(finishButton).toBeTruthy();
+
+  await act(async () => {
+    finishButton.onPress();
+    finishButton.onPress();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  await flush();
+
+  expect(finishProgressScanSession).toHaveBeenCalledTimes(1);
+});
+
+test('the continue-after-pose entry path (final pose double-tap) also produces exactly one session mutation', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  await pressLabel(tree, 'Add photos');
+  await flush();
+  await pressLabel(tree, 'Start photo set');
+  await flush();
+
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+
+  await act(async () => {
+    capture.props.onCaptured('front.jpg', { name: 'front.jpg', uri: 'file:///photos/front.jpg', ts: 1700000000000 });
+    await Promise.resolve();
+  });
+  await flush();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+  const frontSavedAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Front saved');
+  await act(async () => {
+    frontSavedAlert[2].find((b) => b.text === 'Continue').onPress();
+    await Promise.resolve();
+  });
+  await flush();
+
+  await act(async () => {
+    capture.props.onCaptured('back.jpg', { name: 'back.jpg', uri: 'file:///photos/back.jpg', ts: 1700000000001 });
+    await Promise.resolve();
+  });
+  await flush();
+  await pressLabel(tree, 'Use photo');
+  await flush();
+  const backSavedAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Back saved');
+  const continueToSide = backSavedAlert[2].find((b) => b.text === 'Take side');
+  await act(async () => {
+    continueToSide.onPress();
+    await Promise.resolve();
+  });
+  await flush();
+
+  await act(async () => {
+    capture.props.onCaptured('side.jpg', { name: 'side.jpg', uri: 'file:///photos/side.jpg', ts: 1700000000002 });
+    await Promise.resolve();
+  });
+  await flush();
+
+  // Rapid double-tap on the final pose's own approval button. The second tap
+  // reads the same (not-yet-re-rendered) scanReview state, so both fire the
+  // same save; the asset dedup guard (scanSaveInFlightRef) then blocks the
+  // duplicate before it ever reaches continueScanAfterPose, so finishScan is
+  // reached exactly once via this entry path too.
+  await act(async () => {
+    const usePhoto = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Use photo' && typeof n.props.onPress === 'function',
+    )[0];
+    usePhoto.props.onPress();
+    usePhoto.props.onPress();
+    await Promise.resolve();
+  });
+  await flush();
+
+  expect(addProgressScanAsset).toHaveBeenCalledTimes(3); // front, back, side (once each)
+  expect(finishProgressScanSession).toHaveBeenCalledTimes(1);
 });

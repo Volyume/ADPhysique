@@ -43,19 +43,19 @@ jest.mock('../database', () => ({
     runAsync: async (sql, params) => {
       if (/INSERT INTO progress_photo_meta/.test(sql)) {
         const legacy = /VALUES \(NULL,/.test(sql);
-        const [user_id, name, taken_at, pose, weight_kg, note, created_at, updated_at] = legacy
+        const [user_id, name, taken_at, pose, weight_kg, note, unscored, created_at, updated_at] = legacy
           ? [null, ...params]
           : params;
         const key = mockKey(user_id, name);
         const prev = mockTable.get(key);
         mockTable.set(key, {
-          user_id, name, taken_at, pose, weight_kg, note,
+          user_id, name, taken_at, pose, weight_kg, note, unscored,
           // ON CONFLICT keeps the original created_at.
           created_at: prev ? prev.created_at : created_at,
           updated_at,
         });
       } else if (/UPDATE progress_photo_meta/.test(sql)) {
-        const [taken_at, pose, weight_kg, note, updated_at, name] = params;
+        const [taken_at, pose, weight_kg, note, unscored, updated_at, name] = params;
         const key = mockKey(null, name);
         const prev = mockTable.get(key);
         mockTable.set(key, {
@@ -65,6 +65,7 @@ jest.mock('../database', () => ({
           pose,
           weight_kg,
           note,
+          unscored,
           created_at: prev ? prev.created_at : updated_at,
           updated_at,
         });
@@ -109,6 +110,7 @@ describe('getPhotoMeta back-compat defaults', () => {
       pose: null,
       weightKg: null,
       note: null,
+      unscored: false,
     });
   });
 });
@@ -119,8 +121,12 @@ describe('getPhotoMetaMap', () => {
       user_id: null, name: '200.jpg', taken_at: 999, pose: 'front', weight_kg: 72.4, note: 'hi', created_at: 1, updated_at: 2,
     });
     const map = await getPhotoMetaMap(['100.jpg', '200.jpg']);
-    expect(map['100.jpg']).toEqual({ name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null });
-    expect(map['200.jpg']).toEqual({ name: '200.jpg', takenAt: 999, pose: 'front', weightKg: 72.4, note: 'hi' });
+    expect(map['100.jpg']).toEqual({
+      name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null, unscored: false,
+    });
+    expect(map['200.jpg']).toEqual({
+      name: '200.jpg', takenAt: 999, pose: 'front', weightKg: 72.4, note: 'hi', unscored: false,
+    });
   });
 
   test('an empty list returns an empty map', async () => {
@@ -138,9 +144,12 @@ describe('getPhotoMetaMap', () => {
       pose: null,
       weightKg: null,
       note: null,
+      unscored: false,
     });
     expect(await getPhotoMetaMap(['100.jpg'], 'user-1')).toEqual({
-      '100.jpg': { name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null },
+      '100.jpg': {
+        name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null, unscored: false,
+      },
     });
   });
 });
@@ -149,7 +158,9 @@ describe('upsertPhotoMeta weight snapshot semantics', () => {
   test('creating a row snapshots the nearest weight at takenAt', async () => {
     mockState.nearestWeight = { weightKg: 80.1, loggedAt: 50 };
     const res = await upsertPhotoMeta('user-1', '100.jpg', { pose: 'side' });
-    expect(res).toEqual({ name: '100.jpg', takenAt: 100, pose: 'side', weightKg: 80.1, note: null });
+    expect(res).toEqual({
+      name: '100.jpg', takenAt: 100, pose: 'side', weightKg: 80.1, note: null, unscored: false,
+    });
     // Snapshot taken at the derived takenAt (the filename timestamp).
     expect(mockWeightCalls).toEqual([{ userId: 'user-1', t: 100 }]);
   });
@@ -196,7 +207,30 @@ describe('upsertPhotoMeta weight snapshot semantics', () => {
     });
     mockState.nearestWeight = { weightKg: 80.1, loggedAt: 50 };
     const res = await upsertPhotoMeta('user-1', '100.jpg', { pose: 'back' });
-    expect(res).toEqual({ name: '100.jpg', takenAt: 100, pose: 'back', weightKg: 80.1, note: null });
+    expect(res).toEqual({
+      name: '100.jpg', takenAt: 100, pose: 'back', weightKg: 80.1, note: null, unscored: false,
+    });
+  });
+});
+
+describe('unscored (progress-photos wave 2, founder gate F2 = tag route)', () => {
+  test('defaults to false and is set true only when explicitly requested', async () => {
+    const created = await upsertPhotoMeta('user-1', '100.jpg', { pose: 'front' });
+    expect(created.unscored).toBe(false);
+
+    const tagged = await upsertPhotoMeta('user-1', '200.jpg', { pose: 'front', unscored: true });
+    expect(tagged.unscored).toBe(true);
+  });
+
+  test('is permanent: a later patch without unscored:true, or with unscored:false, never clears it', async () => {
+    await upsertPhotoMeta('user-1', '100.jpg', { pose: 'front', unscored: true });
+    const editedNote = await upsertPhotoMeta('user-1', '100.jpg', { note: 'left profile' });
+    expect(editedNote.unscored).toBe(true);
+
+    const explicitFalse = await upsertPhotoMeta('user-1', '100.jpg', { unscored: false });
+    expect(explicitFalse.unscored).toBe(true);
+
+    expect((await getPhotoMeta('user-1', '100.jpg')).unscored).toBe(true);
   });
 });
 
@@ -207,7 +241,7 @@ describe('deletePhotoMeta', () => {
     expect((await getPhotoMeta('user-1', '100.jpg')).pose).toBe('front');
     await deletePhotoMeta('user-1', '100.jpg');
     expect(await getPhotoMeta('user-1', '100.jpg')).toEqual({
-      name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null,
+      name: '100.jpg', takenAt: 100, pose: null, weightKg: null, note: null, unscored: false,
     });
   });
 });

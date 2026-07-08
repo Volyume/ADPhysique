@@ -52,6 +52,9 @@ import {
   buildCheckInCompletenessModel,
   buildProgressScanFinishPayload,
   enrichProgressPhotos,
+  isFirstPoseCapture,
+  localDayKeyForScanMatch,
+  resolveScanForCheckIn,
   scanShareItemsFromEntries,
   shouldGateProgressScanStart,
   visibleCompletedScans,
@@ -62,8 +65,10 @@ import {
   filterAndSort,
 } from '../lib/progressPhotoTimeline';
 import {
+  BASELINE_FIRST_POSE_SENTENCE,
   buildProgressStudioCaptureRoutes,
   buildScanCaptureSubtitle,
+  firstPoseRetakeCopy,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -112,13 +117,6 @@ const SORTS = [
   { key: 'newest', label: 'Newest', a11y: 'Sort newest first' },
   { key: 'oldest', label: 'Oldest', a11y: 'Sort oldest first' },
 ];
-
-function localDateKey(ms) {
-  const n = Number(ms);
-  if (!Number.isFinite(n)) return null;
-  const d = new Date(n);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
 
 export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
@@ -204,6 +202,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   const captureRouteActionRef = useRef(false);
   const progressScanOpeningRef = useRef(false);
   const scanSaveInFlightRef = useRef(new Set());
+  // finishScan re-entrancy guard (progress-photos wave 2): reached from both
+  // "Finish without side" and the final continueScanAfterPose pose, so a
+  // rapid double-tap on either must produce exactly one session mutation.
+  const finishScanInFlightRef = useRef(new Set());
 
   const refresh = useCallback(async () => {
     const requestId = refreshRequestRef.current + 1;
@@ -391,6 +393,9 @@ export default function ProgressPhotosScreen({ navigation }) {
     setBusy(true);
     let savedPhoto = null;
     const savedFromPendingUri = !!pendingUri;
+    // Read BEFORE this save lands, so a photo cannot count itself as its own
+    // history (progress-photos wave 2, founder gate F3 baseline framing).
+    const isFirstPose = isFirstPoseCapture(enriched, pose);
     try {
       let name = pendingName;
       if (pendingUri) {
@@ -400,10 +405,21 @@ export default function ProgressPhotosScreen({ navigation }) {
       if (name) {
         // Creates the metadata row and snapshots the weigh-in nearest takenAt
         // (or re-snapshots for a captured photo whose date the user moved).
-        await upsertPhotoMeta(uid, name, { takenAt, pose }, { throwOnError: true });
+        // `pendingUri` only ever comes from the quick camera/library route
+        // (openDetailsForNew, called only by pickFrom), so this is the
+        // permanent quick-add fence tag (founder gate F2, tag route): once
+        // true it can never be cleared by a later edit.
+        await upsertPhotoMeta(uid, name, {
+          takenAt,
+          pose,
+          ...(savedFromPendingUri ? { unscored: true } : {}),
+        }, { throwOnError: true });
       }
       resetPending();
       await refresh();
+      if (isFirstPose) {
+        toast.show(`Saved. ${BASELINE_FIRST_POSE_SENTENCE}`, { variant: 'success' });
+      }
     } catch (e) {
       if (savedFromPendingUri && savedPhoto?.uri) {
         await cleanupUnattachedSavedScanPhoto({
@@ -583,42 +599,54 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function finishScan(scanId) {
     if (!userId || !scanId) return;
-    if (!canWrite()) {
-      await abandonLapsedScanFlow({ scanId });
-      return;
-    }
-    let finished = false;
+    // Re-entrancy guard: a second invocation for the same scanId while one is
+    // already in flight (rapid double-tap on "Finish without side" or the
+    // side-photo continue path) is a no-op, not a second mutation.
+    if (finishScanInFlightRef.current.has(scanId)) return;
+    finishScanInFlightRef.current.add(scanId);
     try {
-      const profile = useAppStore.getState().userProfile || {};
-      const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
       if (!canWrite()) {
         await abandonLapsedScanFlow({ scanId });
         return;
       }
-      await finishProgressScanSession(userId, scanId, buildProgressScanFinishPayload(profile, bodyProfile, userSex));
-      finished = true;
-    } catch (e) {
-      logError('ProgressPhotos.finishScan', e, { userId, scanId });
-      toast.show('The photo set was saved, but the Volyume Score could not be created.', { variant: 'warning' });
-    }
-    try {
-      setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
-    } catch (e) {
-      logError('ProgressPhotos.finishScan.refreshScans', e, { userId, scanId, finished });
-    }
-    try {
-      await refresh();
-    } catch (e) {
-      logError('ProgressPhotos.finishScan.refreshPhotos', e, { userId, scanId, finished });
+      let finished = false;
+      try {
+        const profile = useAppStore.getState().userProfile || {};
+        const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
+        if (!canWrite()) {
+          await abandonLapsedScanFlow({ scanId });
+          return;
+        }
+        await finishProgressScanSession(userId, scanId, buildProgressScanFinishPayload(profile, bodyProfile, userSex));
+        finished = true;
+      } catch (e) {
+        logError('ProgressPhotos.finishScan', e, { userId, scanId });
+        toast.show('The photo set was saved, but the Volyume Score could not be created.', { variant: 'warning' });
+      }
+      try {
+        setScans(await listProgressScanEntries(userId, PROGRESS_SCAN_LIBRARY_LIMIT));
+      } catch (e) {
+        logError('ProgressPhotos.finishScan.refreshScans', e, { userId, scanId, finished });
+      }
+      try {
+        await refresh();
+      } catch (e) {
+        logError('ProgressPhotos.finishScan.refreshPhotos', e, { userId, scanId, finished });
+      }
+    } finally {
+      finishScanInFlightRef.current.delete(scanId);
     }
   }
 
-  async function continueScanAfterPose(flow, pose) {
+  async function continueScanAfterPose(flow, pose, isFirstPose = false) {
     if (pose === 'front') {
       const nextFlow = { ...flow, pose: 'back' };
       setScanFlow(nextFlow);
       setCapturePose('back');
-      appAlert('Front saved', 'Turn around for the back photo. Use the timer if you need to step into position.', [
+      const frontSavedBody = isFirstPose
+        ? `Turn around for the back photo. Use the timer if you need to step into position. ${BASELINE_FIRST_POSE_SENTENCE}`
+        : 'Turn around for the back photo. Use the timer if you need to step into position.';
+      appAlert('Front saved', frontSavedBody, [
         {
           text: 'Continue',
           onPress: () => {
@@ -639,7 +667,10 @@ export default function ProgressPhotosScreen({ navigation }) {
         if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'side');
         else setCaptureOpen(true);
       };
-      appAlert('Back saved', 'Now add the side photo to complete the set.', [
+      const backSavedBody = isFirstPose
+        ? `Now add the side photo to complete the set. ${BASELINE_FIRST_POSE_SENTENCE}`
+        : 'Now add the side photo to complete the set.';
+      appAlert('Back saved', backSavedBody, [
         {
           text: flow?.mode === 'library' ? 'Import side' : 'Take side',
           onPress: continueToSide,
@@ -648,11 +679,12 @@ export default function ProgressPhotosScreen({ navigation }) {
       ], { cancelable: false });
       return;
     }
+    if (isFirstPose) toast.show(`Saved. ${BASELINE_FIRST_POSE_SENTENCE}`, { variant: 'success' });
     setScanFlow(null);
     await finishScan(flow.scanId);
   }
 
-  async function saveScanAssetAndContinue(flow, pose, name, saved, vision) {
+  async function saveScanAssetAndContinue(flow, pose, name, saved, vision, isFirstPose = false) {
     if (!canWrite()) {
       await abandonLapsedScanFlow(flow, name, saved);
       return;
@@ -681,7 +713,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         throw new Error('progress_scan_asset_save_failed');
       }
       committed = true;
-      await continueScanAfterPose(flow, pose);
+      await continueScanAfterPose(flow, pose, isFirstPose);
     } finally {
       if (saveKey && !committed) scanSaveInFlightRef.current.delete(saveKey);
     }
@@ -771,6 +803,10 @@ export default function ProgressPhotosScreen({ navigation }) {
       });
       return;
     }
+    // Read BEFORE this pose's asset is saved, so the photo in flight cannot
+    // count itself (progress-photos wave 2, founder gate F3 baseline framing;
+    // the firmer retake nudge only applies here, where analysis actually runs).
+    const isFirstPose = isFirstPoseCapture(enriched, pose);
     try {
       setBusy(true);
       const vision = await analyseProgressScanPhoto({ uri: saved.uri, pose });
@@ -781,13 +817,13 @@ export default function ProgressPhotosScreen({ navigation }) {
       }
       const retakeCopy = retakeCopyForVisionResult(vision);
       if (retakeCopy) {
-        appAlert('Retake this photo?', retakeCopy, [
+        appAlert('Retake this photo?', isFirstPose ? firstPoseRetakeCopy(retakeCopy) : retakeCopy, [
           { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
           {
             text: 'Save without score',
             onPress: () => {
               setBusy(true);
-              saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
+              saveScanAssetAndContinue(flow, pose, name, saved, vision, isFirstPose).catch((e) => {
                 logError('ProgressPhotos.scanSaveAfterRetakePrompt', e, { userId, pose });
                 toast.show('Could not save that photo. Please try again.', { variant: 'error' });
               }).finally(() => {
@@ -799,7 +835,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         return;
       }
       if (saved?.previewApproved) {
-        await saveScanAssetAndContinue(flow, pose, name, saved, vision);
+        await saveScanAssetAndContinue(flow, pose, name, saved, vision, isFirstPose);
         return;
       }
     } catch (e) {
@@ -968,7 +1004,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const scansByDateKey = useMemo(() => {
     const map = new Map();
     for (const scan of visibleScans || []) {
-      const key = localDateKey(scan?.capturedAt ?? scan?.captured_at);
+      const key = localDayKeyForScanMatch(scan?.capturedAt ?? scan?.captured_at);
       if (!key) continue;
       const list = map.get(key) || [];
       list.push(scan);
@@ -981,18 +1017,12 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     return map;
   }, [visibleScans]);
+  // The set-matching logic itself lives in progressPhotosController.js
+  // (resolveScanForCheckIn) so the quick-add fence is unit-testable in
+  // isolation; this stays a thin wire-up so every existing call site here is
+  // untouched.
   function scanForCheckIn(item) {
-    const coverName = item?.cover?.name;
-    if (coverName && scanByPhotoName.has(coverName)) return scanByPhotoName.get(coverName);
-    for (const photo of item?.photos || []) {
-      if (photo?.name && scanByPhotoName.has(photo.name)) return scanByPhotoName.get(photo.name);
-    }
-    const candidates = scansByDateKey.get(localDateKey(item?.takenAt)) || [];
-    if (!candidates.length) return null;
-    return [...candidates].sort((a, b) => (
-      Math.abs((Number(a?.capturedAt ?? a?.captured_at) || 0) - (Number(item?.takenAt) || 0))
-        - Math.abs((Number(b?.capturedAt ?? b?.captured_at) || 0) - (Number(item?.takenAt) || 0))
-    ))[0] || null;
+    return resolveScanForCheckIn(item, scanByPhotoName, scansByDateKey);
   }
   const canExportCalibration = isProgressScanCalibrationExportAllowed(user);
   const exportLatestScanCalibration = useCallback(async () => {
