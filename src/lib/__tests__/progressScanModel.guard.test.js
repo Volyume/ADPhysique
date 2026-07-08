@@ -102,7 +102,10 @@ describe('Progress Scan on-device TFLite model guard', () => {
   });
 
   test('Android release workflow verifies native 16 KB page-size compatibility', () => {
-    expect(read('scripts/verify-android-elf-page-size.cjs')).toMatch(/PT_LOAD/);
+    const verifier = read('scripts/verify-android-elf-page-size.cjs');
+    expect(verifier).toMatch(/PT_LOAD/);
+    expect(verifier).toMatch(/64-bit native libraries/);
+    expect(verifier).toMatch(/skipped32/);
     expect(read('package.json')).toMatch(/verify:android:16kb/);
     expect(read('.github/workflows/build-android.yml')).toMatch(/verify:android:16kb/);
     expect(read('.github/workflows/build-android.yml')).toMatch(/app-release\.aab/);

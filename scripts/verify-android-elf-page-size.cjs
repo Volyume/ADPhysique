@@ -46,10 +46,10 @@ function u64(buf, off, little) {
   return Number(n);
 }
 
-function loadAlignments(file) {
+function loadElfInfo(file) {
   const buf = fs.readFileSync(file);
   if (buf.length < 64 || buf[0] !== 0x7f || buf[1] !== 0x45 || buf[2] !== 0x4c || buf[3] !== 0x46) {
-    return [];
+    return null;
   }
   const klass = buf[4];
   const little = buf[5] === 1;
@@ -71,7 +71,7 @@ function loadAlignments(file) {
     alignments.push(align);
   }
 
-  return alignments;
+  return { alignments, is64, is32 };
 }
 
 function inputsToSharedObjects(inputs) {
@@ -111,9 +111,15 @@ function main() {
     }
 
     let checked = 0;
+    let skipped32 = 0;
     for (const file of soFiles) {
-      const alignments = loadAlignments(file);
-      if (alignments.length === 0) continue;
+      const info = loadElfInfo(file);
+      if (!info || info.alignments.length === 0) continue;
+      if (!info.is64) {
+        skipped32 += 1;
+        continue;
+      }
+      const { alignments } = info;
       checked += 1;
       const bad = alignments.filter((align) => align < MIN_ALIGN || align % MIN_ALIGN !== 0);
       if (bad.length > 0) {
@@ -122,10 +128,13 @@ function main() {
     }
 
     if (checked === 0) {
-      fail('No ELF shared libraries found to verify.');
+      fail('No 64-bit ELF shared libraries found to verify.');
       return;
     }
-    if (!process.exitCode) console.log(`Verified ${checked} native libraries for 16 KB page-size compatibility.`);
+    if (!process.exitCode) {
+      const skipped = skipped32 > 0 ? `; skipped ${skipped32} 32-bit native libraries` : '';
+      console.log(`Verified ${checked} 64-bit native libraries for 16 KB page-size compatibility${skipped}.`);
+    }
   } finally {
     for (const dir of extracted) fs.rmSync(dir, { recursive: true, force: true });
   }

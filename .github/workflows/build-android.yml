@@ -438,7 +438,10 @@ jobs:
             exit 1
           fi
 
-      - name: Verify native libraries are 16 KB page-size compatible
+      # Google Play's 16 KB page-size requirement applies to 64-bit devices.
+      # The verifier enforces every packaged 64-bit ELF and reports skipped
+      # 32-bit ELF files so armeabi-v7a support does not false-fail releases.
+      - name: Verify 64-bit native libraries are 16 KB page-size compatible
         run: |
           npm run verify:android:16kb -- \
             android/app/build/outputs/apk/release/app-release.apk \
