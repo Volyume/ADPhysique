@@ -2316,7 +2316,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
                       : targetReason}
               >
-                <Ionicons name="sparkles-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
+                <Ionicons name="pulse-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
                 <Text style={styles.coachLineText} numberOfLines={2}>
                   {(sessionAdjustment?.show && !readinessDrivesTarget)
                     ? sessionAdjustment.reasonText
@@ -2331,7 +2331,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             )}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
               <View style={styles.firstSetHint}>
-                <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+                <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
                   {firstSetPrompt} Tap More for form tips, warm-ups, swaps and session options.
                 </Text>
@@ -3109,7 +3109,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {sessionAdjustment?.show ? (
                 <View style={styles.adjustedSection}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="sparkles" size={14} color={colors.primary} />
+                    <Ionicons name="pulse-outline" size={14} color={colors.primary} />
                     <Text style={styles.adjustedTitle}>Adjusted today</Text>
                   </View>
                   <Text style={styles.adjustedReason}>{sessionAdjustment.reasonText}</Text>
@@ -3139,7 +3139,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {readinessReduces ? (
                 <View style={styles.adjustedSection}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="sparkles" size={14} color={colors.primary} />
+                    <Ionicons name="pulse-outline" size={14} color={colors.primary} />
                     <Text style={styles.adjustedTitle}>Eased for today</Text>
                   </View>
                   <Text style={styles.adjustedReason}>{readinessTweak.whySets}</Text>

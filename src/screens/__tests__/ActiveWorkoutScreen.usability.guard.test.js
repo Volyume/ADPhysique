@@ -47,6 +47,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';");
     expect(ACTIVE_WORKOUT).toContain('return \'Enter weight and reps, then tap Log set when done.\';');
     expect(ACTIVE_WORKOUT).toContain('Tap More for form tips, warm-ups, swaps and session options.');
+    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={colors.primary}');
+    expect(ACTIVE_WORKOUT).not.toContain('sparkles');
   });
 
   test('previous performance cues use a compact control instead of inline link copy', () => {
