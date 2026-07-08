@@ -67,7 +67,10 @@ The other eight §15 items build under the standard wave process.
 - Wave 1 — Food trust quick wins (items 2, 5): **done** (`dcc74fc`, `4d71fed`).
   Item 5's UI was already shipped; a dead-telemetry bug was fixed and both
   items are now test-covered.
-- Wave 2 — Plan/diary adherence loop (items 1, 4): not started.
+- Wave 2 — Plan/diary adherence loop (items 1, 4): **done** (`b066e73`).
+  Audit's "no linkage" claim for item 1 was stale (a day-level linkage already
+  existed); extended to per-meal granularity. Item 4 verified already correct
+  by construction; added a regression test.
 - Wave 3 — Coach surface coherence (items 3, 6, 7): not started.
 - Wave 4 — Polish/loading/correctness/a11y (items 8, 9, 10): not started.
 - Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
