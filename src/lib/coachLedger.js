@@ -145,8 +145,8 @@ export function buildHoldReceipt({ dataNote = null, ...ledgerArgs } = {}) {
   // date the gate could hold.
   const unlockLine = ledger.unlockLabel
     ? (ledger.variant === 'neutral'
-      ? `Your first coaching review unlocks around ${ledger.unlockLabel}.`
-      : `Keep logging and your first coaching review unlocks on ${ledger.unlockLabel}.`)
+      ? `Your first coaching review is ready around ${ledger.unlockLabel}.`
+      : `Keep logging and your first coaching review is ready on ${ledger.unlockLabel}.`)
     : 'Log your first morning weight and your first review date is set.';
   return { ledger, rule, unlockLine };
 }

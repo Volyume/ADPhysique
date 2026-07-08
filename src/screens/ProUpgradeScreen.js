@@ -333,8 +333,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
             {needsSetup
-              ? "Everything's unlocked and your data is backed up. Set up your training plan and nutrition targets and the coach can start."
-              : "Everything's unlocked and your data is backed up."}
+              ? 'Everything is ready and your data is backed up. Set up your training plan and nutrition targets and the coach can start.'
+              : 'Everything is ready and your data is backed up.'}
           </Text>
           {needsSetup ? (
             <>

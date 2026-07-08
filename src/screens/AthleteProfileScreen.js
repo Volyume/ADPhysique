@@ -456,8 +456,8 @@ export default function AthleteProfileScreen({ navigation }) {
           )) : (
             <EmptyState
               icon="barbell-outline"
-              title="Strength standards unlock with data"
-              text="Log body weight and your main lifts to compare your strength against baseline standards."
+              title="Add lifts for strength standards"
+              text="Log body weight and your main lifts to compare against baseline standards."
               compact
             />
           )}

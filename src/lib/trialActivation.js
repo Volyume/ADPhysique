@@ -117,13 +117,13 @@ export function trialDay3Push({ variant, completedSessions = 0, weighIns7d = 0, 
   if (variant === 'S1') {
     return {
       title: 'Your coach has a read on you',
-      body: `${plural(completedSessions, 'session')} and ${plural(weighIns7d, 'weigh-in')} logged. Keep logging and your first coaching review unlocks on ${when}.`,
+      body: `${plural(completedSessions, 'session')} and ${plural(weighIns7d, 'weigh-in')} logged. Keep logging and your first coaching review is ready on ${when}.`,
     };
   }
   if (variant === 'S2') {
     return {
       title: 'Your coach can see your training',
-      body: `${plural(completedSessions, 'session')} logged. ${plural(weighInsNeeded(weighIns7d), 'more morning weigh-in')} and your first coaching review unlocks on ${when}.`,
+      body: `${plural(completedSessions, 'session')} logged. ${plural(weighInsNeeded(weighIns7d), 'more morning weigh-in')} and your first coaching review is ready on ${when}.`,
     };
   }
   return {
@@ -144,16 +144,16 @@ export function trialBannerLine({ variant, completedSessions = 0, weighIns7d = 0
   const when = unlockDayName || 'soon';
   if (edFlagOpen) {
     // Neutral fallback: no weigh-in counts, no weight ask, on top of an open flag.
-    return `First coaching review unlocks ${when}`;
+    return `First coaching review is ready ${when}`;
   }
   const midpoint = trialDay >= 7;
   if (variant === 'S1') {
     return midpoint
-      ? `Half-way. Your first coaching review unlocks ${when}`
-      : `First coaching review unlocks ${when} · ${plural(completedSessions, 'session')}, ${plural(weighIns7d, 'weigh-in')} in`;
+      ? `Half-way. Your first coaching review is ready ${when}`
+      : `First coaching review is ready ${when} - ${plural(completedSessions, 'session')}, ${plural(weighIns7d, 'weigh-in')} in`;
   }
   if (variant === 'S2') {
-    return `${plural(weighInsNeeded(weighIns7d), 'more morning weigh-in')} unlock your first coaching review`;
+    return `${plural(weighInsNeeded(weighIns7d), 'more morning weigh-in')} for your first coaching review`;
   }
   return `Your 14-day trial is live. One session starts your first coaching review.`;
 }

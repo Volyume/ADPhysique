@@ -154,15 +154,15 @@ describe('buildHoldReceipt', () => {
     expect(r.rule).toMatch(/week 2/);
   });
 
-  test('names the unlock date, keep-logging framing (future-conditional)', () => {
+  test('names the readiness date, keep-logging framing (future-conditional)', () => {
     const r = buildHoldReceipt({ firstWeightAt: WED - DAY, checkinDay: 0, now: WED });
-    expect(r.unlockLine).toMatch(/^Keep logging and your first coaching review unlocks on /);
+    expect(r.unlockLine).toMatch(/^Keep logging and your first coaching review is ready on /);
   });
 
   test('neutral variant drops the weight ask AND softens the date (no promise the gate can break)', () => {
     const r = buildHoldReceipt({ firstWeightAt: WED - DAY, checkinDay: 0, edFlagOpen: true, now: WED });
-    expect(r.unlockLine).toMatch(/^Your first coaching review unlocks around /);
-    expect(r.unlockLine).not.toMatch(/unlocks on /);
+    expect(r.unlockLine).toMatch(/^Your first coaching review is ready around /);
+    expect(r.unlockLine).not.toMatch(/is ready on /);
     expect(r.ledger.rows).toHaveLength(0);
   });
 

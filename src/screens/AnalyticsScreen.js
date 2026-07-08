@@ -724,7 +724,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                     if (!recapUnlocked) {
                       appAlert(
                         'Recaps',
-                        `Your first monthly recap unlocks after ${RECAP_GATE} logged sessions. ${toGo} to go.`,
+                        `Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${toGo} to go.`,
                       );
                       return;
                     }
@@ -1003,7 +1003,7 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not unlocked yet.'}` : pro ? `${label}. Part of Pro.` : label}
+      accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not ready yet.'}` : pro ? `${label}. Part of Pro.` : label}
       accessibilityState={{ disabled: !!locked }}
     >
       <Ionicons
