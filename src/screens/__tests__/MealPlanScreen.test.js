@@ -9,6 +9,7 @@
  * nutrition); reduce-motion makes the BottomSheet mount synchronously.
  */
 import { create, act } from 'react-test-renderer';
+import { Share } from 'react-native';
 
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -30,6 +31,7 @@ jest.mock('../../lib/food/mealPlanService', () => ({
   applyPlanDayToDiary: jest.fn(),
   applyPlanWeekToDiary: jest.fn(),
   answerTrainingTodayOnActivePlan: jest.fn(),
+  repeatPlanDayOnActivePlan: jest.fn(),
   swapMealInPlan: jest.fn(),
   swapFoodInMeal: jest.fn(),
 }));
@@ -38,10 +40,12 @@ jest.mock('../../lib/food/db', () => ({
   getFoodEntriesForDay: jest.fn(async () => []),
   clearPlannedDay: jest.fn(),
 }));
+jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 
 import useAppStore from '../../store/useAppStore';
-import { loadActiveMealPlan, swapMealInPlan } from '../../lib/food/mealPlanService';
+import { loadActiveMealPlan, swapMealInPlan, repeatPlanDayOnActivePlan } from '../../lib/food/mealPlanService';
 import { updateMealPlan } from '../../lib/food/db';
+import { appAlert } from '../../components/AppAlert';
 import MealPlanScreen from '../MealPlanScreen';
 
 const nav = { goBack: jest.fn(), navigate: jest.fn() };
@@ -174,6 +178,98 @@ describe('MealPlanScreen meal-swap sheet', () => {
     const savedSlot = savedPlan.days[0].slots[0];
     expect(savedSlot.name).toBe('Alt 3');
     expect(savedSlot.slot).toBe('meal_1');
+  });
+});
+
+// A minimal two-day WEEK plan: distinct meals per day so a copy is provable.
+function makeWeekPlan() {
+  const mkDay = (variant, mealName) => ({
+    variant,
+    withinTolerance: true,
+    totals: { kcal: 600, protein: 40, carbs: 50, fat: 20 },
+    slots: [{
+      slot: 'meal_1',
+      name: mealName,
+      totals: { kcal: 600, protein: 40, carbs: 50, fat: 20 },
+      items: [],
+      components: [{ food: 'chicken_breast', g: 150 }],
+    }],
+  });
+  return {
+    kind: 'week',
+    prefs: {},
+    schedule: ['training', 'rest'],
+    targetSnapshot: { targetKcal: 2400 },
+    days: [mkDay('training', 'Training day meal'), mkDay('rest', 'Rest day meal')],
+  };
+}
+
+describe('MealPlanScreen — repeat this day (audit §15 item 6)', () => {
+  test('the quick action is offered on a week plan, and the copy only runs after the confirm alert, with the right day indices', async () => {
+    loadActiveMealPlan.mockResolvedValue({ id: 'rec1', plan: makeWeekPlan() });
+    repeatPlanDayOnActivePlan.mockResolvedValue({
+      plan: { ...makeWeekPlan(), lastEditType: 'day_repeat' },
+      changed: true,
+    });
+
+    let tree;
+    await act(async () => { tree = create(<MealPlanScreen navigation={nav} />); });
+
+    const repeatBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Repeat this day onto another day');
+    expect(repeatBtn).toBeTruthy();
+    act(() => repeatBtn.props.onPress());
+
+    // The picker offers the OTHER day only (day 1 is in view by default).
+    // react-test-renderer surfaces both the composite and host node for one
+    // TouchableOpacity, so dedupe by label as the swap-sheet test above does.
+    const targetLabels = new Set(buttons(tree)
+      .map((b) => String(b.props.accessibilityLabel || ''))
+      .filter((l) => /^Copy meals onto /.test(l)));
+    expect(targetLabels.size).toBe(1);
+    const targetBtn = buttons(tree).find((b) => b.props.accessibilityLabel === [...targetLabels][0]);
+    act(() => targetBtn.props.onPress());
+
+    // Picking a target opens the confirm alert; the service is NOT called yet.
+    expect(appAlert).toHaveBeenCalledTimes(1);
+    expect(repeatPlanDayOnActivePlan).not.toHaveBeenCalled();
+    const [title, message, alertButtons] = appAlert.mock.calls[0];
+    expect(title).toBe('Repeat this day?');
+    expect(message).toMatch(/replaced/i);
+    const confirm = alertButtons.find((b) => b.text === 'Repeat');
+    expect(confirm).toBeTruthy();
+
+    // Confirming fires the real write with the source day (0) and chosen target (1).
+    await act(async () => { await confirm.onPress(); });
+    expect(repeatPlanDayOnActivePlan).toHaveBeenCalledTimes(1);
+    expect(repeatPlanDayOnActivePlan).toHaveBeenCalledWith('u1', { fromIndex: 0, toIndex: 1 });
+  });
+
+  test('a single-day plan never offers the repeat action (nowhere else to copy to)', async () => {
+    const tree = await mountLoaded(); // single-day plan from makePlan()
+    const repeatBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Repeat this day onto another day');
+    expect(repeatBtn).toBeUndefined();
+  });
+});
+
+describe('MealPlanScreen — shopping-list share (audit §15 item 6)', () => {
+  test('sharing the built list sends plain text using the same names and grams the sheet shows', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    const tree = await mountLoaded();
+
+    const groceryBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Shopping list');
+    expect(groceryBtn).toBeTruthy();
+    act(() => groceryBtn.props.onPress());
+
+    const shareBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Share shopping list');
+    expect(shareBtn).toBeTruthy();
+    await act(async () => { await shareBtn.props.onPress(); });
+
+    expect(Share.share).toHaveBeenCalledTimes(1);
+    const { message } = Share.share.mock.calls[0][0];
+    expect(message).toContain('Shopping list, 1 day');
+    expect(message).toContain('Proteins');
+    expect(message).toContain('Chicken breast fillet (cooked), 150 g');
+    Share.share.mockRestore();
   });
 });
 

@@ -6,7 +6,7 @@
  * Other (NA-nutrition-4 forbids an invented aisle map), and graceful
  * empty/malformed handling.
  */
-import { buildGroceryList } from '../groceryList';
+import { buildGroceryList, formatGroceryListForShare } from '../groceryList';
 import { CURATED_FOODS } from '../curatedFoods';
 
 // Build a slot from curated components ({ food, g }).
@@ -110,5 +110,56 @@ describe('buildGroceryList', () => {
     expect(buildGroceryList({})).toMatchObject({ isEmpty: true });
     expect(buildGroceryList({ days: [] })).toMatchObject({ isEmpty: true });
     expect(buildGroceryList({ days: [day([]), { slots: null }] }).isEmpty).toBe(true);
+  });
+});
+
+describe('formatGroceryListForShare (§15 item 6 — grocery-list export polish)', () => {
+  test('lays out a heading, section labels and "name, grams" lines, same grouping as the sheet', () => {
+    const plan = { days: [day([
+      slot('Meal', [
+        { food: 'chicken_breast', g: 200 },
+        { food: 'white_rice', g: 300 },
+      ]),
+    ])] };
+    const text = formatGroceryListForShare(buildGroceryList(plan));
+    expect(text).toBe(
+      'Shopping list, 1 day\n'
+      + '\n'
+      + 'Proteins\n'
+      + `- ${CURATED_FOODS.chicken_breast.name}, 200 g\n`
+      + '\n'
+      + 'Carbs\n'
+      + `- ${CURATED_FOODS.white_rice.name}, 300 g`,
+    );
+  });
+
+  test('a week plan heading pluralises "days"', () => {
+    const plan = { days: [
+      day([slot('Meal', [{ food: 'chicken_breast', g: 100 }])]),
+      day([slot('Meal', [{ food: 'chicken_breast', g: 100 }])]),
+    ] };
+    const text = formatGroceryListForShare(buildGroceryList(plan));
+    expect(text.startsWith('Shopping list, 2 days')).toBe(true);
+  });
+
+  test('a gram-less (saved-meal) row with a count shares the same "x2" label as the sheet', () => {
+    const saved = { name: 'Mum\'s chilli', items: null, components: null, totals: { kcal: 0 } };
+    const plan = { days: [day([saved]), day([saved])] };
+    const text = formatGroceryListForShare(buildGroceryList(plan));
+    expect(text).toContain('- Mum\'s chilli, x2');
+  });
+
+  test('no British-spelling/em-dash violations and no invented data: only the list\'s own names and grams appear', () => {
+    const plan = { days: [day([slot('Meal', [{ food: 'chicken_breast', g: 200 }])])] };
+    const text = formatGroceryListForShare(buildGroceryList(plan));
+    expect(text).not.toMatch(/—/);
+    expect(text).not.toContain('aisle');
+  });
+
+  test('null / empty / malformed list → empty string, never throws', () => {
+    expect(formatGroceryListForShare(null)).toBe('');
+    expect(formatGroceryListForShare(undefined)).toBe('');
+    expect(formatGroceryListForShare(buildGroceryList(null))).toBe('');
+    expect(formatGroceryListForShare({ sections: [], dayCount: 0, isEmpty: true })).toBe('');
   });
 });

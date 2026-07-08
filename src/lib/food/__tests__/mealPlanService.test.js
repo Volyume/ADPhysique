@@ -24,6 +24,7 @@ import {
   applyPlanWeekToDiary,
   planNextWeek,
   resyncBankedPlannedFood,
+  repeatPlanDay,
 } from '../mealPlanService';
 import { assembleWeekPlan } from '../mealPlanAssembler';
 import { resolveComponent } from '../curatedFoods';
@@ -288,5 +289,66 @@ describe('answerDayTraining (rethink §3.2 — per-day "Training today?")', () =
     expect(answerDayTraining({ plan, dayIndex: 9, training: true }).changed).toBe(false);
     expect(answerDayTraining({ plan: null, dayIndex: 0, training: true }).changed).toBe(false);
     expect(answerDayTraining({ plan, dayIndex: -1, training: false }).changed).toBe(false);
+  });
+});
+
+describe('repeatPlanDay (audit §15 item 6 — repeat a day onto another day)', () => {
+  const engineTarget = {
+    targetKcal: 2400, kcalMin: 2160, kcalMax: 2640,
+    proteinG: 180, carbsG: 250, fatG: 70, warnings: [],
+  };
+  const makePlan = () => {
+    const week = assembleWeekPlan({
+      engineTarget,
+      prefs: { diet: 'omnivore', mealsPerDay: 4 },
+      schedule: ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'],
+      seed: 7,
+    });
+    return buildPlanSnapshot({ week, engineTarget, prefs: week.prefs ?? { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
+  };
+
+  test('copies the source day\'s real slots+totals onto the target day, a real write not a label change', () => {
+    const plan = makePlan();
+    const { plan: next, changed } = repeatPlanDay({ plan, fromIndex: 0, toIndex: 1 });
+    expect(changed).toBe(true);
+    // The target day now holds the SAME slot data (names/items/totals) as the
+    // source day, not merely "close" — this is a copy, not a re-generation.
+    expect(next.days[1].slots.map((s) => s.name)).toEqual(plan.days[0].slots.map((s) => s.name));
+    expect(next.days[1].totals).toEqual(plan.days[0].totals);
+    // The variant travels with the copy, so schedule and day.variant agree.
+    expect(next.days[1].variant).toBe(plan.days[0].variant);
+    expect(next.schedule[1]).toBe(plan.days[0].variant);
+    expect(next.lastEditType).toBe('day_repeat');
+  });
+
+  test('other days are left untouched (same object references)', () => {
+    const plan = makePlan();
+    const { plan: next } = repeatPlanDay({ plan, fromIndex: 0, toIndex: 2 });
+    plan.days.forEach((d, i) => {
+      if (i !== 2) expect(next.days[i]).toBe(d);
+    });
+  });
+
+  test('the copy is independent of the source: later edits to the target day do not mutate the source day', () => {
+    const plan = makePlan();
+    const { plan: next } = repeatPlanDay({ plan, fromIndex: 0, toIndex: 1 });
+    next.days[1].slots[0].name = 'mutated for the test';
+    expect(plan.days[0].slots[0].name).not.toBe('mutated for the test');
+  });
+
+  test('copying a day onto itself is a no-op', () => {
+    const plan = makePlan();
+    const { plan: next, changed } = repeatPlanDay({ plan, fromIndex: 2, toIndex: 2 });
+    expect(changed).toBe(false);
+    expect(next).toBe(plan);
+  });
+
+  test('invalid indices, a single-day plan, and malformed input never throw and never change anything', () => {
+    const plan = makePlan();
+    expect(repeatPlanDay({ plan, fromIndex: 9, toIndex: 0 }).changed).toBe(false);
+    expect(repeatPlanDay({ plan, fromIndex: 0, toIndex: -1 }).changed).toBe(false);
+    expect(repeatPlanDay({ plan: null, fromIndex: 0, toIndex: 1 }).changed).toBe(false);
+    expect(repeatPlanDay({ plan: { days: [plan.days[0]] }, fromIndex: 0, toIndex: 0 }).changed).toBe(false);
+    expect(repeatPlanDay().changed).toBe(false);
   });
 });

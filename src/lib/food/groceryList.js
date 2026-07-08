@@ -118,3 +118,28 @@ export function buildGroceryList(plan) {
 
   return { sections, dayCount: plan.days.length, isEmpty: sections.length === 0 };
 }
+
+/**
+ * Format a built grocery list (buildGroceryList's output) as plain text for
+ * the native share sheet (audit §15 item 6, grocery-list export polish).
+ * Same sections, grouping and order the list already computed; this only
+ * lays them out as calm, plain lines. No new data and no aisle taxonomy
+ * (still forbidden, see the header note above) — grams are shown exactly
+ * as the list holds them. Pure. Returns '' for an empty/malformed list so a
+ * caller can skip opening the share sheet on nothing.
+ */
+export function formatGroceryListForShare(list) {
+  if (!list || list.isEmpty || !Array.isArray(list.sections) || list.sections.length === 0) {
+    return '';
+  }
+  const heading = list.dayCount === 1 ? 'Shopping list, 1 day' : `Shopping list, ${list.dayCount} days`;
+  const lines = [heading];
+  list.sections.forEach((section) => {
+    lines.push('', section.label);
+    section.items.forEach((item) => {
+      const qty = item.grams != null ? `${item.grams} g` : (item.count > 1 ? `x${item.count}` : '');
+      lines.push(qty ? `- ${item.name}, ${qty}` : `- ${item.name}`);
+    });
+  });
+  return lines.join('\n');
+}

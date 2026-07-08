@@ -209,6 +209,56 @@ export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMea
   };
 }
 
+/**
+ * Repeat ONE day's already-assembled meals onto another day of the SAME
+ * plan (audit §15 item 6 "repeat a day"). An explicit copy that reuses the
+ * source day's plan data verbatim — same slots, food and totals as
+ * generated — so this never re-generates or recomputes a calorie/macro
+ * number. The source day's variant travels with the copy (so a rest day
+ * copied onto a training slot really does make that slot a rest day), and
+ * the plan's schedule marker for the target index is updated to match, so
+ * schedule/day.variant never disagree after the copy. Only meaningful on a
+ * multi-day (kind:'week') plan: a single-day plan has nowhere else to copy
+ * to. Pure.
+ *
+ * Returns { plan, changed }: changed=false when the indices are invalid,
+ * equal (copying a day onto itself), or the plan has fewer than two days.
+ */
+export function repeatPlanDay({ plan, fromIndex, toIndex } = {}) {
+  const from = Number(fromIndex);
+  const to = Number(toIndex);
+  if (
+    !plan || !Array.isArray(plan.days) || plan.days.length < 2
+    || !Number.isInteger(from) || !Number.isInteger(to)
+    || from < 0 || from >= plan.days.length
+    || to < 0 || to >= plan.days.length
+    || from === to
+  ) {
+    return { plan, changed: false };
+  }
+  const sourceDay = plan.days[from];
+  if (!sourceDay || !Array.isArray(sourceDay.slots)) return { plan, changed: false };
+
+  // Copy the day's own data as-is (no engine re-solve): a fresh day object
+  // with its own slots array reference, so later edits to the target day
+  // (swaps, food flags) never mutate the source day it was copied from.
+  const copiedDay = { ...sourceDay, slots: sourceDay.slots.map((s) => ({ ...s })) };
+  const days = plan.days.map((d, i) => (i === to ? copiedDay : d));
+  const schedule = Array.isArray(plan.schedule) ? [...plan.schedule] : [];
+  if (schedule.length > to && copiedDay.variant) schedule[to] = copiedDay.variant;
+
+  return {
+    plan: {
+      ...plan,
+      days,
+      schedule,
+      lastEditType: 'day_repeat',
+      withinTolerance: days.every((d) => d.withinTolerance),
+    },
+    changed: true,
+  };
+}
+
 // ─── Async orchestration (the only impure surface) ──────────────────────
 
 /**
@@ -332,6 +382,20 @@ export async function answerTrainingTodayOnActivePlan(userId, { dayIndex, traini
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
   });
+  if (!changed) return { plan: active.plan, changed: false };
+  await updateMealPlan(userId, active.id, plan);
+  return { plan, changed: true };
+}
+
+/**
+ * Repeat one day of the active plan onto another day and persist it (audit
+ * §15 item 6). An explicit user action only, never automatic. Returns
+ * { plan, changed } or { error: 'no_plan' }.
+ */
+export async function repeatPlanDayOnActivePlan(userId, { fromIndex, toIndex } = {}) {
+  const active = await getActiveMealPlan(userId);
+  if (!active?.plan) return { error: 'no_plan' };
+  const { plan, changed } = repeatPlanDay({ plan: active.plan, fromIndex, toIndex });
   if (!changed) return { plan: active.plan, changed: false };
   await updateMealPlan(userId, active.id, plan);
   return { plan, changed: true };

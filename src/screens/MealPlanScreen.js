@@ -12,7 +12,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions, Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,11 +37,12 @@ import {
   applyPlanDayToDiary,
   applyPlanWeekToDiary,
   answerTrainingTodayOnActivePlan,
+  repeatPlanDayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
-import { buildGroceryList } from '../lib/food/groceryList';
+import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
 import { getMealAdditions, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
@@ -195,6 +196,7 @@ export default function MealPlanScreen({ navigation, route }) {
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
+  const [repeatSheet, setRepeatSheet] = useState(false); // "repeat this day" target picker
   const planStartDate = useMemo(() => normaliseDayKey(route?.params?.entryDate), [route?.params?.entryDate]);
   const planStartLabel = useMemo(() => dateLabelForKey(planStartDate), [planStartDate]);
 
@@ -382,6 +384,55 @@ export default function MealPlanScreen({ navigation, route }) {
       setBusy(false);
     }
   }, [user?.id, record, dayIndex, busy, toast]);
+
+  // "Repeat this day" (audit §15 item 6): copy the day in view onto another
+  // day of the same week plan, reusing its already-assembled meals as-is
+  // (no re-generation). Opening the picker is one tap; the actual copy is a
+  // second, explicit confirm, since it replaces whatever the target day held.
+  const openRepeatDay = useCallback(() => {
+    if (busy || !plan || planDayCount < 2) return;
+    setRepeatSheet(true);
+  }, [busy, plan, planDayCount]);
+
+  const handleChooseRepeatTarget = useCallback((toIndex) => {
+    setRepeatSheet(false);
+    const sourceLabel = dayLabels[dayIndex]?.date || `Day ${dayIndex + 1}`;
+    const targetLabel = dayLabels[toIndex]?.date || `Day ${toIndex + 1}`;
+    appAlert(
+      'Repeat this day?',
+      `${targetLabel} will get the same meals as ${sourceLabel}. Whatever is currently planned for ${targetLabel} is replaced.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Repeat',
+          onPress: async () => {
+            if (!user?.id || !record || busy) return;
+            setBusy(true);
+            try {
+              const res = await repeatPlanDayOnActivePlan(user.id, { fromIndex: dayIndex, toIndex });
+              if (res?.error === 'no_plan' || !res?.changed) return;
+              setRecord({ ...record, plan: res.plan });
+              toast.show(`${targetLabel} now matches ${sourceLabel}.`, { variant: 'success' });
+            } catch (_) {
+              toast.show("Couldn't repeat that day. Try again.", { variant: 'error' });
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [user?.id, record, dayIndex, busy, dayLabels, toast]);
+
+  // Share the built grocery list as plain text via the native share sheet
+  // (audit §15 item 6, grocery-list export polish). Same grouping/labels the
+  // sheet already shows; nothing new is invented, and there is nothing to
+  // share on an empty list.
+  const handleShareGroceryList = useCallback(async () => {
+    const message = formatGroceryListForShare(grocerySheet);
+    if (!message) return;
+    try { await Share.share({ message }); } catch (_) { /* user dismissed */ }
+  }, [grocerySheet]);
 
   // Open the swap sheet for a slot: the engine returns the closest
   // replacement plus a style-diverse pool of alternatives (rethink §3.3,
@@ -878,6 +929,18 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Ionicons name="basket-outline" size={16} color={colors.primary} />
                 <Text style={styles.planQuickActionText}>Shopping list</Text>
               </TouchableOpacity>
+              {!isDayPlan && planDayCount > 1 ? (
+                <TouchableOpacity
+                  style={styles.planQuickAction}
+                  onPress={openRepeatDay}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Repeat this day onto another day"
+                >
+                  <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                  <Text style={styles.planQuickActionText}>Repeat day</Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
                 style={[styles.planQuickAction, styles.planQuickActionMode]}
                 onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
@@ -948,7 +1011,21 @@ export default function MealPlanScreen({ navigation, route }) {
       >
         {grocerySheet ? (
           <>
-            <Text style={styles.swapSheetTitle}>Shopping list</Text>
+            <View style={styles.grocerySheetHead}>
+              <Text style={styles.swapSheetTitle}>Shopping list</Text>
+              {!grocerySheet.isEmpty ? (
+                <TouchableOpacity
+                  style={styles.groceryShareBtn}
+                  onPress={handleShareGroceryList}
+                  hitSlop={hitSlop}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share shopping list"
+                >
+                  <Ionicons name="share-outline" size={15} color={colors.primary} />
+                  <Text style={styles.groceryShareBtnText}>Share</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
             {grocerySheet.isEmpty ? (
               <Text style={styles.swapSheetSub}>
                 Nothing to shop for yet. Create a plan and your list fills in.
@@ -985,6 +1062,38 @@ export default function MealPlanScreen({ navigation, route }) {
             )}
           </>
         ) : null}
+      </BottomSheet>
+
+      {/* Repeat this day (audit §15 item 6): pick another day of the same week
+          plan to copy this day's meals onto. The copy itself only runs after
+          the confirm alert, so nothing is replaced by a stray tap. */}
+      <BottomSheet
+        visible={repeatSheet}
+        onClose={() => setRepeatSheet(false)}
+        accessibilityLabel="Repeat this day"
+      >
+        <Text style={styles.swapSheetTitle}>Repeat this day</Text>
+        <Text style={styles.swapSheetSub}>
+          {`Copy ${activeDayLabel}'s meals onto another day. That day's current meals are replaced.`}
+        </Text>
+        <ScrollView
+          style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
+          contentContainerStyle={styles.swapListContent}
+          showsVerticalScrollIndicator
+        >
+          {dayLabels.slice(0, planDayCount).map((label, i) => (i === dayIndex ? null : (
+            <TouchableOpacity
+              key={`${label.tab}-${i}`}
+              style={styles.swapOption}
+              onPress={() => handleChooseRepeatTarget(i)}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={`Copy meals onto ${label.accessibility}`}
+            >
+              <Text style={styles.swapOptionName}>{label.date}</Text>
+            </TouchableOpacity>
+          )))}
+        </ScrollView>
       </BottomSheet>
     </SafeAreaView>
   );
@@ -1201,6 +1310,19 @@ const styles = StyleSheet.create({
   // long swap / grocery list does not clip on small screens.
   swapList: { maxHeight: 360 },
   swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
+  grocerySheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  groceryShareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  groceryShareBtnText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   grocerySection: { marginTop: spacing.sm },
   grocerySectionLabel: {
     marginBottom: spacing.xxs,
