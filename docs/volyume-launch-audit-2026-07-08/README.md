@@ -92,8 +92,8 @@ The other eight §15 items build under the standard wave process.
   `f9e962f`, `b314efe`). Schema local + cloud (migrate_109, founder-run),
   wiring, sync, read, diary panel + custom-food entry. Ships "unknown" until
   the seed .dat regen (separate queued task, #99).
-- #4 "Last verified" + opportunistic re-fetch — **building** (was initially
-  missed in the dispatch rounds; caught and now in progress, not dropped).
+- #4 "Last verified" + opportunistic re-fetch — **done** (`17a163e`). Reuses
+  foods.fetched_at (no new column); network-only, best-effort, non-blocking.
 - #5 Training-day meal composition — **done** (`e2a31ed`), floor-only, no
   target/floor changes.
 - #6 Repeat-a-day + grocery share — **done** (`3f060dd`).
