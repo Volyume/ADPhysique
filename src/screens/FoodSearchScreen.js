@@ -41,6 +41,7 @@ import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { refreshFrequentsIfStale } from '../lib/food/frequents';
 import { SEARCH_TABS, selectTabRows, rankByPersonalHistory } from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
+import NetInfo from '@react-native-community/netinfo';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
@@ -116,6 +117,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [customRows, setCustomRows] = useState([]);
   const [frequentRows, setFrequentRows] = useState([]);
   const [searching, setSearching] = useState(false);
+  // Distinguish "no live results because you're offline" from a genuine miss.
+  // The waterfall returns [] for both (live sources time out to [] silently),
+  // so on an empty result we probe connectivity, mirroring ScanBarcodeScreen.
+  const [searchOffline, setSearchOffline] = useState(false);
   const [picker, setPicker] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -303,6 +308,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       searchRequestRef.current += 1;
       setResults([]);
       setSearching(false);
+      setSearchOffline(false);
       return;
     }
     const requestId = searchRequestRef.current + 1;
@@ -313,9 +319,24 @@ export default function FoodSearchScreen({ navigation, route }) {
         const rows = await searchFoods(userId, q, { limit: 25 });
         if (searchRequestRef.current !== requestId) return;
         setResults(rows);
+        // Only the no-hit case is ambiguous. A saved-food (local) hit means
+        // we answered without needing the network, so never flag offline then.
+        if (rows.length === 0) {
+          let offline = false;
+          try {
+            const state = await NetInfo.fetch();
+            offline = state?.isConnected === false || state?.isInternetReachable === false;
+          } catch (_) {
+            // Connectivity probe itself failed: leave the generic miss copy.
+          }
+          if (searchRequestRef.current === requestId) setSearchOffline(offline);
+        } else if (searchRequestRef.current === requestId) {
+          setSearchOffline(false);
+        }
       } catch (_) {
         if (searchRequestRef.current !== requestId) return;
         setResults([]);
+        setSearchOffline(false);
       } finally {
         if (searchRequestRef.current === requestId) setSearching(false);
       }
@@ -780,7 +801,11 @@ export default function FoodSearchScreen({ navigation, route }) {
       if (searching) return null;
       return (
         <View style={styles.noResults}>
-          <Text style={styles.noResultsText}>No matches for "{query.trim()}".</Text>
+          <Text style={styles.noResultsText}>
+            {searchOffline
+              ? "You're offline, so live search can't check the food database. Saved foods still work, or add a custom food."
+              : `No matches for "${query.trim()}".`}
+          </Text>
           <View style={styles.noResultsActions}>
             <TouchableOpacity
               style={[styles.noResultsBtn, styles.noResultsBtnSecondary]}
