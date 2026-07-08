@@ -338,12 +338,12 @@ export default function BuildWorkoutScreen({ navigation }) {
         {exercises.length === 0 ? (
           <Button
             testID="volyume-btn-start-empty"
-            title="Start empty"
+            title="Start without a plan"
             icon="play-skip-forward-outline"
             size="lg"
             loading={starting}
             onPress={handleSkip}
-            accessibilityLabel="Start an empty workout"
+            accessibilityLabel="Start a workout without a plan"
           />
         ) : (
           <Button
@@ -364,7 +364,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         accessibilityLabel="Travel or hotel gym equipment picker"
       >
         <Text style={styles.travelTitle}>Travel / hotel gym</Text>
-        <Text style={styles.travelSub}>Choose the equipment you have today. Volyume builds a full-body session that keeps training moving without changing your plan.</Text>
+        <Text style={styles.travelSub}>Choose what equipment you've got today. Volyume will build a full-body session that keeps you moving without changing your plan.</Text>
         <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
           {[
             { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },

@@ -32,7 +32,7 @@ function scan(id, day, score = 66) {
         scanConfidenceTier: 'moderate',
         scanConfidenceLabel: 'Moderate',
         progressSignal: day > 1 ? 'slight_positive' : 'baseline',
-        progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline scan',
+        progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline set',
       },
       estimatorInputs: {
         waistToHeight: score >= 65 ? 0.18 : 0.21,
@@ -78,7 +78,7 @@ describe('ProgressScanCompare helpers', () => {
   test('score and weight labels hide exact values on request', () => {
     const s = scan('a', 1, 66);
     expect(scanRangeLabel(s)).toBe('Lean 66/100');
-    expect(scanRangeLabel(s, { hideExact: true })).toBe('Baseline scan');
+    expect(scanRangeLabel(s, { hideExact: true })).toBe('Baseline set');
     expect(scanWeightLabel(s)).toBe('81 kg');
     expect(scanWeightLabel(s, { hideExact: true })).toBeNull();
     expect(scanRangeLabel(scan('m', 2, null))).toBe('Measured only');
@@ -105,7 +105,7 @@ describe('ProgressScanCompare component', () => {
     const tree = await render([scan('new', 20, 66), scan('old', 1, 54)], { hideExact: true });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Slight positive trend');
-    expect(text).toContain('Visual progress signal is positive against the last comparable photo set.');
+    expect(text).toContain('Visual progress change is positive against the last comparable photo set.');
     expect(text).not.toContain('Stored trend should not render');
     expect(text).not.toContain('54/100');
     expect(text).not.toContain('66/100');

@@ -62,7 +62,7 @@ describe('EmptyDiary', () => {
   test('keeps the premium empty state focused when there is no yesterday to copy', () => {
     const tree = create(<EmptyDiary onAdd={() => {}} onPlanDay={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Build meals');
+    expect(txt).toContain('Plan meals');
     expect(txt).toContain('Add food');
     expect(txt).toContain(`"backgroundColor":"${colors.surface}"`);
     expect(txt).not.toContain('Copy yesterday');
@@ -301,7 +301,7 @@ describe('MealSection', () => {
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Eggs');
-    expect(txt).toContain('Usual foods are ready below. Add something else if this meal was different.');
+    expect(txt).toContain('Your usual foods are below. Pick something else if this meal was different.');
   });
 
   test('meal action hub stays focused on the single add-food action', () => {

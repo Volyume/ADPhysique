@@ -151,7 +151,7 @@ describe('ProgressScanHistoryCard', () => {
     expect(text).toContain('ChangeMeasured only');
     expect(text).toContain('ScoreNot scored');
     expect(text).not.toContain('LeannessBaseline');
-    expect(text).not.toContain('Baseline scan');
+    expect(text).not.toContain('Baseline set');
   });
 
   test('legacy v1 scores are recalibrated before rendering', async () => {
@@ -164,7 +164,7 @@ describe('ProgressScanHistoryCard', () => {
           visualLeannessScore: 37,
           leannessBandLabel: 'Athletic',
           scanConfidenceLabel: 'Moderate',
-          progressSignalLabel: 'Baseline scan',
+          progressSignalLabel: 'Baseline set',
         },
       },
     };

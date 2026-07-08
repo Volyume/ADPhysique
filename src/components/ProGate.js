@@ -28,7 +28,7 @@ const FEATURE_BENEFIT = {
   'Food search': 'Search a full food database and log straight to your day against your targets.',
   'Barcode scanning': 'Scan a barcode to log a food in seconds, with its macros filled in for you.',
   'Label scanning': 'Snap a nutrition label to capture its macros without typing them in.',
-  'Meal plan': 'Get a day of real food built around your own calories and macros, swap anything you like.',
+  'Meal plan': 'Build a day of food around your own calories and macros, swap anything you like.',
   'Food insights': 'See how your eating tracks against your targets over the week, not just day by day.',
   Recipes: 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
   'Saved meals': 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
@@ -36,9 +36,9 @@ const FEATURE_BENEFIT = {
   'Per-day targets': 'Give each day of the week its own calorie target, so weekends and midweek can carry different plans.',
   Cardio: 'Log cardio so your sessions and the energy they burn feed into your weekly plan.',
   'Body metrics': 'Track your weight and measurements so coaching can read the trend and adjust your plan.',
-  'Progress photos': 'Keep private progress photos alongside your stats, so you can see the changes the scales miss.',
-  'Progress photos and Volyume Score': 'Keep private progress photos alongside your stats, with a Volyume Score when the photo read is strong enough.',
-  'Training partner': 'Train alongside a partner who sees that you showed up, never your numbers. Private, one to one.',
+  'Progress photos': 'Keep private progress photos with your stats, so you can see the changes the scales miss.',
+  'Progress photos and Volyume Score': 'Keep private progress photos with your stats, with a Volyume Score when the photo read is strong enough.',
+  'Training partner': 'Train with a partner who can see you showed up, not your numbers. Private, one-to-one.',
   'Nutrition targets': 'Get calorie and macro targets set for your goal, division, and the week ahead.',
   'Weekly check-in': 'Run a weekly check-in so your plan and targets adjust to how the week actually went.',
   'Coaching decision': 'See the weekly decision, what changed, what held, and the signals behind it.',
@@ -50,7 +50,7 @@ const FEATURE_BENEFIT = {
 // Sensible default for any unmapped feature: the coaching-layer pitch the lock
 // used to show everyone. Used by both the inline sheet and the full-screen lock.
 const DEFAULT_BENEFIT =
-  'Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.';
+  'Pro gives you weekly check-ins, nutrition targets, the food diary, and body metrics.';
 
 function benefitFor(feature) {
   return FEATURE_BENEFIT[feature] ?? DEFAULT_BENEFIT;

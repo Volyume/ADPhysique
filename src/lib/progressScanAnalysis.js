@@ -47,7 +47,7 @@ export const PROGRESS_SCAN_LEANNESS_BANDS = [
 ];
 
 const PROGRESS_SIGNAL_COPY = {
-  baseline: 'Baseline scan',
+  baseline: 'Baseline set',
   clear_positive: 'Clear positive trend',
   slight_positive: 'Slight positive trend',
   holding_steady: 'Holding steady',
@@ -915,7 +915,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       trendDirection: 'uncertain',
       lines: ['This is your baseline scan.'],
       summary: 'This is your baseline scan. Future scans will compare only measured changes from stored scan signals.',
-      trendSummary: 'Baseline scan saved.',
+      trendSummary: 'Baseline set saved.',
       coachSummary: 'Progress photos have a baseline saved, but no comparable trend yet.',
     };
   }
@@ -1036,10 +1036,10 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
   const trendSummary = !canCallPairTrend
     ? 'Comparable photo set saved. Scan confidence is low, so Volyume is not calling progress from this pair yet.'
     : visualTrendDirection === 'leaner'
-      ? 'Visual progress signal is positive against the last comparable photo set.'
+      ? 'Visual progress change is positive against the last comparable photo set.'
       : visualTrendDirection === 'softer'
-        ? 'Visual progress signal shows a drift to watch against the last comparable photo set.'
-        : 'Visual progress signal is holding steady against the last comparable photo set.';
+        ? 'Visual progress change shows a drift to watch against the last comparable photo set.'
+        : 'Visual progress change is holding steady against the last comparable photo set.';
 
   return {
     measuredSignalsOnly: true,

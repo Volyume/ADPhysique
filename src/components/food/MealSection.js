@@ -45,7 +45,7 @@ export default function MealSection({
       {showEmptyActions && showUsuals ? (
         <View style={styles.emptySlot}>
           <Text style={styles.emptySlotText}>
-            Usual foods are ready below. Add something else if this meal was different.
+            Your usual foods are below. Pick something else if this meal was different.
           </Text>
         </View>
       ) : null}
@@ -85,7 +85,7 @@ export default function MealSection({
       {seasonAdds ? (
         <View style={styles.seasonRow}>
           <Text style={styles.seasonText}>
-            <Text style={styles.seasonLabel}>Season to taste: </Text>
+            <Text style={styles.seasonLabel}>Add these extras too: </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
         </View>

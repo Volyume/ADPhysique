@@ -317,7 +317,7 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
           : (baselineComparison ? 'baseline' : (scoreReady ? 'trend_pending' : 'inconclusive')),
         progressSignalLabel: comparisonReady
           ? (deltaExplanation.progressSignalLabel ?? analysis.physiqueAssessment.progressSignalLabel)
-          : (baselineComparison ? 'Baseline scan' : (scoreReady ? 'Trend not ready' : 'Inconclusive')),
+          : (baselineComparison ? 'Baseline set' : (scoreReady ? 'Trend not ready' : 'Inconclusive')),
         progressDirection: comparisonReady
           ? (deltaExplanation.progressDirection ?? analysis.physiqueAssessment.progressDirection)
           : (baselineComparison ? 'baseline' : 'uncertain'),

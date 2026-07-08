@@ -26,7 +26,7 @@ function scan(id, day, score = 66, poses = ['front', 'back']) {
         leannessBandLabel: score >= 65 ? 'Lean' : 'Defined',
         scanConfidenceTier: 'moderate',
         scanConfidenceLabel: 'Moderate',
-        progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline scan',
+        progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline set',
       },
       estimatorInputs: {
         waistToHeight: score >= 65 ? 0.18 : 0.21,

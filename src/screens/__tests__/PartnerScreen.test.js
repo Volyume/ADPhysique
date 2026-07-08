@@ -154,7 +154,7 @@ describe('load error state', () => {
     const tree = await mount();
     const text = allText(tree).join(' ');
     expect(text).toContain('Partners needs a refresh');
-    expect(text).toContain('Volyume could not read your partner space on this device.');
+    expect(text).toContain('Volyume could not read your partner area on this device.');
     expect(text).not.toContain('Train with a partner');
     await press(tree, 'Refresh Partners');
     expect(reload).toHaveBeenCalledTimes(1);
@@ -229,7 +229,7 @@ describe('connected state: isolated pair cards', () => {
     const tree = await mount();
     let text = allText(tree).join(' ');
     expect(text).toContain('Share a win');
-    expect(text).toContain('Send one workout, PR or progress update. You approve the preview before Sam sees it.');
+    expect(text).toContain('Send a workout, PR, or progress update. You approve the preview before Sam sees it.');
 
     await press(tree, 'Share a win');
     text = allText(tree).join(' ');

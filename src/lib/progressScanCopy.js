@@ -23,7 +23,7 @@ export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {
     if (hideExact) {
       return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden.`;
     }
-    return [score, band, confidence, `Progress change: ${assessment.progressSignalLabel || 'Baseline scan'}`, 'Private visual progress score from repeatable photos.']
+    return [score, band, confidence, `Progress change: ${assessment.progressSignalLabel || 'Baseline set'}`, 'Private visual progress score from repeatable photos.']
       .filter(Boolean)
       .join('. ');
   }

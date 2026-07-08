@@ -64,8 +64,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('set entry stays compact while keeping thumb-sized steppers', () => {
     expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };');
     expect(SET_ENTRY).toContain("import { workoutLoggerSize } from '../styles/layout';");
-    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*width: workoutLoggerSize\.setEntryLabelWidth,\s*flexShrink: 0,\s*gap: 1,/);
-    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*width: workoutLoggerSize\.setEntryStepperButton,\s*height: workoutLoggerSize\.setEntryStepperButton,/);
+    expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*minWidth: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexBasis: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexShrink: 0,/);
+    expect(SET_ENTRY).toMatch(/stepBtn: \{\s*minWidth: workoutLoggerSize\.setEntryStepperButton,[\s\S]*minHeight: workoutLoggerSize\.setEntryStepperButton,[\s\S]*aspectRatio: 1,/);
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');

@@ -86,7 +86,7 @@ function signalLabel(scan, { suppressed = false } = {}) {
   if (state === 'measured_only') return 'Measured only';
   if (state) return 'Not scored';
   const assessment = assessmentFor(scan);
-  return assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || 'Baseline scan';
+  return assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || 'Baseline set';
 }
 
 function scoreLabel(scan, { suppressed = false, hideExact = false } = {}) {

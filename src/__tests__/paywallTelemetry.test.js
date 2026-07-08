@@ -159,15 +159,15 @@ describe('paywall telemetry impressions', () => {
   });
 
   test('ProLocked emits feature_locked_viewed once per locked feature render', async () => {
-    const tree = await mount(<ProLocked feature="Progress photos and Physique Scan" />);
+    const tree = await mount(<ProLocked feature="Progress photos and Volyume Score" />);
 
     expect(track).toHaveBeenCalledWith('user-telemetry', 'feature_locked_viewed', {
-      feature: 'Progress photos and Physique Scan',
+      feature: 'Progress photos and Volyume Score',
     });
 
     track.mockClear();
     await act(async () => {
-      tree.update(<ProLocked feature="Progress photos and Physique Scan" />);
+      tree.update(<ProLocked feature="Progress photos and Volyume Score" />);
     });
     await flush();
 

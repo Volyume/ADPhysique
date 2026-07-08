@@ -319,8 +319,8 @@ export default function BeforeAfterShareSheet({
     try { confirmed = (await AsyncStorage.getItem(CONFIRM_KEY)) === '1'; } catch (_) { confirmed = false; }
     if (confirmed) { next(); return; }
     appAlert(
-      'Create a shareable image',
-      "You're creating a shareable image of your photos. It stays on your device until you choose to share or save it.",
+      'Create an image to share',
+      "You're making an image from your photos. It stays on your device until you choose to share or save it.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -339,14 +339,14 @@ export default function BeforeAfterShareSheet({
   const withGeneratedFile = useCallback(async (consume) => {
     if (useAppStore.getState().tier !== 'pro' || suppressed) return;
     if (!Skia || !FileSystem || !typefaces) {
-      toast.show('Progress image sharing is not available in this app build.', { variant: 'error', duration: 5000 });
+      toast.show("Progress image sharing isn't available in this version.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!pairReady) { toast.show('Choose two photos first', { variant: 'info' }); return; }
     if (!beforeImg || !afterImg) {
       // S2 guard 1: a deleted/corrupt/unreadable photo must not composite a
       // blank cell or throw into the share sheet.
-      toast.show('That photo could not be opened, try another', { variant: 'error' });
+      toast.show("That photo couldn't be opened. Try another.", { variant: 'error' });
       return;
     }
     let uri = null;
@@ -363,7 +363,7 @@ export default function BeforeAfterShareSheet({
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
       setSharing(true);
       try {
-        if (!Sharing) { toast.show('Sharing is not available in this app build.', { variant: 'error', duration: 5000 }); return; }
+        if (!Sharing) { toast.show("Sharing isn't available in this version.", { variant: 'error', duration: 5000 }); return; }
         const canShare = await Sharing.isAvailableAsync();
         if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
         // ONE composited file, never a multi-attach (S2 §1).
@@ -378,11 +378,11 @@ export default function BeforeAfterShareSheet({
 
   const onSaveToGallery = useCallback(() => {
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
-      if (!MediaLibrary) { toast.show('Saving to gallery is not available in this app build.', { variant: 'error', duration: 5000 }); return; }
+      if (!MediaLibrary) { toast.show("Saving to your gallery isn't available in this version.", { variant: 'error', duration: 5000 }); return; }
       setSavingToGallery(true);
       try {
         const perm = await MediaLibrary.requestPermissionsAsync();
-        if (!perm.granted) { toast.show('Gallery access is needed to save. You can still use Share.', { variant: 'warning', duration: 5000 }); return; }
+        if (!perm.granted) { toast.show("Gallery access is needed to save. You can still share it.", { variant: 'warning', duration: 5000 }); return; }
         await MediaLibrary.saveToLibraryAsync(uri);
         toast.show('Saved to your gallery', { variant: 'success' });
       } catch (_e) {

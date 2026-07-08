@@ -92,7 +92,7 @@ export function getPoseCaptureGuidance(pose) {
 export function buildProgressStudioCapturePromptCopy() {
   return [
     'Add a dated photo set from the camera or your photo library.',
-    'Clear front and back photos can earn a private Volyume Score, leanness band, progress signal and confidence.',
+    'Clear front and back photos can earn a private Volyume Score, leanness band, progress change and confidence.',
     'Use the same room, light, distance and camera height each week. Side is optional.',
     QUALITY_FIRST_CAPTURE_NOTE,
   ].join('\n\n');
@@ -217,7 +217,7 @@ export function buildProgressStudioHowItWorksCopy() {
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
     `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
-    'Volyume Score is our own private visual progress score. It can show a leanness band, progress signal, confidence, and why that confidence changed.',
+    'Volyume Score is our own private visual progress score. It can show a leanness band, progress change, confidence, and why that confidence changed.',
     'If a set is not clear enough for a score, Volyume should still save it to the photo library.',
     'The coach may use broad trend direction as low-confidence context. It cannot use one photo as proof of readiness or a reason to make aggressive changes.',
     'Use progress photos about once a week. Retake sooner only when you are fixing a poor photo set.',

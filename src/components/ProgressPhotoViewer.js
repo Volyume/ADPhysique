@@ -445,12 +445,12 @@ export default function ProgressPhotoViewer({
                 </View>
                 <View style={styles.destructiveActionRow}>
                   <Button
-                    title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Delete date group' : 'Delete photo'}
+                    title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Delete set' : 'Delete photo'}
                     variant="destructive"
                     size="sm"
                     icon="trash-outline"
                     onPress={onPressDelete}
-                    accessibilityLabel={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Remove this photo set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Remove every photo from this date' : 'Remove this photo'}
+                    accessibilityLabel={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Remove this photo set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Remove every photo from this day' : 'Remove this photo'}
                   />
                 </View>
               </View>

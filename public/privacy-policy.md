@@ -20,11 +20,11 @@ To run the app and coach you, Volyume may use:
 - Body weight, body measurements, body-fat percentage and lean mass when you enter them
 - Food diary entries, recipes, saved meals, water, calories and macro targets
 - Weekly check-ins, recovery, energy, adherence and eating-habits screening responses
-- Progress photo metadata and Volyume Score analysis metadata, including photo quality, scan confidence, leanness band, visual score and progress signal
+- Progress photo metadata and Volyume Score analysis metadata, including photo quality, result confidence, leanness band, visual score and progress change
 - Usage events that tell us which app surfaces are used and where the app is slow
 - Crash and diagnostic events, scrubbed before they leave the device
 
-Progress photo and Physique Scan image files stay on your device unless you choose to share or export them. Physique Scan is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
+Progress photo image files stay on your device unless you choose to share or export them. Volyume Score is a visual progress feature, not an exact body-fat percentage, DEXA scan, diagnosis, or medical assessment.
 
 ## 3. Why we collect this data
 

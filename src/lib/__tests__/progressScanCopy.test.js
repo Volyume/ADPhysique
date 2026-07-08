@@ -71,7 +71,7 @@ describe('progressScanCopy', () => {
           visualLeannessScore: 37,
           leannessBandLabel: 'Athletic',
           scanConfidenceLabel: 'Moderate',
-          progressSignalLabel: 'Baseline scan',
+          progressSignalLabel: 'Baseline set',
         },
       },
     };

@@ -403,7 +403,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs2,
   },
   fieldLabelRow: {
-    width: workoutLoggerSize.setEntryLabelWidth,
+    minWidth: workoutLoggerSize.setEntryLabelWidth,
+    flexBasis: workoutLoggerSize.setEntryLabelWidth,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -414,7 +415,9 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabelWrap: {
-    width: workoutLoggerSize.setEntryLabelWidth,
+    minWidth: workoutLoggerSize.setEntryLabelWidth,
+    flexBasis: workoutLoggerSize.setEntryLabelWidth,
+    maxWidth: 88,
     flexShrink: 0,
     gap: 1,
   },
@@ -440,8 +443,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stepBtn: {
-    width: workoutLoggerSize.setEntryStepperButton,
-    height: workoutLoggerSize.setEntryStepperButton,
+    minWidth: workoutLoggerSize.setEntryStepperButton,
+    minHeight: workoutLoggerSize.setEntryStepperButton,
+    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface3,

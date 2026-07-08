@@ -283,7 +283,7 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       <View style={styles.shareWinsRowCopy}>
         <Text style={styles.shareWinsTitle}>Share a win</Text>
         <Text style={styles.shareWinsText}>
-          Send one workout, PR or progress update. You approve the preview before {name} sees it.
+          Send a workout, PR, or progress update. You approve the preview before {name} sees it.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
@@ -399,7 +399,7 @@ function LocalReadNotice({ onRefresh }) {
       <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
       <View style={styles.localReadNoticeCopy}>
         <Text style={styles.localReadNoticeTitle}>Refresh partner data</Text>
-        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh the cloud copy.</Text>
+        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh.</Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
     </TouchableOpacity>
@@ -430,7 +430,7 @@ function PairCard({
           </View>
           <View style={styles.partnerNameBlock}>
             <Text style={styles.pairName} numberOfLines={1}>{name}</Text>
-            <Text style={styles.pairKicker}>Private partner space</Text>
+            <Text style={styles.pairKicker}>Private partner area</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -455,9 +455,9 @@ function PairCard({
                 style={styles.heroNum}
                 accessibilityLabel={`${run} weeks running together`}
               />
-              <Text style={styles.heroWord}>weeks running, together</Text>
+              <Text style={styles.heroWord}>weeks running together</Text>
             </View>
-            <Text style={styles.heroSub}>Counted against each person's current plan. Rest weeks never break it.</Text>
+            <Text style={styles.heroSub}>Counts towards each person's current plan. Rest weeks never break it.</Text>
           </View>
         ) : (
           <Text style={styles.heroFirst}>Your first shared week is under way</Text>
@@ -979,7 +979,7 @@ export default function PartnerScreen({ route }) {
           <EmptyState
             icon="warning-outline"
             title="Partners needs a refresh"
-            text="Volyume could not read your partner space on this device. Refresh Partners and we will check the cloud copy without changing anything you have shared."
+            text="Volyume could not read your partner area on this device. Refresh Partners and we will check again without changing anything you have shared."
             actionLabel="Refresh Partners"
             onAction={retryPartners}
           />

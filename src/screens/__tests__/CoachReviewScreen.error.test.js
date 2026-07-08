@@ -69,7 +69,7 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     expect(source).toMatch(/const loadRequestRef = useRef\(0\);/);
     expect(source).toMatch(/if \(!isCurrentRequest\(\)\) return;[\s\S]*setLoadError\(true\);/);
     expect(source).toMatch(
-      /<EmptyState[\s\S]*icon="warning-outline"[\s\S]*title="Couldn't load your review"[\s\S]*text="Your sessions are safe\. This is a read problem, not a lost week\."[\s\S]*actionLabel="Try again"[\s\S]*onAction=\{retryLoad\}/,
+      /<EmptyState[\s\S]*icon="warning-outline"[\s\S]*title="Couldn't load your review"[\s\S]*text="Your sessions are safe\. This is a loading problem, not lost data\."[\s\S]*actionLabel="Try again"[\s\S]*onAction=\{retryLoad\}/,
     );
   });
 
@@ -77,7 +77,7 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     getAllWorkouts.mockImplementation(() => Promise.reject(new Error('read fault')));
     const json = await mount();
     expect(json).toContain('Try again');
-    expect(json).toContain('not a lost week');
+    expect(json).toContain('not lost data');
     expect(json).not.toContain('No sessions logged this week');
   });
 
@@ -93,7 +93,7 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     await act(async () => { start.props.onPress(); });
     expect(mockNavigateCrossTab).toHaveBeenCalledWith(mockNavigation, 'HomeTab', 'BuildWorkout');
     expect(json).not.toContain('Try again');
-    expect(json).not.toContain('not a lost week');
+    expect(json).not.toContain('not lost data');
   });
 
   test('an older failed load cannot overwrite a newer successful review', async () => {
@@ -115,12 +115,12 @@ describe('CoachReviewScreen — U-B-6 read-error vs no-data', () => {
     await flush();
     let json = JSON.stringify(tree.toJSON());
     expect(json).toContain('No sessions logged this week');
-    expect(json).not.toContain('not a lost week');
+    expect(json).not.toContain('not lost data');
 
     await act(async () => { older.reject(new Error('late old failure')); });
     await flush();
     json = JSON.stringify(tree.toJSON());
     expect(json).toContain('No sessions logged this week');
-    expect(json).not.toContain('not a lost week');
+    expect(json).not.toContain('not lost data');
   });
 });

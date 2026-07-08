@@ -12,8 +12,8 @@ describe('privacy, consent, export and store-copy truth', () => {
     const source = readRepoFile('src', 'screens', 'Article9ConsentScreen.js');
 
     expect(source).toContain("const CONSENT_VERSION = '2026-07-04'");
-    expect(source).toContain('photo quality, confidence, leanness band, Volyume Score and progress signal');
-    expect(source).toContain('not a medical assessment, DEXA scan, diagnosis, or medical advice');
+    expect(source).toContain('photo quality, result confidence, leanness band, Volyume Score and progress change');
+    expect(source).toContain('not a medical measure, DEXA scan, diagnosis, or medical advice');
     expect(source).toContain('Progress photo image files stay on this device');
     expect(source).toContain('Never use your photos or health data for advertising or third-party model training');
   });
@@ -23,7 +23,7 @@ describe('privacy, consent, export and store-copy truth', () => {
     const data = readRepoFile('src', 'screens', 'SettingsDataScreen.js');
 
     expect(privacy).toContain("LAST_UPDATED = '4 July 2026'");
-    expect(privacy).toMatch(/Volyume Score is a visual\s+progress feature/);
+    expect(privacy).toMatch(/Volyume Score is a simple\s+progress read/);
     expect(privacy).toContain('not a DEXA scan, diagnosis, medical assessment, or medical advice');
     expect(privacy).toContain('progress photo metadata and Volyume Score analysis metadata');
     expect(privacy).toContain('private photo image files');
@@ -52,12 +52,12 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(publicFiles).not.toMatch(/RevenueCat/i);
   });
 
-  test('store listing drafts include current Progress Scan, nutrition and diagnostic disclosures', () => {
+  test('store listing drafts include current progress photo, nutrition and diagnostic disclosures', () => {
     const appStore = readRepoFile('docs', 'APP_STORE_CONNECT_LISTING.md');
     const playStore = readRepoFile('docs', 'PLAY_STORE_LISTING.md');
     const combined = `${appStore}\n${playStore}`;
 
-    expect(combined).toContain('Physique Scan');
+    expect(combined).toContain('Volyume Score');
     expect(combined).toContain('Progress photo metadata');
     expect(combined).toContain('Nutrition / food logs');
     expect(combined).toContain('Crash Data and Performance Data');

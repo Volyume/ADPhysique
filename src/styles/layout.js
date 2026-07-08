@@ -15,7 +15,7 @@ export const workoutLoggerSize = Object.freeze({
   overflowButton: touchTarget.minimum,
   loggedSetMinHeight: 36,
   setNumberBadge: 22,
-  setEntryLabelWidth: 86,
+  setEntryLabelWidth: 80,
   setEntryStepperButton: 36,
   compactSheetOptionMinHeight: 56,
 });

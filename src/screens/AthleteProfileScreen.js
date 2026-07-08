@@ -65,10 +65,10 @@ function StatTile({ label, value, sub }) {
 }
 
 function scanConfidenceLabel(confidence) {
-  if (confidence === 'high') return 'High confidence';
-  if (confidence === 'moderate') return 'Moderate confidence';
-  if (confidence === 'low') return 'Low confidence';
-  return 'Visual scan';
+  if (confidence === 'high') return 'High read quality';
+  if (confidence === 'moderate') return 'Moderate read quality';
+  if (confidence === 'low') return 'Low read quality';
+  return 'Photo score saved';
 }
 
 function finiteMs(value) {
@@ -98,8 +98,10 @@ function physiqueScoreTileValue(scan) {
 
 function physiqueScoreTileSub(scan) {
   const assessment = progressScanAssessmentForDisplay(scan);
-  const signal = assessment?.progressSignalLabel || (assessment?.progressSignal === 'baseline' ? 'Baseline scan' : null);
-  const confidence = assessment?.scanConfidenceLabel || scanConfidenceLabel(assessment?.scanConfidenceTier ?? scan?.confidence);
+  const signal = assessment?.progressSignal === 'baseline'
+    ? 'Baseline set'
+    : (assessment?.progressSignalLabel || null);
+  const confidence = scanConfidenceLabel(assessment?.scanConfidenceTier ?? scan?.confidence);
   return [signal, confidence].filter(Boolean).join(' - ') || 'Latest photo set saved';
 }
 

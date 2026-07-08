@@ -26,8 +26,8 @@ response plan can scope correctly:
 - ED-pattern detection signals and flag state
 - SCOFF screener responses at onboarding
 - Photo progress images (on-device only, never synced)
-- Physique Scan local metadata and derived outputs: photo quality, scan
-  confidence, visual leanness band/score and progress signal. This is
+- Volyume Score local metadata and derived outputs: photo quality, result
+  confidence, visual leanness band/score and progress change. This is
   not an exact body-fat percentage, DEXA scan, diagnosis or medical
   assessment.
 - Menstrual cycle phase if/when the user enters it (future)
@@ -39,11 +39,11 @@ be skipped. Locked copy:
 
 > **Health and nutrition data consent**
 >
-> Volyume works by using your health and nutrition data to tell you
-> what to train, what to eat, and when to back off. Under UK and EU
-> data law, we need your explicit consent to use this data.
+> Volyume uses your health and food logs to help guide training,
+> nutrition, and recovery. Under UK and EU data law, we need your
+> explicit consent to use this data.
 >
-> The information Volyume uses to do its job:
+> What Volyume looks at:
 >
 > - Your weight and how it changes over time
 > - Your body fat percentage and lean mass when you enter them
@@ -51,21 +51,21 @@ be skipped. Locked copy:
 > - Your weekly check-ins, including energy, recovery, and how you
 >   feel
 > - The screening questions you answer about eating habits
-> - Progress photos you choose to take, plus Physique Scan quality,
->   confidence, leanness band, visual score and progress signal when
->   you use that feature
+> - Progress photos you choose to take, plus photo quality, result
+>   confidence, leanness band, Volyume Score and progress change when
+>   you use photo analysis
 >
 > What we never do with it:
 >
 > - Never sell it
 > - Never share it with advertisers
-> - Never use it to train a public AI model
+> - Never use your photos or health data for advertising or third-party
+>   model training
 >
 > Where it lives:
 >
-> - On your phone, in encrypted local storage. Progress photos and scan
->   image files stay on this device unless you choose to share or
->   export them
+> - On your phone, in encrypted local storage. Progress photo image
+>   files stay on this device unless you choose to share or export them
 > - In Supabase in the EU region for cloud-backed account data, with
 >   row-level security so only you and the team supporting your account
 >   can see it
@@ -262,8 +262,8 @@ A single Privacy section in You tab, with:
   confirmation)
 - "Your data" -> local export tools: workout-log CSV and JSON app-data
   backup. The JSON backup contains database records, including progress
-  photo metadata and Physique Scan metadata, but not private photo image
-  files.
+  photo metadata and Volyume Score analysis metadata, but not private
+  photo image files.
 - "Delete my account" → the deletion flow above
 
 ## Implementation notes (for the engineer)

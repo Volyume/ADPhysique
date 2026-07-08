@@ -126,7 +126,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               >
                 <Ionicons name="arrow-back" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={styles.createTitle}>New Exercise</Text>
+              <Text style={styles.createTitle} numberOfLines={1} ellipsizeMode="tail">New Exercise</Text>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
                 onPress={onClose}
@@ -179,7 +179,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 disabled={creating}
               >
                 <Ionicons name="add-circle" size={20} color={colors.onPrimary} />
-                <Text style={styles.createSaveBtnText}>{buttonLabel}</Text>
+                <Text style={styles.createSaveBtnText} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   createContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   createNameInputContainer: { gap: 0 },
   createNameInputField: { borderRadius: radius.md },
-  createNameInputText: { ...type.title, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  createNameInputText: { ...type.bodyStrong, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 0.3 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterRow: {
@@ -344,5 +344,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  createSaveBtnText: { ...type.title, color: colors.onPrimary },
+  createSaveBtnText: { ...type.label, color: colors.onPrimary },
 });

@@ -1,5 +1,5 @@
 /**
- * Out-of-engine Physique Scan coaching resolver.
+ * Out-of-engine progress photo coaching resolver.
  *
  * This is deliberately NOT part of weeklyCoach or nutritionEngine. It takes the
  * already bounded photo_scan summary and turns it into a coach-facing note that
@@ -13,10 +13,10 @@ function clean(str) {
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     const { clean: ok, violations } = checkJargon(str);
     if (!ok) {
-      throw new Error(`Jargon detected in Physique Scan coach note: "${violations.join(', ')}" in: "${str}"`);
+      throw new Error(`Jargon detected in progress photo coach note: "${violations.join(', ')}" in: "${str}"`);
     }
     if (/[\u2013\u2014]/.test(str)) {
-      throw new Error(`Em or en dash detected in Physique Scan coach note: "${str}"`);
+      throw new Error(`Em or en dash detected in progress photo coach note: "${str}"`);
     }
   }
   return String(str ?? '').trim();
@@ -26,7 +26,7 @@ function trendOnlyLabel(scan) {
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') return 'Your latest progress photos are saved, but I am not comparing them because the setup changed too much.';
   if (scan?.comparisonStatus !== 'comparable') return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
-  if (direction === 'down') return 'Your latest progress photos have a positive visual progress signal against the last comparable photo set.';
+  if (direction === 'down') return 'Your latest progress photos show positive visual change against the last comparable photo set.';
   if (direction === 'up') return 'Your latest progress photos show a visual drift to watch against the last comparable photo set.';
   if (direction === 'steady') return 'Your latest progress photos are holding steady against the last comparable photo set.';
   return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
@@ -53,7 +53,7 @@ function trendLine(scan, label, trendOnly = false) {
     return `Your latest progress photos are ${label}. This is a baseline until there is another comparable photo set.`;
   }
   if (direction === 'down') {
-    return `Your latest progress photos are ${label}, with a positive visual progress signal against the last comparable photo set.`;
+    return `Your latest progress photos are ${label}, with positive visual change against the last comparable photo set.`;
   }
   if (direction === 'up') {
     return `Your latest progress photos are ${label}, with a visual drift to watch against the last comparable photo set.`;
@@ -72,8 +72,8 @@ function coachLine(scan, label, trendOnly = false) {
   if (scan?.comparisonStatus !== 'comparable') {
     return 'Progress photos are now saved as a baseline. I will compare future photo sets only when the setup is comparable.';
   }
-  const context = label && !trendOnly ? label : 'visual scan signals';
-  if (direction === 'down') return `Progress photos also have a positive signal from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
+  const context = label && !trendOnly ? label : 'the photo read';
+  if (direction === 'down') return `Progress photos also show positive change from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
   if (direction === 'up') return `Progress photos show a drift to watch from ${context}. I am treating that as a check on consistency, not as a calorie trigger.`;
   if (direction === 'steady') return `Progress photos are steady from ${context}. That supports holding the read calm unless your logged trend says otherwise.`;
   return `Progress photos are now saved as a baseline from ${context}. I will compare future photo sets only when the setup is comparable.`;
@@ -88,7 +88,7 @@ function decisionLine(output) {
   if (primary === 'calories' || output?.adjustments?.calories) {
     return 'The weekly target still comes from your logs, weight trend, training and recovery, not from this scan.';
   }
-  return 'It sits beside the weekly read as a low-confidence cross-check, not as a target-setting signal.';
+  return 'It sits beside the weekly read as a low-confidence cross-check, not as a target-setting trigger.';
 }
 
 export function resolveProgressScanCoachNote({

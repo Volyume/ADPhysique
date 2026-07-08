@@ -176,26 +176,26 @@ export default function Article9ConsentScreen({ navigation }) {
         <Text style={styles.title}>Health and nutrition data consent</Text>
 
         <Text style={styles.body}>
-          Volyume works by using your health and nutrition data to tell you what to train, what to eat, and when to back off. Under UK and EU data law, we need your explicit consent to use this data.
+          Volyume uses your health and food logs to help guide training, nutrition, and recovery. Under UK and EU data law, we need your explicit consent to use this data.
         </Text>
 
-        <Text style={styles.subhead}>The information Volyume uses to do its job:</Text>
+        <Text style={styles.subhead}>What Volyume looks at:</Text>
         <BulletList items={[
           'Your weight and how it changes over time',
           'Your body fat percentage and lean mass when you enter them',
           'Everything you log to your food diary',
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
-          'Progress photos you choose to take, plus photo quality, confidence, leanness band, Volyume Score and progress signal when you use photo analysis',
+          'Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use photo analysis',
         ]} />
 
         <Text style={styles.body}>
-          Volyume Score is a visual progress tool, not a medical assessment, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
+          Volyume Score is a simple progress read, not a medical measure, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
         <Text style={styles.subhead}>An automated safety check:</Text>
         <Text style={styles.body}>
-          Volyume watches your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.
+          Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.
         </Text>
 
         <Text style={styles.subhead}>What we never do with it:</Text>

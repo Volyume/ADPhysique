@@ -389,9 +389,9 @@ export default function RestTimer() {
         >
           <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
           {isCountdown ? (
-            <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]}>{restTimerRemaining}</Text>
+            <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
           ) : (
-            <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
+            <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
           <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         </View>
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
@@ -475,17 +475,17 @@ const styles = StyleSheet.create({
   },
   rowCompact: { minHeight: 56 },
   // eslint-disable-next-line no-restricted-syntax -- compact hero numeral on short screens
-  timeTextCompact: { fontSize: 24 },
+  timeTextCompact: { fontSize: 22 },
   almostDone: { color: colors.warning },
   countdownNum: {
-    fontSize: fontSize.xxxl,
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.warning,
     fontVariant: ['tabular-nums'],
     minWidth: 40,
     textAlign: 'center',
   },
-  countdownNumCompact: { fontSize: fontSize.xxl, minWidth: 32 },
+  countdownNumCompact: { fontSize: fontSize.xl, minWidth: 32 },
   label: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

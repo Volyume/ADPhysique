@@ -463,7 +463,7 @@ export default function CoachReviewScreen() {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load your review"
-            text="Your sessions are safe. This is a read problem, not a lost week."
+            text="Your sessions are safe. This is a loading problem, not lost data."
             actionLabel="Try again"
             onAction={retryLoad}
           />
@@ -489,7 +489,7 @@ export default function CoachReviewScreen() {
           <EmptyState
             icon="barbell-outline"
             title="No sessions logged this week"
-            text="Complete a session from Train and this training review will turn your workouts into useful patterns."
+            text="Complete a session from Train and this review will show you the pattern."
             actionLabel="Start a workout"
             onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
             compact

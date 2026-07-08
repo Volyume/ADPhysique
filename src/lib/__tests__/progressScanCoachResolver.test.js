@@ -76,7 +76,7 @@ describe('Progress Scan out-of-engine coach resolver', () => {
     );
 
     expect(response.interpretation).toContain('Your 7-day average is level with last week.');
-    expect(response.interpretation).toContain('Progress photos also have a positive signal');
+    expect(response.interpretation).toContain('Progress photos also show positive change');
     expect(response.progressScanContext).toEqual({
       usedFor: 'visual_trend_context_only',
       affectsTargets: false,

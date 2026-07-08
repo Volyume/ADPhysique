@@ -215,7 +215,7 @@ test('scan-set delete copy explains that the whole photo set is removed', async 
   expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
 });
 
-test('date-group delete copy is explicit and separate from scored scan sets', async () => {
+test('date delete copy is explicit and separate from scored scan sets', async () => {
   const props = baseProps({ deleteModeForPhoto: jest.fn(() => 'photo-set') });
   mockAppAlert.mockImplementation((title, message, buttons) => {
     const del = buttons.find((b) => b.style === 'destructive');
@@ -223,8 +223,8 @@ test('date-group delete copy is explicit and separate from scored scan sets', as
   });
   const tree = await mount(props);
 
-  expect(allText(tree)).toContain('Delete date group');
-  const [delBtn] = findByLabel(tree, 'Remove every photo from this date');
+  expect(allText(tree)).toContain('Delete set');
+  const [delBtn] = findByLabel(tree, 'Remove every photo from this day');
   await act(async () => { delBtn.props.onPress(); });
 
   const [, message, buttons] = mockAppAlert.mock.calls[0];

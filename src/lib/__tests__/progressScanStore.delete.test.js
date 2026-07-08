@@ -156,7 +156,7 @@ describe('deleteProgressScanSession cleanup', () => {
           leannessBand: 'athletic',
           leannessBandLabel: 'Athletic',
           progressSignal: 'baseline',
-          progressSignalLabel: 'Baseline scan',
+          progressSignalLabel: 'Baseline set',
           scanConfidenceTier: 'moderate',
           scanConfidenceLabel: 'Moderate',
         },

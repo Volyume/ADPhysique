@@ -56,7 +56,7 @@ function _variantContent(variant) {
       // user is already on Free; the close button dismisses.
       return {
         title: 'Go Pro',
-        subtitle: 'Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features stay read-only.',
+        subtitle: 'Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features stay view-only.',
         primaryCta: 'Go Pro',
         primaryTarget: 'pro',
         secondaryCta: null,
@@ -70,7 +70,7 @@ function _variantContent(variant) {
     case 'day28':   // legacy synonym
       return {
         title: 'Your Pro trial is winding down',
-        subtitle: "Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features become read-only.",
+        subtitle: "Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features become view-only.",
         primaryCta: 'Stay on Pro',
         primaryTarget: 'pro',
         secondaryCta: null,

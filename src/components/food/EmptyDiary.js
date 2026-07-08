@@ -32,13 +32,13 @@ export default function EmptyDiary({
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
-          accessibilityLabel="Build meals: choose this day or the week, review the meals, then add them to your diary"
+          accessibilityLabel="Plan meals for this day or week"
         >
           <View style={styles.planIcon}>
             <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
           </View>
           <View style={styles.planCopy}>
-            <Text style={styles.planTitle}>Build meals</Text>
+            <Text style={styles.planTitle}>Plan meals</Text>
             <Text style={styles.planText}>Create a day or week from your targets. Nothing is logged until you add it.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

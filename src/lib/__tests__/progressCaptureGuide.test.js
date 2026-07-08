@@ -42,7 +42,7 @@ describe('progress capture guide copy', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
     expect(prompt).toContain('Clear front and back photos can earn a private Volyume Score');
-    expect(prompt).toContain('progress signal');
+    expect(prompt).toContain('progress change');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
     expect(prompt).not.toContain('not a body fat estimate');
