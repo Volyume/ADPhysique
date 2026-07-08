@@ -9,6 +9,7 @@ import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
 import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
+import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -878,6 +879,7 @@ const SCHEMA_MIGRATIONS = [
       fibre_100g REAL,
       sodium_100g REAL,
       sugar_100g REAL,
+      ${microColumnsCreateFragment()},
       verified INTEGER DEFAULT 0,
       fetched_at INTEGER,
       created_at INTEGER NOT NULL,
@@ -901,6 +903,7 @@ const SCHEMA_MIGRATIONS = [
       fibre_100g REAL,
       sodium_100g REAL,
       sugar_100g REAL,
+      ${microColumnsCreateFragment()},
       photo_url TEXT,
       notes TEXT,
       deleted_at INTEGER,
@@ -1665,6 +1668,15 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE progress_scan_assets ADD COLUMN signals_json TEXT',
   ],
+  // v58, MN-1 micronutrients (audit §15 item 2, founder-approved 2026-07-08).
+  // Additive, nullable REAL per-100g columns on foods + custom_foods for the 27
+  // UK-NRV vitamins/minerals in src/lib/food/micronutrients.js. Existing rows
+  // keep NULL (rendered "unknown", never 0). Cloud counterpart: migrate_109
+  // (founder-run). Duplicate-column errors are tolerated by the runner.
+  MICRO_COLUMNS.flatMap((c) => [
+    `ALTER TABLE foods ADD COLUMN ${c} REAL`,
+    `ALTER TABLE custom_foods ADD COLUMN ${c} REAL`,
+  ]),
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
