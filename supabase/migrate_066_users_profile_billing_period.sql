@@ -2,8 +2,8 @@
 -- Migration 066: users_profile.billing_period
 -- ====================================================================
 -- Purpose
---   Flat pricing (2026-06-06) has two plans: monthly (£4.99) and annual
---   (£29.99). Store which one a subscriber bought so the in-app
+--   Flat pricing (2026-06-06) has two plans: monthly (£2.99) and annual
+--   (£19.99). Store which one a subscriber bought so the in-app
 --   Subscription screen shows the right price instead of defaulting to
 --   monthly. Authoritative source is the Play Billing RTDN webhook
 --   (supabase/functions/play-billing-rtdn), which sets it from the

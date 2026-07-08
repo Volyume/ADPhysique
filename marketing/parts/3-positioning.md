@@ -1,4 +1,4 @@
-# VOLYUME MARKETING FACT-BASE — Part 3: Positioning
+﻿# VOLYUME MARKETING FACT-BASE — Part 3: Positioning
 
 Coaching loop, connection, platform, pricing, differentiators, audience angles,
 forum positioning, honest limits, store/ad-safe notes, claims split.
@@ -218,23 +218,23 @@ deliberate opposite of a social feed.
 
 - **Products.** Two SKUs, both Pro: `pro_monthly` and `pro_annual`. These IDs
   are the source of truth in code and never change. [VERIFIED, `catalogue.js`]
-- **Reference prices in code.** `£4.99/month` (`pro_monthly`) and `£29.99/year`
-  (`pro_annual`), the annual about 50% off twelve monthly payments. These are
+- **Reference prices in code.** `£2.99/month` (`pro_monthly`) and `£19.99/year`
+  (`pro_annual`), the annual about 44% off twelve monthly payments. These are
   REFERENCE values in `catalogue.js` and are explicitly NOT the user-facing
   display price. [VERIFIED]
-- **Actual charged price is store-set.** Every paywall renders Google Play's own
-  localised price live via `usePlayPrices`; the authoritative amount a user is
-  charged is set per region in Play Console, not in the app. So the £4.99/£29.99
+- **Actual charged price is store-set.** Every paywall renders the active
+  store's own localised price live via `usePlayPrices`; the authoritative amount a user is
+  charged is set per region in App Store Connect / Google Play Console, not in the app. So the £2.99/£19.99
   figures match the founder-supplied UK reference but the charged amount for any
   given user comes from the store. [VERIFIED]
-  - Founder-supplied UK figures: £4.99/mo, £29.99/yr. [founder-supplied; also
+  - Founder-supplied UK figures: £2.99/mo, £19.99/yr. [founder-supplied; also
     present in code as reference, but the charged figure is store-set]
 - **Trial — two distinct things, both real:**
   1. A **14-day in-app trial** (the cascade's complete-trial stage) that begins
-     from in-app Article 9 consent, not from a Play Billing purchase, so no card
+     from in-app Article 9 consent, not from a store purchase, so no card
      is required to start it. [VERIFIED, `cascade.js`: "the 14-day in-app trial"]
-  2. A separate **7-day Play Billing intro free trial** configured per product
-     in Play Console (the store's own intro offer). [VERIFIED, `catalogue.js`
+  2. A separate **7-day store intro free trial** configured per product in
+     App Store Connect / Google Play Console (the store's own intro offer). [VERIFIED, `catalogue.js`
      comment + `cascade.js` "the 7-day Play intro offer"]
   - Founder-supplied "14-day, no card" maps to trial (1) and is corroborated by
     code, so it can be stated as true, with the note that the exact no-card

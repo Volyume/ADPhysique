@@ -1,4 +1,4 @@
-# Tier scope (locked)
+﻿# Tier scope (locked)
 
 > **Founder override 2026-06-06 (supersedes the trial + pricing in the
 > 2026-05-25 block below):**
@@ -7,7 +7,7 @@
 >   Play intro free trial on the Pro product. See
 >   `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` and
 >   `TRIAL_CONVERSION_STRATEGY_2026-06-06.md`.
-> - **Pricing is flat: £4.99/month or £29.99/year** (migration 066 stores
+> - **Pricing is flat: £2.99/month or £19.99/year** (migration 066 stores
 >   the bought period). The escalating launch / founders / standard
 >   windows are retired.
 > - **`PRO_BETA_ACTIVE` is OFF** (`src/lib/proGate.js:28`): new accounts

@@ -1,4 +1,4 @@
-# Volyume current status
+﻿# Volyume current status
 
 > ## ⚠ STALE — predates the June 2026 sprint (banner added 2026-06-26)
 > This doc was verified on **2026-05-29** and has NOT been rewritten since. The
@@ -578,9 +578,9 @@ native. This entry is the authoritative resume point.
   workflow.
 
 **Founder-side cloud setup completed this session:**
-- Play Console subscriptions **`pro_monthly` (£4.99/mo)** and **`pro_annual`
-  (£29.99/yr)**, each with a base plan + **7-day free-trial offer**, active. UK
-  price is VAT-inclusive (Google is merchant of record; the £4.99 row with 20%
+- Play Console subscriptions **`pro_monthly` (£2.99/mo)** and **`pro_annual`
+  (£19.99/yr)**, each with a base plan + **7-day free-trial offer**, active. UK
+  price is VAT-inclusive (Google is merchant of record; the £2.99 row with 20%
   is the all-in price).
 - `play-billing-rtdn` (+ `send-push`) deployed via the dashboard; **Verify JWT
   turned OFF** on play-billing-rtdn (required for Google OIDC); function secrets
@@ -651,7 +651,7 @@ entry records what actually shipped, and the numbered sections below (§1, §3, 
   (`src/lib/proGate.js:28`). New accounts now flow through the trial / cascade
   rather than an automatic Pro grant. This affects future / sideloaded builds
   only; the frozen closed-test AAB is unchanged.
-- **Pricing flattened** (`c6907c3`): one monthly £4.99 + one annual £29.99,
+- **Pricing flattened** (`c6907c3`): one monthly £2.99 + one annual £19.99,
   retiring the £0.99 / £1.99 / £3.99 windows (`src/lib/payments/catalogue.js`;
   migration 066 stores the bought period).
 - **Trial reshaped to 14 + 7** (founder decision,
@@ -1716,7 +1716,7 @@ App Links verify for Play-Store-signed installs too. Founder-side.
    entirely. Founder direction: "peak week needs a human eye, not numbers".
    **Trial (updated 2026-06-06): 14 cardless in-app days + a 7-day Google Play
    intro trial, 21 days free total** (migration 065). **Pricing (updated
-   2026-06-06): flat £4.99/month or £29.99/year** (migration 066 stores the bought
+   2026-06-06): flat £2.99/month or £19.99/year** (migration 066 stores the bought
    period); the old £0.99 / £1.99 / £3.99 windows are retired.
 4. ~~**Closed Testing build stays frozen** until the WHOLE project is built out.~~
    **Superseded 2026-06-06:** closed testing completes today; the next AAB targets
@@ -2052,8 +2052,8 @@ the live gate list; supersedes the older "Now" items beneath where they overlap.
 the § 0 evening entry). What remains is testing + store paperwork + iOS.
 
 **Founder-side / on-device (these gate production approval):**
-1. ~~Play Console subscriptions~~ **DONE.** `pro_monthly` (£4.99/mo) and
-   `pro_annual` (£29.99/yr) created, each active with a base plan + a 7-day
+1. ~~Play Console subscriptions~~ **DONE.** `pro_monthly` (£2.99/mo) and
+   `pro_annual` (£19.99/yr) created, each active with a base plan + a 7-day
    free-trial offer. IDs match `catalogue.js`.
 2. ~~Apply migrations 060-067~~ **DONE** (049/059 still held). ~~Deploy
    `play-billing-rtdn` + `send-push`~~ **DONE** (dashboard; Verify-JWT off on the

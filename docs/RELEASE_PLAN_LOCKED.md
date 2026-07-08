@@ -1,4 +1,4 @@
-# Release plan (locked)
+﻿# Release plan (locked)
 
 How we get from "the moves are merging" to "real users on real
 devices paying real money." Locked 2026-05-23.
@@ -12,7 +12,7 @@ devices paying real money." Locked 2026-05-23.
 > all audits and errors cleared (Play + App store readiness findings, and
 > the red Jest suite / Main CI restored to green). **iOS is in scope
 > alongside Android** (EAS/TestFlight pipeline built; founder continues it
-> Monday). Pricing is flat £4.99/month or £29.99/year (the £0.99 / £1.99
+> Monday). Pricing is flat £2.99/month or £19.99/year (the £0.99 / £1.99
 > open-beta windows below are retired). The Phase A → B → C framing below
 > is preserved for history; `docs/CURRENT_STATUS.md` § "Release phase" and
 > § 0 (2026-06-06) carry the live plan.
@@ -48,7 +48,7 @@ Phase D: Standard (indefinite)
 Phase E: Coach beta (phase 2)
    │
    │  Coach.volyume.app launches with 60-day trial.
-   │  First 100 coaches = founding coaches (6mo free + lifetime 50% off).
+   │  First 100 coaches = founding coaches (6mo free + lifetime 44% off).
    │
    ▼
 Phase F: Coach GA (phase 2 v2)

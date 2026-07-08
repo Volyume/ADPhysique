@@ -1,4 +1,4 @@
-# Volyume — Competitive Audit (04)
+﻿# Volyume — Competitive Audit (04)
 
 Date: 2026-07-01 · Read-only on our code · Method: three parallel teardowns
 (Hevy; Cronometer + MacroFactor; differentiation legibility), grounded in the
@@ -13,7 +13,7 @@ repo; no screenshots were available. Companions: 01 (codebase), 02 (UX),
 
 Pricing context: Hevy $2.99/mo · $23.99/yr · $74.99 lifetime (quota-gated
 free tier). MacroFactor ~$12/mo (~$6/mo annual), paid-only. Cronometer
-freemium + Gold. Volyume £4.99/mo · £29.99/yr, free training / Pro
+freemium + Gold. Volyume £2.99/mo · £19.99/yr, free training / Pro
 nutrition-coaching, 14-day cardless trial — priced roughly 60% above Hevy
 with no lifetime anchor.
 

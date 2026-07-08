@@ -1,4 +1,4 @@
-# Trial length + when to ask for the card (strategy memo)
+﻿# Trial length + when to ask for the card (strategy memo)
 
 Date 2026-06-06. Grounds the 4-week-trial decision in what is already built
 plus current trial-conversion benchmarks. Strategy, not a code change.
@@ -82,7 +82,7 @@ fine; the gain from 28 is one extra adjustment cycle of felt value.)
 3. Day 23 (5 days left) and Day 26-27 (about 3 days left, per benchmark): trial
    ending reminders, push + inline. Plain, not alarmist: "Your Pro trial ends in
    X days. Subscribe to keep weekly coaching, targets, and the food diary."
-4. Day 28: the gate. Two clear choices, Pro (£4.99/month) or continue on Free.
+4. Day 28: the gate. Two clear choices, Pro (£2.99/month) or continue on Free.
    No lockout, no dark pattern, a visible "continue free" path. Free keeps the
    Plan Library + logging; coaching/targets/diary lock with a one-tap re-subscribe
    later. A user who lapses to Free stays a re-conversion candidate.

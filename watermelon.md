@@ -1,4 +1,4 @@
----
+﻿---
 paths:
   - src/billing/**
   - src/services/billing*
@@ -131,7 +131,7 @@ Remove the listener when the component unmounts or app backgrounds.
 
 Android paywall (cardless trial available):
   "Try Pro free for 14 days. No card needed."
-  "Then £29.99/year or £4.99/month. Cancel anytime in Google Play."
+  "Then £19.99/year or £2.99/month. Cancel anytime in Google Play."
 
 iOS paywall (Apple requires payment method for trial):
   "Try Pro free for 14 days."
@@ -144,11 +144,11 @@ Never show "no card needed" on iOS — Apple requires a payment method.
 
 ## PRICING — DISPLAY VALUES
 
-Monthly: £4.99
-Annual: £29.99 (save 50% vs monthly)
+Monthly: £2.99
+Annual: £19.99 (save 44% vs monthly)
 
 Always show the annual saving. Annual is the default selected option.
-The saving calculation: £4.99 x 12 = £59.88 per year vs £29.99 = 50% saving.
+The saving calculation: £2.99 x 12 = £35.88 per year vs £19.99 = 44% saving.
 
 ---
 
@@ -172,7 +172,7 @@ Never submit a billing change to production without sandbox verification.
 
 - Product IDs and entitlement IDs
 - Trial duration (14-day cardless + 7-day platform trial)
-- Pricing (£4.99/month, £29.99/year)
+- Pricing (£2.99/month, £19.99/year)
 - The free-gating logic for Pro features
 - The server-side entitlement grant mechanism
 - The paywall trigger timing (day 14)

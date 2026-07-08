@@ -1,4 +1,4 @@
-# VOLYUME Marketing Fact-Base (single source of truth)
+﻿# VOLYUME Marketing Fact-Base (single source of truth)
 
 Consolidated from three verified source parts (`marketing/parts/1-training.md`,
 `marketing/parts/2-nutrition.md`, `marketing/parts/3-positioning.md`). Every line
@@ -225,14 +225,15 @@ corrected).
 
 ### Pricing and trials
 - **Two SKUs, both Pro:** `pro_monthly` and `pro_annual`. These IDs never change.
-- **Reference prices in code:** PS4.99/month and PS29.99/year (annual about 50%
+- **Reference prices in code:** PS2.99/month and PS19.99/year (annual about 44%
   off twelve monthly payments). These are REFERENCE values only; the actual
-  charged price is store-set per region via Google Play (`usePlayPrices`).
+  charged price is store-set per region via App Store Connect / Google Play
+  Console (`usePlayPrices`).
 - **Two distinct real trials:**
   1. A 14-day in-app trial that begins from in-app Article 9 consent, no card
      required.
-  2. A separate 7-day Play Billing intro free trial, configured per product in
-     Play Console.
+  2. A separate 7-day store intro free trial, configured per product in
+     App Store Connect / Google Play Console.
 - Do not shorten the 14-day trial in copy; its length is a deliberate decision.
 
 ### Tap counts [UNVERIFIED exact totals - confirm on device]
@@ -415,6 +416,6 @@ no data sold, no PII to analytics.
   parity with the Android background rest timer.
 - **Exact tap counts.** "A couple of taps" is safe; any hard tap number for
   starting a plan must be confirmed on a physical device.
-- **Reference prices match live store prices.** Confirm PS4.99/mo and PS29.99/yr
-  match the current Google Play Console prices for the target region; the charged
-  amount is store-set, so the reference figures are indicative only.
+- **Reference prices match live store prices.** Confirm PS2.99/mo and PS19.99/yr
+  match the current App Store Connect / Google Play Console prices for the target
+  region; the charged amount is store-set, so the reference figures are indicative only.

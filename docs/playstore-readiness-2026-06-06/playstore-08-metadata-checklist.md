@@ -35,7 +35,7 @@ unverifiable here.
 - ☐ Title ≤ 30 chars ("Volyume" is fine; confirm any subtitle)
 - ☐ Short description ≤ 80 chars
 - ☐ Full description ≤ 4000 chars — see `docs/PLAY_STORE_LISTING.md` (refreshed
-  for £4.99/£29.99 + 14+7 trial)
+  for £2.99/£19.99 + 14+7 trial)
 - ☐ Icon 512×512 PNG
 - ☐ Feature graphic 1024×500
 - ☐ ≥ 2 phone screenshots, current UI

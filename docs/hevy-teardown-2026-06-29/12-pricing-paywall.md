@@ -1,4 +1,4 @@
-# 12 — Pricing & paywall — Hevy vs Volyume
+﻿# 12 — Pricing & paywall — Hevy vs Volyume
 
 > Competitive teardown, LEARNINGS ONLY. No Hevy code/assets are copied. This file
 > is analysis; it proposes nothing that edits Volyume billing without founder
@@ -100,7 +100,7 @@ every paywall/upsell impression.
   (`src/components/ProGate.js:22`). Guardrails are tier-blind by mandate
   (`proGate.js:22-24`).
 - **Catalogue: two SKUs, no lifetime** — `src/lib/payments/catalogue.js:32-49`
-  (`pro_monthly` £4.99/mo, `pro_annual` £29.99/yr ≈ 50% off). Prices always from
+  (`pro_monthly` £2.99/mo, `pro_annual` £19.99/yr ≈ 44% off). Prices always from
   Play, never hardcoded (`catalogue.js:18-23`). `annualSavingsPct()`
   (`catalogue.js:100`).
 - **Trial cascade (cardless 14-day → Play 7-day intro)** —
