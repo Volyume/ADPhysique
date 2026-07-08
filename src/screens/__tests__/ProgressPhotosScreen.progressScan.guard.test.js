@@ -33,7 +33,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/retake sooner if you are fixing photo quality/);
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/score may be less useful/);
-    expect(SCREEN).toMatch(/Clear front and back photos can be scored/);
+    expect(SCREEN).toMatch(/Front and back are needed for a score; side helps comparison/);
     expect(SCREEN).not.toMatch(/Save without estimate/);
     expect(SCREEN).not.toMatch(/at least a week apart|at least 1 week apart/);
   });
@@ -116,9 +116,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Private physique photos/);
-    expect(SCREEN).toMatch(/Private unless you choose to share or export/);
-    expect(SCREEN).toMatch(/Add front and back photos once a week/);
-    expect(SCREEN).toMatch(/Clear sets are scored, saved to your library and compared over time/);
+    expect(SCREEN).toMatch(/Private on this device unless you choose to share or export/);
+    expect(SCREEN).toMatch(/Add clear front and back photos once a week/);
+    expect(SCREEN).toMatch(/Add side too if you can/);
+    expect(SCREEN).toMatch(/Volyume scores the set and saves it to your library/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);

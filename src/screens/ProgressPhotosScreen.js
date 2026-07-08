@@ -1125,11 +1125,11 @@ export default function ProgressPhotosScreen({ navigation }) {
             <View style={styles.heroPrivacyPill}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.heroPrivacyText}>
-                Private unless you choose to share or export.
+                Private on this device unless you choose to share or export.
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Add front and back photos once a week. Clear sets are scored, saved to your library and compared over time.
+              Add clear front and back photos once a week. Add side too if you can. Volyume scores the set and saves it to your library.
             </Text>
           </View>
 
@@ -1321,7 +1321,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add front and back photos to start tracking progress.
+                Add front and back photos to start. A side photo helps comparison.
               </Text>
             </>
           )}
@@ -1522,7 +1522,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate set if these photos are from another day.`
-                    : 'Add a new set from the camera or your photo library. Clear front and back photos can be scored.'}
+                    : 'Add a new set from the camera or your photo library. Front and back are needed for a score; side helps comparison.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}

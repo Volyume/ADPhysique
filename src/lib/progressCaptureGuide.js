@@ -91,7 +91,7 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Add clear front and back photos from the camera or your photo library.',
+    'Add clear front and back photos from the camera or your photo library. Add side too if you can.',
     'Volyume scans the set for a Score, leanness band, progress signal and confidence.',
     'Repeat the same room, light, distance and camera height each week. Side is optional.',
     QUALITY_FIRST_CAPTURE_NOTE,
@@ -128,7 +128,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'scan',
       eyebrow: 'New set',
       title: 'Take a new photo set',
-      body: 'Guided front and back photos, with an optional side photo.',
+      body: 'Guided front and back photos for the score, with an optional side photo for comparison.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
       recommendationLabel: 'Recommended',
@@ -140,7 +140,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'images-outline',
       eyebrow: 'Existing set',
       title: 'Import a photo set',
-      body: 'Choose existing front and back photos, then set the date.',
+      body: 'Choose existing front and back photos, add side if you have it, then set the date.',
       actionLabel: 'Import photo set',
       disabled: !canScan,
       disabledReason: 'Sign in to save imported photo sets.',
