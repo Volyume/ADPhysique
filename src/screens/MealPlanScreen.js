@@ -564,14 +564,14 @@ export default function MealPlanScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load meal planning"
+            title="Couldn't load meal builder"
             text="Check your connection and try again. Your diary has not been changed."
             actionLabel="Try again"
             onAction={load}
@@ -582,9 +582,9 @@ export default function MealPlanScreen({ navigation, route }) {
           <View style={styles.emptyIcon}>
             <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Create meals</Text>
+          <Text style={styles.emptyTitle}>Meal builder</Text>
           <Text style={styles.emptyBody}>
-            Create meals from your targets, review them, then add the ones you want to your diary.
+            Build meals from your targets, review them, then add the ones you want to your diary.
           </Text>
           <View style={styles.emptySteps} accessibilityLabel="Meal planning steps">
             <View style={styles.emptyStep}>
@@ -623,9 +623,9 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Create meals for today only. Good when you want it organised quickly.
+              Build meals for today only. Good when you want it organised quickly.
             </Text>
-            <Button title="Create this day" onPress={handleGenerateDay} loading={busy} fullWidth />
+            <Button title="Build today" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
 
           <Card style={styles.planOption}>
@@ -634,9 +634,9 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>Week ahead</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Create seven dated days and a shopping list. Existing logged food is left alone.
+              Build seven dated days and a shopping list. Existing logged food is left alone.
             </Text>
-            <Button title="Create the week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+            <Button title="Build week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
           </Card>
         </ScrollView>
       ) : (

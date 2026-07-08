@@ -130,7 +130,7 @@ describe('MealPlanScreen meal-swap sheet', () => {
       tree = create(<MealPlanScreen navigation={nav} />);
     });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).toContain("Couldn't load meal planning");
+    expect(text).toContain("Couldn't load meal builder");
     expect(text).toContain('Your diary has not been changed.');
     expect(text).not.toContain('Build a day or week to your targets');
   });
@@ -181,11 +181,12 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('<Text style={styles.emptyTitle}>Create meals</Text>');
-    expect(source).toContain("title={!plan ? 'Meal planning' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
-    expect(source).toContain('Create meals from your targets, review them, then add the ones you want to your diary.');
-    expect(source).toContain('title="Create this day"');
-    expect(source).toContain('title="Create the week"');
+    expect(source).toContain('<Text style={styles.emptyTitle}>Meal builder</Text>');
+    expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
+    expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
+    expect(source).toContain('title="Build today"');
+    expect(source).toContain('title="Build week"');
+    expect(source).not.toContain('<Text style={styles.emptyTitle}>Create meals</Text>');
     expect(source).not.toContain('title="Plan this day"');
     expect(source).not.toContain('title="Plan the week"');
     expect(source).toContain('Nothing is logged until you add it');
