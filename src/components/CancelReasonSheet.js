@@ -113,8 +113,7 @@ export default function CancelReasonSheet({
           </View>
           {Platform.OS === 'android' ? (
             <Text style={styles.pauseHint}>
-              Google Play also lets you pause your subscription instead, it's in
-              the same settings screen.
+              Your subscription settings may also let you pause instead of cancel.
             </Text>
           ) : null}
         </View>

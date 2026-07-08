@@ -10,6 +10,8 @@
  * synchronously.
  */
 import { create, act } from 'react-test-renderer';
+import fs from 'fs';
+import path from 'path';
 
 jest.mock('../../store/useAppStore', () => {
   const fn = (selector) => selector({ accessibility: { reduceMotion: true } });
@@ -26,6 +28,8 @@ jest.mock('../../lib/payments/winbackState', () => ({ setStatedReturn: (...a) =>
 
 import CancelReasonSheet from '../CancelReasonSheet';
 
+const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'CancelReasonSheet.js'), 'utf8');
+
 function pressByLabel(tree, label) {
   const node = tree.root.findAll(
     (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
@@ -41,7 +45,7 @@ function render(props = {}) {
         visible
         onClose={props.onClose || (() => {})}
         onStoreHandoff={props.onStoreHandoff || (() => {})}
-        storeLabel="Google Play"
+        storeLabel={props.storeLabel || 'Google Play'}
         userId="u1"
         surface="pre_store_handoff"
       />,
@@ -76,6 +80,16 @@ describe('CancelReasonSheet', () => {
     expect(onStoreHandoff).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mockTrack).not.toHaveBeenCalled();
+  });
+
+  test('store handoff label is supplied by the platform-specific parent', () => {
+    const tree = render({ storeLabel: 'the App Store' });
+    expect(JSON.stringify(tree.toJSON())).toContain('Continue to the App Store');
+  });
+
+  test('pause hint is store-neutral copy', () => {
+    expect(SOURCE).toContain('Your subscription settings may also let you pause instead of cancel.');
+    expect(SOURCE).not.toContain('Google Play also lets you pause your subscription instead');
   });
 
   test('selecting a reason then continuing emits cancel_reason_captured with the enum + surface', () => {

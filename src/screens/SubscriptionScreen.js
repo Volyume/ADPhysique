@@ -29,6 +29,7 @@ import { skuFor } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { storeName } from '../lib/storeName';
 
 const STAGE_LABEL = {
   unstarted:       'Not started',
@@ -62,6 +63,7 @@ export default function SubscriptionScreen({ navigation, route }) {
   const currentSku = stage === 'paid' ? skuFor('pro', period) : null;
   // C-2: localised store price, catalogue text as the pre-load fallback.
   const priceFor = usePlayPrices();
+  const platformStore = storeName();
 
   const [busy, setBusy] = useState(false);
   const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
@@ -187,9 +189,9 @@ export default function SubscriptionScreen({ navigation, route }) {
         </View>
 
         <Text style={styles.footnote}>
-          Billing is handled by {Platform.OS === 'ios' ? 'Apple' : 'Google Play'}.
+          Billing is handled by {platformStore}.
           To change your payment method or cancel, open subscription settings in
-          the {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}.
+          {` ${platformStore}`}.
         </Text>
       </ScrollView>
 
@@ -197,7 +199,7 @@ export default function SubscriptionScreen({ navigation, route }) {
         visible={cancelSheetVisible}
         onClose={() => setCancelSheetVisible(false)}
         onStoreHandoff={handleStoreHandoff}
-        storeLabel={Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}
+        storeLabel={platformStore}
         userId={userId}
         surface="pre_store_handoff"
       />
