@@ -73,6 +73,16 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(iosModule).toMatch(/target\.absoluteString/);
   });
 
+  test('iOS native module exposes Apple Vision person-mask fallback for scan reliability', () => {
+    const iosModule = read('modules/progress-scan-image/ios/ProgressScanImageModule.swift');
+    expect(iosModule).toMatch(/import Vision/);
+    expect(iosModule).toMatch(/AsyncFunction\("segmentPersonMask"\)/);
+    expect(iosModule).toMatch(/VNGeneratePersonSegmentationRequest/);
+    expect(iosModule).toMatch(/kCVPixelFormatType_OneComponent8/);
+    expect(iosModule).toMatch(/vision_person_segmentation/);
+    expect(iosModule).toMatch(/maskBase64\(from: pixelBuffer\)/);
+  });
+
   test('iOS deployment target remains 16.0 for v1', () => {
     const app = JSON.parse(read('app.json'));
     const buildProps = app.expo.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-build-properties');

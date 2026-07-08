@@ -2,9 +2,17 @@ import ExpoModulesCore
 import Foundation
 import ImageIO
 import UIKit
+import Vision
 
 public class ProgressScanImageModule: Module {
   private let bundledModelMinimumBytes = 100_000
+
+  private struct PreparedImage {
+    let image: UIImage
+    let originalWidth: Int
+    let originalHeight: Int
+    let contentRect: CGRect
+  }
 
   public func definition() -> ModuleDefinition {
     Name("ProgressScanImage")
@@ -140,6 +148,119 @@ public class ProgressScanImageModule: Module {
         "lightingScore": lightingScore,
       ]
     }
+
+    AsyncFunction("segmentPersonMask") { (uri: String, width: Int, height: Int) -> [String: Any]? in
+      guard width > 0, height > 0 else {
+        return ["engine": "vision_person_segmentation", "errorCode": "invalid_target_size"]
+      }
+      guard let prepared = preparedImage(from: uri, width: width, height: height) else {
+        return ["engine": "vision_person_segmentation", "errorCode": "image_decode_failed"]
+      }
+      guard let cgImage = prepared.image.cgImage else {
+        return ["engine": "vision_person_segmentation", "errorCode": "cgimage_unavailable"]
+      }
+
+      let request = VNGeneratePersonSegmentationRequest()
+      request.qualityLevel = .balanced
+      request.outputPixelFormat = kCVPixelFormatType_OneComponent8
+
+      do {
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
+        try handler.perform([request])
+      } catch {
+        return ["engine": "vision_person_segmentation", "errorCode": "vision_segmentation_failed"]
+      }
+
+      guard let pixelBuffer = request.results?.first?.pixelBuffer else {
+        return ["engine": "vision_person_segmentation", "errorCode": "vision_mask_unavailable"]
+      }
+      guard let encodedMask = maskBase64(from: pixelBuffer) else {
+        return ["engine": "vision_person_segmentation", "errorCode": "vision_mask_encode_failed"]
+      }
+
+      let maskWidth = CVPixelBufferGetWidth(pixelBuffer)
+      let maskHeight = CVPixelBufferGetHeight(pixelBuffer)
+      let scaleX = Double(maskWidth) / Double(max(1, width))
+      let scaleY = Double(maskHeight) / Double(max(1, height))
+      let contentLeft = max(0, Int((prepared.contentRect.minX * scaleX).rounded()))
+      let contentTop = max(0, Int((prepared.contentRect.minY * scaleY).rounded()))
+      let contentRight = min(maskWidth, Int((prepared.contentRect.maxX * scaleX).rounded()))
+      let contentBottom = min(maskHeight, Int((prepared.contentRect.maxY * scaleY).rounded()))
+
+      return [
+        "width": maskWidth,
+        "height": maskHeight,
+        "originalWidth": prepared.originalWidth,
+        "originalHeight": prepared.originalHeight,
+        "contentRect": [
+          "x": contentLeft,
+          "y": contentTop,
+          "width": max(1, contentRight - contentLeft),
+          "height": max(1, contentBottom - contentTop),
+        ],
+        "maskBase64": encodedMask,
+        "engine": "vision_person_segmentation",
+      ]
+    }
+  }
+
+  private func preparedImage(from uri: String, width: Int, height: Int) -> PreparedImage? {
+    guard let url = imageUrl(from: uri) else { return nil }
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+    let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+    let originalWidth = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0
+    let originalHeight = properties?[kCGImagePropertyPixelHeight] as? Int ?? 0
+    let thumbOptions: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceThumbnailMaxPixelSize: max(width, height) * 2
+    ]
+    guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else { return nil }
+    let sourceImage = UIImage(cgImage: thumbnail)
+    let imageWidth = max(1.0, sourceImage.size.width)
+    let imageHeight = max(1.0, sourceImage.size.height)
+    let scale = min(CGFloat(width) / imageWidth, CGFloat(height) / imageHeight)
+    let contentWidth = max(1.0, imageWidth * scale)
+    let contentHeight = max(1.0, imageHeight * scale)
+    let contentRect = CGRect(
+      x: (CGFloat(width) - contentWidth) / 2.0,
+      y: (CGFloat(height) - contentHeight) / 2.0,
+      width: contentWidth,
+      height: contentHeight
+    )
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+    let rendered = renderer.image { context in
+      UIColor.black.setFill()
+      context.cgContext.fill(CGRect(x: 0, y: 0, width: width, height: height))
+      sourceImage.draw(in: contentRect)
+    }
+    return PreparedImage(
+      image: rendered,
+      originalWidth: originalWidth > 0 ? originalWidth : thumbnail.width,
+      originalHeight: originalHeight > 0 ? originalHeight : thumbnail.height,
+      contentRect: contentRect
+    )
+  }
+
+  private func maskBase64(from pixelBuffer: CVPixelBuffer) -> String? {
+    CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+    defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+    guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
+    let width = CVPixelBufferGetWidth(pixelBuffer)
+    let height = CVPixelBufferGetHeight(pixelBuffer)
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+    var data = Data(capacity: max(0, width * height * 4))
+    for y in 0..<height {
+      let row = baseAddress.advanced(by: y * bytesPerRow).assumingMemoryBound(to: UInt8.self)
+      for x in 0..<width {
+        var bits = (Float(row[x]) / 255.0).bitPattern.littleEndian
+        withUnsafeBytes(of: &bits) { data.append(contentsOf: $0) }
+      }
+    }
+    return data.base64EncodedString()
   }
 
   private func imageUrl(from uri: String) -> URL? {
