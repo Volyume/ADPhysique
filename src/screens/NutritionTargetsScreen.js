@@ -649,7 +649,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="Set my targets"
               >
                 <Ionicons
-                  name={calculating ? 'hourglass-outline' : 'sparkles-outline'}
+                  name={calculating ? 'hourglass-outline' : 'calculator-outline'}
                   size={20}
                   color={formComplete ? colors.onPrimary : colors.textDisabled}
                 />
@@ -1087,7 +1087,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         accessibilityRole="button"
                         accessibilityLabel={`Use Volyume's recommended ${recommended} meals per day`}
                       >
-                        <Ionicons name="sparkles-outline" size={13} color={colors.primary} />
+                        <Ionicons name="checkmark-circle-outline" size={13} color={colors.primary} />
                         <Text style={styles.mealCountRecButtonText}>
                           Use recommended
                         </Text>

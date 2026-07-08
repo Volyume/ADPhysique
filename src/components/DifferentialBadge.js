@@ -61,7 +61,7 @@ export default function DifferentialBadge({
   return (
     <View style={styles.wrap} accessibilityLabel="Differential paywall">
       <View style={styles.headerRow}>
-        <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
+        <Ionicons name="barbell-outline" size={16} color={colors.primary} />
         <Text style={styles.headerText}>With Pro</Text>
       </View>
       <Text style={styles.body}>

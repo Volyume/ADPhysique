@@ -84,7 +84,7 @@ export default function WelcomeScreen({ navigation }) {
           <Card radius="xl" padding="none" style={styles.proCard} onPress={startTrial}>
             <View style={styles.proCardHeader}>
               <View style={styles.proIconWrap}>
-                <Ionicons name="sparkles" size={20} color={colors.primary} />
+                <Ionicons name="barbell-outline" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.proTitleRow}>

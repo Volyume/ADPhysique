@@ -30,7 +30,7 @@
  * review is actually viewed (both via the SAME per-week AsyncStorage
  * dismissal flag the Home banner already used, no second scheme). Amber, not
  * red: the theme defines no alarm-dot treatment, and amber matches the
- * sparkles icon on the banner itself, so a coaching update reads as calm.
+ * calm coach-update treatment rather than reading as an alarm.
  */
 import { useEffect, useState } from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
@@ -176,9 +176,8 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 2, paddingTop: 4 },
   iconWrap: { position: 'relative' },
   // T2: a calm amber dot, not an alarm-red one (the theme defines no such
-  // treatment). It matches the sparkles icon colour on the coach banner it
-  // stands in for; the hairline border cuts it out from the icon glyph
-  // underneath it.
+  // treatment). It matches the coach-update colour; the hairline border cuts
+  // it out from the icon glyph underneath it.
   badgeDot: {
     position: 'absolute',
     top: -spacing.xxs,

@@ -31,7 +31,7 @@ export default function SettingsAccountScreen({ navigation }) {
         />
         {tier !== 'pro' && (
           <SettingRow
-            icon="sparkles"
+            icon="barbell-outline"
             label="Go Pro"
             sub="Coach decisions and weekly check-ins"
             onPress={() => navigation.navigate('ProUpgrade')}

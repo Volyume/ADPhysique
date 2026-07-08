@@ -251,7 +251,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             )}
             {plan.tags && plan.tags.includes('featured') && (
               <View style={styles.featuredBadge}>
-                <Ionicons name="sparkles" size={9} color={colors.onPrimary} />
+                <Ionicons name="star" size={9} color={colors.onPrimary} />
                 <Text style={styles.featuredBadgeText}>Featured</Text>
               </View>
             )}

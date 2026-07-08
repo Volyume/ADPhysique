@@ -2111,7 +2111,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Plan a fresh week of meals"
             >
-              <Ionicons name="sparkles-outline" size={14} color={colors.textSecondary} />
+              <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.planEditLinkText}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
             </TouchableOpacity>
             <TouchableOpacity

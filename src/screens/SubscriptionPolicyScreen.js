@@ -51,7 +51,7 @@ export default function SubscriptionPolicyScreen() {
         </Section>
 
         <Section
-          icon="sparkles-outline"
+          icon="barbell-outline"
           tint={colors.primary}
           title="What Pro adds"
         >

@@ -58,7 +58,7 @@ export default function AttentionCard({
         accessibilityLabel={trialBanner.line}
       >
         <View style={styles.trialBannerTopRow}>
-          <Ionicons name="sparkles" size={18} color={colors.primary} />
+          <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
           <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.primary} />
           <TouchableOpacity

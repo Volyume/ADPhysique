@@ -529,7 +529,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
-            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Ionicons name="newspaper-outline" size={18} color={colors.primary} />
             <Text style={styles.recapCardText}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
@@ -715,7 +715,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               const toGo = Math.max(0, RECAP_GATE - completedWorkoutCount);
               return (
                 <NavTile
-                  icon="sparkles-outline"
+                  icon="newspaper-outline"
                   color={colors.textSecondary}
                   label="Recaps"
                   locked={!recapUnlocked}

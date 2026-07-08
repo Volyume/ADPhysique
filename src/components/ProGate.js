@@ -111,7 +111,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
       >
         <View style={styles.sheetContent}>
           <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
-            <Ionicons name="sparkles" size={28} color={colors.primary} />
+            <Ionicons name="lock-closed-outline" size={28} color={colors.primary} />
           </View>
 
           <Text style={styles.sheetTitle}>{feature}</Text>
@@ -121,7 +121,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
 
           <Button
             title="Upgrade to Pro"
-            icon="sparkles"
+            icon="barbell-outline"
             onPress={upgrade}
             accessibilityLabel="Upgrade to Pro"
             style={styles.upgradeBtn}
@@ -226,7 +226,7 @@ export function ProLocked({ feature = 'This' }) {
           onPress={() => navigation.navigate('ProUpgrade')}
           activeOpacity={0.88}
         >
-          <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
+          <Ionicons name="barbell-outline" size={16} color={colors.onPrimary} />
           <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity accessibilityRole="button"
@@ -339,7 +339,7 @@ export function ProBadge({ size = 'sm' }) {
   const isSmall = size === 'sm';
   return (
     <View style={[styles.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
-      <Ionicons name="sparkles" size={isSmall ? 8 : 10} color={colors.onPrimary} />
+      <Ionicons name="barbell" size={isSmall ? 8 : 10} color={colors.onPrimary} />
       <Text style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );

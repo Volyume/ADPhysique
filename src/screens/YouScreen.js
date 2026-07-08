@@ -247,7 +247,7 @@ export default function YouScreen({ navigation }) {
           <View style={styles.section}>
             <SectionLabel>Coach</SectionLabel>
             <NavRow
-              icon="sparkles-outline"
+              icon="barbell-outline"
               label="Upgrade to Pro"
               sub="Weekly coaching, nutrition targets, body metrics and progress photos."
               pro={!isPro}

@@ -61,7 +61,7 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
   });
 
   test('next-week meal planning actions render as contained neutral buttons', () => {
-    expect(COACH).toContain('Ionicons name="sparkles-outline" size={14} color={colors.textSecondary}');
+    expect(COACH).toContain('Ionicons name="calendar-outline" size={14} color={colors.textSecondary}');
     expect(COACH).toContain('Ionicons name="repeat-outline" size={14} color={colors.textSecondary}');
     expect(COACH).toContain('Ionicons name="restaurant-outline" size={14} color={colors.textSecondary}');
     expect(COACH).toMatch(/planEditLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);

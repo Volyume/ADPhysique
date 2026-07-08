@@ -1363,7 +1363,7 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel="This week's coaching review. Tap to open."
           >
             <View style={styles.coachBannerLeft}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Ionicons name="pulse-outline" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.coachBannerTitle}>Coach - this week's decision</Text>
                 <Text style={styles.coachBannerBody}>
@@ -1728,7 +1728,7 @@ export default function HomeScreen({ navigation, route }) {
                   }}
                   activeOpacity={0.88}
                 >
-                  <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
+                  <Ionicons name="clipboard-outline" size={18} color={colors.onPrimary} />
                   <Text style={styles.proRecoverBtnText}>Start with a plan</Text>
                 </TouchableOpacity>
               </>
@@ -1837,7 +1837,7 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel="Learn about Pro coaching"
           >
             <View style={styles.proTeaserLeft}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.proTeaserTitle}>
                   {teaserInsight?.progressed && teaserInsight?.stalled
