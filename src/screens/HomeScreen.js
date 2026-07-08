@@ -61,6 +61,7 @@ import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
+import { buildReadinessSummary } from '../lib/readinessSummary';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1225,6 +1226,17 @@ export default function HomeScreen({ navigation, route }) {
     ? rawCoachBrief
     : null;
 
+  // S15#7: readiness aggregate. One calm line for the mesocycle chip,
+  // composed from signals HomeScreen already loads (block phase, the
+  // shouldDeload signal, last session's soreness/sleep/energy facts, recent
+  // fatigue trend) rather than the phase-only text it showed before.
+  const readinessSummary = buildReadinessSummary({
+    currentMesoWeek,
+    deloadSuggestion,
+    fatigueHistory: fatigueSessions,
+    lastSession,
+  });
+
   // Banner priority: keep the primary "Start" action prominent by showing at
   // most one of the three attention banners at once. A fresh weekly coach
   // review outranks a suggested recovery week, which outranks the nutrition-
@@ -1635,12 +1647,15 @@ export default function HomeScreen({ navigation, route }) {
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
-            {/* Mesocycle context chip: tells the user where they are in
-                the training block and what effort to bring today. Keeps
-                Volyume's coaching identity visible at the start of every
-                session, the way an RP-style plan would. Tooltip-free
+            {/* S15#7 readiness aggregate: tells the user where they are in
+                the training block PLUS whatever recovery/soreness/sleep/
+                energy/fatigue signal outranks a plain phase read this week,
+                composed by buildReadinessSummary so it is one calm line
+                instead of the phase-only chip plus scattered other reads.
+                Keeps Volyume's coaching identity visible at the start of
+                every session, the way an RP-style plan would. Tooltip-free
                 because the row is glanceable on its own. */}
-            {currentMesoWeek && (
+            {readinessSummary && (
               <TouchableOpacity
                 style={styles.mesoBriefChip}
                 onPress={() => setShowBlockShape(true)}
@@ -1648,18 +1663,11 @@ export default function HomeScreen({ navigation, route }) {
                 accessibilityLabel="See the shape of your training block"
               >
                 <Ionicons
-                  name={currentMesoWeek.isDeload ? 'bed-outline' : 'trending-up-outline'}
+                  name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
                   size={12}
-                  color={currentMesoWeek.isDeload ? colors.success : colors.primary}
+                  color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
                 />
-                <Text style={styles.mesoBriefText}>
-                  {currentMesoWeek.isDeload
-                    ? `Deload week - pull effort back`
-                    : `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}` +
-                      (currentMesoWeek.rirTarget != null
-                        ? ` - stop ${currentMesoWeek.rirTarget} short of failure`
-                        : '')}
-                </Text>
+                <Text style={styles.mesoBriefText}>{readinessSummary.line}</Text>
                 <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
               </TouchableOpacity>
             )}
@@ -2299,6 +2307,10 @@ function getRelativeDay(ts) {
 // ── Coach Brief Card ──────────────────────────────────────────────────────────
 
 const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
+// S15#7 readiness aggregate chip: its own icon set (kept distinct from
+// BRIEF_ICON's card-sized icons) but the SAME tone colours (BRIEF_ICON_COLOR
+// below) so the chip and the coaching brief card read as one family.
+const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outline', recover: 'bed-outline' };
 const BRIEF_BORDER = {
   go:      withAlpha(colors.primary, alpha.soft),
   caution: withAlpha(colors.warning, alpha.soft),
