@@ -175,7 +175,15 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       // holding their low-confidence read (the user didn't correct them), record
       // how many, count only, no values, so OCR accuracy is measurable.
       if (userId && prefillConfidence) {
-        const vals = { kcal, protein, carbs, fat, fibre };
+        // Bug fix (item 5 audit): these must be the full field names
+        // (kcal100g etc.), the same keys prefillConfidence/prefillMacros use,
+        // matching what _unsure's callers pass when rendering the amber
+        // marks. The short names ('kcal', 'protein'...) never matched a
+        // confidence key, so this count was always 0 and the event never
+        // fired.
+        const vals = {
+          kcal100g: kcal, protein100g: protein, carbs100g: carbs, fat100g: fat, fibre100g: fibre,
+        };
         const flagged = Object.keys(vals).filter((k) => _unsure(k, vals[k])).length;
         if (flagged > 0) {
           try {

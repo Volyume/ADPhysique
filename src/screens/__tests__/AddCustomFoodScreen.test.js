@@ -98,6 +98,104 @@ async function renderAndSave(eatenValue) {
   return nav;
 }
 
+describe('AddCustomFoodScreen OCR low-confidence highlighting (item 5)', () => {
+  const CONFIDENCE_HINT = 'Not certain, check this value';
+  const BANNER = "Amber figures aren't certain, check them.";
+
+  function ocrRoute(prefillMacros, prefillConfidence) {
+    return {
+      params: {
+        mealSlot: 'snack',
+        entryDate: '2026-07-08',
+        from: 'scan',
+        prefillName: 'Scanned food',
+        prefillMacros,
+        prefillConfidence,
+      },
+    };
+  }
+
+  test('a low-confidence field is marked and named in the banner at confirm', async () => {
+    const route = ocrRoute(
+      { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+      { kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' }
+    );
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+
+    expect(allText(tree)).toContain(BANNER);
+
+    const kcalInput = tree.root.findByProps({ accessibilityLabel: 'Calories' });
+    expect(kcalInput.props.accessibilityHint).toBe(CONFIDENCE_HINT);
+
+    const proteinInput = tree.root.findByProps({ accessibilityLabel: 'Protein, grams' });
+    expect(proteinInput.props.accessibilityHint).toBeUndefined();
+  });
+
+  test('editing the flagged value clears its mark and the banner', async () => {
+    const route = ocrRoute(
+      { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+      { kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' }
+    );
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+
+    expect(allText(tree)).toContain(BANNER);
+    setInput(tree, 'Calories', '110');
+
+    expect(allText(tree)).not.toContain(BANNER);
+    const kcalInput = tree.root.findByProps({ accessibilityLabel: 'Calories' });
+    expect(kcalInput.props.accessibilityHint).toBeUndefined();
+  });
+
+  test('no OCR prefill (manual entry) shows no low-confidence banner or marks', async () => {
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-08' } };
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+
+    expect(allText(tree)).not.toContain(BANNER);
+    const kcalInput = tree.root.findByProps({ accessibilityLabel: 'Calories' });
+    expect(kcalInput.props.accessibilityHint).toBeUndefined();
+  });
+
+  test('a high-confidence-only scan records no ocr_low_confidence_saved telemetry on save', async () => {
+    const route = ocrRoute(
+      { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+      { kcal100g: 'high', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' }
+    );
+    const { track } = require('../../lib/engineTelemetry');
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    setInput(tree, 'Eaten (g), grams', '100');
+    expect(mockSaveButton).toBeTruthy();
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+
+    expect(track).not.toHaveBeenCalledWith('u1', 'ocr_low_confidence_saved', expect.anything());
+  });
+
+  test('saving with the low-confidence field left unedited records ocr_low_confidence_saved', async () => {
+    const route = ocrRoute(
+      { servingG: 100, kcal100g: 105, protein100g: 20, carbs100g: 5, fat100g: 2, fibre100g: 1 },
+      { kcal100g: 'low', protein100g: 'high', carbs100g: 'high', fat100g: 'high', fibre100g: 'high' }
+    );
+    const { track } = require('../../lib/engineTelemetry');
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    setInput(tree, 'Eaten (g), grams', '100');
+    expect(mockSaveButton).toBeTruthy();
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+
+    expect(track).toHaveBeenCalledWith('u1', 'ocr_low_confidence_saved', { fields_flagged: 1, from: 'scan' });
+  });
+});
+
 describe('AddCustomFoodScreen eaten-quantity guard (FOOD-001)', () => {
   test('uses plain diary copy instead of meal-number context', async () => {
     const route = { params: { mealSlot: 'meal_2', entryDate: '2026-07-04' } };
