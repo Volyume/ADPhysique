@@ -69,12 +69,22 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');
-    expect(ACTIVE_WORKOUT).toMatch(/exerciseName: \{ flex: 1, fontSize: fontSize\.lg,/);
+    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.targetText} numberOfLines={1}>');
-    expect(ACTIVE_WORKOUT).toMatch(/targetText: \{ flex: 1, fontSize: fontSize\.xs,/);
+    expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 28/);
     expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
+  });
+
+  test('high-impact workout text uses the semantic Inter type roles', () => {
+    expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.primary }");
+    expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.onPrimary, letterSpacing: 0 }');
+    expect(ACTIVE_WORKOUT).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
+    expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.h3, color: colors.textPrimary }');
+    expect(ACTIVE_WORKOUT).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');
+    expect(ACTIVE_WORKOUT).not.toMatch(/exerciseName: \{ flex: 1, fontSize: fontSize\.lg,[\s\S]*fontWeight: fontWeight\.black/);
+    expect(ACTIVE_WORKOUT).not.toMatch(/completeBtnText: \{ fontSize: fontSize\.md,[\s\S]*fontWeight: fontWeight\.bold/);
   });
 
   test('distance time input is announced as time, not duration', () => {
