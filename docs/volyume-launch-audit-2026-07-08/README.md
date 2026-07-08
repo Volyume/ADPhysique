@@ -83,5 +83,21 @@ The other eight §15 items build under the standard wave process.
   HomeScreen-scoped a11y lint rule + 5 labels. Repo-wide a11y rollout (53
   pre-existing violations) flagged for a founder scope decision.
 
-**All 10 §14 launch-critical items are complete.** Next: the §15 premium wave.
+**All 10 §14 launch-critical items are complete.**
+
+### §15 premium wave (in progress)
+
+- #6 Repeat-a-day + grocery share — **done** (`3f060dd`).
+- #8 Notification deep-links (coach/check-in/diary-day) — **done** (`71ba616`).
+- #10 Tap-count regression gate — **done** (`19804fc`).
+- #2 MN-1 micronutrients (full build, hands-on) — schema local+cloud, wiring,
+  sync, read, migrate_109 all **done** (`086d23f`, `f9e962f`); diary panel +
+  custom-food entry UI building. Ships "unknown" until the seed .dat regen
+  (separate queued task); migrate_109 is founder-run.
+- #9 Raw/cooked toggle — no build (founder decision: keep stored grams as-is).
+- #7 Readiness aggregate — building.
+- #5 Training-day meal composition — building (hard safety boundary: no target
+  or floor changes).
+- #1 Connected weekly story surface — queued (shares HomeScreen with #7).
+- #3 Report-bad-food flow — queued (moderation scope to confirm before build).
 - Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
