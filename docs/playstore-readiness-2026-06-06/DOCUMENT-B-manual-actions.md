@@ -32,8 +32,8 @@ upload.
   (pair with Document A H-3).
 
 ## BLOCKS — billing (so the trial/subscription actually works)
-- **Create subscription products** `pro_monthly` (£4.99/mo) and `pro_annual`
-  (£29.99/yr) with base plans and a **7-day free-trial offer** on each. *Where:*
+- **Create subscription products** `pro_monthly` (£2.99/mo) and `pro_annual`
+  (£19.99/yr) with base plans and a **7-day free-trial offer** on each. *Where:*
   Monetise → Products → Subscriptions. Product IDs must match
   `src/lib/payments/catalogue.js` exactly.
 - **Merchant/payments profile** active (you noted this is sorted — confirm it

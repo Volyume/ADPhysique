@@ -13,8 +13,8 @@ Status: COMPLETE. Date: 2026-06-06.
   fakes entitlement.
 
 ## Products
-- Catalogue (`src/lib/payments/catalogue.js`): `pro_monthly` (£4.99/mo),
-  `pro_annual` (£29.99/yr). 2-tier model (Free / Pro). `skuFor`, `allSkuIds`,
+- Catalogue (`src/lib/payments/catalogue.js`): `pro_monthly` (£2.99/mo),
+  `pro_annual` (£19.99/yr). 2-tier model (Free / Pro). `skuFor`, `allSkuIds`,
   `BILLING_PERIODS` present.
 - **The Play Console products do not exist yet** (founder task). Billing is inert
   until `pro_monthly` + `pro_annual` base plans + the 7-day free-trial offers are

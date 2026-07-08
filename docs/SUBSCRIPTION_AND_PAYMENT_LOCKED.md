@@ -1,5 +1,12 @@
 # Subscription and payment (locked)
 
+> **Founder override 2026-07-08 (store pricing):** Pro launch pricing is
+> **£2.99/month** or **£19.99/year** on both App Store Connect and Google
+> Play Console. The live product IDs stay `pro_monthly` and `pro_annual` on
+> both stores. The app must keep reading the display price from the active
+> store; prices are configured in the store consoles, not hardcoded into a
+> paywall fallback.
+
 > **Founder override 2026-06-06 (trial shape):** The single Pro trial
 > splits into two halves, 21 days free total still:
 >
@@ -8,30 +15,31 @@
 >    `start_cascade` from `interval '21 days'` to `interval '14 days'`).
 >    No card. The day-14 worker reverts to Free if the user does
 >    nothing.
-> 2. **7-day Google Play intro free trial** on the Pro subscription
+> 2. **7-day store intro free trial** on the Pro subscription
 >    product. When the user subscribes (at the day-14 ask or any earlier
->    Pro touch), Google's intro offer gives 7 more days free with the
->    card on file, then bills. This half is Play Console config, not a
->    database concern: our state machine treats a Play subscriber as
+>    Pro touch), the App Store / Google Play intro offer gives 7 more days
+>    free with the card on file, then bills. This half is store-console
+>    config, not a database concern: our state machine treats a store subscriber as
 >    `paid_pro` the moment the subscription starts, intro trial or not.
 >
 > Net: 14 + 7 = 21 days free, but the card is only captured at the
 > point of subscribing (day 14 onward), so the "no early ask" principle
 > holds. The day-21 references below become **day-14** for the in-app
-> gate; the 7-day figure is the Play purchase-surface disclosure.
+> gate; the 7-day figure is the store purchase-surface disclosure.
 > Rationale and the conversion trade-off (vs a 28-day variant) are in
 > `docs/TRIAL_CONVERSION_STRATEGY_2026-06-06.md`. The in-app figures
 > below that still read "21" predate this override; where they conflict
 > this block governs.
 >
-> **Not yet live:** the real Play Billing path is still a stub
-> (`src/lib/payments/playBilling.js`), and the Play Console 7-day offer
-> must be created before any of this converts. See the founder-action
-> checklist in the strategy memo.
+> **Console setup still required:** the App Store Connect / Google Play
+> subscription products and 7-day intro offers must exist before purchases
+> convert. The app wiring is shared through `src/lib/payments/playBilling.js`
+> and chooses StoreKit on iOS or Google Play Billing on Android.
 
-> **Founder override 2026-06-06 (pricing):** Flat pricing replaces the
-> escalating launch/founders/standard windows. Pro is **£4.99/month** or
-> **£29.99/year** (annual ~50% off). Two Play Console products to create:
+> **Founder override 2026-06-06 (pricing), superseded by 2026-07-08 price
+> point above:** Flat pricing replaces the escalating launch/founders/standard
+> windows. Pro is **£2.99/month** or **£19.99/year** (annual ~44% off). Two
+> store products to create in both App Store Connect and Google Play Console:
 > `pro_monthly` and `pro_annual`, each carrying the 7-day intro free-trial
 > offer. The `locked_in_price_tier` window machinery is retired client-side
 > (`src/lib/payments/catalogue.js` now keys on billing period, not window);
@@ -41,7 +49,8 @@
 > now also carries the monthly/annual toggle. The purchased period is
 > stored on the profile (migration 066 `billing_period`, set by the
 > play-billing-rtdn webhook) and read by the Subscription screen, so
-> annual subscribers see £29.99/year. ProUpgrade still subscribes monthly.
+> annual subscribers see the store-localised annual price. ProUpgrade still
+> subscribes monthly by default unless the user chooses annual.
 
 > **Founder override 2026-05-25:** Three structural changes since
 > the original 2026-05-23 lock:
@@ -50,10 +59,9 @@
 >    `COMPLETE_TIER_SCOPE_LOCKED.md` for the new tier scope.
 > 2. **Single 21-day Pro trial**, not a 28-day cascade. No day-14
 >    Complete→Pro step. Day-21 gate replaces day-28.
-> 3. **Google Play Billing direct**, not RevenueCat. Saves the 1%
->    above £2.5k MRR; one fewer third-party dependency. iOS deferred
->    indefinitely; cross-platform identity that RevenueCat solved
->    is moot on Android-only.
+> 3. **Direct store billing**, not RevenueCat. Android uses Google Play
+>    Billing; iOS uses StoreKit through the same `react-native-iap` wrapper.
+>    Receipt verification stays server-side.
 >
 > Updated values are in the sections below. Historical 3-tier text
 > with the cascade state machine is preserved at the bottom for
@@ -75,10 +83,12 @@ Locked at native SDKs on mobile, not web OAuth flows.
 - Flow: native Google picker → Google ID token → Supabase
   `signInWithIdToken({ provider: 'google', token })`.
 
-### iOS: deferred indefinitely
+### iOS: Sign in with Apple via native SDK
 
-iOS is not in scope at Phase B per the Android-only locked decision.
-Apple Sign-In wiring stays out until iOS lands.
+- App Store builds must enable the Sign in with Apple capability for
+  bundle `app.volyume`.
+- Flow: native Apple sheet → Apple ID token → Supabase
+  `signInWithIdToken({ provider: 'apple', token })`.
 
 ### Email magic link (fallback)
 
@@ -87,33 +97,29 @@ native sign-in fails or for users who prefer email.
 
 ## Provider
 
-**Google Play Billing direct.** Founder override 2026-05-25
-replacing the original locked RevenueCat choice; rationale recorded
-in `docs/CURRENT_STATUS.md`. The IAP SDK (`react-native-iap` or
-`expo-in-app-purchases`) wraps Play Billing; receipt validation
-runs server-side via a Supabase Edge Function calling Google's
-Play Developer API verifyPurchase endpoint. Real-Time Developer
-Notifications (RTDN) Pub/Sub topic delivers renewal / cancel /
-refund events to the same Edge Function.
+**Direct store billing.** Founder override 2026-05-25 replaced the
+original RevenueCat choice; the 2026-07-08 update made it cross-platform.
+The client uses `react-native-iap`: Google Play Billing on Android and
+StoreKit on iOS. Receipt validation runs server-side via Supabase Edge
+Functions, with Google RTDN and App Store Server Notifications carrying
+renewal / cancel / refund events back into the same entitlement model.
 
 Cost posture (see `BUDGET_POSTURE_LOCKED.md`): zero recurring third-
-party fee. Google takes their 15% (small business programme) at the
-store layer; that's unavoidable and baked into pricing.
+party fee. Apple / Google store commission is unavoidable and baked into
+pricing.
 
 ## The product catalogue
 
-**Three SKUs at launch**, all Pro:
+**Two subscription products at launch**, both Pro, created with the same
+IDs in App Store Connect and Google Play Console:
 
-| SKU ID | Pricing window | UK price |
+| Product ID | Billing period | UK launch price |
 |---|---|---|
-| `pro_monthly_open_beta` | Open beta (first 4 weeks post-GA) | £0.99/month |
-| `pro_monthly_founders` | Founders (weeks 5-16) | £1.99/month |
-| `pro_monthly_standard` | Standard (week 17+) | £3.99/month |
+| `pro_monthly` | Monthly | £2.99/month |
+| `pro_annual` | Annual | £19.99/year |
 
-When a user signs up they see only the SKU matching the current
-pricing window. Once subscribed, they stay on that SKU for life
-unless cancelled (lapse = lose the locked price; resubscribe at
-the then-current price).
+The app queries these product IDs and displays the active store's
+localised price. Do not add a hardcoded display-price fallback to a paywall.
 
 Coach tier SKUs (phase 2) remain a separate set (see historical
 section), purchased via Stripe from the coach web dashboard.
@@ -128,7 +134,7 @@ States:
 - `unstarted`: fresh account, hasn't passed Article 9 consent yet
 - `pro_trial_active`: days 1-14 of the cardless in-app Pro trial
   (was 21; see the 2026-06-06 override at the top)
-- `paid_pro`: user paid for Pro (any pricing window)
+- `paid_pro`: user paid for Pro (monthly or annual)
 - `free`: trial expired without payment, or user skipped to Free
 - `cascade_expired`: equivalent to `free`; kept distinct for telemetry
 
@@ -145,7 +151,7 @@ Transitions:
 | `pro_trial_active` | Day 14 + no action | `cascade_expired` |
 | `pro_trial_active` | User pays Pro | `paid_pro` |
 | `pro_trial_active` | User skips to Free | `free` |
-| `paid_pro` | Play Billing reports cancellation | `free` (after grace period) |
+| `paid_pro` | App Store / Google Play reports cancellation | `free` (after grace period) |
 | `paid_pro` | User cancels and renewal cycle ends | `free` |
 | `free` | User pays Pro | `paid_pro` |
 | Any | Account deleted | (no state, row gone) |
@@ -221,12 +227,11 @@ raw IAP success callback alone.
 The flow:
 
 1. User taps "Upgrade to Pro".
-2. App initiates IAP via the chosen SDK
-   (`Purchases.requestSubscription(skuId)` for `react-native-iap`).
-3. Google Play completes the purchase.
-4. App posts the purchase token to our Edge Function.
-5. Edge Function calls Google's Play Developer API to verify the
-   token and read subscription state.
+2. App initiates IAP via `react-native-iap`.
+3. App Store / Google Play completes the purchase.
+4. App posts the StoreKit JWS or Play purchase token to our Edge Function.
+5. Edge Function calls the matching store API to verify the
+   transaction and read subscription state.
 6. On verified-purchase, the Edge Function calls `upgrade_tier(
    target_tier, payment_ref)` RPC.
 7. RPC writes `tier_history` row and updates `profiles.trial_state`.
@@ -234,24 +239,16 @@ The flow:
 
 ## Cross-platform subscription state
 
-Android-only at v1. When iOS lands (phase later), the same Edge
-Function pattern will validate Apple receipts via App Store
-Connect's verifyReceipt endpoint; a single user account with
-purchases on both platforms gets a single entitlement (tier
-follows the user, not the device).
+The same user account gets one entitlement regardless of purchase platform.
+Android transactions verify through Google; iOS transactions verify through
+the App Store server path. The tier follows the user, not the device.
 
 ## Founding-price lock-in
 
-Locked-in pricing is enforced platform-side via the SKU the user
-originally purchased.
-
-- User signs up during open beta, buys `pro_monthly_open_beta` at
-  £0.99/mo. Google charges them £0.99/mo at every renewal as long
-  as the subscription stays continuously active.
-- If they cancel and resubscribe later, they buy whatever SKU is
-  current (Founders or Standard).
-- We don't manipulate price ourselves; we rely on Google Play's
-  subscription continuity rule to keep them on the original SKU.
+Pricing is enforced platform-side through the subscription product and
+country/region price matrix in App Store Connect or Google Play Console.
+Keep `pro_monthly` and `pro_annual` stable; update prices in the store
+consoles, then let the app display the store-localised price it receives.
 
 ## Tier transitions in `profiles`
 
@@ -356,26 +353,26 @@ nothing to restore.
 
 ```
 src/lib/payments/
-├── playBilling.js        -- IAP SDK initialisation and wrappers
-├── catalogue.js          -- the three consumer SKUs + lookup helpers
+├── playBilling.js        -- IAP SDK initialisation and StoreKit / Play wrappers
+├── catalogue.js          -- the two consumer product IDs + lookup helpers
 ├── cascade.js            -- the trial state machine (transitions, gate)
 └── restore.js            -- restore purchases flow
 
 src/screens/
-├── CascadeGateScreen.js  -- the day-21 modal
+├── CascadeGateScreen.js  -- the day-14 gate
 └── SubscriptionScreen.js -- You-tab subscription management
 ```
 
-Edge function lives in `supabase/functions/play-billing-rtdn/`.
+Edge functions live in `supabase/functions/play-billing-rtdn/` and the
+App Store verification / notification functions.
 
 ## Testing
 
-- Sandbox tester accounts on Google Play Console for every
-  transition.
-- Play Billing test purchases used to verify our Edge Function
-  handler.
-- A scripted test cycles through every transition above in a Play
-  Billing sandbox before Phase A exit.
+- Sandbox tester accounts on App Store Connect and Google Play Console for
+  every transition.
+- Store sandbox purchases used to verify the matching Edge Function handler.
+- A scripted test cycles through every transition above in store sandbox
+  before launch.
 - Grace period test: revoke a sandbox subscription, observe the
   3-day banner, verify auto-downgrade at 72h.
 
@@ -383,12 +380,11 @@ Edge function lives in `supabase/functions/play-billing-rtdn/`.
 
 - State machine passes all transitions in test (see
   `payments.cascade.test.js`).
-- A sandbox purchase of `pro_monthly_open_beta` results in
-  `paid_pro` state + `locked_in_price_tier = 'open_beta'`.
-- Cancelling on Play Billing sandbox triggers `SUBSCRIPTION_CANCELED`
-  webhook → banner appears → `SUBSCRIPTION_EXPIRED` fires at period
-  end → tier becomes `free`.
-- Refunding via Play Billing sandbox immediately downgrades tier.
+- A sandbox purchase of `pro_monthly` or `pro_annual` results in
+  `paid_pro` state + the correct `billing_period`.
+- Cancelling in store sandbox triggers the cancellation / expiry path,
+  shows the banner, and moves the user to `free` at the correct time.
+- Refunding via store sandbox immediately downgrades tier.
 - Restore purchases on a clean install correctly restores tier.
 
 ---
@@ -398,7 +394,7 @@ Edge function lives in `supabase/functions/play-billing-rtdn/`.
 The original 2026-05-23 spec used three tiers (Free, Pro, Complete)
 with a 28-day cascade (14 Complete → 14 Pro → Free) and RevenueCat
 as the IAP provider. That spec is preserved below for traceability
-with prior LOCKED docs. The current 2-tier + Play Billing model
+with prior LOCKED docs. The current 2-tier + direct store billing model
 above governs the implementation.
 
 ## Sign-in providers

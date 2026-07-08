@@ -18,8 +18,8 @@ the beta switch. None of what's left is a rebuild.
 - **Billing rewritten for react-native-iap v15** (the installed version;
   the old code targeted a removed v12 API). Selects the 7-day offer token
   and bridges the v15 event-based purchase result. Unit-tested.
-- **Flat pricing £4.99/month + £29.99/year**, with a monthly/annual
-  toggle on the Paywall and a "Save 50%" badge. The old escalating
+- **Flat pricing £2.99/month + £19.99/year**, with a monthly/annual
+  toggle on the Paywall and a "Save 44%" badge. The old escalating
   launch/founders/standard windows are retired.
 - **Gating verified, no leaks.** Diary, cardio, body metrics and all
   coaching are correctly Pro.
@@ -50,7 +50,7 @@ the beta switch. None of what's left is a rebuild.
 - **Purchased period stored, done.** Migration 066 adds
   `users_profile.billing_period`; the webhook sets it from the bought
   product and the Subscription screen reads it, so annual subscribers see
-  £29.99/year.
+  £19.99/year.
 
 - **Annual on ProUpgrade, done.** The lock-screen subscribe path now has
   the monthly/annual toggle too, so all three purchase surfaces (Paywall,
@@ -65,8 +65,8 @@ Still open, none blocking:
 
 1. **Merchant account verified** (in progress, awaiting the bank deposit).
 2. **Create two subscription products** in Play Console:
-   - `pro_monthly` — £4.99/month
-   - `pro_annual` — £29.99/year
+   - `pro_monthly` — £2.99/month
+   - `pro_annual` — £19.99/year
    Each needs a base plan with a **7-day free-trial offer**. These exact
    product IDs are what the app queries; they must match.
 3. **Deploy the `play-billing-rtdn` edge function** and set its env vars

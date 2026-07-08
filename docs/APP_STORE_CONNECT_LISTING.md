@@ -1,10 +1,8 @@
 # Volyume — App Store Connect Listing
 
-> **Status 2026-05-25: OUT OF SCOPE for v1.** Founder confirmed there
-> is no Apple Developer account, no App Store Connect entity, no iOS
-> bundle registered. iOS is deferred indefinitely under the Android-only
-> Phase B decision. This doc is preserved as the prepared listing copy
-> for if/when iOS lands at a later phase; it is NOT current work.
+> **Status 2026-07-08: CURRENT iOS listing/setup copy.** Volyume now has
+> StoreKit/App Store purchase wiring alongside Google Play Billing. Product
+> IDs must match the shared in-app catalogue: `pro_monthly` and `pro_annual`.
 
 _Production-ready. Paste each field directly into App Store Connect._
 _All character counts verified against Apple's limits._
@@ -189,12 +187,23 @@ Found a bug or something that does not feel right? The in-app feedback button go
 | Field | Value |
 |---|---|
 | **Reference name** | Volyume Pro Monthly |
-| **Product ID** | app.volyume.pro.monthly |
+| **Product ID** | pro_monthly |
 | **Type** | Auto-Renewable Subscription |
 | **Subscription group name** | Volyume Pro |
 | **Duration** | 1 Month |
 | **Price** | £2.99 / month (annual plan £19.99 / year) |
 | **Free trial** | 14-day in-app cardless trial, then a 7-day store intro free trial on subscribe |
+
+Create the annual sibling in the same subscription group:
+
+| Field | Value |
+|---|---|
+| **Reference name** | Volyume Pro Annual |
+| **Product ID** | pro_annual |
+| **Type** | Auto-Renewable Subscription |
+| **Duration** | 1 Year |
+| **Price** | £19.99 / year |
+| **Free trial** | Same 7-day store intro free trial |
 
 **Display name (shown to users):**
 ```
@@ -373,12 +382,12 @@ Before submitting for review, confirm each item:
 - [ ] 6 screenshots uploaded (iPhone 6.9" required; 6.5" recommended)
 - [ ] App Preview video uploaded (optional but recommended)
 - [ ] Screenshot captions entered for each screenshot
-- [ ] In-App Purchase `app.volyume.pro.monthly` created and approved
+- [ ] In-App Purchases `pro_monthly` and `pro_annual` created and approved
 - [ ] Subscription group `Volyume Pro` created
 - [ ] Age rating questionnaire completed — target 4+
 - [ ] Privacy Nutrition Label completed
 - [ ] Support URL confirmed live: https://volyume.app/support
 - [ ] Marketing URL confirmed live: https://volyume.app
 - [ ] Privacy Policy URL confirmed live: https://volyume.app/privacy
-- [ ] Build archived in Xcode and uploaded via Organizer → Distribute App (no iOS CI workflow exists yet; the Android-only GitHub Actions build does not produce an `.ipa`)
+- [ ] iOS build uploaded to App Store Connect and tested through TestFlight
 - [ ] TestFlight internal testing confirmed before external submission

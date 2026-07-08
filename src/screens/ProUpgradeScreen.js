@@ -109,7 +109,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // Post-beta subscribe: the real store purchase. Mirrors
   // PaywallScreen.handlePay so there's one purchase path. Store offer
   // eligibility decides 7-days-free (used the in-app trial, never paid) vs
-  // pay now (already used the Play trial and cancelled).
+  // pay now (already used the store trial and cancelled).
   async function subscribePro() {
     const { logError } = require('../lib/errorLog');
     // Flat pricing: subscribe at the period the user picked (monthly/annual).
@@ -195,13 +195,13 @@ export default function ProUpgradeScreen({ navigation, route }) {
       }
       // Fail toward the purchase sheet, never self-grant: a response with NO
       // trial_state must not read as a live trial, so missing data maps to
-      // null means trialLive false, which sends the user to the honest Play purchase path below.
+      // null means trialLive false, which sends the user to the honest store purchase path below.
       const ts = trial.data?.trial_state ?? null;
       const trialLive = ts === 'pro_trial_active' || ts === 'complete_trial_active';
       if (!trialLive) {
         // already_started with a consumed/expired state: this account cannot
-        // trial again. Fall through to the honest path, the Play purchase,
-        // Google's own intro-offer eligibility still gives an eligible buyer
+        // trial again. Fall through to the honest path, the store purchase,
+        // the store's own intro-offer eligibility still gives an eligible buyer
         // their free week. startCascade mirrored the true trial_state into
         // the local profile, so canStillTrial and the CTA label correct
         // themselves from here.

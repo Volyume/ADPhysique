@@ -35,7 +35,7 @@ installGlobalHandlers();
   initSentry({});
 }
 
-// Google Play Billing wiring (Move #5 / 2-tier model). Lazy-loads
+// Store billing wiring (Free / Pro model). Lazy-loads
 // react-native-iap; no-ops cleanly if the native module isn't linked
 // in this build. Safe to call at module scope — listeners are
 // registered inside initialise() once an authenticated user is known

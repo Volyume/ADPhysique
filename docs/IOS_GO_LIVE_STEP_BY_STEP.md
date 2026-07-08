@@ -30,8 +30,8 @@ use your Apple Developer account; Supabase uses your usual Supabase login).
 | App name | **Volyume** |
 | Bundle ID | **app.volyume** |
 | Apple App ID (numeric) | **6777083702** |
-| Monthly product ID | **pro_monthly** — £4.99/month |
-| Annual product ID | **pro_annual** — £29.99/year |
+| Monthly product ID | **pro_monthly** — £2.99/month |
+| Annual product ID | **pro_annual** — £19.99/year |
 | Free trial | **7 days**, on each product |
 | Supabase project | **sujrylzzxcqxxfygptns** |
 | Notifications URL (you'll paste this into Apple) | `https://sujrylzzxcqxxfygptns.supabase.co/functions/v1/app-store-notifications` |
@@ -118,7 +118,7 @@ Google Play subscriptions.
 5. On the subscription's page set:
    - **Subscription Duration**: **1 Month**
    - **Subscription Prices** → **Add Subscription Price** → choose country
-     **United Kingdom** → price **£4.99** → Apple auto-fills every other
+     **United Kingdom** → price **£2.99** → Apple auto-fills every other
      country; click through **Next/Confirm**.
    - **Localization** (App Store display info) → **Add** → Language **English
      (U.K.)** → Display Name `Volyume Pro (Monthly)` → Description (a sentence,
@@ -136,7 +136,7 @@ Google Play subscriptions.
      trial is always on the shelf for new users. (These dates are how long the
      *offer is available*; the 7 days is the trial's own length, set next.)
    - **Offer Type / what they get**: choose **Free for the first week** (that's
-     the 7-day free trial — same as the Google Play trial).
+     the 7-day free trial — same trial length as Android).
    - Save.
 
    > **If it says you must create a key first:** the key it needs is the
@@ -148,7 +148,7 @@ Google Play subscriptions.
    > key the server uses to confirm purchases, so you need it either way.
 7. Repeat steps 4–6 for the annual plan:
    - **Reference Name**: `Pro Annual`, **Product ID**: `pro_annual`
-   - **Duration**: **1 Year**, **Price**: **£29.99**
+   - **Duration**: **1 Year**, **Price**: **£19.99**
    - Display Name `Volyume Pro (Annual)`, same kind of description.
    - **Introductory Offer**: same as step 6 — **Free for the first week**,
      Start Date today, **No End Date**, all countries.
