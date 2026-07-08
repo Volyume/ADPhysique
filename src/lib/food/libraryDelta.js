@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, uid as makeUid } from '../database';
 import { getSupabaseClient } from '../supabase';
 import { logInfo, logWarn, logError } from '../errorLog';
+import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow } from './micronutrients';
 
 const CURSOR_KEY = '@volyume_food_library_pull_cursor_v1';
 const THROTTLE_KEY = '@volyume_food_library_pull_last_ms_v1';
@@ -143,9 +144,9 @@ async function _run({ force }) {
               (id, source, source_id, barcode_ean, name, brand,
                serving_g, serving_label,
                kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-               sodium_100g, sugar_100g,
+               sodium_100g, sugar_100g, ${microSqlColumns},
                verified, fetched_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET
                barcode_ean = excluded.barcode_ean,
                name = excluded.name,
@@ -159,6 +160,7 @@ async function _run({ force }) {
                fibre_100g = excluded.fibre_100g,
                sodium_100g = excluded.sodium_100g,
                sugar_100g = excluded.sugar_100g,
+               ${microSqlUpsertExcluded},
                verified = excluded.verified,
                fetched_at = excluded.fetched_at,
                updated_at = excluded.updated_at`,
@@ -169,6 +171,7 @@ async function _run({ force }) {
               _num(row.kcal_100g), _num(row.protein_100g),
               _num(row.carbs_100g), _num(row.fat_100g),
               _num(row.fibre_100g), _num(row.sodium_100g), _num(row.sugar_100g),
+              ...microValuesFromRow(row, _num),
               row.verified ? 1 : 0,
               _msSince(row.fetched_at) ?? now,
               now, _msSince(row.updated_at) ?? now,

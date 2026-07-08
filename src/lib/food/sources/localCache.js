@@ -10,6 +10,7 @@
  */
 import { db } from '../../database';
 import { CURATED_FOODS } from '../curatedFoods';
+import { microSqlColumns } from '../micronutrients';
 
 // The columns every search/lookup row carries. sodium_100g / sugar_100g ride
 // along for the food-detail display rows (gap #16 sugars, E4 sodium):
@@ -214,7 +215,7 @@ export async function resolveFoodRef(userId, foodRef) {
       `SELECT 'global:' || id AS food_ref, source, name, brand,
               serving_g, serving_label,
               kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-              sodium_100g, sugar_100g
+              sodium_100g, sugar_100g, ${microSqlColumns}
        FROM foods WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -224,7 +225,7 @@ export async function resolveFoodRef(userId, foodRef) {
       `SELECT 'custom:' || id AS food_ref, 'custom' AS source, name, brand,
               serving_g, serving_label,
               kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-              sodium_100g, sugar_100g
+              sodium_100g, sugar_100g, ${microSqlColumns}
        FROM custom_foods
        WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
       [id, userId]

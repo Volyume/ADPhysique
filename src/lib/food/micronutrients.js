@@ -100,3 +100,32 @@ export function nrvPercent(key, amount) {
   if (!n || amount == null || !Number.isFinite(Number(amount))) return null;
   return Math.round((Number(amount) / n.nrv) * 100);
 }
+
+// ── SQL fragments (keep every foods/custom_foods call site identical) ──────────
+// Column list for SELECT/INSERT: "vit_a_100g, vit_d_100g, ..."
+export const microSqlColumns = MICRO_COLUMNS.join(', ');
+// Bind placeholders matching microSqlColumns: "?, ?, ..."
+export const microSqlPlaceholders = MICRO_COLUMNS.map(() => '?').join(', ');
+// UPSERT set-list: "vit_a_100g = excluded.vit_a_100g, ..."
+export const microSqlUpsertExcluded = MICRO_COLUMNS.map((c) => `${c} = excluded.${c}`).join(', ');
+
+/**
+ * Bind values from a snake_case DB row (cloud custom-food upsert, library pull),
+ * in microSqlColumns order. `num` normalises each value (default: pass-through,
+ * null-safe). A missing column stays null (unknown), never 0.
+ */
+export function microValuesFromRow(row, num = (v) => (v == null ? null : v)) {
+  return MICRO_COLUMNS.map((c) => num(row?.[c] ?? null));
+}
+
+/**
+ * Bind values from a custom-food input carrying a `.micros` object keyed by
+ * nutrient key (e.g. { vitC: 12, iron: 3 }), in microSqlColumns order. A missing
+ * or non-finite value stays null (unknown), never 0.
+ */
+export function microValuesFromInput(micros) {
+  return MICRONUTRIENTS.map((n) => {
+    const v = micros?.[n.key];
+    return v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+  });
+}

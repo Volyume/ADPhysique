@@ -12,6 +12,7 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
+import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow, microValuesFromInput } from './micronutrients';
 import { isValidEntryGrams } from './servingEntry';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
@@ -387,14 +388,15 @@ export async function insertCustomFood(userId, food) {
     `INSERT INTO custom_foods (
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
-      fibre_100g, sodium_100g, sugar_100g, photo_url, notes,
+      fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
       barcode_ean, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?)`,
     [
       id, userId, food.name, food.brand ?? null,
       food.servingG, food.servingLabel ?? null,
       food.kcal100g, food.protein100g, food.carbs100g, food.fat100g,
       food.fibre100g ?? null, food.sodium100g ?? null, food.sugar100g ?? null,
+      ...microValuesFromInput(food.micros),
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
       now, now,
@@ -1559,9 +1561,9 @@ export async function applyCustomFoodFromCloud(userId, row) {
     `INSERT INTO custom_foods (
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
-      fibre_100g, sodium_100g, sugar_100g, photo_url, notes,
+      fibre_100g, sodium_100g, sugar_100g, ${microSqlColumns}, photo_url, notes,
       barcode_ean, deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       user_id = excluded.user_id,
       name = excluded.name,
@@ -1575,6 +1577,7 @@ export async function applyCustomFoodFromCloud(userId, row) {
       fibre_100g = excluded.fibre_100g,
       sodium_100g = excluded.sodium_100g,
       sugar_100g = excluded.sugar_100g,
+      ${microSqlUpsertExcluded},
       photo_url = excluded.photo_url,
       notes = excluded.notes,
       barcode_ean = excluded.barcode_ean,
@@ -1586,6 +1589,7 @@ export async function applyCustomFoodFromCloud(userId, row) {
       row.serving_g, row.serving_label ?? null,
       row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
       row.fibre_100g ?? null, row.sodium_100g ?? null, row.sugar_100g ?? null,
+      ...microValuesFromRow(row),
       row.photo_url ?? null, row.notes ?? null,
       row.barcode_ean ?? null,
       deletedAt, createdAt, updatedAt,
