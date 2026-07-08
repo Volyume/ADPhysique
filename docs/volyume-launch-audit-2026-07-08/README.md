@@ -87,17 +87,20 @@ The other eight §15 items build under the standard wave process.
 
 ### §15 premium wave (in progress)
 
+- #1 Connected weekly story surface — **done** (`bab1f68`).
+- #2 MN-1 micronutrients (full build, hands-on) — **done** (`086d23f`,
+  `f9e962f`, `b314efe`). Schema local + cloud (migrate_109, founder-run),
+  wiring, sync, read, diary panel + custom-food entry. Ships "unknown" until
+  the seed .dat regen (separate queued task, #99).
+- #4 "Last verified" + opportunistic re-fetch — **building** (was initially
+  missed in the dispatch rounds; caught and now in progress, not dropped).
+- #5 Training-day meal composition — **done** (`e2a31ed`), floor-only, no
+  target/floor changes.
 - #6 Repeat-a-day + grocery share — **done** (`3f060dd`).
-- #8 Notification deep-links (coach/check-in/diary-day) — **done** (`71ba616`).
-- #10 Tap-count regression gate — **done** (`19804fc`).
-- #2 MN-1 micronutrients (full build, hands-on) — schema local+cloud, wiring,
-  sync, read, migrate_109 all **done** (`086d23f`, `f9e962f`); diary panel +
-  custom-food entry UI building. Ships "unknown" until the seed .dat regen
-  (separate queued task); migrate_109 is founder-run.
+- #7 Readiness aggregate — **done** (`5382750`).
+- #8 Notification deep-links — **done** (`71ba616`).
 - #9 Raw/cooked toggle — no build (founder decision: keep stored grams as-is).
-- #7 Readiness aggregate — building.
-- #5 Training-day meal composition — building (hard safety boundary: no target
-  or floor changes).
-- #1 Connected weekly story surface — queued (shares HomeScreen with #7).
-- #3 Report-bad-food flow — queued (moderation scope to confirm before build).
+- #10 Tap-count regression gate — **done** (`19804fc`).
+- #3 Report-bad-food flow — **deferred** (founder decision 2026-07-08: skip this
+  wave; the one item with a real moderation backend/ops dependency).
 - Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
