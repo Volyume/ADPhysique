@@ -584,6 +584,47 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(flagged).toBeLessThan(base);
   });
 
+  test('clean measured scans are not demoted to low confidence by validation-gap flags alone', () => {
+    const cleanButValidationPending = modelBackedAssets.map((asset) => ({
+      ...asset,
+      qualityScore: 0.72,
+      segmentationConfidence: 0.72,
+      framingScore: 0.72,
+      lightingScore: 0.72,
+      blurScore: 0.72,
+      landmarkConfidence: 0.72,
+      signals: {
+        ...asset.signals,
+        quality: {
+          ...(asset.signals.quality || {}),
+          segmentationConfidence: 0.72,
+          framingScore: 0.72,
+          blurScore: 0.72,
+          lightingScore: 0.72,
+          poseConfidence: 0.72,
+          backgroundSeparation: 0.72,
+        },
+      },
+    }));
+
+    const out = analyseProgressScan({
+      assets: cleanButValidationPending,
+      modelEstimate: null,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 82,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.scanConfidenceScore).toBeGreaterThanOrEqual(0.64);
+    expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
+    expect(out.biasFlags).toEqual(expect.arrayContaining([
+      'physique_athlete_validation_pending',
+      'skin_tone_not_collected_validation_gap',
+    ]));
+  });
+
   test('visual leanness score is deterministic from measured silhouette inputs, then calibrated for display', () => {
     expect(computeVisualLeannessScore({
       waistToShoulder: 0.63,

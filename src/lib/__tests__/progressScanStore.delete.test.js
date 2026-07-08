@@ -43,6 +43,7 @@ const {
   deleteProgressScanSession,
   detachProgressScanPhoto,
   finishProgressScanSession,
+  getProgressScanCalibrationJson,
   getProgressScanSession,
 } = require('../progressScanStore');
 const { deleteProgressPhoto } = require('../progressPhotos');
@@ -333,5 +334,48 @@ describe('finishProgressScanSession estimator persistence', () => {
     expect(update.params[4]).toBeNull();
     expect(update.params[5]).toBeNull();
     expect(update.params[14]).toContain('"bmi":27.8');
+  });
+});
+
+describe('progress scan calibration export', () => {
+  test('exports saved scan signals without photo names or file paths', async () => {
+    seedCompletedSessionAssets();
+    mockMetaMap = {
+      '100.jpg': { weightKg: 82 },
+      '101.jpg': { weightKg: 82 },
+    };
+    mockSession = {
+      ...mockSession,
+      status: 'complete',
+      analysis_status: 'complete',
+      required_poses_complete: 1,
+      signals_json: JSON.stringify({
+        estimatorInputs: { sex: 'male', bmi: 25.3 },
+        physiqueAssessment: {
+          visualLeannessScore: 83,
+          leannessBandLabel: 'Lean',
+          scanConfidenceTier: 'moderate',
+        },
+      }),
+    };
+
+    const json = await getProgressScanCalibrationJson('user-1', 'scan-1', {
+      label: 'APK smoke scan',
+    });
+    const parsed = JSON.parse(json);
+
+    expect(parsed[0]).toMatchObject({
+      label: 'APK smoke scan',
+      sex: 'male',
+      weightKg: 82,
+      expected: {
+        min: 79,
+        max: 87,
+        bands: ['Lean'],
+        minConfidence: 'moderate',
+      },
+    });
+    expect(parsed[0].ratios.waistToShoulder).toBeCloseTo(0.63);
+    expect(json).not.toMatch(/file:|100\.jpg|101\.jpg|photo_name|photoName|uri|user-1|progress_photos/i);
   });
 });

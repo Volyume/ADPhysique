@@ -41,6 +41,8 @@ Do not commit user photos, downloaded comparison photos, or copyrighted guide im
 
 The app can then be tuned against real measured signals without storing private photos in Git.
 
+Use `getProgressScanCalibrationJson(userId, scanId, opts)` from `src/lib/progressScanStore.js` when you need a saved local scan converted into the corpus shape. It exports ratios, quality metrics, expected score band and confidence only; it must not include photo names, file paths, user ids, emails or image data.
+
 Example real-case shape:
 
 ```json

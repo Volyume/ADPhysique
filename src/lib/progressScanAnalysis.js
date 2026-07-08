@@ -396,7 +396,7 @@ function confidenceTier(score, { measuredScoreReady = false } = {}) {
   const n = finiteNumber(score);
   if (n == null) return 'unknown';
   if (n >= 0.85) return 'high';
-  if (n >= 0.70) return 'moderate';
+  if (n >= (measuredScoreReady ? 0.64 : 0.70)) return 'moderate';
   if (n >= (measuredScoreReady ? 0.28 : 0.40)) return 'low';
   return 'not_enough';
 }

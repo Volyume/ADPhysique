@@ -19,6 +19,7 @@ import {
 } from './progressScanAnalysis';
 import { getPhotoMetaMap, deletePhotoMeta } from './progressPhotoMeta';
 import { deleteProgressPhoto } from './progressPhotos';
+import { buildProgressScanCalibrationJson } from './progressScanCalibrationExport';
 
 function nowMs() {
   return Date.now();
@@ -393,6 +394,12 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
 export async function listProgressScanEntries(userId, limit = 20) {
   const scans = await listProgressScans(userId, limit);
   return Promise.all(scans.map((scan) => scanEntry(userId, scan)));
+}
+
+export async function getProgressScanCalibrationJson(userId, scanId, opts = {}) {
+  const scan = await getProgressScanSession(userId, scanId);
+  if (!scan) return null;
+  return buildProgressScanCalibrationJson(await scanEntry(userId, scan), opts);
 }
 
 export async function getProgressScanCoachSummary(userId, { suppressed = false } = {}) {
