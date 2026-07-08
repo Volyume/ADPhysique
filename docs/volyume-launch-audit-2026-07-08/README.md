@@ -41,17 +41,26 @@ the current wave. Every item in §14 cites the scout that surfaced it.
   `affectsTargets:false` isolation are not touched by any wave beyond a tiny
   required integration.
 
-## Open founder decision (for the follow-on wave)
+## Follow-on final wave = §15 (premium-later top 10)
 
-The founder asked for "the other 15 improvements" in a final wave under the
-same criteria. The audit does not contain a clean list of exactly 15: §5 ranks
-7 gaps, §14 is the launch-critical 10, §15 is the premium-later 10. Which items
-constitute "the other 15" is a founder decision to be surfaced as a structured
-question **after** the §14 top-10 wave lands — not guessed here.
+Founder clarified (2026-07-08): the follow-on "final wave" is **§15, the
+premium-later top 10** in `00-full-audit.md`, run under the same criteria and
+process after the §14 top-10 wave lands. Two §15 items are **founder-gated in
+the audit** and must be surfaced as structured decisions before any build,
+never auto-built:
+
+- §15 #2 — MN-1 micronutrients, tiered (marked *Founder-gated — decision, then
+  build*; matches CLAUDE.md decision-gated item MN-1).
+- §15 #9 — Raw/cooked toggle (marked *founder-gated item 12*).
+
+The other eight §15 items build under the standard wave process.
 
 ## Live status (updated as waves land)
 
-- Wave 1 — Food trust quick wins (items 2, 5): in progress.
+- Wave 1 — Food trust quick wins (items 2, 5): **done** (`dcc74fc`, `4d71fed`).
+  Item 5's UI was already shipped; a dead-telemetry bug was fixed and both
+  items are now test-covered.
 - Wave 2 — Plan/diary adherence loop (items 1, 4): not started.
 - Wave 3 — Coach surface coherence (items 3, 6, 7): not started.
 - Wave 4 — Polish/loading/correctness/a11y (items 8, 9, 10): not started.
+- Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
