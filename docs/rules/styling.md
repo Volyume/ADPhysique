@@ -94,6 +94,31 @@ copy runs to sentences, it wears `bodySm` or larger.
 
 ---
 
+## LOADING STATES: SKELETON VS SPINNER
+
+**Rule (2026-07-08, ultimate audit item 9): Skeleton for a known layout's
+first load, `ActivityIndicator` only for an indeterminate in-place action.**
+The two idioms exist for different jobs; do not mix them up.
+
+- **Use `Skeleton`/`SkeletonCard`/`SkeletonRow`** when a screen's first
+  paint is waiting on data for a layout you already know the shape of
+  (a card, a list row, a hero). Render the placeholder in the exact slot the
+  real content will occupy so nothing jumps when it arrives. This is what
+  `HomeScreen.js` (`initialLoading` → `SkeletonCard` stack), `CoachOutputScreen.js`
+  (`LoadingView` → `SkeletonCard` stack) and `DiaryScreen.js`/
+  `FoodSearchScreen.js` (list rows → `SkeletonRow`) already do; treat them as
+  the reference implementations.
+- **Use `ActivityIndicator`** only for an indeterminate action with no
+  content shape to preview: a button mid-submit, a single list row mid-action
+  (e.g. `FoodSearchScreen.js` swaps one row's trailing icon for a small
+  `ActivityIndicator` while that one item logs), or any spot where you do not
+  yet know what the finished state will look like.
+- A screen's **first load of its main content** is a Skeleton case, full
+  stop, even if today it happens to render a bare `ActivityIndicator` — that
+  is drift, not a legitimate spinner use, and reads as if two different apps
+  built the loading states. Fix it in place using the shared `Skeleton`
+  primitives; do not invent a new placeholder component per screen.
+
 ## COMPONENTS
 
 Use the shared primitives before writing a local one: `Button` (variants

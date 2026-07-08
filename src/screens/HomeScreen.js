@@ -1718,6 +1718,7 @@ export default function HomeScreen({ navigation, route }) {
                 <TouchableOpacity
                   style={styles.proRecoverBtn}
                   accessibilityRole="button"
+                  accessibilityLabel="Start with a plan"
                   onPress={async () => {
                     const result = await generateAndSavePlan(user.id, userProfile);
                     if (result.ok) {
@@ -1923,6 +1924,7 @@ export default function HomeScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.coachingNudgeBtn}
                 accessibilityRole="button"
+                accessibilityLabel="Open check-in"
                 onPress={() => {
                   dismissCoachingNudge();
                   navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
@@ -1979,7 +1981,7 @@ export default function HomeScreen({ navigation, route }) {
               definitions of its terms live here, in the sheet it opens. */}
           <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
           <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)} accessibilityRole="button">
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)} accessibilityRole="button" accessibilityLabel="Close">
             <Text style={styles.sheetCancelText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -2086,7 +2088,7 @@ export default function HomeScreen({ navigation, route }) {
               );
             })}
           </ScrollView>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)} accessibilityRole="button">
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)} accessibilityRole="button" accessibilityLabel="Cancel">
             <Text style={styles.sheetCancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -2163,6 +2165,7 @@ export default function HomeScreen({ navigation, route }) {
             <TouchableOpacity
               style={styles.intentSkip}
               accessibilityRole="button"
+              accessibilityLabel="Skip and start without answering"
               onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
               <Text style={styles.intentSkipText}>Skip</Text>

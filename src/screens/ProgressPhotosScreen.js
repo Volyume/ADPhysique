@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -11,6 +11,7 @@ import { appAlert } from '../components/AppAlert';
 import Button from '../components/Button';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
+import { SkeletonCard } from '../components/Skeleton';
 import {
   colors, spacing, radius, fontSize, fontWeight, type, iconSize,
 } from '../styles/theme';
@@ -1325,7 +1326,16 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   function renderTimelineEmpty() {
     if (loading) {
-      return <ActivityIndicator style={styles.loadingIndicator} color={colors.primary} />;
+      // Content-shaped first load (docs/rules/styling.md "Skeleton vs
+      // spinner"): the timeline renders check-in cards, so the placeholder
+      // mirrors that shape instead of a bare spinner (audit item 9).
+      return (
+        <View style={styles.loadingSkeletonList}>
+          <SkeletonCard height={132} />
+          <SkeletonCard height={132} />
+          <SkeletonCard height={132} />
+        </View>
+      );
     }
     if (loadError && photos.length === 0) {
       return (
@@ -1941,7 +1951,7 @@ const styles = StyleSheet.create({
   },
   shareActionButton: { flex: 1 },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  loadingIndicator: { marginVertical: spacing.xxl },
+  loadingSkeletonList: { gap: spacing.md, paddingTop: spacing.md },
   monthHeader: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
   checkInCard: {
     flexDirection: 'row',

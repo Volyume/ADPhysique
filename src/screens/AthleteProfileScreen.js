@@ -71,12 +71,40 @@ function scanConfidenceLabel(confidence) {
   return 'Photo score saved';
 }
 
-function finiteMs(value) {
+// A timestamp is only trusted if it is a positive finite number that has not
+// arrived from further in the future than a small clock-skew tolerance. Both
+// scan.capturedAt and bodyFatLoggedAt are written with the device's own
+// Date.now() at save time (see progressScanStore.js and
+// database/bodyMetrics.js logBodyMetric), so a corrupted/clock-skewed write
+// (bad device clock, or a torn sync merge landing a future-dated row) must
+// not be able to "win" the physique-score-vs-body-fat-log ordering below
+// forever by claiming a time that has not happened yet. Anything beyond the
+// tolerance is treated the same as "not logged" for this comparison.
+const CLOCK_SKEW_TOLERANCE_MS = 24 * 60 * 60 * 1000; // 24h
+export function finiteMs(value) {
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n > Date.now() + CLOCK_SKEW_TOLERANCE_MS) return null;
+  return n;
 }
 
-function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
+// Race guard (Scout 5, ultimate audit item 8): scan.capturedAt and
+// bodyFatLoggedAt are two independently-written timestamps (progress scan vs
+// manual body-fat log), so they can arrive tied or in either order. This
+// must resolve deterministically for every combination:
+//   - no scored scan at all                       -> false (nothing to show)
+//   - no body-fat log yet                         -> true  (scan is all we have)
+//   - body-fat log present but its timestamp is
+//     missing/untrusted (see finiteMs guard above) -> true  (can't prove it's newer)
+//   - scan timestamp missing/untrusted but a
+//     trustworthy body-fat log exists              -> false (can't prove scan is newer)
+//   - both timestamps present, EXACT TIE           -> true  (scan wins ties: a photo
+//     scan and a manual log recorded in the same instant favour the richer signal)
+//   - otherwise                                    -> whichever is strictly newer
+// This does NOT read or write anything coaching-related; it only decides
+// which stat tile the profile screen shows (affectsTargets stays false,
+// untouched here).
+export function shouldShowPhysiqueScore({ scan, bodyFat, bodyFatLoggedAt }) {
   if (progressScanScoreForDisplay(scan) == null) return false;
   if (bodyFat == null) return true;
   const scanAt = finiteMs(scan?.capturedAt ?? scan?.captured_at);

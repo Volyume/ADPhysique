@@ -247,6 +247,73 @@ module.exports = [
     },
   },
   {
+    // Ultimate audit item 10 (2026-07-08): a11y touchable-without-label.
+    // eslint-plugin-react-native-a11y's has-valid-accessibility-descriptors
+    // rule (registered above as a repo-wide WARN) is satisfied by ANY of
+    // role/accessibilityRole/accessibilityLabel/accessibilityActions/
+    // accessible, so a bare accessibilityRole="button" with no label already
+    // passes it, even on an icon-only button TalkBack cannot describe. Repo-
+    // wide errors were measured and rejected: forcing accessibilityLabel
+    // across src/screens + src/components trips 53 pre-existing violations
+    // today (counted 2026-07-08, same selector as below) and would break the
+    // lint gate outright. Scoped
+    // here to HomeScreen.js only, now that it is clean, so it cannot
+    // regress; widen file-by-file as each screen is swept (see audit item 10
+    // for the repo-wide backlog this intentionally leaves for a founder
+    // decision on scope/scheduling). This block must repeat every selector
+    // from the design-system guard block above (same files), because flat
+    // config replaces a repeated rule key per file rather than merging it.
+    files: ['src/screens/HomeScreen.js'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: "Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]",
+          message: 'No hardcoded hex colours in screens/components. Use a theme token (colors.*) or withAlpha().',
+        },
+        {
+          selector: "Literal[value=/^rgba?\\(/]",
+          message: 'No hardcoded rgba()/rgb() in screens/components. Use a theme token or withAlpha(colors.*, a).',
+        },
+        {
+          selector: "BinaryExpression[operator='+'] > Literal.right[value=/^[0-9a-fA-F]{2}$/]",
+          message: "No hex-alpha concat (token + '50'). Use withAlpha(token, alpha) so it survives rgba() tokens.",
+        },
+        {
+          selector: "TemplateElement[tail=true][value.cooked=/^[0-9a-fA-F]{2}$/]",
+          message: 'No hex-alpha template (`${token}50`). Use withAlpha(token, alpha).',
+        },
+        {
+          selector: "Property[key.name='fontSize'] > Literal[raw=/^[0-9]/]",
+          message: 'No raw fontSize literal. Use a type role (type.body, type.h2…) or fontSize.* token. (Intentional hero/display sizes: add a scoped eslint-disable with a reason.)',
+        },
+        {
+          selector: "Property[key.name='fontWeight'] > Literal",
+          message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
+        },
+        {
+          selector: "Literal[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "JSXText[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "Literal[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+        {
+          selector: "JSXText[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name=/^(TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|Pressable)$/]:not(:has(JSXAttribute[name.name='accessibilityLabel'])):not(:has(JSXSpreadAttribute))",
+          message: 'Touchable is missing accessibilityLabel (audit item 10: TalkBack cannot describe it without one). Add one, or accessibilityRole alone only where the visible text already says everything TalkBack needs.',
+        },
+      ],
+    },
+  },
+  {
     // The copy half of the gate above also applies to ShareCardScreen, which
     // is exempt from the block above only for its legitimately-literal offline
     // HTML palette. Scoped to that one file so it does not collide with the
