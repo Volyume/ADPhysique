@@ -116,3 +116,41 @@ Decisions/risks recorded:
 - Manual Android EAS device checklist written (in the wave 1 agent report, mirrored into the
   final status): duplicate-import withhold, retake-scores path, anchor-engaged Moderate receipt,
   no-anchor path, old-scan render, ED-suppression check.
+
+### Wave 2 — capture quality and confidence (COMPLETE, commit `465a573`)
+
+Agent: Sonnet. Reviewed hands-on by Fable; ONE REAL BUG caught and fixed in review before
+commit: the agent's new `localDayKeyForScanMatch` in `progressPhotosController.js` used
+`getMonth()` while the screen's map build used `getMonth() + 1` — the day-fallback lookup key
+could never match the map key (silent loss of the legitimate same-day score row), and the test
+fixture mirrored the wrong key so the suite could not see it. Fix: one exported
+`localDayKeyForScanMatch` (month + 1) now builds the screen's `scansByDateKey` AND performs the
+lookup; the screen's private `localDateKey` was deleted; the test fixture builds its map key
+with the exported function so any future drift fails the suite.
+
+Leak-path trace (evidenced by the agent): quick-adds can never enter `progress_scan_assets`
+(hard fence by construction: `addProgressScanAsset` reachable only from scan routes). The real
+leak was display attribution: `scanForCheckIn`'s same-day fallback could attribute an unrelated
+scan's Score/Leanness/Change row to a check-in card containing only quick-add photos (e.g. a
+backdated quick-add landing on a scored day). Fenced at that exact point.
+
+Files changed: `database.js` (additive idempotent local migration v59:
+`progress_photo_meta.unscored`, header-noted), `progressPhotoMeta.js` (permanent monotonic
+`unscored` flag; true can never be cleared), `progressPhotosController.js`
+(`resolveScanForCheckIn` fence + `isFirstPoseCapture` + shared day key),
+`progressCaptureGuide.js` (F3 baseline sentence + firmer retake copy),
+`ProgressPhotosScreen.js` (quick-add tagging on save, baseline-once wiring, `finishScan`
+re-entrancy guard keyed by scanId), plus 5 test files (fence behavioural + source guard,
+baseline-once, re-entrancy, meta permanence; 2 pinned literals updated for the refactor with
+guards preserved).
+
+Tests: `npx jest --testPathPattern="progress|Progress" --testPathIgnorePatterns=progressScanVision`
+→ 35 suites passed (1 skipped: the pre-existing sandbox-only vision-module failure), 364 tests
+passed. `npm run lint` clean.
+
+Deferred item (recorded, not silently parked): the same-day fallback is fenced for quick-add
+photos per founder gate F2's exact scope; a check-in built ENTIRELY from guided single photos
+(ghost-overlay route, also never scan assets) could still, in a narrow backdating edge, borrow
+a same-day scan's score display. Fixing that means either tagging guided singles unscored too
+or removing the day-fallback outright — both beyond F2's stated scope, so this is surfaced in
+the final status as a founder question rather than pre-decided.
