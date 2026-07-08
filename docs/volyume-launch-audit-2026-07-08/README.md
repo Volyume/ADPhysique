@@ -77,5 +77,11 @@ The other eight §15 items build under the standard wave process.
   wiped on CoachOutput remount) — verified NOT a safety/stacking risk, founder
   chose to fix now; fixed via `preserveAppliedAdjustments` merge in
   `saveCoachOutput` with a regression test.
-- Wave 4 — Polish/loading/correctness/a11y (items 8, 9, 10): not started.
+- Wave 4 — Polish/loading/correctness/a11y (items 8, 9, 10): **done**
+  (`fe01c32`). Item 8 clock-skew guard + 13 tests (isolation intact); item 9
+  styling.md rule + ProgressPhotos skeleton swap (other 5 compliant); item 10
+  HomeScreen-scoped a11y lint rule + 5 labels. Repo-wide a11y rollout (53
+  pre-existing violations) flagged for a founder scope decision.
+
+**All 10 §14 launch-critical items are complete.** Next: the §15 premium wave.
 - Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
