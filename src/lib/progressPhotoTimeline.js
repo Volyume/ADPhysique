@@ -56,7 +56,7 @@ function setupQualityForPoses(poses = []) {
     return {
       key: 'scored',
       label: 'Scoring set',
-      helper: 'Front and back are saved. Side is optional for extra comparison.',
+      helper: 'Front and back are saved. Add side next time for a complete set.',
     };
   }
   if (poses.length >= 2) {

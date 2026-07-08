@@ -121,7 +121,7 @@ describe('progressPhotosController transforms', () => {
       missing: [],
       percent: 100,
       label: 'Front and back saved',
-      detail: 'Side is optional. Add it if you want a fuller visual comparison.',
+      detail: 'Front and back are saved. Add side next time for a complete set.',
       nextPose: null,
       nextPoseLabel: null,
     });

@@ -28,8 +28,10 @@ import {
   detachProgressScanPhoto,
   deleteProgressScanSession,
   finishProgressScanSession,
+  getProgressScanCalibrationJson,
   listProgressScanEntries,
 } from '../lib/progressScanStore';
+import { isProgressScanCalibrationExportAllowed } from '../lib/progressScanCalibrationAccess';
 import { getUserBodyProfile } from '../lib/database';
 import {
   getProgressScanCapturePreferences,
@@ -82,6 +84,10 @@ import {
 // the node test env (mirrors ShareCardScreen).
 let ImagePicker;
 try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = null; }
+let FileSystem;
+let Sharing;
+try { FileSystem = require('expo-file-system/legacy'); } catch (_) { FileSystem = null; }
+try { Sharing = require('expo-sharing'); } catch (_) { Sharing = null; }
 
 // Pose filter chips. 'all' shows every photo; the others narrow to a pose so
 // like compares with like (spec §3.3). Function-neutral labels.
@@ -137,6 +143,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const tier = useAppStore((s) => s.tier);
   const readOnly = tier !== 'pro';
   const userId = useAppStore((s) => s.user?.id);
+  const user = useAppStore((s) => s.user);
   const userSex = useAppStore((s) => s.userProfile?.sex ?? null);
   const canWrite = useCallback(() => useAppStore.getState().tier === 'pro', []);
 
@@ -633,19 +640,20 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     if (pose === 'back') {
-      appAlert('Back saved', 'A side photo is optional. It can help line up future comparisons, but you can finish now.', [
-        { text: 'Finish photo set', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
+      const nextFlow = { ...flow, pose: 'side' };
+      const continueToSide = () => {
+        if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
+        setScanFlow(nextFlow);
+        setCapturePose('side');
+        if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'side');
+        else setCaptureOpen(true);
+      };
+      appAlert('Back saved', 'Now add the side photo to complete the set.', [
         {
           text: flow?.mode === 'library' ? 'Import side' : 'Take side',
-          onPress: () => {
-            if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
-            const nextFlow = { ...flow, pose: 'side' };
-            setScanFlow(nextFlow);
-            setCapturePose('side');
-            if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'side');
-            else setCaptureOpen(true);
-          },
+          onPress: continueToSide,
         },
+        { text: 'Finish without side', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
       ], { cancelable: false });
       return;
     }
@@ -1000,6 +1008,41 @@ export default function ProgressPhotosScreen({ navigation }) {
     ))[0] || null;
   }
   const latestAssessment = latestScan?.signals?.physiqueAssessment || null;
+  const canExportCalibration = isProgressScanCalibrationExportAllowed(user);
+  const exportLatestScanCalibration = useCallback(async () => {
+    if (!canExportCalibration) return;
+    if (!userId || !latestScan?.id) {
+      toast.show('No completed scan to export yet.', { variant: 'info' });
+      return;
+    }
+    if (!FileSystem?.cacheDirectory || !FileSystem?.writeAsStringAsync) {
+      toast.show('Scan signal export is not available on this build.', { variant: 'warning' });
+      return;
+    }
+    try {
+      const json = await getProgressScanCalibrationJson(userId, latestScan.id, { sex: userSex ?? undefined });
+      if (!json) throw new Error('progress_scan_calibration_export_empty');
+      const capturedAt = Number(latestScan.capturedAt ?? latestScan.captured_at) || Date.now();
+      const stamp = new Date(capturedAt).toISOString().replace(/[-:]/g, '').replace(/\..+$/, '');
+      const fileUri = `${FileSystem.cacheDirectory}volyume_progress_scan_signals_${stamp}.json`;
+      await FileSystem.writeAsStringAsync(fileUri, json, {
+        encoding: FileSystem.EncodingType?.UTF8 ?? 'utf8',
+      });
+      if (Sharing?.isAvailableAsync && await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export Volyume scan signals',
+          UTI: 'public.json',
+        });
+        toast.show('Scan signals exported.', { variant: 'success' });
+      } else {
+        toast.show('Scan signal file created in app cache.', { variant: 'info' });
+      }
+    } catch (e) {
+      logError('ProgressPhotos.exportScanCalibration', e, { userId, scanId: latestScan?.id });
+      toast.show('Could not export scan signals. Please try again.', { variant: 'error' });
+    }
+  }, [canExportCalibration, latestScan, toast, userId, userSex]);
   const lastCheckInLabel = latestPhoto ? formatProgressPhotoDay(latestPhoto.takenAt) : 'No photos yet';
   const scanStatusLabel = latestScanScoreLabel({
     assessment: latestAssessment,
@@ -1100,7 +1143,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </Text>
           ) : !hasSide ? (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Side is optional. Add it if you want a fuller visual comparison.
+              Front and back are saved. Add side next time for a complete set.
             </Text>
           ) : (
             <Text style={styles.checkInHint} numberOfLines={2}>
@@ -1139,14 +1182,20 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.heroTextTitle}>Physique progress</Text>
               </View>
             </View>
-            <View style={styles.heroPrivacyPill}>
+            <TouchableOpacity
+              style={styles.heroPrivacyPill}
+              onLongPress={canExportCalibration ? exportLatestScanCalibration : undefined}
+              delayLongPress={700}
+              activeOpacity={canExportCalibration ? 0.75 : 1}
+              accessibilityLabel="Progress photos privacy note"
+            >
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
               <Text style={styles.heroPrivacyText}>
                 Private on this device unless you choose to share or export.
               </Text>
-            </View>
+            </TouchableOpacity>
             <Text style={styles.heroTextSubtitle}>
-              Add clear front and back photos once a week. Add side too if you can. Volyume scores the set and saves it to your library.
+              Take clear front, back and side photos once a week. Volyume scores the set and saves it to your library.
             </Text>
           </View>
 
@@ -1338,7 +1387,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add front and back photos to start. A side photo helps comparison.
+                Add front, back and side photos to start.
               </Text>
             </>
           )}
@@ -1539,7 +1588,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate set if these photos are from another day.`
-                    : 'Add a new set from the camera or your photo library. Front and back are needed for a score; side helps comparison.'}
+                    : 'Add a new set from the camera or your photo library. Use front, back and side photos.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -1588,12 +1637,6 @@ export default function ProgressPhotosScreen({ navigation }) {
                       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </TouchableOpacity>
                   ))}
-                  <View style={styles.captureRouteNote}>
-                    <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-                    <Text style={styles.captureRouteNoteText}>
-                      Best results come from upright photos with your full body in frame.
-                    </Text>
-                  </View>
                 </ScrollView>
               </View>
             </SafeAreaView>
@@ -2043,7 +2086,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     gap: spacing.md,
-    maxHeight: '82%',
+    maxHeight: '76%',
   },
   captureRouteHandle: {
     width: 36,
@@ -2063,7 +2106,7 @@ const styles = StyleSheet.create({
   captureRouteScroll: { flexShrink: 1, minHeight: 0 },
   captureRouteList: { gap: spacing.sm, paddingBottom: spacing.xl },
   captureRouteCard: {
-    minHeight: 76,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -2123,15 +2166,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   captureRouteStepText: { ...type.caption, color: colors.textSecondary, lineHeight: 18, flex: 1 },
-  captureRouteNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
-    padding: spacing.md,
-  },
-  captureRouteNoteText: { ...type.caption, color: colors.textPrimary, lineHeight: 18, flex: 1 },
   scanDateBackdrop: {
     flex: 1,
     backgroundColor: colors.scrim,

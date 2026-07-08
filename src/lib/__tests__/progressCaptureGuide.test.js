@@ -15,7 +15,7 @@ describe('progress capture guide copy', () => {
     expect(PROGRESS_SCAN_SEQUENCE).toEqual([
       'Front relaxed',
       'Back relaxed',
-      'Optional side relaxed',
+      'Side relaxed',
     ]);
     expect(PROGRESS_STUDIO_SETUP_STEPS.map((step) => step.key)).toEqual([
       'frame',
@@ -41,7 +41,7 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Add clear front and back photos');
+    expect(prompt).toContain('Add clear front, back and side photos');
     expect(prompt).toContain('Volyume scans the set for a Score');
     expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');

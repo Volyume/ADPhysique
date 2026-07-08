@@ -24,6 +24,13 @@ To add non-committed real-photo cases from APK testing, save a JSON array outsid
 PROGRESS_SCAN_CALIBRATION_FILE=/path/to/real-progress-scan-cases.json npm run progress-scan:calibration
 ```
 
+On a release APK signed in as a founder test account, open Progress Photos and
+long-press the privacy note at the top of the page. Volyume writes a sanitized
+`volyume_progress_scan_signals_*.json` file and opens the native share sheet.
+This file is intended for calibration only. It contains ratios, quality metrics
+and score expectations; it must not contain photo names, file paths, user ids,
+emails or image data.
+
 The calibration corpus checks representative score bands for:
 
 - lean and very lean muscular users

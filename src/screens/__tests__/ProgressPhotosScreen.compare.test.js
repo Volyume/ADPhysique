@@ -273,13 +273,13 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
     expect(text).toContain('Private on this device unless you choose to share or export.');
-    expect(text).toContain('Add clear front and back photos once a week. Add side too if you can.');
+    expect(text).toContain('Take clear front, back and side photos once a week.');
     expect(text).toContain('Volyume scores the set and saves it to your library.');
     expect(text).not.toContain('Latest result');
     expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');
     expect(text).toContain('Add photos');
-    expect(text).toContain('Add front and back photos to start. A side photo helps comparison.');
+    expect(text).toContain('Add front, back and side photos to start.');
     expect(text).not.toContain('Suggested next step');
   });
 });

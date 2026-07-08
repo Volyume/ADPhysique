@@ -73,6 +73,18 @@ function scoreCase(testCase) {
   });
 }
 
+function withHeightAtSameBmi(testCase, heightCm) {
+  const currentHeightM = testCase.heightCm / 100;
+  const bmi = testCase.weightKg / (currentHeightM * currentHeightM);
+  const nextHeightM = heightCm / 100;
+  return {
+    ...testCase,
+    id: `${testCase.id}_${heightCm}cm_same_bmi`,
+    heightCm,
+    weightKg: Math.round(bmi * nextHeightM * nextHeightM * 10) / 10,
+  };
+}
+
 const CALIBRATION_CASES = [
   {
     id: 'male_very_lean_muscular',
@@ -275,5 +287,40 @@ describe('Progress Scan calibration corpus', () => {
     const out = scoreCase(CALIBRATION_CASES.find((testCase) => testCase.id === 'male_lean_broad_frame'));
     expect(out.physiqueAssessment.indexInputs.rawSilhouetteScore).toBeLessThan(out.physiqueAssessment.visualLeannessScore);
     expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(80);
+  });
+
+  test('height alone does not move a same-ratio same-BMI physique into a different score band', () => {
+    const base = CALIBRATION_CASES.find((testCase) => testCase.id === 'male_athletic_average_frame');
+    const shorter = scoreCase(withHeightAtSameBmi(base, 165));
+    const taller = scoreCase(withHeightAtSameBmi(base, 193));
+
+    expect(Math.abs(
+      shorter.physiqueAssessment.visualLeannessScore - taller.physiqueAssessment.visualLeannessScore,
+    )).toBeLessThanOrEqual(2);
+    expect(shorter.physiqueAssessment.leannessBandLabel).toBe(taller.physiqueAssessment.leannessBandLabel);
+  });
+
+  test('weaker lighting lowers confidence without making the same measured physique look worse', () => {
+    const base = CALIBRATION_CASES.find((testCase) => testCase.id === 'male_lean_broad_frame');
+    const bright = scoreCase(base);
+    const dim = scoreCase({
+      ...base,
+      id: `${base.id}_dim_room`,
+      quality: {
+        qualityScore: 0.48,
+        segmentationConfidence: 0.5,
+        framingScore: 0.62,
+        blurScore: 0.58,
+        lightingScore: 0.32,
+        poseConfidence: 0.62,
+        backgroundSeparation: 0.48,
+      },
+    });
+
+    expect(Math.abs(
+      bright.physiqueAssessment.visualLeannessScore - dim.physiqueAssessment.visualLeannessScore,
+    )).toBeLessThanOrEqual(2);
+    expect(CONFIDENCE_RANK[dim.physiqueAssessment.scanConfidenceTier])
+      .toBeLessThanOrEqual(CONFIDENCE_RANK[bright.physiqueAssessment.scanConfidenceTier]);
   });
 });

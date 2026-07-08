@@ -102,7 +102,7 @@ export function buildCheckInCompletenessModel(checkIn = {}) {
     detail: complete
       ? (hasSide
         ? 'Front, back and side are saved together.'
-        : 'Side is optional. Add it if you want a fuller visual comparison.')
+        : 'Front and back are saved. Add side next time for a complete set.')
       : `Add ${missing.map((pose) => `${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date to score it.`,
     nextPose: missing[0] || null,
     nextPoseLabel: missing[0] ? NEXT_ACTION_POSE_LABEL[missing[0]] : null,

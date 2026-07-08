@@ -33,7 +33,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/retake sooner if you are fixing photo quality/);
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/score may be less useful/);
-    expect(SCREEN).toMatch(/Front and back are needed for a score; side helps comparison/);
+    expect(SCREEN).toMatch(/Use front, back and side photos/);
     expect(SCREEN).not.toMatch(/Save without estimate/);
     expect(SCREEN).not.toMatch(/at least a week apart|at least 1 week apart/);
   });
@@ -125,9 +125,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Physique progress/);
     expect(SCREEN).toMatch(/Private on this device unless you choose to share or export/);
-    expect(SCREEN).toMatch(/Add clear front and back photos once a week/);
-    expect(SCREEN).toMatch(/Add side too if you can/);
+    expect(SCREEN).toMatch(/Take clear front, back and side photos once a week/);
     expect(SCREEN).toMatch(/Volyume scores the set and saves it to your library/);
+    expect(SCREEN).not.toMatch(/Add side too if you can/);
+    expect(SCREEN).not.toMatch(/Best results come from upright photos/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);
@@ -163,6 +164,17 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/datesControl: \{[\s\S]*flexGrow: 1,[\s\S]*flexBasis: 148,[\s\S]*minWidth: 0/);
     expect(SCREEN).toMatch(/datesChip: \{[\s\S]*flex: 1, minWidth: 0/);
     expect(SCREEN).toMatch(/datesChipText: \{ \.\.\.type\.label, color: colors\.textMuted, flex: 1, minWidth: 0 \}/);
+  });
+
+  test('real APK scan-signal export is hidden behind a founder-gated long press', () => {
+    expect(SCREEN).toMatch(/getProgressScanCalibrationJson/);
+    expect(SCREEN).toMatch(/isProgressScanCalibrationExportAllowed/);
+    expect(SCREEN).toMatch(/const canExportCalibration = isProgressScanCalibrationExportAllowed\(user\);/);
+    expect(SCREEN).toMatch(/onLongPress=\{canExportCalibration \? exportLatestScanCalibration : undefined\}/);
+    expect(SCREEN).toMatch(/volyume_progress_scan_signals_/);
+    expect(SCREEN).toMatch(/mimeType: 'application\/json'/);
+    expect(SCREEN).toMatch(/dialogTitle: 'Export Volyume scan signals'/);
+    expect(SCREEN).not.toMatch(/title="Export scan|title="Export signals|Scan calibration/);
   });
 
   test('missing-pose and route recommendation controls avoid loose amber links', () => {

@@ -36,7 +36,7 @@ export const PROGRESS_STUDIO_AVOID = Object.freeze([
 export const PROGRESS_SCAN_SEQUENCE = Object.freeze([
   'Front relaxed',
   'Back relaxed',
-  'Optional side relaxed',
+  'Side relaxed',
 ]);
 
 export const QUALITY_FIRST_CAPTURE_NOTE =
@@ -91,9 +91,9 @@ export function getPoseCaptureGuidance(pose) {
 
 export function buildProgressStudioCapturePromptCopy() {
   return [
-    'Add clear front and back photos from the camera or your photo library. Add side too if you can.',
+    'Add clear front, back and side photos from the camera or your photo library.',
     'Volyume scans the set for a Score, leanness band, progress signal and confidence.',
-    'Repeat the same room, light, distance and camera height each week. Side is optional.',
+    'Repeat the same room, light, distance and camera height each week.',
     QUALITY_FIRST_CAPTURE_NOTE,
   ].join('\n\n');
 }
@@ -128,7 +128,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'scan',
       eyebrow: 'New set',
       title: 'Take a new photo set',
-      body: 'Guided front and back photos for the score, with an optional side photo for comparison.',
+      body: 'Guided front, back and side photos for a repeatable weekly set.',
       actionLabel: 'Start photo set',
       recommended: !latestPartial?.nextPose,
       recommendationLabel: 'Recommended',
@@ -140,7 +140,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'images-outline',
       eyebrow: 'Existing set',
       title: 'Import a photo set',
-      body: 'Choose existing front and back photos, add side if you have it, then set the date.',
+      body: 'Choose existing front, back and side photos, then set the date.',
       actionLabel: 'Import photo set',
       disabled: !canScan,
       disabledReason: 'Sign in to save imported photo sets.',
@@ -215,7 +215,7 @@ export function buildProgressStudioHowItWorksCopy() {
   return [
     'Progress Photos keeps your physique photo sets in date order.',
     `Useful photo standard: ${SETUP_STANDARD.join(', ')}.`,
-    `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}. A side photo helps comparison but is optional.`,
+    `Photo set sequence: ${PROGRESS_SCAN_SEQUENCE.join(', ')}.`,
     `Avoid ${PROGRESS_STUDIO_AVOID.join(', ')}.`,
     'Volyume Score is our own progress read from repeatable photos. It shows a score, leanness band, progress signal, confidence and the reason confidence changed.',
     'If a set is not clear enough for a score, Volyume should still save it to the photo library.',

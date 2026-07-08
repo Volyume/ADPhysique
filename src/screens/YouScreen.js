@@ -213,7 +213,7 @@ export default function YouScreen({ navigation }) {
                 {isPro
                   ? latestReview
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
-                    : 'Ready for your first check-in'
+                    : 'First check-in not open yet'
                   : 'Coach is available on Pro'}
               </Text>
             </View>

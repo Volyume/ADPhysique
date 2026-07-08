@@ -211,7 +211,7 @@ test('add photos sheet presents guided capture and import as the two scan paths'
   const copy = allTexts(tree).join(' ');
   expect(copy).toContain('Add photos');
   expect(copy).toContain('Add a new set from the camera or your photo library.');
-  expect(copy).toContain('Front and back are needed for a score; side helps comparison.');
+  expect(copy).toContain('Use front, back and side photos.');
   expect(copy).toContain('Take a new photo set');
   expect(copy).toContain('Import a photo set');
   expect(copy).not.toContain('For new photos taken today.');
