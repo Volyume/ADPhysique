@@ -7,7 +7,7 @@ export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
 export const PROGRESS_SCAN_ESTIMATOR_VERSION = bfEstimatorAsset.id;
 export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
 export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v2';
-export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 14 * 86400000;
+export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 7 * 86400000;
 
 const REQUIRED_SCORE_RATIO_KEYS = ['waistToShoulder', 'waistToHip', 'waistToHeight', 'bodyAreaRatio'];
 const FINAL_SCAN_QUALITY_GATES = {

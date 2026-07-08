@@ -804,11 +804,19 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(scanComparability(movedCamera, previous).comparable).toBe(false);
   });
 
-  test('scan comparability refuses short-interval photo sets before reporting progress', () => {
+  test('scan comparability supports weekly photo sets and refuses shorter intervals', () => {
     const previous = comparableScan({ id: 'old', score: 60 });
     const current = comparableScan({ id: 'new', score: 72 });
     previous.capturedAt = Date.parse('2026-07-01T08:00:00Z');
     current.capturedAt = previous.capturedAt + (7 * DAY_MS);
+
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: true,
+      status: 'comparable',
+    });
+
+    current.capturedAt = previous.capturedAt + (7 * DAY_MS);
+    current.capturedAt -= 1;
 
     const comparability = scanComparability(current, previous);
     expect(comparability).toMatchObject({
