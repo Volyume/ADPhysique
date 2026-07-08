@@ -19,9 +19,9 @@ const scoredScan = {
 };
 
 describe('progressScanCopy', () => {
-  test('scanReadCopy explains Volyume Score as a private visual progress score', () => {
+  test('scanReadCopy explains Volyume Score without product jargon', () => {
     expect(scanReadCopy(scoredScan)).toBe(
-      'Volyume Score 72/100. Lean band. Result confidence: High. Progress change: Slight positive trend. Private visual progress score from repeatable photos.',
+      'Volyume Score 72/100. Lean band. Result confidence: High. Progress change: Slight positive trend. Score from this photo set.',
     );
   });
 
@@ -33,7 +33,7 @@ describe('progressScanCopy', () => {
 
   test('suppression hides score details completely', () => {
     expect(scanReadCopy(scoredScan, { suppressed: true })).toBe(
-      'Photo set saved privately. Score details are hidden right now.',
+      'Photo set saved privately. Score hidden.',
     );
   });
 

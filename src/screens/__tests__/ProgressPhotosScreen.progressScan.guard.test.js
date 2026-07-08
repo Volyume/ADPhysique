@@ -61,6 +61,10 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('capture and deletion lifecycle cleans up scan assets', () => {
+    expect(SCREEN).toMatch(/import \{ SafeAreaView, useSafeAreaInsets \} from 'react-native-safe-area-context';/);
+    expect(SCREEN).toMatch(/const insets = useSafeAreaInsets\(\);/);
+    expect(SCREEN).toMatch(/contentContainerStyle=\{\[\s*styles\.captureRouteList,[\s\S]*insets\.bottom \+ spacing\.lg/);
+    expect(SCREEN).toMatch(/contentContainerStyle=\{\[\s*styles\.scanReviewContent,[\s\S]*insets\.bottom \+ spacing\.lg/);
     expect(SCREEN).toMatch(/setScanReview\(\{\s*name,\s*saved,\s*flow,\s*pose,\s*\}\);/);
     expect(SCREEN).toMatch(/previewApproved/);
     expect(SCREEN).not.toMatch(/Use this photo\?/);

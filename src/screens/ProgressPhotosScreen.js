@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
@@ -126,6 +126,7 @@ export { buildCheckInTimeline, filterAndSort, scanShareItemsFromEntries };
 
 export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
   // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
@@ -1525,7 +1526,10 @@ export default function ProgressPhotosScreen({ navigation }) {
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
-                  contentContainerStyle={styles.captureRouteList}
+                  contentContainerStyle={[
+                    styles.captureRouteList,
+                    { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.lg) },
+                  ]}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                 >
@@ -1635,7 +1639,10 @@ export default function ProgressPhotosScreen({ navigation }) {
           </View>
           <ScrollView
             style={styles.scanReviewScroll}
-            contentContainerStyle={styles.scanReviewContent}
+            contentContainerStyle={[
+              styles.scanReviewContent,
+              { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.lg) },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >

@@ -104,7 +104,7 @@ export function resolveProgressScanCoachNote({
   const body = clean([
     trendLine(scan, label, trendOnly),
     trendOnly && label ? 'Detailed score and band are hidden by your preference.' : null,
-    'This is a visual progress score from repeatable photos.',
+    'This is photo context from repeatable progress photos.',
     decisionLine(output),
   ].filter(Boolean).join(' '));
 

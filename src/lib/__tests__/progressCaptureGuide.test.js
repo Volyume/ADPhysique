@@ -41,17 +41,19 @@ describe('progress capture guide copy', () => {
   test('keeps scan copy constrained to leanness, progress and confidence', () => {
     const prompt = buildProgressStudioCapturePromptCopy();
     const how = buildProgressStudioHowItWorksCopy();
-    expect(prompt).toContain('Clear front and back photos can earn a private Volyume Score');
-    expect(prompt).toContain('progress change');
+    expect(prompt).toContain('Add clear front and back photos');
+    expect(prompt).toContain('Volyume scans the set for a Score');
+    expect(prompt).toContain('progress signal');
     expect(prompt).toContain('leanness band');
     expect(prompt).toContain('confidence');
     expect(prompt).not.toContain('not a body fat estimate');
     expect(prompt).toContain(QUALITY_FIRST_CAPTURE_NOTE);
-    expect(how).toContain('Volyume Score is our own private visual progress score');
+    expect(how).toContain('Volyume Score is our own progress read from repeatable photos');
     expect(how).toContain('still save it to the photo library');
     expect(how).toContain('cannot use one photo as proof of readiness');
-    expect(how).toContain('about once a week');
+    expect(how).toContain('once a week');
     expect(how).not.toContain('every couple of weeks');
+    expect(`${prompt}\n${how}`).not.toMatch(/private visual progress score/i);
   });
 
   test('builds action-first photo-set routes for capture and import', () => {

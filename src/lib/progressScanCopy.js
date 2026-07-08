@@ -14,7 +14,7 @@ export function trendOnlyScanCopy(scan) {
 }
 
 export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {}) {
-  if (suppressed) return 'Photo set saved privately. Score details are hidden right now.';
+  if (suppressed) return 'Photo set saved privately. Score hidden.';
   const assessment = progressScanAssessmentForDisplay(scan);
   if (assessment?.visualLeannessScore != null) {
     const score = `Volyume Score ${formatVolyumeScore(assessment.visualLeannessScore)}`;
@@ -23,7 +23,7 @@ export function scanReadCopy(scan, { suppressed = false, hideExact = false } = {
     if (hideExact) {
       return `${assessment.leannessBandLabel ? `${band}. ` : ''}${trendOnlyScanCopy(scan)} Detailed score is hidden.`;
     }
-    return [score, band, confidence, `Progress change: ${assessment.progressSignalLabel || 'Baseline set'}`, 'Private visual progress score from repeatable photos.']
+    return [score, band, confidence, `Progress change: ${assessment.progressSignalLabel || 'Baseline set'}`, 'Score from this photo set.']
       .filter(Boolean)
       .join('. ');
   }

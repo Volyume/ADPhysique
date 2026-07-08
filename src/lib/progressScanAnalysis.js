@@ -700,7 +700,7 @@ export function progressScanAssessmentCopy(assessment = null) {
   const prefix = assessment.progressSignal === 'baseline'
     ? `Baseline Volyume Score ${score}`
     : `Volyume Score ${score}`;
-  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. This is a private visual progress score for photos taken in similar conditions.`;
+  return `${prefix}. ${band}. Scan Confidence: ${confidence}. Progress Signal: ${progress}. Score from photos taken in similar conditions.`;
 }
 
 function scanPoseSet(scan = {}) {
