@@ -233,3 +233,68 @@ describe('AddCustomFoodScreen eaten-quantity guard (FOOD-001)', () => {
     expect(nav.goBack).toHaveBeenCalled();
   });
 });
+
+// MN-1 (audit §15 item 2): the optional per-100g vitamin/mineral entry
+// section. Collapsed by default, driven off MICRONUTRIENTS, and collected
+// into `food.micros` for the existing insertCustomFood call (the DB layer
+// already persists food.micros via microValuesFromInput; this suite pins
+// only that the SCREEN builds that object correctly and never invents a 0
+// for a field the user left blank).
+describe('AddCustomFoodScreen micronutrients (MN-1)', () => {
+  function expandMicros(tree) {
+    const header = tree.root.findByProps({ accessibilityLabel: 'Vitamins and minerals (optional)' });
+    act(() => { header.props.onPress(); });
+  }
+
+  test('collapsed by default: no micronutrient inputs are mounted until opened', async () => {
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-08' } };
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Vitamin C')).toHaveLength(0);
+    expect(allText(tree)).toContain('Vitamins and minerals (optional)');
+  });
+
+  test('entered values are collected and passed through as food.micros on save', async () => {
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-08' } };
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    setInput(tree, 'Name', 'Test food');
+    expandMicros(tree);
+    setInput(tree, 'Vitamin C', '12');
+    setInput(tree, 'Iron', '3.5');
+    setInput(tree, 'Eaten (g), grams', '100');
+
+    expect(mockSaveButton).toBeTruthy();
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({
+      micros: { vitC: 12, iron: 3.5 },
+    }));
+  });
+
+  test('a field opened then left blank is omitted, never coerced to 0', async () => {
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-08' } };
+    let tree;
+    await act(async () => { tree = create(<AddCustomFoodScreen navigation={makeNav()} route={route} />); });
+    await flush();
+    setInput(tree, 'Name', 'Test food');
+    expandMicros(tree);
+    setInput(tree, 'Vitamin C', '12');
+    setInput(tree, 'Vitamin C', ''); // typed then cleared
+    setInput(tree, 'Eaten (g), grams', '100');
+
+    await act(async () => { await mockSaveButton.onPress(); });
+    await flush();
+
+    const call = insertCustomFood.mock.calls[0][1];
+    expect(call.micros).not.toHaveProperty('vitC');
+  });
+
+  test('saving with the section never opened omits every micronutrient (unchanged from before this feature)', async () => {
+    await renderAndSave('150');
+    expect(insertCustomFood).toHaveBeenCalledWith('u1', expect.objectContaining({ micros: {} }));
+  });
+});

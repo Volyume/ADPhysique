@@ -45,6 +45,7 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
+import MicronutrientPanel from '../components/food/MicronutrientPanel';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
@@ -1233,6 +1234,16 @@ export default function DiaryScreen({ navigation, route }) {
           ) : null}
         </View>
 
+        {/* MN-1 (audit §15 item 2): Pro-only, same tier check every other
+            write/Pro affordance on this screen already derives from the
+            store (`readOnly = tier !== 'pro'`). Collapsed by default inside
+            the component itself; nothing resolves until the user taps it. */}
+        {!readOnly ? (
+          <View style={styles.micronutrientWrap}>
+            <MicronutrientPanel entries={viewEntries} userId={userId} />
+          </View>
+        ) : null}
+
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
@@ -1958,6 +1969,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
+  micronutrientWrap: { marginBottom: spacing.lg },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,

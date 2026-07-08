@@ -9,7 +9,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
@@ -28,6 +28,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { MICRONUTRIENTS } from '../lib/food/micronutrients';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 
 export default function AddCustomFoodScreen({ navigation, route }) {
@@ -85,6 +87,29 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const [quantityG, setQuantityG] = useState('100');
   const [saving, setSaving] = useState(false);
 
+  // MN-1 (audit §15 item 2): optional per-100g vitamin/mineral entry, keyed by
+  // nutrient key (MICRONUTRIENTS is the single source of truth for the set).
+  // Every value is optional; leaving all of them blank saves exactly as
+  // before this section existed (insertCustomFood/microValuesFromInput
+  // already treat a missing key as null/unknown, never 0).
+  const [microsOpen, setMicrosOpen] = useState(false);
+  const [microInputs, setMicroInputs] = useState({});
+  const setMicroValue = useCallback((key, v) => {
+    setMicroInputs((prev) => ({ ...prev, [key]: v }));
+  }, []);
+  const micros = useMemo(() => {
+    const out = {};
+    for (const n of MICRONUTRIENTS) {
+      const raw = microInputs[n.key];
+      // Blank/whitespace stays unset (never coerced to Number('') === 0);
+      // only a genuinely finite entered value is collected.
+      if (raw != null && raw.trim() !== '' && Number.isFinite(Number(raw))) {
+        out[n.key] = Number(raw);
+      }
+    }
+    return out;
+  }, [microInputs]);
+
   const food = useMemo(() => ({
     name: name.trim(),
     brand: brand.trim() || null,
@@ -95,7 +120,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     fat100g: Number(fat) || 0,
     fibre100g: fibre.trim() ? Number(fibre) : null,
     barcodeEan: prefillBarcode || null,
-  }), [name, brand, servingG, kcal, protein, carbs, fat, fibre, prefillBarcode]);
+    micros,
+  }), [name, brand, servingG, kcal, protein, carbs, fat, fibre, prefillBarcode, micros]);
 
   // Hard-block non-finite / negative numbers here (audit F-006): an entry like
   // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
@@ -284,6 +310,28 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
         </View>
 
+        {/* MN-1 (audit §15 item 2): fully optional per-100g vitamin/mineral
+            entry. Collapsed by default so the common case (just the macros
+            above) stays exactly as short as it always was; nothing here is
+            required to save. */}
+        <View style={styles.microsWrap}>
+          <CollapsibleSection
+            title="Vitamins and minerals (optional)"
+            open={microsOpen}
+            onToggle={() => setMicrosOpen((v) => !v)}
+          >
+            {MICRONUTRIENTS.map((n) => (
+              <NumField
+                key={n.key}
+                label={n.label}
+                value={microInputs[n.key] ?? ''}
+                onChange={(v) => setMicroValue(n.key, v)}
+                suffix={n.unit}
+              />
+            ))}
+          </CollapsibleSection>
+        </View>
+
         <Button
           title="Save and add to diary"
           accessibilityLabel="Save food and add to diary"
@@ -351,6 +399,7 @@ const styles = StyleSheet.create({
   dupeText: { ...type.bodySm, color: colors.textSecondary },
 
   sectionLabelSpacing: { marginTop: spacing.lg, marginBottom: spacing.sm },
+  microsWrap: { marginTop: spacing.lg },
   field: { marginBottom: spacing.md },
   numField: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.sm },
