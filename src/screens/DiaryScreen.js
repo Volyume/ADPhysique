@@ -238,6 +238,23 @@ export default function DiaryScreen({ navigation }) {
     }
   }, [canWrite, userId, selectedDate, load, toast]);
 
+  // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
+  // meal's planned rows, not the whole day, so staging a plan into the diary
+  // does not force an all-or-nothing choice. Same real write path as the
+  // day-level confirm (confirmPlannedDay -> is_planned 1->0), scoped to a
+  // meal_slot; MealSection only renders the button when that slot actually
+  // holds planned rows.
+  const handleConfirmPlannedSlot = useCallback(async (slotKey) => {
+    if (!userId || !canWrite() || !slotKey) return;
+    try {
+      const n = await confirmPlannedDay(userId, selectedDate, slotKey);
+      await load();
+      if (n > 0) toast.show('Marked as eaten.', { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    }
+  }, [canWrite, userId, selectedDate, load, toast]);
+
   const handleClearPlanned = useCallback(async () => {
     if (!userId || !canWrite()) return;
     try {
@@ -1265,6 +1282,11 @@ export default function DiaryScreen({ navigation }) {
                     onLongPressEntry={enterSelection}
                     onToggleSelect={toggleSelect}
                     readOnly={readOnly}
+                    // One-tap "mark eaten" per meal (food audit item 1). Only
+                    // offered when a write is possible and the day has
+                    // happened; MealSection itself decides whether THIS slot
+                    // has any planned rows to confirm.
+                    onConfirmPlanned={!readOnly && !isFutureDay ? () => handleConfirmPlannedSlot(slot.key) : undefined}
                   />
                 </AnimatedEntrance>
               </View>

@@ -235,15 +235,21 @@ export async function hasAnyFoodEntries(userId) {
  * Confirm a day's planned meals as eaten (adherence model 2026-06-15): flips
  * is_planned 1 -> 0 so they count towards the rollup/adherence/FFM and sync as
  * normal actuals. Bumps logged_at + updated_at. Returns the number confirmed.
+ *
+ * @param {string} [mealSlot] optional (food audit item 1, "mark planned meal
+ *   eaten" one-tap): when given, confirms only that meal's planned rows
+ *   instead of the whole day, so a single staged meal can be logged without
+ *   forcing every other planned meal on the day to confirm with it. Every
+ *   existing whole-day call site omits this and is unaffected.
  */
-export async function confirmPlannedDay(userId, entryDate) {
+export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   const d = await db();
   const now = Date.now();
-  const res = await d.runAsync(
-    `UPDATE food_entries SET is_planned = 0, logged_at = ?, updated_at = ?
-     WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`,
-    [now, now, userId, entryDate]
-  );
+  const params = [now, now, userId, entryDate];
+  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, updated_at = ?
+     WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`;
+  if (mealSlot) { sql += ' AND meal_slot = ?'; params.push(mealSlot); }
+  const res = await d.runAsync(sql, params);
   await recomputeRollup(userId, entryDate);
   _scheduleSync();
   return res?.changes ?? 0;

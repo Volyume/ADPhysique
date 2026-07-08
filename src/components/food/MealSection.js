@@ -18,11 +18,24 @@ export default function MealSection({
   usuals = null, onLogUsual,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
   readOnly = false,
+  // Food audit item 1 ("mark planned meal eaten", one tap): confirms just
+  // THIS slot's planned rows via mealPlanService's real intake write path
+  // (logFoodEntry -> is_planned=1, confirmPlannedDay -> is_planned=0), never
+  // a cosmetic flag. Undefined when the parent has decided a write is not
+  // currently possible (read-only, a future day); the button only ever
+  // renders when this slot actually holds planned rows.
+  onConfirmPlanned,
 }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
+  // Planned-but-unconfirmed rows in THIS meal (is_planned=1, staged by the
+  // meal plan). MacroRings already shows the day-wide planned/eaten split
+  // (the faded arc); this is the per-meal signal that drives the one-tap
+  // confirm button below, no colour or score attached to it.
+  const plannedCount = entries.reduce((n, e) => n + (e.is_planned ? 1 : 0), 0);
+  const showMarkEaten = plannedCount > 0 && !selectionMode && typeof onConfirmPlanned === 'function';
   // GAP #5: one-tap "usuals". Only on an empty slot (a slot with food doesn't
   // need the prompt) and never in selection mode (the card is a target then).
   // E10 read-only lapse views: never in read-only either, logging a usual is
@@ -88,6 +101,26 @@ export default function MealSection({
             <Text style={styles.seasonLabel}>Add these extras too: </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
+        </View>
+      ) : null}
+      {/* Food audit item 1: a planned meal stages into the diary as real rows
+          (is_planned=1); one tap here confirms THIS meal eaten. Shown before
+          the action hub so it reads as the meal's own next step, not a
+          generic add action. Staging only, never automatic: nothing here
+          runs without this explicit tap. */}
+      {showMarkEaten ? (
+        <View style={styles.plannedRow}>
+          <Text style={styles.plannedRowText}>
+            {plannedCount === 1 ? 'This meal is planned.' : `${plannedCount} foods planned in this meal.`}
+          </Text>
+          <TouchableOpacity
+            style={styles.markEatenButton}
+            onPress={onConfirmPlanned}
+            accessibilityRole="button"
+            accessibilityLabel={`Mark ${slot.label} as eaten`}
+          >
+            <Text style={styles.markEatenText}>Mark eaten</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
       {/* E10 read-only lapse views: no add affordances on a view-only diary. */}
@@ -166,6 +199,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   addFoodText: { ...type.label, color: colors.textPrimary },
+  // Per-meal "mark eaten" (food audit item 1). Same visual language as the
+  // day-level planned banner (DiaryScreen `plannedBtnPrimary`): a quiet
+  // caption plus a single primary-tinted button, no colour judgement, no
+  // score, no streak.
+  plannedRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+  },
+  plannedRowText: { ...type.bodySm, color: colors.textMuted, flex: 1 },
+  markEatenButton: {
+    backgroundColor: colors.primary, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 36,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  markEatenText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,

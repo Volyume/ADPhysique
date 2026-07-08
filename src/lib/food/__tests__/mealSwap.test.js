@@ -14,6 +14,7 @@ import {
   swapMealInPlan,
   mealNameFromComponents,
 } from '../mealSwap';
+import { assembleDayPlan } from '../mealPlanAssembler';
 
 describe('mealNameFromComponents (no stale/lying names after a swap)', () => {
   test('builds an honest "protein & carb" name from components', () => {
@@ -201,6 +202,48 @@ describe('swapMealInPlan', () => {
   test('is deterministic', () => {
     expect(swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} }))
       .toEqual(swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} }));
+  });
+});
+
+// ─── Custom (user-given) meal names survive a food swap (food audit item 4) ──
+//
+// Verified, not assumed: a meal's own `name` field is user-given ONLY for a
+// saved meal (MyMealsScreen's renameSavedMeal); a curated meal's name is
+// content-authored and a food-swapped meal's name is always the deliberate
+// mealNameFromComponents refresh (the "Tuna renamed to Cod" fix above,
+// founder report 2026-06-15) — there is no "custom name on a swappable
+// meal" concept for those. The ONLY place a user can rename a specific meal
+// is a saved meal, and mealPlanAssembler's savedCandidate() places it on a
+// plan as a FIXED block with `components: null` (no per-food rescale), which
+// is exactly the shape swapFoodInMeal requires components for. This pins
+// that the whole chain protects a saved meal's custom name: it can never
+// reach mealNameFromComponents and be silently renamed.
+describe('a saved meal\'s custom name survives a food swap (food audit item 4)', () => {
+  const TARGET = { kcal: 2600, proteinG: 180, carbsG: 290, fatG: 75 };
+  const BAND = { kcalMin: 2340, kcalMax: 2860 };
+
+  test('swapFoodInMeal is a no-op (returns null) on a saved-meal shape (components: null)', () => {
+    // Mirrors MealPlanScreen.handleSwapFood's own guard (`if (!slot?.components)
+    // return`) at the pure-function level: even called directly, a food swap
+    // can never touch a block with no component list.
+    expect(swapFoodInMeal({ components: null, foodKeyOut: 'chicken_breast', prefs: {} })).toBeNull();
+  });
+
+  test('a saved meal placed on an assembled day keeps its own name and carries no components to swap', () => {
+    const saved = { id: 'saved_custom', name: 'Nana\'s chilli', slots: [], totals: { kcal: 650, protein: 45, carbs: 65, fat: 19 } };
+    const day = assembleDayPlan({
+      target: TARGET, band: BAND,
+      prefs: { mealsPerDay: 4, pinnedMealIds: ['saved_custom'] }, seed: 4, savedMeals: [saved],
+    });
+    const placed = day.slots.find((s) => s.mealId === 'saved_custom');
+    expect(placed).toBeTruthy();
+    // The user's own name, verbatim, untouched by mealNameFromComponents.
+    expect(placed.name).toBe('Nana\'s chilli');
+    expect(placed.components).toBeFalsy();
+    // And because it carries no components, MealPlanScreen's food-swap path
+    // (and swapFoodInMeal itself, per the test above) can never fire on it,
+    // so the name can never be silently overwritten by a swap.
+    expect(swapFoodInMeal({ components: placed.components, foodKeyOut: 'chicken_breast', prefs: {} })).toBeNull();
   });
 });
 
