@@ -536,7 +536,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
-      appAlert('Leave more time between sets', 'Volyume reads change best when sets are about a week apart. You can still save photos today, and retake sooner if you are fixing photo quality, but the score may be less useful.', [
+      appAlert('Best about a week apart', 'Volyume reads change best when photo sets are about a week apart. You can still save photos today, and retake sooner if you are fixing photo quality, but the score may be less useful.', [
         { text: 'Save photos anyway', onPress: () => openProgressScan(mode, { ...opts, skipCadence: true }) },
         { text: 'OK', style: 'cancel' },
       ]);
@@ -600,7 +600,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       await refresh();
     } catch (e) {
       logError('ProgressPhotos.finishScan', e, { userId, scanId });
-      toast.show('The photo set was saved, but the Volyume Score could not finish.', { variant: 'warning' });
+      toast.show('The photo set was saved, but the Volyume Score could not be created.', { variant: 'warning' });
     }
   }
 
@@ -774,7 +774,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         appAlert('Retake this photo?', retakeCopy, [
           { text: 'Retake', onPress: () => retakeScanPose(flow, pose, name, saved) },
           {
-            text: 'Save without estimate',
+            text: 'Save without score',
             onPress: () => {
               setBusy(true);
               saveScanAssetAndContinue(flow, pose, name, saved, vision).catch((e) => {
@@ -1129,7 +1129,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Add front and back photos about once a week. Clear sets can be compared over time.
+              Add front and back photos once a week. Clear sets are scored, saved to your library and compared over time.
             </Text>
           </View>
 
@@ -1447,7 +1447,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             >
               <Text style={styles.scanDateTitle}>Date for this photo set</Text>
               <Text style={styles.scanDateIntro}>
-                Pick the day these photos were taken. Volyume uses that date for the library entry and the bodyweight snapshot.
+                Pick the day these photos were taken. Volyume uses that date for the library entry and weight snapshot.
               </Text>
               <TouchableOpacity
                 style={styles.scanDateField}

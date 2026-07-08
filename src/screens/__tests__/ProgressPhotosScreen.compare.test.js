@@ -273,7 +273,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Progress Photos');
     expect(text).toContain('Private unless you choose to share or export.');
-    expect(text).toContain('Clear sets can be compared over time.');
+    expect(text).toContain('Clear sets are scored, saved to your library and compared over time.');
     expect(text).not.toContain('Latest result');
     expect(text).not.toContain('What the Volyume Score means');
     expect(text).toContain('No saved photos yet');

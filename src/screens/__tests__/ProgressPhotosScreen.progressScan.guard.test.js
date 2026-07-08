@@ -28,12 +28,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/setProgressScanHideExactPreference/);
     expect(SCREEN).not.toMatch(/Hide score/);
     expect(SCREEN).toMatch(/PROGRESS_SCAN_MIN_INTERVAL_MS\s*=\s*7 \* 86400000/);
-    expect(SCREEN).toMatch(/Leave more time between sets/);
+    expect(SCREEN).toMatch(/Best about a week apart/);
     expect(SCREEN).toMatch(/about a week apart/);
     expect(SCREEN).toMatch(/retake sooner if you are fixing photo quality/);
     expect(SCREEN).toMatch(/save photos today/);
     expect(SCREEN).toMatch(/score may be less useful/);
     expect(SCREEN).toMatch(/Clear front and back photos can be scored/);
+    expect(SCREEN).not.toMatch(/Save without estimate/);
     expect(SCREEN).not.toMatch(/at least a week apart|at least 1 week apart/);
   });
 
@@ -116,8 +117,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Private physique photos/);
     expect(SCREEN).toMatch(/Private unless you choose to share or export/);
-    expect(SCREEN).toMatch(/Add front and back photos about once a week/);
-    expect(SCREEN).toMatch(/Clear sets can be compared over time/);
+    expect(SCREEN).toMatch(/Add front and back photos once a week/);
+    expect(SCREEN).toMatch(/Clear sets are scored, saved to your library and compared over time/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);

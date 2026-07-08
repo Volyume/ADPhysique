@@ -62,7 +62,7 @@ describe('EmptyDiary', () => {
   test('keeps the premium empty state focused when there is no yesterday to copy', () => {
     const tree = create(<EmptyDiary onAdd={() => {}} onPlanDay={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Plan meals');
+    expect(txt).toContain('Meal builder');
     expect(txt).toContain('Add food');
     expect(txt).toContain(`"backgroundColor":"${colors.surface}"`);
     expect(txt).not.toContain('Copy yesterday');

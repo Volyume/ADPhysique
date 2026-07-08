@@ -149,7 +149,7 @@ describe('DiaryScreen diary tools', () => {
     expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Day tools<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
-    expect(SRC).toMatch(/Need a shortcut\? Copy a logged day, check trends, or export your diary\./);
+    expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
 });
@@ -157,10 +157,10 @@ describe('DiaryScreen diary tools', () => {
 describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
-    expect(SRC).toMatch(/accessibilityLabel="Plan meals for this day or week"/);
+    expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.textSecondary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Plan meals<\/Text>/);
-    expect(SRC).toMatch(/Plan meals from your targets for this date or the week\. Nothing is logged until you add it\./);
+    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal builder<\/Text>/);
+    expect(SRC).toMatch(/Build a day or week from your targets\. Nothing is logged until you add it\./);
     expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface2/);
   });
 

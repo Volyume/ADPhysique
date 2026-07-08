@@ -339,7 +339,7 @@ test('retake warning save action cannot insert the same scan asset twice', async
 
   const retakeAlert = mockAppAlert.mock.calls.find((call) => call[0] === 'Retake this photo?');
   expect(retakeAlert).toBeTruthy();
-  const saveButton = retakeAlert[2].find((button) => button.text === 'Save without estimate');
+  const saveButton = retakeAlert[2].find((button) => button.text === 'Save without score');
   await act(async () => {
     saveButton.onPress();
     saveButton.onPress();

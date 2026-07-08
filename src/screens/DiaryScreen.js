@@ -1286,14 +1286,14 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Plan meals for this day or week"
+                  accessibilityLabel="Open meal builder for this day or week"
                 >
                   <View style={styles.buildPlanIcon}>
                     <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text style={styles.buildPlanLabel}>Plan meals</Text>
-                    <Text style={styles.buildPlanSub}>Plan meals from your targets for this date or the week. Nothing is logged until you add it.</Text>
+                    <Text style={styles.buildPlanLabel}>Meal builder</Text>
+                    <Text style={styles.buildPlanSub}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -1534,7 +1534,7 @@ export default function DiaryScreen({ navigation }) {
       >
         <Text style={styles.moveTitle}>Day tools</Text>
         <Text style={styles.saveMealHint}>
-          Need a shortcut? Copy a logged day, check trends, or export your diary.
+          Copy foods from another day, check nutrition trends, or export your diary.
         </Text>
         <TouchableOpacity
           style={styles.diaryToolRow}
