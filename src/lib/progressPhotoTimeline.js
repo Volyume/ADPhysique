@@ -42,11 +42,21 @@ function poseOrder(pose) {
 }
 
 function setupQualityForPoses(poses = []) {
-  if (poses.includes('front') && poses.includes('side') && poses.includes('back')) {
+  const hasFront = poses.includes('front');
+  const hasBack = poses.includes('back');
+  const hasSide = poses.includes('side');
+  if (hasFront && hasBack && hasSide) {
     return {
       key: 'complete',
       label: 'Strong setup',
-      helper: 'Front, side and back are saved for comparable progress checks.',
+      helper: 'Front, back and side are saved for fuller progress checks.',
+    };
+  }
+  if (hasFront && hasBack) {
+    return {
+      key: 'scored',
+      label: 'Scoring set',
+      helper: 'Front and back are saved. Side is optional for extra comparison.',
     };
   }
   if (poses.length >= 2) {

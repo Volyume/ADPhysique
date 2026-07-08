@@ -261,7 +261,7 @@ describe('ProgressPhotosScreen timeline', () => {
     const tree = await render([NEW]);
     const text = flattenText(tree.toJSON());
     expect(text).not.toContain('Partial setup');
-    expect(text).toContain('0/3 poses');
+    expect(text).toContain('0/2 scoring photos');
     expect(text).toContain('Add front photo');
     await press(tree, 'Add a Front photo for this date');
     expect(surfaceOpen(tree, 'ProgressGhostCapture')).toBe(true);

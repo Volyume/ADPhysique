@@ -75,8 +75,9 @@ export function progressCheckInCadenceLabel(latestTakenAt, nowMs = Date.now(), m
   return `In ${days} days`;
 }
 
-const NEXT_ACTION_POSES = ['front', 'side', 'back'];
+const NEXT_ACTION_POSES = ['front', 'back'];
 const NEXT_ACTION_POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+const OPTIONAL_SIDE_POSE = 'side';
 
 function checkInIsComplete(checkIn) {
   const poses = Array.isArray(checkIn?.poses) ? checkIn.poses : [];
@@ -89,15 +90,20 @@ export function buildCheckInCompletenessModel(checkIn = {}) {
   const missing = NEXT_ACTION_POSES.filter((pose) => !poses.includes(pose));
   const complete = missing.length === 0;
   const percent = Math.round((present.length / NEXT_ACTION_POSES.length) * 100);
+  const hasSide = poses.includes(OPTIONAL_SIDE_POSE);
   return {
     complete,
     present,
     missing,
     percent,
-    label: complete ? 'Front, side and back saved' : `${present.length} of ${NEXT_ACTION_POSES.length} photos added`,
+    label: complete
+      ? (hasSide ? 'Front, back and side saved' : 'Front and back saved')
+      : `${present.length} of ${NEXT_ACTION_POSES.length} scoring photos added`,
     detail: complete
-      ? 'Front, side and back are saved together.'
-      : `Add ${missing.map((pose) => `${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date.`,
+      ? (hasSide
+        ? 'Front, back and side are saved together.'
+        : 'Side is optional. Add it if you want a fuller visual comparison.')
+      : `Add ${missing.map((pose) => `${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date to score it.`,
     nextPose: missing[0] || null,
     nextPoseLabel: missing[0] ? NEXT_ACTION_POSE_LABEL[missing[0]] : null,
   };
@@ -122,7 +128,7 @@ export function buildPhysiqueStudioNextAction({
       kind: 'complete_pose',
       title: `Add ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo`,
       body: `Your latest date is missing the ${NEXT_ACTION_POSE_LABEL[pose].toLowerCase()} photo.`,
-      reason: 'Add it to keep front, side and back together for that date.',
+      reason: 'Front and back are needed before the set can be scored.',
       detailItems: [
         'Use similar lighting, distance and camera height.',
         'If the photo is not clear enough, keep it as a normal progress photo.',
@@ -151,7 +157,7 @@ export function buildPhysiqueStudioNextAction({
     return {
       kind: 'compare_checkins',
       title: 'Compare matched photo sets',
-      body: 'Compare front, side or back photos from complete photo sets.',
+      body: 'Compare matching front or back photos. Side is included when both dates have it.',
       reason: `${completed.length} complete photo sets are ready.`,
       detailItems: [
         'Matching angles and lighting makes changes easier to see.',

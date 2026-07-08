@@ -51,7 +51,7 @@ describe('progressPhotoTimeline', () => {
         setupQuality: {
           key: 'complete',
           label: 'Strong setup',
-          helper: 'Front, side and back are saved for comparable progress checks.',
+          helper: 'Front, back and side are saved for fuller progress checks.',
         },
       },
       { type: 'header', key: 'h-2026-4', label: 'May 2026' },

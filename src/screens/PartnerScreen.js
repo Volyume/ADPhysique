@@ -118,7 +118,7 @@ function cheerFailureMessage(error) {
 
 function partnerWinFailureMessage(error, action = 'share') {
   if (error === 'win_cards_unavailable') {
-    return 'Partner win sharing needs the latest cloud update.';
+    return 'Partner updates need the latest cloud update.';
   }
   if (error === 'not_active') {
     return 'This partner link is not ready yet. Refresh Partners, then try again.';
@@ -133,8 +133,8 @@ function partnerWinFailureMessage(error, action = 'share') {
     return 'Volyume could not reach Partners just now. Try again when your connection is back.';
   }
   return action === 'delete'
-    ? 'Could not delete that win right now. Refresh Partners, then try once more.'
-    : 'Could not share that win right now. Refresh Partners, then try once more.';
+    ? 'Could not delete that update right now. Refresh Partners, then try once more.'
+    : 'Could not share that update right now. Refresh Partners, then try once more.';
 }
 
 // ── Small motion helpers (Reanimated, reduce-motion aware) ──
@@ -275,13 +275,13 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
       activeOpacity={0.85}
       hitSlop={hitSlop}
       accessibilityRole="button"
-      accessibilityLabel="Share a win"
+      accessibilityLabel="Share an update"
     >
       <View style={styles.shareWinsIcon}>
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text style={styles.shareWinsTitle}>Share a win</Text>
+        <Text style={styles.shareWinsTitle}>Share an update</Text>
         <Text style={styles.shareWinsText}>
           Send a workout, PR, or progress update. You approve the preview before {name} sees it.
         </Text>
@@ -305,7 +305,7 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
   if (!visible.length) return null;
   return (
     <View style={styles.partnerWins}>
-      <Text style={styles.partnerWinsTitle}>Shared wins</Text>
+      <Text style={styles.partnerWinsTitle}>Shared updates</Text>
       {visible.map((card) => {
         const mine = card.senderId === userId;
         const date = formatWinCardDate(card.createdAt);
@@ -319,7 +319,7 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
                   hitSlop={hitSlop}
                   style={styles.partnerWinDeleteButton}
                   accessibilityRole="button"
-                  accessibilityLabel={`Delete shared win ${card.title}`}
+                  accessibilityLabel={`Delete shared update ${card.title}`}
                 >
                   <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
                   <Text style={styles.partnerWinDelete}>Delete</Text>
@@ -859,7 +859,7 @@ export default function PartnerScreen({ route }) {
     if (!card?.id) return;
     const r = await p.revokeWin(card.id, card.pairId || card.pair_id || shareWinsPair?.id || null);
     if (r?.ok) {
-      toast.show('Shared win deleted', { variant: 'success' });
+      toast.show('Shared update deleted', { variant: 'success' });
     } else {
       toast.show(partnerWinFailureMessage(r?.error, 'delete'), { variant: r?.error === 'partner_syncing' ? 'warning' : 'error' });
     }
@@ -1017,7 +1017,7 @@ export default function PartnerScreen({ route }) {
                   <Text style={styles.incomingShareNoticeTitle}>Choose who receives it</Text>
                 </View>
                 <Text style={styles.incomingShareNoticeText}>
-                  Nothing has been sent. Pick Share a win under the right partner and approve the preview first.
+                  Nothing has been sent. Pick Share an update under the right partner and approve the preview first.
                 </Text>
               </Card>
             ) : null}
@@ -1066,7 +1066,7 @@ export default function PartnerScreen({ route }) {
             <Text style={styles.emptyBody}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent yet. Pair with someone you know and trust to start sharing.'
-                : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the wins you choose to send. Food, photos, body metrics and notes stay private.'}
+                : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the updates you choose to send. Food, photos, body metrics and notes stay private.'}
             </Text>
 
             {hasIncomingShareIntent ? (
@@ -1146,7 +1146,7 @@ export default function PartnerScreen({ route }) {
               {[
                 ['calendar-outline', 'Whether you trained this week'],
                 ['hand-left-outline', 'One fixed cheer a day'],
-                ['trophy-outline', 'Only the wins you choose to send'],
+                ['trophy-outline', 'Only the updates you choose to send'],
                 ['lock-closed-outline', 'No food, photos, body metrics or private notes'],
               ].map(([icon, line]) => (
                 <View key={line} style={styles.howLineRow}>
@@ -1228,7 +1228,7 @@ export default function PartnerScreen({ route }) {
       <BottomSheet
         visible={!!shareWinsPair}
         onClose={() => setShareWinsPair(null)}
-        accessibilityLabel="Choose a win to share"
+        accessibilityLabel="Choose an update to share"
         scroll
         sheetStyle={styles.partnerActionSheet}
       >
@@ -1302,14 +1302,14 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   }
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share a win</Text>
+      <Text style={styles.sheetHeading}>Share an update</Text>
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
         <Text style={styles.shareWinPreviewIntroText}>
           Pick one update, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
-      <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose shareable win type">
+      <View style={styles.shareWinChooser} accessibilityRole="radiogroup" accessibilityLabel="Choose update type">
         {examplePreviews.map((preview) => {
           const active = preview.type === selectedType;
           return (

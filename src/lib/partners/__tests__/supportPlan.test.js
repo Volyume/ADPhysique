@@ -11,7 +11,7 @@ describe('partner accountability copy', () => {
   test('starts from Coach-plan status, not a manual session target', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 0, partnerAim: 3 }, 'Sam');
     expect(plan.title).toBe('What Sam sees');
-    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to share an update.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
     expect(plan.privacyLine).toBe(PARTNER_SUPPORT_PRIVACY_LINE);
     expect(plan.steps).toBeUndefined();
@@ -19,7 +19,7 @@ describe('partner accountability copy', () => {
 
   test('routes to cheer when the daily acknowledgement is open', () => {
     const plan = buildPartnerSupportPlan({ ...pair, myAim: 4, partnerAim: 3 }, 'Sam');
-    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(plan.headline).toBe('Sam can see whether you trained this week. They only see extra detail when you choose to share an update.');
     expect(plan.primaryAction).toMatchObject({ key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' });
   });
 

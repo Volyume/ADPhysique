@@ -103,7 +103,7 @@ describe('progressPhotosController transforms', () => {
       kind: 'complete_pose',
       title: 'Add front photo',
       body: 'Your latest date is missing the front photo.',
-      reason: 'Add it to keep front, side and back together for that date.',
+      reason: 'Front and back are needed before the set can be scored.',
       detailItems: [
         'Use similar lighting, distance and camera height.',
         'If the photo is not clear enough, keep it as a normal progress photo.',
@@ -116,21 +116,32 @@ describe('progressPhotosController transforms', () => {
 
   test('buildCheckInCompletenessModel explains complete and partial photo sets', () => {
     expect(buildCheckInCompletenessModel({ poses: ['front', 'back'] })).toEqual({
-      complete: false,
+      complete: true,
       present: ['front', 'back'],
-      missing: ['side'],
-      percent: 67,
-      label: '2 of 3 photos added',
-      detail: 'Add side photo for this date.',
-      nextPose: 'side',
-      nextPoseLabel: 'Side',
+      missing: [],
+      percent: 100,
+      label: 'Front and back saved',
+      detail: 'Side is optional. Add it if you want a fuller visual comparison.',
+      nextPose: null,
+      nextPoseLabel: null,
+    });
+
+    expect(buildCheckInCompletenessModel({ poses: ['front'] })).toMatchObject({
+      complete: false,
+      present: ['front'],
+      missing: ['back'],
+      percent: 50,
+      label: '1 of 2 scoring photos added',
+      detail: 'Add back photo for this date to score it.',
+      nextPose: 'back',
+      nextPoseLabel: 'Back',
     });
 
     expect(buildCheckInCompletenessModel({ poses: ['front', 'side', 'back'] })).toMatchObject({
       complete: true,
       percent: 100,
-      label: 'Front, side and back saved',
-      detail: 'Front, side and back are saved together.',
+      label: 'Front, back and side saved',
+      detail: 'Front, back and side are saved together.',
       nextPose: null,
     });
   });

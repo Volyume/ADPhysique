@@ -123,7 +123,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('empty photo hero is plain text, not a fake body placeholder', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
-    expect(SCREEN).toMatch(/Private physique photos/);
+    expect(SCREEN).toMatch(/Physique progress/);
     expect(SCREEN).toMatch(/Private on this device unless you choose to share or export/);
     expect(SCREEN).toMatch(/Add clear front and back photos once a week/);
     expect(SCREEN).toMatch(/Add side too if you can/);

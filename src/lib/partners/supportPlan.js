@@ -12,10 +12,10 @@ export function buildPartnerSupportPlan(pair = {}, partnerName = 'Your partner')
   let primaryAction = null;
 
   if (cheerAvailable) {
-    headline = `${name} can see whether you trained this week. They only see extra detail when you choose to send a win.`;
+    headline = `${name} can see whether you trained this week. They only see extra detail when you choose to share an update.`;
     primaryAction = { key: 'cheer', label: 'Send a cheer', accessibilityLabel: 'Send a cheer' };
   } else if (pair.weekKept) {
-    headline = `${name} still only sees training status and wins you approve.`;
+    headline = `${name} still only sees training status and updates you approve.`;
   }
 
   return Object.freeze({

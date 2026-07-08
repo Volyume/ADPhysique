@@ -195,7 +195,7 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair({ sharedBlock: { status: 'active', blockName: 'Upper Lower' } })] });
     const text = allText(await mount()).join(' ');
     expect(text).toContain('What Sam sees');
-    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to share an update.');
     expect(text).toContain('Private: full workout details, food, Coach check-ins, body metrics and photos');
     expect(text).toContain('full workout details, food, Coach check-ins, body metrics and photos');
     expect(text).not.toContain('Shared with Sam');
@@ -215,7 +215,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain("Set this week's sessions. Sam sees only the number, not your plan.");
     expect(text).not.toContain("Sam's weekly sessions");
     expect(text).toContain('What Sam sees');
-    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to send a win.');
+    expect(text).toContain('Sam can see whether you trained this week. They only see extra detail when you choose to share an update.');
     expect(text).not.toContain('Visible to Sam');
     expect(text).not.toContain('Choose a realistic number. Sam sees the number only.');
     expect(text).not.toContain('This week with Sam');
@@ -229,13 +229,13 @@ describe('connected state: isolated pair cards', () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();
     let text = allText(tree).join(' ');
-    expect(text).toContain('Share a win');
+    expect(text).toContain('Share an update');
     expect(text).toContain('Send a workout, PR, or progress update. You approve the preview before Sam sees it.');
 
-    await press(tree, 'Share a win');
+    await press(tree, 'Share an update');
     text = allText(tree).join(' ');
     expect(tree.root.findAll((n) => n.props?.keyboardShouldPersistTaps === 'handled').length).toBeGreaterThan(0);
-    expect(text).toContain('Share a win');
+    expect(text).toContain('Share an update');
     expect(text).toContain('Pick one update, check exactly what Sam will see, then send it.');
     expect(text).toContain('Preview only');
     expect(text).toContain('Workout complete');
@@ -266,7 +266,7 @@ describe('connected state: isolated pair cards', () => {
     const hook = base({ pairs: [pair()] });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Share a win');
+    await press(tree, 'Share an update');
     await press(tree, 'Send workout complete to Sam');
     expect(hook.shareWin).toHaveBeenCalledWith('p1', expect.objectContaining({ type: 'workout_summary' }));
   });
@@ -278,9 +278,9 @@ describe('connected state: isolated pair cards', () => {
     });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Share a win');
+    await press(tree, 'Share an update');
     await press(tree, 'Send workout complete to Sam');
-    expect(mockToastShow).toHaveBeenCalledWith('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    expect(mockToastShow).toHaveBeenCalledWith('Partner updates need the latest cloud update.', { variant: 'error' });
     expect(mockToastShow).not.toHaveBeenCalledWith(
       expect.stringMatching(/connection|internet/i),
       expect.anything(),
@@ -294,7 +294,7 @@ describe('connected state: isolated pair cards', () => {
     });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Share a win');
+    await press(tree, 'Share an update');
     await press(tree, 'Send workout complete to Sam');
     expect(mockToastShow).toHaveBeenCalledWith(
       'This partner link is still being prepared. We are refreshing it now; try again in a moment.',
@@ -323,9 +323,9 @@ describe('connected state: isolated pair cards', () => {
     });
     mockHook.value = hook;
     const tree = await mount();
-    expect(allText(tree)).toContain('Shared wins');
+    expect(allText(tree)).toContain('Shared updates');
     expect(allText(tree)).toContain('Bench press: New rep best.');
-    await press(tree, 'Delete shared win Personal record');
+    await press(tree, 'Delete shared update Personal record');
     expect(hook.revokeWin).toHaveBeenCalledWith('win1', 'p1');
   });
 
@@ -347,8 +347,8 @@ describe('connected state: isolated pair cards', () => {
     });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Delete shared win Personal record');
-    expect(mockToastShow).toHaveBeenCalledWith('Partner win sharing needs the latest cloud update.', { variant: 'error' });
+    await press(tree, 'Delete shared update Personal record');
+    expect(mockToastShow).toHaveBeenCalledWith('Partner updates need the latest cloud update.', { variant: 'error' });
     expect(mockToastShow).not.toHaveBeenCalledWith(
       expect.stringMatching(/connection|internet/i),
       expect.anything(),
@@ -373,7 +373,7 @@ describe('connected state: isolated pair cards', () => {
     });
     mockHook.value = hook;
     const tree = await mount();
-    await press(tree, 'Delete shared win Personal record');
+    await press(tree, 'Delete shared update Personal record');
     expect(mockToastShow).toHaveBeenCalledWith(
       'This partner link is still being prepared. We are refreshing it now; try again in a moment.',
       { variant: 'warning' },
@@ -397,7 +397,7 @@ describe('connected state: isolated pair cards', () => {
         imageUri: 'file:///private-card.png',
       },
     });
-    await press(tree, 'Share a win');
+    await press(tree, 'Share an update');
     const text = allText(tree).join(' ');
     expect(text).toContain('Progress comparison');
     expect(text).toContain('Progress comparison, 5 Jan to 20 Jun.');
@@ -425,7 +425,7 @@ describe('connected state: isolated pair cards', () => {
       },
     });
     const text = allText(tree).join(' ');
-    expect(text).toContain('Share a win');
+    expect(text).toContain('Share an update');
     expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
     expect(text).toContain('The visible Volyume Score is part of that export.');
     expect(text).toContain('Weight is off for this export.');
@@ -467,7 +467,7 @@ describe('connected state: isolated pair cards', () => {
     });
     const text = allText(tree).join(' ');
     expect(text).toContain('Choose who receives it');
-    expect(text).toContain('Nothing has been sent. Pick Share a win under the right partner and approve the preview first.');
+    expect(text).toContain('Nothing has been sent. Pick Share an update under the right partner and approve the preview first.');
     expect(text).not.toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
   });
 
@@ -506,7 +506,7 @@ describe('connected state: isolated pair cards', () => {
       },
     });
     const text = allText(tree).join(' ');
-    expect(text).toContain('Share a win');
+    expect(text).toContain('Share an update');
     expect(text).toContain('Upper body strength completed on 6 Jul 2026.');
     expect(text).toContain('Exercises, sets, reps, loads, notes and effort stay private.');
     expect(text).not.toContain('18');
@@ -545,7 +545,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Your update stays private');
     expect(text).toContain('Invite your partner first. Once they accept, you can choose exactly which update to send.');
     expect(text).toContain('Invite someone you train with');
-    expect(text).not.toContain('Share a win');
+    expect(text).not.toContain('Share an update');
   });
 
   test('pro under the cap offers "Invite another partner"', async () => {
@@ -750,14 +750,14 @@ describe('empty state', () => {
     const text = allText(await mount());
     expect(text).toContain('Train with a partner');
     expect(text).toContain(
-      'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the wins you choose to send. Food, photos, body metrics and notes stay private.',
+      'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the updates you choose to send. Food, photos, body metrics and notes stay private.',
     );
     // The plain-English receipt explains what pairing actually exposes before
     // the user invites anyone.
     expect(text).toContain('What your partner sees');
     expect(text).toContain('Whether you trained this week');
     expect(text).toContain('One fixed cheer a day');
-    expect(text).toContain('Only the wins you choose to send');
+    expect(text).toContain('Only the updates you choose to send');
     expect(text).toContain('No food, photos, body metrics or private notes');
     // The word "signal" is gone from the pitch.
     expect(text).not.toContain('signal');
@@ -949,7 +949,7 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Manage partnership" scroll/);
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/accessibilityLabel="This week's sessions" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose an update to share"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerActionSheet: \{\s*alignSelf: 'stretch',\s*maxHeight: '86%',\s*\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);

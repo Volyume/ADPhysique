@@ -92,7 +92,8 @@ const POSES = [
   { key: 'back', label: 'Back', a11y: 'Show back photos' },
 ];
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
-const CORE_POSES = ['front', 'side', 'back'];
+const SCORE_POSES = ['front', 'back'];
+const PHOTO_LIBRARY_POSES = ['front', 'back', 'side'];
 const PROGRESS_SCAN_MIN_INTERVAL_MS = 7 * 86400000;
 const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
 const PROGRESS_SCAN_IMAGE_QUALITY = 0.92;
@@ -1027,11 +1028,13 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
   function renderCheckInCard(item) {
     const dateLabel = item.label || formatProgressPhotoDay(item.takenAt);
-    const missingPoses = CORE_POSES.filter((pose) => !item.poses.includes(pose));
+    const missingPoses = SCORE_POSES.filter((pose) => !item.poses.includes(pose));
     const nextMissingPose = missingPoses[0] || null;
+    const hasSide = item.poses.includes('side');
+    const scorePoseCount = SCORE_POSES.filter((pose) => item.poses.includes(pose)).length;
     const poseSummary = missingPoses.length === 0
-      ? 'Full set'
-      : `${item.poses.length}/${CORE_POSES.length} poses`;
+      ? (hasSide ? 'Front, back + side' : 'Front + back')
+      : `${scorePoseCount}/${SCORE_POSES.length} scoring photos`;
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
     const scanForDay = scanForCheckIn(item);
     const scanSummary = libraryScanSummary(scanForDay);
@@ -1079,7 +1082,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
           ) : null}
           <View style={styles.checkInPoseRow}>
-            {CORE_POSES.map((pose) => {
+            {PHOTO_LIBRARY_POSES.map((pose) => {
               const complete = item.poses.includes(pose);
               return (
                 <View key={pose} style={[styles.checkInPoseChip, complete && styles.checkInPoseChipDone]}>
@@ -1093,11 +1096,15 @@ export default function ProgressPhotosScreen({ navigation }) {
           {item.note ? <Text style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
           {missingPoses.length > 0 ? (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Add {missingPoses.map((pose) => `${POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date.
+              Add {missingPoses.map((pose) => `${POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date to score it.
+            </Text>
+          ) : !hasSide ? (
+            <Text style={styles.checkInHint} numberOfLines={2}>
+              Side is optional. Add it if you want a fuller visual comparison.
             </Text>
           ) : (
             <Text style={styles.checkInHint} numberOfLines={2}>
-              Front, side and back photos are saved together.
+              Front, back and side photos are saved together.
             </Text>
           )}
           {!readOnly && nextMissingPose ? (
@@ -1129,7 +1136,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </View>
               <View style={styles.heroTitleCopy}>
                 <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
-                <Text style={styles.heroTextTitle}>Private physique photos</Text>
+                <Text style={styles.heroTextTitle}>Physique progress</Text>
               </View>
             </View>
             <View style={styles.heroPrivacyPill}>
