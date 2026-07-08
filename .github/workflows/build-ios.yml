@@ -138,10 +138,10 @@ jobs:
           fi
           echo "✓ Config synced to EAS"
 
-      # Credentials are already stored on EAS, so keep the paid cloud build fully
-      # non-interactive. If EAS ever needs first-time credential repair again, do
-      # that once in the EAS credentials UI instead of trying to answer prompts in
-      # CI.
+      # Keep the EAS driver interactive under expect because EAS can still ask
+      # credential/push-notification questions on manual iOS runs even when the
+      # credentials are already usable. The cloud builder itself is hardened in
+      # eas.json with the pinned Node version used for dependency install.
       - name: Build iOS (EAS, waits for completion)
         if: ${{ !inputs.skip_build }}
         env:
@@ -149,9 +149,25 @@ jobs:
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CI: "1"
+          CI: "false"
           EAS_SKIP_AUTO_FINGERPRINT: "1"
-        run: eas build --platform ios --profile production --wait --non-interactive
+        run: |
+          sudo apt-get install -y expect -qq 2>/dev/null
+          expect <<'EOF'
+          set timeout 6600
+          spawn eas build --platform ios --profile production --wait
+          expect {
+            -re {Select your Apple Team Type}      { send -- "\033\[B\033\[B\r"; exp_continue }
+            -re {set up Push Notifications}        { send -- "\033\[B\r";        exp_continue }
+            -re {Apple ID:}                        { puts "\n::error::EAS dropped to an interactive Apple ID login. Set up the APNs key once on expo.dev or add EXPO_APPLE_ID + EXPO_APPLE_APP_SPECIFIC_PASSWORD secrets."; exit 3 }
+            -re {\(Y/n\)}                          { send -- "\r";              exp_continue }
+            -re {\(y/N\)}                          { send -- "y\r";             exp_continue }
+            timeout { puts "\n::error::Stuck for 110 min with no progress. Check the log above for the prompt EAS was waiting on."; exit 2 }
+            eof
+          }
+          catch wait result
+          exit [lindex $result 3]
+          EOF
 
       # eas submit needs submit.production.ios.ascAppId (the App Store Connect
       # numeric app id). Rather than commit it, resolve it at submit time from the
