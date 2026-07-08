@@ -127,6 +127,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
   });
 
+  test('warm-up helper uses gym-floor language, not internal ramp wording', () => {
+    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetTitle}>Warm-up sets</Text>');
+    expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
+    expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
+    expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');
+    expect(ACTIVE_WORKOUT).not.toContain('<Text style={styles.sheetOptionLabel}>Warm-up ramp</Text>');
+  });
+
   test('custom workout modals stay within the screen and keyboard-safe', () => {
     expect(ACTIVE_WORKOUT).toMatch(/supSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
     expect(ACTIVE_WORKOUT).toContain('supSheetScroll');

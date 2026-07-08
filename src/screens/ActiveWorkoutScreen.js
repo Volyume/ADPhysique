@@ -2780,19 +2780,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
         </WorkoutBottomSheet>
 
-        {/* B8: warm-up ramp sheet. Opens ONLY from the overflow menu (the
+        {/* B8: warm-up set helper. Opens ONLY from the overflow menu (the
             recorded no-auto-suggest decision stands, pull, never push).
-            Rows are the deterministic warmupRamp arithmetic; tapping one
+            Choosing one suggested set
             loads it into the set entry as a Warm-up via the same setType
             machinery as the manual picker. Nothing is logged for the user. */}
         <WorkoutBottomSheet
           visible={showWarmupRamp}
           onClose={() => setShowWarmupRamp(false)}
-          accessibilityLabel="Warm-up ramp"
+          accessibilityLabel="Warm-up sets"
         >
           {showWarmupRamp ? (
             <>
-              <Text style={styles.sheetTitle}>Warm-up ramp</Text>
+              <Text style={styles.sheetTitle}>Warm-up sets</Text>
               {(() => {
                 // Working weight: the entry while it holds a working set;
                 // the anchor while the entry holds a ramp row (so reopening
@@ -2817,14 +2817,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 if (rows.length === 0) {
                   return (
                     <Text style={styles.sheetExplainer}>
-                      {`This is light enough to start at ${working} ${units}. No ramp is needed today.`}
+                      {`This is light enough to start at ${working} ${units}. You can begin with your working set today.`}
                     </Text>
                   );
                 }
                 return (
                   <>
                     <Text style={styles.sheetExplainer}>
-                      {`Working up to ${working} ${units}. Tap a row to load it as a warm-up, then log it. Warm-ups are saved but not counted in your working-set target.`}
+                      {`Working up to ${working} ${units}. Choose a warm-up set to load it, then tap Log warm-up. Warm-ups are saved but not counted in your working-set target.`}
                     </Text>
                     {rows.map((row) => (
                       <TouchableOpacity
@@ -2837,7 +2837,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           setShowWarmupRamp(false);
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load into the set entry as a warm-up.`}
+                        accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load as a warm-up set.`}
                       >
                         <View style={styles.overflowOptionRow}>
                           <Ionicons name="flame-outline" size={16} color={colors.warning} />
@@ -2968,7 +2968,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
               {/* B8 gym basics. Both live here in the overflow, secondary
                   utilities off the permanent surface (COMP-001), and strictly
-                  pull: the warm-up ramp NEVER auto-appears (recorded decision
+                  pull: the warm-up helper NEVER auto-appears (recorded decision
                   at the set-entry card). */}
               {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
                   weight AND set type, and finishCluster commits from the
@@ -2986,12 +2986,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   setShowWarmupRamp(true);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="Warm-up ramp"
+                accessibilityLabel="Warm-up sets"
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="flame-outline" size={18} color={colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Warm-up ramp</Text>
+                    <Text style={styles.sheetOptionLabel}>Warm-up sets</Text>
                     <Text style={styles.sheetOptionDesc}>Suggested light sets up to today's working weight.</Text>
                   </View>
                 </View>
