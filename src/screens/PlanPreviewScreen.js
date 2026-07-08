@@ -41,7 +41,7 @@ export default function PlanPreviewScreen({ navigation }) {
           accessibilityLabel="Create an account to keep your plan">
           <Text style={styles.ctaText}>Create an account to keep it</Text>
         </TouchableOpacity>
-        <Text style={styles.fine}>No card. Nothing charged unless you choose.</Text>
+        <Text style={styles.fine}>No payment card. Nothing charged unless you choose.</Text>
       </View>
     </SafeAreaView>
   );

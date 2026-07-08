@@ -411,7 +411,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </View>
 
           {ingredients.length === 0 ? (
-            <Text style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will build here.</Text>
+            <Text style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
           ) : ingredients.map((ing, i) => (
             <View key={`${ing.food_ref}-${i}`} style={styles.ingRow}>
               <View style={{ flex: 1 }}>

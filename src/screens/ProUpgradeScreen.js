@@ -46,7 +46,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does the 14-day trial work?',
-    a: 'No card needed. New accounts get full Pro free for 14 days (one trial per account), and if you decide not to subscribe it winds down gently and nothing you logged is lost.',
+    a: 'No payment card needed. New accounts get full Pro free for 14 days (one trial per account), and if you decide not to subscribe it winds down gently and nothing you logged is lost.',
   },
   {
     q: 'I subscribed before. How do I get Pro back?',

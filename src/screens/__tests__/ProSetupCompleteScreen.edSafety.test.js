@@ -139,7 +139,7 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(SOURCE).not.toContain('accessibilityRole="link"');
     expect(SOURCE).not.toContain('Diary &gt; Plan my week');
     expect(SOURCE).not.toContain('Open Plans to build or pick a routine');
-    expect(SOURCE).toContain('Build or choose a routine before your first session.');
+    expect(SOURCE).toContain('Create or choose a routine before your first session.');
     expect(SOURCE).toMatch(/eduLearnRow: \{[\s\S]*minHeight: 44/);
     expect(SOURCE).toMatch(/eduLearnText: \{ color: colors\.textPrimary/);
   });

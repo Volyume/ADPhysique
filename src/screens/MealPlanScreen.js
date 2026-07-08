@@ -257,7 +257,7 @@ export default function MealPlanScreen({ navigation, route }) {
       await load();
       toast.show(okMsg, { variant: 'success' });
     } catch (_) {
-      toast.show("Couldn't build your plan. Try again.", { variant: 'error' });
+      toast.show("Couldn't create your meals. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -564,14 +564,14 @@ export default function MealPlanScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : loadError ? (
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="warning-outline"
-            title="Couldn't load meal builder"
+            title="Couldn't load meal planning"
             text="Check your connection and try again. Your diary has not been changed."
             actionLabel="Try again"
             onAction={load}
@@ -586,7 +586,7 @@ export default function MealPlanScreen({ navigation, route }) {
           <Text style={styles.emptyBody}>
             Create meals from your targets, review them, then add the ones you want to your diary.
           </Text>
-          <View style={styles.emptySteps} accessibilityLabel="Meal builder steps">
+          <View style={styles.emptySteps} accessibilityLabel="Meal planning steps">
             <View style={styles.emptyStep}>
               <Ionicons name="analytics-outline" size={16} color={colors.primary} />
               <Text style={styles.emptyStepText}>Uses your calories and macros</Text>

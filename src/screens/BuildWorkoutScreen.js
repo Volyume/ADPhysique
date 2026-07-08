@@ -364,7 +364,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         accessibilityLabel="Travel or hotel gym equipment picker"
       >
         <Text style={styles.travelTitle}>Travel / hotel gym</Text>
-        <Text style={styles.travelSub}>Choose what equipment you've got today. Volyume will build a full-body session that keeps you moving without changing your plan.</Text>
+        <Text style={styles.travelSub}>Choose what equipment you've got today. Volyume will create a full-body session that keeps you moving without changing your plan.</Text>
         <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
           {[
             { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
@@ -391,10 +391,10 @@ export default function BuildWorkoutScreen({ navigation }) {
             accessibilityLabel="Cancel"
           />
           <Button
-            title="Build session"
+            title="Create session"
             style={styles.travelAction}
             onPress={applyTravelMode}
-            accessibilityLabel="Build session"
+            accessibilityLabel="Create session"
           />
         </View>
       </BottomSheet>

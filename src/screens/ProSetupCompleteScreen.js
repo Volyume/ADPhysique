@@ -308,11 +308,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   disabled={buildingMeals}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="Build my first week of meals to these targets"
+                  accessibilityLabel="Create my first week of meals to these targets"
                 >
                   <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
                   <Text style={styles.eduLearnText}>
-                    {buildingMeals ? 'Building your week' : 'Build my first week of meals'}
+                    {buildingMeals ? 'Creating your week' : 'Create my first week of meals'}
                   </Text>
                   {!buildingMeals ? <Ionicons name="chevron-forward" size={14} color={colors.primary} /> : null}
                 </TouchableOpacity>
@@ -343,7 +343,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </Text>
                 ) : (
                   <Text style={styles.routineBody}>
-                    Build or choose a routine before your first session.
+                    Create or choose a routine before your first session.
                   </Text>
                 )}
               </View>

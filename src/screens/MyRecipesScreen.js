@@ -222,7 +222,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           icon="restaurant-outline"
           title="Create your first recipe"
           text="Save the ingredients once, then log the recipe in one tap whenever you eat it."
-          actionLabel="Build a recipe"
+          actionLabel="Create a recipe"
           onAction={onCreate}
         />
       ) : (

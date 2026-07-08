@@ -122,7 +122,7 @@ describe('MyRecipesScreen load states', () => {
     expect(text).toContain('Create your first recipe');
     expect(text).not.toContain("Couldn't load recipes");
 
-    const build = tree.root.findByProps({ accessibilityLabel: 'Build a recipe' });
+    const build = tree.root.findByProps({ accessibilityLabel: 'Create a recipe' });
     await act(async () => {
       build.props.onPress();
     });

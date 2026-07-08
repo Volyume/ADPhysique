@@ -193,9 +193,9 @@ export default function Article9ConsentScreen({ navigation }) {
           Volyume Score is a simple progress read, not a medical measure, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
-        <Text style={styles.subhead}>An automated safety check:</Text>
+        <Text style={styles.subhead}>A safety check that runs in the background:</Text>
         <Text style={styles.body}>
-          Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.
+          Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support.
         </Text>
 
         <Text style={styles.subhead}>What we never do with it:</Text>
