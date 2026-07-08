@@ -180,8 +180,13 @@ export default function TodayStrip({
       >
         <Text style={styles.cellLabel}>Morning weight</Text>
         <View style={styles.emptyLogBox}>
-          <Ionicons name="scale-outline" size={15} color={colors.textSecondary} />
-          <Text style={styles.logPrompt}>Log weight</Text>
+          <View style={styles.emptyLogMain}>
+            <Ionicons name="scale-outline" size={15} color={colors.textSecondary} />
+            <Text style={styles.logPrompt}>Add weight</Text>
+          </View>
+          <View style={styles.emptyLogAction}>
+            <Text style={styles.emptyLogActionText}>Log</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -229,14 +234,26 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.xs,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
   },
+  emptyLogMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0, flex: 1 },
   logPrompt: { ...type.label, color: colors.textPrimary },
+  emptyLogAction: {
+    minHeight: 30,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryFill,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyLogActionText: { ...type.label, color: colors.onPrimary },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },
   kgField: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flex: 1 },

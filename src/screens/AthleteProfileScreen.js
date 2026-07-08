@@ -357,7 +357,7 @@ export default function AthleteProfileScreen({ navigation }) {
   } : {
     label: 'Progress photos',
     value: 'Not scored yet',
-    sub: 'Add front and back photos to create your private Volyume Score.',
+    sub: 'Add front and back photos to create your Volyume Score.',
   };
   const focusTile = currentFocusTile(userProfile);
   const avatarPresetConfig = avatarPreset ? avatarPresetFor(avatarPreset) : null;

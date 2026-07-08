@@ -2078,7 +2078,10 @@ const styles = StyleSheet.create({
   primaryBtnText: { ...type.label, color: colors.onPrimary },
 
   // ── Sheets ──
-  partnerActionSheet: { minHeight: 520, height: '76%' },
+  partnerActionSheet: {
+    alignSelf: 'stretch',
+    maxHeight: '86%',
+  },
   sheetBody: { gap: spacing.xs },
   sheetHeading: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   sheetRow: {

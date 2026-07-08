@@ -938,7 +938,7 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/accessibilityLabel="This week's sessions" scroll/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Send a cheer"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/accessibilityLabel="Choose a win to share"[\s\S]*scroll[\s\S]*sheetStyle=\{styles\.partnerActionSheet\}/);
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerActionSheet: \{ minHeight: 520, height: '76%' \}/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerActionSheet: \{\s*alignSelf: 'stretch',\s*maxHeight: '86%',\s*\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/keyboardShouldPersistTaps="handled"/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/journeyContent: \{ flexGrow: 1,/);
   });

@@ -81,6 +81,9 @@ describe('weight cell', () => {
     expect(SOURCE).toContain('emptyLogBox: {');
     expect(SOURCE).toContain('borderColor: colors.border');
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
+    expect(SOURCE).toContain('emptyLogAction: {');
+    expect(SOURCE).toContain('backgroundColor: colors.primaryFill');
+    expect(SOURCE).toContain('emptyLogActionText: { ...type.label, color: colors.onPrimary }');
     expect(SOURCE).toContain('logPrompt: { ...type.label, color: colors.textPrimary }');
     expect(SOURCE).not.toContain('logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }');
   });
