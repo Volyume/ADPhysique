@@ -74,6 +74,18 @@ function widenMaskRows(mask, {
   return out;
 }
 
+function addSeparateArmRows(mask, {
+  width = 256, yStart = 112, yEnd = 152, leftStart = 56, leftEnd = 72, rightStart = 184, rightEnd = 200,
+  foregroundProbability = 0.96,
+} = {}) {
+  const out = new Float32Array(mask);
+  for (let y = yStart; y <= yEnd; y += 1) {
+    for (let x = leftStart; x <= leftEnd; x += 1) out[y * width + x] = foregroundProbability;
+    for (let x = rightStart; x <= rightEnd; x += 1) out[y * width + x] = foregroundProbability;
+  }
+  return out;
+}
+
 function bytesToBase64(bytes) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let out = '';
@@ -331,6 +343,25 @@ describe('Progress Scan vision signal extraction', () => {
     expect(Math.abs(
       noisy.silhouetteRatios.waistToShoulder - base.silhouetteRatios.waistToShoulder,
     )).toBeLessThan(0.03);
+  });
+
+  test('waist measurement ignores separate arms beside the torso', () => {
+    const base = measureMaskSignals(syntheticPersonMask(), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+    const armsDown = measureMaskSignals(addSeparateArmRows(syntheticPersonMask()), {
+      lightingScore: 0.9,
+      blurScore: 0.88,
+      pose: 'front',
+    });
+
+    expect(armsDown.abstentionReasons).toEqual([]);
+    expect(Math.abs(
+      armsDown.silhouetteRatios.waistToShoulder - base.silhouetteRatios.waistToShoulder,
+    )).toBeLessThan(0.05);
+    expect(armsDown.silhouetteRatios.waistToShoulder).toBeLessThan(0.8);
   });
 
   test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {

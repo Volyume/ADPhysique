@@ -10,6 +10,14 @@ Run:
 npm run progress-scan:calibration
 ```
 
+For an optional external real-silhouette smoke test, run:
+
+```bash
+npm run progress-scan:bodym
+```
+
+This downloads a small sample from the public BodyM dataset at run time. It is intentionally not part of normal CI because it depends on network access and a third-party dataset.
+
 To add non-committed real-photo cases from APK testing, save a JSON array outside Git and run the same gate with:
 
 ```bash
@@ -42,6 +50,12 @@ Do not commit user photos, downloaded comparison photos, or copyrighted guide im
 The app can then be tuned against real measured signals without storing private photos in Git.
 
 Use `getProgressScanCalibrationJson(userId, scanId, opts)` from `src/lib/progressScanStore.js` when you need a saved local scan converted into the corpus shape. It exports ratios, quality metrics, expected score band and confidence only; it must not include photo names, file paths, user ids, emails or image data.
+
+## External shape-smoke checks
+
+The BodyM smoke test uses public real-subject silhouette masks, height, weight, gender and body measurements to check that Volyume can extract finite silhouette ratios and bounded scores across varied body sizes. It is useful for shape robustness, PNG/mask decoding, and guarding against obvious score inversions across height and waist differences.
+
+It is not body-fat ground truth. BodyM does not provide DXA or validated body-fat labels, so it must not be used to claim exact body-fat accuracy. Treat it as one layer beneath real APK scan exports and controlled validation photos.
 
 Example real-case shape:
 

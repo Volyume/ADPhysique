@@ -373,18 +373,35 @@ export function blurScoreFromRgb(rgb, width, height) {
 
 function rowWidthAndCenter(binary, width, bbox, y) {
   const row = y * width;
-  let minX = width;
-  let maxX = -1;
+  const targetCenter = (bbox.minX + bbox.maxX + 1) / 2;
+  const segments = [];
+  let minX = -1;
   for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
     if (binary[row + x]) {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
+      if (minX < 0) minX = x;
+    } else if (minX >= 0) {
+      segments.push({ minX, maxX: x - 1 });
+      minX = -1;
     }
   }
-  return maxX >= minX ? {
-    width: maxX - minX + 1,
-    center: (minX + maxX + 1) / 2,
-  } : null;
+  if (minX >= 0) segments.push({ minX, maxX: bbox.maxX });
+  if (!segments.length) return null;
+  const chosen = segments
+    .map((segment) => ({
+      ...segment,
+      width: segment.maxX - segment.minX + 1,
+      center: (segment.minX + segment.maxX + 1) / 2,
+      distance: targetCenter < segment.minX
+        ? segment.minX - targetCenter
+        : targetCenter > segment.maxX
+          ? targetCenter - segment.maxX
+          : 0,
+    }))
+    .sort((a, b) => a.distance - b.distance || b.width - a.width)[0];
+  return {
+    width: chosen.width,
+    center: chosen.center,
+  };
 }
 
 function profileInRange(binary, width, height, bbox, startRatio, endRatio) {

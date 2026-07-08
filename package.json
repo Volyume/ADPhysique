@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",
     "progress-scan:calibration": "jest --runTestsByPath src/lib/__tests__/progressScanCalibrationCorpus.test.js --runInBand",
+    "progress-scan:bodym": "node scripts/run-progress-scan-bodym.cjs",
     "verify:android:16kb": "node scripts/verify-android-elf-page-size.cjs",
     "release:quality": "npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npm run release:quality && npm run release:audit",
