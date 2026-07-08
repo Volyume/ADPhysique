@@ -12,11 +12,23 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('Recovery affects your plan volume. Reminders keep coaching consistent.');
   });
 
-  test('optional body composition points users towards Volyume Score without guessing', () => {
-    expect(SOURCE).toContain('Progress Photos can track physique change later with your Volyume Score.');
-    expect(SOURCE).toContain('Use a measured value if you have one. If not, leave it blank. Do not guess it.');
+  test('optional body composition can seed the first plan while staying honest about certainty', () => {
+    expect(SOURCE).toContain('Your best current estimate helps the first plan.');
+    expect(SOURCE).toContain('Enter your best current estimate or a measured value.');
     expect(SOURCE).toContain('const BODY_FAT_SOURCE_OPTIONS = [');
+    expect(SOURCE).toContain("{ label: 'Best estimate', value: 'visual' }");
     expect(SOURCE).not.toContain("{ label: 'Visual', value: 'visual' }");
+    expect(SOURCE).not.toContain('Do not guess it.');
+  });
+
+  test('step chrome components stay outside the screen render so Android inputs keep focus', () => {
+    expect(SOURCE).toContain('function ProOnboardingHeader({ step, title, sub, onBack })');
+    expect(SOURCE).toContain('function QuestionGroup({ icon, title, sub, children })');
+
+    const screenBody = SOURCE.slice(SOURCE.indexOf('export default function ProOnboardingScreen'));
+    expect(screenBody).not.toContain('function Header(');
+    expect(screenBody).not.toContain('function QuestionGroup(');
+    expect(screenBody).not.toContain('function ProgressBar(');
   });
 
   test('header outcome chips and dense rows are shrink-safe on phones', () => {

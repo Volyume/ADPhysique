@@ -6,6 +6,8 @@ import {
   shouldSuggestDietBreak,
   getPlanNutritionContext,
   calculateNutritionTargets,
+  isBaselineBodyFatSource,
+  isAuthoritativeBodyFatSource,
   PROTEIN_MAX_GKGBW,
   DIET_BREAK_THRESHOLD_WEEKS,
   ADVANCED_PROTEIN_GOALS,
@@ -669,9 +671,20 @@ describe('calculateNutritionTargets is NaN-safe', () => {
     expect(withBf.bmrKcal).not.toBe(without.bmrKcal);
   });
 
+  test('a visual body fat estimate can shape the starting baseline without safety-floor authority', () => {
+    const withVisual = calculateNutritionTargets({ ...valid, bodyFatPercent: 12, bodyFatSource: 'visual' });
+    const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
+
+    expect(isBaselineBodyFatSource('visual')).toBe(true);
+    expect(isAuthoritativeBodyFatSource('visual')).toBe(false);
+    expect(withVisual.bmrKcal).not.toBe(without.bmrKcal);
+    expect(withVisual.confidence).toBe('low');
+  });
+
   test('photo_scan body fat never gains Katch-McArdle authority', () => {
     const withPhotoScan = calculateNutritionTargets({ ...valid, bodyFatPercent: 12, bodyFatSource: 'photo_scan' });
     const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
+    expect(isBaselineBodyFatSource('photo_scan')).toBe(false);
     expect(withPhotoScan.bmrKcal).toBe(without.bmrKcal);
     expect(withPhotoScan.confidence).toBe('low');
   });

@@ -200,6 +200,20 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
           <Text style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
+          <View style={styles.readyGrid} accessibilityLabel="Setup summary">
+            <View style={styles.readyItem}>
+              <Ionicons name="flame-outline" size={15} color={colors.primary} />
+              <Text style={styles.readyText}>Targets saved</Text>
+            </View>
+            <View style={styles.readyItem}>
+              <Ionicons name="barbell-outline" size={15} color={colors.primary} />
+              <Text style={styles.readyText}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
+            </View>
+            <View style={styles.readyItem}>
+              <Ionicons name="calendar-outline" size={15} color={colors.primary} />
+              <Text style={styles.readyText}>Coach reminders set</Text>
+            </View>
+          </View>
           </Animated.View>
 
           {/* 1. Log your weight, first thing each morning */}
@@ -471,8 +485,28 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, marginBottom: spacing.sm,
   },
   sub: {
-    ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xl,
+    ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md,
   },
+  readyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  readyItem: {
+    flexGrow: 1,
+    flexBasis: 150,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+  },
+  readyText: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
 
   // Cards 1, 2 and 4 (plain, non-collapsible) now render via the shared
   // Card component; this is just the residual chrome Card doesn't own

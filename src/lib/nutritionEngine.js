@@ -574,6 +574,13 @@ export function isAuthoritativeBodyFatSource(bodyFatSource) {
   return bodyFatSource === 'dexa' || bodyFatSource === 'caliper' || bodyFatSource === 'bia';
 }
 
+export function isBaselineBodyFatSource(bodyFatSource) {
+  return isAuthoritativeBodyFatSource(bodyFatSource) ||
+    bodyFatSource === 'visual' ||
+    bodyFatSource === 'manual' ||
+    bodyFatSource === 'self_reported';
+}
+
 function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSource) {
   const useKatchMcArdle =
     Number.isFinite(bodyFatPercent) &&
@@ -583,7 +590,7 @@ function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSourc
     // already enforces, and fall back to Mifflin outside it.
     bodyFatPercent > 0 &&
     bodyFatPercent < 60 &&
-    isAuthoritativeBodyFatSource(bodyFatSource);
+    isBaselineBodyFatSource(bodyFatSource);
 
   if (useKatchMcArdle) {
     const lbm = weightKg * (1 - bodyFatPercent / 100);
@@ -701,7 +708,12 @@ export function energyAvailabilityCaution(targetKcal, maintenanceKcal, { weightK
 function calcConfidence(bodyFatSource) {
   if (bodyFatSource === 'dexa' || bodyFatSource === 'caliper') return 'high';
   if (bodyFatSource === 'bia') return 'medium';
-  if (bodyFatSource === 'visual' || bodyFatSource === 'photo_scan') return 'low';
+  if (
+    bodyFatSource === 'visual' ||
+    bodyFatSource === 'manual' ||
+    bodyFatSource === 'self_reported' ||
+    bodyFatSource === 'photo_scan'
+  ) return 'low';
   return 'medium'; // no body fat provided
 }
 
@@ -729,16 +741,16 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'opti
     return { proteinG, basis: 'bodyweight', proteinRateUsed: rate };
   }
 
-  const hasCredibleLbm =
+  const hasBaselineLbm =
     lbm !== null &&
     lbm !== undefined &&
     lbm > 0 &&
-    isAuthoritativeBodyFatSource(bodyFatSource);
+    isBaselineBodyFatSource(bodyFatSource);
 
   let proteinG;
   let basis;
   let proteinRateUsed;
-  if (hasCredibleLbm) {
+  if (hasBaselineLbm) {
     proteinRateUsed = approach.lbm[goal] ?? approach.lbm.maintain;
     proteinG = proteinRateUsed * lbm;
     basis = 'lbm';

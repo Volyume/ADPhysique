@@ -107,14 +107,15 @@ function daysToFreqBucket(daysPerWeek) {
 const SEX_OPTIONS = [{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }];
 const ACCEPTED_SEX_VALUES = SEX_OPTIONS.map((o) => o.value);
 const BODY_FAT_SOURCE_OPTIONS = [
+  { label: 'Best estimate', value: 'visual' },
   { label: 'BIA', value: 'bia' },
   { label: 'Caliper', value: 'caliper' },
   { label: 'DEXA', value: 'dexa' },
 ];
 const BODY_FAT_SOURCE_VALUES = BODY_FAT_SOURCE_OPTIONS.map((o) => o.value);
 
-function normaliseMeasuredBodyFatSource(source) {
-  return BODY_FAT_SOURCE_VALUES.includes(source) ? source : 'bia';
+function normaliseBodyFatSource(source) {
+  return BODY_FAT_SOURCE_VALUES.includes(source) ? source : 'visual';
 }
 
 // ONBOARD-001: height bounds (cm) for the required-details gate. Height feeds
@@ -184,6 +185,79 @@ function fmt12(h) {
   return `${h - 12} pm`;
 }
 
+function ProOnboardingProgressBar({ step }) {
+  // Endowed Progress Effect: the bar opens with a small amount already filled
+  // rather than empty, so step 1 doesn't read as "0% done, long way to go".
+  const BASE = 0.12;
+  const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
+  const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width: `${filled}%` }]} />
+    </View>
+  );
+}
+
+function ProOnboardingHeader({ step, title, sub, onBack }) {
+  const stepLabel = STEP_LABELS[step - 1] || 'Setup';
+  const outcomes = STEP_OUTCOMES[step] || [];
+  return (
+    <View style={styles.headerBlock}>
+      <View style={styles.brandRow}>
+        {onBack ? (
+          <TouchableOpacity
+            onPress={onBack}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.brandBack}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        ) : null}
+        <VolyumeIcon size={22} />
+        <View style={styles.proBadge}>
+          <Text style={styles.proBadgeText}>PRO</Text>
+        </View>
+      </View>
+      <ProOnboardingProgressBar step={step} />
+      <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+      <Text style={styles.stepTitle}>{title}</Text>
+      {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
+      {outcomes.length ? (
+        <View style={styles.outcomeCard}>
+          <Text style={styles.outcomeEyebrow}>This step sets</Text>
+          <View style={styles.outcomeGrid}>
+            {outcomes.map((item) => (
+              <View key={item.label} style={styles.outcomeChip}>
+                <Ionicons name={item.icon} size={14} color={colors.primary} />
+                <Text style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function QuestionGroup({ icon, title, sub, children }) {
+  return (
+    <View style={styles.questionGroup}>
+      <View style={styles.questionGroupHead}>
+        <View style={styles.questionGroupIcon}>
+          <Ionicons name={icon} size={18} color={colors.primary} />
+        </View>
+        <View style={styles.questionGroupCopy}>
+          <Text style={styles.questionGroupTitle}>{title}</Text>
+          {sub ? <Text style={styles.questionGroupSub}>{sub}</Text> : null}
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
+
 export default function ProOnboardingScreen({ navigation }) {
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
@@ -234,7 +308,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // only) and the bulk target came out ~300 kcal too low, landing on the lean
   // bulk number.
   const [bodyFat, setBodyFat] = useState('');
-  const [bfSource, setBfSource] = useState('bia');
+  const [bfSource, setBfSource] = useState('visual');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   // Biological sex has NO default (founder 2026-07-01): it drives the ED
   // calorie floor (1500 male / 1200 female) and BMR, so a silent 'male' default
@@ -397,7 +471,7 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.bodyWeightStLbs, setBodyWeightStLbs);
       str(a.bodyWeight, setBodyWeight);
       str(a.bodyFat, setBodyFat);
-      if (typeof a.bfSource === 'string') setBfSource(normaliseMeasuredBodyFatSource(a.bfSource));
+      if (typeof a.bfSource === 'string') setBfSource(normaliseBodyFatSource(a.bfSource));
       if (a.localHeightUnits === 'imperial' || a.localHeightUnits === 'metric') setLocalHeightUnits(a.localHeightUnits);
       // Sex only ever restores an explicit prior choice; anything else stays null.
       const sexValid = ACCEPTED_SEX_VALUES.includes(a.sex);
@@ -717,11 +791,12 @@ export default function ProOnboardingScreen({ navigation }) {
       // never fabricates a plausible height that reads as user data.
       const safeHeightCm = hcm;
       const safeAge = ageNum;
-      // Parse body fat the same way NutritionTargetsScreen does, and only treat
-      // it as set when it is a sane percentage, so a typo can't poison the calc.
+      // Parse body fat as a low-confidence baseline unless it came from a
+      // measured source. It can shape the first plan, but measured-only safety
+      // floors still live inside nutritionEngine.
       const bfParsed = parseFloat(bodyFat);
       const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
-      const measuredBfSource = bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null;
+      const baselineBfSource = bfNum != null ? normaliseBodyFatSource(bfSource) : null;
       // Build inputs through the shared builder so onboarding and Update Your
       // Plan can never feed the engine different shapes (the bug that made the
       // two flows disagree). Same values as before, so onboarding output is
@@ -732,7 +807,7 @@ export default function ProOnboardingScreen({ navigation }) {
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
         bodyFatPct: bfNum,
-        bodyFatSource: measuredBfSource,
+        bodyFatSource: baselineBfSource,
         daysPerWeek,
         trainingPhase,
         trainingGoal,
@@ -773,11 +848,9 @@ export default function ProOnboardingScreen({ navigation }) {
         planWeakPoints,
         proteinApproach,
         // Persist body composition so later recalcs (Update Your Plan, manual
-        // Nutrition Targets) read the same BF% + method onboarding used and keep
-        // the Katch-McArdle BMR path. Without this the update flow silently fell
-        // back to Mifflin and produced different calories from an unchanged body.
+        // Nutrition Targets) read the same BF% + method onboarding used.
         bodyFatPct: bfNum,
-        bodyFatSource: measuredBfSource,
+        bodyFatSource: baselineBfSource,
         // Store the nutrition goal key alongside the phase so surfaces that read
         // userProfile.goal (Nutrition Targets summary) show the right phase
         // instead of defaulting to lean_gain.
@@ -793,7 +866,7 @@ export default function ProOnboardingScreen({ navigation }) {
         await logBodyMetric(user.id, {
           weightKg: bwKg,
           bodyFatPercent: bfNum,
-          bodyFatSource: measuredBfSource,
+          bodyFatSource: baselineBfSource,
           loggedAt: Date.now(),
         });
         // Also seed the morning weights series so the weekly check-in
@@ -915,83 +988,6 @@ export default function ProOnboardingScreen({ navigation }) {
     navigation.replace('ProSetupComplete');
   }
 
-  // ── Progress bar ─────────────────────────────────────────────────────────────
-
-  function ProgressBar() {
-    // Endowed Progress Effect: the bar opens with a small amount already
-    // filled rather than empty, so step 1 doesn't read as "0% done, long way
-    // to go". The account is behind them by the time they see this. It then
-    // fills to full on the last step.
-    const BASE = 0.12;
-    const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
-    const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
-    return (
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${filled}%` }]} />
-      </View>
-    );
-  }
-
-  function Header({ title, sub, onBack }) {
-    const stepLabel = STEP_LABELS[step - 1] || 'Setup';
-    const outcomes = STEP_OUTCOMES[step] || [];
-    return (
-      <View style={styles.headerBlock}>
-        <View style={styles.brandRow}>
-          {onBack ? (
-            <TouchableOpacity
-              onPress={onBack}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.brandBack}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ) : null}
-          <VolyumeIcon size={22} />
-          <View style={styles.proBadge}>
-            <Text style={styles.proBadgeText}>PRO</Text>
-          </View>
-        </View>
-        <ProgressBar />
-        <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
-        <Text style={styles.stepTitle}>{title}</Text>
-        {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
-        {outcomes.length ? (
-          <View style={styles.outcomeCard}>
-            <Text style={styles.outcomeEyebrow}>This step sets</Text>
-            <View style={styles.outcomeGrid}>
-              {outcomes.map((item) => (
-                <View key={item.label} style={styles.outcomeChip}>
-                  <Ionicons name={item.icon} size={14} color={colors.primary} />
-                  <Text style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
-      </View>
-    );
-  }
-
-  function QuestionGroup({ icon, title, sub, children }) {
-    return (
-      <View style={styles.questionGroup}>
-        <View style={styles.questionGroupHead}>
-          <View style={styles.questionGroupIcon}>
-            <Ionicons name={icon} size={18} color={colors.primary} />
-          </View>
-          <View style={styles.questionGroupCopy}>
-            <Text style={styles.questionGroupTitle}>{title}</Text>
-            {sub ? <Text style={styles.questionGroupSub}>{sub}</Text> : null}
-          </View>
-        </View>
-        {children}
-      </View>
-    );
-  }
-
   // ── Step 1, Create account ──────────────────────────────────────────────────
 
   if (step === 1) {
@@ -999,7 +995,8 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-1" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Header
+            <ProOnboardingHeader
+              step={step}
               title="Set up your Pro account safely"
               sub="Sign in once so your plan, weight history and coaching updates can be restored if you change device."
             />
@@ -1058,7 +1055,8 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-2" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Header
+            <ProOnboardingHeader
+              step={step}
               title="Set your starting baseline"
               sub="These details let the app set a safe starting baseline without guessing."
             />
@@ -1251,13 +1249,13 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <QuestionGroup
               icon="analytics-outline"
-              title="Measured body composition"
-              sub="Leave this blank unless you have a recent measured figure. Progress Photos can track physique change later with your Volyume Score."
+              title="Starting body composition"
+              sub="Your best current estimate helps the first plan. Progress Photos can refine physique change later with your Volyume Score."
             >
               <View style={styles.sectionLast}>
-                <Text style={styles.fieldLabel}>Measured body fat % (optional)</Text>
+                <Text style={styles.fieldLabel}>Body fat estimate % (optional)</Text>
                 <Text style={styles.fieldHint}>
-                  Use a measured value if you have one. If not, leave it blank. Do not guess it.
+                  Enter your best current estimate or a measured value. Leave it blank only if you genuinely do not know.
                 </Text>
                 <TextField
                   fieldStyle={styles.inputField}
@@ -1270,20 +1268,20 @@ export default function ProOnboardingScreen({ navigation }) {
                   maxLength={4}
                   autoComplete="off"
                   textContentType="none"
-                  accessibilityLabel="Measured body fat percentage, optional"
+                  accessibilityLabel="Starting body fat estimate percentage, optional"
                 />
                 {bodyFat.trim() ? (
                   <View style={{ marginTop: spacing.sm }}>
                     {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
                     <View style={styles.measuredRow}>
-                      <Text style={styles.fieldHint}>Measurement method</Text>
+                      <Text style={styles.fieldHint}>Estimate source</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
                     <SegmentedControl
                       options={BODY_FAT_SOURCE_OPTIONS}
                       value={bfSource}
                       onChange={setBfSource}
-                      accessibilityLabel="Body fat measurement method"
+                      accessibilityLabel="Body fat estimate source"
                     />
                   </View>
                 ) : null}
@@ -1318,7 +1316,8 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-3" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Header
+            <ProOnboardingHeader
+              step={step}
               title="Shape your training week"
               sub="The plan should fit your real week, not the week you wish you had."
               onBack={goBack}
@@ -1423,7 +1422,7 @@ export default function ProOnboardingScreen({ navigation }) {
             heightCm: hcm,
             weightKg: bwKg,
             bodyFatPct: bfNum,
-            bodyFatSource: bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null,
+            bodyFatSource: bfNum != null ? normaliseBodyFatSource(bfSource) : null,
             daysPerWeek,
             trainingPhase,
             trainingGoal,
@@ -1439,7 +1438,8 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-4-goal" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <Header
+            <ProOnboardingHeader
+              step={step}
               title="Set your training focus"
               sub="Your goal sets the calorie direction, training bias and nutrition target."
               onBack={goBack}
@@ -1606,21 +1606,33 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: '100%' }]} />
               </View>
-              <Text style={styles.seqHeading}>Setting up your plan</Text>
-              <View style={styles.seqList} accessibilityLiveRegion="polite">
-                {lines.slice(0, sequenceStage).map((line, i) => {
-                  const isCurrent = i === sequenceStage - 1;
-                  return (
-                    <View key={i} style={styles.seqRow}>
-                      {isCurrent ? (
-                        <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
-                      ) : (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
-                      )}
-                      <Text style={styles.seqLine}>{line}</Text>
-                    </View>
-                  );
-                })}
+              <View style={styles.seqPanel}>
+                <View style={styles.seqHeroRow}>
+                  <View style={styles.seqHeroIcon}>
+                    <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.seqHeroCopy}>
+                    <Text style={styles.seqHeading}>Building your first plan</Text>
+                    <Text style={styles.seqSub}>
+                      Using your body data, goal, training week and recovery to set a sensible starting point.
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.seqList} accessibilityLiveRegion="polite">
+                  {lines.slice(0, sequenceStage).map((line, i) => {
+                    const isCurrent = i === sequenceStage - 1;
+                    return (
+                      <View key={i} style={styles.seqRow}>
+                        {isCurrent ? (
+                          <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
+                        ) : (
+                          <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
+                        )}
+                        <Text style={styles.seqLine}>{line}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             </Animated.View>
           </ScrollView>
@@ -1631,7 +1643,8 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-5" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Header
+          <ProOnboardingHeader
+            step={step}
             title="Recovery and reminders"
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
             onBack={goBack}
@@ -1872,16 +1885,43 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     justifyContent: 'center',
   },
-  seqWrap: { width: '100%' },
-  seqHeading: {
-    fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.xl,
-    lineHeight: 30,
+  seqWrap: { width: '100%', gap: spacing.lg },
+  seqPanel: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
-  seqList: { gap: spacing.md },
-  seqRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  seqHeroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  seqHeroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seqHeroCopy: { flex: 1, minWidth: 0 },
+  seqHeading: {
+    ...type.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  seqSub: {
+    ...type.bodySm,
+    color: colors.textSecondary,
+  },
+  seqList: { gap: spacing.sm },
+  seqRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 34,
+  },
   seqIcon: { width: 22, alignItems: 'center' },
-  seqLine: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, lineHeight: 22 },
+  seqLine: { ...type.bodySm, flex: 1, color: colors.textPrimary },
 
   // Back affordance, inline at the left of the brand row so it reads as part of
   // the header chrome instead of floating above the logo. Negative left margin

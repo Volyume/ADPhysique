@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { estimateBodyFatFromScanAssets } from '../progressScanAnalysis';
-import { computeFFMFloor, isAuthoritativeBodyFatSource } from '../nutritionEngine';
+import { computeFFMFloor, isAuthoritativeBodyFatSource, isBaselineBodyFatSource } from '../nutritionEngine';
 import { safeDayFloorKcal } from '../food/calorieBank';
 import { runWeeklyCoach } from '../weeklyCoach';
 
@@ -43,6 +43,8 @@ function coachCutInputs(over = {}) {
 describe('Progress Scan safety-floor isolation', () => {
   test('photo_scan is never an authoritative Katch-McArdle source', () => {
     expect(isAuthoritativeBodyFatSource('photo_scan')).toBe(false);
+    expect(isBaselineBodyFatSource('photo_scan')).toBe(false);
+    expect(isBaselineBodyFatSource('visual')).toBe(true);
     expect(isAuthoritativeBodyFatSource('dexa')).toBe(true);
   });
 

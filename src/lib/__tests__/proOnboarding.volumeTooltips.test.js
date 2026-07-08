@@ -9,7 +9,7 @@
  *   - step 5 "Recovery & reminders" Header sub
  *   - step 5 "How's your recovery?" Dropdown hint
  * The Header sub carries no field label of its own to anchor a tooltip to
- * (Header takes title/sub/onBack only), so it shares the ONE tooltip wired
+ * (ProOnboardingHeader takes title/sub/onBack only), so it shares the ONE tooltip wired
  * onto the Recovery Dropdown immediately below it — the nearest label, per
  * the founder's own fallback rule for a hint with no anchor. These are
  * source-level regression guards (same style as
@@ -26,12 +26,12 @@ function read(rel) {
 describe('ProOnboarding: GLOSSARY.volume wired onto the "volume" jargon sites (A6)', () => {
   const src = read('src/screens/ProOnboardingScreen.js');
 
-  test('the Header component itself carries no tip/InfoTooltip support (confirms the shared-anchor design)', () => {
-    const start = src.indexOf('function Header(');
+  test('the header component itself carries no tip/InfoTooltip support (confirms the shared-anchor design)', () => {
+    const start = src.indexOf('function ProOnboardingHeader(');
     expect(start).toBeGreaterThan(-1);
-    const end = src.indexOf('\n  }', start);
-    const body = src.slice(start, end === -1 ? start + 600 : end);
+    const body = src.slice(start, start + 1400);
     expect(body).not.toMatch(/InfoTooltip/);
+    expect(src).not.toContain('function Header(');
   });
 
   test('step 3 "Training experience" Dropdown carries the volume tooltip', () => {
