@@ -71,6 +71,11 @@ The other eight §15 items build under the standard wave process.
   Audit's "no linkage" claim for item 1 was stale (a day-level linkage already
   existed); extended to per-meal granularity. Item 4 verified already correct
   by construction; added a regression test.
-- Wave 3 — Coach surface coherence (items 3, 6, 7): not started.
+- Wave 3 — Coach surface coherence (items 3, 6, 7): **done** (`c65aed7`,
+  `2e3a21c`). Item 3 reorder + item 6 chip shipped. Item 7 diligence read found
+  no copy/crash bugs but one pre-existing persistence bug (coach applied-state
+  wiped on CoachOutput remount) — verified NOT a safety/stacking risk, founder
+  chose to fix now; fixed via `preserveAppliedAdjustments` merge in
+  `saveCoachOutput` with a regression test.
 - Wave 4 — Polish/loading/correctness/a11y (items 8, 9, 10): not started.
 - Final wave — §15 premium-later 10 (2 founder-gated): queued after Wave 4.
