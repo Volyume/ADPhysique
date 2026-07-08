@@ -32,9 +32,9 @@ export default function TierComparisonStrip({
   highlighted = 'pro',   // 'free' | 'pro', which column gets the amber outline
   onPickPro,             // optional: makes the Pro column tappable
 }) {
-  // C-2 / PLAY-002: localised store price. priceFor returns null until Google
-  // Play responds; the Pro column shows a short placeholder, never a hardcoded
-  // price.
+  // C-2 / PLAY-002: localised store price. priceFor returns null until the
+  // active store responds; the Pro column shows a short placeholder, never a
+  // hardcoded price.
   const priceFor = usePlayPrices();
 
   const FreeColumn = (
@@ -69,7 +69,7 @@ export default function TierComparisonStrip({
     >
       <Text style={styles.colHeader}>Pro</Text>
       <Text style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
-      {/* COMP-007: cadence suffix so an annual "£29.99" isn't misread as monthly. */}
+      {/* COMP-007: cadence suffix so the annual price isn't misread as monthly. */}
       <Text style={styles.colCadence}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>

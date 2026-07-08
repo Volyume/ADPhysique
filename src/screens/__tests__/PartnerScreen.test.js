@@ -202,7 +202,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
     expect(text).toContain('Shared training phase');
-    expect(text).toContain('Upper Lower is shared as a phase name only. Workouts, exercises, loads, notes and Coach changes stay private.');
+    expect(text).toContain('Upper Lower is shared as a phase name only. Your workouts, exercises, weights and notes stay private.');
     expect(text).toContain('Sharing settings');
     expect(text).not.toContain('Manage label');
   });
@@ -540,7 +540,7 @@ describe('connected state: isolated pair cards', () => {
     });
     const text = allText(tree).join(' ');
     expect(text).toContain('Add a partner to share this update');
-    expect(text).toContain('Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.');
+    expect(text).toContain('Nothing has been sent yet. Pair with someone you know and trust to start sharing.');
     expect(text).toContain('Your update stays private');
     expect(text).toContain('Invite your partner first. Once they accept, you can choose exactly which update to send.');
     expect(text).toContain('Invite someone you train with');

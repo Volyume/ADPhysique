@@ -81,11 +81,11 @@ describe('selectDisplayPrice (C-2: show the store-localised price)', () => {
         offerId: 'free-trial-7d', offerToken: FREE_TOKEN,
         pricingPhases: { pricingPhaseList: [
           { priceAmountMicros: '0', billingPeriod: 'P1W', formattedPrice: 'Free' },
-          { priceAmountMicros: '4990000', billingPeriod: 'P1M', formattedPrice: '£4.99' },
+          { priceAmountMicros: '2990000', billingPeriod: 'P1M', formattedPrice: '£2.99' },
         ] },
       }],
     };
-    expect(selectDisplayPrice(product)).toBe('£4.99');
+    expect(selectDisplayPrice(product)).toBe('£2.99');
   });
   test('returns null when no priced phase exposes a formattedPrice', () => {
     expect(selectDisplayPrice(null)).toBeNull();

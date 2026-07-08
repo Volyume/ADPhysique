@@ -100,7 +100,7 @@ describe('ProgressPhotoPrompt, renders on a competence milestone', () => {
     const copy = flattenText(tree.toJSON());
     expect(copy).toContain('Mark the moment');
     expect(copy).toContain(
-      "You just hit a milestone. If you'd like, add a photo to your record. Your own pace, always private to this phone.",
+      "You've just hit a milestone. If you'd like, add a photo. Your own pace, always private to this phone.",
     );
     expect(copy).toContain('Add a photo');
     expect(copy).toContain('Not now');

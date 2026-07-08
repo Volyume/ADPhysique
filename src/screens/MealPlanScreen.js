@@ -584,7 +584,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           <Text style={styles.emptyTitle}>Build meals</Text>
           <Text style={styles.emptyBody}>
-            Build real meals from your targets, check every plate, then add them to your diary when you are happy.
+            Build meals from your targets, review them, then add the ones you want to your diary.
           </Text>
           <View style={styles.emptySteps} accessibilityLabel="Meal builder steps">
             <View style={styles.emptyStep}>
@@ -611,7 +611,7 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={styles.prefsToggleSub}>{prefSummary}</Text>
               </View>
             </View>
-            <Text style={styles.preferencesHint}>Set these first. The meal builder uses them when it creates your day or week.</Text>
+            <Text style={styles.preferencesHint}>Set these first. The plan uses them for today or the week.</Text>
           </View>
           <View style={styles.prefsPanel}>
             <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} />
@@ -623,7 +623,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Text style={styles.planOptionTitle}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={styles.planOptionDesc}>
-              Build meals for this diary date only. Best when you want today organised quickly.
+              Build meals for today only. Good when you want it organised quickly.
             </Text>
             <Button title="Build this day" onPress={handleGenerateDay} loading={busy} fullWidth />
           </Card>
@@ -730,7 +730,7 @@ export default function MealPlanScreen({ navigation, route }) {
               </View>
               <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
             </TouchableOpacity>
-            <Text style={styles.preferencesHint}>Set these before you add the plan. Changes rebuild the meals around the same targets.</Text>
+            <Text style={styles.preferencesHint}>Set these before you add the plan. Changes update the meals around the same targets.</Text>
           </View>
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
@@ -847,7 +847,7 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Text style={styles.planActionTitle}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
                 <Text style={styles.planActionSub}>
                   {isDayPlan
-                    ? 'Adds these meals to the diary date. Existing logged food is left alone.'
+                    ? 'Adds these meals to today. Existing logged food is left alone.'
                     : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
                 </Text>
               </View>
@@ -863,10 +863,10 @@ export default function MealPlanScreen({ navigation, route }) {
                 onPress={handleRegenerate}
                 disabled={busy}
                 accessibilityRole="button"
-                accessibilityLabel="Rebuild meals"
+                accessibilityLabel="Refresh meals"
               >
                 <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Rebuild</Text>
+                <Text style={styles.planQuickActionText}>Refresh meals</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.planQuickAction}

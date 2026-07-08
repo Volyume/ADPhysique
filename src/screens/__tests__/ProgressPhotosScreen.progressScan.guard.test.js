@@ -112,8 +112,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/heroTextHeader/);
     expect(SCREEN).toMatch(/Private physique photos/);
     expect(SCREEN).toMatch(/Private unless you choose to share or export/);
-    expect(SCREEN).toMatch(/Add front and back photos once a week/);
-    expect(SCREEN).toMatch(/Clear sets can be scored and compared over time/);
+    expect(SCREEN).toMatch(/Add front and back photos about once a week/);
+    expect(SCREEN).toMatch(/Clear sets can be compared over time/);
     expect(SCREEN).not.toMatch(/What the Volyume Score means/);
     expect(SCREEN).not.toMatch(/Latest result/);
     expect(SCREEN).not.toMatch(/signalCard/);
@@ -167,7 +167,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('library scan imports abandon unfinished draft sessions on every failed path', () => {
     expect(SCREEN).toMatch(/async function pickScanPoseFromLibrary\(flow = scanFlow, pose = capturePose\)/);
-    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photo library is not available in this app build/);
+    expect(SCREEN).toMatch(/if \(!ImagePicker\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*Photo library isn't available on this device/);
     expect(SCREEN).toMatch(/if \(result\?\.canceled\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/if \(!uri\) \{[\s\S]*await abandonLapsedScanFlow\(flow\);[\s\S]*return;/);
     expect(SCREEN).toMatch(/let savedPhoto = null;[\s\S]*savedPhoto = saved;/);

@@ -209,7 +209,7 @@ function blockStatusCopy(block, partnerName, userId) {
   if (block.status === 'active') {
     return {
       title: 'Shared training phase',
-      copy: `${block.blockName} is shared as a phase name only. Workouts, exercises, loads, notes and Coach changes stay private.`,
+      copy: `${block.blockName} is shared as a phase name only. Your workouts, exercises, weights and notes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
@@ -1056,7 +1056,7 @@ export default function PartnerScreen({ route }) {
             <Text style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
             <Text style={styles.emptyBody}>
               {hasIncomingShareIntent
-                ? 'Nothing has been sent. Partner sharing starts after you pair with one person you already know and trust.'
+                ? 'Nothing has been sent yet. Pair with someone you know and trust to start sharing.'
                 : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the wins you choose to send. Food, photos, body metrics and notes stay private.'}
             </Text>
 
@@ -1561,7 +1561,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     return (
       <View style={styles.sheetBody}>
         <Text style={styles.sheetHeading}>Shared training phase</Text>
-        <Text style={styles.blockPitch}>Your partner can see the phase name only. Workouts, exercises, loads, notes and Coach changes stay private.</Text>
+        <Text style={styles.blockPitch}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing this phase name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1593,7 +1593,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
     <View style={styles.sheetBody}>
       <Text style={styles.sheetHeading}>Share phase name</Text>
       <Text style={styles.blockPitch}>
-        Choose the phase name to show {name}. This does not share workouts, loads or Coach changes.
+        Choose the phase name to show {name}. This does not share workouts, weights or notes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />

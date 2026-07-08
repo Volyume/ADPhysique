@@ -338,7 +338,7 @@ export default function ProgressGhostCapture({
         </Text>
         <Text style={styles.fallbackBody}>
           {noModule
-            ? 'The in-app camera needs a fresh build here. You can still add a photo from your library, at your own pace.'
+            ? 'The camera is not available on this device right now. You can still add a photo from your library.'
             : 'You can turn camera access on in Settings whenever you like, or add a photo from your library instead.'}
         </Text>
         {onFallback ? (

@@ -153,7 +153,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load block summary"
-            text="Your sessions are safe. This is a read problem, not a lost block."
+            text="Your sessions are safe. This is a loading problem, not lost data."
             actionLabel="Try again"
             onAction={loadData}
             compact

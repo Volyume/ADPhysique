@@ -157,7 +157,7 @@ export default function YouScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader title="Coach" subtitle="Rules-based weekly coaching from your logs." />
+        <ScreenHeader title="Coach" subtitle="Weekly coaching from your logs." />
 
         {loadError ? (
           <Card
@@ -208,7 +208,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.statusEyebrow}>Rules-based coach</Text>
+              <Text style={styles.statusEyebrow}>Coach</Text>
               <Text style={styles.statusTitle}>
                 {isPro
                   ? latestReview
@@ -223,7 +223,7 @@ export default function YouScreen({ navigation }) {
               ? latestReview
                 ? 'Open the coaching decision to see what changed, what was held, and the exact signals behind it.'
                 : 'Log training, morning weight and food where relevant. When the weekly check-in opens, Volyume combines your answers with those logs before changing targets.'
-              : 'The Coach is a rules-based weekly system that reads your logs, applies safety limits, and explains every decision.'}
+              : 'The Coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
 
@@ -239,7 +239,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="pulse-outline"
               label="Coaching decision"
-              sub="The output from your check-in: changes, holds, rationale and next steps."
+              sub="See what changed, what stayed the same, and why."
               onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             />
           </View>
@@ -311,7 +311,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="heart-outline"
               label="Wellbeing check"
-              sub="Update the screening answers that shape how coaching is applied."
+              sub="Update the questions that shape your coaching."
               onPress={() => navigation.navigate('WellbeingCheck')}
             />
           </View>
@@ -329,7 +329,7 @@ export default function YouScreen({ navigation }) {
 
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
-          <Text style={styles.aboutVersion}>Rules-based coaching, private by design.</Text>
+          <Text style={styles.aboutVersion}>Private coaching based on your logs.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

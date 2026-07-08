@@ -4,13 +4,13 @@ import { skuFor } from './catalogue';
 
 /**
  * C-2: paywall surfaces must show the store's localised price (Apple + Google
- * policy), not a hardcoded one. This hook fetches the prices from Play and
- * returns a `priceFor(tier, period)` resolver.
+ * policy), not a hardcoded one. This hook fetches the prices from the active
+ * store and returns a `priceFor(tier, period)` resolver.
  *
- * PLAY-002: the resolver returns `null` until Google Play has responded. It
- * does NOT fall back to a hardcoded catalogue price. A hardcoded "£4.99" would
+ * PLAY-002: the resolver returns `null` until the store has responded. It
+ * does NOT fall back to a hardcoded catalogue price. A hardcoded "£2.99" would
  * show the wrong currency and amount to a non-UK user, and could diverge from
- * what Google actually charges, both of which break the store's
+ * what Apple or Google actually charges, both of which break the store's
  * localised-price requirement. Callers render a price-free "Subscribe" or a
  * short loading state until a real price arrives. Once loaded the price is
  * cached at module level, so returning to a paywall in the same session shows
@@ -18,7 +18,7 @@ import { skuFor } from './catalogue';
  *
  * Usage:
  *   const priceFor = usePlayPrices();
- *   const price = priceFor('pro', period);          // "£4.99" / "$6.99" / null
+ *   const price = priceFor('pro', period);          // "£2.99" / "$4.99" / null
  *   <Text>{price ?? 'Subscribe'}</Text>
  */
 export function usePlayPrices() {

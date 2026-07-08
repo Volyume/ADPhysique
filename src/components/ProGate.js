@@ -180,7 +180,7 @@ export function ProLocked({ feature = 'This' }) {
       } else if (result.tier === 'pro') {
         appAlert('Pro restored', 'Your subscription is active again.');
       } else {
-        appAlert('Nothing to restore', 'We could not find an active subscription on this Google account.');
+        appAlert('Nothing to restore', 'We could not find an active subscription for this store account.');
       }
     } catch {
       appAlert('Could not restore', 'Try again in a moment.');

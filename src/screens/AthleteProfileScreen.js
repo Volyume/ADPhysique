@@ -282,7 +282,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
-      toast.show('Profile pictures are not available in this app build.', { variant: 'warning' });
+      toast.show("Profile pictures aren't available in this version.", { variant: 'warning' });
       return;
     }
     try {

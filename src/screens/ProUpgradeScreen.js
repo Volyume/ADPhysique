@@ -73,8 +73,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
   const canTrial = cascade.canStillTrial(userProfile);
 
-  // C-2 / PLAY-002: localised store prices. priceFor returns null until Google
-  // Play responds; we never substitute a hardcoded price. Until it loads, the
+  // C-2 / PLAY-002: localised store prices. priceFor returns null until the
+  // active store responds; we never substitute a hardcoded price. Until it loads, the
   // price chips show a short placeholder and the copy drops the figure.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
@@ -88,7 +88,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // Founder decision 2026-07-02 (supersedes COMP-007's annual anchor): monthly
   // is the pre-selected period on every subscribe surface, matching the
   // cascade gate, so the two revenue surfaces never disagree. Annual stays
-  // visible with its honest 50% saving; anchor, don't hide.
+  // visible with its honest saving; anchor, don't hide.
   const [period, setPeriod] = useState('monthly'); // billing period when subscribing
 
   async function activatePro(supabaseUserId, { isNew }) {
@@ -389,7 +389,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks
               use, so the decision point carries the honest side-by-side.
-              Prices come from Google Play via usePlayPrices inside the strip;
+              Prices come from the active store via usePlayPrices inside the strip;
               nothing is hardcoded. Follows the billing period picked below. */}
           <View style={styles.compareWrap}>
             <TierComparisonStrip pricingWindow={period} highlighted="pro" />

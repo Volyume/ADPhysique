@@ -82,7 +82,7 @@ export default function ConsistencyScreen({ navigation }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load consistency"
-            text="Your training history is safe. This is a read problem, not a lost block."
+            text="Your training history is safe. This is a loading problem, not lost data."
             actionLabel="Try again"
             onAction={handleRefresh}
             compact

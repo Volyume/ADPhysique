@@ -233,7 +233,7 @@ export default function ShareCardScreen({ route }) {
   // so no photo-library permission is needed.
   const takeGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show('Photo backgrounds are not available in this app build.', { variant: 'error', duration: 5000 });
+      toast.show("Photo backgrounds aren't available in this version.", { variant: 'error', duration: 5000 });
       return;
     }
     try {
@@ -274,7 +274,7 @@ export default function ShareCardScreen({ route }) {
   // never a crash.
   async function handleSaveToGallery() {
     if (!Skia || !FileSystem || !MediaLibrary) {
-      toast.show('Saving to gallery is not available in this app build.', { variant: 'error', duration: 5000 });
+      toast.show("Saving to your gallery isn't available in this version.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
@@ -309,7 +309,7 @@ export default function ShareCardScreen({ route }) {
   // as a Story share with both app icons.
   async function handleShareToStories() {
     if (!Skia || !FileSystem || !Sharing) {
-      toast.show('Story sharing is not available in this app build.', { variant: 'error', duration: 5000 });
+      toast.show("Story sharing isn't available in this version.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {

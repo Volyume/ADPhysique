@@ -3,24 +3,25 @@
  *
  * Founder override 2026-06-06: flat pricing replaces the old escalating
  * launch/founders/standard windows. One tier (Pro), two billing periods:
- *   - Monthly  £4.99/month
- *   - Annual   £29.99/year   (about 50% off the monthly rate)
+ *   - Monthly  £2.99/month
+ *   - Annual   £19.99/year   (about 44% off the monthly rate)
  *
  * SKU IDs are the source of truth in code. User-facing prices always come from
- * Play Billing, never from hardcoded values. SKU IDs must match the products
- * created in Google Play Console. The 7-day intro free-trial offer is configured
- * per product in Play Console, not here; the billing provider reads whichever
- * offer the user is eligible for at purchase time.
+ * the active store, never from hardcoded values. SKU IDs must match the
+ * products created in Google Play Console and App Store Connect. The 7-day
+ * intro free-trial offer is configured per product in each store, not here; the
+ * billing provider reads whichever offer the user is eligible for at purchase
+ * time.
  *
- * UK prices are the reference in Play Console; other regions map via Play
- * Console's automatic price tiers.
+ * UK prices are the reference in Google Play Console and App Store Connect;
+ * other regions map through the stores' local pricing.
  *
  * PLAY-002: the `priceText` / `priceNumber` values below are a reference and
  * the input to annualSavingsPct(). They are NOT a user-facing display price.
- * Every paywall renders Google Play's own localised price via usePlayPrices,
+ * Every paywall renders the store's own localised price via usePlayPrices,
  * and shows a price-free loading state until it arrives. Do not wire priceText
  * back into a screen as a fallback: it would show the wrong currency and amount
- * to a non-UK user and could diverge from what Google actually charges.
+ * to a non-UK user and could diverge from what the store actually charges.
  *
  * Coach SKUs (phase 2) remain a separate set, purchased via the coach web
  * dashboard, not IAP.
@@ -35,15 +36,15 @@ export const SKU_CATALOGUE = Object.freeze({
       id: 'pro_monthly',
       tier: 'pro',
       period: 'monthly',
-      priceText: '£4.99/month',
-      priceNumber: 4.99,
+      priceText: '£2.99/month',
+      priceNumber: 2.99,
     }),
     annual: Object.freeze({
       id: 'pro_annual',
       tier: 'pro',
       period: 'annual',
-      priceText: '£29.99/year',
-      priceNumber: 29.99,
+      priceText: '£19.99/year',
+      priceNumber: 19.99,
     }),
   }),
 });
@@ -66,7 +67,7 @@ export function skuFor(tier, period = 'monthly') {
 
 /**
  * Reference price string for (tier, period). NOT for user-facing display
- * (PLAY-002): paywalls show Google Play's localised price via usePlayPrices.
+ * (PLAY-002): paywalls show the active store's localised price via usePlayPrices.
  * Kept for tests and any internal reference that needs the UK figure.
  */
 export function priceTextFor(tier, period = 'monthly') {
@@ -75,7 +76,7 @@ export function priceTextFor(tier, period = 'monthly') {
 
 /**
  * Look up a SKU by its Play product id. Used to correlate an incoming
- * Play Billing purchase / RTDN notification back to a known SKU.
+ * store purchase / notification back to a known SKU.
  */
 export function skuById(id) {
   for (const period of BILLING_PERIODS) {
@@ -86,8 +87,8 @@ export function skuById(id) {
 }
 
 /**
- * Every SKU id the app knows about. Used by the Play Billing init step
- * to declare the products to query.
+ * Every SKU id the app knows about. Used by the store billing init step to
+ * declare the products to query.
  */
 export function allSkuIds() {
   return BILLING_PERIODS.map(period => SKU_CATALOGUE.pro[period].id);

@@ -15,8 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import { storeName } from '../lib/storeName';
 
 export default function SubscriptionPolicyScreen() {
+  const platformStore = storeName();
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Free, Pro, and your data" />
@@ -95,11 +97,11 @@ export default function SubscriptionPolicyScreen() {
             New accounts get Pro free for 14 days. You get the full coaching features and can see if it's for you.
           </Body>
           <Body>
-            To keep Pro after that, subscribe in the app. Google Play adds a further 7 days free, then it renews monthly at the price shown at checkout until you cancel.
+            To keep Pro after that, subscribe in the app. Your store adds a further 7 days free, then it renews at the price shown at checkout until you cancel.
           </Body>
           <Bullet>The Free tier has no time limit: the plan library, your own training, and your progress charts stay free.</Bullet>
           <Bullet>Anything you built on Pro stays yours and readable even if you move to Free; only new coaching changes pause.</Bullet>
-          <Bullet>Cancel anytime in Google Play. You keep Pro until the period you've paid for ends, then you drop to Free.</Bullet>
+          <Bullet>Cancel anytime in {platformStore}. You keep Pro until the period you've paid for ends, then you drop to Free.</Bullet>
         </Section>
 
         <Section

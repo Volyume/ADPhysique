@@ -425,7 +425,7 @@ export default function LiftProgressScreen({ navigation }) {
               <EmptyState
                 icon="cloud-offline-outline"
                 title="Couldn't load lifts"
-                text="Your workout history is safe. This is a read problem, not a lost lift."
+                text="Your workout history is safe. This is a loading problem, not lost data."
                 actionLabel="Try again"
                 onAction={loadData}
                 compact

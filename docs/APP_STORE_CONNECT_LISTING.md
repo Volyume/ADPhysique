@@ -59,7 +59,7 @@ Log smarter. Grow faster.
 **Limit: 170 characters — can be updated without a new submission**
 
 ```
-Pro is free for 14 days, no card needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it for a 7-day store free trial, then £4.99 a month.
+Pro is free for 14 days, no card needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it for a 7-day store free trial, then £2.99 a month.
 ```
 
 > Character count: 156 ✓
@@ -137,7 +137,7 @@ Coaching (Pro)
 
 YOUR FREE TRIAL
 
-Try Pro free for 14 days. No card needed. Keep it after that for a 7-day store free trial before your first payment, then £4.99 a month or £29.99 a year. Cancel anytime. The Free tier stays free with no time limit.
+Try Pro free for 14 days. No card needed. Keep it after that for a 7-day store free trial before your first payment, then £2.99 a month or £19.99 a year. Cancel anytime. The Free tier stays free with no time limit.
 
 NOT MEDICAL ADVICE
 
@@ -173,7 +173,7 @@ Pro Coaching with personalised plan generation based on your goal, schedule, rec
 
 Nutrition targets calculated from your body stats and training phase. Protein, carbohydrate, and fat targets update automatically as your weight or phase changes.
 
-Pro starts with a 14-day free trial, no card needed. Keep it for a 7-day store free trial, then £4.99 a month or £29.99 a year. The Free tier stays free with no time limit.
+Pro starts with a 14-day free trial, no card needed. Keep it for a 7-day store free trial, then £2.99 a month or £19.99 a year. The Free tier stays free with no time limit.
 
 Found a bug or something that does not feel right? The in-app feedback button goes directly to the developer.
 ```
@@ -193,7 +193,7 @@ Found a bug or something that does not feel right? The in-app feedback button go
 | **Type** | Auto-Renewable Subscription |
 | **Subscription group name** | Volyume Pro |
 | **Duration** | 1 Month |
-| **Price** | £4.99 / month (annual plan £29.99 / year) |
+| **Price** | £2.99 / month (annual plan £19.99 / year) |
 | **Free trial** | 14-day in-app cardless trial, then a 7-day store intro free trial on subscribe |
 
 **Display name (shown to users):**

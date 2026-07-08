@@ -2598,88 +2598,95 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {supersetHeadsUp ? (
           <View style={styles.supOverlay}>
             <View style={styles.supSheet}>
-              <View style={styles.supIconRow}>
-                <Ionicons name="link" size={24} color={colors.primary} />
-                <Text style={styles.supTitle}>Superset coming up</Text>
-              </View>
-              <Text style={styles.supSubtitle}>
-                Two exercises paired back-to-back with no rest between them.
-              </Text>
-
-              <View style={styles.supPairCard}>
-                <View style={styles.supPairRow}>
-                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
-                  <Text style={styles.supPairName} numberOfLines={2}>
-                    {supersetHeadsUp?.exerciseAName}
-                  </Text>
-                </View>
-                <View style={styles.supPairConnector} />
-                <View style={styles.supPairRow}>
-                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
-                  <Text style={styles.supPairName} numberOfLines={2}>
-                    {supersetHeadsUp?.exerciseBName}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.supSteps}>
-                <View style={styles.supStep}>
-                  <Text style={styles.supStepNum}>1</Text>
-                  <Text style={styles.supStepText}>Set up both stations now if you can.</Text>
-                </View>
-                <View style={styles.supStep}>
-                  <Text style={styles.supStepNum}>2</Text>
-                  <Text style={styles.supStepText}>Do all reps of the first exercise.</Text>
-                </View>
-                <View style={styles.supStep}>
-                  <Text style={styles.supStepNum}>3</Text>
-                  <Text style={styles.supStepText}>Move straight to the second. No rest between.</Text>
-                </View>
-                <View style={styles.supStep}>
-                  <Text style={styles.supStepNum}>4</Text>
-                  <Text style={styles.supStepText}>After both, rest the full rest period, then repeat.</Text>
-                </View>
-              </View>
-
-              <Text style={styles.supTip}>
-                Tip: if you can't grab both stations right now, unlink and do them as normal sets.
-              </Text>
-
-              <TouchableOpacity
-                style={styles.supPrimaryBtn}
-                onPress={() => setSupersetHeadsUp(null)}
-                accessibilityRole="button"
-                accessibilityLabel="Got it, start"
+              <ScrollView
+                style={styles.supSheetScroll}
+                contentContainerStyle={styles.supSheetContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
               >
-                <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
-              </TouchableOpacity>
+                <View style={styles.supIconRow}>
+                  <Ionicons name="link" size={24} color={colors.primary} />
+                  <Text style={styles.supTitle}>Superset coming up</Text>
+                </View>
+                <Text style={styles.supSubtitle}>
+                  Two exercises paired back-to-back with no rest between them.
+                </Text>
 
-              <View style={styles.supSecondaryRow}>
+                <View style={styles.supPairCard}>
+                  <View style={styles.supPairRow}>
+                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
+                    <Text style={styles.supPairName} numberOfLines={2}>
+                      {supersetHeadsUp?.exerciseAName}
+                    </Text>
+                  </View>
+                  <View style={styles.supPairConnector} />
+                  <View style={styles.supPairRow}>
+                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
+                    <Text style={styles.supPairName} numberOfLines={2}>
+                      {supersetHeadsUp?.exerciseBName}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.supSteps}>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>1</Text>
+                    <Text style={styles.supStepText}>Set up both stations now if you can.</Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>2</Text>
+                    <Text style={styles.supStepText}>Do all reps of the first exercise.</Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>3</Text>
+                    <Text style={styles.supStepText}>Move straight to the second. No rest between.</Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>4</Text>
+                    <Text style={styles.supStepText}>After both, rest the full rest period, then repeat.</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.supTip}>
+                  Tip: if you can't grab both stations right now, unlink and do them as normal sets.
+                </Text>
+
                 <TouchableOpacity
-                  style={styles.supSecondaryBtn}
-                  onPress={() => {
-                    handleTogglePair(); // unpair
-                    setSupersetHeadsUp(null);
-                  }}
+                  style={styles.supPrimaryBtn}
+                  onPress={() => setSupersetHeadsUp(null)}
                   accessibilityRole="button"
-                  accessibilityLabel="Unlink the superset"
+                  accessibilityLabel="Got it, start"
                 >
-                  <Ionicons name="unlink" size={14} color={colors.textSecondary} />
-                  <Text style={styles.supSecondaryBtnText}>Unlink</Text>
+                  <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.supSecondaryBtn}
-                  onPress={() => {
-                    setSupersetHeadsUp(null);
-                    handleOpenSwap();
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Swap exercise"
-                >
-                  <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
-                  <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
-                </TouchableOpacity>
-              </View>
+
+                <View style={styles.supSecondaryRow}>
+                  <TouchableOpacity
+                    style={styles.supSecondaryBtn}
+                    onPress={() => {
+                      handleTogglePair(); // unpair
+                      setSupersetHeadsUp(null);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Unlink the superset"
+                  >
+                    <Ionicons name="unlink" size={14} color={colors.textSecondary} />
+                    <Text style={styles.supSecondaryBtnText}>Unlink</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.supSecondaryBtn}
+                    onPress={() => {
+                      setSupersetHeadsUp(null);
+                      handleOpenSwap();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Swap exercise"
+                  >
+                    <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
+                    <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             </View>
           </View>
           ) : null}
@@ -3266,48 +3273,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
         >
           {editingSet != null ? (
-          <View style={styles.editSetOverlay}>
-            <View style={styles.editSetSheet}>
-              <Text style={styles.editSetTitle}>Edit set</Text>
-              {editValue && (
-                <SetEntry
-                  value={editValue}
-                  onChange={setEditValue}
-                  units={units}
-                  isWarmup={editValue.setType === 'warmup'}
-                  exerciseType={activeExerciseType}
-                  weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
-                />
-              )}
-              <TouchableOpacity
-                style={[styles.editSetSaveBtn, saving && styles.btnDisabled]}
-                onPress={handleSaveEditedSet}
-                disabled={saving}
-                accessibilityRole="button"
-                accessibilityLabel="Save set changes"
-              >
-                <Text style={styles.editSetSaveText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.editSetCancelBtn}
-                onPress={() => { setEditingSet(null); setEditValue(null); }}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel editing set"
-              >
-                <Text style={styles.editSetCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <View style={styles.editSetDivider} />
-              <TouchableOpacity
-                style={styles.editSetDeleteBtn}
-                onPress={handleDeleteEditedSet}
-                accessibilityRole="button"
-                accessibilityLabel="Delete set"
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.error} />
-                <Text style={styles.editSetDeleteText}>Delete set</Text>
-              </TouchableOpacity>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.editSetKeyboard}
+          >
+            <View style={styles.editSetOverlay}>
+              <View style={styles.editSetSheet}>
+                <ScrollView
+                  style={styles.editSetScroll}
+                  contentContainerStyle={styles.editSetContent}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Text style={styles.editSetTitle}>Edit set</Text>
+                  {editValue && (
+                    <SetEntry
+                      value={editValue}
+                      onChange={setEditValue}
+                      units={units}
+                      isWarmup={editValue.setType === 'warmup'}
+                      exerciseType={activeExerciseType}
+                      weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={[styles.editSetSaveBtn, saving && styles.btnDisabled]}
+                    onPress={handleSaveEditedSet}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save set changes"
+                  >
+                    <Text style={styles.editSetSaveText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editSetCancelBtn}
+                    onPress={() => { setEditingSet(null); setEditValue(null); }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel editing set"
+                  >
+                    <Text style={styles.editSetCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <View style={styles.editSetDivider} />
+                  <TouchableOpacity
+                    style={styles.editSetDeleteBtn}
+                    onPress={handleDeleteEditedSet}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete set"
+                  >
+                    <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    <Text style={styles.editSetDeleteText}>Delete set</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
           ) : null}
         </Modal>
 
@@ -3624,7 +3643,9 @@ const styles = StyleSheet.create({
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal
   supOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxl, borderTopWidth: 1, borderColor: colors.border, gap: spacing.md },
+  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, maxHeight: '88%', borderTopWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  supSheetScroll: { flexShrink: 1, minHeight: 0 },
+  supSheetContent: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },
   supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   supSubtitle: { ...type.bodySm, color: colors.textSecondary },
@@ -3646,7 +3667,7 @@ const styles = StyleSheet.create({
   supSecondaryBtnText: { ...type.label, color: colors.textSecondary },
 
   staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', maxHeight: '88%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   staleBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
   staleResume: { width: '100%', backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
@@ -3656,15 +3677,18 @@ const styles = StyleSheet.create({
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
   staleDiscardText: { ...type.label, color: colors.error },
   discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
   keepTrainingBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
   keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
+  editSetKeyboard: { flex: 1 },
   editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, width: '100%', maxHeight: '88%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  editSetScroll: { flexShrink: 1, minHeight: 0 },
+  editSetContent: { padding: spacing.xl, gap: spacing.md },
   editSetTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   editSetSaveBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
   editSetSaveText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },

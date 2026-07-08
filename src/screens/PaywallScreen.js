@@ -149,7 +149,7 @@ export default function PaywallScreen({ navigation, route }) {
         appAlert('Pro restored', 'Your subscription is active again.');
         if (navigation?.canGoBack?.()) navigation.goBack();
       } else {
-        appAlert('Nothing to restore', 'We could not find an active subscription on this Google account.');
+        appAlert('Nothing to restore', 'We could not find an active subscription for this store account.');
       }
     } catch (e) {
       logError('Paywall.restoreFailed', e, { surface });
@@ -159,8 +159,8 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [busy, surface, navigation]);
 
-  // C-2 / PLAY-002: localised store prices (Play). priceFor returns null until
-  // Google Play responds; we never substitute a hardcoded price. The CTA and
+  // C-2 / PLAY-002: localised store prices. priceFor returns null until the
+  // active store responds; we never substitute a hardcoded price. The CTA and
   // disclosure drop the figure until it loads, and the chips show a short
   // placeholder.
   const priceFor = usePlayPrices();
@@ -173,18 +173,17 @@ export default function PaywallScreen({ navigation, route }) {
   const renewCadence = period === 'annual' ? 'yearly' : 'monthly';
   // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
   // 14 cardless days run inside the app BEFORE a purchase surface, then the
-  // Play subscription carries a 7-day intro free trial. This screen is a Play
-  // purchase surface, so its disclosure must state the 7-day Play offer (what
-  // Google actually bills), not the 21-day journey total. Once real Play
-  // Billing is wired, drive this length from the SDK's reported offer +
-  // eligibility rather than the hardcoded 7.
+  // store subscription carries a 7-day intro free trial. This screen is a store
+  // purchase surface, so its disclosure must state the 7-day store offer, not
+  // the 21-day journey total. Drive this length from the SDK's reported offer +
+  // eligibility when that becomes available.
   const ctaLabel = ctaMode === 'try_pro_14d'
     ? 'Try Pro free for 7 days'
     : priceText ? `Get Pro for ${priceText}` : 'Get Pro';
-  // Play subscription disclosure. Auto-renew, price, billing period and
+  // Store subscription disclosure. Auto-renew, price, billing period and
   // how to cancel must be on the purchase surface itself. Until the store
   // price loads we state the renewal cadence without a figure rather than a
-  // hardcoded price (PLAY-002); the figure appears the moment Play responds.
+  // hardcoded price (PLAY-002); the figure appears the moment the store responds.
   // Subscriptions are managed in the platform's own store.
   const storeManage = storeName();
   const termsText = ctaMode === 'try_pro_14d'

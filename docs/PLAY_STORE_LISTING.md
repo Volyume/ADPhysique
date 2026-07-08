@@ -212,8 +212,8 @@ Coaching (Pro)
 YOUR FREE TRIAL
 
 Try Pro free for 14 days. No card needed. Keep it after that and Google Play adds
-a further 7 days free before your first payment. Then it's £4.99 a month, or
-£29.99 a year. Cancel anytime. The Free tier stays free with no time limit.
+a further 7 days free before your first payment. Then it's £2.99 a month, or
+£19.99 a year. Cancel anytime. The Free tier stays free with no time limit.
 
 ---
 

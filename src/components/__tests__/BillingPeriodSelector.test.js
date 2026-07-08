@@ -24,7 +24,7 @@ describe('BillingPeriodSelector', () => {
     );
 
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Save 50%');
+    expect(text).toContain('Save 44%');
     expect(text).toContain('Annual');
     expect(text).toContain('$49.99');
     expect(text).toContain('Monthly');
@@ -33,7 +33,7 @@ describe('BillingPeriodSelector', () => {
     const monthly = tree.root.findByProps({ accessibilityLabel: 'Monthly, $6.99' });
     expect(monthly.props.accessibilityState).toEqual({ selected: true, disabled: false });
 
-    const annual = tree.root.findByProps({ accessibilityLabel: 'Annual, $49.99, save 50 per cent' });
+    const annual = tree.root.findByProps({ accessibilityLabel: 'Annual, $49.99, save 44 per cent' });
     expect(annual.props.accessibilityState).toEqual({ selected: false, disabled: false });
     act(() => { annual.props.onPress(); });
     expect(onChange).toHaveBeenCalledWith('annual');
@@ -43,7 +43,7 @@ describe('BillingPeriodSelector', () => {
     const tree = create(<BillingPeriodSelector value="annual" onChange={jest.fn()} />);
 
     expect(flattenText(tree.toJSON())).toContain('\u2026');
-    expect(tree.root.findByProps({ accessibilityLabel: 'Annual, save 50 per cent' })).toBeTruthy();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Annual, save 44 per cent' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Monthly' })).toBeTruthy();
   });
 });

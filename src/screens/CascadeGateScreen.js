@@ -37,6 +37,7 @@ import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
+import { storeName } from '../lib/storeName';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { track as trackEvent } from '../lib/engineTelemetry';
@@ -82,7 +83,7 @@ function _variantContent(variant) {
     case 'payment_failure':
       return {
         title: "We couldn't take your payment",
-        subtitle: "Update your billing in Google Play within 3 days to keep your current features. After that you'll drop to Free.",
+        subtitle: `Update your billing in ${storeName()} within 3 days to keep your current features. After that you'll drop to Free.`,
         primaryCta: 'Open billing settings',
         primaryTarget: 'billing',
         secondaryCta: null,
@@ -125,9 +126,9 @@ export default function CascadeGateScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // C-2 / PLAY-002: localised store prices. priceFor returns null until Google
-  // Play responds; the chips show a short placeholder rather than a hardcoded
-  // price.
+  // C-2 / PLAY-002: localised store prices. priceFor returns null until the
+  // active store responds; the chips show a short placeholder rather than a
+  // hardcoded price.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');

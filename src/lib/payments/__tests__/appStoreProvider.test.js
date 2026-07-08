@@ -12,7 +12,7 @@ import { selectIosDisplayPrice, _buildIosStoreKitProvider } from '../playBilling
 
 const SKU = 'pro_monthly';
 
-function iosProduct(displayPrice = '£4.99') {
+function iosProduct(displayPrice = '£2.99') {
   // StoreKit products carry their own localised price; no Android offer details.
   return { id: SKU, displayPrice, type: 'subs' };
 }
@@ -37,7 +37,7 @@ function makeFakeIap(overrides = {}) {
 
 describe('selectIosDisplayPrice (C-2: show the store-localised price on iOS)', () => {
   it('returns the StoreKit displayPrice', () => {
-    expect(selectIosDisplayPrice(iosProduct('£4.99'))).toBe('£4.99');
+    expect(selectIosDisplayPrice(iosProduct('£2.99'))).toBe('£2.99');
     expect(selectIosDisplayPrice({ id: SKU, displayPrice: '8,99 €' })).toBe('8,99 €');
   });
   it('falls back to localizedPrice then priceString', () => {

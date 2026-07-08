@@ -151,7 +151,7 @@ export function selectOfferToken(product, { preferOfferId = null } = {}) {
 
 /**
  * The localised recurring price string to display for a subscription product,
- * read from the store (e.g. "£4.99", "$6.99", "8,99 €"). Returns the first
+ * read from the store (e.g. "£2.99", "$4.99", "4,99 €"). Returns the first
  * non-free pricing phase's `formattedPrice` from the base plan (or any offer),
  * which is the price the user actually pays after any trial. Returns null when
  * the product exposes no priced phase, so callers fall back to the catalogue
@@ -752,7 +752,7 @@ const _stubProvider = Object.freeze({
   async loadProducts() { /* no-op; no store prices in the stub env */ },
   async getCustomerInfo() { return { ...STUB_CUSTOMER_INFO }; },
   async purchasePackage() {
-    throw new Error('Play Billing provider not injected (Phase A stub)');
+    throw new Error('Store billing provider not injected');
   },
   async restorePurchases() { return { ...STUB_CUSTOMER_INFO }; },
   async logOut() { /* no-op */ },

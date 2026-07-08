@@ -151,7 +151,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           <Card borderless style={styles.card}>
             <Text style={styles.cardLabel}>Price</Text>
             {/* PLAY-002: the store's localised price, or a short placeholder
-                until Google Play responds. Never a hardcoded fallback. */}
+                until the active store responds. Never a hardcoded fallback. */}
             <Text style={styles.cardValue}>{priceFor('pro', period) ?? '...'}</Text>
             <Text style={styles.cardSub}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}

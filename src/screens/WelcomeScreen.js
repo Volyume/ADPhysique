@@ -38,8 +38,8 @@ const AFTER_TRIAL_BULLETS = [
 
 export default function WelcomeScreen({ navigation }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // PLAY-002: show Google Play's localised price, or drop the figure until it
-  // loads. Never a hardcoded fallback.
+  // PLAY-002: show the active store's localised price, or drop the figure
+  // until it loads. Never a hardcoded fallback.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
 

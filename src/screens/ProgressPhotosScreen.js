@@ -253,7 +253,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!canWrite()) return;
     setScanFlow(null);
     setCapturePose(null);
-    if (!ImagePicker) { toast.show('Photo library is not available in this app build.', { variant: 'warning' }); return; }
+    if (!ImagePicker) { toast.show("Photo library isn't available on this device.", { variant: 'warning' }); return; }
     setBusy(true);
     try {
       const opts = { mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images', quality: 0.7 };
@@ -289,7 +289,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     if (!ImagePicker) {
       await abandonLapsedScanFlow(flow);
-      toast.show('Photo library is not available in this app build.', { variant: 'warning' });
+      toast.show("Photo library isn't available on this device.", { variant: 'warning' });
       return;
     }
     setBusy(true);
@@ -1128,7 +1128,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               </Text>
             </View>
             <Text style={styles.heroTextSubtitle}>
-              Add front and back photos once a week. Clear sets can be scored and compared over time.
+              Add front and back photos about once a week. Clear sets can be compared over time.
             </Text>
           </View>
 
@@ -1320,7 +1320,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             <>
               <Text style={styles.emptyTitle}>No saved photos yet</Text>
               <Text style={styles.emptyHint}>
-                Add front and back photos to start your private photo record.
+                Add front and back photos to start tracking progress.
               </Text>
             </>
           )}

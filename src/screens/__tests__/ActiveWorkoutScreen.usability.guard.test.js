@@ -126,4 +126,17 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('styles.sheetHandle');
     expect(ACTIVE_WORKOUT).toContain('keyboardShouldPersistTaps="handled"');
   });
+
+  test('custom workout modals stay within the screen and keyboard-safe', () => {
+    expect(ACTIVE_WORKOUT).toMatch(/supSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(ACTIVE_WORKOUT).toContain('supSheetScroll');
+    expect(ACTIVE_WORKOUT).toContain('supSheetContent');
+    expect(ACTIVE_WORKOUT).toMatch(/staleSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(ACTIVE_WORKOUT).toMatch(/discardSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(ACTIVE_WORKOUT).toContain('editSetKeyboard');
+    expect(ACTIVE_WORKOUT).toContain("behavior={Platform.OS === 'ios' ? 'padding' : 'height'}");
+    expect(ACTIVE_WORKOUT).toMatch(/editSetSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
+    expect(ACTIVE_WORKOUT).toContain('editSetScroll');
+    expect(ACTIVE_WORKOUT).toContain('editSetContent');
+  });
 });

@@ -1,10 +1,10 @@
 /**
  * PLAY-002 regression guard.
  *
- * usePlayPrices must return Google Play's localised price, or null until the
+ * usePlayPrices must return the active store's localised price, or null until the
  * store responds. It must NOT fall back to the hardcoded UK catalogue price:
  * that would show the wrong currency and amount to a non-UK user and could
- * diverge from what Google actually charges. The screens render a price-free
+ * diverge from what Apple or Google actually charges. The screens render a price-free
  * loading state on null.
  */
 import React from 'react';
@@ -48,8 +48,8 @@ describe('usePlayPrices (PLAY-002)', () => {
     expect(r.monthly).toBeNull();
     expect(r.annual).toBeNull();
     // The smell we are guarding against: never the catalogue text.
-    expect(r.monthly).not.toBe('£4.99/month');
-    expect(r.annual).not.toBe('£29.99/year');
+    expect(r.monthly).not.toBe('£2.99/month');
+    expect(r.annual).not.toBe('£19.99/year');
   });
 
   test('returns the store localised price once loaded', async () => {
@@ -60,7 +60,7 @@ describe('usePlayPrices (PLAY-002)', () => {
   });
 
   test('returns null for a non-Pro tier', async () => {
-    mockDisplayPrices = { pro_monthly: '£4.99' };
+    mockDisplayPrices = { pro_monthly: '£2.99' };
     const r = await render();
     expect(r.nonPro).toBeNull();
   });

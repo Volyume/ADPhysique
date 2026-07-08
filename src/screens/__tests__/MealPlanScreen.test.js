@@ -183,7 +183,7 @@ describe('MealPlanScreen review-before-add flow', () => {
   test('puts the add-to-diary action after the meal list and day totals', () => {
     expect(source).toContain('<Text style={styles.emptyTitle}>Build meals</Text>');
     expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
-    expect(source).toContain('Build real meals from your targets, check every plate, then add them to your diary when you are happy.');
+    expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
     expect(source).toContain('title="Build this day"');
     expect(source).toContain('title="Build the week"');
     expect(source).not.toContain('title="Plan this day"');
@@ -193,7 +193,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
     expect(source).toContain('const [prefsOpen, setPrefsOpen] = useState(false);');
-    expect(source).toContain('Changes rebuild the meals around the same targets.');
+    expect(source).toContain('Changes update the meals around the same targets.');
     expect(source).toContain('easy to repeat');
     expect(source).not.toContain('repeat-friendly');
     expect(source).toContain('Repeat is easiest to prep. Mixed keeps some meals familiar. Varied changes more across the week.');
@@ -208,8 +208,8 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('Hold a swappable food to leave it out of future plans.');
     expect(source).toContain('Review the meals and add the plan when it looks right.');
     expect(source).toContain("`Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}`");
-    expect(source).toContain('Adds these meals to the diary date. Existing logged food is left alone.');
-    expect(source).toContain('accessibilityLabel="Rebuild meals"');
+    expect(source).toContain('Adds these meals to today. Existing logged food is left alone.');
+    expect(source).toContain('accessibilityLabel="Refresh meals"');
     expect(source).toContain("isDayPlan ? 'Build week' : 'Build day'");
     expect(source).toMatch(/swapBtn: \{[\s\S]*borderWidth: 1,[\s\S]*backgroundColor: colors\.surface2/);
     expect(source).toMatch(/swapText: \{ color: colors\.textPrimary/);

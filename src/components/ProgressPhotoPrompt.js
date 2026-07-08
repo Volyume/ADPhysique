@@ -175,7 +175,7 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
         <View style={styles.headerText}>
           <Text style={styles.title}>Mark the moment</Text>
           <Text style={styles.body}>
-            You just hit a milestone. If you&apos;d like, add a photo to your record.
+            You've just hit a milestone. If you'd like, add a photo.
             Your own pace, always private to this phone.
           </Text>
         </View>
