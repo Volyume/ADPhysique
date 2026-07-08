@@ -522,6 +522,9 @@ function visualIndexFromEstimatedBodyFat(value, sex = null) {
   return score == null ? null : rounded0(clamp(score, 0, 100));
 }
 
+const ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS = 20;
+const ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS = 8;
+
 export function calibrateVolyumeScore(rawScore) {
   const n = finiteNumber(rawScore);
   if (n == null) return null;
@@ -531,6 +534,15 @@ export function calibrateVolyumeScore(rawScore) {
     [92, 98], [100, 100],
   ];
   return rounded0(clamp(interpolateBodyFatIndex(n, curve), 0, 100));
+}
+
+function boundedEstimatorAnchorScore(silhouetteScore, estimateScore) {
+  const silhouette = finiteNumber(silhouetteScore);
+  const estimate = finiteNumber(estimateScore);
+  if (silhouette == null || estimate == null) return estimate;
+  const lower = silhouette - ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS;
+  const upper = silhouette + ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS;
+  return rounded0(clamp(estimate, lower, upper));
 }
 
 function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
@@ -544,10 +556,11 @@ function blendedVisualLeannessScore(inputs = {}, modelEstimate = null) {
   if (estimateScore == null) return silhouetteScore;
   const gap = Math.abs(silhouetteScore - estimateScore);
   const estimateWeight = estimateScore >= 80 && gap >= 15 ? 0.75 : gap >= 20 ? 0.60 : 0.50;
+  const weighted = silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight;
   return rounded0(clamp(
-    silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight,
-    0,
-    100,
+    weighted,
+    silhouetteScore - ESTIMATOR_ANCHOR_MAX_DOWNWARD_POINTS,
+    silhouetteScore + ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS,
   ));
 }
 
@@ -559,7 +572,32 @@ export function leannessBandForScore(score) {
 
 export function normaliseStoredPhysiqueAssessment(assessment = null) {
   if (!assessment || typeof assessment !== 'object') return assessment ?? null;
-  if (assessment.assessmentVersion !== 'volyume_physique_scan_score_v1') return assessment;
+  if (assessment.assessmentVersion !== 'volyume_physique_scan_score_v1') {
+    const score = finiteNumber(assessment.visualLeannessScore);
+    const rawScore = finiteNumber(assessment.indexInputs?.rawSilhouetteScore);
+    const calibratedScore = finiteNumber(assessment.indexInputs?.calibratedSilhouetteScore);
+    if (
+      score != null
+      && rawScore != null
+      && calibratedScore != null
+      && Math.abs(score - rawScore) < 0.5
+      && calibratedScore > score
+      && Math.abs(calibratedScore - score) >= 8
+    ) {
+      const band = leannessBandForScore(calibratedScore);
+      return {
+        ...assessment,
+        visualLeannessScore: calibratedScore,
+        leannessBand: band?.key ?? assessment.leannessBand ?? null,
+        leannessBandLabel: band?.label ?? assessment.leannessBandLabel ?? null,
+        indexInputs: {
+          ...(assessment.indexInputs || {}),
+          displayScoreRecoveredFromStoredRawScore: score,
+        },
+      };
+    }
+    return assessment;
+  }
   const oldScore = finiteNumber(assessment.visualLeannessScore);
   const nextScore = calibrateVolyumeScore(oldScore);
   if (nextScore == null) return assessment;
@@ -631,6 +669,7 @@ export function buildPhysiqueAssessment({
     modelEstimateValue(modelEstimate),
     modelEstimate?.inputs?.sex,
   );
+  const boundedEstimatorAnchor = boundedEstimatorAnchorScore(calibratedSilhouetteScore, estimatorAnchorScore);
   const scanConfidenceScore = computeScanConfidenceScore({
     assets,
     quality,
@@ -671,6 +710,13 @@ export function buildPhysiqueAssessment({
       rawSilhouetteScore,
       calibratedSilhouetteScore,
       estimatorAnchorScore,
+      boundedEstimatorAnchorScore: boundedEstimatorAnchor,
+      estimatorAnchorAdjustment: (
+        finiteNumber(estimatorAnchorScore) != null
+        && finiteNumber(boundedEstimatorAnchor) != null
+      )
+        ? rounded0(boundedEstimatorAnchor - estimatorAnchorScore)
+        : null,
     },
     biasFlags,
     calibrationStatus: 'still_calibrating_for_your_body_type',

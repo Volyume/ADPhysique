@@ -41,18 +41,21 @@ const ACTIVITY_OPTIONS = [
 
 
 const BF_SOURCES = [
+  { key: 'visual',  label: 'Best estimate' },
   { key: 'bia',     label: 'BIA' },
   { key: 'caliper', label: 'Caliper' },
   { key: 'dexa',    label: 'DEXA' },
 ];
-const MEASURED_BF_SOURCE_KEYS = BF_SOURCES.map(source => source.key);
+const BF_SOURCE_KEYS = BF_SOURCES.map(source => source.key);
 
-function isMeasuredBodyFatSource(source) {
-  return MEASURED_BF_SOURCE_KEYS.includes(source);
+function isBodyFatSource(source) {
+  return BF_SOURCE_KEYS.includes(source) || source === 'manual' || source === 'self_reported';
 }
 
-function normaliseMeasuredBodyFatSource(source) {
-  return isMeasuredBodyFatSource(source) ? source : 'bia';
+function normaliseBodyFatSource(source) {
+  if (BF_SOURCE_KEYS.includes(source)) return source;
+  if (source === 'manual' || source === 'self_reported') return 'visual';
+  return 'visual';
 }
 
 const GOALS = [
@@ -76,7 +79,7 @@ const PHASE_DESCRIPTIONS = {
 const CONFIDENCE_LABELS = {
   high:   'High confidence. Body fat measured by a precise method.',
   medium: 'Medium confidence. Based on a formula estimate.',
-  low:    'Low confidence. Leave body fat blank unless you have a measured value.',
+  low:    'Low confidence. Useful for a starting baseline, not a safety floor.',
 };
 
 const CONFIDENCE_ICONS = { high: 'checkmark-circle', medium: 'information-circle', low: 'alert-circle' };
@@ -201,7 +204,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [heightIn,       setHeightIn]       = useState('');
   const [weight,         setWeight]         = useState('');
   const [bodyFat,        setBodyFat]        = useState('');
-  const [bfSource,       setBfSource]       = useState('bia');
+  const [bfSource,       setBfSource]       = useState('visual');
   const [activity,       setActivity]       = useState('moderate');
   const [goal,           setGoal]           = useState('lean_gain');
   const [proteinApproach, setProteinApproach] = useState('optimised');
@@ -336,9 +339,9 @@ export default function NutritionTargetsScreen({ navigation }) {
         const comp = await getLatestBodyComposition(user.id).catch(() => null);
         const bf = comp?.bodyFatPercent ?? (typeof userProfile?.bodyFatPct === 'number' ? userProfile.bodyFatPct : null);
         const bfSrc = comp?.bodyFatSource ?? userProfile?.bodyFatSource ?? null;
-        if (typeof bf === 'number' && bf > 0 && isMeasuredBodyFatSource(bfSrc)) {
+        if (typeof bf === 'number' && bf > 0 && isBodyFatSource(bfSrc)) {
           setBodyFat(String(bf));
-          setBfSource(bfSrc);
+          setBfSource(normaliseBodyFatSource(bfSrc));
         }
 
         // Activity should track how often the user actually trains, not a fixed
@@ -378,7 +381,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     // which produced NaN calorie/macro targets that then persisted.
     const bfParsed  = parseFloat(bodyFat);
     const bfNum     = bodyFat.trim() && Number.isFinite(bfParsed) ? bfParsed : null;
-    const measuredBfSource = bfNum != null ? normaliseMeasuredBodyFatSource(bfSource) : null;
+    const baselineBfSource = bfNum != null ? normaliseBodyFatSource(bfSource) : null;
     const ftNum     = parseInt(heightFt, 10) || 0;
     const inNum     = parseFloat(heightIn) || 0;
     const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm
@@ -407,7 +410,7 @@ export default function NutritionTargetsScreen({ navigation }) {
         heightCm:           heightNum,
         weightKg:           weightNum,
         bodyFatPercent:     bfNum,
-        bodyFatSource:      measuredBfSource,
+        bodyFatSource:      baselineBfSource,
         activityLevel:      activity,
         goal: goalToUse,
         // Scale the surplus by training experience, matching onboarding and the
@@ -454,7 +457,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             logBodyMetric(user.id, {
               weightKg: weightNum,
               bodyFatPercent: bfNum ?? null,
-              bodyFatSource: measuredBfSource,
+              bodyFatSource: baselineBfSource,
               loggedAt: Date.now(),
             }).catch(() => {});
           }
@@ -491,7 +494,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               size={14}
               text={
                 'How calories are calculated:\n' +
-                '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a measured body fat percentage (from a scan or caliper test), we use a more accurate formula that accounts for your actual muscle mass.\n' +
+                '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.\n' +
                 '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
                 '• Target: your maintenance adjusted for your goal (e.g. around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.\n\n' +
                 'How your targets are calculated:\n' +
@@ -744,21 +747,21 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Body fat */}
           <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Measured body fat % <Text style={styles.optional}>(optional)</Text></Text>
+            <Text style={styles.fieldLabel}>Body fat estimate % <Text style={styles.optional}>(optional)</Text></Text>
             <NumericField
               value={bodyFat}
               onChangeText={setBodyFat}
               placeholder="e.g. 15"
               keyboardType="decimal-pad"
               maxLength={4}
-              accessibilityLabel="Measured body fat percentage"
+              accessibilityLabel="Body fat estimate percentage"
             />
           </View>
 
           {/* BF Source, only shown when BF is entered */}
           {bodyFat.trim() ? (
             <View style={styles.formGroup}>
-              <Text style={styles.fieldLabel}>Measurement method</Text>
+              <Text style={styles.fieldLabel}>Estimate source</Text>
               <PillGroup
                 options={BF_SOURCES}
                 selected={bfSource}
@@ -1181,8 +1184,11 @@ export default function NutritionTargetsScreen({ navigation }) {
 
                 const proteinWhy = results.proteinBasis === 'lbm'
                   ? (() => {
-                      const lbmLine = `You have roughly ${lbmKg} kg of muscle and bone. At ${results.proteinGPerKgLbm} g per kg of that muscle mass, ${results.proteinG}g is based on ${approachLabel}. `;
-                      const scalingLine = `We scale to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
+                      const estimatedLabel = results.confidence === 'low' ? 'about' : 'roughly';
+                      const lbmLine = `You have ${estimatedLabel} ${lbmKg} kg of muscle and bone. At ${results.proteinGPerKgLbm} g per kg of that muscle mass, ${results.proteinG}g is based on ${approachLabel}. `;
+                      const scalingLine = results.confidence === 'low'
+                        ? `Because this uses a best estimate, treat it as a sensible starting point rather than an exact measurement. `
+                        : `We scale to muscle mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of your body fat level. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
@@ -1196,7 +1202,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       const bwLine = safeProteinGPerKg != null
                         ? `At ${safeProteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `
                         : `Your target of ${results.proteinG}g is based on ${approachLabel}. `;
-                      const tipLine = `Tip: entering a measured body fat percentage from a reliable test lets us scale to your muscle mass instead of total weight. That gives a more precise target, especially if your body fat is high or low. `;
+                      const tipLine = `Tip: entering a body-fat estimate or measured figure lets us scale closer to your lean mass instead of total weight. A measured source is stronger, but even a good estimate can improve the starting point. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp

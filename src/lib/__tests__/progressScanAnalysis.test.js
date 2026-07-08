@@ -12,6 +12,8 @@ import {
   estimateBodyFatFromScanAssets,
   leannessBandForScore,
   measuredSignalsSummaryFromAssets,
+  normaliseStoredPhysiqueAssessment,
+  PROGRESS_SCAN_SCORE_VERSION,
   scanComparability,
   scanSetupStability,
   uncertaintyMarginPctPoints,
@@ -464,6 +466,59 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.physiqueAssessment.visualLeannessScore).toBe(86);
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+  });
+
+  test('provisional estimator cannot drag a strong silhouette into a demoralising score', () => {
+    const highEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 35,
+      inputs: {
+        sex: 'male',
+        bmi: 28,
+        waistToShoulder: 0.63,
+        waistToHip: 0.77,
+        waistToHeight: 0.185,
+        bodyAreaRatio: 0.295,
+        frontBackWaistSpread: 0.01,
+      },
+      biasFlags: [],
+    };
+
+    const out = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: highEstimate,
+      sex: 'male',
+      heightCm: 180,
+      weightKg: 91,
+    });
+
+    expect(out.analysisStatus).toBe('complete');
+    expect(out.physiqueAssessment.indexInputs).toMatchObject({
+      rawSilhouetteScore: 68,
+      calibratedSilhouetteScore: 89,
+      boundedEstimatorAnchorScore: 81,
+    });
+    expect(out.physiqueAssessment.indexInputs.estimatorAnchorAdjustment).toBeGreaterThan(0);
+    expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(80);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+  });
+
+  test('stored v2 raw scores recover to the calibrated display score when available', () => {
+    const assessment = normaliseStoredPhysiqueAssessment({
+      assessmentVersion: PROGRESS_SCAN_SCORE_VERSION,
+      visualLeannessScore: 37,
+      leannessBand: 'athletic',
+      leannessBandLabel: 'Athletic',
+      indexInputs: {
+        rawSilhouetteScore: 37,
+        calibratedSilhouetteScore: 71,
+      },
+    });
+
+    expect(assessment.visualLeannessScore).toBe(71);
+    expect(assessment.leannessBandLabel).toBe('Defined');
+    expect(assessment.indexInputs.displayScoreRecoveredFromStoredRawScore).toBe(37);
   });
 
   test('optional side photo quality cannot withhold a clear front and back score', () => {
