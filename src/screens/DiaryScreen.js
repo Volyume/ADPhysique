@@ -292,11 +292,12 @@ export default function DiaryScreen({ navigation, route }) {
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
       if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
+      if (n > 0) dismissPlanAddedHint(); // same discovery, plan-added teach's signal
       toast.show(n > 0 ? `${n} planned ${n === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint]);
+  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
   // meal's planned rows, not the whole day, so staging a plan into the diary
@@ -311,12 +312,13 @@ export default function DiaryScreen({ navigation, route }) {
       await load();
       if (n > 0) {
         dismissMarkEatenHint(); // discovery: per-meal mark-as-eaten used
+        dismissPlanAddedHint(); // same discovery, plan-added teach's signal
         toast.show('Marked as eaten.', { variant: 'success' });
       }
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint]);
+  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   const handleClearPlanned = useCallback(async () => {
     if (!userId || !canWrite()) return;
@@ -606,6 +608,11 @@ export default function DiaryScreen({ navigation, route }) {
   // moved to the bottom of the page, D12 item 2), so this one-time hint
   // teaches both ways to confirm a planned meal, same once-ever convention.
   const [showMarkEatenHint, setShowMarkEatenHint] = useState(false);
+  // Founder ask (2026-07-09): fires once ever, only on arrival from the meal
+  // builder / meal plan's "Add this day" / "Add this week" (route param
+  // `justAddedPlan`, set by MealPlanScreen), not on every sighting of planned
+  // meals like DIARY_MARKEATEN_HINT_KEY above.
+  const [showPlanAddedHint, setShowPlanAddedHint] = useState(false);
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
@@ -619,6 +626,21 @@ export default function DiaryScreen({ navigation, route }) {
     }).catch(() => {});
     return () => { active = false; };
   }, []);
+  // One-shot: only when the nav param is actually present (arriving straight
+  // from a meal-builder add), and only if never dismissed before. The param
+  // is cleared immediately so revisiting this Diary instance later (tab
+  // round-trip, backgrounding) never re-fires it, matching the setParams
+  // idiom AnalyticsScreen's focusWeightTrend and RecipeBuilderScreen's
+  // addedIngredient already use for a one-shot arrival signal.
+  useEffect(() => {
+    if (!route?.params?.justAddedPlan) return;
+    navigation.setParams({ justAddedPlan: undefined });
+    let active = true;
+    AsyncStorage.getItem(DIARY_PLANADDED_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowPlanAddedHint(true);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [route?.params?.justAddedPlan, navigation]);
   const dismissFoodHint = useCallback(() => {
     setShowFoodHint(false);
     AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
@@ -630,6 +652,10 @@ export default function DiaryScreen({ navigation, route }) {
   const dismissMarkEatenHint = useCallback(() => {
     setShowMarkEatenHint(false);
     AsyncStorage.setItem(DIARY_MARKEATEN_HINT_KEY, 'true').catch(() => {});
+  }, []);
+  const dismissPlanAddedHint = useCallback(() => {
+    setShowPlanAddedHint(false);
+    AsyncStorage.setItem(DIARY_PLANADDED_HINT_KEY, 'true').catch(() => {});
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
@@ -1341,6 +1367,23 @@ export default function DiaryScreen({ navigation, route }) {
           )
         ) : (
           <>
+            {/* Founder ask (2026-07-09): the moment meals from the meal
+                builder / meal plan land here (arrival flagged by
+                justAddedPlan above), a one-time hint teaches the same two
+                ways to confirm them, anchored to that specific arrival
+                rather than "any time planned meals are visible" (D12's
+                showMarkEatenHint just below). The two never stack: this one
+                takes priority the first time round, since it is more
+                specific to what the user just did; D12's general hint
+                still covers every other time planned meals appear if this
+                one somehow never fires (e.g. an older, already-planned day
+                reached without a fresh add). */}
+            {plannedCount > 0 && !selectionMode && !readOnly && showPlanAddedHint ? (
+              <HintCaption
+                text="Your meals are in the diary. Mark each one eaten as you go, or mark them all at the end of the day."
+                onDismiss={dismissPlanAddedHint}
+              />
+            ) : null}
             {/* D12 item 3 (ux-world-class-audit-2026-07-09): the bulk
                 "mark all as eaten" banner used to live here; it is now at
                 the bottom of the page (D12 item 2). The first time a user
@@ -1349,8 +1392,12 @@ export default function DiaryScreen({ navigation, route }) {
                 showWaterHint below) teaches both ways to confirm them, since
                 the bulk control is no longer visible at this scroll
                 position. Gone the moment it's dismissed or the user marks
-                any meal as eaten (individually or in bulk). */}
-            {plannedCount > 0 && !selectionMode && !readOnly && showMarkEatenHint ? (
+                any meal as eaten (individually or in bulk). Never shows
+                alongside showPlanAddedHint above (mutually exclusive: a
+                fresh plan-add always dismisses both discovery signals
+                together, see dismissMarkEatenHint/dismissPlanAddedHint in
+                handleConfirmPlanned/handleConfirmPlannedSlot). */}
+            {plannedCount > 0 && !selectionMode && !readOnly && !showPlanAddedHint && showMarkEatenHint ? (
               <HintCaption
                 text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
                 onDismiss={dismissMarkEatenHint}
@@ -1808,6 +1855,13 @@ const WATER_TARGET_KEY = '@volyume_water_target_ml';
 const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
 const DIARY_WATER_HINT_KEY = '@volyume_seen_diary_water_hint';
 const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
+// Founder ask (2026-07-09): a one-time teach anchored to the moment meals
+// from the meal builder / meal plan land in the diary (MealPlanScreen's
+// "Add this day" / "Add this week", via the `justAddedPlan` nav param),
+// distinct from DIARY_MARKEATEN_HINT_KEY above (D12's general first-sight-of-
+// planned-meals teach). Same once-ever convention; the two never render at
+// once (see the mutually-exclusive gating where showMarkEatenHint is read).
+const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
 
 function WaterRow({
   ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false,

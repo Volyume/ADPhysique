@@ -39,7 +39,14 @@ jest.mock('../../lib/payments/winbackState', () => ({
 
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
 
+const mockNavigate = jest.fn();
+jest.mock('../../navigation/RootNavigator', () => ({
+  navigationRef: { isReady: () => true, navigate: (...a) => mockNavigate(...a) },
+}));
+
 import PostLapseSheet from '../PostLapseSheet';
+
+const SUBSCRIPTION_LINK_TEXT = 'Changed your mind? Pro is always one tap away in Subscription.';
 
 function pressByLabel(tree, label) {
   const node = tree.root.findAll(
@@ -67,6 +74,7 @@ beforeEach(() => {
   mockCapture.mockClear();
   mockMarkShown.mockClear();
   mockMarkReason.mockClear();
+  mockNavigate.mockClear();
   mockCaptured = true;
 });
 
@@ -105,4 +113,55 @@ test('askReason=true but nothing captured: marks sheet shown, does not mark reas
   pressByLabel(tree, 'Done');
   expect(mockMarkReason).not.toHaveBeenCalled();
   expect(mockMarkShown).toHaveBeenCalledTimes(1);
+});
+
+// L08-B3 (ux-world-class-audit-2026-07-09/L08-B3-billing-test-plan.md):
+// the post-cancel forward link to Subscription.
+describe('L08-B3: Subscription forward link', () => {
+  test('the exact calm line renders in the no-reason variant', () => {
+    const json = JSON.stringify(render({ askReason: false }).toJSON());
+    expect(json).toContain(SUBSCRIPTION_LINK_TEXT);
+  });
+
+  test('the exact calm line renders in the ask-reason variant', () => {
+    const json = JSON.stringify(render({ askReason: true }).toJSON());
+    expect(json).toContain(SUBSCRIPTION_LINK_TEXT);
+  });
+
+  test('tapping the link navigates to Subscription and marks the sheet shown exactly once, via the same one-time contract as Done', () => {
+    const onClose = jest.fn();
+    const tree = render({ askReason: false, onClose });
+    pressByLabel(tree, SUBSCRIPTION_LINK_TEXT);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileTab', { screen: 'Subscription', initial: false });
+    expect(mockMarkShown).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test('tapping the link does not capture a cancel reason, matching the Got it path', () => {
+    const tree = render({ askReason: false });
+    pressByLabel(tree, SUBSCRIPTION_LINK_TEXT);
+    expect(mockCapture).not.toHaveBeenCalled();
+  });
+
+  test('the primary Done/Got it path is unaffected by the new link (no extra navigate call)', () => {
+    const tree = render({ askReason: false });
+    pressByLabel(tree, 'Got it');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockMarkShown).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('L08-B3: source guards', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const SRC = fs.readFileSync(path.join(__dirname, '..', 'PostLapseSheet.js'), 'utf8');
+
+  test('no react-native-iap import', () => {
+    expect(SRC).not.toMatch(/react-native-iap/);
+  });
+
+  test('no product id literal', () => {
+    expect(SRC).not.toMatch(/pro_monthly|pro_annual/);
+  });
 });

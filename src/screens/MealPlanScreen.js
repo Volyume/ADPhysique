@@ -304,8 +304,11 @@ export default function MealPlanScreen({ navigation, route }) {
       // A successful add lands the user on the result (founder 2026-07-03:
       // staying here read as nothing happening). Diary is this stack's
       // root, so navigate pops back to it; the toast rides the transition
-      // via the app-level provider.
-      if (n > 0) navigation.navigate('Diary');
+      // via the app-level provider. `justAddedPlan` is a one-shot signal
+      // (founder ask, 2026-07-09) DiaryScreen reads once to teach that these
+      // meals can be marked eaten one by one or all at once; it consumes and
+      // clears the param itself so a later revisit never re-fires it.
+      if (n > 0) navigation.navigate('Diary', { justAddedPlan: true });
     } catch (_) {
       toast.show("Couldn't log the day. Try again.", { variant: 'error' });
     } finally {
@@ -363,8 +366,9 @@ export default function MealPlanScreen({ navigation, route }) {
         const skipNote = skippedDays > 0 ? ` ${skippedDays} day${skippedDays === 1 ? '' : 's'} left as-is.` : '';
         toast.show(`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.${skipNote}`, { variant: 'success' });
         // Same landing rule as writeLogDay: a successful add returns the
-        // user to the diary they just filled.
-        navigation.navigate('Diary');
+        // user to the diary they just filled, with the same one-shot
+        // `justAddedPlan` teach signal.
+        navigation.navigate('Diary', { justAddedPlan: true });
       }
     } catch (_) {
       toast.show("Couldn't schedule the week. Try again.", { variant: 'error' });

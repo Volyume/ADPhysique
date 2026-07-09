@@ -101,8 +101,12 @@ describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
   });
 
   test('the hint is gated on planned meals actually being present, read-write, and not mid-selection', () => {
+    // L08-teach (founder ask 2026-07-09, ux-world-class-audit-2026-07-09):
+    // this hint now also stays hidden while the more specific plan-added
+    // teach (showPlanAddedHint) is showing, so the two never stack; every
+    // other D12 gate (plannedCount, selectionMode, readOnly) is unchanged.
     expect(SRC).toMatch(
-      /\{plannedCount > 0 && !selectionMode && !readOnly && showMarkEatenHint \? \(\s*<HintCaption/,
+      /\{plannedCount > 0 && !selectionMode && !readOnly && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
     );
   });
 

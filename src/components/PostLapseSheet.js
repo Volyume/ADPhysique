@@ -28,6 +28,11 @@ import {
 
 const BODY = "Everything you logged is saved: training history, PRs, weigh-ins, and your food diary. Training, plans and progress stay free. You can export or back up everything any time in You, under Data.";
 
+// L08-B3 (ux-world-class-audit-2026-07-09/L08-B3-billing-test-plan.md,
+// founder "PROCEED" 2026-07-09): the peak-attention post-cancellation moment
+// carried no forward path. One calm line, no urgency, no discount mention.
+const SUBSCRIPTION_LINK_TEXT = 'Changed your mind? Pro is always one tap away in Subscription.';
+
 export default function PostLapseSheet({ visible, onClose, userId = null, askReason = false }) {
   const [reason, setReason] = useState(null);
   const [text, setText] = useState('');
@@ -47,6 +52,25 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
     onClose?.();
   }, [askReason, reason, text, userId, onClose]);
 
+  // L08-B3: navigates to Subscription, then runs the exact same handleDone
+  // path (so markLapseSheetShown() still fires exactly once and the sheet's
+  // one-time contract holds, whether the user leaves via this link or the
+  // primary Done/Got it button).
+  const handleSubscriptionLink = useCallback(() => {
+    try {
+      // Lazy require: this component mounts near the app root (App.js) and
+      // RootNavigator's module graph must not be pulled in at module-scope
+      // here (matches the lib lazy-require idiom, e.g. components/
+      // ScreenBoundary.js's handleGoHome).
+      // eslint-disable-next-line global-require
+      const { navigationRef } = require('../navigation/RootNavigator');
+      if (navigationRef?.isReady?.()) {
+        navigationRef.navigate('ProfileTab', { screen: 'Subscription', initial: false });
+      }
+    } catch (_) { /* best-effort; the sheet still dismisses via handleDone */ }
+    handleDone();
+  }, [handleDone]);
+
   return (
     <BottomSheet
       visible={visible}
@@ -56,6 +80,16 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
     >
       <Text style={styles.title}>Your Pro subscription has ended</Text>
       <Text style={styles.body}>{BODY}</Text>
+
+      <Button
+        title={SUBSCRIPTION_LINK_TEXT}
+        variant="tertiary"
+        size="sm"
+        fullWidth={false}
+        onPress={handleSubscriptionLink}
+        accessibilityLabel={SUBSCRIPTION_LINK_TEXT}
+        style={styles.subscriptionLink}
+      />
 
       {askReason ? (
         <>
@@ -133,5 +167,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     marginTop: spacing.xs,
+  },
+  subscriptionLink: {
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
   },
 });
