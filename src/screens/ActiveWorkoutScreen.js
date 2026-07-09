@@ -45,6 +45,7 @@ import {
 } from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
@@ -2441,7 +2442,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  {firstSetPrompt} Use exercise options for form tips, warm-ups, swaps and session settings.
+                  {/* NV-4 (ux-world-class-audit-2026-07-09/cohesion-02-novice-psychology.md):
+                      no baseline "what's a set / what's a rep" explainer existed
+                      anywhere. This is the exact gate the audit asked for: the
+                      very first exercise card, shown once ever (the seen-flag
+                      above turns off for good the moment any set is logged). */}
+                  {GLOSSARY.rep} {GLOSSARY.set} {firstSetPrompt} Use exercise options for form tips, warm-ups, swaps and session settings.
                 </Text>
               </View>
             )}

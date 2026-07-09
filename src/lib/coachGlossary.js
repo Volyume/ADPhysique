@@ -61,4 +61,18 @@ export const GLOSSARY = {
     "Adjusting your training and targets week to week based on how you're actually recovering and performing, rather than following a fixed plan regardless.",
   redS:
     'Relative Energy Deficiency in Sport: when the body runs on too little energy, for too long, to fully support training and health. Your coach watches for the early signals so your plan stays safe.',
+  // NV-2 (ux-world-class-audit-2026-07-09/cohesion-02-novice-psychology.md):
+  // matches the live-session "Superset coming up" walkthrough
+  // (ActiveWorkoutScreen.js's supersetHeadsUp modal) so the builder and the
+  // session teach the same thing.
+  superset:
+    'Two exercises done back-to-back with no rest between them, then a full rest before repeating.',
+  // NV-4: baseline vocabulary glosses for the "never lifted" persona, so the
+  // two most foundational training words in the product are defined
+  // somewhere. Self-naming (like rir/redS above) since these surface as a
+  // standalone note rather than beside an already-labelled term.
+  set:
+    'A set is a number of reps done one after another, then a rest before the next set.',
+  rep:
+    'A rep is one full repetition of an exercise, like one push-up or one squat.',
 };

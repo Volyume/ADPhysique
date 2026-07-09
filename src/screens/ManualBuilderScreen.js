@@ -14,6 +14,7 @@ import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
+import InfoTooltip from '../components/InfoTooltip';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -25,6 +26,7 @@ import {
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
 import { logError } from '../lib/errorLog';
+import { GLOSSARY } from '../lib/coachGlossary';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -125,6 +127,11 @@ function PlanBalanceCard({ days }) {
       <View style={balanceStyles.header}>
         <Ionicons name="pie-chart-outline" size={16} color={colors.textSecondary} />
         <Text style={balanceStyles.title}>Plan balance</Text>
+        {/* NV-1: the dot legend (full/half/hollow, green/amber/red) has no key
+            anywhere else on this card, so a first-time builder can only learn
+            it by triggering a warning. Reuses the volume-bands gloss already
+            shown on BodyDiagramHeatmap.js, same InfoTooltip+GLOSSARY pattern. */}
+        <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
       </View>
 
       <View style={balanceStyles.grid}>
@@ -1055,16 +1062,22 @@ export default function ManualBuilderScreen({ navigation, route }) {
                   })}
 
                   {selected.size >= 2 && (
-                    <Button
-                      title={`Group ${selected.size} into superset`}
-                      icon="link"
-                      variant="tertiary"
-                      size="sm"
-                      onPress={() => handleGroupSuperset(dayIdx)}
-                      style={styles.groupBtn}
-                      textStyle={styles.groupBtnText}
-                      accessibilityLabel={`Group ${selected.size} exercises into a superset`}
-                    />
+                    <View style={styles.groupBtnRow}>
+                      <Button
+                        title={`Group ${selected.size} into superset`}
+                        icon="link"
+                        variant="tertiary"
+                        size="sm"
+                        onPress={() => handleGroupSuperset(dayIdx)}
+                        style={styles.groupBtn}
+                        textStyle={styles.groupBtnText}
+                        accessibilityLabel={`Group ${selected.size} exercises into a superset`}
+                      />
+                      {/* NV-2: "superset" is unexplained jargon for a novice
+                          building their own plan (no equivalent of the
+                          in-session teaching modal here). */}
+                      <InfoTooltip text={GLOSSARY.superset} size={14} />
+                    </View>
                   )}
                 </View>
               );
@@ -1375,13 +1388,19 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
+  groupBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
   groupBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
+    flex: 1,
   },
   groupBtnText: {
     ...type.label,

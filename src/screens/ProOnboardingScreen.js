@@ -687,9 +687,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // length, the single highest-leverage word, proving the labels are real.
   function sequenceStages() {
     const divisionLabel = trainingGoal && trainingGoal !== 'general' ? GOAL_LABELS[trainingGoal] : null;
+    // NV-3 (ux-world-class-audit-2026-07-09/cohesion-02-novice-psychology.md):
+    // "volume" is resistance-training jargon a brand-new user has had zero
+    // prior exposure to at this, the single highest-attention beat in
+    // onboarding. This is a transient ~800ms animated caption, not a static
+    // screen, so it can't carry an InfoTooltip; reworded to the plain
+    // mechanism GLOSSARY.volume already uses ("the total work for a muscle").
+    // No meaning lost, animation/staging untouched.
     return [
       'Balancing your week',
-      divisionLabel ? `Setting your starting volume - ${divisionLabel} priorities` : 'Setting your starting volume',
+      divisionLabel ? `Setting how much you'll train each muscle - ${divisionLabel} priorities` : "Setting how much you'll train each muscle",
       'Choosing your exercises',
       `Fitting sessions to your ${sessionLengthMinutes} minutes`,
     ];
