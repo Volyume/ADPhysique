@@ -2,13 +2,25 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
+import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize } from '../../styles/theme';
 
-export function SectionHeader({ title }) {
-  return <SectionLabel style={styles.sectionHeader}>{title}</SectionLabel>;
+// L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
+// pattern already shipped on 26 other files (BodyMetricsScreen, EngineLog,
+// LiftProgressScreen, etc). Undefined by default, so every existing caller
+// (LedgerCard's "What worked"/"Needs attention", the held-decisions header)
+// renders exactly as before.
+export function SectionHeader({ title, tooltip }) {
+  if (!tooltip) return <SectionLabel style={styles.sectionHeader}>{title}</SectionLabel>;
+  return (
+    <View style={styles.sectionHeaderRow}>
+      <SectionLabel style={styles.sectionHeaderInline}>{title}</SectionLabel>
+      <InfoTooltip text={tooltip} size={13} />
+    </View>
+  );
 }
 
-export function StatChip({ icon, iconColor, label, value, valueColor }) {
+export function StatChip({ icon, iconColor, label, value, valueColor, tooltip }) {
   return (
     <View style={styles.statChip}>
       {icon ? (
@@ -18,6 +30,7 @@ export function StatChip({ icon, iconColor, label, value, valueColor }) {
         {value}
       </Text>
       {label ? <Text style={styles.statChipLabel}>{label}</Text> : null}
+      {tooltip ? <InfoTooltip text={tooltip} size={12} /> : null}
     </View>
   );
 }
@@ -100,6 +113,15 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     marginBottom: spacing.xs,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginBottom: spacing.xs,
+  },
+  sectionHeaderInline: {
+    marginBottom: 0,
   },
   statChip: {
     flexDirection: 'row',

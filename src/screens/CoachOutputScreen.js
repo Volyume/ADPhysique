@@ -97,6 +97,12 @@ import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+// L04-11: the jargon-translation layer (InfoTooltip + the single static,
+// founder-signed-off glossary) already ships on 26 other files; this screen
+// carries the coach's own vocabulary (deload, refeed, macro cycle, training
+// volume, the smoothed weight trend) and had none of it wired in.
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 // M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
@@ -175,7 +181,7 @@ function HoldEnter({ live, children }) {
 // waits for onApplySettled to avoid saying "Applied" twice at once).
 function AdjustmentRow({
   iconName, label, note, detail, holdNote, holdArrived, applied,
-  onApply, applyState = 'idle', onApplySettled, emphasis,
+  onApply, applyState = 'idle', onApplySettled, emphasis, tooltip,
 }) {
   const settling = applyState === 'success';
   const showApply = (!!onApply && !applied && !holdNote) || settling;
@@ -187,6 +193,10 @@ function AdjustmentRow({
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
           <Text style={emphasis ? styles.adjustmentLabelHero : styles.adjustmentLabel}>{label}</Text>
+          {/* L04-11: the recovery-week (deload) row is the one jargon term
+              named inline in an Apply row's label rather than a section
+              header, so the gloss sits right next to it. */}
+          {tooltip ? <InfoTooltip text={tooltip} size={13} /> : null}
           {applied && !settling && (
             <View style={styles.appliedChip}>
               <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -330,13 +340,14 @@ function TrainingNextWeekCard({
 
   return (
     <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
-      <SectionHeader title="Training next week" />
+      <SectionHeader title="Training next week" tooltip={GLOSSARY.volume} />
       {deloadSuggested ? (
         <>
           <AdjustmentRow
             iconName="bed-outline"
             label={deloadApplied ? 'Recovery week set for next week' : 'Take a recovery week'}
             note={deloadNote}
+            tooltip={GLOSSARY.deload}
             applied={deloadApplied}
             onApply={canApply && !deloadApplied ? onApplyDeload : undefined}
             applyState={applyStateFor('deload')}
@@ -387,6 +398,7 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
     <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <Text style={hero ? styles.dietBreakTitleHero : styles.dietBreakTitle}>Diet break worth considering</Text>
+        <InfoTooltip text={GLOSSARY.maintenanceCalories} size={13} />
         {applied && !settling && (
           <View style={styles.appliedChip}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -443,7 +455,7 @@ function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettl
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <SectionHeader title="Carbs by day" />
+        <SectionHeader title="Carbs by day" tooltip={GLOSSARY.macroCycle} />
         {applied && !settling && (
           <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -498,7 +510,7 @@ function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, ener
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <SectionHeader title="Refeed day" />
+        <SectionHeader title="Refeed day" tooltip={GLOSSARY.refeed} />
         {applied && !settling && (
           <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -2109,6 +2121,10 @@ export default function CoachOutputScreen({ navigation, route }) {
             label={trend.delta !== null ? '7-day trend' : null}
             // Class B: no colour on a body-weight numeral, ever.
             valueColor={colors.textPrimary}
+            // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
+            // reused here so the "7-day trend" number is explained the same
+            // way everywhere it appears. Only shown once there is a trend to explain.
+            tooltip={trend.delta !== null ? GLOSSARY.ewma : undefined}
           />
           <StatChip
             icon="barbell-outline"
