@@ -239,7 +239,7 @@ function CompareOverlay({
   const trackW = w;
   const pan = Gesture.Pan().onUpdate((e) => {
     const v = Math.max(0, Math.min(100, Math.round((e.x / trackW) * 100)));
-    setPct(v);
+    runOnJS(setPct)(v);
   });
 
   function step(delta) {
