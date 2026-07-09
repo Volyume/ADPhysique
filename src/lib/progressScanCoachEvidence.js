@@ -39,11 +39,19 @@
  */
 import { PHOTO_SCAN_SOURCE } from './progressScanAnalysis';
 
-// The only usedFor value this evidence shape may ever carry today. Widening
-// this enum is a founder-approved event (integration blueprint §8), never a
-// side effect of a refactor; the guard test pins this exact array.
+// The usedFor values this evidence shape may carry. Widening this enum is a
+// founder-approved event, never a side effect of a refactor; the guard test
+// pins this exact array. 'progress_assessment_context' authorised by founder
+// instruction 2026-07-09 (coach/check-in evidence integration); affectsTargets
+// stays false. v1's own `buildProgressScanCoachEvidence` below still only
+// ever assigns 'visual_trend_context_only' as a literal (or passes through
+// `note.usedFor`, itself pinned to that same value) -- the second value is
+// for the v2 evidence packet (`progressScanCheckInEvidence.js`), which sets
+// its own `usedFor` literal to that value directly and does not import from
+// this module at all (source-guarded as a pure layer with no v1 coupling).
 export const PROGRESS_SCAN_COACH_EVIDENCE_USED_FOR_VALUES = Object.freeze([
   'visual_trend_context_only',
+  'progress_assessment_context',
 ]);
 
 // Static safety-disclaimer strings coachSummaryFromScan always prepends to

@@ -147,15 +147,34 @@ describe('ProgressScanCoachEvidence v1 interface honesty (source guard)', () => 
     expect(SOURCE).not.toMatch(/affectsTargets:\s*(?!false,)[a-zA-Z]/);
   });
 
-  test('usedFor can only ever resolve to the single approved enum value', () => {
-    expect(PROGRESS_SCAN_COACH_EVIDENCE_USED_FOR_VALUES).toEqual(['visual_trend_context_only']);
-    // The only literal ever assigned to usedFor in source is the approved
-    // value (as a fallback) or a pass-through of the resolver's own
-    // `note.usedFor`, which is itself pinned to the same single value
+  test('usedFor enum is pinned to EXACTLY the two founder-approved values', () => {
+    // Widened 2026-07-09 (coach/check-in evidence integration) to add
+    // 'progress_assessment_context' for the v2 evidence packet
+    // (progressScanCheckInEvidence.js). Loudly pinned: this must be exactly
+    // these two values, in this order, never silently grown further.
+    expect(PROGRESS_SCAN_COACH_EVIDENCE_USED_FOR_VALUES).toEqual([
+      'visual_trend_context_only',
+      'progress_assessment_context',
+    ]);
+    // v1's own source, however, is UNCHANGED: the only literal it ever
+    // assigns to usedFor is the original approved value (as a fallback) or a
+    // pass-through of the resolver's own `note.usedFor`, which is itself
+    // pinned to that same single value
     // (progressScanCoachResolver.test.js / progressScanCoachIsolation.guard.test.js).
+    // v1 never produces 'progress_assessment_context' -- only the v2 packet
+    // builder sets that literal, and it does so independently (source-guarded
+    // to import nothing from this module).
     const usedForAssignments = [...SOURCE.matchAll(/usedFor:\s*([^\n,]+)/g)].map((m) => m[1].trim());
     for (const assignment of usedForAssignments) {
       expect(assignment).toMatch(/note\.usedFor \?\? 'visual_trend_context_only'/);
     }
+  });
+
+  test('affectsTargets:false pins are unchanged by the enum widening', () => {
+    // Re-asserts the existing pins from the "affectsTargets is a hard-coded
+    // false literal" test above are still true after the enum change --
+    // nothing about the widening touched affectsTargets.
+    expect(SOURCE).toMatch(/affectsTargets:\s*false,/);
+    expect(SOURCE).not.toMatch(/affectsTargets:\s*(?!false,)[a-zA-Z]/);
   });
 });
