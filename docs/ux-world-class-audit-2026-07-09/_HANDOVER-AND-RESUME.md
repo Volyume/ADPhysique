@@ -923,3 +923,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   (e.g. "Vegetarian · 2 foods excluded"). Pro surface (builder is Pro).
   QUEUED NEXT — blocked until the mark-eaten agent lands (it is editing
   MealPlanScreen.js right now).
+- FOUNDER CLARIFICATION (same ask): needs set from the Meal Builder are
+  REMEMBERED AS THE USER'S DEFAULT and appear ticked in Settings too.
+  Satisfied by the single-source-of-truth shape already queued (both
+  entry points open the same SettingsDietaryScreen over the same synced
+  profile fields — one store, two doors, can never disagree). The build
+  agent must include a test proving a selection made via the builder
+  entry point is reflected in Settings state and vice versa.
