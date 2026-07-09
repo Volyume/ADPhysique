@@ -671,6 +671,18 @@ export default function PartnerScreen({ route }) {
     if (redeemSyncing && (p.pairs || []).length > 0) setRedeemSyncing(false);
   }, [redeemSyncing, p.pairs]);
 
+  // A code held from a paywall bounce (A1 s9.3) is auto-redeemed once the user
+  // is Pro; either outcome deserves a visible toast rather than failing
+  // silently (L06-F8).
+  useEffect(() => {
+    if (p.pendingInviteOutcome === 'success') {
+      toast.show('Partner connected', { variant: 'success' });
+    } else if (p.pendingInviteOutcome === 'failed') {
+      toast.show('Your saved invite code could not be used. It may have expired.', { variant: 'warning' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.pendingInviteOutcome]);
+
   useEffect(() => {
     if (!REDEEM_SYNC_POLL_ENABLED) return undefined;
     if (!redeemSyncing || typeof retryPartners !== 'function') return undefined;
@@ -1043,15 +1055,17 @@ export default function PartnerScreen({ route }) {
             ))}
 
             {canInviteAnother ? (
-              <Button
-                title="Invite another partner"
-                variant="outline"
-                icon="person-add-outline"
-                fullWidth
-                style={styles.inviteAnotherButton}
+              <TouchableOpacity
                 onPress={openJourney}
+                style={styles.inviteAnotherRow}
+                activeOpacity={0.7}
+                hitSlop={hitSlop}
+                accessibilityRole="button"
                 accessibilityLabel="Invite another partner"
-              />
+              >
+                <Text style={styles.inviteAnotherText}>Invite another partner</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+              </TouchableOpacity>
             ) : null}
 
             {pending ? (
@@ -1972,7 +1986,15 @@ const styles = StyleSheet.create({
   cheerPillText: { ...type.label, color: colors.onPrimary },
   cheerPillTextDone: { color: colors.textSecondary },
 
-  inviteAnotherButton: { marginTop: spacing.xs },
+  inviteAnotherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  inviteAnotherText: { ...type.body, color: colors.primary },
 
   // Pending card
   pendingCard: {

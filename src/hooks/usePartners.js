@@ -39,7 +39,8 @@ const WEEK_MS = 7 * 86400000;
 const EMPTY = {
   loading: true, error: false, partnership: null, rowState: 'empty', partnerWeek: null,
   myWeek: null, sharedStreak: null, cheerEnabled: false, lastReceived: null,
-  sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, localReadIssue: false, reload: () => {},
+  sharedBlock: null, canAdd: true, pairs: [], pendingInvite: null, localReadIssue: false,
+  pendingInviteOutcome: null, reload: () => {},
 };
 
 const PASSIVE_PENDING_REFRESH_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
@@ -366,6 +367,12 @@ export default function usePartners(userId, tier) {
       // already paired, auto-open the redemption path once, expiry respected.
       // Runs before the render branches so a successful redeem lands the active
       // pairing on this same load pass.
+      // Outcome is surfaced (not just acted on) so the screen can show a calm
+      // one-shot toast either way — a silently-failing held invite was the
+      // audit's only complaint about this path (L06-F8); local var, not ref,
+      // so it naturally resets to null on every later load once
+      // pendingTriedRef.current is true and this block is skipped.
+      let pendingInviteOutcome = null;
       if (tier === 'pro' && !pendingTriedRef.current && !partnerships.some((p) => p.status === 'active')) {
         const storedCode = await readPendingPartnerCode();
         if (!isCurrentRequest()) return;
@@ -376,6 +383,7 @@ export default function usePartners(userId, tier) {
           await clearPendingPartnerCode();
           if (!isCurrentRequest()) return;
           if (rr.ok) {
+            pendingInviteOutcome = 'success';
             await mirrorAcceptedPartnershipLocally(userId, rr.data);
             if (!isCurrentRequest()) return;
             await pullPartnerMirrorNow(userId);
@@ -394,6 +402,8 @@ export default function usePartners(userId, tier) {
             activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
             if (!isCurrentRequest()) return;
             canAdd = canAddPartner({ tier, activeCount });
+          } else {
+            pendingInviteOutcome = 'failed';
           }
         }
       }
@@ -434,6 +444,7 @@ export default function usePartners(userId, tier) {
         localReadIssue: false,
         pairs,
         pendingInvite,
+        pendingInviteOutcome,
         canAdd,
         partnership: primaryPair ? primaryPair.partnership : primary,
         rowState: primaryPair ? primaryPair.rowState : partnerRowState({ partnership: primary }),
