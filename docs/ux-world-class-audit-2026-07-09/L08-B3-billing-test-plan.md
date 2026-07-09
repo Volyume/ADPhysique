@@ -1,8 +1,8 @@
 # L08-B3 — Post-cancel forward link: written billing test plan
 
-**Status:** Awaiting founder "proceed" (per docs/rules/billing.md, billing-
-adjacent changes need this plan approved BEFORE code). Ruling authorising
-the build: D16 (DECISIONS-2026-07-09.md).
+**Status:** FOUNDER "PROCEED" GRANTED 2026-07-09 (resume session), against
+this exact plan as committed at bc90d3f. Ruling authorising the build: D16
+(DECISIONS-2026-07-09.md); billing.md pre-approval requirement satisfied.
 
 ## The change (statement required by billing.md)
 
