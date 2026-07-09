@@ -248,10 +248,13 @@ notification-lock safety grep (EMPTY = locked mechanisms untouched), pushed.
 
 ### DATA-INTEGRITY BUG surfaced (genuine, for a fix wave - NOT dropped)
 `insertOrUpdateExerciseFromCloud` (database.js:6502) cloud-restore INSERT omits
-exercise_type, equipment_category, force, laterality, difficulty, machine_ok,
-home_ok, cue, equipment_profiles -> custom-exercise metadata LOST on
-sign-out/in. Local columns + migrate_091 already carry these. Additive fix
-(extend the INSERT column list + values); no schema change. Queued for batch 2.
+exercise_type. CORRECTION (batch 3 source-verify): the other eight columns
+originally listed here (equipment_category, force, laterality, difficulty,
+machine_ok, home_ok, cue, equipment_profiles) are canonical-library-only
+metadata - never populated on user-created custom exercises and absent from
+the cloud custom_exercises schema, so they cannot round-trip regardless. Only
+exercise_type is genuinely restorable. Fixed in batch 3 (38d94ab). Additive,
+no schema change. NOTE: only migrate_091 carries exercise_type cloud-side.
 
 ## "Keep going on all" - Batch 2 IN FLIGHT (2026-07-09)
 Per D5. Domain-partitioned Sonnet agents: ProOnboarding Step-2 split (gates
@@ -287,3 +290,38 @@ sync.registry/perDayTargets = 99/99). Committer re-stamped (reset-author) + push
 - Cloud-restore column fix (database.js:6502 insertOrUpdateExerciseFromCloud
   drops custom-exercise metadata) still queued - deliberately NOT bundled with
   per-day-target agent to avoid database.js collision. Next micro-batch.
+
+## "Keep going on all" - Batch 3 DONE (2026-07-09)
+Four Sonnet agents. Boundary: full lint EXIT 0 (transient JSX WIP from the KAV
+sweep resolved before its commit - independently reconfirmed); engine/ED-safety
+files (nutritionEngine/edPatternDetector/wellbeing/coachApply/weeklyCoach/
+planEngine/proGate) NOT in diff; migrate_111 additive+idempotent+founder-run;
+BodyMetrics KAV change is a pure structural wrapper (no calm/ED/lapse/floor
+line changed); ED-safety guards green (nutritionEngine/ffmFloor/edPatternDetector/
+weeklyCoach.ffmFloor + new tests = 239/239). Sequenced: cloud-restore committed
+database.js first, then NT1 re-dispatched onto the freed file.
+- `38d94ab` Cloud-restore exercise_type (see corrected note above): source-verify
+  found only exercise_type restorable; +test. ASYMMETRY LOGGED: exercise_type
+  won't fully round-trip until sync.js syncExercises PUSH also sends it (queue).
+- `7f6974b` CoachOutput tooltips (L04-11): 6 InfoTooltips reusing existing
+  coachGlossary (founder-signed strings, no new copy), engine untouched,
+  TalkBack-reachable. DELIBERATELY skipped RED-S/autoregulation footer.
+- `d5e6ed0` KeyboardAvoidingView sweep (L03-C5): 9 screens + SettingsPage chrome
+  in existing PlansScreen pattern; skipped DiaryScreen/MyMealsScreen (BottomSheet
+  already keyboardAvoiding); excluded PartnerScreen.
+- `7abac35` NT1 goal/proteinApproach cloud persist (L05-NT1): database.js ALTER
+  + save/insertFromCloud + migrate_111 + sync push row; no screen change needed;
+  ED reload path re-verified (never recomputes, no floor bypass); +T7/T8 tests.
+
+### SURFACED TO FOUNDER (decisions, not parked):
+- CoachOutput RED-S/autoregulation footer tooltip: needs founder-reviewed NEW
+  glossary entries for "RED-S" (ED-safety-adjacent) + "autoregulation". Agent
+  correctly refused to draft ED-adjacent copy unilaterally. Founder call.
+- sync.js syncExercises PUSH does not send exercise_type -> the batch-3 restore
+  fix is forward-compatible but the end-to-end custom-exercise-type round trip
+  stays broken until push is patched too. Small sync-layer fix - queue next.
+- Coverage-gap audit lanes (6 new: light-theme parity, motion, aesthetic craft,
+  a11y contrast/SR, first-run emotion, competitive benchmarks) NOT yet run -
+  these are Opus-tier AUDITS that EXPAND campaign scope; recommend a founder
+  go/no-go before spending on them vs finishing the remaining build backlog
+  (food follow-ons L05-FI5/SB2/SL1/ACF1/MM1, L04-10 WhatsNew version-key).
