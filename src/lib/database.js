@@ -1866,6 +1866,40 @@ const SCHEMA_MIGRATIONS = [
        'Cable Reverse Curl'
      )`,
   ],
+  // v65, progress-scan classification history (D18, founder decision
+  // 2026-07-09; plan-F §4.3, docs/exercise-planning-2026-07-09/
+  // plan-F-photo-corroboration.md). Persists ONLY the deterministic v2
+  // classification of a progress scan alongside a check-in — the `assessment`
+  // enum (supports | conflicts | visual_change_weight_stable | inconclusive |
+  // not_used | insufficient_data) and its `status` enum, with a timestamp — so
+  // a future receipt can say calm historical context like "supports has held
+  // for 3 of your last 4 check-ins". It stores NO photo, NO raw score, NO
+  // free text, NO body-fat value: only the enum labels and the moment.
+  // Written AFTER the coaching engine has run and NEVER read by any engine
+  // module (weeklyCoach/coachApply/nutritionEngine/planEngine) — pinned by the
+  // source guard in progressScanClassificationHistory.test.js.
+  // Applied: LOCALLY only, via this user_version bump. There is NO cloud
+  // counterpart and this table is deliberately absent from the sync layer
+  // (src/lib/sync/registry.js and src/lib/sync.js): progress-photo scans and
+  // every value derived from them are device-local by constraint and never
+  // leave the phone (safety-privacy-blueprint.md §6.1; matches progress_scan_
+  // sessions/assets, v56/v57). Wiped per-user by wipeAllUserData (added to
+  // directTables) so deleting an account or its photos also clears this.
+  // Safe to re-run: yes (CREATE TABLE IF NOT EXISTS; a re-run is a benign
+  // no-op).
+  // Rollback: DROP TABLE progress_scan_classification_history (data loss
+  // confined to this on-device classification log; photos, scans and the
+  // check-in rows are untouched).
+  [
+    `CREATE TABLE IF NOT EXISTS progress_scan_classification_history (
+      id          TEXT PRIMARY KEY NOT NULL,
+      user_id     TEXT NOT NULL,
+      assessment  TEXT NOT NULL,
+      status      TEXT NOT NULL,
+      created_at  INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_progress_scan_classification_history_user_time ON progress_scan_classification_history(user_id, created_at DESC)',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -4372,6 +4406,10 @@ export const WIPE_DIRECT_TABLES = [
   // food_slot_recents (client-only) both DELETE cleanly by user_id.
   'plan_folders', 'food_slot_recents',
   'progress_photo_meta', 'progress_scan_sessions', 'progress_scan_assets',
+  // D18 (plan-F §4.3): local-only progress-scan classification log. Wiped on
+  // every user boundary so a deleted account or wiped photo set also clears
+  // its derived classification history.
+  'progress_scan_classification_history',
 ];
 
 export const FATAL_LOCAL_WIPE_TABLES = new Set([

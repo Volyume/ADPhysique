@@ -166,4 +166,122 @@ describe('Progress Scan safety-floor isolation', () => {
     }));
     expect(withScanEvidence).toEqual(withoutScanEvidence);
   });
+
+  // ── D18 (founder decision 2026-07-09; plan-F §4.4) ─────────────────────────
+  // BOUNDED-DELTA GUARD. This NARROWS the historic byte-identical guarantee for
+  // the ONE real, named, bounded scan input (`photoCorroboration`) that D18
+  // authorised: a strong, already-agreeing progress-photo trend may raise the
+  // EMITTED `confidence` caption by EXACTLY ONE step and nothing else. The
+  // guarantee becomes: output is byte-identical when photoCorroboration is
+  // absent, ineligible, non-supporting, or suppressed; and when present and
+  // eligible it moves `confidence` by at most one step in ONE direction (toward
+  // higher confidence only) plus the two `photoCorroboration*` telemetry flags,
+  // with adjustments, heldDecisions and every floor/gate field byte-identical
+  // in every case. The old "any scan-shaped key is inert" guard above still
+  // holds for every accidental/unrecognised key; only this named parameter has
+  // a defined, bounded effect.
+  //
+  // Helper: strips the fields D18 permits to move, so `toEqual` on the
+  // remainder proves nothing else (no calorie/macro/training/floor value)
+  // changed.
+  const withoutMovableFields = (out) => {
+    const clone = { ...out };
+    delete clone.confidence;
+    delete clone.photoCorroborationApplied;
+    delete clone.photoCorroborationBlocked;
+    return clone;
+  };
+  // Untracked calorie adherence => assessDataConfidence returns 'medium' (a
+  // full week of weigh-ins and >=2 weeks in phase keep it off the data_hold and
+  // baseline-output paths), giving headroom to observe a single upward step to
+  // 'high'. weeksInPhase < 2 would instead route to _buildBaselineOutput, which
+  // never reaches the confidence field, so it is deliberately NOT used here.
+  const UNTRACKED_CHECKIN = {
+    energyScore: 4, recoveryScore: 4, stepsAdherence: 'hit',
+    calsAdherence: 'untracked', sorenessFlag: false, cycleOverride: false,
+  };
+  // recentIntakeAvgKcal 2500 keeps intake clear of the FFM safety floor so no
+  // hold is open — corroboration can only be observed on a hold-free week
+  // (the point of the separate suppression tests below is the inverse).
+  const midConfidenceInputs = (over = {}) => coachCutInputs({
+    checkin: UNTRACKED_CHECKIN, recentIntakeAvgKcal: 2500, ...over,
+  });
+  const eligibleSupports = { eligible: true, direction: 'supports' };
+
+  test('an eligible, supporting scan raises confidence by exactly one step and nothing else', () => {
+    const base = runWeeklyCoach(midConfidenceInputs());
+    const corroborated = runWeeklyCoach(midConfidenceInputs({ photoCorroboration: eligibleSupports }));
+
+    expect(base.confidence).toBe('medium');
+    expect(corroborated.confidence).toBe('high'); // exactly one step up
+    expect(corroborated.photoCorroborationApplied).toBe(true);
+    // Every other field — adjustments, heldDecisions, floors — is byte-identical.
+    expect(withoutMovableFields(corroborated)).toEqual(withoutMovableFields(base));
+  });
+
+  test('the step is clamped at high (never above the ceiling)', () => {
+    // Default cut inputs (weeksInPhase 6, >=5 weigh-ins, adherence known) => 'high'.
+    const base = runWeeklyCoach(coachCutInputs());
+    const corroborated = runWeeklyCoach(coachCutInputs({ photoCorroboration: eligibleSupports }));
+    expect(base.confidence).toBe('high');
+    expect(corroborated.confidence).toBe('high');
+    expect(corroborated.photoCorroborationApplied).toBe(false);
+    expect(corroborated).toEqual(base);
+  });
+
+  test('a conflicting scan never moves confidence (never lowers, never originates)', () => {
+    const base = runWeeklyCoach(midConfidenceInputs());
+    const conflicting = runWeeklyCoach(midConfidenceInputs({
+      photoCorroboration: { eligible: true, direction: 'conflicts' },
+    }));
+    expect(conflicting).toEqual(base);
+  });
+
+  test('an ineligible scan is inert (kill switch: null / eligible:false restore base exactly)', () => {
+    const base = runWeeklyCoach(midConfidenceInputs());
+    const nullCorr = runWeeklyCoach(midConfidenceInputs({ photoCorroboration: null }));
+    const ineligible = runWeeklyCoach(midConfidenceInputs({
+      photoCorroboration: { eligible: false, direction: 'supports' },
+    }));
+    expect(nullCorr).toEqual(base);
+    expect(ineligible).toEqual(base);
+  });
+
+  test('corroboration is suppressed under calm mode (a safety hold) even when eligible', () => {
+    const base = runWeeklyCoach(midConfidenceInputs({ calmMode: true }));
+    const corroborated = runWeeklyCoach(midConfidenceInputs({
+      calmMode: true,
+      photoCorroboration: eligibleSupports,
+    }));
+    expect(base.photoCorroborationBlocked).toBe(true);
+    expect(corroborated.confidence).toBe('medium'); // unchanged under the hold
+    expect(corroborated.photoCorroborationApplied).toBe(false);
+    expect(corroborated).toEqual(base);
+  });
+
+  test('corroboration never moves a data_hold, and is reported blocked there', () => {
+    // Fewer than 3 weigh-ins => data_hold early return (a safety hold).
+    const held = runWeeklyCoach(coachCutInputs({
+      morningWeights: [{ weightKg: 80, loggedAt: Date.now() }],
+      photoCorroboration: eligibleSupports,
+    }));
+    expect(held.confidence).toBe('data_hold');
+    expect(held.photoCorroborationApplied).toBe(false);
+    expect(held.photoCorroborationBlocked).toBe(true);
+  });
+
+  test('the corroboration input never reaches the ED-pattern detector', () => {
+    // recentWeeklyHistory drives detectEdPatternFlag; the scan input must not
+    // change what it fires or the signals it reports.
+    const history = Array.from({ length: 4 }, () => ({
+      energy: 1, adherence: 'under', hasCheckin: true, hasFoodData: true,
+    }));
+    const withoutCorr = runWeeklyCoach(midConfidenceInputs({ recentWeeklyHistory: history }));
+    const withCorr = runWeeklyCoach(midConfidenceInputs({
+      recentWeeklyHistory: history,
+      photoCorroboration: eligibleSupports,
+    }));
+    expect(withCorr.edPatternFired).toBe(withoutCorr.edPatternFired);
+    expect(withCorr.edPatternSignals).toEqual(withoutCorr.edPatternSignals);
+  });
 });

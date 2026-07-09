@@ -139,6 +139,58 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
   return { level, reasons, holdMessage: null };
 }
 
+// ─── Photo-corroboration bounded step (D18, founder decision 2026-07-09) ──────
+// Founder ruling D18 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md)
+// on plan-F §4.4 (docs/exercise-planning-2026-07-09/plan-F-photo-corroboration.md):
+// a strong, ALREADY-AGREEING progress-photo trend may raise the data-confidence
+// caption by EXACTLY ONE bounded step, never lower it, never originate it.
+//
+// The ordered ladder the step walks. 'data_hold' is deliberately absent: a data
+// hold is a safety hold and can never be lifted by a photo signal (indexOf
+// returns -1 below, so the level is returned unchanged). 'high' is the ceiling
+// (the Math.min clamps there).
+export const PHOTO_CORROBORATION_CONFIDENCE_LADDER = Object.freeze(['low', 'medium', 'high']);
+
+/**
+ * Bounded photo-corroboration step (D18 / plan-F §4.4). A strong, already-
+ * agreeing progress-photo trend may raise the data-confidence level by EXACTLY
+ * ONE step (low -> medium, medium -> high), never lowering, never originating,
+ * never moving 'data_hold', clamped at 'high'. Pure: no I/O, no randomness;
+ * same inputs give the same output (deterministic per CLAUDE.md §2).
+ *
+ * This function ONLY ever returns a level. It has no path into any calorie,
+ * macro, training, refeed, diet-break or floor value: the caller (runWeeklyCoach)
+ * uses the pre-corroboration `confidence.level` for every decision
+ * (offTargetWeeksRequired and everything downstream) and only feeds the raised
+ * level into the EMITTED `confidence` display field, so adjustments,
+ * heldDecisions and all safety floors stay byte-identical whether or not a scan
+ * corroborates (pinned by the bounded-delta safety-floor isolation guard,
+ * D18).
+ *
+ * @param {string} baseLevel - the logs-only confidence level
+ *   ('high'|'medium'|'low'|'data_hold').
+ * @param {object|null} [photoCorroboration] - caller-supplied signal; the
+ *   engine never reads a scan itself.
+ * @param {boolean} photoCorroboration.eligible - true only for a scored scan
+ *   at Moderate+ confidence with 3+ comparable points (caller-derived from the
+ *   v2 evidence packet's eligibleForAssessment).
+ * @param {string|null} photoCorroboration.direction - 'supports' (agrees with
+ *   the decision the logs already leaned toward) raises one step; 'conflicts'
+ *   and null never move the level (the rule never lowers and never originates).
+ * @param {object} [opts]
+ * @param {boolean} [opts.suppressed=false] - when true (calm mode / open or
+ *   just-fired ED flag / any safety hold) the level is returned unchanged.
+ * @returns {string} the (possibly) one-step-raised level.
+ */
+export function corroborateConfidenceLevel(baseLevel, photoCorroboration, { suppressed = false } = {}) {
+  if (suppressed) return baseLevel;
+  if (!photoCorroboration || photoCorroboration.eligible !== true) return baseLevel;
+  if (photoCorroboration.direction !== 'supports') return baseLevel; // never lowers, never originates
+  const idx = PHOTO_CORROBORATION_CONFIDENCE_LADDER.indexOf(baseLevel);
+  if (idx < 0) return baseLevel; // 'data_hold' or unknown: never moved
+  return PHOTO_CORROBORATION_CONFIDENCE_LADDER[Math.min(idx + 1, PHOTO_CORROBORATION_CONFIDENCE_LADDER.length - 1)];
+}
+
 // ─── Autoregulation matrix ────────────────────────────────────────────────────
 
 /**
@@ -425,6 +477,14 @@ export function runWeeklyCoach(inputs) {
     // ED-SAFETY note above the escalation block below for why this is the
     // one training-only signal in this file that IS calm-mode-gated.
     calmMode = false,
+    // D18 (founder decision 2026-07-09, plan-F §4.4): optional caller-supplied
+    // photo-corroboration signal, { eligible: boolean, direction: 'supports' |
+    // 'conflicts' | null }. Defaults null so every existing caller is
+    // byte-identical. It can ONLY raise the EMITTED data-confidence caption by
+    // one bounded step (see the PHOTO CORROBORATION block before the return);
+    // it never reaches any calorie/macro/training/floor path. The engine never
+    // reads a scan itself — the caller derives this from the v2 evidence packet.
+    photoCorroboration = null,
     lastCalAdjustmentDirection: _lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
@@ -563,6 +623,11 @@ export function runWeeklyCoach(inputs) {
       hasEnoughData: false,
       dataNote: confidence.holdMessage,
       confidence: confidence.level,
+      // D18: a data hold is a safety hold — corroboration can never lift it,
+      // and it is blocked from surfacing. Emitted here for output-shape parity
+      // with the main-card return.
+      photoCorroborationApplied: false,
+      photoCorroborationBlocked: true,
       weekLabel: `Week ${Number.isFinite(weeksInPhase) ? Math.round(weeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
@@ -1478,10 +1543,57 @@ export function runWeeklyCoach(inputs) {
     trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg, nowMs),
   });
 
+  // ── PHOTO CORROBORATION (D18, founder decision 2026-07-09; plan-F §4.4) ────
+  // A strong, already-agreeing progress-photo trend (photoCorroboration:
+  // eligible === true means 3+ comparable scans at Moderate+ confidence;
+  // direction 'supports' means the scan agrees with the decision the logged
+  // data was already leaning toward) may raise the EMITTED data-confidence
+  // caption by EXACTLY ONE bounded step, clamped at 'high', never lowering,
+  // never originating, never moving 'data_hold' (the data_hold early return
+  // above never reaches this block).
+  //
+  // It moves ONLY the emitted `confidence` field. The pre-corroboration
+  // `confidence.level` is what fed offTargetWeeksRequired and therefore every
+  // calorie/macro/training/floor decision earlier in this run, so adjustments,
+  // heldDecisions and all floors stay byte-identical whether or not a scan
+  // corroborates — the narrowed bounded-delta safety-floor isolation guard
+  // (D18) pins exactly that.
+  // Deterministic: a pure function of named inputs, no I/O, no randomness.
+  //
+  // Suppressed entirely (photoCorroborationBlocked) under calm mode, an open or
+  // just-fired ED-pattern flag, the FFM-floor hold, the rapid-loss safety
+  // correction, the joint-pain/illness/injury safety hold, or a positive
+  // wellbeing-screen restriction flag — wired into the existing hold reads in
+  // this run, not a new mechanism. The flag is emitted so a display-only
+  // consumer can gate the same rule faithfully (it carries the scoffPositive/
+  // calm reads it cannot otherwise see) without persisting or syncing any
+  // photo-derived value (photos and their derived data never leave the device).
+  const photoCorroborationBlocked = !!(
+    edPatternHeld ||
+    ffmFloorHeld ||
+    rapidWeightLossFlag ||
+    safetyHold ||
+    scoffPositive ||
+    calmMode
+  );
+  const emittedConfidenceLevel = corroborateConfidenceLevel(
+    confidence.level,
+    photoCorroboration,
+    { suppressed: photoCorroborationBlocked },
+  );
+  const photoCorroborationApplied = emittedConfidenceLevel !== confidence.level;
+
   return {
     hasEnoughData: true,
     dataNote: null,
-    confidence: confidence.level,
+    confidence: emittedConfidenceLevel,
+    // D18: true only on a run where a strong, already-agreeing scan actually
+    // raised the emitted confidence caption one step; false otherwise.
+    photoCorroborationApplied,
+    // D18: the engine's authoritative "corroboration is unsafe to surface this
+    // week" read (calm mode / ED flag / any safety hold), so a display-only
+    // consumer never has to re-derive scoffPositive/calm to gate the caption.
+    photoCorroborationBlocked,
     weekLabel,
     trend: {
       ewma7: ewma7Today,

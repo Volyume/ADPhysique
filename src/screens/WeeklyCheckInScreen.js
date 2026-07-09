@@ -30,6 +30,7 @@ import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
 import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
+import { recordScanClassification } from '../lib/progressScanClassificationHistory';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -700,6 +701,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
           soreMuscles.length > 0 ? `Sore: ${soreMuscles.join(', ')}.` : '',
         ].filter(Boolean).join(' ') || null,
       });
+
+      // D18 (plan-F §4.3): record the deterministic scan classification for
+      // this check-in into the device-local history (assessment + status enums
+      // + timestamp only — never a photo, raw score or free text). Best-effort,
+      // AFTER the check-in has saved; never read by any coaching engine and
+      // never synced. Absent when the packet is null (photo suppression / no
+      // scan this period), matching every other scan surface's fail-closed gate.
+      if (scanEvidencePacket?.assessment && scanEvidencePacket?.status) {
+        await recordScanClassification(userId, {
+          assessment: scanEvidencePacket.assessment,
+          status: scanEvidencePacket.status,
+        }).catch(() => {});
+      }
 
       // Reschedule the check-in reminder so we don't bug them again this week.
       // The prefs blob is FLAT (checkinEnabled, checkinDay, checkinHour,
