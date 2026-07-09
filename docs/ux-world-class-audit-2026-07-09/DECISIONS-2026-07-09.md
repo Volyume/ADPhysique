@@ -160,8 +160,10 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   calorie target.", verified byte-identical against pre-ae42b4d history).
 - **Home banner cap: DELEGATED to the lead** ("You decide what will be
   best"). Lead ruling: ONE attention banner max above the Start-Workout
-  hero, chosen by the existing pickAttentionVariant priority order; others
-  wait their turn (strongest match to the one-hero Materials Policy).
+  hero, chosen by the existing full-stack ranking (BANNER_PRIORITY in
+  HomeScreen.js; pickAttentionVariant only orders the attention card's own
+  sub-variants); others wait their turn (strongest match to the one-hero
+  Materials Policy). CORRECTED 2026-07-09 at build time.
 - **Group C rounds selected (in order): notifications wording + rest-day
   (A2), Settings cluster (CP-10 restart-free theming, CP-9 Help/FAQ,
   L08-B3 post-cancel link), weigh-in edit/delete (NAV-2).** RPE/RIR

@@ -3,12 +3,15 @@
  * paywall re-homed from the Pro-guarded CoachOutput (where its free-tier
  * audience could never see it) to HomeScreen's banner stack.
  *
- * Priority-slot mechanics updated for AC-6/CP-1 (design-usability-audit-
- * 2026-07-09), founder decision D7: the old strict one-banner invariant is
- * replaced by a ranked list that shows the top two eligible banners and
- * collapses the rest behind one "more updates" affordance. The differential
- * badge shares the lowest-priority "attention" slot with the free coach line
- * (AttentionCard's own pickAttentionVariant still decides between the two).
+ * Priority-slot mechanics updated for D14 (DECISIONS-2026-07-09.md, Home
+ * banner cap ruling delegated to the lead): at most ONE attention banner
+ * shows above the Start-Workout hero at a time, chosen by the fixed
+ * BANNER_PRIORITY order; every other eligible banner waits its turn and
+ * takes the slot on a later render once the current winner is dismissed or
+ * resolves (this supersedes the earlier D7 "top two + overflow" model). The
+ * differential badge shares the lowest-priority "attention" slot with the
+ * free coach line (AttentionCard's own pickAttentionVariant still decides
+ * between the two).
  *
  * The detector itself is behaviourally tested in differentialPaywall.test.js;
  * the Home wiring is a screen load effect + JSX, exercised on device per the

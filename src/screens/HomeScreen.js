@@ -256,12 +256,6 @@ export default function HomeScreen({ navigation, route }) {
   const [activationNudge, setActivationNudge] = useState(null);
   const [activationNudgeDismissed, setActivationNudgeDismissed] = useState(true);
 
-  // AC-6/CP-1 (design-usability-audit-2026-07-09), founder decision D7:
-  // whether the collapsed "more updates" affordance is expanded, revealing
-  // every banner past the top two shown by default. Session-local (not
-  // persisted) so a fresh Home visit always opens calm/collapsed.
-  const [bannersExpanded, setBannersExpanded] = useState(false);
-
   // Pre-workout coaching brief
   const [briefDismissed, setBriefDismissed] = useState(false);
 
@@ -1252,19 +1246,24 @@ export default function HomeScreen({ navigation, route }) {
     lastSession,
   });
 
-  // Banner priority (AC-6/CP-1, design-usability-audit-2026-07-09, founder
-  // decision D7): keep the primary "Start" action prominent by showing only
-  // the top TWO highest-priority banners at once; anything past that
-  // collapses behind one calm "N more updates" affordance instead of the old
-  // strict one-banner invariant, which hid every lower banner silently until
-  // the winner above it was dismissed. A fresh weekly coach review outranks
-  // a trial/paywall countdown, which outranks a suggested recovery week,
-  // which outranks the nutrition-phase nudge, then a lift plateau, then the
-  // activation nudge, then the free-tier/differential upsell line (see the
-  // ranked list below for the full order and rationale). Nothing here is an
-  // ED-safety, wellbeing or calm-mode banner (each already fails closed under
-  // an open ED flag/calm mode inside its own loader, unchanged by this), so
-  // none needs always-show treatment; this is a pure attention-priority call.
+  // Banner priority (D14, DECISIONS-2026-07-09.md, Home banner cap ruling
+  // delegated to the lead): keep the primary "Start" action prominent by
+  // showing AT MOST ONE attention banner at a time, chosen by this fixed
+  // priority order; every other eligible banner simply waits its turn, and
+  // the next-highest-priority one appears on the next render once the shown
+  // banner is dismissed or resolves. This supersedes the earlier D7 "top two
+  // + collapsed overflow" model (AC-6/CP-1, design-usability-audit-2026-07-09)
+  // as the strongest match to the one-hero Materials Policy. A fresh weekly
+  // coach review outranks a trial/paywall countdown, which outranks a
+  // suggested recovery week, which outranks the nutrition-phase nudge, then
+  // a lift plateau, then the activation nudge, then the free-tier/
+  // differential upsell line (see the ranked list below for the full order
+  // and rationale). Nothing here is an ED-safety, wellbeing or calm-mode
+  // banner (each already fails closed under an open ED flag/calm mode inside
+  // its own loader, unchanged by this), so none needs always-show/exempt
+  // treatment; this is a pure attention-priority call. Dismissal semantics
+  // are untouched per banner: the cap only decides who gets the one visible
+  // slot, it never marks an unshown banner as seen/dismissed.
   // Only surface the "this week's review" banner when the coach actually has a
   // review, i.e. it had enough data to assess the week. During the baseline
   // weeks the output is hasEnoughData:false ("Building your baseline,
@@ -1280,8 +1279,8 @@ export default function HomeScreen({ navigation, route }) {
   // You-tab icon can carry a calm badge too; CoachOutputScreen clears both the
   // badge and this banner (same per-week dismissal flag) the moment the
   // review is actually viewed, not just when the banner's own close button is
-  // tapped. showCoachBanner is rank 1 below, so it is always within the top
-  // two whenever eligible, this mirror never disagrees with what Home shows.
+  // tapped. showCoachBanner is rank 1 below, so it is always the one shown
+  // whenever eligible, this mirror never disagrees with what Home shows.
   useEffect(() => {
     useAppStore.getState().setHasUnseenCoachChange(showCoachBanner);
   }, [showCoachBanner]);
@@ -1308,9 +1307,8 @@ export default function HomeScreen({ navigation, route }) {
   const differentialBadgeEligible = tier === 'free' && !!differentialBanner?.shown && !differentialDismissed;
 
   // The ranked list, highest priority first. Filtering to only the currently
-  // eligible ones and slicing keeps this dynamic: whichever banners are
-  // actually active this load compete for the two visible slots, in this
-  // fixed order.
+  // eligible ones keeps this dynamic: whichever banners are actually active
+  // this load compete for the ONE visible slot, in this fixed order.
   const BANNER_PRIORITY = [
     { key: 'coach', eligible: showCoachBanner },
     { key: 'trial', eligible: trialBannerEligible },
@@ -1320,16 +1318,16 @@ export default function HomeScreen({ navigation, route }) {
     { key: 'activation', eligible: activationBannerEligible },
     { key: 'attention', eligible: freeCoachLineEligible || differentialBadgeEligible },
   ].filter(b => b.eligible);
-  const topBannerKeys = new Set(BANNER_PRIORITY.slice(0, 2).map(b => b.key));
-  const overflowBannerKeys = new Set(BANNER_PRIORITY.slice(2).map(b => b.key));
-  const overflowBannerCount = overflowBannerKeys.size;
+  // The single decision point for the cap: whichever eligible banner ranks
+  // highest takes the one visible slot; everything else waits its turn.
+  const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
 
-  const showTrialCountdownBanner = topBannerKeys.has('trial') || (bannersExpanded && overflowBannerKeys.has('trial'));
-  const showDeloadBanner = topBannerKeys.has('deload') || (bannersExpanded && overflowBannerKeys.has('deload'));
-  const showPhaseBanner = topBannerKeys.has('phase') || (bannersExpanded && overflowBannerKeys.has('phase'));
-  const showPlateauBanner = topBannerKeys.has('plateau') || (bannersExpanded && overflowBannerKeys.has('plateau'));
-  const showActivationBanner = topBannerKeys.has('activation') || (bannersExpanded && overflowBannerKeys.has('activation'));
-  const showAttentionSlot = topBannerKeys.has('attention') || (bannersExpanded && overflowBannerKeys.has('attention'));
+  const showTrialCountdownBanner = shownBannerKey === 'trial';
+  const showDeloadBanner = shownBannerKey === 'deload';
+  const showPhaseBanner = shownBannerKey === 'phase';
+  const showPlateauBanner = shownBannerKey === 'plateau';
+  const showActivationBanner = shownBannerKey === 'activation';
+  const showAttentionSlot = shownBannerKey === 'attention';
   // Free line still outranks the differential badge within their shared slot.
   const showFreeCoachLine = freeCoachLineEligible && showAttentionSlot;
   const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;
@@ -1578,27 +1576,10 @@ export default function HomeScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── AC-6/CP-1 (D7): collapsed "more updates" affordance. Only
-            appears when a third-or-later banner is eligible this load; taps
-            to reveal the rest in their own slots above (in the same priority
-            order), each keeping its own existing tap/dismiss behaviour. ── */}
-        {overflowBannerCount > 0 && (
-          <TouchableOpacity
-            style={styles.moreBannersRow}
-            onPress={() => setBannersExpanded(v => !v)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: bannersExpanded }}
-            accessibilityLabel={bannersExpanded
-              ? 'Hide the rest of your updates'
-              : `${overflowBannerCount} more update${overflowBannerCount === 1 ? '' : 's'}. Tap to view.`}
-          >
-            <Text style={styles.moreBannersText}>
-              {bannersExpanded ? 'Hide' : `${overflowBannerCount} more update${overflowBannerCount === 1 ? '' : 's'}`}
-            </Text>
-            <Ionicons name={bannersExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
+        {/* D14 (Home banner cap): no "reveal the rest" affordance. Exactly
+            one attention banner shows at a time (whichever above won the
+            slot); the others wait their turn and appear on a later render
+            once the shown one is dismissed or resolves. ── */}
 
         {/* Skeleton placeholders shown during initial cold-load. As
             soon as loadData completes, this block disappears and the
@@ -1689,7 +1670,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.continueTitle}>Workout in progress</Text>
                 <Text style={styles.continueSub}>Tap to return to your workout</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.background, 0.8)} />
+              <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.onPrimary, 0.8)} />
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
@@ -2437,7 +2418,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
-  continueSub: { ...type.caption, color: withAlpha(colors.background, 0.8), marginTop: spacing.xxs },
+  continueSub: { ...type.caption, color: withAlpha(colors.onPrimary, 0.8), marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: one primary CTA, two discreet text links
   // underneath. Stat goes in the eyebrow line so we don't waste a row on a
@@ -2975,22 +2956,6 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
-  },
-
-  // AC-6/CP-1 (D7): the collapsed "more updates" affordance. Deliberately
-  // quieter than the amber banners above it (no tint, no border) so it reads
-  // as a calm secondary control, not an eighth notice competing for attention.
-  moreBannersRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  moreBannersText: {
-    ...type.captionTight,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
   },
 
   // Pre-workout coaching brief card

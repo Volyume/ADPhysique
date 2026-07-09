@@ -1,13 +1,15 @@
 /**
  * B3 (audit/05-enhancements.md): proactive plateau-break surfacing on Home.
  *
- * Priority-slot mechanics updated for AC-6/CP-1 (design-usability-audit-
- * 2026-07-09), founder decision D7: the old strict one-banner invariant
- * (every lower banner hidden until the winner above it was dismissed) is
- * replaced by a ranked list that shows the top two eligible banners and
- * collapses the rest behind one "more updates" affordance. The plateau
- * banner's own trigger (plateauBannerEligible) is untouched; only how many
- * banners can show alongside it changed. These are scoped source guards in
+ * Priority-slot mechanics updated for D14 (DECISIONS-2026-07-09.md, Home
+ * banner cap ruling delegated to the lead): at most ONE attention banner
+ * shows above the Start-Workout hero at a time, chosen by the fixed
+ * BANNER_PRIORITY order; every other eligible banner waits its turn and
+ * takes the slot on a later render once the current winner is dismissed or
+ * resolves (this supersedes the earlier D7 "top two + overflow" model). The
+ * plateau banner's own trigger (plateauBannerEligible) is untouched; only
+ * whether it can share the stack with another banner at the same time
+ * changed. These are scoped source guards in
  * the checkinCoachAudit/navigationTargets style (screen wiring is exercised
  * on device, not jest-mounted). They pin:
  *  - the banner's eligibility trigger, unchanged by D7;
@@ -55,9 +57,9 @@ describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test('renders only when it wins one of the top two slots (direct or expanded-overflow)', () => {
+  test('renders only when it is the single highest-priority eligible banner', () => {
     expect(HOME).toMatch(
-      /const showPlateauBanner = topBannerKeys\.has\('plateau'\) \|\| \(bannersExpanded && overflowBannerKeys\.has\('plateau'\)\);/,
+      /const showPlateauBanner = shownBannerKey === 'plateau';/,
     );
   });
 });

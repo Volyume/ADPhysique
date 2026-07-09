@@ -603,3 +603,16 @@ OAuth SHA-1; Cut 4 seed walk.
   orphaned single-tap design documented as superseded in unilateral.js
   header. JOB BOARD: unilateral moved from Running to DONE; Home bundle
   running; concurrency limit raised to THREE agents (founder, 2026-07-09).
+- HOME BUNDLE LANDED (Sonnet, lead-reviewed): AC-3 ink fix (continue card
+  chevron + subtitle -> withAlpha(colors.onPrimary, 0.8); continueIcon
+  backing verified as genuine fill, untouched). Banner cap D14: single
+  shownBannerKey = highest-priority ELIGIBLE banner from BANNER_PRIORITY
+  (verified filtered by eligibility); superseded the interim top-2+overflow
+  model; no trigger/dismiss logic deleted; all 7 stack members classified
+  capped (none ED/consent - ConsistencyEcho independent, Article 9 gates in
+  RootNavigator upstream). D14 decision-log wording CORRECTED: master
+  ranking is BANNER_PRIORITY, not pickAttentionVariant (which only orders
+  the attention card's sub-variants). Guard tests rewritten for the new
+  model; 97 screen suites/720 tests + 4 banner guards/28 tests green, lint
+  clean. JOB BOARD: Home bundle DONE; Charts + Picker bundles running;
+  History bundle firing into the third slot.
