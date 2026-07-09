@@ -119,6 +119,14 @@ const SubscriptionPolicyScreen = lazyScreen(() => require('../screens/Subscripti
 import { withProGuard, withReadOnlyProGuard } from '../components/ProGate';
 import { withScreenBoundaries } from '../components/ScreenBoundary';
 import VolyumeTabBar from '../components/VolyumeTabBar';
+// CP-7 (design-usability audit 2026-07-09, coverage-06-competitive-hps.md):
+// opt-in biometric app lock. See src/lib/biometricLock.js's file header for
+// the full placement rationale -- this hook/screen are wired ONLY inside
+// LockedMainTabs below, which wraps the navigator's existing final
+// `MainTabs` branch. It never touches the auth/Article-9/onboarding
+// branches above it in renderNavigator().
+import { useAppLockGate } from '../lib/biometricLock';
+import BiometricLockScreen from '../components/BiometricLockScreen';
 
 // F8 (audit PR-7): per-screen error boundaries. The installed React
 // Navigation v6 (@react-navigation/native 6.1.18) has no `screenLayout`
@@ -558,6 +566,32 @@ function MainTabs() {
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Coach' }} />
     </Tab.Navigator>
+  );
+}
+
+// CP-7: the biometric app-lock gate, scoped to MainTabs only (see
+// biometricLock.js's file header). Holds a brief resolver (identical in
+// spirit to the firstRunChecked/tierChecked splash gate above) until the
+// pref is known, so a lock-enabled user never sees a flash of MainTabs
+// before the lock overlay appears; a lock-disabled user (the default)
+// passes straight through once that one read resolves. MainTabs itself
+// stays mounted underneath the lock overlay at all times once shown, so an
+// in-progress session (active workout, rest timer) is never unmounted by a
+// background/foreground cycle.
+function LockedMainTabs() {
+  const { checked, locked, authenticating, lastFailed, retryAuth } = useAppLockGate();
+  if (!checked) return <SplashScreen />;
+  return (
+    <View style={{ flex: 1 }}>
+      <MainTabs />
+      {locked ? (
+        <BiometricLockScreen
+          authenticating={authenticating}
+          lastFailed={lastFailed}
+          onRetry={retryAuth}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -1430,7 +1464,10 @@ export default function RootNavigator() {
     if (!firstRunComplete) {
       return tier === 'pro' ? <ProOnboardingStack /> : <FirstRunStack />;
     }
-    return <MainTabs />;
+    // CP-7: LockedMainTabs wraps MainTabs with the opt-in biometric app-lock
+    // overlay. This is the ONLY change to this function; every branch above
+    // (Welcome, Article 9 consent, onboarding) is untouched.
+    return <LockedMainTabs />;
   }
 
   return (

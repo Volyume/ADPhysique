@@ -36,7 +36,7 @@
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture.",
         "NSLocationWhenInUseUsageDescription": "Volyume does not track your location. This entry is required by a bundled camera library and the permission is never requested.",
         "NSMicrophoneUsageDescription": "Volyume does not record audio. This entry is required by a bundled media library used for timer sounds and the permission is never requested.",
-        "NSFaceIDUsageDescription": "Volyume does not use Face ID. This entry is required by the secure storage library that keeps your sign-in safe on this device.",
+        "NSFaceIDUsageDescription": "Volyume uses Face ID to unlock the app when you turn on App lock in Settings > Privacy. Off unless you switch it on.",
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
@@ -155,6 +155,12 @@
       ],
       "expo-apple-authentication",
       "@react-native-google-signin/google-signin",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Volyume uses Face ID to unlock the app when you turn on App lock in Settings > Privacy. Off unless you switch it on."
+        }
+      ],
       [
         "react-native-vision-camera",
         {
