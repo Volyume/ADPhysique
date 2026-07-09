@@ -422,3 +422,17 @@ OAuth SHA-1; Cut 4 seed walk.
   only, per-meal primary); one-time mark-eaten hint via the @volyume_seen_*
   convention, dismisses on first successful mark. 14-assertion D12 guard test.
   Suite green (env exception only; 1 lint warning = superset agent's live WIP).
+- Superset fix LANDED (6087b7f): v62 retag migration (local-only, correctly no
+  cloud counterpart), seedExercises fixed for fresh installs, founder pair now
+  tier:null/practical:false (test-pinned), calm builder nudge, real-sqlite
+  migration idempotency tests. SURFACED: Viking Press + Plate-Loaded Shoulder
+  Press carry the SAME mistag (queued tiny retag extension, same ruling).
+- D13 bundle LANDED (cc3ed7b): "First check-in: DD/MM/YYYY" (en-GB short);
+  additions intro -> "Optional extras. Add any you fancy for flavour. They
+  will not change the meal's numbers." + heading "Optional extras" (NOTE:
+  FoodSearchScreen:896 has a hardcoded duplicate of the OLD intro - queued);
+  Coach profile moved to directly beneath the hero (guard test satisfied).
+- CI INVESTIGATION LIVE: Android build unblocked by the lockfile fix (in
+  progress). Main CI still red on EVERY run in window with ALL TESTS PASSING
+  and exit 1 - masked locally by the progressScanVision env failure.
+  Diagnosing exit-code source (suspect: leaked process.exitCode / teardown).
