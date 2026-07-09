@@ -39,7 +39,7 @@ export default function ProfileAvatarMark({
       <View style={baseStyle}>
         <Image source={{ uri: avatarUri }} style={styles.image} />
         {editable ? (
-          <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primary }]}>
+          <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
             <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />
           </View>
         ) : null}
@@ -66,7 +66,7 @@ export default function ProfileAvatarMark({
     <View style={baseStyle}>
       <Text style={[styles.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
       {editable ? (
-        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primary }]}>
+        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
           <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />
         </View>
       ) : null}

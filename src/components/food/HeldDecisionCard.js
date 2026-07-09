@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radius.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   badgeText: {
     color: colors.onPrimary,

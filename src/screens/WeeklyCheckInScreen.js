@@ -1686,7 +1686,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gateBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
+    backgroundColor: colors.primaryFill, borderRadius: radius.lg,
     minHeight: 52,
     minWidth: 180,
     paddingHorizontal: spacing.xl,
@@ -1731,7 +1731,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3,
   },
   stepDotDone: { backgroundColor: withAlpha(colors.primary, 0.376) },
-  stepDotActive: { backgroundColor: colors.primary },
+  stepDotActive: { backgroundColor: colors.primaryFill },
 
   scroll: { flex: 1 },
   scrollContent: {
@@ -1901,7 +1901,7 @@ const styles = StyleSheet.create({
   ctaRow: { marginTop: spacing.lg },
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary,
+    gap: spacing.sm, backgroundColor: colors.primaryFill,
     borderRadius: radius.lg, height: 52,
   },
   // opacity 1 counteracts the Button primitive's default disabled dim so the

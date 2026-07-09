@@ -2407,7 +2407,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     marginTop: 7,
     flexShrink: 0,
   },

@@ -1566,7 +1566,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
   },
@@ -1694,7 +1694,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: circle(8),
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     opacity: 0.7,
   },
   mealCountRow: {
@@ -1743,7 +1743,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: circle(6),
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   mealCountRecCaption: {
     ...type.caption,

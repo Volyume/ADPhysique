@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   proBadge: {
-    backgroundColor: colors.primary, borderRadius: 4,
+    backgroundColor: colors.primaryFill, borderRadius: 4,
     paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
   proBadgeText: {
@@ -1905,7 +1905,7 @@ const styles = StyleSheet.create({
     height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
   },
-  progressFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
+  progressFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primaryFill },
 
   stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {
@@ -2107,7 +2107,7 @@ const styles = StyleSheet.create({
 
   // Shared by the compact height-units toggle (ft+in / cm). The full-width
   // sex and body-weight-unit pickers now use the shared SegmentedControl.
-  segmentActive: { backgroundColor: colors.primary },
+  segmentActive: { backgroundColor: colors.primaryFill },
   segmentTextActive: { color: colors.onPrimary },
 
   // Notifications
@@ -2149,7 +2149,7 @@ const styles = StyleSheet.create({
     width: 48, height: 28, borderRadius: 14,
     backgroundColor: colors.surface3, justifyContent: 'center', paddingHorizontal: 3,
   },
-  toggleOn: { backgroundColor: colors.primary },
+  toggleOn: { backgroundColor: colors.primaryFill },
   toggleThumb: { width: 20, height: 20, borderRadius: radius.md, backgroundColor: colors.textMuted },
   toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
 
@@ -2164,7 +2164,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center',
   },
-  hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  hourChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   hourChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 
@@ -2178,7 +2178,7 @@ const styles = StyleSheet.create({
   offerBadgeRow: { marginBottom: spacing.sm },
   offerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start', backgroundColor: colors.primary,
+    alignSelf: 'flex-start', backgroundColor: colors.primaryFill,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
   offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },

@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   addBtnText: { ...type.label, color: colors.onPrimary },
 
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: circle(8),
     backgroundColor: colors.border,
   },
-  quizDotActive: { backgroundColor: colors.primary },
+  quizDotActive: { backgroundColor: colors.primaryFill },
   quizQuestion: {
     fontSize: fontSize.lg, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
   quizResultDesc: { ...type.bodySm, color: colors.textSecondary },
   quizResultMeta: { ...type.caption, color: colors.textMuted },
   quizStartBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
+    backgroundColor: colors.primaryFill, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',
   },
   quizStartText: { ...type.bodyStrong, color: colors.onPrimary },

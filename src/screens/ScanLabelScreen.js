@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   },
   captureBtn: {
     width: 72, height: 72, borderRadius: circle(72),
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     alignItems: 'center', justifyContent: 'center',
     // eslint-disable-next-line no-restricted-syntax -- white capture-ring is camera-UI convention, sits over the live preview
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.9)',

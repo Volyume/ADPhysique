@@ -1210,7 +1210,7 @@ const styles = StyleSheet.create({
   },
   goalBarFill: {
     height: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     borderRadius: radius.sm,
   },
   goalBarCaption: {

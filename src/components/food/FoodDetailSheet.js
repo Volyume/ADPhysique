@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     alignItems: 'center',
   },
   saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },

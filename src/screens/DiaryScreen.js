@@ -1832,7 +1832,7 @@ const styles = StyleSheet.create({
   scanFab: {
     position: 'absolute', right: spacing.lg, bottom: spacing.xl,
     width: 56, height: 56, borderRadius: circle(56),
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     alignItems: 'center', justifyContent: 'center',
     ...shadow.lg,
   },
@@ -2101,7 +2101,7 @@ const styles = StyleSheet.create({
   plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
   plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   plannedBtnPrimary: {
-    backgroundColor: colors.primary, borderRadius: radius.md,
+    backgroundColor: colors.primaryFill, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -2137,7 +2137,7 @@ const styles = StyleSheet.create({
     height: 6, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
-  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
   // waterRow already pads/gaps its children; HintCaption's own padding would
   // double up, so this instance is flush.
   waterHint: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },

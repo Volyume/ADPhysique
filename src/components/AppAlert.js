@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnStacked: { width: '100%' },
-  btnPrimary: { backgroundColor: colors.primary },
+  btnPrimary: { backgroundColor: colors.primaryFill },
   btnDestructive: { backgroundColor: 'transparent' },
   btnCancel: { backgroundColor: 'transparent' },
   btnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold },

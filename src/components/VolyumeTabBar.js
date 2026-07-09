@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: spacing.sm,
     height: spacing.sm,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.surfaceElevated,
   },

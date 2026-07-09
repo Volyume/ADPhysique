@@ -1575,7 +1575,7 @@ const splashStyles = StyleSheet.create({
     width: 40,
     height: 2,
     borderRadius: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     marginTop: spacing.md,
   },
   tagline: {

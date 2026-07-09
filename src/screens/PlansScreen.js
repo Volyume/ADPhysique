@@ -1172,7 +1172,7 @@ const styles = StyleSheet.create({
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   startNextBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+    gap: spacing.xs, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.md,
     minHeight: 48,
   },
   startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
   templateActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   startTemplateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     minHeight: 44,
   },
   startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
@@ -1326,7 +1326,7 @@ const styles = StyleSheet.create({
   blockCardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
   blockRestartBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+    gap: spacing.xs, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.md,
     minWidth: 144,
     minHeight: 48,
   },

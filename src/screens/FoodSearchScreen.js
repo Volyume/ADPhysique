@@ -1135,7 +1135,7 @@ const styles = StyleSheet.create({
     height: 2, width: '100%', backgroundColor: 'transparent',
     borderRadius: radius.hair,
   },
-  tabUnderlineActive: { backgroundColor: colors.primary },
+  tabUnderlineActive: { backgroundColor: colors.primaryFill },
 
   searchBar: {
     margin: spacing.md,
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
   plateCount: { ...type.bodyStrong, color: colors.textPrimary },
   plateKcalLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   plateLogBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
@@ -1229,7 +1229,7 @@ const styles = StyleSheet.create({
   plateClearText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   plateLogBtnWide: {
     flex: 1, alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
 });

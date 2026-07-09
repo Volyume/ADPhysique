@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dayChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
   dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   dayChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   applyBtn: {
     marginTop: spacing.lg, minHeight: 48, borderRadius: radius.md,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
   },
   applyBtnDisabled: { opacity: 0.5 },
   applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },

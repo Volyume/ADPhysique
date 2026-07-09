@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   betaBadgeText: {
     fontSize: fontSize.micro,

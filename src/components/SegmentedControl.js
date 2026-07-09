@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.sm + 2,
     alignItems: 'center', borderRadius: radius.sm - 2,
   },
-  segmentActive: { backgroundColor: colors.primary },
+  segmentActive: { backgroundColor: colors.primaryFill },
   segmentText: { ...type.label, color: colors.textMuted },
   segmentTextActive: { color: colors.onPrimary },
 });

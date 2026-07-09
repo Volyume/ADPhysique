@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quizChip: { minHeight: 44 },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  cta: { backgroundColor: colors.primary, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
+  cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },
   ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.heavy },
 });

@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   plannedRowText: { ...type.bodySm, color: colors.textMuted, flex: 1 },
   markEatenButton: {
-    backgroundColor: colors.primary, borderRadius: radius.md,
+    backgroundColor: colors.primaryFill, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 36,
     alignItems: 'center', justifyContent: 'center',
   },

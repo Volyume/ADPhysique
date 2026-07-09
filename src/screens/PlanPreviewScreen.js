@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   phase: { ...type.body, color: colors.textSecondary },
   note: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.lg },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  cta: { backgroundColor: colors.primary, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
+  cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.heavy },
   fine: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.sm },
 });

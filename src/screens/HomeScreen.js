@@ -2515,7 +2515,7 @@ const styles = StyleSheet.create({
   noPlanSection: { gap: spacing.md },
   proRecoverBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
+    backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
   },
   proRecoverBtnText: {
     ...type.bodyStrong, color: colors.onPrimary,

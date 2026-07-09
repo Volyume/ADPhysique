@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   },
   lockChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primary, borderRadius: radius.sm,
+    backgroundColor: colors.primaryFill, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
   lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.onPrimary },
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   lockedTeaser: { alignSelf: 'stretch', marginBottom: spacing.sm },
   lockedBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary,
+    gap: spacing.sm, backgroundColor: colors.primaryFill,
     borderRadius: radius.lg, paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xxl, alignSelf: 'stretch',
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.primary, borderRadius: 4,
+    backgroundColor: colors.primaryFill, borderRadius: 4,
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },

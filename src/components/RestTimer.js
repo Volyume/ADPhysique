@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   },
   drainFill: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     transformOrigin: 'left',
   },
   drainFillWarm: { backgroundColor: colors.warning },

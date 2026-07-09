@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   featuredBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: radius.full,
+    alignSelf: 'flex-start', backgroundColor: colors.primaryFill, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
   featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontWeight: fontWeight.bold },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   startWorkoutBtn: {
     width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.primary, borderRadius: radius.md,
+    backgroundColor: colors.primaryFill, borderRadius: radius.md,
   },
   // Card owns background/radius/border here; overflow clips row dividers to
   // the rounded corner.
@@ -460,6 +460,6 @@ const styles = StyleSheet.create({
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },
-  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
+  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primaryFill, marginTop: 7 },
   whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });

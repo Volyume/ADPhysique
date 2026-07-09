@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   dotPast: { backgroundColor: colors.textMuted, borderColor: colors.textMuted },
   dotFuture: { backgroundColor: 'transparent', borderColor: colors.border },
   dotCurrent: {
-    backgroundColor: colors.primary, borderColor: colors.primary,
+    backgroundColor: colors.primaryFill, borderColor: colors.primary,
     width: 16, height: 16, borderRadius: circle(16),
   },
   dotRecovery: { backgroundColor: withAlpha(colors.primary, 0.22), borderColor: withAlpha(colors.primary, 0.45) },

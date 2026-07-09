@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: circle(10),
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   rowText: {
     flex: 1,

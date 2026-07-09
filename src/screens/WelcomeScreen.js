@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
 
   proCtaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, paddingVertical: spacing.md, margin: spacing.md,
+    backgroundColor: colors.primaryFill, paddingVertical: spacing.md, margin: spacing.md,
     borderRadius: radius.lg,
   },
   proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },

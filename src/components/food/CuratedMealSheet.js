@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   logBtn: {
     flex: 1, paddingVertical: spacing.md, borderRadius: radius.md,
-    backgroundColor: colors.primary, alignItems: 'center',
+    backgroundColor: colors.primaryFill, alignItems: 'center',
   },
   logText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });

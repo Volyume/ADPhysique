@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   checkboxOn: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     borderColor: colors.primary,
   },
   entryMain: { flex: 1 },

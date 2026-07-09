@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   dayCircleSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   dayNum: {
     ...type.num('caption'),
