@@ -86,6 +86,11 @@ jest.mock('../../food/db', () => ({
   recomputeRollup: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../../food/perDayTargets', () => ({
+  loadPerDayOffsetsForSync: jest.fn(),
+  applyPerDayOffsetsFromCloud: jest.fn(),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -113,6 +118,7 @@ const { getSupabaseClient } = require('../../supabase');
 const prefs = require('../../notifications/preferences');
 const db = require('../../database');
 const foodDb = require('../../food/db');
+const perDayTargets = require('../../food/perDayTargets');
 const { SYNC_REGISTRY } = require('../registry');
 const { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } = require('../transport');
 
@@ -229,6 +235,9 @@ describe('Matrix coverage', () => {
       // Food-domain coordinator (6 tables):
       'food_entries', 'custom_foods', 'saved_meals', 'recipes',
       'food_favourites', 'daily_water',
+      // perday_target_offsets (per-day calorie planning offsets, L05-PDT1):
+      // push/pull covered in the describe block below.
+      'perday_target_offsets',
     ]);
     for (const t of registryTables) expect(covered.has(t)).toBe(true);
     for (const t of covered) expect(registryTables.has(t)).toBe(true);
@@ -701,6 +710,96 @@ describe('plan_folders', () => {
     const result = await pushTable('plan_folders', { userId: 'u1', localUserId: 'u1' });
     expect(result.errors).toBe(1);
     expect(result.count).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// perday_target_offsets (bidirectional, LWW, no soft-delete, PK=user_id)
+// ---------------------------------------------------------------------------
+
+describe('perday_target_offsets', () => {
+  const OFFSETS = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 200, sun: 200 };
+
+  test('T1 insert push: single per-user row, onConflict:user_id', async () => {
+    perDayTargets.loadPerDayOffsetsForSync.mockResolvedValue({ offsets: OFFSETS, updatedAtMs: 1000 });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('perday_target_offsets', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    expect(sb._calls.upserts[0].opts).toEqual({ onConflict: 'user_id' });
+    expect(sb._calls.upserts[0].rows).toMatchObject({
+      user_id: 'u1', sat_offset_kcal: 200, sun_offset_kcal: 200, mon_offset_kcal: 0,
+    });
+  });
+
+  test('T2 update push: new offset values land in the upsert row', async () => {
+    perDayTargets.loadPerDayOffsetsForSync.mockResolvedValue({
+      offsets: { ...OFFSETS, wed: -300 }, updatedAtMs: 2000,
+    });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('perday_target_offsets', { userId: 'u1', localUserId: 'u1' });
+    expect(sb._calls.upserts[0].rows).toMatchObject({ wed_offset_kcal: -300 });
+  });
+
+  test('push: nothing to send when the offsets have never been saved locally', async () => {
+    perDayTargets.loadPerDayOffsetsForSync.mockResolvedValue({ offsets: OFFSETS, updatedAtMs: 0 });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('perday_target_offsets', { userId: 'u1', localUserId: 'u1' });
+    expect(result).toEqual({ count: 0, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(0);
+  });
+
+  // T3 N/A, softDelete:false. "Reset all to base target" writes zeros, never a tombstone.
+
+  test('T4 remote insert pull: cloud row → applyPerDayOffsetsFromCloud called with the mapped offsets', async () => {
+    const sb = makePullSb({
+      data: { user_id: 'u1', sat_offset_kcal: 300, sun_offset_kcal: 300, updated_at: new Date(5000).toISOString() },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    perDayTargets.applyPerDayOffsetsFromCloud.mockResolvedValue(true);
+
+    const result = await pullTable('perday_target_offsets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    expect(perDayTargets.applyPerDayOffsetsFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ sat: 300, sun: 300 }),
+      5000,
+    );
+  });
+
+  test('T5 conflict (LWW): pull reports skipped when the LWW gate keeps the local copy', async () => {
+    const sb = makePullSb({
+      data: { user_id: 'u1', updated_at: new Date(100).toISOString() },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    perDayTargets.applyPerDayOffsetsFromCloud.mockResolvedValue(false);
+
+    const result = await pullTable('perday_target_offsets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0, skipped: 1 });
+  });
+
+  test('T6 push error: upsert fails → errors:1, count:0', async () => {
+    perDayTargets.loadPerDayOffsetsForSync.mockResolvedValue({ offsets: OFFSETS, updatedAtMs: 1000 });
+    const sb = makeUpsertSb({ upsertError: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('perday_target_offsets', { userId: 'u1', localUserId: 'u1' });
+    expect(result.errors).toBe(1);
+    expect(result.count).toBe(0);
+  });
+
+  test('benign-skips (errors:0) when the cloud table is not migrated yet', async () => {
+    perDayTargets.loadPerDayOffsetsForSync.mockResolvedValue({ offsets: OFFSETS, updatedAtMs: 1000 });
+    const sb = makeUpsertSb({
+      upsertError: { code: 'PGRST205', message: "Could not find the table 'public.perday_target_offsets' in the schema cache" },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('perday_target_offsets', { userId: 'u1', localUserId: 'u1' });
+    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
   });
 });
 

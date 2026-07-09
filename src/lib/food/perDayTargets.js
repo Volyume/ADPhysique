@@ -20,10 +20,24 @@
  * Offsets are kcal deltas (… −200, 0, +300 …), so they auto-track changes to the
  * base target instead of going stale like an absolute goal would. Stored device-
  * local in AsyncStorage, like the meals-per-day and meal-reminder prefs.
+ *
+ * Sync (design-usability audit 2026-07-09, L05-PDT1): the offsets were
+ * device-local only and lost on reinstall/device change, below the
+ * portability bar CLAUDE.md sets for a Pro feature. `loadPerDayOffsetsForSync`
+ * / `applyPerDayOffsetsFromCloud` back the new `perday_target_offsets` cloud
+ * table (src/lib/sync/tables/perDayTargetOffsets.js, registry entry, cloud
+ * migration 110 — founder-run, not yet applied). A second AsyncStorage key
+ * tracks when the offsets were last WRITTEN LOCALLY (ms epoch) so the sync
+ * handler has a last-write-wins clock without changing the existing
+ * `loadPerDayOffsets`/`savePerDayOffsets` contract every screen already uses.
+ * Nothing here feeds the engine or a floor; see the module header above.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const PERDAY_TARGETS_KEY = '@volyume_perday_target_offsets';
+// Last-write-wins clock for the cloud sync handler. Stored separately from
+// PERDAY_TARGETS_KEY so the existing offsets payload shape never changes.
+export const PERDAY_TARGETS_UPDATED_AT_KEY = '@volyume_perday_target_offsets_updated_at';
 
 // Monday-first, matching the diary's weekDatesMon week model.
 export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -100,8 +114,65 @@ export async function loadPerDayOffsets() {
   }
 }
 
-export async function savePerDayOffsets(offsets) {
+/** The ms epoch the offsets were last written locally, or 0 if never saved. */
+export async function loadPerDayOffsetsUpdatedAtMs() {
+  try {
+    const raw = await AsyncStorage.getItem(PERDAY_TARGETS_UPDATED_AT_KEY);
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) ? n : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+// Shared write path. Never called directly by screens: savePerDayOffsets
+// (user edits, bumps the clock to now and queues a push) and
+// applyPerDayOffsetsFromCloud (a cloud pull, stamps the cloud's own clock so
+// the LWW comparison stays meaningful) both go through this.
+async function _writeOffsets(offsets, updatedAtMs) {
   const clean = normaliseOffsets(offsets);
-  try { await AsyncStorage.setItem(PERDAY_TARGETS_KEY, JSON.stringify(clean)); } catch (_) {}
+  try {
+    await AsyncStorage.setItem(PERDAY_TARGETS_KEY, JSON.stringify(clean));
+    await AsyncStorage.setItem(PERDAY_TARGETS_UPDATED_AT_KEY, String(updatedAtMs));
+  } catch (_) { /* tolerate, matches the pre-existing best-effort save */ }
   return clean;
+}
+
+export async function savePerDayOffsets(offsets) {
+  const clean = await _writeOffsets(offsets, Date.now());
+  // Queue a push like every other food-domain write. Lazy-required so a test
+  // environment or a require cycle can't break a plain local save.
+  try {
+    // eslint-disable-next-line global-require
+    require('../sync').scheduleSync();
+  } catch (_) { /* sync module unavailable, tolerate */ }
+  return clean;
+}
+
+/**
+ * Read the current offsets + their local last-write-wins clock, for the
+ * sync push handler. Never throws; a storage read failure reads as
+ * "never saved" (updatedAtMs 0), matching loadPerDayOffsets' own fallback.
+ */
+export async function loadPerDayOffsetsForSync() {
+  const [offsets, updatedAtMs] = await Promise.all([
+    loadPerDayOffsets(),
+    loadPerDayOffsetsUpdatedAtMs(),
+  ]);
+  return { offsets, updatedAtMs };
+}
+
+/**
+ * Apply a cloud row under a strict last-write-wins gate: only overwrite the
+ * local offsets when the cloud row is NEWER than the local clock. Never
+ * calls scheduleSync (this is a pull, not a user edit) so a pull can never
+ * loop back into an immediate push. Returns true when applied, false when
+ * skipped because the local copy was already as new or newer.
+ */
+export async function applyPerDayOffsetsFromCloud(rawOffsets, cloudUpdatedAtMs) {
+  const localUpdatedAtMs = await loadPerDayOffsetsUpdatedAtMs();
+  const cloudMs = Number.isFinite(cloudUpdatedAtMs) ? cloudUpdatedAtMs : 0;
+  if (localUpdatedAtMs > 0 && cloudMs <= localUpdatedAtMs) return false;
+  await _writeOffsets(rawOffsets, cloudMs);
+  return true;
 }

@@ -227,6 +227,21 @@ export const SYNC_REGISTRY = [
     softDelete: true,
     direction: 'bidirectional',
   },
+  {
+    // Per-day-of-week calorie planning offsets (design-usability audit
+    // 2026-07-09, finding L05-PDT1). One row per user; the offsets are
+    // display-only kcal deltas the diary adds to the base target
+    // (src/lib/food/perDayTargets.js), never a coaching write, never a
+    // floor. No soft delete: "Reset all to base target" writes zeros, it
+    // never deletes the row. Cloud migration 110 (founder-run, not yet
+    // applied). Handler: src/lib/sync/tables/perDayTargetOffsets.js.
+    table: 'perday_target_offsets',
+    pk: 'user_id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: false,
+    direction: 'bidirectional',
+  },
 ];
 
 export function getRegistryEntry(tableName) {

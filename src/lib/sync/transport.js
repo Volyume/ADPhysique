@@ -45,6 +45,7 @@ import { pushProfiles, pullProfiles } from './tables/profiles';
 import { pushPartners, pullPartners } from './tables/partners';
 import { pushMealPlans, pullMealPlans } from './tables/mealPlans';
 import { pushPlanFolders, pullPlanFolders } from './tables/planFolders';
+import { pushPerDayTargetOffsets, pullPerDayTargetOffsets } from './tables/perDayTargetOffsets';
 import {
   FOOD_DOMAIN_TABLES,
   foodPushFor,
@@ -89,6 +90,7 @@ export const MIGRATED_TABLES = Object.freeze([
   'partner_signals',
   'meal_plans',
   'plan_folders',
+  'perday_target_offsets',
   ...FOOD_DOMAIN_TABLES,
   // recipe_ingredients after recipes (in FOOD_DOMAIN_TABLES) so the parent is
   // pushed and pulled before the child within a cycle (audit B6).
@@ -108,6 +110,7 @@ const PUSH_HANDLERS = {
   partner_signals: pushPartners,
   meal_plans: pushMealPlans,
   plan_folders: pushPlanFolders,
+  perday_target_offsets: pushPerDayTargetOffsets,
   // Pull-only tables intentionally absent, pushTable returns
   // skipped:'pull_only' before reaching this map:
   //   ed_pattern_flags, tier_history, daily_intake_rollups.
@@ -135,6 +138,7 @@ const PULL_HANDLERS = {
   partner_signals: pullPartners,
   meal_plans: pullMealPlans,
   plan_folders: pullPlanFolders,
+  perday_target_offsets: pullPerDayTargetOffsets,
   // Food-domain tables share the coordinator (incl. pull-only
   // daily_intake_rollups which is reported as a count of dates
   // whose rollups were locally recomputed):
