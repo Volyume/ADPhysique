@@ -481,7 +481,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
-        setFirstSessionLine(suppressed ? null : "Your first session is done, and that's the hard part over.");
+        setFirstSessionLine(suppressed ? null : "Your first workout is done, and that's the hard part over.");
       }
 
       // D1: claim the early-win milestone for this session. Skipped on the very
@@ -917,7 +917,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             const { verdict, pct, position, total, priorCount } = comparison;
             let headline, sub, accent;
             if (verdict === 'best') {
-              headline = `Strongest session in 4 weeks`;
+              headline = `Strongest workout in 4 weeks`;
               sub = `Top of ${total} sessions logged for this routine.`;
               accent = colors.gold;
             } else if (verdict === 'up') {
@@ -1252,7 +1252,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && (
           <Card style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Session feedback</Text>
+              <Text style={styles.sectionTitle}>Workout feedback</Text>
               <Text style={styles.optionalLabel}>optional</Text>
             </View>
             <Text style={styles.coachZoneSubHeading}>How did the session feel?</Text>
@@ -1262,10 +1262,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityState={{ expanded: feedbackExpanded }}
-              accessibilityLabel={feedbackExpanded ? 'Hide session rating' : 'Rate this session'}
+              accessibilityLabel={feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
             >
               <Text style={styles.feedbackToggleBtnText}>
-                {feedbackExpanded ? 'Hide session rating' : 'Rate this session'}
+                {feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
               </Text>
               <Ionicons
                 name={feedbackExpanded ? 'chevron-up' : 'chevron-down'}
@@ -1283,7 +1283,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
-                <TextField accessibilityLabel="Session feedback notes"
+                <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
                   inputStyle={styles.notesInput}
                   value={notes}

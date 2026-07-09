@@ -177,7 +177,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
   function handleRepeatWorkout(workout) {
     appAlert(
-      'Repeat session',
+      'Repeat workout',
       'How would you like to continue?',
       [
         {
@@ -504,7 +504,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             onPress={() => handleRepeatWorkout(workout)}
             style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
             textStyle={styles.repeatBtnText}
-            accessibilityLabel="Repeat session"
+            accessibilityLabel="Repeat workout"
           />
           <TouchableOpacity
             style={styles.deleteBtn}
@@ -770,8 +770,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           ) : (
             <EmptyState
               icon="barbell-outline"
-              title="Your sessions will appear here"
-              text="Completed workouts appear here. Each session is saved automatically when you finish."
+              title="Your workouts will appear here"
+              text="Completed workouts appear here, saved automatically when you finish."
             />
           )
         }

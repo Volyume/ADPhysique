@@ -2379,6 +2379,29 @@ export async function getLastTrainedByMuscle(userId) {
 }
 
 /**
+ * L07-F7 (design-usability-audit-2026-07-09): the exercise picker's "recents"
+ * row. Returns exercise ids ordered by the most recent COMPLETED workout that
+ * logged a working set on that exercise, most recent first, deduped, capped
+ * at `limit`. Warm-up sets are excluded so the row reflects what the user
+ * actually trained, matching getLastTrainedByMuscle's own filter.
+ */
+export async function getRecentlyUsedExerciseIds(userId, limit = 8) {
+  const d = await db();
+  const rows = await d.getAllAsync(`
+    SELECT s.exercise_id AS exerciseId, MAX(w.started_at) AS last_session_ms
+    FROM workout_sets s
+    JOIN workouts w ON w.id = s.workout_id
+    WHERE w.user_id = ?
+      AND w.is_completed = 1
+      AND s.set_type != 'warmup'
+    GROUP BY s.exercise_id
+    ORDER BY last_session_ms DESC
+    LIMIT ?
+  `, [userId, limit]);
+  return rows.map(r => r.exerciseId);
+}
+
+/**
  * Returns acute (this week) and chronic (4-week average) training tonnage
  * for calculating the Acute:Chronic Workload Ratio.
  * Only counts hard sets from completed workouts (setType != 'warmup').

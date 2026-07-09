@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 12,
     backgroundColor: colors.border,
-    borderRadius: 1,
+    borderRadius: radius.hair,
   },
   setsCount: {
     width: 22,

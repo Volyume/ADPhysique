@@ -10,10 +10,12 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { getAllExercises, insertExercise } from '../lib/database';
+import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
+import useAppStore from '../store/useAppStore';
 import Chip from './Chip';
 import SearchBar from './SearchBar';
+import SectionLabel from './SectionLabel';
 import TextField from './TextField';
 import { useToast } from './Toast';
 
@@ -32,6 +34,7 @@ const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight
 // actionLabel). Either works; saveLabel wins if both are given.
 export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel, actionLabel }) {
   const toast = useToast();
+  const userId = useAppStore(s => s.user?.id);
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const isSwapAction = buttonLabel.toLowerCase().includes('swap');
   const showBrowseFilters = !isSwapAction;
@@ -40,6 +43,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const [equipmentFilter, setEquipmentFilter] = useState('');
   const [allExercises, setAll] = useState([]);
   const [filtered, setFiltered] = useState([]);
+  const [recentIds, setRecentIds] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createMuscle, setCreateMuscle] = useState('');
@@ -56,7 +60,21 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       setAll(exs);
       setFiltered(exs);
     }).catch(() => {});
-  }, [visible]);
+    // L07-F7: most-recently-used row, add-mode only (swap already narrows to
+    // search-and-select). A read failure just leaves the row empty; browsing
+    // the full library still works.
+    if (!isSwapAction && userId) {
+      getRecentlyUsedExerciseIds(userId).then(setRecentIds).catch(() => setRecentIds([]));
+    } else {
+      setRecentIds([]);
+    }
+  }, [visible, isSwapAction, userId]);
+
+  // Recents are an entry point into an untouched browse, not another filter:
+  // once the user is searching or has a chip active, the row steps aside.
+  const recentExercises = (!isSwapAction && !query.trim() && !muscleFilter && !equipmentFilter)
+    ? recentIds.map(id => allExercises.find(e => String(e.id) === String(id))).filter(Boolean)
+    : [];
 
   useEffect(() => {
     const q = query.trim().toLowerCase();
@@ -204,6 +222,30 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            {recentExercises.length > 0 ? (
+              <View style={styles.recentSection}>
+                <SectionLabel style={styles.recentLabel}>Recent</SectionLabel>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {recentExercises.map(ex => (
+                    <Chip
+                      key={ex.id}
+                      icon="time-outline"
+                      label={ex.name}
+                      numberOfLines={1}
+                      accessibilityLabel={`Add ${ex.name}`}
+                      onPress={() => { onSelect(ex); onClose(); }}
+                      style={styles.recentChip}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
 
             {showBrowseFilters ? (
               <>
@@ -357,6 +399,9 @@ const styles = StyleSheet.create({
   filterChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   filterChipText: { ...type.label, color: colors.textSecondary },
   filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  recentSection: { paddingTop: spacing.sm },
+  recentLabel: { paddingHorizontal: spacing.lg },
+  recentChip: { maxWidth: 180 },
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     minHeight: 48,

@@ -123,7 +123,7 @@ function PlanBalanceCard({ days }) {
     <Card style={balanceStyles.card}>
       <View style={balanceStyles.header}>
         <Ionicons name="pie-chart-outline" size={16} color={colors.textSecondary} />
-        <Text style={balanceStyles.title}>Plan Balance</Text>
+        <Text style={balanceStyles.title}>Plan balance</Text>
       </View>
 
       <View style={balanceStyles.grid}>
@@ -1141,12 +1141,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
         <View style={styles.successIconWrap}>
           <Ionicons name="checkmark-circle" size={48} color={colors.success} />
         </View>
-        <Text style={styles.successTitle}>Plan Activated</Text>
+        <Text style={styles.successTitle}>Plan activated</Text>
         <Text style={styles.successName}>{savedPlanName}</Text>
         <Text style={styles.successSub}>Your plan is set as active and ready to use.</Text>
         <View style={styles.successActions}>
           <Button
-            title="Stay Here"
+            title="Stay here"
             variant="secondary"
             fullWidth={false}
             style={styles.successSecondary}

@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   strengthName: { ...type.label, color: colors.textPrimary },
   strengthNarrative: { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
-  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm, flexShrink: 0 },
+  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm, flexShrink: 0 },
   levelBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
 
   bwPromptCard: {

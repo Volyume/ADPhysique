@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   weekProgressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   weekLabel:  { ...type.num('label'), color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
-  weekDot:    { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.surface2 },
+  weekDot:    { flex: 1, height: 8, borderRadius: radius.xs, backgroundColor: colors.surface2 },
   weekDotActive: { backgroundColor: colors.primary },
   weekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
   deloadLabel: { ...type.num('caption'), color: colors.warning },
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   planWeekLabel:     { ...type.num('label'), color: colors.primary },
   planWeekLabelDeload: { color: colors.warning },
   planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
-  planWeekDot:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.surface2 },
+  planWeekDot:       { flex: 1, height: 6, borderRadius: radius.hair, backgroundColor: colors.surface2 },
   planWeekDotActive: { backgroundColor: colors.primary },
   planWeekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
 });

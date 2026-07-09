@@ -160,7 +160,7 @@ export default function PlanDetailScreen({ navigation, route }) {
 
   async function handleArchive() {
     appAlert(
-      'Archive Plan?',
+      'Archive plan?',
       'The plan will be hidden. Session history remains intact.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -367,18 +367,18 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={colors.primary} />
-                <Text style={styles.manageRowText}>Edit Plan</Text>
+                <Text style={styles.manageRowText}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                <Text style={styles.manageRowText}>Duplicate Plan</Text>
+                <Text style={styles.manageRowText}>Duplicate plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={colors.error} />
-                  <Text style={[styles.manageRowText, { color: colors.error }]}>Archive Plan</Text>
+                  <Text style={[styles.manageRowText, { color: colors.error }]}>Archive plan</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               )}

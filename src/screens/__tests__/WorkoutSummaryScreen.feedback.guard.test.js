@@ -46,9 +46,13 @@ describe('WorkoutSummaryScreen feedback controls', () => {
   });
 
   test('keeps optional post-workout ratings collapsed until the user opens them', () => {
+    // old -> new (design-usability-audit-2026-07-09 lane-07 SAFE sweep, L01-B39):
+    // "Session feedback" / "Rate this session" reworded to "Workout feedback" /
+    // "Rate this workout" so the completed unit reads as "workout" throughout,
+    // matching the "Workout complete" header on this screen.
     expect(SOURCE).toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(false);');
-    expect(SOURCE).toContain('<Text style={styles.sectionTitle}>Session feedback</Text>');
-    expect(SOURCE).toContain('Rate this session');
+    expect(SOURCE).toContain('<Text style={styles.sectionTitle}>Workout feedback</Text>');
+    expect(SOURCE).toContain('Rate this workout');
     expect(SOURCE).toContain('placeholder="Anything notable from this session"');
     expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');
     expect(SOURCE).not.toContain('Tell your coach');
