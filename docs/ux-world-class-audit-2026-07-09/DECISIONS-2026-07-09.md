@@ -91,3 +91,14 @@ compound_isolation field:
 Rationale (expert review vs real-world practice): resting limb recovers while
 the other works; systemic fatigue only matters on compounds. One deterministic
 rule, no user configuration, self-explanatory in the flow.
+
+## D10. Bands-in-loaded-plans exception (founder, structured round, 2026-07-09)
+
+The locked rule "bands never reach a loaded plan (measurable staples only)"
+gains ONE NAMED EXCEPTION: Band Lat Pulldown and Band Assisted Pull-Up become
+available in the Dumbbells Only / Barbell & Plates / Home Gym equipment
+profiles as accessories, because those contexts otherwise have NO vertical
+pull at all. The rule stands for every other band exercise and context. The
+exception is documented in exerciseMetadata and pinned by updated tests
+(citations D10) replacing the blanket never-rule assertions. QUEUED into pair
+1's small-batch slot alongside the B-5 tail + approved-unbuilt items.
