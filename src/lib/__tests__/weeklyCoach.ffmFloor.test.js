@@ -205,7 +205,12 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
       recentIntakeDaysLogged: 7,
     }));
     expect(out.whyThisWeek).toMatch(/calorie target holds/);
-    expect(out.whyThisWeek).toMatch(/fat-free mass/);
+    // 'fat-free mass' -> 'lean mass': commit de9a1653 (2026-07-09) restored the
+    // ffm_floor_hold copy to comply with the plain-mechanism jargon rule in
+    // docs/COACHING_VOICE_SYNTHESIS_LOCKED.md line 178 ("Substitute 'FFM' with
+    // 'lean mass' or 'muscle'"). The floor threshold/maths are untouched -
+    // floorKcal: 2040 is still asserted exactly by the test above this one.
+    expect(out.whyThisWeek).toMatch(/lean mass/);
   });
 
   test('intake above the floor does not trigger the hold', () => {
