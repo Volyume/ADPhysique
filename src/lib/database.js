@@ -1772,6 +1772,39 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET primary_muscle = 'front_delts'
      WHERE name IN ('Machine Shoulder Press', 'Shoulder Press')`,
   ],
+  // v63, extend the v62 front-delt muscle-taxonomy correction to two more
+  // exact-name matches that v62 deliberately left out of scope: "Viking
+  // Press" and "Plate-Loaded Shoulder Press" (both overhead PUSHES,
+  // front-delt dominant, matching Machine Shoulder Press / Overhead Press /
+  // Military Press / Arnold Press / Seated Dumbbell Press). Same v2
+  // taxonomy bug as v62 (the original side_delts UPDATE clause above,
+  // :419-422), just a wider founder-approved retag landing after v62
+  // shipped. Founder ruling: docs/ux-world-class-audit-2026-07-09/
+  // DECISIONS-2026-07-09.md D14 Group A ("Viking Press + Plate-Loaded
+  // Shoulder Press retag"). v62 is already shipped and not safe to edit in
+  // place, so this is a NEW, additive, idempotent migration, exactly scoped
+  // by name so no other Shoulder Press / delt variant is touched (every
+  // other side_delts row -- the Lateral Raise family, Upright Row, Cable
+  // Upright Row, Dumbbell Y-Raise -- is genuinely side-delt and stays put;
+  // Dumbbell/Half-Kneeling/Band Shoulder Press and the "(Front Delt Focus)"
+  // variant are already front_delts in seedExercises and are left alone).
+  // Applied: LOCALLY only (no rows have run this yet), via this
+  // user_version bump.
+  // No cloud counterpart: the canonical exercise catalogue (user_id NULL
+  // rows) is seeded locally per device and is never pushed to or pulled
+  // from Supabase (src/lib/sync.js only pulls `exercises` rows scoped to
+  // `user_id = <this user>`, i.e. legacy custom exercises); there is
+  // nothing to correct in EU-Dublin for this fix.
+  // Safe to re-run: yes (setting an already-correct row to the same value
+  // is a no-op).
+  // Rollback: UPDATE exercises SET primary_muscle = 'side_delts' WHERE name
+  // IN ('Viking Press', 'Plate-Loaded Shoulder Press') (restores the
+  // pre-fix mistag; not recommended, kept only for the mandated rollback
+  // note).
+  [
+    `UPDATE exercises SET primary_muscle = 'front_delts'
+     WHERE name IN ('Viking Press', 'Plate-Loaded Shoulder Press')`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

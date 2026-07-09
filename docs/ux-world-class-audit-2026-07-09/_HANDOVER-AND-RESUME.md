@@ -700,3 +700,12 @@ OAuth SHA-1; Cut 4 seed walk.
   ALSO PENDING: founder decision round (notifications drift, rest-day A2,
   plan-G acceleration + adherence-why) - asked once, founder deferred;
   re-raise when founder is ready, never silently drop.
+- D15 RULED AND LANDED: v63 retag committed (Viking + Plate-Loaded
+  Shoulder Press -> front_delts, migration + seed + 9 idempotency tests)
+  with the overlap gate raised 0.50 -> 0.60 per founder ("Raise the
+  gate"; measured 0.56). Rulings recorded in DECISIONS D15: amend locked
+  doc for notif drift; re-specify rest-day; plan-G = BOTH (ack copy +
+  bounded escalation), lead-delegated N=3 and adherence-why placement =
+  onboarding + first coach output. NEXT PAIR: (1) notifications agent
+  (amend Surface 6 to current strings + rest-day spec doc), (2) plan-G
+  build agent (engine diff gets hands-on lead review at landing).

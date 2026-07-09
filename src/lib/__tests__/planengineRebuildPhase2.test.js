@@ -46,10 +46,15 @@ describe('Phase 2 benchmark: division specialisation', () => {
   // is the live app path. The internal POOL is a thin hand-written fallback
   // (e.g. only 4 lateral raises total), so two divisions necessarily pick the
   // same few lifts there; measuring divergence on it is not meaningful.
-  test('4-day Bikini and 4-day MP share < 50% of exercises (phase 3 gate, founder-set, library path)', () => {
+  // Gate raised 0.50 -> 0.60 by founder ruling (D15, 2026-07-09): the
+  // approved front-delt retag of Viking Press and Plate-Loaded Shoulder
+  // Press (migration v63) shifts candidate pool composition and lifts the
+  // measured overlap to 0.56; the founder chose to accept that rather than
+  // rework pool rules or narrow the retag.
+  test('4-day Bikini and 4-day MP share < 60% of exercises (phase 3 gate, founder-set, library path)', () => {
     const bikLib = genLib('bikini', { days: 4 });
     const mpLib = genLib('mens_physique', { days: 4 });
-    expect(overlapPct(bikLib, mpLib)).toBeLessThan(0.50);
+    expect(overlapPct(bikLib, mpLib)).toBeLessThan(0.60);
   });
   test('4-day Bikini and 4-day MP have different lead lifts', () => {
     expect(measure(bik4).lead).not.toBe(measure(mp4).lead);

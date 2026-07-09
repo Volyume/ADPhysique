@@ -168,3 +168,24 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   (A2), Settings cluster (CP-10 restart-free theming, CP-9 Help/FAQ,
   L08-B3 post-cancel link), weigh-in edit/delete (NAV-2).** RPE/RIR
   revisit NOT selected this round (stays settled-removed).
+
+## D15 — Retag gate + notifications + plan-G rulings (founder, 2026-07-09)
+- **Division overlap gate RAISED 0.50 -> 0.60** ("Raise the gate"): accepts
+  the 0.56 overlap caused by the approved v63 front-delt retag (Viking
+  Press + Plate-Loaded Shoulder Press). planengineRebuildPhase2.test.js
+  updated with a comment citing this ruling.
+- **Notification drift: AMEND THE LOCKED DOC.** The current in-app
+  weekly-coach-ready and cascade-gate strings become canonical; Surface 6
+  in COACHING_VOICE_SYNTHESIS_LOCKED.md is updated to match them verbatim
+  (documented as a founder amendment, not silent drift).
+- **Rest-day notification: RE-SPECIFY.** Commission a short spec (copy,
+  trigger, quiet hours, ED/calm rules) and bring back for approval before
+  any build.
+- **Plan-G over-performance: BOTH** - calm acknowledgement copy AND the
+  bounded one-step escalation (consecutiveExceededWeeks pattern), still
+  MRV-clamped, confirm-before-apply, floors/gates untouched.
+- **Plan-G threshold N and adherence-why placement: DELEGATED to lead.**
+  Lead rulings: N = 3 consecutive exceeded weeks (sustained pattern,
+  responds within a mesocycle); adherence-why surfaces BOTH at Pro setup
+  completion and once in the first weekly coach output (one calm line
+  each, said once, never repeated).

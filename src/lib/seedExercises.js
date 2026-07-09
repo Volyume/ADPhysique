@@ -564,6 +564,12 @@ const RAW = [
   // plan-D-intelligent-supersets.md section 1b: it was mistagged side_delts,
   // the same taxonomy bug corrected by database.js SCHEMA_MIGRATIONS v62).
   ['Machine Shoulder Press',        'front_delts', ['triceps', 'side_delts'], 'machine',   'push',      true,  8, 15,  3, 4],
+  // Viking Press: an overhead PUSH, front-delt dominant, moved here from the
+  // Side delts block below (same taxonomy bug as Machine Shoulder Press
+  // above, closed for this name by database.js SCHEMA_MIGRATIONS v63; v62
+  // deliberately left it out of scope pending this founder ruling -- see
+  // docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md D14 Group A).
+  ['Viking Press',                  'front_delts', ['triceps', 'side_delts'], 'machine', 'push',      true,  8, 15,  3, 4],
   ['Dumbbell Front Raise',          'front_delts', [],                    'dumbbell',     'isolation', false, 12, 20, 2, 3],
   ['Cable Front Raise',             'front_delts', [],                    'cable',        'isolation', false, 12, 20, 2, 3],
 
@@ -575,7 +581,6 @@ const RAW = [
   ['Landmine Lateral Raise',        'side_delts', [],                     'barbell',      'isolation', false, 12, 20, 2, 4],
   ['Seated Lateral Raise',          'side_delts', [],                     'dumbbell',     'isolation', false, 15, 25, 2, 5],
   ['Upright Row',                   'side_delts', ['biceps', 'traps'],    'barbell',      'pull',      false, 10, 15, 3, 3],
-  ['Viking Press',                  'side_delts', ['triceps', 'front_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
   ['Leaning Cable Lateral Raise',   'side_delts', [],                     'cable',        'isolation', false, 15, 25, 2, 5],
   ['Plate Lateral Raise',           'side_delts', [],                     'barbell',      'isolation', false, 15, 25, 2, 4],
   ['Cable Upright Row',             'side_delts', ['biceps', 'traps'],    'cable',        'pull',      false, 10, 15, 2, 3],
@@ -980,7 +985,13 @@ const RAW = [
   ['Plate-Loaded Row',              'back', ['biceps', 'rear_delts'],      'machine',      'pull',      true,  8, 15,  3, 4],
   ['Plate-Loaded High Row',         'back', ['biceps', 'rear_delts'],      'machine',      'pull',      true,  8, 15,  3, 4],
   ['Plate-Loaded Low Row',          'back', ['biceps'],                    'machine',      'pull',      true,  10, 15, 3, 4],
-  ['Plate-Loaded Shoulder Press',   'side_delts', ['front_delts', 'triceps'], 'machine',   'push',      true,  8, 15,  3, 4],
+  // Plate-Loaded Shoulder Press: an overhead PUSH, front-delt dominant (same
+  // taxonomy bug as Machine Shoulder Press / Viking Press above, closed for
+  // this name by database.js SCHEMA_MIGRATIONS v63). Left in place in this
+  // equipment-grouped section (siblings here keep their own varied muscle
+  // tags too, e.g. Plate-Loaded Rear Delt below) rather than relocated to
+  // the muscle-grouped Shoulders section above.
+  ['Plate-Loaded Shoulder Press',   'front_delts', ['triceps', 'side_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
   ['Plate-Loaded Rear Delt',        'rear_delts', ['back'],                'machine',      'isolation', false, 12, 20, 2, 5],
   ['Plate-Loaded Preacher Curl',    'biceps', [],                          'machine',      'isolation', false, 10, 15, 2, 5],
   ['Plate-Loaded Hip Thrust',       'glutes', ['hamstrings'],              'machine',      'hinge',     true,  8, 15,  3, 5],
