@@ -190,4 +190,89 @@ describe('generated pool over the real seed library', () => {
       }
     }
   });
+
+  // ── D8 / plan-A Option B library expansion (2026-07-09) ──────────────────
+  // Verifies the named gaps in docs/exercise-planning-2026-07-09/plan-A-
+  // library-expansion.md section 2 are actually closed in the real,
+  // generated pool, the same way the plan's own research verified they were
+  // holes in the first place (running generatePoolFromLibrary against the
+  // live library, not asserting against the raw exercise count).
+  describe('library expansion closes the named plan-A section 2 gaps', () => {
+    const rawStart = seedSrc.indexOf('const RAW = [');
+    const rawEnd = seedSrc.indexOf('\n];', rawStart);
+    const rawBody = seedSrc.slice(rawStart, rawEnd);
+    const rawExerciseNames = new Set(
+      [...rawBody.matchAll(/^\s*\[\s*'([^']+)',/gm)].map(m => m[1]),
+    );
+
+    function coverage(muscle, sub) {
+      const entries = (pool[muscle] ?? []).filter(e => e.sub === sub);
+      const profiles = new Set();
+      entries.forEach(e => e.eq.forEach(p => profiles.add(p)));
+      return { count: entries.length, profiles };
+    }
+
+    test('the library grew to comprehensive scope with no duplicate names', () => {
+      expect(rawExerciseNames.size).toBeGreaterThan(540);
+    });
+
+    test('section 2.1: the "Bands" filter chip is no longer dead (equipmentCategory band is non-empty)', () => {
+      const bandEntries = Object.values(pool).flat().filter(e => e.equipmentCategory === 'band');
+      expect(bandEntries.length).toBeGreaterThan(10);
+    });
+
+    test('section 2.3: hamstrings hip_extension now has machines_cables and bodyweight options (was 0/0)', () => {
+      const cov = coverage('hamstrings', 'hip_extension');
+      expect(cov.profiles.has('machines_cables')).toBe(true);
+      expect(cov.profiles.has('bodyweight')).toBe(true);
+    });
+
+    test('section 2.4: rear_delts face_pull now has a bodyweight option (was 0)', () => {
+      const cov = coverage('rear_delts', 'face_pull');
+      expect(cov.profiles.has('bodyweight')).toBe(true);
+    });
+
+    test('section 2.5: chest incline now has a bodyweight option (was 0)', () => {
+      const cov = coverage('chest', 'incline');
+      expect(cov.profiles.has('bodyweight')).toBe(true);
+    });
+
+    test('section 2.6 related: calves soleus now has barbell_plates and bodyweight options (was 0/0)', () => {
+      const cov = coverage('calves', 'soleus');
+      expect(cov.profiles.has('barbell_plates')).toBe(true);
+      expect(cov.profiles.has('bodyweight')).toBe(true);
+    });
+
+    test('section 2.6: front_delts now has a machine-based press (was 0)', () => {
+      const machineFrontDelts = (pool.front_delts ?? []).filter(e => e.equipmentCategory === 'machine_selectorised');
+      expect(machineFrontDelts.length).toBeGreaterThan(0);
+    });
+
+    test('section 2.8: side_delts and rear_delts now have unilateral options (were 0)', () => {
+      expect(rawExerciseNames.has('Single-Arm Cable Lateral Raise')).toBe(true);
+      expect(rawExerciseNames.has('Single-Arm Cable Rear Delt Fly')).toBe(true);
+    });
+
+    // Section 2.2 (back vertical_pull for Dumbbells Only / Barbell & Plates /
+    // Home Gym): documented as OPEN, not closed. Fixing it the way plan-A
+    // section 2.2 specifies requires tagging Band Lat Pulldown / Band
+    // Assisted Pull-Up with home_gym + dumbbells_only + barbell_plates
+    // equipment profiles, which directly conflicts with the existing,
+    // separately locked founder rule that bands never reach a loaded plan
+    // (exerciseMetadata.js deriveEquipmentProfiles, "measurable staples
+    // only", guarded by this same suite's `deriveEquipmentProfiles` test and
+    // by planEngineLibraryPool.test.js's "loaded plans drop bodyweight
+    // compounds, weighted calisthenics and bands"). This was surfaced back
+    // to the founder rather than silently resolved either way; this test
+    // pins the CURRENT true state so the gap cannot regress into a false
+    // "fixed" claim, and so it flips loudly (not silently) once a founder
+    // decision lands.
+    test('section 2.2: back vertical_pull for Dumbbells Only / Barbell & Plates / Home Gym remains open pending a founder decision on the band-loaded-plans rule', () => {
+      const cov = coverage('back', 'vertical_pull');
+      expect(cov.profiles.has('bodyweight')).toBe(true); // the bodyweight side IS fixed (Band Lat Pulldown, Band Assisted Pull-Up, Wide-Grip Pull-Up)
+      expect(cov.profiles.has('dumbbells_only')).toBe(false);
+      expect(cov.profiles.has('barbell_plates')).toBe(false);
+      expect(cov.profiles.has('home_gym')).toBe(false);
+    });
+  });
 });

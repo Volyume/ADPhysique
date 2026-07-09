@@ -13,7 +13,10 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v2';
 // Bumped when exercises are added to RAW so the top-up scans for the new
 // canonical IDs once on installs that already seeded an earlier list.
-const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v2';
+// v3: D8 / plan-A Option B (2026-07-09) comprehensive library expansion,
+// ~100 new rows (bands, hamstrings hip-extension fill, rear-delt/chest/
+// front-delt/calf P2 fills, and broader P3 depth across every muscle).
+const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v3';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //
@@ -368,6 +371,97 @@ const SUBREGION_MAP = {
   'Terminal Knee Extension':         'sweep',
   'Pendulum Squat':                  'sweep',
   'Leg Press (Narrow Stance)':       'sweep',
+
+  // ─── EXPANSION (D8 / plan-A Option B, 2026-07-09) ──────────────────────────
+  // Rotation/anti-rotation tags for existing names that were carrying the
+  // muscle's default subregion by omission (metadata fix, no new rows): these
+  // already existed but were untagged, so they silently counted as `flexion`
+  // instead of the rotation work they actually are.
+  'Cable Woodchop (High to Low)':    'rotation',
+  'Cable Woodchop (Low to High)':    'rotation',
+  'Dumbbell Side Bend':              'rotation',
+  'Cable Side Bend':                 'rotation',
+
+  // Back, vertical pull / horizontal row (bands)
+  'Band Row':                        'horizontal_row',
+  'Band Lat Pulldown':               'vertical_pull',
+  'Band Assisted Pull-Up':           'vertical_pull',
+  'Batwing Row':                     'horizontal_row',
+  'Wide-Grip Pull-Up':               'vertical_pull',
+  'Cable Reverse-Grip Pulldown':     'vertical_pull',
+  'Renegade Row':                    'horizontal_row',
+  'Single-Arm Landmine Row':         'horizontal_row',
+
+  // Hamstrings, hip extension / knee flexion
+  'Bodyweight Single-Leg RDL':       'hip_extension',
+  'Glute-Ham Raise Machine':         'hip_extension',
+  'Band Good Morning':               'hip_extension',
+  'Band Pull-Through':               'hip_extension',
+  'Band Deadlift':                   'hip_extension',
+  'Landmine Romanian Deadlift':      'hip_extension',
+  'Kettlebell Romanian Deadlift':    'hip_extension',
+  'Band Leg Curl':                   'knee_flexion',
+  'Slider Leg Curl (Bodyweight)':    'knee_flexion',
+
+  // Glutes, activator / stretcher / pumper
+  'Band Hip Thrust':                 'activator',
+  'B-Stance Hip Thrust':             'activator',
+  'Weighted Frog Pump':              'activator',
+  'Banded Lateral Walk':             'pumper',
+  'Deficit Reverse Lunge (Glute Focus)': 'stretcher',
+
+  // Quads, sweep
+  'Sissy Squat Machine':             'sweep',
+  'Reverse Nordic Curl':             'sweep',
+  'Smith Machine Front Squat':       'sweep',
+
+  // Chest, flat / incline
+  'Band Chest Press':                'flat',
+  'Landmine Chest Press (Single-Arm)': 'flat',
+  'Deficit Push-Up':                 'flat',
+  'Cable Iron Cross':                'flat',
+  'Floor Press (Dumbbell)':          'flat',
+  'Push-Up Plus':                    'flat',
+  'Chest Press Machine (Single-Arm)': 'flat',
+  'Machine Chest Fly (Single-Arm)':  'flat',
+  'Standing Cable Chest Press (Single-Arm)': 'flat',
+  'Incline Push-Up (Hands Elevated)': 'incline',
+  'Incline Cable Chest Press':       'incline',
+
+  // Rear delts, face pull / horizontal abduction
+  'Band Pull-Apart':                 'horiz_abduction',
+  'Prone Reverse Fly':               'horiz_abduction',
+  'Landmine Rear Delt Row':          'horiz_abduction',
+  'Machine Y-Raise':                 'horiz_abduction',
+  'Reverse Cable Crossover':         'horiz_abduction',
+  'Single-Arm Cable Rear Delt Fly':  'horiz_abduction',
+  'Band Face Pull':                  'face_pull',
+
+  // Triceps, overhead / pushdown
+  'Band Overhead Tricep Extension':  'overhead',
+  'Dumbbell Floor Skull Crusher':    'overhead',
+  'Single-Arm Overhead Cable Extension': 'overhead',
+  'Landmine Tricep Extension':       'overhead',
+  'Band Tricep Pushdown':            'pushdown',
+  'Cross-Body Cable Tricep Extension': 'pushdown',
+  'Bench Press (Close Grip, Dumbbell)': 'pushdown',
+
+  // Calves, gastro / soleus
+  'Donkey Calf Raise (Machine)':     'gastro',
+  'Eccentric Calf Raise (Bodyweight)': 'gastro',
+  'Seated Bodyweight Calf Raise':    'soleus',
+  'Seated Calf Raise (Barbell)':     'soleus',
+
+  // Abs, anti-extension / rotation
+  'Weighted Plank (Plate on Back)':  'anti_extension',
+  'Cable Anti-Rotation Hold (Half-Kneeling)': 'anti_extension',
+  'Reverse Plank':                   'anti_extension',
+  'Single-Arm Farmer Carry':         'anti_extension',
+  'Oblique V-Up':                    'rotation',
+  'Cable Reverse Woodchop (Kneeling)': 'rotation',
+  'Weighted Russian Twist (Medicine Ball)': 'rotation',
+  'Cable Woodchop (Half-Kneeling)':  'rotation',
+  'Single-Arm Cable Woodchop (Standing)': 'rotation',
 };
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
@@ -903,6 +997,160 @@ const RAW = [
   ['Glute Kickback Machine',        'glutes', ['hamstrings'],              'machine',      'isolation', false, 12, 20, 2, 5],
   ['Ab Crunch Machine',             'abs', [],                             'machine',      'isolation', false, 12, 20, 2, 5],
   ['Assisted Dip Machine',          'triceps', ['chest', 'front_delts'],   'machine',      'push',      true,  8, 15,  2, 4],
+
+  // ─── EXPANSION: BANDS (D8 / plan-A Option B, 2026-07-09) ───────────────────
+  // Resistance band work was entirely absent (equipmentCategory 'band' had 0
+  // rows), so the picker's "Bands" filter chip returned an empty list. These
+  // ship `equipment: 'bodyweight'` on purpose, the same convention every
+  // existing band-pattern test expects: deriveEquipmentCategory reclassifies
+  // any name matching /\bband(ed)?\b/i to 'band' regardless of this column.
+  ['Band Pull-Apart',               'rear_delts', ['back'],                 'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Band Face Pull',                'rear_delts', ['back', 'traps'],        'bodyweight',   'pull',      false, 15, 25, 1, 4],
+  ['Band Lateral Raise',            'side_delts', [],                       'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Band Row',                      'back', ['biceps'],                     'bodyweight',   'pull',      true,  12, 20, 2, 4],
+  ['Band Lat Pulldown',             'back', ['biceps'],                     'bodyweight',   'pull',      true,  12, 20, 2, 4],
+  ['Band Assisted Pull-Up',         'back', ['biceps'],                     'bodyweight',   'pull',      true,  8,  15, 2, 4],
+  ['Band Chest Press',              'chest', ['triceps', 'front_delts'],    'bodyweight',   'push',      true,  12, 20, 2, 4],
+  ['Band Bicep Curl',               'biceps', [],                           'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Band Tricep Pushdown',          'triceps', [],                          'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Band Squat',                    'quads', ['glutes'],                    'bodyweight',   'squat',     true,  12, 20, 2, 4],
+  ['Band Good Morning',             'hamstrings', ['glutes', 'back'],       'bodyweight',   'hinge',     true,  10, 15, 2, 4],
+  ['Band Pull-Through',             'hamstrings', ['glutes'],               'bodyweight',   'hinge',     true,  12, 20, 2, 4],
+  ['Band Overhead Tricep Extension','triceps', [],                          'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Banded Lateral Walk',           'glutes', [],                           'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Band Deadlift',                 'hamstrings', ['glutes', 'back'],       'bodyweight',   'hinge',     true,  10, 15, 2, 4],
+  ['Band Tibialis Raise',           'tibialis', [],                         'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Band Wrist Curl',               'forearms', [],                        'bodyweight',   'isolation', false, 15, 25, 1, 3],
+  ['Band Wrist Extension',          'forearms', [],                        'bodyweight',   'isolation', false, 15, 25, 1, 3],
+  ['Band Hip Thrust',               'glutes', ['hamstrings'],               'bodyweight',   'hinge',     true,  12, 20, 2, 4],
+  ['Band Leg Curl',                 'hamstrings', [],                       'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Band Shoulder Press',           'front_delts', ['triceps', 'side_delts'], 'bodyweight', 'push',      true,  12, 20, 2, 4],
+
+  // ─── EXPANSION: HAMSTRINGS hip_extension (machine + bodyweight fill, P1) ───
+  ['Bodyweight Single-Leg RDL',     'hamstrings', ['glutes'],               'bodyweight',   'hinge',     true,  8,  12, 2, 4],
+  ['Glute-Ham Raise Machine',       'hamstrings', ['glutes'],               'machine',      'hinge',     true,  8,  15, 3, 5],
+
+  // ─── EXPANSION: REAR DELTS face_pull/horiz_abduction bodyweight fill (P1) ──
+  ['Prone Reverse Fly',             'rear_delts', ['back'],                 'bodyweight',   'isolation', false, 15, 25, 1, 4],
+
+  // ─── EXPANSION: CHEST bodyweight incline fill (P2) ─────────────────────────
+  ['Incline Push-Up (Hands Elevated)', 'chest', ['triceps', 'front_delts'], 'bodyweight',   'push',      true,  10, 20, 2, 3],
+
+  // ─── EXPANSION: FRONT DELTS machine press (P2, distinct new row, history-safe) ─
+  ['Machine Shoulder Press (Front Delt Focus)', 'front_delts', ['triceps', 'side_delts'], 'machine', 'push', true, 8, 15, 3, 4],
+
+  // ─── EXPANSION: CALVES soleus bodyweight fill (P2) ─────────────────────────
+  ['Seated Bodyweight Calf Raise',  'calves', [],                           'bodyweight',   'isolation', false, 15, 30, 1, 3],
+
+  // ─── EXPANSION: ABS rotation depth (P2/P3) ─────────────────────────────────
+  ['Oblique V-Up',                  'abs', [],                              'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Cable Reverse Woodchop (Kneeling)', 'abs', [],                          'cable',        'isolation', false, 10, 15, 2, 4],
+  ['Weighted Russian Twist (Medicine Ball)', 'abs', [],                     'dumbbell',     'isolation', false, 15, 25, 2, 4],
+  ['Cable Woodchop (Half-Kneeling)', 'abs', [],                             'cable',        'isolation', false, 10, 15, 2, 4],
+  ['Single-Arm Cable Woodchop (Standing)', 'abs', [],                       'cable',        'isolation', false, 10, 15, 2, 4],
+
+  // ─── EXPANSION: UNILATERAL/SYMMETRY depth (P3) ─────────────────────────────
+  ['Single-Arm Cable Lateral Raise', 'side_delts', [],                      'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Single-Arm Cable Rear Delt Fly', 'rear_delts', ['back'],                'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Single-Arm Dumbbell Shrug',     'traps', [],                            'dumbbell',     'isolation', false, 12, 20, 2, 4],
+  ['Single-Arm Cable Wrist Curl',   'forearms', [],                         'cable',        'isolation', false, 15, 25, 1, 3],
+  ['Single-Arm Farmer Carry',       'abs', ['traps', 'forearms'],           'dumbbell',     'carry',     true,  20, 40, 2, 5],
+  ['Single-Leg Tibialis Raise',     'tibialis', [],                         'bodyweight',   'isolation', false, 15, 25, 1, 5],
+
+  // ─── EXPANSION: ADDUCTORS depth (P3) ───────────────────────────────────────
+  ['Adductor Squeeze (Ball)',       'adductors', [],                        'bodyweight',   'isolation', false, 15, 30, 1, 3],
+  ['Wide-Stance Goblet Squat (Adductor Bias)', 'adductors', ['quads', 'glutes'], 'dumbbell', 'squat',    true,  10, 15, 3, 4],
+  ['Zercher Sumo Squat (Adductor Focus)', 'adductors', ['quads', 'glutes'], 'barbell',      'squat',     true,  6,  12, 4, 3],
+  ['Adductor Rock-Back (Kneeling)', 'adductors', [],                        'bodyweight',   'isolation', false, 12, 20, 1, 4],
+
+  // ─── EXPANSION: TIBIALIS depth (P3) ─────────────────────────────────────────
+  ['Dumbbell Tibialis Raise (Seated)', 'tibialis', [],                      'dumbbell',     'isolation', false, 15, 25, 1, 4],
+  ['Tib Bar Raise (Machine)',       'tibialis', [],                         'machine',      'isolation', false, 15, 25, 1, 5],
+
+  // ─── EXPANSION: NECK depth (P3) ─────────────────────────────────────────────
+  ['Plate Neck Lateral Flexion',    'neck', [],                             'barbell',      'isolation', false, 15, 25, 1, 4],
+  ['Neck Machine Lateral Flexion', 'neck', [],                              'machine',      'isolation', false, 15, 25, 1, 4],
+
+  // ─── EXPANSION: FOREARMS depth (P3) ─────────────────────────────────────────
+  ['Behind-the-Back Wrist Curl (Barbell)', 'forearms', [],                  'barbell',      'isolation', false, 15, 25, 1, 3],
+  ['Wrist Roller',                  'forearms', [],                         'barbell',      'isolation', false, 8,  15, 2, 4],
+
+  // ─── EXPANSION: TRAPS depth (P3) ─────────────────────────────────────────────
+  ['Kettlebell Shrug',              'traps', [],                            'kettlebell',   'isolation', false, 12, 20, 2, 4],
+  ['Cable Behind-the-Back Shrug',   'traps', [],                            'cable',        'isolation', false, 12, 20, 2, 4],
+
+  // ─── EXPANSION: SIDE / FRONT / REAR DELTS depth (P3) ────────────────────────
+  ['Cable Y-Raise (Standing)',      'side_delts', ['rear_delts', 'traps'],  'cable',        'isolation', false, 12, 20, 2, 4],
+  ['Egyptian Lateral Raise',        'side_delts', [],                       'dumbbell',     'isolation', false, 12, 20, 2, 5],
+  ['Landmine Front Raise',          'front_delts', [],                      'barbell',      'isolation', false, 12, 20, 2, 3],
+  ['Landmine Rear Delt Row',        'rear_delts', ['back'],                 'barbell',      'pull',      false, 10, 15, 2, 4],
+  ['Machine Y-Raise',               'rear_delts', ['back'],                 'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Cuban Press',                   'front_delts', ['side_delts', 'rear_delts'], 'dumbbell', 'push',     true,  10, 15, 2, 4],
+  ['Bradford Press',                'front_delts', ['side_delts', 'triceps'], 'barbell',    'push',      true,  8,  12, 3, 3],
+  ['Cable Lateral Raise (Behind the Back)', 'side_delts', [],               'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Reverse Cable Crossover',       'rear_delts', ['back'],                 'cable',        'isolation', false, 12, 20, 2, 5],
+
+  // ─── EXPANSION: CALVES depth (P3, includes soleus barbell_plates fill) ─────
+  ['Seated Calf Raise (Barbell)',   'calves', [],                           'barbell',      'isolation', false, 15, 25, 2, 4],
+  ['Donkey Calf Raise (Machine)',   'calves', [],                           'machine',      'isolation', false, 15, 25, 2, 4],
+  ['Eccentric Calf Raise (Bodyweight)', 'calves', [],                       'bodyweight',   'isolation', false, 12, 20, 2, 4],
+
+  // ─── EXPANSION: QUADS depth (P3) ────────────────────────────────────────────
+  ['Sissy Squat Machine',           'quads', [],                            'machine',      'isolation', false, 10, 20, 3, 4],
+  ['Belt Squat',                    'quads', ['glutes'],                    'machine',      'squat',     true,  8,  15, 4, 4],
+  ['Reverse Nordic Curl',           'quads', [],                            'bodyweight',   'isolation', false, 6,  12, 3, 5],
+  ['Smith Machine Front Squat',     'quads', ['glutes'],                    'smith_machine','squat',     true,  6,  12, 4, 4],
+  ['Bodyweight Bulgarian Split Squat', 'quads', ['glutes'],                 'bodyweight',   'squat',     true,  10, 20, 3, 4],
+  ['Wall Ball Squat',               'quads', ['glutes'],                    'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Cable Squat (Standing)',        'quads', ['glutes'],                    'cable',        'squat',     true,  10, 15, 3, 4],
+
+  // ─── EXPANSION: HAMSTRINGS depth (P3) ───────────────────────────────────────
+  ['Kettlebell Romanian Deadlift',  'hamstrings', ['glutes'],               'kettlebell',   'hinge',     true,  10, 15, 3, 4],
+  ['Slider Leg Curl (Bodyweight)',  'hamstrings', ['glutes'],               'bodyweight',   'isolation', false, 10, 20, 2, 4],
+  ['Landmine Romanian Deadlift',    'hamstrings', ['glutes'],               'barbell',      'hinge',     true,  8,  12, 3, 4],
+
+  // ─── EXPANSION: GLUTES depth (P3) ───────────────────────────────────────────
+  ['B-Stance Hip Thrust',           'glutes', ['hamstrings'],               'barbell',      'hinge',     true,  10, 15, 3, 5],
+  ['Deficit Reverse Lunge (Glute Focus)', 'glutes', ['quads'],              'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Weighted Frog Pump',            'glutes', [],                           'dumbbell',     'isolation', false, 15, 25, 1, 4],
+
+  // ─── EXPANSION: CHEST depth (P3) ────────────────────────────────────────────
+  ['Landmine Chest Press (Single-Arm)', 'chest', ['triceps', 'front_delts'], 'barbell',     'push',      true,  8,  15, 3, 4],
+  ['Deficit Push-Up',               'chest', ['triceps', 'front_delts'],    'bodyweight',   'push',      true,  10, 20, 2, 4],
+  ['Cable Iron Cross',              'chest', [],                            'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Incline Cable Chest Press',     'chest', ['triceps', 'front_delts'],    'cable',        'push',      true,  10, 15, 2, 4],
+  ['Floor Press (Dumbbell)',        'chest', ['triceps'],                   'dumbbell',     'push',      true,  8,  15, 3, 4],
+  ['Push-Up Plus',                  'chest', ['abs'],                       'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Chest Press Machine (Single-Arm)', 'chest', ['triceps', 'front_delts'], 'machine',      'push',      true,  8,  15, 2, 4],
+  ['Machine Chest Fly (Single-Arm)', 'chest', [],                           'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Standing Cable Chest Press (Single-Arm)', 'chest', ['triceps', 'front_delts'], 'cable', 'push',       true,  10, 15, 2, 4],
+
+  // ─── EXPANSION: BACK depth (P3) ─────────────────────────────────────────────
+  ['Batwing Row',                   'back', ['biceps'],                     'dumbbell',     'pull',      true,  8,  12, 3, 4],
+  ['Wide-Grip Pull-Up',             'back', ['biceps'],                     'bodyweight',   'pull',      true,  5,  15, 3, 4],
+  ['Cable Reverse-Grip Pulldown',   'back', ['biceps'],                     'cable',        'pull',      true,  10, 15, 3, 4],
+  ['Renegade Row',                  'back', ['abs', 'biceps'],              'dumbbell',     'pull',      true,  8,  12, 3, 4],
+  ['Cable Rope Straight-Arm Pulldown (Single-Arm)', 'back', [],             'cable',        'pull',      false, 12, 20, 2, 5],
+  ['Single-Arm Landmine Row',       'back', ['biceps'],                     'barbell',      'pull',      true,  8,  15, 3, 4],
+
+  // ─── EXPANSION: BICEPS depth (P3) ───────────────────────────────────────────
+  ['Cable Concentration Curl',      'biceps', [],                           'cable',        'isolation', false, 10, 15, 2, 5],
+  ['EZ Bar Drag Curl',              'biceps', [],                           'ez_bar',       'isolation', false, 8,  12, 2, 4],
+  ['Zottman Preacher Curl',         'biceps', ['forearms'],                 'dumbbell',     'isolation', false, 8,  12, 2, 4],
+  ['Incline Hammer Curl',           'biceps', ['forearms'],                 'dumbbell',     'isolation', false, 10, 15, 2, 5],
+  ['Cable Overhead Bicep Curl',     'biceps', [],                           'cable',        'isolation', false, 10, 15, 2, 4],
+
+  // ─── EXPANSION: TRICEPS depth (P3) ──────────────────────────────────────────
+  ['Dumbbell Floor Skull Crusher',  'triceps', [],                          'dumbbell',     'isolation', false, 8,  15, 2, 4],
+  ['Single-Arm Overhead Cable Extension', 'triceps', [],                    'cable',        'isolation', false, 10, 15, 2, 5],
+  ['Bench Press (Close Grip, Dumbbell)', 'triceps', ['chest'],              'dumbbell',     'push',      true,  8,  15, 3, 4],
+  ['Landmine Tricep Extension',     'triceps', [],                          'barbell',      'isolation', false, 10, 15, 2, 4],
+  ['Cross-Body Cable Tricep Extension', 'triceps', [],                     'cable',        'isolation', false, 12, 20, 2, 4],
+
+  // ─── EXPANSION: ABS depth (P3) ──────────────────────────────────────────────
+  ['Weighted Plank (Plate on Back)', 'abs', [],                             'barbell',      'isolation', false, 20, 60, 2, 4],
+  ['Cable Anti-Rotation Hold (Half-Kneeling)', 'abs', [],                   'cable',        'isolation', false, 20, 40, 1, 5],
+  ['Reverse Plank',                 'abs', [],                              'bodyweight',   'isolation', false, 20, 60, 1, 4],
 ];
 
 // Exercise TYPE axis (Hevy teardown 03-exercise-library.md, R3). Drives which
@@ -945,6 +1193,12 @@ const EXERCISE_TYPE_MAP = {
   'Decline Push-Up':    'weighted_bodyweight',
   'Ring Push-Up':       'weighted_bodyweight',
   'Weighted Dips (Chest)': 'weighted_bodyweight',
+  'Wide-Grip Pull-Up':  'weighted_bodyweight',
+  // EXPANSION (D8 / plan-A Option B, 2026-07-09): new timed holds.
+  'Weighted Plank (Plate on Back)': 'duration',
+  'Reverse Plank':                 'duration',
+  'Cable Anti-Rotation Hold (Half-Kneeling)': 'duration',
+  'Adductor Squeeze (Ball)':       'duration',
 };
 
 // Build the full insert payload for one RAW row: the base fields the seed
