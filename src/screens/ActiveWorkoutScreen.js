@@ -2120,7 +2120,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               );
             }
             if (notes.length === 0) return null;
-            const cueCount = notes.length;
+            const noteCount = notes.length;
             return (
               <View style={styles.notesRail}>
                 <TouchableOpacity
@@ -2129,10 +2129,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: notesExpanded }}
-                  accessibilityLabel={`${cueCount} training cue${cueCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
+                  accessibilityLabel={`${noteCount} note${noteCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
                 >
                   <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.notesChipText}>{cueCount} cue{cueCount !== 1 ? 's' : ''}</Text>
+                  <Text style={styles.notesChipText}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
                   <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {notesExpanded && <View style={styles.notesExpanded}>{notes}</View>}

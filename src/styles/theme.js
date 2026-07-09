@@ -20,7 +20,9 @@ import { fontFamily } from './fontFamily';
 // only per-surface and only after profiling on a mid-range device, never
 // as a default. ONE surface in the app may carry a Skia glow (the Home
 // Start button, E15 element 3); no other glow, gradient orb or bloom is
-// permitted. All surface motion uses the motion.* tokens; Reduce Motion
+// permitted, with a single recorded exception (2026-07-09): shadow.glow, a
+// brand-tinted soft shadow reserved for the three Pro-moment hero surfaces,
+// applied only via that token, never inline. All surface motion uses the motion.* tokens; Reduce Motion
 // flattens it. Chart verdict (E15 element 5, accepted): VolyumeChart is
 // the app's one chart engine; no second engine (Victory et al.), no
 // rebuild. Optional S-effort uplifts on record: a once-per-mount draw-in
@@ -422,14 +424,22 @@ export const lineHeight = {
   relaxed: 1.6,
 };
 
-// Letter-spacing stays neutral on Android. Negative tracking and loose
-// micro-copy made the default system font look blocky on real devices.
+// Letter-spacing stays neutral on Android for running text. Negative
+// tracking and loose micro-copy made the default system font look blocky on
+// real devices. Two deliberate exceptions (decision 2026-07-09, recorded in
+// docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): uppercase
+// micro-labels track slightly open via `overline` (the one sanctioned value
+// for every uppercase section/eyebrow label; raw literals are drift), and
+// the brand wordmark tracks wide via `wordmark` (SettingsAbout app name,
+// PRCelebration hero). No other non-zero tracking is permitted.
 export const letterSpacing = {
   display: 0,
   heading: 0,
   body: 0,
   label: 0,
   caption: 0,
+  overline: 0.5,
+  wordmark: 2,
 };
 
 // Semantic type roles. Getters (like volumeColors) so they reflect the
@@ -550,6 +560,22 @@ export const shadow = {
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 10,
+  },
+  // The one sanctioned brand-tinted shadow (decision 2026-07-09, recorded in
+  // docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): a soft
+  // amber halo reserved for Pro-moment hero surfaces (Welcome Pro card,
+  // ProOnboarding offer card, ProUpgrade success circle). One value set so
+  // the three sites cannot drift apart again. Getter so shadowColor reads
+  // colors.primary AFTER applyAccessibility's boot-time palette swap, the
+  // same pattern as the type.* roles.
+  get glow() {
+    return {
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 8,
+    };
   },
 };
 

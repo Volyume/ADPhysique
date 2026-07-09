@@ -47,10 +47,14 @@ export default function Card({
   // 'surfaceElevated' | 'surface2' | 'surface3'. Lets the one Card absorb the
   // surface2/3 boxes the app used to hand-roll.
   surface,
-  // `radius` overrides the corner radius token: 'hair'|'xs'|'sm'|'md'
-  // (default)|'lg'|'xl'. Lets Card express tighter or more rounded boxes
+  // `radius` overrides the corner radius token: 'hair'|'xs'|'sm'|'md'|'lg'
+  // (default)|'xl'. Lets Card express tighter or more rounded boxes
   // that previously had to stay hand-rolled to avoid a corner-radius regression.
-  radius: radiusKey = 'md',
+  // Default is 'lg' (16px), the documented card radius (DESIGN_SYSTEM.md) and
+  // the radius the app's hand-rolled cards already use; the old 'md' default
+  // left two visibly different corner radii side by side on the same screens
+  // (design audit 2026-07-09, A-1).
+  radius: radiusKey = 'lg',
   borderless = false,
   // `padding` is a spacing token key, or 'none' for a full-bleed card whose
   // children self-pad (e.g. list sections with edge-to-edge rows).

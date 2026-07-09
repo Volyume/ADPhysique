@@ -15,10 +15,13 @@ describe('Pro gate feature copy', () => {
 
     expect(ROOT_NAVIGATOR).not.toContain("'Progress photos and Physique Scan'");
     expect(ROOT_NAVIGATOR).not.toContain("'Update training'");
-    expect(ROOT_NAVIGATOR).not.toContain("'Your week'");
     expect(PRO_GATE).not.toContain("'Progress photos and Physique Scan'");
     expect(PRO_GATE).not.toContain("'Update training'");
-    expect(PRO_GATE).not.toContain("'Your week'");
+    // 'Your week' was retired as the coach-output gate label, then later
+    // legitimately reused as the Weekly Story gate label (§15 item 1,
+    // GatedWeeklyStory in RootNavigator). The positive assertions above pin
+    // the coach surfaces' current labels, so a blanket ban on the string
+    // would now fail on the new feature, not on a regression.
   });
 
   test('meal and plan labels use human create/adjust wording', () => {
