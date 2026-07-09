@@ -132,9 +132,17 @@ describe('B9 wiring guard: builder pre-fill only, runtime untouched', () => {
 
   test('runtime rest resolution for saved routines is unchanged', () => {
     // Existing logged routines keep restSeconds || defaultRestSeconds || 90;
-    // the suggestion must never leak into the live timer resolution.
+    // the suggestion must never leak into the live timer resolution. D9
+    // (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md)
+    // extracted this formula into a `fullRest` local so a per-side compound
+    // set's post-pair rest can be conditionally halved (amendment 2); the
+    // formula itself, and the fact it still feeds straight into
+    // startRestTimer with no suggestion-table involvement, are unchanged.
     expect(ACTIVE).toMatch(
-      /startRestTimer\(routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90\)/,
+      /const fullRest = routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90;/,
+    );
+    expect(ACTIVE).toMatch(
+      /startRestTimer\(overrides\.perSideCompound \? halfRestSeconds\(fullRest\) : fullRest\);/,
     );
     expect(ACTIVE).not.toMatch(/restSuggest/);
   });

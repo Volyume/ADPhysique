@@ -587,3 +587,19 @@ OAuth SHA-1; Cut 4 seed walk.
   97 screen suites green; restSuggest.test.js failure confirmed to come
   from the unilateral agent's live WIP, not this sweep (stash-verified) -
   MUST be green again when the unilateral build lands.
+- D9 UNILATERAL LOGGING LANDED (Sonnet build, lead-reviewed diff): two-phase
+  per-side flow in ActiveWorkoutScreen on the cluster-banner pattern;
+  laterality metadata wired (database.js getRoutineExercisesWithDetails now
+  selects e.laterality - query-only, no schema change); suggest-and-confirm
+  with sticky per-exercise asked/enabled prefs (@volyume_unilateral_* keys);
+  rest by class per amendment 2 (compound: half rest between sides AND
+  after pair, ceil-rounded; isolation: switch-sides prompt, full rest after
+  pair); ONE workout_sets row, actual_reps = lowerSideReps, "L 10 / R 9"
+  breakdown in notes (legacy left/right_reps columns stay dead); first-ever
+  walkthrough modal + light confirm for later exercises + manual overflow
+  toggle. restSuggest guard updated to pin the new fullRest shape (formula
+  unchanged). 59 tests across 3 suites green, lint clean. 10-step Android
+  device checklist in the agent report (chat log, this landing). Old
+  orphaned single-tap design documented as superseded in unilateral.js
+  header. JOB BOARD: unilateral moved from Running to DONE; Home bundle
+  running; concurrency limit raised to THREE agents (founder, 2026-07-09).

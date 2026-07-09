@@ -3040,7 +3040,8 @@ export async function getRoutineExercisesWithDetails(routineId) {
             e.default_rep_max,
             e.fatigue_cost,
             e.stimulus_to_fatigue_ratio,
-            e.equipment_category
+            e.equipment_category,
+            e.laterality
      FROM routine_exercises re
      LEFT JOIN exercises e ON e.id = re.exercise_id
      WHERE re.routine_id = ? AND re.deleted_at IS NULL
@@ -3067,6 +3068,12 @@ export async function getRoutineExercisesWithDetails(routineId) {
       // plan-D-intelligent-supersets.md): ManualBuilderScreen needs this to
       // classify a superset pair the same way the auto-gen engine does.
       equipmentCategory: row.equipment_category,
+      // D9 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
+      // 'bilateral' | 'unilateral', derived by exerciseMetadata.js's
+      // deriveLaterality and stored on the exercise at insert/update time.
+      // Previously computed and never read anywhere; ActiveWorkoutScreen
+      // reads it to suggest per-side logging.
+      laterality: row.laterality,
       // Flag for the UI: this row needs to be repaired by the user
       // because the exercise lookup failed. Active screens can render
       // an inline "Re-link exercise" affordance here.

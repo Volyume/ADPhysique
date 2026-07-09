@@ -43,7 +43,11 @@ import {
   validateSetEntryValue,
   formatLoggedSet,
 } from '../lib/workoutHelpers';
-import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
+import {
+  formatPerSide, loadUnilateralExercises, setUnilateralExercise,
+  loadUnilateralAsked, markUnilateralAsked,
+  lowerSideReps, perSideRestPlan, halfRestSeconds,
+} from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -54,6 +58,13 @@ import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
+
+// D9 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md): the
+// full unilateral (per-side) walkthrough - modelled on the superset
+// heads-up below - shows only the very first time it is ever suggested,
+// same '@volyume_seen_*' once-ever convention as '@volyume_seen_workout_info'
+// just below and DiaryScreen's hints.
+const UNILATERAL_WALKTHROUGH_SEEN_KEY = '@volyume_seen_unilateral_walkthrough';
 
 // B8: keep-awake tag so this screen's activate/deactivate can never release
 // a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
@@ -268,6 +279,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [clusterReps, setClusterReps] = useState('');
   // Exercise IDs the user logs per-side (unilateral). Device-local pref.
   const [unilateralExercises, setUnilateralExercises] = useState(() => new Set());
+  // D9: exercise IDs the user has already been asked about (accepted or
+  // declined per-side logging), so the one-time suggestion never repeats.
+  const [unilateralAsked, setUnilateralAsked] = useState(() => new Set());
+  const [unilateralPrefsLoaded, setUnilateralPrefsLoaded] = useState(false);
+  // D9: has the full one-time walkthrough (below) ever been shown? A ref,
+  // not state - it only decides which suggestion UI to show and doesn't
+  // itself need to trigger a re-render.
+  const unilateralWalkthroughSeenRef = useRef(false);
+  // D9: the current suggestion/walkthrough prompt, or null when hidden.
+  // Only set for the FULL walkthrough case (first time ever); the
+  // lighter repeat-suggestion for later exercises fires via appAlert
+  // directly and never touches this state.
+  const [unilateralSuggest, setUnilateralSuggest] = useState(null);
+  // D9: per-side (unilateral) two-phase set in progress. null when not
+  // active. shape: { setType, weight, leftReps }.
+  const [perSide, setPerSide] = useState(null);
+  const [perSideReps, setPerSideReps] = useState('');
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
@@ -625,6 +653,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setGhostSet(null);
     setCluster(null);
     setClusterReps('');
+    setPerSide(null);
+    setPerSideReps('');
     setExtraSetArmed(false);
     setNoteText('');
     setShowNoteInput(false);
@@ -664,6 +694,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // and handleFinishWorkout (names the set in its existing confirm copy).
   function hasInProgressSetEntry() {
     return !!cluster
+      || !!perSide
       || (currentSet.weight !== '' && currentSet.weight != null)
       || currentSet.reps !== DEFAULT_SET.reps
       || noteText.trim().length > 0;
@@ -698,9 +729,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load the per-exercise "log left/right" preference once.
+  // D9: load the per-exercise "log per side" preferences once - which
+  // exercises are ON, which have already been asked about (so the
+  // suggestion never repeats), and whether the one-time walkthrough has
+  // ever been shown. All three gate the suggestion effect below, so it
+  // waits for this load rather than firing optimistically and asking twice.
   useEffect(() => {
-    loadUnilateralExercises().then(setUnilateralExercises).catch(() => {});
+    let active = true;
+    Promise.all([
+      loadUnilateralExercises(),
+      loadUnilateralAsked(),
+      AsyncStorage.getItem(UNILATERAL_WALKTHROUGH_SEEN_KEY).catch(() => null),
+    ]).then(([on, asked, seen]) => {
+      if (!active) return;
+      setUnilateralExercises(on);
+      setUnilateralAsked(asked);
+      unilateralWalkthroughSeenRef.current = seen === 'true';
+      setUnilateralPrefsLoaded(true);
+    }).catch(() => { if (active) setUnilateralPrefsLoaded(true); });
+    return () => { active = false; };
   }, []);
 
   // Stale workout check (>4h since last activity)
@@ -745,6 +792,42 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     });
     hapticsVocab.selection();
   }, [currentSGI, pairedExerciseName, exercise?.name]);
+
+  // D9: metadata-flagged unilateral exercises (exercise.laterality, finally
+  // read here - exerciseMetadata.js's deriveLaterality was computed and
+  // stored but never consulted before this build, see plan-C-unilateral-
+  // logging.md) get a one-time, per-exercise suggestion to log per side.
+  // Never forced - bilateral exercises never see this, and a unilateral
+  // exercise only ever gets asked ONCE (loadUnilateralAsked); the answer
+  // sticks per exercise via setUnilateralExercise. The very first time this
+  // fires for the user, the suggestion carries the full walkthrough
+  // (modelled on the superset heads-up above); every later exercise gets a
+  // quick confirm only, since the pattern has already been taught.
+  // acknowledgedUnilateralRef tags the exercise id immediately, same guard
+  // shape as acknowledgedSupersetsRef above, so navigating away and back
+  // doesn't re-fire before the user answers.
+  const acknowledgedUnilateralRef = useRef(new Set());
+  useEffect(() => {
+    if (!unilateralPrefsLoaded || !exercise?.id) return;
+    if (exercise.laterality !== 'unilateral') return;
+    if (unilateralAsked.has(exercise.id)) return;
+    if (acknowledgedUnilateralRef.current.has(exercise.id)) return;
+    acknowledgedUnilateralRef.current.add(exercise.id);
+    hapticsVocab.selection();
+    if (unilateralWalkthroughSeenRef.current) {
+      appAlert(
+        'Log this one side at a time?',
+        `${exercise.name} is usually trained one side at a time. Do one side, then the other; it still counts as one working set.`,
+        [
+          { text: 'No, log as normal', style: 'cancel', onPress: () => handleUnilateralAnswer(exercise.id, false) },
+          { text: 'Yes, log per side', onPress: () => handleUnilateralAnswer(exercise.id, true) },
+        ],
+      );
+    } else {
+      setUnilateralSuggest({ exerciseId: exercise.id, exerciseName: exercise.name });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the
@@ -937,9 +1020,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setNotesExpanded(false);
     // An unfinished cluster belongs to the exercise it was started on;
     // abandon it on any exercise change (incl. superset auto-jump) so
-    // its banner can't carry stale reps onto the next exercise.
+    // its banner can't carry stale reps onto the next exercise. A
+    // part-way-through per-side set is the same shape of risk.
     setCluster(null);
     setClusterReps('');
+    setPerSide(null);
+    setPerSideReps('');
 
     // Guard so that async state updates don't land after the exercise
     // changes (rapid swap) or the screen unmounts mid-load. Without this,
@@ -1343,8 +1429,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Start rest timer with per-exercise duration, falling back to the user's
       // global default rest (Hevy teardown R1). Honour the auto-start pref: when
       // off, logging a set no longer kicks off the countdown automatically.
+      // D9 amendment 2: a per-side (unilateral) COMPOUND set halves this
+      // rest too (finishPerSide already halved the between-sides pause);
+      // isolation gets the ordinary full rest here, its rest-class
+      // difference is only the between-sides "switch sides" prompt.
       if (autoStartRestTimer) {
-        startRestTimer(routineExercise?.restSeconds || defaultRestSeconds || 90);
+        const fullRest = routineExercise?.restSeconds || defaultRestSeconds || 90;
+        startRestTimer(overrides.perSideCompound ? halfRestSeconds(fullRest) : fullRest);
       }
 
       // Auto-advance to next exercise when target sets just completed
@@ -1590,13 +1681,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // Keyboard-completes-the-set (ULTIMATE-WR-1): the reps field's Done key and
   // the Complete-set button share ONE guarded completion, so cluster set-types
-  // still start a cluster and unilateral/normal sets call handleCompleteSet().
+  // still start a cluster, a per-side (D9) exercise starts the two-phase
+  // per-side flow, and everything else calls handleCompleteSet() directly.
   // Respects the same `saving` guard the button's disabled state enforces, so a
-  // double Done cannot double-log.
+  // double Done cannot double-log. Per-side takes the same precedence over
+  // cluster the old minimal design already gave it (an exercise is one or the
+  // other, never both); its own second-phase input (below) drives
+  // finishPerSide directly, never this shared button, so a truthy `perSide`
+  // here is a no-op rather than mis-committing the in-progress pair.
   function handleCompleteSetPress() {
     if (saving) return;
+    if (perSide) return;
     const uni = exercise ? unilateralExercises.has(exercise.id) : false;
-    if (isClusterType(currentSet.setType) && !uni) return startCluster();
+    if (uni) return startPerSide();
+    if (isClusterType(currentSet.setType)) return startCluster();
     return handleCompleteSet();
   }
   // Keep the ref pointed at the latest closure so the rest-notification
@@ -1630,6 +1728,84 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function cancelCluster() {
     setCluster(null);
     setClusterReps('');
+  }
+
+  // ─── Per-side (unilateral) sets (D9) ─────────────────────────────────
+  // Same two-phase shape as the cluster flow above: side one accumulates
+  // locally, a rest-class-governed pause runs (lib/unilateral.js
+  // perSideRestPlan - D9 amendment 2), side two is entered, and the pair
+  // commits as ONE workout_sets row via the normal handleCompleteSet path -
+  // actual_reps is the LOWER side (lowerSideReps), the breakdown rides in
+  // notes as "L 10 / R 9" (formatPerSide), exactly as the cluster's
+  // breakdown rides in notes (clusterSet.js). No schema change: left_reps/
+  // right_reps (migration 054, legacy) stay untouched and unwritten.
+
+  async function handleUnilateralAnswer(exerciseId, turnOn) {
+    try {
+      const [onSet, askedSet] = await Promise.all([
+        setUnilateralExercise(exerciseId, turnOn),
+        markUnilateralAsked(exerciseId),
+      ]);
+      setUnilateralExercises(onSet);
+      setUnilateralAsked(askedSet);
+    } catch (e) {
+      logError('ActiveWorkoutScreen.handleUnilateralAnswer', e, { exerciseId });
+    }
+  }
+
+  function startPerSide() {
+    const leftReps = parseInt(currentSet.reps, 10);
+    if (!Number.isFinite(leftReps) || leftReps < 1) {
+      appAlert('Enter reps', 'Enter the reps for your first side.');
+      return;
+    }
+    const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
+    const weightNum = parseFloat(currentSet.weight);
+    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
+      appAlert('Enter weight', `Enter the weight used (in ${units}) before logging your first side.`);
+      return;
+    }
+    setPerSide({
+      setType: currentSet.setType,
+      weight: currentSet.weight,
+      leftReps,
+    });
+    setPerSideReps('');
+    hapticsVocab.setLogged();
+    // D9 amendment 2: compound gets a real running rest timer for the
+    // between-sides pause (half the exercise's normal rest); isolation gets
+    // no timer here at all, betweenSeconds is null and the banner below
+    // shows a plain "switch sides" prompt instead.
+    const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);
+    if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);
+  }
+
+  async function finishPerSide() {
+    if (!perSide) return;
+    const rightReps = parseInt(perSideReps, 10);
+    if (!Number.isFinite(rightReps) || rightReps < 1) {
+      appAlert('Enter reps', 'Enter the reps for your other side.');
+      return;
+    }
+    const notes = mergeClusterNote(noteText, formatPerSide(perSide.leftReps, rightReps));
+    const actualReps = lowerSideReps(perSide.leftReps, rightReps);
+    // perSideCompound tells handleCompleteSet's post-set rest (below) to
+    // halve the normal rest too (D9 amendment 2: compound halves EVERY
+    // pause, between sides AND after the second side); isolation gets the
+    // ordinary full rest there, its rest-class difference is only the
+    // between-sides "switch sides" prompt handled in startPerSide above.
+    await handleCompleteSet({
+      actualReps,
+      notes,
+      perSideCompound: exercise?.compoundIsolation === 'compound',
+    });
+    setPerSide(null);
+    setPerSideReps('');
+  }
+
+  function cancelPerSide() {
+    setPerSide(null);
+    setPerSideReps('');
   }
 
   function handleRevertTimeCrunch() {
@@ -2532,12 +2708,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           ) : null}
 
+          {/* Per-side (unilateral) banner (D9): drives the two-phase
+              per-side flow. Reuses the cluster banner's exact styling and
+              shape (same interaction pattern, not a new one) - one input
+              row for the second side, one primary "finish" action, one
+              cancel. Rest-class copy (D9 amendment 2) differs: compound
+              names the running rest timer above; isolation shows a plain
+              switch-sides line with no timer at all. */}
+          {perSide ? (
+            <View style={styles.clusterBanner}>
+              <Text style={styles.clusterTitle}>
+                {exercise?.compoundIsolation === 'compound' ? 'Other side, after your rest' : 'Switch sides'}
+              </Text>
+              <Text style={styles.clusterReps}>
+                First side: {perSide.leftReps} reps
+                {perSide.weight ? ` @ ${perSide.weight}${units}` : ''}
+              </Text>
+              {exercise?.compoundIsolation !== 'compound' && (
+                <Text style={styles.sheetOptionDesc}>Swap sides when you're ready, no rush.</Text>
+              )}
+              <View style={styles.clusterInputRow}>
+                <TextInput
+                  style={styles.clusterInput}
+                  value={perSideReps}
+                  onChangeText={setPerSideReps}
+                  placeholder="Other side reps"
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel="Other side reps"
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={finishPerSide}
+                />
+              </View>
+              <Button
+                variant="primary"
+                style={styles.completeBtn}
+                onPress={finishPerSide}
+                disabled={saving}
+                accessibilityLabel="Log the other side and finish this set"
+              >
+                <Ionicons name="checkmark-circle" size={20} color={colors.onPrimary} />
+                <Text style={styles.completeBtnText}>Log other side</Text>
+              </Button>
+              <TouchableOpacity onPress={cancelPerSide} style={styles.clusterCancel} accessibilityLabel="Cancel this set">
+                <Text style={styles.clusterCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
               bar (thumb zone, stable position). In the scroll, only the
               "Log another set" affordance remains, promoted to a full-size
               outline button in the exact pixels the primary used to occupy,
               so the muscle-memory tap logs a set instead of navigating. */}
-          {cluster ? null : (targetComplete && !extraSetArmed) ? (
+          {(cluster || perSide) ? null : (targetComplete && !extraSetArmed) ? (
             <Button
               testID="volyume-btn-extra-set"
               variant="secondary"
@@ -2611,7 +2835,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,
             the one-handed thumb zone, at a stable position, instead of
             floating mid-scroll and swapping identity in the same pixels.
-            Cluster flows keep their own in-card controls, so no bar then.
+            Cluster flows (and the per-side flow, D9) keep their own
+            in-card controls, so no bar then.
             insets.bottom IS required here: E15's VolyumeTabBar returns null
             while ActiveWorkout is focused (VolyumeTabBar.js), so nothing else
             absorbs the system inset and a flat spacing.md left Log set half
@@ -2619,7 +2844,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             The earlier "no insets here" note (2026-07-02) described the stock
             always-visible tab bar and no longer holds. Math.max keeps the
             old padding on devices that report no bottom inset. */}
-        {cluster ? null : (
+        {(cluster || perSide) ? null : (
           <View style={[styles.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
             {targetComplete && !extraSetArmed ? (
               isLastExercise ? (
@@ -2779,6 +3004,116 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           </View>
           ) : null}
+        </Modal>
+
+        {/* D9 unilateral (per-side) FULL walkthrough - shown only the very
+            first time the suggestion ever fires for this user
+            (unilateralWalkthroughSeenRef / UNILATERAL_WALKTHROUGH_SEEN_KEY);
+            every later unilateral exercise gets a quick appAlert confirm
+            only (see the suggestion effect above). Copies the superset
+            heads-up's shape and styles exactly (icon, title, numbered
+            steps, tip, primary CTA) - same tone, same reused pattern, not a
+            new one. "No, log as normal" still counts as answered: the
+            choice sticks per exercise either way, so the suggestion never
+            repeats for THIS exercise regardless of which button is tapped. */}
+        <Modal
+          visible={!!unilateralSuggest}
+          transparent
+          animationType={reduceMotion ? 'none' : 'fade'}
+          onRequestClose={() => setUnilateralSuggest(null)}
+        >
+          {unilateralSuggest ? (() => {
+            const isCompound = exercise?.compoundIsolation === 'compound';
+            const answerAndClose = (turnOn) => {
+              const id = unilateralSuggest.exerciseId;
+              setUnilateralSuggest(null);
+              unilateralWalkthroughSeenRef.current = true;
+              AsyncStorage.setItem(UNILATERAL_WALKTHROUGH_SEEN_KEY, 'true').catch(() => {});
+              handleUnilateralAnswer(id, turnOn);
+            };
+            return (
+          <View style={styles.supOverlay}>
+            <View style={styles.supSheet}>
+              <ScrollView
+                style={styles.supSheetScroll}
+                contentContainerStyle={styles.supSheetContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.supIconRow}>
+                  <Ionicons name="repeat" size={24} color={colors.primary} />
+                  <Text style={styles.supTitle}>Log this one side at a time?</Text>
+                </View>
+                <Text style={styles.supSubtitle}>
+                  {unilateralSuggest.exerciseName} is usually trained one side at a time.
+                </Text>
+
+                <Card surface="surface2" radius="md" padding="md" style={styles.supPairCard}>
+                  <View style={styles.supPairRow}>
+                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
+                    <Text style={styles.supPairName} numberOfLines={2}>First side</Text>
+                  </View>
+                  <View style={styles.supPairConnector} />
+                  <View style={styles.supPairRow}>
+                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
+                    <Text style={styles.supPairName} numberOfLines={2}>Other side</Text>
+                  </View>
+                </Card>
+
+                <View style={styles.supSteps}>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>1</Text>
+                    <Text style={styles.supStepText}>Do your first side.</Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>2</Text>
+                    <Text style={styles.supStepText}>
+                      {isCompound
+                        ? 'Half your normal rest, then do the other side.'
+                        : 'Switch sides when you\'re ready, no forced timer.'}
+                    </Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>3</Text>
+                    <Text style={styles.supStepText}>
+                      {isCompound
+                        ? 'Rest the same again, then start your next set.'
+                        : 'Rest as normal once both sides are done.'}
+                    </Text>
+                  </View>
+                  <View style={styles.supStep}>
+                    <Text style={styles.supStepNum}>4</Text>
+                    <Text style={styles.supStepText}>Logs as one set, using your lower side's reps.</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.supTip}>
+                  Tip: change your mind any time from this exercise's options menu.
+                </Text>
+
+                <Button
+                  variant="primary"
+                  style={styles.supPrimaryBtn}
+                  onPress={() => answerAndClose(true)}
+                  title="Yes, log per side"
+                  textStyle={styles.supPrimaryBtnText}
+                />
+
+                <View style={styles.supSecondaryRow}>
+                  <Button
+                    variant="outline"
+                    style={styles.supSecondaryBtn}
+                    onPress={() => answerAndClose(false)}
+                    accessibilityLabel="No, log as normal"
+                  >
+                    <Text style={styles.supSecondaryBtnText}>No, log as normal</Text>
+                  </Button>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+            );
+          })() : null}
         </Modal>
 
         {/* Stale workout recovery modal */}
@@ -3038,6 +3373,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={styles.sheetOptionLabel}>Exercise info</Text>
                 </View>
               </TouchableOpacity>
+              {/* D9: per-exercise "log per side" preference. Shown only for
+                  metadata-flagged unilateral exercises (exercise.laterality,
+                  exerciseMetadata.js deriveLaterality) - this is the manual
+                  override/escape hatch alongside the one-time suggestion
+                  prompt above; flipping it here never re-shows that prompt
+                  (it also marks the exercise "asked", same as answering the
+                  prompt directly). */}
+              {exercise?.laterality === 'unilateral' && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => {
+                  setShowOverflow(false);
+                  const exerciseId = exercise.id;
+                  const nextOn = !unilateralExercises.has(exerciseId);
+                  handleUnilateralAnswer(exerciseId, nextOn);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={unilateralExercises.has(exercise.id) ? 'Stop logging this exercise per side' : 'Log this exercise per side'}
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons
+                    name={unilateralExercises.has(exercise.id) ? 'repeat' : 'repeat-outline'}
+                    size={18}
+                    color={unilateralExercises.has(exercise.id) ? colors.primary : colors.textSecondary}
+                  />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={styles.sheetOptionLabel}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
+                    <Text style={styles.sheetOptionDesc}>One side, then the other. Still counts as one set.</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              )}
               {/* B8 gym basics. The warm-up helper lives here in the overflow,
                   off the permanent surface (COMP-001), and strictly
                   pull: the warm-up helper NEVER auto-appears (recorded decision
