@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },

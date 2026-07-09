@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   label: {
     flex: 1,
