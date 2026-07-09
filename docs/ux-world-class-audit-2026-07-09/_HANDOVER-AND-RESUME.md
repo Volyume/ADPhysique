@@ -101,6 +101,15 @@ in this session unless the founder asks.
   restricted diets, incomplete FSA vocabulary + buried UX, exclusions not
   synced). Six founder decision questions in that doc, section 7.
 
+## FOUNDER RULINGS (2026-07-09, after the assessment landed)
+
+See `DECISIONS-2026-07-09.md` in this folder for the full register. Short
+form: media HOLD, Live Activities HOLD, plate calculator REJECTED, haptics
+APPROVED, social proof NO, a11y/ease-of-use pass APPROVED with emphasis;
+dietary = Phase A+B, sync diet+allergens, add pescatarian, soft nudge
+guardrail. Build work proceeds in this session on this branch; per-stage
+commits continue. Anything REJECTED/HELD must never be re-proposed.
+
 ## Current position
 
 Stages 0 to 3 complete. Stage 4 (lint + test + ship) in progress. After
