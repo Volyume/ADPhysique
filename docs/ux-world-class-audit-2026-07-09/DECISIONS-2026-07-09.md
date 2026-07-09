@@ -39,3 +39,20 @@ world class." / "Proceed with dietary."
 2. Dietary Phase B (curated meal library expansion)
 3. Haptics rollout across builder/settings
 4. Ease-of-use, ability and design strengthening pass
+
+## D8. Exercise engine + library rulings (founder, structured round, 2026-07-09)
+
+| Question | Ruling |
+|---|---|
+| Set cap per exercise/session | **4 compound / 3 isolation** (split by the existing compound_isolation field). |
+| Overflow past the cap | **Add a different-angle exercise** — weekly volume PRESERVED, spilled deterministically into a complementary-angle exercise (never trimmed). |
+| Cap scope | **Auto-gen enforces; manual builder shows a calm nudge past the cap, never blocks.** Existing plans untouched (no migration prompt). |
+| Library expansion | **~100 comprehensive** (plan-A Option B): all targeted fills incl. bands + wider depth + subregion-enforcement extension. |
+
+Delegated engine-design details (recorded, not re-asked): max exercises per
+session derived as ceil(sessionTarget/cap) bounded by existing session budget;
+thin-equipment fallback = equipment-category diversity when no second angle
+exists; biceps (and similar already-tagged muscles) join SUBREGION_REQUIREMENTS.
+Build split: library agent owns seedExercises DATA + tags ONLY; engine agent
+owns ALL planEngine.js changes; engine diff gets LEAD hands-on review before
+push (deterministic, replay/invariant tests extended).
