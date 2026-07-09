@@ -6468,6 +6468,22 @@ const _tsToMs = (v) => {
   return Number.isFinite(ms) ? ms : null;
 };
 
+// F5/exercise-restore audit (2026-07-09): the INSERT below intentionally
+// carries exercise_type but NOT equipment_category, machine_type, force,
+// laterality, difficulty, machine_ok, home_ok, cue or equipment_profiles.
+// Those eight are canonical-exercise-library metadata, derived locally by
+// deriveExerciseMetadata()/updateExerciseMetadata() in seedExercises.js --
+// they are never set on a user-created custom exercise (see
+// ExercisePickerModal.handleCreate) and never sent to the cloud by
+// syncExercises() (sync.js), and neither the cloud `exercises` nor
+// `custom_exercises` table has these columns (migrate_020_custom_exercises.sql
+// defines custom_exercises' full column list; no later migration adds them).
+// Reading them off `e` here would only ever produce null, so they are left
+// out on purpose rather than papering over with dead null-coalesces.
+// exercise_type IS a real cloud column on both tables (migrate_091) and IS
+// user-settable on a custom exercise (createExerciseType), so it round-trips
+// here even though syncExercises() does not yet push it (separate gap, owned
+// by the sync-layer migration this batch, not fixed here).
 export async function insertOrUpdateExerciseFromCloud(e) {
   if (!e?.id || !e?.name) return;
   const d = await db();
@@ -6504,8 +6520,8 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
-       exercise_category, increment_kg)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       exercise_category, increment_kg, exercise_type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       e.id, e.name,
       e.primary_muscle ?? null, secondary,
@@ -6517,6 +6533,7 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       e.is_custom ? 1 : 0, e.notes ?? null,
       _tsToMs(e.created_at) ?? now, now,
       e.exercise_category ?? 'compound', e.increment_kg ?? 2.5,
+      e.exercise_type ?? 'weight_reps',
     ],
   );
   _invalidateExercisesCache();
