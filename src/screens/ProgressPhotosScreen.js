@@ -75,16 +75,31 @@ import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
 import ProgressScanCompare from '../components/ProgressScanCompare';
+import ProgressScanTrend from '../components/ProgressScanTrend';
+import ProgressScanMeaningMoment from '../components/ProgressScanMeaningMoment';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
+import CollapsibleSection from '../components/CollapsibleSection';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
   progressScanScoreForDisplay,
 } from '../lib/progressScanDisplay';
+import {
+  buildScanReceipt,
+  buildScoreTierContract,
+  isRecalibratedAssessment,
+  RECALIBRATION_NOTE_TEXT,
+} from '../lib/progressScanResultsContract';
+import {
+  getProgressScanMeaningMomentSeen,
+  getSeenRecalibrationScanIds,
+  markRecalibrationNoteSeen,
+  setProgressScanMeaningMomentSeen,
+} from '../lib/progressScanPreferences';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -173,7 +188,19 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareInitialName, setCompareInitialName] = useState(null);
   const [scanCompareOpen, setScanCompareOpen] = useState(false);
+  const [trendOpen, setTrendOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Wave 3 results contract: the Low-tier "Show score anyway" affordance is
+  // per-scan and resets on refresh (a reveal is a viewing choice, never
+  // persisted); the Why? expansion open state is likewise transient.
+  const [revealedLowScoreIds, setRevealedLowScoreIds] = useState(() => new Set());
+  const [whyOpenScanIds, setWhyOpenScanIds] = useState(() => new Set());
+  // The recalibration note and the meaning moment each render at most once
+  // ever (device-local, progressScanPreferences.js). `meaningMomentSeen` is
+  // null until the persisted flag is read, so the moment never flashes open
+  // before that read resolves.
+  const [seenRecalibrationIds, setSeenRecalibrationIds] = useState([]);
+  const [meaningMomentSeen, setMeaningMomentSeen] = useState(null);
   const [captureRouteOpen, setCaptureRouteOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureReference, setCaptureReference] = useState(null);
@@ -248,6 +275,23 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, [userId]);
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  // Wave 3 one-time-render state: read once on mount, device-local, never
+  // blocks the rest of the screen (both reads are best-effort; a failure
+  // resolves to the safe "not yet seen" default from progressScanPreferences).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [ids, seenMeaningMoment] = await Promise.all([
+        getSeenRecalibrationScanIds(),
+        getProgressScanMeaningMomentSeen(),
+      ]);
+      if (!alive) return;
+      setSeenRecalibrationIds(ids);
+      setMeaningMomentSeen(seenMeaningMoment);
+    })();
+    return () => { alive = false; };
+  }, []);
 
   async function pickFrom(source) {
     // Live-tier re-check (hostile review E10 #1 class): the add alert can be
@@ -975,7 +1019,26 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCompareOpen(true);
   }
   function openScanCompare() { setScanCompareOpen(true); }
+  function openTrend() { setTrendOpen(true); }
   function openShare() { setShareOpen(true); }
+
+  // Low-tier "Show score anyway" (results-ui-and-copy-blueprint.md §1): a
+  // per-scan viewing toggle, never persisted, never affects the engine's own
+  // tier decision.
+  function toggleRevealLowScore(scanId) {
+    setRevealedLowScoreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(scanId)) next.delete(scanId); else next.add(scanId);
+      return next;
+    });
+  }
+  function toggleWhyOpen(scanId) {
+    setWhyOpenScanIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(scanId)) next.delete(scanId); else next.add(scanId);
+      return next;
+    });
+  }
 
   // NEW high-risk surfaces are withheld under the shared suppression gate
   // (fail-closed): the comparison entry and the share card. Viewing the dated
@@ -992,11 +1055,56 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, [visibleScans]);
   const scanShareItems = scanShareItemsFromEntries(visibleScans);
   const scoredScans = useMemo(() => visibleScoredScans(visibleScans), [visibleScans]);
+  // Chronological order for the Why? receipt's setup-drift lines (results-ui-
+  // and-copy-blueprint.md §2): the engine's own scanSetupStability compares a
+  // scan against the ONE immediately before it, never a more distant one.
+  const scansAscending = useMemo(
+    () => [...(visibleScans || [])].sort(
+      (a, b) => (Number(a?.capturedAt) || 0) - (Number(b?.capturedAt) || 0),
+    ),
+    [visibleScans],
+  );
+  function previousScanFor(scan) {
+    const idx = scansAscending.findIndex((s) => s.id === scan?.id);
+    return idx > 0 ? scansAscending[idx - 1] : null;
+  }
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
   const canCompareScans = !loading && scoredScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
   const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
+  // Trend entry (results-ui-and-copy-blueprint.md §4): withheld under
+  // suppression like every other score surface (fail-closed double guard,
+  // matching the Compare entry above); the component self-suppresses too.
+  const canShowTrend = !loading && visibleScans.length > 0 && !suppressed;
+
+  // Meaning moment (results-ui-and-copy-blueprint.md §1): shown once, before
+  // the first time this device ever renders a score. `meaningMomentSeen` is
+  // null until the persisted flag is read; the moment is never shown to a
+  // suppressed session (nothing score-shaped is on screen to explain yet).
+  const meaningMomentOpen = meaningMomentSeen === false && scoredScans.length > 0 && !suppressed;
+  function dismissMeaningMoment() {
+    setMeaningMomentSeen(true);
+    setProgressScanMeaningMomentSeen().catch(() => {});
+  }
+
+  // Recalibration note (results-ui-and-copy-blueprint.md §1): renders for the
+  // whole of this first encounter (this mount/session), then is persisted as
+  // seen so a FUTURE mount never renders it again for that scan id. Marking
+  // seen deliberately does not update `seenRecalibrationIds` mid-session: the
+  // note must stay put for the remainder of the session the user first saw
+  // it in, not vanish a frame after appearing.
+  useEffect(() => {
+    const unseenMigratedIds = (visibleScans || [])
+      .filter((scan) => isRecalibratedAssessment(progressScanAssessmentForDisplay(scan))
+        && !seenRecalibrationIds.includes(scan.id))
+      .map((scan) => scan.id);
+    if (unseenMigratedIds.length === 0) return;
+    (async () => {
+      for (const id of unseenMigratedIds) await markRecalibrationNoteSeen(id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleScans]);
   const latestScan = useMemo(() => {
     if (!Array.isArray(visibleScans) || visibleScans.length === 0) return null;
     return [...visibleScans].sort((a, b) => (Number(b.capturedAt) || Number(b.captured_at) || 0) - (Number(a.capturedAt) || Number(a.captured_at) || 0))[0] || null;
@@ -1063,15 +1171,33 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (!scan) return null;
     const assessment = progressScanAssessmentForDisplay(scan);
     const score = progressScanScoreForDisplay(scan);
-    const scoreValue = suppressed ? 'Hidden' : (score != null ? formatVolyumeScore(score) : 'Not scored');
+    // Tier rendered contract (scoring-accuracy-and-validation-blueprint.md §5):
+    // a Low-tier score sits behind a "Show score anyway" affordance; every
+    // other tier shows the integer directly, same as before this wave.
+    const tierContract = buildScoreTierContract(scan, {
+      suppressed,
+      revealed: revealedLowScoreIds.has(scan.id),
+    });
+    const scoreValue = suppressed ? 'Hidden' : (tierContract.requiresRevealAffordance && !tierContract.revealed
+      ? 'Show anyway'
+      : (score != null ? formatVolyumeScore(score) : 'Not scored'));
     const bandValue = assessment?.leannessBandLabel || (score == null ? 'Not scored' : 'Baseline');
     const signalValue = suppressed
       ? 'Hidden'
       : (assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || (score == null ? 'Not scored' : 'Baseline'));
+    const confidenceValue = suppressed ? 'Hidden' : tierContract.chipLabel;
     return [
-      { label: 'Score', value: scoreValue },
+      {
+        label: 'Score',
+        value: scoreValue,
+        // A score never renders without its tier, and the accessible label
+        // always carries both together (results-ui-and-copy-blueprint.md §8).
+        interactive: !suppressed && tierContract.requiresRevealAffordance && !tierContract.revealed,
+        accessibilityLabel: tierContract.accessibilityLabel,
+      },
       { label: 'Leanness', value: bandValue },
       { label: 'Change', value: signalValue },
+      { label: 'Confidence', value: confidenceValue },
     ];
   }
   function renderCheckInCard(item) {
@@ -1086,6 +1212,17 @@ export default function ProgressPhotosScreen({ navigation }) {
     const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
     const scanForDay = scanForCheckIn(item);
     const scanSummary = libraryScanSummary(scanForDay);
+    // Receipts (results-ui-and-copy-blueprint.md §2/§9): one calm sentence +
+    // an optional Why? expansion, built from the engine's own reason/setup-
+    // finding codes. Withheld entirely under suppression, same as every
+    // other score-adjacent surface.
+    const receipt = (!suppressed && scanForDay)
+      ? buildScanReceipt(scanForDay, { previousScan: previousScanFor(scanForDay) })
+      : null;
+    const whyOpen = scanForDay ? whyOpenScanIds.has(scanForDay.id) : false;
+    const showRecalibrationNote = !suppressed && !!scanForDay
+      && isRecalibratedAssessment(progressScanAssessmentForDisplay(scanForDay))
+      && !seenRecalibrationIds.includes(scanForDay.id);
     const metaText = [weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
     return (
@@ -1122,11 +1259,48 @@ export default function ProgressPhotosScreen({ navigation }) {
           {scanSummary ? (
             <View style={styles.libraryScoreRow}>
               {scanSummary.map((part) => (
-                <View key={part.label} style={styles.libraryScoreCell}>
-                  <Text style={styles.libraryScoreLabel}>{part.label}</Text>
-                  <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
-                </View>
+                part.interactive ? (
+                  <TouchableOpacity
+                    key={part.label}
+                    style={styles.libraryScoreCell}
+                    onPress={() => toggleRevealLowScore(scanForDay.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={part.accessibilityLabel}
+                  >
+                    <Text style={styles.libraryScoreLabel}>{part.label}</Text>
+                    <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View
+                    key={part.label}
+                    style={styles.libraryScoreCell}
+                    accessible={!!part.accessibilityLabel}
+                    accessibilityLabel={part.accessibilityLabel}
+                  >
+                    <Text style={styles.libraryScoreLabel}>{part.label}</Text>
+                    <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                  </View>
+                )
               ))}
+            </View>
+          ) : null}
+          {receipt ? (
+            <View style={styles.scanReceiptBlock}>
+              <Text style={styles.scanReceiptSentence}>{receipt.sentence}</Text>
+              {showRecalibrationNote ? (
+                <Text style={styles.scanRecalibrationNote}>{RECALIBRATION_NOTE_TEXT}</Text>
+              ) : null}
+              {receipt.whyLines.length > 0 ? (
+                <CollapsibleSection
+                  title="Why?"
+                  open={whyOpen}
+                  onToggle={() => toggleWhyOpen(scanForDay.id)}
+                >
+                  {receipt.whyLines.map((line) => (
+                    <Text key={line} style={styles.scanReceiptWhyLine}>{line}</Text>
+                  ))}
+                </CollapsibleSection>
+              ) : null}
             </View>
           ) : null}
           <View style={styles.checkInPoseRow}>
@@ -1226,6 +1400,18 @@ export default function ProgressPhotosScreen({ navigation }) {
                   fullWidth={false}
                   style={styles.heroActionButton}
                   accessibilityLabel="Compare two photo sets"
+                />
+              ) : null}
+              {canShowTrend ? (
+                <Button
+                  title="Trend"
+                  icon="trending-up-outline"
+                  variant="outline"
+                  size="sm"
+                  onPress={openTrend}
+                  fullWidth={false}
+                  style={styles.heroActionButton}
+                  accessibilityLabel="View score trend"
                 />
               ) : null}
             </View>
@@ -1483,6 +1669,31 @@ export default function ProgressPhotosScreen({ navigation }) {
           hideExact={false}
           onClose={() => setScanCompareOpen(false)}
         />
+      </Modal>
+
+      {/* Score trend (results-ui-and-copy-blueprint.md §4): comparable scans
+          only, gaps shown honestly. Self-suppresses; the entry above is ALSO
+          gated, the same double guard as Compare. */}
+      <Modal
+        visible={trendOpen}
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={() => setTrendOpen(false)}
+      >
+        <ProgressScanTrend
+          scans={visibleScans}
+          onClose={() => setTrendOpen(false)}
+        />
+      </Modal>
+
+      {/* One-time meaning moment (results-ui-and-copy-blueprint.md §1): shown
+          before this device's first-ever score render, then never again.
+          Blocks nothing else; the timeline behind it keeps working. */}
+      <Modal
+        visible={meaningMomentOpen}
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={() => {}}
+      >
+        <ProgressScanMeaningMoment onDismiss={dismissMeaningMoment} />
       </Modal>
 
       {/* Comparison. Self-contained selection + three modes; self-suppresses
@@ -2027,10 +2238,12 @@ const styles = StyleSheet.create({
   checkInMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs, flexShrink: 1 },
   libraryScoreRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
   },
   libraryScoreCell: {
     flex: 1,
+    minWidth: 96,
     minHeight: 54,
     borderRadius: radius.sm,
     backgroundColor: colors.surface2,
@@ -2040,7 +2253,22 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   libraryScoreLabel: { ...type.caption, color: colors.textMuted },
+  // Equal visual weight with the Score cell (results-ui-and-copy-blueprint.md
+  // §1): every cell in this grid, including Confidence, shares this exact
+  // style token, so the confidence chip is never demoted relative to the
+  // score integer.
   libraryScoreValue: { ...type.label, color: colors.textPrimary, lineHeight: 18 },
+  scanReceiptBlock: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  scanReceiptSentence: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  scanRecalibrationNote: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  scanReceiptWhyLine: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
     borderWidth: 1,

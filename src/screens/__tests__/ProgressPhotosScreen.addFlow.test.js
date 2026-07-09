@@ -113,6 +113,10 @@ jest.mock('../../lib/progressScanPreferences', () => ({
   getProgressScanCapturePreferences: jest.fn(async () => ({ timerSeconds: 10 })),
   getProgressScanHideExactPreference: jest.fn(async () => false),
   setProgressScanHideExactPreference: jest.fn(async () => {}),
+  getSeenRecalibrationScanIds: jest.fn(async () => []),
+  markRecalibrationNoteSeen: jest.fn(async () => {}),
+  getProgressScanMeaningMomentSeen: jest.fn(async () => true),
+  setProgressScanMeaningMomentSeen: jest.fn(async () => {}),
 }));
 jest.mock('../../lib/database', () => ({
   getUserBodyProfile: jest.fn(async () => null),

@@ -16,6 +16,7 @@ import {
   orderedScanEntries,
 } from '../lib/progressScanCompareViewModel';
 import { formatVolyumeScore, progressScanAssessmentForDisplay } from '../lib/progressScanDisplay';
+import { confidenceChipLabel, resolveConfidenceTier } from '../lib/progressScanResultsContract';
 
 export { defaultScanPair, orderedScanEntries } from '../lib/progressScanCompareViewModel';
 
@@ -48,13 +49,27 @@ export function scanWeightLabel(scan, { hideExact = false } = {}) {
   return kg == null ? null : `${kg} kg`;
 }
 
+// Results-ui-and-copy-blueprint.md §1: a score never renders without its
+// confidence tier, at equal visual weight (the integer is never more than one
+// type step larger than the chip; summaryRange uses type.h3, so the chip here
+// uses type.title, the adjacent step down). Only rendered alongside an actual
+// numeric score, never for an unscored/measured-only/baseline panel (those
+// already say so via scanRangeLabel and carry no tier to show).
+function scanConfidenceChipText(scan) {
+  const assessment = progressScanAssessmentForDisplay(scan);
+  if (assessment?.visualLeannessScore == null) return null;
+  return confidenceChipLabel(resolveConfidenceTier(scan));
+}
+
 function ScanSummary({ scan, label, hideExact }) {
   const weight = scanWeightLabel(scan, { hideExact });
+  const confidenceChip = scanConfidenceChipText(scan);
   return (
     <View style={styles.summaryPanel}>
       <Text style={styles.summaryLabel}>{label}</Text>
       <Text style={styles.summaryDate}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
       <Text style={styles.summaryRange}>{scanRangeLabel(scan, { hideExact })}</Text>
+      {confidenceChip ? <Text style={styles.summaryConfidence}>{confidenceChip}</Text> : null}
       <Text style={styles.summaryMeta}>
         {[scan?.qualityLabel || 'saved', weight, `${scan?.assets?.length || 0} photos`].filter(Boolean).join(' | ')}
       </Text>
@@ -235,6 +250,7 @@ const styles = StyleSheet.create({
   summaryLabel: { ...type.caption, color: colors.textMuted, fontWeight: fontWeight.semibold },
   summaryDate: { ...type.bodyStrong, color: colors.textPrimary, lineHeight: 20 },
   summaryRange: { ...type.h3, color: colors.primary, lineHeight: 25 },
+  summaryConfidence: { ...type.title, color: colors.textSecondary },
   summaryMeta: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   deltaBox: {
     borderRadius: radius.md,
