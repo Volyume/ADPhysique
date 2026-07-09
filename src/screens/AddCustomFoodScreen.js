@@ -79,6 +79,13 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [prefillBarcode, userId]);
   const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
+  // L05-ACF1 (2026-07-09 design audit): the named/household unit for the
+  // Serving (g) figure above, e.g. "slice" when Serving (g) is 30 (one
+  // slice = 30 g). Optional; no OCR/barcode source ever prefills it, so it
+  // always starts blank. Persisted as custom_foods.serving_label, the
+  // column insertCustomFood already writes (db.js:389,396) but the form
+  // never populated until now.
+  const [servingLabel, setServingLabel] = useState('');
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
   const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
   const [carbs, setCarbs] = useState(_num(prefillMacros?.carbs100g));
@@ -114,6 +121,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     name: name.trim(),
     brand: brand.trim() || null,
     servingG: Number(servingG) || 0,
+    servingLabel: servingLabel.trim() || null,
     kcal100g: Number(kcal) || 0,
     protein100g: Number(protein) || 0,
     carbs100g: Number(carbs) || 0,
@@ -121,7 +129,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     fibre100g: fibre.trim() ? Number(fibre) : null,
     barcodeEan: prefillBarcode || null,
     micros,
-  }), [name, brand, servingG, kcal, protein, carbs, fat, fibre, prefillBarcode, micros]);
+  }), [name, brand, servingG, servingLabel, kcal, protein, carbs, fat, fibre, prefillBarcode, micros]);
 
   // Hard-block non-finite / negative numbers here (audit F-006): an entry like
   // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
@@ -146,13 +154,22 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     if (!fin(quantityG) || qty <= 0 || !fin(kcal)) return null;
     const factor = qty / 100;
     const round1 = (n) => Math.round(n * 10) / 10;
+    // L05-ACF1: when a named serving is set (e.g. "slice" at 30 g), fold it
+    // into the existing preview as a multiple ("2 x slice") alongside the
+    // grams, rather than adding a second preview line.
+    const label = servingLabel.trim();
+    const sG = Number(servingG);
+    const unitPrefix = (label && fin(servingG) && sG > 0)
+      ? ` (${round1(qty / sG)} x ${label})`
+      : '';
     return {
       kcal: Math.round((Number(kcal) || 0) * factor),
       protein: round1((Number(protein) || 0) * factor),
       carbs: round1((Number(carbs) || 0) * factor),
       fat: round1((Number(fat) || 0) * factor),
+      unitPrefix,
     };
-  }, [quantityG, kcal, protein, carbs, fat]);
+  }, [quantityG, kcal, protein, carbs, fat, servingG, servingLabel]);
 
   async function onSave() {
     if (!canSave || saving) return;
@@ -328,6 +345,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
         <SectionLabel style={styles.sectionLabelSpacing}>QUANTITY EATEN</SectionLabel>
+        {/* L05-ACF1 (2026-07-09 design audit): name the Serving (g) amount as
+            a household unit ("slice", "cup", "tin"), stored as
+            custom_foods.serving_label alongside the gram figure. Optional;
+            leaving it blank saves exactly as before this field existed. */}
+        <Field
+          label="Serving name (optional)"
+          value={servingLabel}
+          onChange={setServingLabel}
+          placeholder="e.g. slice, cup, tin"
+        />
         <View style={styles.row}>
           <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
           <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
@@ -339,7 +366,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </Text>
         {portionPreview ? (
           <Text style={styles.portionPreview}>
-            {`${quantityG} g works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
+            {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
           </Text>
         ) : null}
 
