@@ -290,7 +290,15 @@ export default function FoodSearchScreen({ navigation, route }) {
       const parsedMeals = parseInt(mealsPerRaw, 10);
       const mealsPerDay = (parsedMeals >= 3 && parsedMeals <= 8) ? parsedMeals : 4;
       const mealsLeft = mealsLeftToday(mealsPerDay, loggedSlots);
-      const candidates = getCuratedCandidates({ diet, slot: mealSlot });
+      // Dietary-needs build 2026-07-09: suggestions share the plan layer's
+      // hard exclusions (avoid list + allergens). The user's own saved
+      // foods/meals are deliberately not filtered: their history is theirs.
+      const candidates = getCuratedCandidates({
+        diet,
+        slot: mealSlot,
+        excludeFoodKeys: userProfile?.mealPlanExcludeFoods,
+        excludeTags: userProfile?.mealPlanExcludeTags,
+      });
       const { suggestions: ranked, remaining, perMeal } = rankSuggestions({
         targets, consumed, savedMeals: candidates, foods: suggestFoodCandidates, slot: mealSlot, mealsLeft, limit: 12,
       });

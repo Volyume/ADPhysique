@@ -19,22 +19,27 @@
  *   - Protein-forward; a deliberate lean/balanced fat spread across the set.
  *
  * Diet tag = the BROADEST diet the meal qualifies for (vegan ⊂ vegetarian ⊂
- * omnivore), so the engine's dietAllows cascade shows a vegan meal to everyone
- * and a dairy/egg meal to vegetarians + omnivores. Quorn is egg-bound, so Quorn
- * meals are 'vegetarian', not 'vegan' (report caveat).
+ * pescatarian ⊂ omnivore), so the engine's dietAllows cascade shows a vegan
+ * meal to everyone and a dairy/egg meal to vegetarians and up. Quorn is
+ * egg-bound, so Quorn meals are 'vegetarian', not 'vegan' (report caveat).
+ * Fish and seafood meals with no meat are 'pescatarian' (dietary-needs
+ * build 2026-07-09): pescatarian sits between vegetarian and omnivore, so
+ * omnivores still see every fish meal exactly as before.
  *
  * Schema (per meal): id, name, diet, slots[], components[{food,g}].
  */
 
 import { CURATED_FOODS, resolveComponent } from './curatedFoods';
+import { foodExcluded } from './foodRoles';
 
-export const DIETS = Object.freeze(['omnivore', 'vegetarian', 'vegan']);
+export const DIETS = Object.freeze(['omnivore', 'pescatarian', 'vegetarian', 'vegan']);
 
-// vegan ⊂ vegetarian ⊂ omnivore.
+// vegan ⊂ vegetarian ⊂ pescatarian ⊂ omnivore.
+const DIET_RANK = Object.freeze({ vegan: 0, vegetarian: 1, pescatarian: 2, omnivore: 3 });
 export function dietAllows(userDiet, mealDiet) {
-  if (userDiet === 'vegan') return mealDiet === 'vegan';
-  if (userDiet === 'vegetarian') return mealDiet === 'vegan' || mealDiet === 'vegetarian';
-  return true;
+  const user = DIET_RANK[userDiet] ?? DIET_RANK.omnivore;
+  const meal = DIET_RANK[mealDiet] ?? DIET_RANK.omnivore;
+  return meal <= user;
 }
 
 const m = (id, name, diet, slots, components) => ({ id, name, diet, slots, components });
@@ -43,8 +48,8 @@ export const CURATED_MEALS = Object.freeze([
   // ─── OMNIVORE — meat/fish (report §B omnivore) ──────────────────────────
   // Breakfast: only the genuinely omnivore (fish/bacon) ones; the egg/dairy
   // breakfasts are tagged vegetarian below and cascade up to omnivore.
-  m('curated_om_eggs_salmon_oats', 'Scrambled eggs, smoked salmon & oats', 'omnivore', ['breakfast'], [{ food: 'eggs', g: 150 }, { food: 'smoked_salmon', g: 50 }, { food: 'oats', g: 50 }]),
-  m('curated_om_eggs_toast_salmon', 'Eggs on toast & smoked salmon', 'omnivore', ['breakfast'], [{ food: 'eggs', g: 150 }, { food: 'wholemeal_bread', g: 80 }, { food: 'smoked_salmon', g: 50 }]),
+  m('curated_om_eggs_salmon_oats', 'Scrambled eggs, smoked salmon & oats', 'pescatarian', ['breakfast'], [{ food: 'eggs', g: 150 }, { food: 'smoked_salmon', g: 50 }, { food: 'oats', g: 50 }]),
+  m('curated_om_eggs_toast_salmon', 'Eggs on toast & smoked salmon', 'pescatarian', ['breakfast'], [{ food: 'eggs', g: 150 }, { food: 'wholemeal_bread', g: 80 }, { food: 'smoked_salmon', g: 50 }]),
   m('curated_om_bacon_eggs', 'Bacon medallions & eggs', 'omnivore', ['breakfast'], [{ food: 'bacon_medallions', g: 90 }, { food: 'eggs', g: 150 }]),
 
   // Lunch / dinner
@@ -52,22 +57,22 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_beef_chilli', 'Beef mince chilli & rice', 'omnivore', ['lunch', 'dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'kidney_beans', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'tomato_sauce', g: 80 }]),
   m('curated_om_spag_bol', 'Spaghetti bolognese', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
   m('curated_om_turkey_stirfry', 'Turkey mince stir-fry', 'omnivore', ['lunch', 'dinner'], [{ food: 'turkey_mince', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
-  m('curated_om_salmon_rice_broccoli', 'Baked salmon, rice & broccoli', 'omnivore', ['lunch', 'dinner'], [{ food: 'salmon', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'broccoli', g: 120 }]),
-  m('curated_om_cod_bake', 'Cod bake', 'omnivore', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_potato', g: 250 }, { food: 'cheddar_light', g: 25 }]),
+  m('curated_om_salmon_rice_broccoli', 'Baked salmon, rice & broccoli', 'pescatarian', ['lunch', 'dinner'], [{ food: 'salmon', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'broccoli', g: 120 }]),
+  m('curated_om_cod_bake', 'Cod bake', 'pescatarian', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_potato', g: 250 }, { food: 'cheddar_light', g: 25 }]),
   m('curated_om_chicken_sweetpot_greens', 'Chicken, sweet potato & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'sweet_potato', g: 250 }, { food: 'green_beans', g: 120 }, { food: 'olive_oil', g: 10 }]),
   m('curated_om_chicken_jacket', 'Chicken jacket potato & salad', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 140 }, { food: 'white_potato', g: 300 }, { food: 'salad', g: 80 }, { food: 'olive_oil', g: 10 }]),
-  m('curated_om_jacket_tuna', 'Jacket potato & tuna', 'omnivore', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'tuna_water', g: 120 }, { food: 'salad', g: 60 }]),
+  m('curated_om_jacket_tuna', 'Jacket potato & tuna', 'pescatarian', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'tuna_water', g: 120 }, { food: 'salad', g: 60 }]),
   m('curated_om_steak_potatoes', 'Steak & potatoes', 'omnivore', ['dinner'], [{ food: 'steak_lean', g: 150 }, { food: 'white_potato', g: 250 }, { food: 'salad', g: 100 }]),
-  m('curated_om_prawn_stirfry', 'King prawn stir-fry & rice', 'omnivore', ['lunch', 'dinner'], [{ food: 'prawns', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_om_prawn_stirfry', 'King prawn stir-fry & rice', 'pescatarian', ['lunch', 'dinner'], [{ food: 'prawns', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
   m('curated_om_chicken_pasta', 'Chicken & tomato pasta', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'pasta', g: 80 }, { food: 'tomato_sauce', g: 100 }, { food: 'broccoli', g: 100 }, { food: 'olive_oil', g: 10 }]),
   m('curated_om_beef_rice_greens', 'Beef mince, rice & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'white_rice', g: 200 }, { food: 'green_beans', g: 100 }]),
   m('curated_om_turkey_potato_greens', 'Turkey mince, potato & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'turkey_mince', g: 150 }, { food: 'white_potato', g: 300 }, { food: 'green_beans', g: 120 }, { food: 'olive_oil', g: 10 }]),
-  m('curated_om_salmon_sweetpot', 'Salmon, sweet potato & broccoli', 'omnivore', ['dinner'], [{ food: 'salmon', g: 150 }, { food: 'sweet_potato', g: 250 }, { food: 'broccoli', g: 120 }]),
-  m('curated_om_cod_rice_peas', 'Cod, rice & peas', 'omnivore', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_om_salmon_sweetpot', 'Salmon, sweet potato & broccoli', 'pescatarian', ['dinner'], [{ food: 'salmon', g: 150 }, { food: 'sweet_potato', g: 250 }, { food: 'broccoli', g: 120 }]),
+  m('curated_om_cod_rice_peas', 'Cod, rice & peas', 'pescatarian', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }, { food: 'olive_oil', g: 10 }]),
   m('curated_om_chicken_potato_veg', 'Chicken, potatoes & veg', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_potato', g: 300 }, { food: 'mixed_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
 
   // Snack / pre / post
-  m('curated_om_sn_tuna_ricecakes', 'Tuna & rice cakes', 'omnivore', ['snack'], [{ food: 'tuna_water', g: 100 }, { food: 'rice_cakes', g: 30 }]),
+  m('curated_om_sn_tuna_ricecakes', 'Tuna & rice cakes', 'pescatarian', ['snack'], [{ food: 'tuna_water', g: 100 }, { food: 'rice_cakes', g: 30 }]),
   m('curated_om_pre_chicken_rice', 'Chicken & white rice', 'omnivore', ['preworkout'], [{ food: 'chicken_breast', g: 120 }, { food: 'white_rice', g: 150 }]),
   m('curated_om_post_chicken_rice', 'Chicken & white rice', 'omnivore', ['postworkout'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
 
@@ -171,14 +176,24 @@ export function mealTotals(items) {
  * the macro ranking pick (the same rule slotMatches() applies). The named slots
  * (breakfast/lunch/dinner/snack and pre/post-workout) still filter to their
  * tagged meals.
+ *
+ * excludeFoodKeys/excludeTags (dietary-needs build 2026-07-09): the user's
+ * avoid list and FSA allergen excludes. A meal is out when ANY component is
+ * excluded, the same hard rule planPreferences applies to generated plans,
+ * via the same foodExcluded predicate. The diet cascade and exclusions are
+ * the ONLY suggestion filters: the plan-only protein-anchor policy stays
+ * out of the diary deliberately, so suggestions keep today's breadth.
  */
 const NUMBERED_SLOT = /^meal_\d+$/;
-export function getCuratedCandidates({ diet = 'omnivore', slot = null } = {}) {
+export function getCuratedCandidates({ diet = 'omnivore', slot = null, excludeFoodKeys, excludeTags } = {}) {
   const out = [];
   const slotFilter = slot && !NUMBERED_SLOT.test(slot);
+  const exclude = { excludeFoodKeys, excludeTags };
+  const hasExcludes = (excludeFoodKeys?.length || 0) > 0 || (excludeTags?.length || 0) > 0;
   for (const meal of CURATED_MEALS) {
     if (!dietAllows(diet, meal.diet)) continue;
     if (slotFilter && !(meal.slots.includes(slot) || meal.slots.includes('any'))) continue;
+    if (hasExcludes && meal.components.some((c) => foodExcluded(c.food, exclude))) continue;
     const items = mealItems(meal);
     out.push({
       id: meal.id,

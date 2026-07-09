@@ -149,6 +149,33 @@ describe('profiles push', () => {
     expect(sb._calls.upserts[0].row.diet_preference).toBe('omnivore');
   });
 
+  // Allergen excludes (dietary-needs build 2026-07-09, migrate_112): mirrors
+  // the sex/diet_preference column tests above for the new jsonb column.
+  test('payload carries allergen_excludes + its column timestamp when stamped', async () => {
+    setStoreState({
+      userProfile: { firstName: 'Allan', mealPlanExcludeTags: ['peanuts', 'milk'] },
+      userProfileFieldUpdatedAt: { mealPlanExcludeTags: Date.UTC(2026, 6, 9) },
+    });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushProfiles(sb, { userId: 'u1' });
+
+    const { row } = sb._calls.upserts[0];
+    expect(row.allergen_excludes).toEqual(['peanuts', 'milk']);
+    expect(row.column_updates_at.allergen_excludes).toBe('2026-07-09T00:00:00.000Z');
+  });
+
+  test('allergen_excludes defaults to an empty array when unset', async () => {
+    setStoreState({ userProfile: { firstName: 'Allan' }, userProfileFieldUpdatedAt: {} });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushProfiles(sb, { userId: 'u1' });
+
+    expect(sb._calls.upserts[0].row.allergen_excludes).toEqual([]);
+  });
+
   // U2 sex mirror, moved here from the retired legacy syncProfile (E12
   // step 1): only the two onboarding-enforced values ever cross the wire.
   test('payload carries a valid sex; invalid or missing sex is null', async () => {
@@ -168,19 +195,27 @@ describe('profiles push', () => {
     expect(sb._calls.upserts[2].row.sex).toBeNull();
   });
 
-  // migrate_094 tolerance: a cloud project without the sex column rejects
-  // the whole upsert; the handler must retry sex-less so the other fields
-  // keep syncing (same fallback restoreSessionFromCloud uses on read).
-  test('retries the upsert without sex when the first attempt errors', async () => {
-    setStoreState({ userProfile: { firstName: 'A', sex: 'female' }, userProfileFieldUpdatedAt: {} });
+  // Column tolerance (migrate_094 sex, migrate_112 allergen_excludes): a
+  // cloud project missing either column rejects the WHOLE upsert; the
+  // handler walks its retry ladder until an attempt carries only columns
+  // the cloud knows, so the core fields keep syncing. Updated 2026-07-09
+  // (dietary-needs build): the ladder now also strips allergen_excludes,
+  // so the mock simulates the unmigrated cloud faithfully (errors on any
+  // payload containing a missing column) instead of failing call #1 only.
+  test('retries the upsert without unmigrated columns when the cloud rejects them', async () => {
+    setStoreState({
+      userProfile: { firstName: 'A', sex: 'female', mealPlanExcludeTags: ['peanuts'] },
+      userProfileFieldUpdatedAt: {},
+    });
     const calls = { upserts: [] };
+    const missing = ['sex', 'allergen_excludes']; // neither 094 nor 112 applied
     const sb = {
       _calls: calls,
       from: jest.fn(() => ({
         upsert: jest.fn(async (row, opts) => {
           calls.upserts.push({ row, opts });
-          // First call (with sex) fails as an unmigrated project would.
-          return { error: calls.upserts.length === 1 ? { code: 'PGRST204' } : null };
+          const rejected = missing.some((c) => c in row);
+          return { error: rejected ? { code: 'PGRST204' } : null };
         }),
       })),
     };
@@ -189,9 +224,15 @@ describe('profiles push', () => {
     const result = await pushProfiles(sb, { userId: 'u1' });
 
     expect(result).toEqual({ count: 1, errors: 0 });
-    expect(calls.upserts).toHaveLength(2);
+    // Ladder: full -> minus allergen_excludes -> minus sex -> minus both.
+    const last = calls.upserts[calls.upserts.length - 1].row;
+    expect('sex' in last).toBe(false);
+    expect('allergen_excludes' in last).toBe(false);
+    // The first attempt still tried the full payload (both columns sent).
     expect(calls.upserts[0].row.sex).toBe('female');
-    expect('sex' in calls.upserts[1].row).toBe(false);
+    expect(calls.upserts[0].row.allergen_excludes).toEqual(['peanuts']);
+    // Core fields survive to the successful attempt.
+    expect(last.first_name).toBe('A');
   });
 
   test('returns count:0 when there is no profile in the store', async () => {

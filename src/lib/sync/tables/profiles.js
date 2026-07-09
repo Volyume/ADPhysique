@@ -36,7 +36,27 @@ const FIELD_MAP = Object.freeze([
   ['barWeight',        'bar_weight'],
   ['dietPreference',   'diet_preference'],
   ['sex',              'sex'],
+  // Allergen excludes (dietary-needs build 2026-07-09, migrate_112): the
+  // FSA-tag exclusion list rides the profile merge so an allergy survives a
+  // device change. Kept as mealPlanExcludeTags locally so every engine
+  // reader stays unchanged. jsonb array column.
+  ['mealPlanExcludeTags', 'allergen_excludes'],
 ]);
+
+// Columns that may not exist in the cloud yet (founder applies migrations
+// manually): sex (migrate_094), allergen_excludes (migrate_112). PostgREST
+// rejects a whole upsert for one unknown column, so the push retries with
+// progressively fewer optional columns rather than failing the sync.
+const OPTIONAL_COLUMNS = Object.freeze(['allergen_excludes', 'sex']);
+
+function _withoutColumns(payload, cols) {
+  const out = { ...payload, column_updates_at: { ...payload.column_updates_at } };
+  for (const c of cols) {
+    delete out[c];
+    delete out.column_updates_at[c];
+  }
+  return out;
+}
 
 // Only the two onboarding-enforced values ever cross the wire; anything
 // else (including a legacy profile without one) travels as null.
@@ -87,6 +107,7 @@ function _profilesEqual(a, b) {
     barWeight:        p?.barWeight ?? 20,
     dietPreference:   p?.dietPreference ?? 'omnivore',
     sex:              _validSex(p?.sex),
+    allergenExcludes: JSON.stringify(Array.isArray(p?.mealPlanExcludeTags) ? p.mealPlanExcludeTags : []),
   });
   const x = norm(a);
   const y = norm(b);
@@ -97,7 +118,8 @@ function _profilesEqual(a, b) {
     && x.primaryEquipment === y.primaryEquipment
     && x.barWeight === y.barWeight
     && x.dietPreference === y.dietPreference
-    && x.sex === y.sex;
+    && x.sex === y.sex
+    && x.allergenExcludes === y.allergenExcludes;
 }
 
 function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
@@ -115,6 +137,10 @@ function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
     else if (camel === 'barWeight')   payload[snake] = profile.barWeight ?? 20;
     else if (camel === 'dietPreference') payload[snake] = profile.dietPreference ?? 'omnivore';
     else if (camel === 'sex')         payload[snake] = _validSex(profile.sex);
+    else if (camel === 'mealPlanExcludeTags') {
+      payload[snake] = Array.isArray(profile.mealPlanExcludeTags)
+        ? profile.mealPlanExcludeTags : [];
+    }
 
     const ts = fieldUpdatedAt?.[camel];
     if (ts) columnUpdatesAt[snake] = _toIso(ts);
@@ -133,27 +159,25 @@ export async function pushProfiles(sb, { userId } = {}) {
     const fieldUpdatedAt = state.userProfileFieldUpdatedAt || {};
     const payload = _profileToCloudPayload(userId, profile, fieldUpdatedAt);
 
-    let { error } = await sb
-      .from('users_profile')
-      .upsert(payload, { onConflict: 'id' });
-    if (error) {
-      // migrate_094 tolerance (same pattern as restoreSessionFromCloud):
-      // until the founder-run migration adds users_profile.sex, PostgREST
-      // rejects the WHOLE upsert for the unknown column. Retry once with
-      // the proven sex-less payload so the other seven fields keep syncing;
-      // a second failure is a real error.
-      const { sex: _dropped, ...sexless } = payload;
-      sexless.column_updates_at = { ...payload.column_updates_at };
-      delete sexless.column_updates_at.sex;
+    // Column tolerance (migrate_094 sex, migrate_112 allergen_excludes):
+    // try the full payload, then drop each optional column, then both, so
+    // the core fields keep syncing until the founder applies the
+    // migrations. Only a failure with NO optional columns is a real error.
+    const attempts = [
+      payload,
+      _withoutColumns(payload, [OPTIONAL_COLUMNS[0]]),
+      _withoutColumns(payload, [OPTIONAL_COLUMNS[1]]),
+      _withoutColumns(payload, OPTIONAL_COLUMNS),
+    ];
+    let error = null;
+    for (const attempt of attempts) {
       ({ error } = await sb
         .from('users_profile')
-        .upsert(sexless, { onConflict: 'id' }));
-      if (error) {
-        logSyncError('sync.tables.profiles.pushUpsert', error);
-        return { count: 0, errors: 1 };
-      }
+        .upsert(attempt, { onConflict: 'id' }));
+      if (!error) return { count: 1, errors: 0 };
     }
-    return { count: 1, errors: 0 };
+    logSyncError('sync.tables.profiles.pushUpsert', error);
+    return { count: 0, errors: 1 };
   } catch (e) {
     logSyncError('sync.tables.profiles.push', e);
     return { count: 0, errors: 1 };
@@ -169,10 +193,11 @@ export async function pullProfiles(sb, { userId } = {}) {
       .select(cols)
       .eq('id', userId)
       .maybeSingle();
-    // migrate_094 tolerance (same pattern as restoreSessionFromCloud): try
-    // WITH sex; on any read error fall back to the proven sex-less select so
-    // the profile pull is never coupled to the migration being applied.
-    let { data, error } = await runRead(`${BASE_COLS}, sex`);
+    // Column tolerance (migrate_094 sex, migrate_112 allergen_excludes):
+    // try the fullest select first, then fall back column by column so the
+    // profile pull is never coupled to either migration being applied.
+    let { data, error } = await runRead(`${BASE_COLS}, sex, allergen_excludes`);
+    if (error) ({ data, error } = await runRead(`${BASE_COLS}, sex`));
     if (error) ({ data, error } = await runRead(BASE_COLS));
     if (error) {
       logSyncError('sync.tables.profiles.pull', error);
@@ -220,6 +245,12 @@ export async function pullProfiles(sb, { userId } = {}) {
       // floor + BMR, so a cloud row without one (pre-094, or a legacy account)
       // must not wipe the local value. Only a valid cloud value can change it.
       sex:              _validSex(merged.sex) ?? _validSex(localProfile.sex),
+      // Allergens never unset on a missing column either (pre-112 cloud):
+      // only a real cloud array can change the local list. An allergy
+      // silently wiped by a pull would be the worst failure this field has.
+      mealPlanExcludeTags: Array.isArray(merged.allergen_excludes)
+        ? merged.allergen_excludes
+        : (Array.isArray(localProfile.mealPlanExcludeTags) ? localProfile.mealPlanExcludeTags : []),
     };
 
     // Only write back when the merge actually changed something. Writing

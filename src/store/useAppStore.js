@@ -1693,6 +1693,30 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // Allergen excludes (dietary-needs build 2026-07-09, founder-approved).
+  // Kept under the existing mealPlanExcludeTags key so every engine reader
+  // (preferencesFromProfile, plan assembler, swaps, suggestions) works
+  // unchanged, but UNLIKE the other mealPlan* prefs this one SYNCS: an
+  // allergy silently lost on a device change is not an acceptable failure,
+  // so it rides the same per-field merge as dietPreference
+  // (users_profile.allergen_excludes, migration 112). `tags` replaces the
+  // whole list (the Dietary needs screen owns the full selection).
+  setAllergenExcludes: async (tags) => {
+    const { user, userProfile, _stampProfileFields } = get();
+    if (!user?.id) return;
+    const clean = Array.from(new Set(
+      (Array.isArray(tags) ? tags : []).filter((t) => typeof t === 'string' && t),
+    ));
+    const updated = { ...(userProfile || {}), mealPlanExcludeTags: clean };
+    const key = PROFILE_KEY_PFX + user.id;
+    const value = JSON.stringify(updated);
+    try { await AsyncStorage.setItem(key, value); } catch (_) {}
+    set({ userProfile: updated });
+    _stampProfileFields(['mealPlanExcludeTags']);
+    await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
+    pushPrefSoon(user.id, key, value);
+  },
+
   // Meal-plan food exclusions ("never show me this", deep-audit Theme G
   // R1). A local profile field (the meal plan is local-only for now, so no
   // cloud column / pushPrefSoon); the generator + swaps read it via
@@ -1716,8 +1740,12 @@ const useAppStore = create((set, get) => ({
   setMealPlanPrefs: async (partial) => {
     const { user, userProfile } = get();
     if (!user?.id || !partial || typeof partial !== 'object') return;
+    // mealPlanExcludeTags left this list (dietary-needs build 2026-07-09):
+    // allergens are synced and MUST be written via setAllergenExcludes so
+    // the per-field timestamp is stamped; an unstamped write here would
+    // never push and could be silently reverted by the next pull.
     const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
-      'mealPlanPeriWorkout', 'mealPlanExcludeTags', 'mealPlanPinnedMeals'];
+      'mealPlanPeriWorkout', 'mealPlanPinnedMeals'];
     const patch = {};
     for (const k of allowed) if (k in partial) patch[k] = partial[k];
     if (Object.keys(patch).length === 0) return;

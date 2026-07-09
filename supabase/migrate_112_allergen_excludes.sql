@@ -1,0 +1,35 @@
+-- Migration 112: users_profile.allergen_excludes — synced FSA allergen
+-- exclusion list for the dietary-needs build.
+--
+-- Purpose:
+--   Dietary preferences and allergen exclusions (founder decisions
+--   2026-07-09, docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md:
+--   scope Phase A+B, "Sync diet + allergens"). The user's FSA allergen
+--   excludes (stored locally as userProfile.mealPlanExcludeTags) were
+--   device-local only, so an allergy set on one phone was silently lost on
+--   a device change — not an acceptable failure for allergy data. This adds
+--   a jsonb array column to users_profile riding the existing per-field
+--   merge (migration 045 column_updates_at); the app-side mapping is
+--   src/lib/sync/tables/profiles.js FIELD_MAP
+--   ('mealPlanExcludeTags' -> 'allergen_excludes').
+--
+--   Values are FSA 14-allergen tag strings from the app's fixed vocabulary
+--   (src/lib/food/foodRoles.js ALLERGENS, e.g. 'peanuts', 'milk',
+--   'cereals_gluten'). The app treats filtering as best-effort convenience
+--   and says so in the UI; nothing here gates or reads any ED-safety floor.
+--   Taste-only food excludes (mealPlanExcludeFoods) stay device-local by
+--   founder decision.
+--
+-- Applied: locally NO (cloud-only column), remotely PENDING (founder-run,
+--   EU-Dublin). The app tolerates this column being absent: push retries
+--   without it and pull falls back to a narrower select
+--   (src/lib/sync/tables/profiles.js, same pattern as migrate_094 sex).
+--
+-- Safe to re-run: yes (ADD COLUMN IF NOT EXISTS; no data rewrite).
+--
+-- Rollback: ALTER TABLE public.users_profile DROP COLUMN IF EXISTS
+--   allergen_excludes; (client keeps working: column tolerance covers the
+--   drop, and the local list remains on-device).
+
+ALTER TABLE public.users_profile
+  ADD COLUMN IF NOT EXISTS allergen_excludes jsonb NOT NULL DEFAULT '[]'::jsonb;

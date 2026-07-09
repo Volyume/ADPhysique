@@ -158,6 +158,31 @@ const STATE = Object.freeze({
 });
 
 // ─── FSA allergen tags (the 14-allergen vocabulary, where present) ──────
+// ALLERGENS is the full FSA list in UI order, with UK labels, so the
+// Dietary needs screen and the engine share one vocabulary. A food only
+// carries a tag we can stand behind (curated staples, hand-tagged);
+// filtering is best-effort by design and the UI must say so — packaged
+// food data can be incomplete, so the copy always points at the label
+// and never says "safe".
+export const ALLERGENS = Object.freeze([
+  { tag: 'celery', label: 'Celery' },
+  { tag: 'cereals_gluten', label: 'Cereals containing gluten' },
+  { tag: 'crustaceans', label: 'Crustaceans' },
+  { tag: 'eggs', label: 'Eggs' },
+  { tag: 'fish', label: 'Fish' },
+  { tag: 'lupin', label: 'Lupin' },
+  { tag: 'milk', label: 'Milk' },
+  { tag: 'molluscs', label: 'Molluscs' },
+  { tag: 'mustard', label: 'Mustard' },
+  { tag: 'nuts', label: 'Tree nuts' },
+  { tag: 'peanuts', label: 'Peanuts' },
+  { tag: 'sesame', label: 'Sesame' },
+  { tag: 'soya', label: 'Soya' },
+  { tag: 'sulphites', label: 'Sulphur dioxide and sulphites' },
+]);
+
+export const ALLERGEN_TAGS = Object.freeze(ALLERGENS.map((a) => a.tag));
+
 const TAGS = Object.freeze({
   oats: ['cereals_gluten'], wholemeal_bread: ['cereals_gluten'],
   weetabix: ['cereals_gluten'],
@@ -324,17 +349,29 @@ export function classifyRole(profile) {
 }
 
 /**
+ * The ONE exclusion predicate (dislikes + allergen tags). Every surface
+ * that hides a food — plan assembly, swaps, diary suggestions — must route
+ * through this so the rule can never drift between callers. `exclude`
+ * takes { excludeFoodKeys: string[], excludeTags: string[] } (both
+ * optional). Pure.
+ */
+export function foodExcluded(foodKey, exclude = {}) {
+  const keys = exclude.excludeFoodKeys;
+  if (Array.isArray(keys) && keys.includes(foodKey)) return true;
+  const excludeTags = exclude.excludeTags;
+  if (!Array.isArray(excludeTags) || excludeTags.length === 0) return false;
+  return tagsOf(foodKey).some((t) => excludeTags.includes(t));
+}
+
+/**
  * All curated keys of one role, exclusion-aware. `exclude` takes
  * { excludeFoodKeys: string[], excludeTags: string[] } (both optional).
  * Pure; stable alphabetical order for determinism.
  */
 export function keysForRole(role, exclude = {}) {
-  const excludeKeys = new Set(exclude.excludeFoodKeys || []);
-  const excludeTags = new Set(exclude.excludeTags || []);
   return Object.keys(CURATED_FOODS)
     .filter((k) => ROLE[k] === role)
-    .filter((k) => !excludeKeys.has(k))
-    .filter((k) => !tagsOf(k).some((t) => excludeTags.has(t)))
+    .filter((k) => !foodExcluded(k, exclude))
     .sort();
 }
 

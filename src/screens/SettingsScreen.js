@@ -128,6 +128,14 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('PerDayTargets')}
           />
         ) : null}
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="leaf-outline"
+            label="Dietary needs"
+            sub="Diet, allergies and foods to avoid"
+            onPress={() => navigation.navigate('SettingsDietary')}
+          />
+        ) : null}
         <SettingRow
           icon="notifications-outline"
           label="Notifications and reminders"

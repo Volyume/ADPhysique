@@ -15,13 +15,13 @@
  * starving a day to "make it fit" (blueprint §3.6).
  */
 
-import { CURATED_MEALS, dietAllows } from './curatedMeals';
-import { tagsOf, mealProteinAnchor } from './foodRoles';
+import { CURATED_MEALS, DIETS, dietAllows } from './curatedMeals';
+import { foodExcluded, mealProteinAnchor } from './foodRoles';
 
 export const FAT_CONVENTIONS = Object.freeze(['equalised', 'higher_rest_day']);
 
 export const DEFAULT_PLAN_PREFERENCES = Object.freeze({
-  diet: 'omnivore',            // 'omnivore' | 'vegetarian' | 'vegan'
+  diet: 'omnivore',            // one of curatedMeals.DIETS (incl. 'pescatarian')
   excludeFoodKeys: [],         // dislikes + anything flagged "never show me this"
   excludeTags: [],             // FSA allergen tags, hard excludes
   mealsPerDay: 4,              // physique norm 4-6; beginners often 3-4
@@ -42,7 +42,7 @@ const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 export function normalisePreferences(prefs) {
   const p = prefs || {};
   const dedupe = (a) => Array.from(new Set(Array.isArray(a) ? a.filter(Boolean) : []));
-  const diet = ['omnivore', 'vegetarian', 'vegan'].includes(p.diet) ? p.diet : 'omnivore';
+  const diet = DIETS.includes(p.diet) ? p.diet : 'omnivore';
   const fatConvention = FAT_CONVENTIONS.includes(p.fatConvention)
     ? p.fatConvention : 'equalised';
   const pool = p.rotationPool && typeof p.rotationPool === 'object'
@@ -65,12 +65,12 @@ export function normalisePreferences(prefs) {
   };
 }
 
-/** Is this single curated food key allowed under the preferences? Pure. */
+/** Is this single curated food key allowed under the preferences? Pure.
+ * Delegates to foodRoles.foodExcluded, the one exclusion predicate every
+ * surface shares (dietary-needs build 2026-07-09). */
 export function foodAllowed(foodKey, prefs) {
   const p = normalisePreferences(prefs);
-  if (p.excludeFoodKeys.includes(foodKey)) return false;
-  const tags = tagsOf(foodKey);
-  return !tags.some((t) => p.excludeTags.includes(t));
+  return !foodExcluded(foodKey, p);
 }
 
 /**
@@ -102,7 +102,11 @@ export function mealAllowed(meal, prefs) {
       // not satisfy the gate (food review E-M3).
       if (anchor.cls !== 'high' || anchor.role !== 'protein') return false;
     }
-    if (p.diet === 'vegetarian' && anchor.cls === 'carb_protein') return false;
+    // Pescatarian follows the vegetarian rule (dietary-needs build
+    // 2026-07-09): fish/dairy/egg anchors are 'high' and pass; the plant
+    // anchors ('moderate') stay allowed, exactly as they are for
+    // vegetarians; a bare legume never anchors any plan.
+    if ((p.diet === 'vegetarian' || p.diet === 'pescatarian') && anchor.cls === 'carb_protein') return false;
   }
   const components = Array.isArray(meal.components) ? meal.components : [];
   return components.every((c) => foodAllowed(c.food, p));

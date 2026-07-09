@@ -106,7 +106,7 @@ describe('library data integrity', () => {
     expect(veganMains.filter(m => has(m, 'tempeh')).length).toBeLessThanOrEqual(2);
   });
 
-  test('covers every slot and all three diets', () => {
+  test('covers every slot and all four diets', () => {
     const slotsCovered = new Set();
     const dietsCovered = new Set();
     for (const meal of CURATED_MEALS) {
@@ -114,7 +114,28 @@ describe('library data integrity', () => {
       dietsCovered.add(meal.diet);
     }
     SLOTS.forEach(s => expect(slotsCovered.has(s)).toBe(true));
-    expect([...dietsCovered].sort()).toEqual(['omnivore', 'vegan', 'vegetarian']);
+    expect([...dietsCovered].sort()).toEqual(['omnivore', 'pescatarian', 'vegan', 'vegetarian']);
+  });
+
+  // Dietary-needs build (2026-07-09): diet tags stay honest to the broadest-
+  // qualifying rule after the pescatarian re-tag. A meal tagged 'pescatarian'
+  // has fish/seafood and never meat; meat makes a meal 'omnivore'; fish or
+  // meat in a 'vegetarian'/'vegan' meal is a tagging bug.
+  const MEAT_KEYS = ['chicken_breast', 'turkey_breast', 'turkey_mince',
+    'beef_mince_5', 'steak_lean', 'bacon_medallions'];
+  const SEAFOOD_KEYS = ['cod', 'salmon', 'smoked_salmon', 'tuna_water', 'prawns'];
+  test('diet tags are honest: meat only in omnivore, seafood never below pescatarian', () => {
+    for (const meal of CURATED_MEALS) {
+      const hasMeat = meal.components.some(c => MEAT_KEYS.includes(c.food));
+      const hasSeafood = meal.components.some(c => SEAFOOD_KEYS.includes(c.food));
+      if (hasMeat) expect(meal.diet).toBe('omnivore');
+      if (hasSeafood) expect(['omnivore', 'pescatarian']).toContain(meal.diet);
+      if (meal.diet === 'pescatarian') expect(hasSeafood).toBe(true);
+      if (meal.diet === 'vegetarian' || meal.diet === 'vegan') {
+        expect(hasMeat).toBe(false);
+        expect(hasSeafood).toBe(false);
+      }
+    }
   });
 });
 
@@ -127,18 +148,31 @@ describe('resolveComponent macros (computed, not hand-typed)', () => {
   });
 });
 
-describe('dietAllows (vegan ⊂ vegetarian ⊂ omnivore)', () => {
+describe('dietAllows (vegan ⊂ vegetarian ⊂ pescatarian ⊂ omnivore)', () => {
   test('omnivore eats anything', () => {
     expect(dietAllows('omnivore', 'vegan')).toBe(true);
+    expect(dietAllows('omnivore', 'pescatarian')).toBe(true);
     expect(dietAllows('omnivore', 'omnivore')).toBe(true);
   });
-  test('vegetarian gets vegetarian + vegan, not omnivore', () => {
+  test('pescatarian gets fish + vegetarian + vegan, never omnivore', () => {
+    expect(dietAllows('pescatarian', 'omnivore')).toBe(false);
+    expect(dietAllows('pescatarian', 'pescatarian')).toBe(true);
+    expect(dietAllows('pescatarian', 'vegetarian')).toBe(true);
+    expect(dietAllows('pescatarian', 'vegan')).toBe(true);
+  });
+  test('vegetarian gets vegetarian + vegan, not fish or meat', () => {
     expect(dietAllows('vegetarian', 'omnivore')).toBe(false);
+    expect(dietAllows('vegetarian', 'pescatarian')).toBe(false);
     expect(dietAllows('vegetarian', 'vegan')).toBe(true);
   });
   test('vegan gets vegan only', () => {
     expect(dietAllows('vegan', 'vegetarian')).toBe(false);
+    expect(dietAllows('vegan', 'pescatarian')).toBe(false);
     expect(dietAllows('vegan', 'vegan')).toBe(true);
+  });
+  test('an unknown user diet falls back to omnivore, an unknown meal diet is treated as omnivore', () => {
+    expect(dietAllows('keto', 'vegan')).toBe(true);
+    expect(dietAllows('vegan', 'mystery')).toBe(false);
   });
 });
 
@@ -175,5 +209,47 @@ describe('getCuratedCandidates', () => {
     const [c] = getCuratedCandidates({ diet: 'omnivore', slot: 'lunch' });
     expect(c.totals.protein).toBeGreaterThan(0);
     expect(c.itemCount).toBe(c.items.length);
+  });
+
+  // Dietary-needs build (2026-07-09): the diary Suggested tab shares the plan
+  // layer's hard-exclusion rule. An excluded allergen tag or avoided food
+  // removes every meal containing it; nothing else changes.
+  test('a fish allergen exclude removes every meal containing fish, for every diet', () => {
+    for (const diet of ['omnivore', 'pescatarian']) {
+      const c = getCuratedCandidates({ diet, excludeTags: ['fish'] });
+      expect(c.length).toBeGreaterThan(0);
+      c.forEach(meal => meal.items.forEach(it => {
+        expect(['curated:cod', 'curated:salmon', 'curated:smoked_salmon', 'curated:tuna_water']).not.toContain(it.foodRef);
+      }));
+    }
+  });
+
+  test('a peanut allergen exclude removes peanut butter meals but keeps the rest', () => {
+    const all = getCuratedCandidates({ diet: 'vegan' });
+    const filtered = getCuratedCandidates({ diet: 'vegan', excludeTags: ['peanuts'] });
+    expect(filtered.length).toBeLessThan(all.length);
+    expect(filtered.length).toBeGreaterThan(0);
+    filtered.forEach(meal => meal.items.forEach(it => expect(it.foodRef).not.toBe('curated:peanut_butter')));
+  });
+
+  test('an avoided food key removes only meals containing it', () => {
+    const all = getCuratedCandidates({ diet: 'omnivore' });
+    const noChicken = getCuratedCandidates({ diet: 'omnivore', excludeFoodKeys: ['chicken_breast'] });
+    expect(noChicken.length).toBeLessThan(all.length);
+    noChicken.forEach(meal => meal.items.forEach(it => expect(it.foodRef).not.toBe('curated:chicken_breast')));
+  });
+
+  test('pescatarian candidates include fish meals and never meat meals', () => {
+    const c = getCuratedCandidates({ diet: 'pescatarian' });
+    const ids = c.map(meal => meal.id);
+    expect(ids).toContain('curated_om_salmon_rice_broccoli');
+    expect(ids).not.toContain('curated_om_chicken_rice');
+    expect(ids).not.toContain('curated_om_bacon_eggs');
+  });
+
+  test('empty exclusion arrays change nothing (no accidental narrowing)', () => {
+    const a = getCuratedCandidates({ diet: 'omnivore' });
+    const b = getCuratedCandidates({ diet: 'omnivore', excludeFoodKeys: [], excludeTags: [] });
+    expect(b.map(meal => meal.id)).toEqual(a.map(meal => meal.id));
   });
 });

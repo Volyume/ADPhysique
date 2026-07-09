@@ -102,6 +102,8 @@ jest.mock('../../lib/food/sources/localCache', () => ({ resolveFoodRef: jest.fn(
 
 import useAppStore from '../../store/useAppStore';
 import { logFoodEntry, deleteFoodEntry, upsertSlotRecent } from '../../lib/food/db';
+import { getNutritionTargets } from '../../lib/database';
+import { getCuratedCandidates } from '../../lib/food/curatedMeals';
 import { searchFoods } from '../../lib/food/waterfall';
 import FoodSearchScreen from '../FoodSearchScreen';
 
@@ -292,6 +294,34 @@ describe('FoodSearchScreen confirmQuickAdd (A2)', () => {
     const [, opts] = mockToastShow.mock.calls[0];
     await act(async () => { await opts.action.onPress(); });
     expect(deleteFoodEntry).toHaveBeenCalledWith('entry-1', 'u1');
+  });
+});
+
+describe('FoodSearchScreen Suggested tab (dietary-needs build 2026-07-09)', () => {
+  test('passes the user\'s avoid-list foods and allergen tags through to getCuratedCandidates', async () => {
+    const dietaryStore = {
+      user: { id: 'u1' },
+      userProfile: {
+        dietPreference: 'vegan',
+        mealPlanExcludeFoods: ['peanut_butter'],
+        mealPlanExcludeTags: ['peanuts'],
+      },
+      accessibility: { energyUnit: 'kcal' },
+    };
+    useAppStore.mockImplementation((selector) => selector(dietaryStore));
+    getNutritionTargets.mockResolvedValue({ targetKcal: 2000, proteinG: 150, carbsG: 200, fatG: 60 });
+
+    const nav = makeNav();
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03', initialTab: 'suggested' } };
+    await act(async () => { create(<FoodSearchScreen navigation={nav} route={route} />); });
+    await flush();
+
+    expect(getCuratedCandidates).toHaveBeenCalledWith(expect.objectContaining({
+      diet: 'vegan',
+      slot: 'snack',
+      excludeFoodKeys: ['peanut_butter'],
+      excludeTags: ['peanuts'],
+    }));
   });
 });
 
