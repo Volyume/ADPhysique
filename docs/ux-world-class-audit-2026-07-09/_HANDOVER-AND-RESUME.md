@@ -331,3 +331,15 @@ OAuth SHA-1; Cut 4 seed walk.
   the BENEFIT of following the programme is ever explained; (4) options +
   short multi-choice round. Queue after: pair 1 (unilateral build +
   small-batch bundle), pair 2 (superset mistag fix + builder nudge).
+- CORRECTION (founder): plan-E is about PROGRESS PHOTOS, not programme
+  adherence. Rescoped -> plan-E-progress-photos-loop.md: (1) encouragement
+  loop - is photo-taking elegantly encouraged with the benefit explained
+  (ProgressPhotoPrompt exists - audit its triggers/tone), never pushy;
+  (2) engine consumption - what the progress-scan assessment
+  (progressScanVision + CoachOutputScreen.progressScanAssessment) actually
+  feeds into coaching adjustments today, how deep; (3) the divergence case:
+  logs/performance fine but photos show body-comp drift -> should the plan
+  modify. PART 3 IS HARD ED-SAFETY TERRITORY: any photo-driven adjustment
+  must be floors-intact, calm-framed, adherence-neutral, suppressed under ED
+  flag/calm mode, and lands as FOUNDER OPTIONS not a build. Same queue slot
+  as before.
