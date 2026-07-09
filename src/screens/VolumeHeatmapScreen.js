@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
@@ -366,6 +366,11 @@ export default function VolumeHeatmapScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Volume heatmap" />
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern so the "Edit volume targets" number
+          fields stay reachable, for consistency, no fixed footer was found
+          below this scroll. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         {/* Anatomical body heatmap, tap a muscle to jump to its bar below */}
         <BodyDiagramHeatmap
@@ -623,6 +628,7 @@ export default function VolumeHeatmapScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -723,6 +729,7 @@ const trendStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   loadingStack: { padding: spacing.lg, gap: spacing.lg },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   windowSelector: {

@@ -22,6 +22,7 @@ import { todayLocalKey } from '../lib/dayKey';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -327,6 +328,10 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           />
         </View>
       ) : (
+      /* L03-C5 (2026-07-09 design audit): standardise on the app's
+         KeyboardAvoidingView pattern for consistency, "Save" lives in the
+         ModalHeader above (not a fixed footer under this scroll). */
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.section}>
           <View style={styles.importRow}>
@@ -464,6 +469,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </Text>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );
@@ -480,6 +486,7 @@ function MacroPill({ label, value }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   loadError: { padding: spacing.lg },
 
   section: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },

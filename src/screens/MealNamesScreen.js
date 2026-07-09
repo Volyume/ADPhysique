@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, type } from '../styles/theme';
@@ -52,6 +52,10 @@ export default function MealNamesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Meal names" />
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern for consistency, no fixed footer was
+          found below this scroll. */}
+      <KeyboardAvoidingView style={local.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={local.intro}>
@@ -77,11 +81,13 @@ export default function MealNamesScreen() {
           ))}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const local = StyleSheet.create({
+  keyboardAvoid: { flex: 1 },
   intro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

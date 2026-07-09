@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -508,6 +508,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
         transparent
         onRequestClose={() => setEditingExercise(null)}
       >
+        {/* L03-C5 (2026-07-09 design audit): this bottom-anchored sheet
+            (editOverlay justifyContent: 'flex-end') holds several TextFields;
+            standardise on the same KeyboardAvoidingView pattern
+            ActiveWorkoutScreen's editSet modal uses (behavior padding/height)
+            so the sheet lifts above the keyboard. */}
+        <KeyboardAvoidingView
+          style={styles.editModalKeyboard}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
         <TouchableOpacity accessibilityRole="button" style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
           <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1}>
             <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
@@ -586,6 +595,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             />
           </TouchableOpacity>
         </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Plan-level swap modal */}
@@ -755,6 +765,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   reorderBtnDisabled: { opacity: 0.3 },
+  editModalKeyboard: { flex: 1 },
   editOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   editSheet: {
     backgroundColor: colors.surface,

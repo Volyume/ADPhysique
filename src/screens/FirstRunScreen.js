@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { Text, StyleSheet, ScrollView } from 'react-native';
+import { Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, type } from '../styles/theme';
@@ -55,6 +55,10 @@ export default function FirstRunScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern for consistency, no fixed footer was
+          found below this scroll. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>You&apos;re almost set up.</Text>
         <Text style={styles.subtitle}>
@@ -95,12 +99,14 @@ export default function FirstRunScreen({ navigation }) {
           </Text>
         </Card>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { ...type.bodySm, color: colors.textSecondary },

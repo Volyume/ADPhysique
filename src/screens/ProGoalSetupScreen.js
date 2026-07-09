@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -390,6 +391,10 @@ export default function ProGoalSetupScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Update goal and phase" />
 
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern for consistency, no fixed footer was
+          found below this scroll. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -604,12 +609,14 @@ export default function ProGoalSetupScreen({ navigation }) {
           accessibilityLabel="Review my plan changes"
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
   sectionLabel: { marginBottom: spacing.xs },

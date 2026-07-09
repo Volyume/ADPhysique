@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -771,6 +772,12 @@ export default function BodyMetricsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Body metrics" />
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern (same behavior prop as PlansScreen /
+          ManualBuilderScreen) so the "New entry" form's fields stay
+          reachable above the keyboard, for consistency, no fixed footer
+          was found below this scroll. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
 
         {/* E10 read-only lapse views: say plainly what this state is, and keep
@@ -1197,6 +1204,7 @@ export default function BodyMetricsScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1279,6 +1287,7 @@ function DeltaBadge({ delta, units, small }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   photosRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

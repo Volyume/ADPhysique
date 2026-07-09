@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal,
+  Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -206,6 +206,12 @@ export default function BuildWorkoutScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Create workout" />
 
+      {/* L03-C5 (2026-07-09 design audit): the rep/weight TextFields sit in
+          a ScrollView with the "Start training" footer below it in normal
+          flex flow (not absolutely positioned). Wrapping both in the app's
+          standard KeyboardAvoidingView (same behavior prop as PlansScreen /
+          ManualBuilderScreen) keeps the footer above the keyboard. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
@@ -362,6 +368,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           />
         )}
       </View>
+      </KeyboardAvoidingView>
 
       {/* Travel Mode equipment picker */}
       <BottomSheet
@@ -473,6 +480,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.md },
   subtitle: {

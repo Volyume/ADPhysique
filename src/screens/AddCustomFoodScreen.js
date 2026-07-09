@@ -10,7 +10,7 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
@@ -285,6 +285,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ModalHeader title="New food" onClose={() => navigation.goBack()} />
 
+      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
+          KeyboardAvoidingView pattern (same behavior prop as PlansScreen /
+          ManualBuilderScreen) for consistency, no fixed footer was found
+          below this scroll. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.contextLabel}>Save this food, then add it to your diary.</Text>
         {prefillBarcode ? (
@@ -370,6 +375,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           style={styles.saveBtn}
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -409,6 +415,7 @@ function NumField({ label, value, onChange, suffix, unsure }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   contextLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginBottom: spacing.lg },

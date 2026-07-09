@@ -1,5 +1,5 @@
 import { cloneElement, isValidElement } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
@@ -59,13 +59,22 @@ export function SettingsPage({ title, children }) {
   return (
     <SafeAreaView style={styles.safe} edges={title ? ['top', 'bottom'] : ['bottom']}>
       {title ? <BackHeader title={title} /> : null}
-      <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      {/* L03-C5 (2026-07-09 design audit): SettingsProfileScreen's first-name
+          TextField has no keyboard avoidance; standardise on the app's
+          KeyboardAvoidingView pattern here in the shared page chrome (same
+          behavior prop as PlansScreen / ManualBuilderScreen) so it covers
+          every SettingsPage sub-page consistently. A no-op for sub-pages
+          with no text input. */}
+      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 export const settingsStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  keyboardAvoid: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   sectionHeader: {
     paddingHorizontal: spacing.sm,
