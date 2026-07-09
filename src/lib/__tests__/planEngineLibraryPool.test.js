@@ -7,6 +7,7 @@
  */
 import { generatePlan } from '../planEngine';
 import { deriveExerciseMetadata } from '../exerciseMetadata';
+import { translateSubregion } from '../poolGenerator';
 
 const BASE_INPUTS = {
   experience: 'intermediate',
@@ -106,10 +107,11 @@ describe('generatePlan with a library pool', () => {
   // bodyweight ISOLATION (crunch, hanging leg raise, plank), the staples
   // anyone can do, plus the no-equipment 'bodyweight' profile keeps everything.
   //
-  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
-  // ONE named exception carved out of the band blanket rule below — Band Lat
-  // Pulldown and Band Assisted Pull-Up, the only vertical pull otherwise
-  // available in Dumbbells Only / Barbell & Plates / Home Gym.
+  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10),
+  // reaffirmed/generalised by D19 (§D19, 2026-07-09, "amend the rule for
+  // this case"): ONE named exception carved out of the band blanket rule
+  // below — Band Lat Pulldown and Band Assisted Pull-Up, the only vertical
+  // pull otherwise available in Dumbbells Only / Barbell & Plates / Home Gym.
   const D10_BAND_EXCEPTIONS = new Set(['Band Lat Pulldown', 'Band Assisted Pull-Up']);
 
   test('loaded plans drop bodyweight compounds, weighted calisthenics and bands (except the D10 exception)', () => {
@@ -128,7 +130,7 @@ describe('generatePlan with a library pool', () => {
     }
   });
 
-  test('D10 exception: Band Lat Pulldown / Band Assisted Pull-Up can be selected into Dumbbells Only, Barbell & Plates and Home Gym plans', () => {
+  test('D10/D19 exception: Band Lat Pulldown / Band Assisted Pull-Up can be selected into Dumbbells Only, Barbell & Plates and Home Gym plans', () => {
     // The named exception only widens where these two exercises MAY be
     // picked from; the engine still selects deterministically by its normal
     // scoring, so assert reachability via deriveEquipmentProfiles (the same
@@ -141,5 +143,49 @@ describe('generatePlan with a library pool', () => {
         expect(ex.equipmentProfiles).toContain(profile);
       }
     }
+  });
+
+  // D19 (§D19, 2026-07-09): the exception is scoped to contexts with NO
+  // measurable vertical-pull alternative. Full Gym and Machines & Cables
+  // carry real cable lat pulldown variants (Lat Pulldown (Wide/Close/Neutral
+  // Grip), Assisted Pull-Up, Single-Arm Lat Pulldown, etc.), so the named
+  // band exercises must never reach those two profiles even though a plan
+  // generated for them is otherwise "loaded". This is the "context WITH a
+  // measurable alternative gets no bands" half of the ruling, proven both by
+  // static membership and by never surfacing in a real generated plan.
+  test('D19 scoping: Band Lat Pulldown / Band Assisted Pull-Up never reach Full Gym or Machines & Cables plans', () => {
+    const exceptionExercises = LIBRARY.filter(e => D10_BAND_EXCEPTIONS.has(e.name));
+    for (const ex of exceptionExercises) {
+      expect(ex.equipmentProfiles).not.toContain('full_gym');
+      expect(ex.equipmentProfiles).not.toContain('machines_cables');
+    }
+    for (const equipment of ['full_gym', 'machines_cables']) {
+      const plan = generatePlan({ ...BASE_INPUTS, equipment, exerciseLibrary: LIBRARY });
+      const offenders = allExerciseNames(plan).filter(n => D10_BAND_EXCEPTIONS.has(n));
+      expect({ equipment, offenders }).toEqual({ equipment, offenders: [] });
+    }
+  });
+
+  // D19 sweep (§D19, 2026-07-09): scan the ENTIRE generated pool, not just a
+  // named exclusion list, to prove no band exercise other than the two named
+  // vertical_pull exceptions ever carries a loaded-plan profile, and that the
+  // two exceptions themselves are never tagged for anything but vertical_pull.
+  // This is the sweep the D19 ruling requires: "the general rule stands
+  // everywhere else" must hold for every muscle and every subregion, not just
+  // the ones this batch happened to touch.
+  test('D19 sweep: no band exercise reaches a loaded profile except the two named vertical_pull exceptions', () => {
+    const LOADED_PROFILES = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym'];
+    const leaks = [];
+    for (const ex of LIBRARY) {
+      if (ex.equipmentCategory !== 'band') continue;
+      const loadedHits = (ex.equipmentProfiles || []).filter(p => LOADED_PROFILES.includes(p));
+      if (loadedHits.length === 0) continue;
+      const isNamedException = D10_BAND_EXCEPTIONS.has(ex.name);
+      const isVerticalPull = translateSubregion('back', ex.subregion) === 'vertical_pull' && ex.primaryMuscle === 'back';
+      if (!isNamedException || !isVerticalPull) {
+        leaks.push({ name: ex.name, muscle: ex.primaryMuscle, subregion: ex.subregion, loadedHits });
+      }
+    }
+    expect(leaks).toEqual([]);
   });
 });

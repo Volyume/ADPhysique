@@ -290,20 +290,75 @@ describe('generated pool over the real seed library', () => {
 
     // Section 2.2 (back vertical_pull for Dumbbells Only / Barbell & Plates /
     // Home Gym): CLOSED by the founder's D10 ruling
-    // (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10) —
-    // Band Lat Pulldown and Band Assisted Pull-Up are a named exception to
-    // the "bands never reach a loaded plan" rule, carved out specifically
-    // because these three profiles otherwise have no vertical pull at all.
-    // The blanket rule stands for every other band exercise (see
-    // exerciseMetadata.test.js and planEngineLibraryPool.test.js's "loaded
-    // plans drop bodyweight compounds, weighted calisthenics and bands
-    // (except the D10 exception)").
-    test('section 2.2: back vertical_pull now reaches Dumbbells Only / Barbell & Plates / Home Gym via the D10 band exception', () => {
+    // (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10),
+    // reaffirmed and generalised by D19 (§D19, 2026-07-09, "amend the rule
+    // for this case: band exercises may enter a loaded plan ONLY when the
+    // user's equipment context has no measurable vertical-pull alternative
+    // -- the narrowest possible exception, test-pinned"). Band Lat Pulldown
+    // and Band Assisted Pull-Up are the named exception to the "bands never
+    // reach a loaded plan" rule, carved out specifically because these three
+    // profiles otherwise have no vertical pull at all. The blanket rule
+    // stands for every other band exercise (see exerciseMetadata.test.js and
+    // planEngineLibraryPool.test.js's "loaded plans drop bodyweight
+    // compounds, weighted calisthenics and bands (except the D10 exception)"
+    // and its dedicated D19 sweep test).
+    test('section 2.2 / D19: back vertical_pull now reaches Dumbbells Only / Barbell & Plates / Home Gym via the named band exception', () => {
       const cov = coverage('back', 'vertical_pull');
       expect(cov.profiles.has('bodyweight')).toBe(true); // Band Lat Pulldown, Band Assisted Pull-Up, Wide-Grip Pull-Up
       expect(cov.profiles.has('dumbbells_only')).toBe(true);
       expect(cov.profiles.has('barbell_plates')).toBe(true);
       expect(cov.profiles.has('home_gym')).toBe(true);
+    });
+
+    // D19 requirement (a): a context WITH a measurable vertical-pull
+    // alternative must get NO bands. Full Gym and Machines & Cables already
+    // carry real cable lat pulldown variants in the generated pool, so the
+    // exception must not fire there -- proving the fork is genuinely
+    // conditioned on absence of an alternative, not just "band exercises are
+    // now generally allowed into loaded plans".
+    test('D19 (a): back vertical_pull for Full Gym / Machines & Cables has a measurable (non-band) alternative and draws no band exception', () => {
+      const cov = coverage('back', 'vertical_pull');
+      const nonBandFullGym = (pool.back ?? []).filter(
+        e => e.sub === 'vertical_pull' && e.eq.includes('full_gym') && e.equipmentCategory !== 'band',
+      );
+      const nonBandMachinesCables = (pool.back ?? []).filter(
+        e => e.sub === 'vertical_pull' && e.eq.includes('machines_cables') && e.equipmentCategory !== 'band',
+      );
+      expect(nonBandFullGym.length).toBeGreaterThan(0);
+      expect(nonBandMachinesCables.length).toBeGreaterThan(0);
+      const bandFullGym = (pool.back ?? []).filter(
+        e => e.sub === 'vertical_pull' && e.eq.includes('full_gym') && e.equipmentCategory === 'band',
+      );
+      const bandMachinesCables = (pool.back ?? []).filter(
+        e => e.sub === 'vertical_pull' && e.eq.includes('machines_cables') && e.equipmentCategory === 'band',
+      );
+      expect(bandFullGym).toEqual([]);
+      expect(bandMachinesCables).toEqual([]);
+      // Sanity: the other three profiles have zero non-band alternative,
+      // which is exactly why they draw the exception (section 2.2 above).
+      expect(cov.profiles.has('dumbbells_only')).toBe(true);
+    });
+
+    // D19 requirement (c), sweep assertion: across the WHOLE generated pool
+    // (every muscle, every subregion), no band-category exercise ever
+    // carries a loaded-plan profile except the two named vertical_pull
+    // exceptions on `back`. This proves the rule stayed narrow -- it did not
+    // quietly widen into other movement patterns (rows, presses, curls,
+    // squats, hinges, etc. all stay bodyweight-only for bands).
+    test('D19 (c) sweep: no muscle/subregion other than back vertical_pull ever gets a band exercise in a loaded profile', () => {
+      const LOADED_PROFILES = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym'];
+      const NAMED_EXCEPTIONS = new Set(['Band Lat Pulldown', 'Band Assisted Pull-Up']);
+      const leaks = [];
+      for (const muscle of Object.keys(pool)) {
+        for (const e of pool[muscle]) {
+          if (e.equipmentCategory !== 'band') continue;
+          const loadedHits = e.eq.filter(p => LOADED_PROFILES.includes(p));
+          if (loadedHits.length === 0) continue;
+          const isAllowed = NAMED_EXCEPTIONS.has(e.n) && muscle === 'back' && e.sub === 'vertical_pull';
+          if (!isAllowed) leaks.push({ muscle, name: e.n, sub: e.sub, loadedHits });
+        }
+      }
+      expect(leaks).toEqual([]);
     });
   });
 });

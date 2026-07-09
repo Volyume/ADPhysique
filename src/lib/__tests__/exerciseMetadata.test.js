@@ -79,18 +79,32 @@ describe('deriveEquipmentProfiles', () => {
     expect(deriveEquipmentProfiles('band', 'Band Lateral Raise', 'isolation')).toEqual(['bodyweight']);
     expect(deriveEquipmentProfiles('band', 'Banded Row', 'isolation')).toEqual(['bodyweight']);
   });
-  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
-  // Band Lat Pulldown and Band Assisted Pull-Up are the ONE named exception
-  // to the rule above, because Dumbbells Only / Barbell & Plates / Home Gym
-  // otherwise have no vertical pull at all. Every other band exercise (all
-  // remaining rows in the seed) must still assert the blanket rule above.
-  test('D10 exception: Band Lat Pulldown and Band Assisted Pull-Up reach Dumbbells Only / Barbell & Plates / Home Gym', () => {
+  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10),
+  // reaffirmed/generalised by D19 (§D19, 2026-07-09): Band Lat Pulldown and
+  // Band Assisted Pull-Up are the ONE named exception to the rule above,
+  // because Dumbbells Only / Barbell & Plates / Home Gym otherwise have no
+  // vertical pull at all. Every other band exercise (all remaining rows in
+  // the seed) must still assert the blanket rule above.
+  test('D10/D19 exception: Band Lat Pulldown and Band Assisted Pull-Up reach Dumbbells Only / Barbell & Plates / Home Gym', () => {
     expect(deriveEquipmentProfiles('band', 'Band Lat Pulldown', 'compound')).toEqual(
       ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'],
     );
     expect(deriveEquipmentProfiles('band', 'Band Assisted Pull-Up', 'compound')).toEqual(
       ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'],
     );
+  });
+  // D19 (§D19, 2026-07-09): the exception is scoped to contexts with NO
+  // measurable vertical-pull alternative. Full Gym and Machines & Cables
+  // already carry cable lat pulldown variants (verified live against the
+  // real pool in poolGenerator.test.js), so the same two named exercises
+  // must NOT reach those profiles even though they are otherwise "loaded"
+  // plans — this is the "context WITH a measurable alternative gets no
+  // bands" half of the narrowest-possible-exception ruling.
+  test('D19 scoping: the exception excludes Full Gym and Machines & Cables, which already have a measurable vertical pull', () => {
+    expect(deriveEquipmentProfiles('band', 'Band Lat Pulldown', 'compound')).not.toContain('full_gym');
+    expect(deriveEquipmentProfiles('band', 'Band Lat Pulldown', 'compound')).not.toContain('machines_cables');
+    expect(deriveEquipmentProfiles('band', 'Band Assisted Pull-Up', 'compound')).not.toContain('full_gym');
+    expect(deriveEquipmentProfiles('band', 'Band Assisted Pull-Up', 'compound')).not.toContain('machines_cables');
   });
   test('returns a fresh array each call (no shared mutation)', () => {
     const a = deriveEquipmentProfiles('barbell');

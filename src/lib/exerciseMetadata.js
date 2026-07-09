@@ -88,13 +88,22 @@ const PROFILES_BY_CATEGORY = {
 const BW_LOADED_PROFILES = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'];
 const WEIGHTED_BW_RE = /\bweighted\b/i;
 
-// D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
-// ONE named exception to "bands never reach a loaded plan (measurable
-// staples only)". Band Lat Pulldown and Band Assisted Pull-Up become
-// available as accessories in Dumbbells Only / Barbell & Plates / Home Gym,
-// because those three profiles otherwise have NO vertical pull at all. The
-// rule stands unchanged for every other band exercise and every other
-// profile (band stays confined to `bodyweight` there).
+// D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10),
+// reaffirmed and generalised by D19 (§D19, 2026-07-09, "amend the rule for
+// this case"): ONE named exception to "bands never reach a loaded plan
+// (measurable staples only)". D19's wording is the general form of the same
+// exception D10 named directly: band exercises may enter a loaded plan ONLY
+// for the vertical-pull movement pattern AND ONLY where the equipment
+// context has zero measurable (non-band) vertical-pull alternative. Verified
+// against the real generated pool (see poolGenerator.test.js): Dumbbells
+// Only / Barbell & Plates / Home Gym have no non-band vertical_pull entry at
+// all, so Band Lat Pulldown and Band Assisted Pull-Up become available there
+// as accessories; Full Gym and Machines & Cables already carry cable lat
+// pulldown variants, so they are deliberately left OUT of this list — those
+// contexts have a measurable alternative and must never receive bands. The
+// rule stands unchanged for every other band exercise, every other
+// subregion and every other profile (band stays confined to `bodyweight`
+// there).
 const D10_BAND_LOADED_EXCEPTION_NAMES = new Set(['Band Lat Pulldown', 'Band Assisted Pull-Up']);
 const D10_BAND_LOADED_EXCEPTION_PROFILES = ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'];
 
