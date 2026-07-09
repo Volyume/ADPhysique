@@ -67,11 +67,15 @@ in this session unless the founder asks.
   Core verdict: brains/ethics/resilience already world class; the gap is
   the sensory layer (media, haptics, drag, Live Activities, plate maths)
   plus reach (dynamic type, hints) and a few built-but-dark features.
-- [ ] **Stage 4 — verify + ship.** `npm run lint && npm test` (docs-only
-  change, but the rule is after EVERY change), report exact output, list
-  files changed, commit, push with `git push -u origin
-  claude/codebase-audit-docs-pv6mjd` (retry 2s/4s/8s/16s on network failure).
-  No PR unless the founder asks.
+- [x] **Stage 4 — verify + ship.** `npm run lint` passed clean
+  (`eslint . --max-warnings 0`). `npm test`: 587 suites passed, 1 skipped,
+  1 failed; 7,469 tests passed, 9 skipped. The single failure is
+  ENVIRONMENTAL, pre-existing and unrelated to these docs-only changes:
+  `progressScanVision.test.js` cannot resolve `react-native-fast-tflite`
+  because that dependency was never installed in this remote container's
+  node_modules (it is present in package.json and package-lock.json).
+  Committed and pushed in stages: f148a96 (evidence), 617212e
+  (assessment), plus the final scoping commit after this edit.
 - [ ] **Stage 5 — reply to founder.** Summarise the verdict and the top
   improvements in chat; surface any founder-decision items as explicit
   questions (no-parking rule).
@@ -89,6 +93,13 @@ in this session unless the founder asks.
   set needing manual tagging), ED-safety considerations (exclusion UX must
   not become a restriction tool; consult edPatternDetector context),
   phasing options and founder decision questions. SCOPING ONLY, no build.
+  **DONE:** facts saved to `facts-meals-dietary.md`; scoping written to
+  `SCOPING-DIETARY-PREFERENCES.md`. Headline: the engine half already
+  exists (diet axis live + synced; FSA-tag exclusion mechanism live for
+  plans); five gaps identified (diary suggestions unwired to prefs, no
+  allergen data ingested for external foods, thin curated library for
+  restricted diets, incomplete FSA vocabulary + buried UX, exclusions not
+  synced). Six founder decision questions in that doc, section 7.
 
 ## Current position
 
