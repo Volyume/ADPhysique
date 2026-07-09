@@ -453,3 +453,13 @@ Batch 1: 93cb4e8, e935be4, 69e1937.  Batch 2: 3e82b18, fe9ba44, 8bfd692
 (+ L07-F5 already built at 0c4d8b2).  Batch 3: 38d94ab, 7f6974b, d5e6ed0,
 7abac35.  Batch 4: 814a99a.  Plus status/decision doc commits.
 =========================================================================
+
+## D6 program - shipped in short windows (2026-07-09, budget-metered):
+- L04-9 (was mis-ID'd L04-13) SettingsPrivacy consent-row isolation: a876b1d.
+- L05-SL1 skip-name reset toggle on SettingsDataScreen (Pro, global flag): 62f08a8.
+- L05-MM1 saved-meal read-only inspect sheet (SavedMealDetailSheet): f6f1c13.
+Each single/paired, verified (lint EXIT 0, ED-neutral render, consent logic
+byte-identical), reset-author + pushed. REMAINING D6: food L05-SB2 (manual
+barcode entry) + L05-ACF1 (serving units); gated L05-D1 (MealSection, test-
+tangled) + L07-F9 (drag-reorder, REUSE no-dep pattern) + L05-D2/NT2 (nutrition
+density, ED-adjacent - lead reviews diff hands-on); six coverage audits (Sonnet).
