@@ -154,3 +154,34 @@ photos per founder gate F2's exact scope; a check-in built ENTIRELY from guided 
 a same-day scan's score display. Fixing that means either tagging guided singles unscored too
 or removing the day-fallback outright — both beyond F2's stated scope, so this is surfaced in
 the final status as a founder question rather than pre-decided.
+
+### Wave 3 -- results, history and trust (COMPLETE, commit `bb98f58`)
+
+Agent: Sonnet. Reviewed hands-on by Fable: read `progressScanResultsContract.js`,
+`progressScanTrendViewModel.js`, both new components, and the full
+`ProgressPhotosScreen.js` diff against the wave doc's acceptance criteria.
+Confirmed `ProgressPhotoCompare.js` (the neutral surface) and its banned-word
+test are byte-identical/untouched; confirmed no engine file touched.
+
+A theoretical timing concern was raised during review (a possible race between
+the mount-time disk read of `seenRecalibrationIds` and the visibleScans-keyed
+effect that marks a scan's recalibration note seen, which could in principle
+make the note render then vanish mid-session). Empirically extended the
+"first encounter" test with two extra flush cycles and a post-settle
+re-assertion that the note text is still present: it passed against the
+as-built code, so no defect is confirmed. Recorded here rather than silently
+dropped; worth a second look only if a future device walk ever shows the note
+disappearing after its first render.
+
+Files changed: `src/lib/progressScanResultsContract.js` (new),
+`src/lib/progressScanTrendViewModel.js` (new), `src/components/ProgressScanTrend.js`
+(new), `src/components/ProgressScanMeaningMoment.js` (new),
+`src/lib/progressScanPreferences.js` (recalibration/meaning-moment seen flags),
+`src/screens/ProgressPhotosScreen.js` (tier contract on the score row, receipts
+with Why?, trend entry, meaning moment, recalibration note),
+`src/components/ProgressScanCompare.js` (confidence chip on the compare
+summary), plus 8 test files (106 tests).
+
+Tests: `npx jest --testPathPattern="progressScanResultsContract|progressScanTrendViewModel|ProgressScanMeaningMoment|ProgressScanTrend|ProgressPhotosScreen.resultsContract|progressScanPreferences|ProgressPhotosScreen.addFlow"`
+-> 8 suites, 106 tests, all passed. `ProgressPhotoCompare.js`'s own suite (12
+tests) re-run to confirm no cross-contamination. `npm run lint` clean.
