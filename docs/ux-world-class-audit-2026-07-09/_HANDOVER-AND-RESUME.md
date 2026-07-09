@@ -135,3 +135,38 @@ No implementation has been started, deliberately.
    docs rather than eight generic opinions.
 4. **Commit and push after every stage** so a token cut or guardrail stop
    loses at most one stage of work.
+
+## CONSOLIDATED ALL-WORKSTREAMS QUEUE (2026-07-09, founder: "the entire flow
+## down" — cohesion mandate is a lens over the WHOLE backlog, not a replacement)
+
+IN FLIGHT (batch, Sonnet): dietary Phase B meals; haptics rollout; cohesion
+audit 1 (flow/language); cohesion audit 2 (novice/psychology).
+
+NEXT BATCHES (tier-matched, ~4 at a time, in order):
+1. Day-level plan reorder (OLD founder GO, verified UNBUILT: routines has no
+   position column; only routine_exercises.order_in_routine exists). Additive
+   local column + consumers + UI reusing the no-dep reorder pattern; cloud
+   migration only if routines sync (agent verifies).
+2. The 18 unapproved-parked items (old task): agent LOCATES the register in
+   docs/ (not found by quick grep in the 2026-07-03 directive files), lists
+   each item + status, builds the buildable to full spec, surfaces the rest.
+3. Backlog-verify pass (HAIKU-grade mechanical): confirm which old campaign
+   leftovers are actually done vs open — Partner/MealPlan skeletons,
+   RecipeBuilder ModalHeader, header-trio docs, remaining Dimensions.get
+   migrations, Card adoption count, EmptyState adoption, B-5 label
+   consolidation. (shadow.glow at 3 Pro sites, letterSpacing sweep,
+   quiet-hours UI: VERIFIED DONE 2026-07-09.)
+4. Coverage-synthesis leftovers (Sonnet): FR-1 free-tier completion warmth,
+   FR-3 Welcome hero beat, MO-5 CheerPill dialect, MO-6 Diary swipe
+   transition. LT-3 light-elevation policy + CP-10 restart-free theming stay
+   founder-decision items.
+5. Cohesion build waves from the two audit docs once synthesised.
+6. Adversarial bug/crash/security hunt (old queued task): re-sized to Sonnet
+   finders + hands-on synthesis per the tier rule; token-heavy, fire when
+   budget allows or founder says go.
+7. P5 growth items (funnel events ship-ahead; review prompts + importers are
+   propose-then-approve; quiz A/B log-only).
+
+FOUNDER-SIDE (unchanged): migrations 110/111/112; App Groups + Live
+Activities provisioning; fresh EAS build (new native dep + widgets); Play
+OAuth SHA-1; Cut 4 seed walk.
