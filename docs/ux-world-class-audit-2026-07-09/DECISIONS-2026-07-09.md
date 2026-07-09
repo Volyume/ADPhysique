@@ -109,3 +109,12 @@ exception is documented in exerciseMetadata and pinned by updated tests
 |---|---|
 | Divergence handling | **Plan deeper corroboration** - commission a follow-up PLAN for photo-signal corroboration influencing coach recommendations. Constraints absolute: floors intact, ED-gated (calm/open-flag suppression), adherence-neutral, deterministic, no appearance-judgement language; the validation-data caveat from the existing blueprint must be addressed head-on in the plan (what data would validate the signal before it ever drives a recommendation). Plan only - no build without a further founder round. |
 | Benefit line | **Yes** - one calm factual line on the photo prompt + photos empty state (e.g. "The scale can't tell muscle from water. Photos can."), ED-suppression untouched. |
+
+## D12. Eat diary de-clutter (founder direct order, 2026-07-09)
+
+1. REMOVE the vitamins & minerals display from the Eat diary screen - dead
+   space in premium screen real estate. (Diary display only; per-food micro
+   detail elsewhere is untouched unless it proves diary-only - agent reports.)
+2. MOVE "mark all meals as eaten" to the BOTTOM of the page - individual
+   per-meal marking is the preferred primary interaction; the bulk action is
+   demoted, not removed.
