@@ -37,6 +37,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import SavedMealDetailSheet from '../components/food/SavedMealDetailSheet';
 import { SkeletonRow } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
@@ -62,6 +63,10 @@ export default function MyMealsScreen({ navigation, route }) {
   const [loadError, setLoadError] = useState(false);
   const [renaming, setRenaming] = useState(null); // { id, name } | null
   const [renameText, setRenameText] = useState('');
+  // L05-MM1 (design audit 2026-07-09, decision D6): read-only inspect sheet
+  // for a saved meal's contents. Holds the already-loaded list item, so no
+  // extra read is needed to open it.
+  const [inspecting, setInspecting] = useState(null); // saved meal | null
 
   const reload = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
@@ -173,7 +178,7 @@ export default function MyMealsScreen({ navigation, route }) {
         onLongPress={() => openMenu(item)}
         accessibilityRole="button"
         accessibilityLabel={`Log ${item.name}`}
-        accessibilityHint="Use the more actions button to rename or delete"
+        accessibilityHint="Use the info button to view what's inside, or the more actions button to rename or delete"
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -183,6 +188,14 @@ export default function MyMealsScreen({ navigation, route }) {
         </View>
         <View style={styles.rowActions}>
           <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          <TouchableOpacity
+            onPress={() => setInspecting(item)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.name}`}
+          >
+            <Ionicons name="information-circle-outline" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => openMenu(item)}
             hitSlop={10}
@@ -258,6 +271,13 @@ export default function MyMealsScreen({ navigation, route }) {
           <Button title="Save" onPress={submitRename} fullWidth={false} />
         </View>
       </BottomSheet>
+
+      <SavedMealDetailSheet
+        visible={!!inspecting}
+        meal={inspecting}
+        energyUnit={energyUnit}
+        onClose={() => setInspecting(null)}
+      />
     </SafeAreaView>
   );
 }

@@ -213,6 +213,29 @@ describe('MyMealsScreen row tap (C6)', () => {
     expect(nav.goBack).not.toHaveBeenCalled();
   });
 
+  test('L05-MM1: the info button opens a read-only inspect sheet, not a log or menu', async () => {
+    const nav = makeNav();
+    const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
+    await flush();
+
+    const row = capturedListProps.renderItem({ item: MEAL });
+    const viewButton = findByA11y(row, 'View Chicken and rice');
+    expect(viewButton).toBeTruthy();
+    await act(async () => { viewButton.props.onPress(); });
+    await flush();
+
+    expect(applySavedMealToDiary).not.toHaveBeenCalled();
+    expect(appAlert).not.toHaveBeenCalled();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Chicken and rice');
+    expect(text).toContain('600');
+    expect(text).toContain('45g protein');
+    expect(text).toContain('No food-by-food detail is stored for this meal.');
+  });
+
   test('long press still opens the rename/delete menu', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
