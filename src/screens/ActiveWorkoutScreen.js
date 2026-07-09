@@ -465,6 +465,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
     : '';
 
+  // L07-F9 (design-usability-audit-2026-07-09): in-session drag-reorder was
+  // missing, only the nav-strip's tap-to-jump existed. Reusing the existing
+  // no-new-dependency reorder pattern (RoutineDetailScreen.js's
+  // handleMoveExercise: swap-adjacent-and-persist, no PanResponder/library).
+  // Supersets pair two ADJACENT entries sharing a supersetGroupId
+  // (isPairedWithNext above); moving either half would separate them from
+  // that adjacency assumption, so a move is blocked whenever the current
+  // exercise or its swap target is part of a pair.
+  const prevSGI = currentExerciseIndex > 0 ? (workoutExercises[currentExerciseIndex - 1]?.supersetGroupId ?? null) : null;
+  const canMoveUp = currentExerciseIndex > 0 && currentSGI == null && prevSGI == null;
+  const canMoveDown = currentExerciseIndex < workoutExercises.length - 1 && currentSGI == null && nextSGI == null;
+
   // C3: the one place that clears the auto-advance ref, so its "armed" state
   // (drives the "Stay here" row) never drifts from the timer it describes.
   function cancelAutoAdvance() {
@@ -506,6 +518,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: newId };
     }
     useAppStore.getState().setWorkoutExercises(updated);
+    hapticsVocab.selection();
+  }
+
+  // L07-F9: move the current exercise one slot earlier/later in the session.
+  // Same swap-adjacent-and-persist pattern as RoutineDetailScreen's
+  // handleMoveExercise, adapted for the single-exercise-focus view here: the
+  // in-memory workoutExercises array is the order of record for a session
+  // (nav-strip order, finish-summary order), and setWorkoutExercises already
+  // persists it via the same crash-recovery snapshot every other
+  // order-affecting action (add/remove exercise) uses.
+  function handleMoveExercise(direction) {
+    const swapIndex = direction === 'up' ? currentExerciseIndex - 1 : currentExerciseIndex + 1;
+    if (swapIndex < 0 || swapIndex >= workoutExercises.length) return;
+    if (currentSGI != null || (workoutExercises[swapIndex]?.supersetGroupId ?? null) != null) return;
+    audit('workout.exercise.reordered', { fromIndex: currentExerciseIndex, toIndex: swapIndex });
+    const updated = [...workoutExercises];
+    const temp = updated[currentExerciseIndex];
+    updated[currentExerciseIndex] = updated[swapIndex];
+    updated[swapIndex] = temp;
+    useAppStore.getState().setWorkoutExercises(updated);
+    setCurrentExerciseIndex(swapIndex);
     hapticsVocab.selection();
   }
 
@@ -2948,6 +2981,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={styles.sheetOptionLabel}>Add exercise</Text>
                 </View>
               </TouchableOpacity>
+              {canMoveUp && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleMoveExercise('up'); }}
+                accessibilityRole="button"
+                accessibilityLabel="Move exercise up"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="chevron-up" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>Move exercise up</Text>
+                </View>
+              </TouchableOpacity>
+              )}
+              {canMoveDown && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleMoveExercise('down'); }}
+                accessibilityRole="button"
+                accessibilityLabel="Move exercise down"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>Move exercise down</Text>
+                </View>
+              </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.sheetOption}
                 onPress={() => {
