@@ -44,7 +44,7 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     expect(mockToastShow).toHaveBeenCalledWith('Sign-in was cancelled.', expect.objectContaining({ variant: 'info' }));
   });
 
-  test('a provider error still shows the error toast (unchanged)', async () => {
+  test('a provider error shows a calm fallback toast, never the raw SDK message (FR-2)', async () => {
     signInWithGoogle.mockResolvedValue({ error: { message: 'Network down' } });
     let tree;
     await act(async () => { tree = create(<LoginScreen />); });
@@ -52,7 +52,7 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     await act(async () => { await google.props.onPress(); });
     await flush();
 
-    expect(mockToastShow).toHaveBeenCalledWith('Network down', expect.objectContaining({ variant: 'error' }));
+    expect(mockToastShow).toHaveBeenCalledWith("That didn't go through. Try again.", expect.objectContaining({ variant: 'error' }));
   });
 
   test('a genuine success shows neither toast (still driven by onAuthStateChange)', async () => {

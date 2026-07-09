@@ -563,7 +563,11 @@ export default function ProOnboardingScreen({ navigation }) {
       const result = await fn();
       if (result?.error) {
         logError('ProOnboarding.oauth.providerError', result.error, { provider });
-        appAlert('Sign-in failed', result.error.message);
+        // FR-2: never show raw provider/SDK error text at the user's very
+        // first touchpoint. The real error is already captured above by
+        // logError; the user only ever sees one calm fallback sentence
+        // (same fix pattern as L01-B35).
+        appAlert('Sign-in failed', "That didn't go through. Try again.");
         return;
       }
       if (result?.cancelled) {

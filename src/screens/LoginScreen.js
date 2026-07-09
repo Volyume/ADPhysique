@@ -38,7 +38,11 @@ export default function LoginScreen() {
         toast.show('Sign-in was cancelled.', { variant: 'info' });
       } else if (result?.error) {
         logError('LoginScreen.oauth.providerError', result.error, { provider });
-        toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
+        // FR-2: never show raw provider/SDK error text at the user's very
+        // first touchpoint. The real error is already captured above by
+        // logError; the user only ever sees one calm fallback sentence
+        // (same fix pattern as L01-B35).
+        toast.show("That didn't go through. Try again.", { variant: 'error' });
       } else {
         // Success is fully driven by onAuthStateChange, log so the
         // upstream SIGNED_IN event can be correlated to this initiation.
