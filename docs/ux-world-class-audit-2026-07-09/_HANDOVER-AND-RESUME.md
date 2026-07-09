@@ -899,3 +899,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
 - ALL 8 BURST LANDINGS COMMITTED. Session PAUSED here by founder order
   (budget). Emergency snapshot above is now historical - tree is CLEAN.
   Resume from "After the burst (tomorrow's queue)" in the job board.
+- RESUME SESSION LANDINGS (2026-07-09 late): Home decomposition (51c65d5);
+  smalls B41+LT-3+AY-7 pin (df26d5a); extras pick-any copy + Coach tab
+  profile-above-status reorder (093fc18, supersedes D13.3 order, guard
+  updated). D16-D19 recorded + pushed. RED-S wording founder-APPROVED as
+  live (closed); VC-1 CLOSED approved-as-coded. L08-B3 test plan written,
+  founder PROCEED granted (0be00ee). Standing order: lowest capable agent
+  tier always. IN FLIGHT: plan-F FULL build (Opus, D18, engine hunks get
+  hands-on review); mark-eaten add-flow teach + L08-B3 link (Sonnet).
+  QUEUE after: band exception (D19), NAV-2 (D16), training-reminder habit
+  rebuild (D17), CP-9 FAQ, CP-10 investigation, Ultimate-Audit 11-16
+  round prep (Haiku extraction of pass4 blueprints).
