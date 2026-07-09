@@ -386,3 +386,10 @@ OAuth SHA-1; Cut 4 seed walk.
   workstream, merged today, 7fc4ba0/84cab3b). ONE GAP: the benefit of photos
   vs the scale is never explained anywhere. Founder round: confirm receipt
   layer sufficient + add the benefit line.
+- Small-batch LANDED (e0c09ea D10 band exception test-pinned + verified via
+  pool run; 34ac986 getCoachOutputHistory deleted_at + guard; b0f5766 B-5
+  tail: 2 zero-visual conversions, 17 kept with role reasons, consent + ED
+  headers untouched). Second "approved-unbuilt" item correctly REFUSED: it is
+  Cut 4 (seed->.dat), the already-known founder-gated dedicated-window item -
+  stays gated, not a fork. Pair 1 fully drained. NEXT: re-ask the photo round
+  (transport error ate it), then pair 2: superset mistag fix + builder nudge.
