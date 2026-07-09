@@ -25,13 +25,28 @@ import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { getOpenEdPatternFlag } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
+// The single canonical OR: suppressed when calm mode is on OR an open
+// ED-pattern flag exists. Both callers here already resolve their own inputs
+// to plain booleans (or a truthy sentinel) before calling this, so it takes
+// two booleans rather than the raw mode/flag shapes `derivePhotoSuppression`
+// below accepts. This is the one place the OR itself lives; every other
+// suppression composition in the app (the hook below, and any screen that
+// cannot run the hook directly, e.g. CoachOutputScreen's existing single big
+// load effect which already performs the same fail-closed raw reads for
+// several other safety features beyond the photo card) should call this
+// function rather than re-write `calm || edFlagOpen` inline, so a future
+// change to the OR logic cannot silently drift between call sites.
+export function isPhotoSuppressed(calm, edFlagOpen) {
+  return !!calm || !!edFlagOpen;
+}
+
 // Pure OR, exported for unit tests. Suppressed when calm mode is on, OR an open
 // ED-pattern flag exists, OR either read failed. The wellbeing 'read_failed'
 // sentinel is matched explicitly; the ED-flag 'read_failed' sentinel is a
 // truthy string so it suppresses via !!edFlag (never null, which reads as "no
 // flag"). Fails CLOSED on any ambiguity.
 export function derivePhotoSuppression({ mode, edFlag }) {
-  return isCalm(mode) || mode === 'read_failed' || !!edFlag;
+  return isPhotoSuppressed(isCalm(mode) || mode === 'read_failed', edFlag);
 }
 
 export default function usePhotoSuppression(explicitUserId) {

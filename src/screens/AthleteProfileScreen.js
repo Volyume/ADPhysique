@@ -28,6 +28,7 @@ import {
 } from '../lib/database';
 import { formatBodyWeightShort } from '../lib/units';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { saveAvatarPhoto, deleteAvatarPhoto } from '../lib/profileAvatar';
 import { AVATAR_PRESETS, avatarPresetFor } from '../lib/profileAvatarPresets';
 import { buildProfileFreshness, freshnessTone } from '../lib/profileFreshness';
@@ -246,6 +247,11 @@ export default function AthleteProfileScreen({ navigation }) {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  // Wave 4 (suppression unification): the Volyume Score tile is scan-derived
+  // content, so it follows the same shared fail-closed gate as the Coach
+  // screen's card and the other high-risk photo surfaces (calm mode or an
+  // open ED-pattern flag). Before this the tile had no suppression at all.
+  const photoSuppressed = usePhotoSuppression(user?.id);
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -369,7 +375,11 @@ export default function AthleteProfileScreen({ navigation }) {
     ? (summary.weightLoggedAt ? `Logged ${formatDate(summary.weightLoggedAt)}` : 'Current profile weight')
     : 'Open Progress to add body weight';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
-  const showPhysiqueScore = shouldShowPhysiqueScore({
+  // Suppressed (calm mode or an open ED-pattern flag) behaves exactly like no
+  // scored scan at all: the tile falls through to the body-fat log, then the
+  // unscored placeholder, same as `shouldShowPhysiqueScore` already does when
+  // there is nothing to show.
+  const showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore({
     scan: summary.scan,
     bodyFat: summary.bodyFat,
     bodyFatLoggedAt: summary.bodyFatLoggedAt,

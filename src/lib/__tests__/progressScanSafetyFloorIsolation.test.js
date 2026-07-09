@@ -138,4 +138,32 @@ describe('Progress Scan safety-floor isolation', () => {
       expect(source).not.toMatch(/progress_scan|progressScan|ProgressScan|photo_scan.*ffm/i);
     }
   });
+
+  // Wave 4 addition (integration blueprint §9 guard test 1): runWeeklyCoach's
+  // output must be byte-identical whether or not ANY scan-evidence-shaped
+  // data is present alongside otherwise-identical inputs. This does not
+  // modify or weaken the five tests above; it adds a new, broader identity
+  // check on top of them. runWeeklyCoach's destructuring has no rest-spread
+  // (verified by scout 07), so unrecognised keys on the inputs object are a
+  // structural no-op -- this proves that in practice, not just by reading
+  // the destructuring list.
+  test('runWeeklyCoach output is identical with and without scan evidence present in the inputs', () => {
+    const withoutScanEvidence = runWeeklyCoach(coachCutInputs());
+    const withScanEvidence = runWeeklyCoach(coachCutInputs({
+      // None of these are real runWeeklyCoach parameters; they simulate a
+      // future refactor accidentally passing scan evidence straight through.
+      progressScanEvidence: {
+        source: 'photo_scan',
+        score: 92,
+        band: 'Very lean',
+        affectsTargets: true,
+        usedFor: 'target_setting',
+      },
+      photo_scan: true,
+      scanScore: 92,
+      scanTrendDirection: 'down',
+      scanConflictsWithWeight: true,
+    }));
+    expect(withScanEvidence).toEqual(withoutScanEvidence);
+  });
 });

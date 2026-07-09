@@ -12,7 +12,11 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/function physiqueScoreTileSub\(scan\)/);
     expect(source).toMatch(/progressScanAssessmentForDisplay/);
     expect(source).toMatch(/progressScanScoreForDisplay/);
-    expect(source).toMatch(/const showPhysiqueScore = shouldShowPhysiqueScore\(\{/);
+    // Wave 4 (suppression unification): the tile now also fails closed on
+    // calm mode / an open ED-pattern flag via the shared usePhotoSuppression
+    // hook, so this pinned expression grew a `!photoSuppressed &&` guard.
+    // Old: `const showPhysiqueScore = shouldShowPhysiqueScore({`.
+    expect(source).toMatch(/const showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore\(\{/);
     expect(source).toMatch(/bodyFatLoggedAt: summary\.bodyFatLoggedAt/);
     expect(source).toMatch(/label: 'Volyume Score'/);
     expect(source).toMatch(/label: 'Body fat'/);

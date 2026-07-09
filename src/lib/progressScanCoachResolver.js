@@ -108,11 +108,25 @@ export function resolveProgressScanCoachNote({
     decisionLine(output),
   ].filter(Boolean).join(' '));
 
+  // Wave 4 (integration blueprint §11 item 3): the used/not-used sentence
+  // ("this does not change your targets", in decisionLine()'s words) already
+  // ran unconditionally into `body` above. It did NOT reliably reach
+  // `coachLine` -- the text folded into the coach's main interpretation via
+  // applyProgressScanCoachContext -- because coachLine()'s own branches only
+  // stated non-authority in some cases (e.g. the not-comparable/baseline
+  // branches did not). Appending decisionLine(output) here makes EVERY
+  // scan-derived render path on the coach screen (the dedicated card body,
+  // and the folded interpretation line) carry the same deterministic
+  // non-authority sentence, regardless of scan state. See
+  // progressScanCoachIsolation.guard.test.js and progressScanCoachResolver.test.js
+  // for the source + behavioural guards that pin this.
+  const foldedCoachLine = clean([coachLine(scan, label, trendOnly), decisionLine(output)].filter(Boolean).join(' '));
+
   return {
     source: PHOTO_SCAN_SOURCE,
     title: 'Progress photo context',
     body,
-    coachLine: clean(coachLine(scan, label, trendOnly)),
+    coachLine: foldedCoachLine,
     trendDirection: scan.trendDirection || 'uncertain',
     confidence: scan.confidence || 'low',
     leannessBand: trendOnly ? null : (scan.leannessBand ?? null),

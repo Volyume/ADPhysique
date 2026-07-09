@@ -41,6 +41,17 @@ import {
   resolveProgressScanCoachNote,
 } from '../lib/progressScanCoachResolver';
 import { getProgressScanHideExactPreference } from '../lib/progressScanPreferences';
+// Suppression unification (Wave 4): this screen already fails-closed on calm
+// mode / an open ED-pattern flag with its own raw reads, reused across many
+// features on this screen beyond the scan card (contest countdown, ED-lockout
+// narrative, weekly-share suppression). Swapping the whole screen to the
+// usePhotoSuppression() hook would mean restructuring this single large load
+// effect and duplicating those reads against the hook's own async lifecycle,
+// which is out of this wave's scope. Instead the scan-context suppression
+// specifically is routed through the SAME pure OR the hook uses
+// (isPhotoSuppressed), so a future change to that policy cannot silently
+// drift between the hook and this screen.
+import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { summariseWeekCardio, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
@@ -1363,7 +1374,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
       const edPatternOpen = !!openFlag;
       const scanCoachSummary = await getProgressScanCoachSummary(user.id, {
-        suppressed: edPatternOpen || calmNow,
+        suppressed: isPhotoSuppressed(calmNow, edPatternOpen),
       }).catch(() => null);
 
       // Cardio (QA P2/P3/D1): the week's logged sessions vs the applied target,
@@ -1444,7 +1455,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       setProgressScanCoachContext(resolveProgressScanCoachNote({
         scan: scanCoachSummary,
         output: result,
-        suppressed: resultEdPatternOpen || calmNow,
+        suppressed: isPhotoSuppressed(calmNow, resultEdPatternOpen),
         trendOnly: hideExactScanRanges,
       }));
 
@@ -1722,7 +1733,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // flag the chip drops to neutral entirely. The weight numeral itself is
   // always textPrimary (set on the value below), colour lives on the icon.
   const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
-  const canShowProgressScanCoachContext = !!progressScanCoachContext && !edPatternOpen && !calmMode;
+  const canShowProgressScanCoachContext = !!progressScanCoachContext && !isPhotoSuppressed(calmMode, edPatternOpen);
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
