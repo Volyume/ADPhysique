@@ -228,3 +228,12 @@ OAuth SHA-1; Cut 4 seed walk.
   so the never-silently-under-fill invariant still genuinely bites.
   WATCH: haptics agent WIP transiently fails BuildWorkoutScreen.travelSheet
   guard - hold haptics to a green suite at its boundary.
+- Haptics rollout LANDED (273613b): existing vocabulary only (selection/
+  commit; Button primary CTAs already auto-fired), added to non-Button
+  touchables across BuildWorkout/ManualBuilder/RoutineDetail + Settings
+  (Display/Health/Profile/Dietary/main). Deliberately excluded: ED/wellbeing/
+  weight surfaces, billing-adjacent screens, Stepper ticks, pure viewers.
+  travelSheet guard updated (pinned pre-rollout literal). haptics.js stays
+  the sole expo-haptics importer (importBan green). Full suite green.
+  Batch state: builds done (Phase B bfaf8cf, haptics 273613b); 2 planners
+  still out (plan-A library expansion, plan-B weak-point sets).
