@@ -45,8 +45,18 @@ import { audit } from '../lib/observability';
 import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
+import BottomSheet from '../components/BottomSheet';
+import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+
+// L05-SB2 (2026-07-09 design audit): a barcode that's damaged or too
+// curved for the camera to read still has a printed number underneath
+// it. Digits-only, 8-14 long covers EAN-8/EAN-13/UPC-A/UPC-E/GS1-128
+// without accepting obvious junk. Exported for the colocated test.
+export function isValidManualBarcode(value) {
+  return /^\d{8,14}$/.test(String(value ?? '').trim());
+}
 
 // Supported barcode types: the common supermarket formats. Code-128
 // is included for some UK weighed-deli labels. QR / DataMatrix
@@ -113,14 +123,16 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     }
   }, [permission, requestPermission]);
 
-  const onCodeScanned = useCallback(async (codes) => {
-    if (scanLock.current) return;
-    const value = codes?.[0]?.value;
-    if (!value) return;
+  // Shared lookup + routing path for a resolved barcode value, whichever
+  // way it arrived (camera detection or the L05-SB2 manual-entry sheet).
+  // Both callers must go through resolveBarcode exactly once, so a typed
+  // EAN gets the same waterfall, hit/miss routing and error handling as a
+  // camera read.
+  const lookupAndRoute = useCallback(async (value, codeType) => {
     scanLock.current = true;
     setResolving(true);
-    audit('food.barcode.scan', { codeType: codes[0]?.type ?? 'unknown' });
-    logInfo('ScanBarcode.detect', `data=${value} type=${codes[0]?.type}`);
+    audit('food.barcode.scan', { codeType: codeType ?? 'manual' });
+    logInfo('ScanBarcode.detect', `data=${value} type=${codeType ?? 'manual'}`);
     // Single success note (planReady's signature, reused so the vocabulary's
     // reduce-motion gate covers the scan lock-on).
     hapticScanSuccess();
@@ -166,10 +178,50 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     }
   }, [navigation, userId, mealSlot, entryDate, toast]);
 
+  const onCodeScanned = useCallback((codes) => {
+    if (scanLock.current) return;
+    const value = codes?.[0]?.value;
+    if (!value) return;
+    lookupAndRoute(value, codes[0]?.type ?? 'unknown');
+  }, [lookupAndRoute]);
+
   const codeScanner = useCodeScanner({
     codeTypes: CODE_TYPES,
     onCodeScanned,
   });
+
+  // L05-SB2: inline "enter barcode number" affordance for a barcode the
+  // camera can't read (damaged, curved, poor lighting). Opens a small
+  // numeric sheet whose submit feeds lookupAndRoute exactly as a camera
+  // detection would.
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualValue, setManualValue] = useState('');
+  const [manualError, setManualError] = useState('');
+
+  const openManual = useCallback(() => {
+    setManualValue('');
+    setManualError('');
+    setManualOpen(true);
+  }, []);
+
+  const closeManual = useCallback(() => {
+    setManualOpen(false);
+  }, []);
+
+  const onManualChange = useCallback((text) => {
+    setManualValue(text.replace(/[^0-9]/g, ''));
+    setManualError('');
+  }, []);
+
+  const submitManual = useCallback(() => {
+    if (scanLock.current) return;
+    if (!isValidManualBarcode(manualValue)) {
+      setManualError('Enter the number under the barcode, 8 to 14 digits.');
+      return;
+    }
+    setManualOpen(false);
+    lookupAndRoute(manualValue.trim(), 'manual');
+  }, [manualValue, lookupAndRoute]);
 
   if (permission === 'not-determined') {
     return (
@@ -233,7 +285,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     );
   }
 
-  const isActive = focused && appActive && !resolving;
+  const isActive = focused && appActive && !resolving && !manualOpen;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -278,7 +330,53 @@ export default function ScanBarcodeScreen({ navigation, route }) {
             <ActivityIndicator size="small" color={colors.textPrimary} />
           </View>
         ) : null}
+        {/* L05-SB2: escape hatch for a damaged/curved barcode the camera
+            can't read. Quiet, bottom-anchored, matches ScanLabelScreen's
+            equivalent capture-row links (scrim text over the live preview). */}
+        {!resolving ? (
+          <View style={styles.manualLinkWrap} pointerEvents="box-none">
+            <TouchableOpacity
+              onPress={openManual}
+              hitSlop={12}
+              style={styles.manualLinkBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Enter barcode number"
+            >
+              <Text style={styles.manualLinkText}>Enter barcode number</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
+
+      <BottomSheet
+        visible={manualOpen}
+        onClose={closeManual}
+        keyboardAvoiding
+        accessibilityLabel="Enter barcode number"
+      >
+        <Text style={styles.manualTitle}>Enter barcode number</Text>
+        <Text style={styles.manualBody}>
+          Type the number printed under the barcode, 8 to 14 digits.
+        </Text>
+        <TextField
+          label="Barcode number"
+          value={manualValue}
+          onChangeText={onManualChange}
+          placeholder="e.g. 5000159461122"
+          keyboardType="number-pad"
+          maxLength={14}
+          autoFocus
+          accessibilityLabel="Barcode number"
+          onSubmitEditing={submitManual}
+        />
+        {manualError ? <Text style={styles.manualErrorText}>{manualError}</Text> : null}
+        <Button
+          title="Look up"
+          onPress={submitManual}
+          disabled={manualValue.length === 0}
+          accessibilityLabel="Look up barcode number"
+        />
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -301,6 +399,18 @@ const styles = StyleSheet.create({
     position: 'absolute', top: spacing.lg, right: spacing.lg,
     backgroundColor: colors.scrim, padding: spacing.sm, borderRadius: radius.sm,
   },
+  manualLinkWrap: {
+    position: 'absolute', bottom: spacing.xl, left: 0, right: 0,
+    alignItems: 'center',
+  },
+  manualLinkBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  manualLinkText: {
+    ...type.body, color: colors.textPrimary, backgroundColor: colors.scrim,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm,
+  },
+  manualTitle: { ...type.title, color: colors.textPrimary },
+  manualBody: { ...type.bodySm, color: colors.textSecondary },
+  manualErrorText: { ...type.bodySm, color: colors.error },
   permissionWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   permissionTitle: {
     color: colors.textPrimary, ...type.title,

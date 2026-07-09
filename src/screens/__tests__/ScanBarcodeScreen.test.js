@@ -29,6 +29,7 @@ jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
@@ -157,5 +158,96 @@ describe('ScanBarcodeScreen lookup failure (ST-2)', () => {
       mealSlot: 'breakfast', entryDate: '2026-07-04', scannedFood: food,
     });
     expect(mockToastShow).not.toHaveBeenCalled();
+  });
+});
+
+// L05-SB2 (2026-07-09 design audit): manual barcode-number entry. A damaged
+// or curved barcode the camera can't read still has a printed number under
+// it; this affordance must feed the typed value into the exact same
+// resolveBarcode() waterfall a camera detection uses, with the same
+// hit/miss routing.
+describe('ScanBarcodeScreen manual barcode-number entry (L05-SB2)', () => {
+  function openManualSheet(tree) {
+    const link = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && n.props.accessibilityLabel === 'Enter barcode number'
+      && typeof n.props.onPress === 'function')[0];
+    act(() => { link.props.onPress(); });
+  }
+
+  function typeManual(tree, value) {
+    const input = tree.root.findAll((n) => n.props.accessibilityLabel === 'Barcode number'
+      && typeof n.props.onChangeText === 'function')[0];
+    act(() => { input.props.onChangeText(value); });
+  }
+
+  function submitManualSheet(tree) {
+    const submit = tree.root.findAll((n) => n.props.accessibilityLabel === 'Look up barcode number'
+      && typeof n.props.onPress === 'function')[0];
+    act(() => { submit.props.onPress(); });
+  }
+
+  test('the affordance is offered on the live scanning view', async () => {
+    const tree = await mount(makeNav());
+
+    const link = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && n.props.accessibilityLabel === 'Enter barcode number');
+    expect(link.length).toBeGreaterThan(0);
+  });
+
+  test('a typed barcode resolves through resolveBarcode and routes to FoodSearch on a hit, exactly as a camera scan would', async () => {
+    const food = { food_ref: 'off:789', source: 'off', name: 'Manual food' };
+    resolveBarcode.mockResolvedValue(food);
+    const nav = makeNav();
+    const tree = await mount(nav, { params: { mealSlot: 'lunch', entryDate: '2026-07-09' } });
+
+    openManualSheet(tree);
+    typeManual(tree, '5000112637922');
+    submitManualSheet(tree);
+    await flush();
+
+    expect(resolveBarcode).toHaveBeenCalledWith('5000112637922', 'u1');
+    expect(nav.replace).toHaveBeenCalledWith('FoodSearch', {
+      mealSlot: 'lunch', entryDate: '2026-07-09', scannedFood: food,
+    });
+  });
+
+  test('a typed barcode with no match routes to ScanLabel with the barcode prefilled, same as a camera miss', async () => {
+    resolveBarcode.mockResolvedValue(null);
+    const nav = makeNav();
+    const tree = await mount(nav, { params: { mealSlot: 'snack', entryDate: '2026-07-09' } });
+
+    openManualSheet(tree);
+    typeManual(tree, '9999999999999');
+    submitManualSheet(tree);
+    await flush();
+
+    expect(nav.replace).toHaveBeenCalledWith('ScanLabel', {
+      mealSlot: 'snack', entryDate: '2026-07-09', prefillBarcode: '9999999999999',
+    });
+  });
+
+  test('non-digit characters are stripped as they are typed', async () => {
+    const tree = await mount(makeNav());
+
+    openManualSheet(tree);
+    typeManual(tree, '500-011a26379bb22');
+
+    const input = tree.root.findAll((n) => n.props.accessibilityLabel === 'Barcode number'
+      && typeof n.props.onChangeText === 'function')[0];
+    expect(input.props.value).toBe('5000112637922');
+  });
+
+  test('a value outside 8 to 14 digits is refused with no lookup call', async () => {
+    const nav = makeNav();
+    const tree = await mount(nav);
+
+    openManualSheet(tree);
+    typeManual(tree, '123');
+    submitManualSheet(tree);
+    await flush();
+
+    expect(resolveBarcode).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(JSON.stringify(tree.toJSON())).toContain('8 to 14 digits');
   });
 });
