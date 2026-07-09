@@ -56,6 +56,21 @@ describe('AY-7: ED-pattern lockout card announces itself on appearance', () => {
     expect(fn).toMatch(/catch \(_\)/);
   });
 
+  test('neither block renders (so neither announcement fires) when no ED-pattern decision is present', () => {
+    // D17/AY-7: the announcement lives entirely inside each block's own
+    // mount effect, so "no announcement when neither renders" is enforced
+    // by HeldDecisionsCard only ever mounting a block when its matching
+    // decision is present -- pin that gating so a future refactor can't
+    // start rendering (and therefore announcing) unconditionally.
+    const cardMatch = SCREEN.match(
+      /function HeldDecisionsCard\([\s\S]*?\n}\n/,
+    );
+    expect(cardMatch).toBeTruthy();
+    const fn = cardMatch[0];
+    expect(fn).toMatch(/\{edLockout \? <EdPatternLockoutBlock[\s\S]*?: null\}/);
+    expect(fn).toMatch(/\{edCleared \? <EdPatternClearedBlock[\s\S]*?: null\}/);
+  });
+
   test('the locked ED-safety copy itself is untouched by this change', () => {
     // AY-7 is announcement-only: no copy or logic change proposed. Pin the
     // exact founder-approved strings still stand in whyThisTemplates.js.

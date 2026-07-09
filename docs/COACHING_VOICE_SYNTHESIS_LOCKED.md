@@ -484,8 +484,10 @@ flag is locked in-app only and is not in this list.
 Daily check-in reminder:
 "Today's check-in is open. Weight, energy, sleep. Two minutes."
 
-Weekly check-in reminder:
-"Weekly check-in is open. Your update lands Monday morning."
+Weekly check-in reminder (amended 2026-07-09, see addendum below):
+Title: "How has your week gone{, First}"
+Body:  "A two-minute check-in is all it takes, and your coach tunes
+       next week around it."
 
 Weekly coach output ready (amended 2026-07-09, see addendum below):
 Title: "Your coaching for the week is ready"
@@ -873,13 +875,42 @@ main "Copy" section (Weekly coach output ready; Cascade day 19; Cascade day
 21) and required no change — the drift was isolated to Surface 6 of this
 document, which predates those strings.
 
-**Not amended under this ruling — flagged for the lead's eyes:** the audit
-(same file, item B41) also flagged the "Weekly check-in reminder" Surface 6
-line as drifted (`scheduler.js:318-323`, `checkinCopy`: old Surface 6 text
-`"Weekly check-in is open. Your update lands Monday morning."` vs live title
-`` `How has your week gone${name}` `` / body `"A two-minute check-in is all
-it takes, and your coach tunes next week around it."`). D15's ruling text
-names only "weekly-coach-ready and cascade-gate" strings as canonical: it
-does not name the weekly check-in reminder. Rather than assume this was
-folded in by implication, this string is left as-is pending an explicit
-founder/lead ruling on whether it is included.
+**Weekly check-in reminder (item B41):** not amended under D15 — D15's ruling
+text named only "weekly-coach-ready and cascade-gate" strings as canonical
+and did not name the weekly check-in reminder, so this string was left as-is
+pending an explicit ruling. That ruling has since landed; see the
+2026-07-09 (D17) addendum below for the amendment.
+
+---
+
+## Addendum 2026-07-09 (D17): weekly check-in reminder drift (B41)
+
+Authority: founder ruling D17, 2026-07-09 (delegated to lead), recorded in
+`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`. D17 verbatim:
+"B41 check-in reminder drift: DELEGATED to lead — ruling: amend Surface 6 of
+COACHING_VOICE_SYNTHESIS_LOCKED.md to the live string ("How has your week
+gone{, First}" / "A two-minute check-in is all it takes, and your coach
+tunes next week around it."), dated amendment; the live string already
+matches NOTIFICATIONS_LOCKED and D15 set the amend-to-live precedent."
+
+Background: the audit (same file, item B41) flagged the "Weekly check-in
+reminder" Surface 6 line as drifted from the live copy in
+`src/lib/notifications/scheduler.js:318-323` (`checkinCopy`). D15 (above)
+amended two other drifted Surface 6 lines but explicitly did not name this
+one, leaving it pending. D17 closes that gap by the same precedent: the
+shipped code is canonical, and the doc is amended to match it rather than
+the code being rewritten to match the doc.
+
+Surface 6 change (old locked text -> new canonical text, verified against
+`src/lib/notifications/scheduler.js:318-323`, `checkinCopy`):
+
+- **Weekly check-in reminder**:
+  - Old: `"Weekly check-in is open. Your update lands Monday morning."`
+  - New: Title `` `How has your week gone${name}` `` (renders as "How has
+    your week gone" or "How has your week gone, First" depending on whether
+    a first name is available) / Body `"A two-minute check-in is all it
+    takes, and your coach tunes next week around it."`
+
+`NOTIFICATIONS_LOCKED.md` already carries this string verbatim and required
+no change — the drift, as with D15's two items, was isolated to Surface 6 of
+this document. No code was changed under this ruling.

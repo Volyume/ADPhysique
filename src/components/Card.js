@@ -15,7 +15,9 @@
 
 import { View, StyleSheet } from 'react-native';
 import PressableCard from './PressableCard';
-import { colors, radius, spacing, withAlpha, alpha } from '../styles/theme';
+import {
+  colors, radius, spacing, withAlpha, alpha, shadow, resolvedTheme,
+} from '../styles/theme';
 
 const TONES = {
   primary: colors.primary,
@@ -126,6 +128,12 @@ const styles = StyleSheet.create({
   base: {
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    // LT-3 (Materials Policy, theme.js): light theme uses shadow as the
+    // PRIMARY elevation cue; dark theme keeps the surface ladder untouched,
+    // so the card-elevation token is only spread in when the theme resolved
+    // at boot is light. Read once here, the same boot-then-reload pattern
+    // as the colors.* tokens above (see theme.js header comment).
+    ...(resolvedTheme === 'light' ? shadow.card : null),
   },
   borderless: { borderWidth: 0 },
 });

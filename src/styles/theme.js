@@ -614,6 +614,21 @@ export const shadow = {
     shadowRadius: 12,
     elevation: 10,
   },
+  // Soft, low-elevation shadow for the shared Card primitive, LIGHT THEME
+  // ONLY (LT-3, Materials Policy above: light theme uses shadow as the
+  // PRIMARY elevation cue; dark theme carries elevation via the surface
+  // ladder and must stay untouched). Calm and subtle: small radius, low
+  // opacity, a barely-there lift rather than a heavy card shadow. Card.js
+  // applies this only when `resolvedTheme === 'light'`; dark output is
+  // unaffected, so the dark surface ladder stays byte-identical.
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
   // The one sanctioned brand-tinted shadow (decision 2026-07-09, recorded in
   // docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): a soft
   // amber halo reserved for Pro-moment hero surfaces (Welcome Pro card,
