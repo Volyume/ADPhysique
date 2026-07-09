@@ -259,3 +259,31 @@ provably preserved), per-day-target persistence code + founder-run migration,
 Partners consent footer + notice-version bump + full receipt (L06-F2/F3),
 iOS Live Activity via existing modules/live-activity (L07-F5), cloud-restore
 missing-columns fix (database.js:6502).
+
+## "Keep going on all" - Batch 2 DONE + PUSHED (2026-07-09), pushed 69e1937..8bfd692
+Four Sonnet agents, domain-partitioned, no collisions. Boundary: full lint
+EXIT 0; ED-safety engine files (nutritionEngine/edPatternDetector/wellbeing/
+coachApply/weeklyCoach/proGate) NOT in diff; migrate_110 additive+idempotent+
+RLS+founder-run; gate regressions green (sexGate/heightGate/PartnerScreen/
+sync.registry/perDayTargets = 99/99). Committer re-stamped (reset-author) + push.
+- `3e82b18` Partners consent (L06-F2/F3): notice version 2->3 (append-only audit
+  stamp per consent.js, NOT a re-prompt gate - verified no bypass), restored
+  "Everything shared is deleted" footer, full receipt now shown pre-pairing.
+- `fe9ba44` ProOnboarding Step-2 split (L04-6): body-composition group moved to
+  its own Step 3 (TOTAL_STEPS 5->6). PURE re-grouping - required-field + sex-gate
+  validation untouched; MAX_STEP bumped 5->6 to keep resume-draft coverage.
+- `8bfd692` Per-day-target SYNC (L05-PDT1): real gap was sync not persistence
+  (AsyncStorage round-trip already existed). LWW clock + new sync table
+  perDayTargetOffsets + registry/transport + migrate_110 (founder-run, benign
+  no-op until applied). Offsets stay display-only, no engine/floor path.
+- L07-F5 iOS Live Activity: ALREADY BUILT (commit 0c4d8b2, 2026-07-02) - agent
+  verified, no change needed. Founder-only outstanding: provision App ID
+  app.volyume.widget + Live Activities capability in EAS before first iOS build.
+
+### SURFACED TO FOUNDER (not parked - needs a decision):
+- L05-NT1 (persist goal/proteinApproach on the cloud nutrition_targets row,
+  NutritionTargetsScreen) was NOT built - out of the per-day-target agent's file
+  scope. Separate small task if wanted.
+- Cloud-restore column fix (database.js:6502 insertOrUpdateExerciseFromCloud
+  drops custom-exercise metadata) still queued - deliberately NOT bundled with
+  per-day-target agent to avoid database.js collision. Next micro-batch.
