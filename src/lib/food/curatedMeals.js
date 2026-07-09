@@ -26,6 +26,12 @@
  * build 2026-07-09): pescatarian sits between vegetarian and omnivore, so
  * omnivores still see every fish meal exactly as before.
  *
+ * Phase B (dietary-needs build, 2026-07-09): 26 new diet-tagged meals added
+ * (10 pescatarian, 9 vegetarian, 7 vegan) so restricted diets get a spread
+ * comparable to omnivore, not just a thin re-tag of existing meals. All new
+ * meals reuse existing curatedFoods.js staples (no new foods, no schema
+ * change); macros are computed the same way as every other meal here.
+ *
  * Schema (per meal): id, name, diet, slots[], components[{food,g}].
  */
 
@@ -76,6 +82,21 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_pre_chicken_rice', 'Chicken & white rice', 'omnivore', ['preworkout'], [{ food: 'chicken_breast', g: 120 }, { food: 'white_rice', g: 150 }]),
   m('curated_om_post_chicken_rice', 'Chicken & white rice', 'omnivore', ['postworkout'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
 
+  // ─── PESCATARIAN (dietary-needs Phase B, 2026-07-09): the pescatarian axis
+  // (added 2026-07-09) only had the fish/seafood dishes re-tagged out of the
+  // old omnivore set (9 meals) behind it. These are genuinely new meals so a
+  // pescatarian user sees a comparable spread to omnivore, not a thin re-tag.
+  m('curated_pesc_bf_salmon_bagel', 'Smoked salmon, egg & bagel', 'pescatarian', ['breakfast'], [{ food: 'smoked_salmon', g: 60 }, { food: 'eggs', g: 100 }, { food: 'bagel', g: 90 }]),
+  m('curated_pesc_bf_salmon_sourdough', 'Smoked salmon, spinach & sourdough', 'pescatarian', ['breakfast'], [{ food: 'smoked_salmon', g: 60 }, { food: 'spinach', g: 60 }, { food: 'sourdough', g: 90 }]),
+  m('curated_pesc_tuna_sweetpot_salad', 'Tuna, sweet potato & salad', 'pescatarian', ['lunch', 'dinner'], [{ food: 'tuna_water', g: 120 }, { food: 'sweet_potato', g: 250 }, { food: 'salad', g: 80 }]),
+  m('curated_pesc_salmon_quinoa_greenbeans', 'Salmon, quinoa & green beans', 'pescatarian', ['lunch', 'dinner'], [{ food: 'salmon', g: 150 }, { food: 'quinoa', g: 180 }, { food: 'green_beans', g: 120 }]),
+  m('curated_pesc_cod_sweetpot_spinach', 'Cod, sweet potato & spinach', 'pescatarian', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'sweet_potato', g: 250 }, { food: 'spinach', g: 80 }]),
+  m('curated_pesc_prawn_tomato_pasta', 'King prawn & tomato pasta', 'pescatarian', ['lunch', 'dinner'], [{ food: 'prawns', g: 150 }, { food: 'pasta', g: 80 }, { food: 'tomato_sauce', g: 100 }]),
+  m('curated_pesc_tuna_bean_rice', 'Tuna, bean & rice bowl', 'pescatarian', ['lunch', 'dinner'], [{ food: 'tuna_water', g: 120 }, { food: 'kidney_beans', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'salad', g: 60 }]),
+  m('curated_pesc_prawn_noodles', 'King prawn noodles', 'pescatarian', ['lunch', 'dinner'], [{ food: 'prawns', g: 150 }, { food: 'noodles', g: 200 }, { food: 'stirfry_veg', g: 120 }]),
+  m('curated_pesc_sn_salmon_cottage', 'Smoked salmon & cottage cheese', 'pescatarian', ['snack'], [{ food: 'smoked_salmon', g: 50 }, { food: 'cottage_cheese', g: 150 }]),
+  m('curated_pesc_sn_prawn_avocado', 'Prawns & avocado', 'pescatarian', ['snack'], [{ food: 'prawns', g: 120 }, { food: 'avocado', g: 60 }]),
+
   // ─── VEGETARIAN — dairy/egg, no meat/fish (report §B vegetarian + the
   //     egg/dairy "omnivore" breakfasts, which are vegetarian by ingredient) ─
   m('curated_veg_protein_porridge', 'Protein porridge', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'whey', g: 30 }, { food: 'milk_skimmed', g: 250 }, { food: 'berries', g: 80 }, { food: 'peanut_butter', g: 20 }]),
@@ -99,6 +120,18 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_pre_yogurt_ricecakes', 'Greek yogurt & rice cakes', 'vegetarian', ['preworkout'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'rice_cakes', g: 24 }, { food: 'honey', g: 10 }]),
   m('curated_veg_post_whey_banana', 'Whey & banana shake', 'vegetarian', ['postworkout'], [{ food: 'whey', g: 40 }, { food: 'banana', g: 120 }, { food: 'milk_skimmed', g: 250 }]),
   m('curated_veg_post_skyr_berries', 'Skyr, berries & honey', 'vegetarian', ['postworkout'], [{ food: 'skyr', g: 250 }, { food: 'berries', g: 100 }, { food: 'honey', g: 15 }]),
+
+  // Phase B (dietary-needs build, 2026-07-09): more vegetarian variety,
+  // especially snacks (only 2 before this).
+  m('curated_veg_bf_weetabix_banana', 'Weetabix, milk & banana', 'vegetarian', ['breakfast'], [{ food: 'weetabix', g: 40 }, { food: 'milk_skimmed', g: 300 }, { food: 'banana', g: 100 }]),
+  m('curated_veg_bf_cottage_granola', 'Cottage cheese, banana & granola bowl', 'vegetarian', ['breakfast'], [{ food: 'cottage_cheese', g: 200 }, { food: 'banana', g: 100 }, { food: 'granola', g: 40 }]),
+  m('curated_veg_paneer_curry', 'Paneer curry, rice & spinach', 'vegetarian', ['lunch', 'dinner'], [{ food: 'paneer', g: 100 }, { food: 'white_rice', g: 180 }, { food: 'spinach', g: 80 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_veg_halloumi_quinoa', 'Halloumi, quinoa & salad', 'vegetarian', ['lunch', 'dinner'], [{ food: 'halloumi', g: 100 }, { food: 'quinoa', g: 180 }, { food: 'salad', g: 100 }]),
+  m('curated_veg_cottage_jacket', 'Cottage cheese jacket potato & salad', 'vegetarian', ['lunch', 'dinner'], [{ food: 'cottage_cheese', g: 200 }, { food: 'white_potato', g: 300 }, { food: 'salad', g: 80 }]),
+  m('curated_veg_mushroom_omelette', 'Mushroom & cheese omelette with sourdough', 'vegetarian', ['lunch', 'dinner'], [{ food: 'eggs', g: 150 }, { food: 'mushrooms', g: 100 }, { food: 'cheddar_light', g: 25 }, { food: 'sourdough', g: 60 }]),
+  m('curated_veg_sn_cheese_toast', 'Cheese on toast', 'vegetarian', ['snack'], [{ food: 'cheddar_light', g: 40 }, { food: 'wholemeal_bread', g: 80 }]),
+  m('curated_veg_sn_yogurt_granola_berries', 'Greek yogurt, granola & berries', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
+  m('curated_veg_sn_paneer_apple', 'Paneer & apple', 'vegetarian', ['snack'], [{ food: 'paneer', g: 90 }, { food: 'apple', g: 120 }]),
 
   // ─── VEGAN (report §B vegan) ────────────────────────────────────────────
   m('curated_vg_tofu_scramble', 'Tofu scramble on sourdough', 'vegan', ['breakfast'], [{ food: 'tofu_firm', g: 200 }, { food: 'sourdough', g: 80 }, { food: 'spinach', g: 60 }]),
@@ -141,6 +174,19 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_pre_soy_oats_banana', 'Soya protein, oats & banana', 'vegan', ['preworkout'], [{ food: 'soy_protein', g: 30 }, { food: 'oats', g: 50 }, { food: 'banana', g: 120 }]),
   m('curated_vg_post_pea_oats_berries', 'Pea protein, oats & berries', 'vegan', ['postworkout'], [{ food: 'vegan_protein_blend', g: 35 }, { food: 'oats', g: 60 }, { food: 'berries', g: 80 }]),
   m('curated_vg_post_soy_banana_shake', 'Soya protein & banana shake', 'vegan', ['postworkout'], [{ food: 'soy_protein', g: 35 }, { food: 'banana', g: 120 }, { food: 'soy_milk', g: 250 }]),
+
+  // Phase B (dietary-needs build, 2026-07-09): vegan snacks were the thinnest
+  // slot (3 meals) alongside a couple more mains for variety.
+  m('curated_vg_sn_chickpeas', 'Spiced roasted chickpeas', 'vegan', ['snack'], [{ food: 'chickpeas', g: 200 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_vg_sn_shake_apple', 'Vegan protein shake & apple', 'vegan', ['snack'], [{ food: 'vegan_protein_blend', g: 33 }, { food: 'soy_milk', g: 200 }, { food: 'apple', g: 120 }]),
+  m('curated_vg_sn_tofu_edamame', 'Tofu & edamame bowl', 'vegan', ['snack'], [{ food: 'tofu_firm', g: 150 }, { food: 'edamame', g: 100 }]),
+  m('curated_vg_sn_edamame_ricecakes', 'Edamame & rice cakes', 'vegan', ['snack'], [{ food: 'edamame', g: 150 }, { food: 'rice_cakes', g: 20 }]),
+  // Vegan mains carry a leucine-matched protein uplift (>= 28 g; the plant-anchor
+  // policy in proteinQuality.test.js), so these two are sized generously on the
+  // legume/lentil component rather than left as a lighter side-style bowl.
+  m('curated_vg_chickpea_quinoa_lentil_bowl', 'Chickpea, quinoa & lentil bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'chickpeas', g: 200 }, { food: 'quinoa', g: 120 }, { food: 'lentils', g: 100 }, { food: 'spinach', g: 60 }, { food: 'olive_oil', g: 10 }]),
+  m('curated_vg_lentilpasta_tomato_spinach', 'Lentil pasta, tomato & spinach', 'vegan', ['lunch', 'dinner'], [{ food: 'lentil_pasta', g: 110 }, { food: 'tomato_sauce', g: 120 }, { food: 'spinach', g: 80 }]),
+  m('curated_vg_tofu_asparagus_stirfry', 'Tofu & asparagus stir-fry', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'asparagus', g: 120 }, { food: 'white_rice', g: 180 }, { food: 'olive_oil', g: 10 }]),
 ]);
 
 const round = (n) => Math.round(n);

@@ -177,6 +177,67 @@ const MEAL_ADDITIONS = {
     { name: 'Black pepper', why: 'Lifts mild chicken.' },
   ],
 
+  // ─── PESCATARIAN (Phase B, 2026-07-09) ─────────────────────────────────
+  curated_pesc_bf_salmon_bagel: [
+    { name: 'Black pepper & chives', why: 'The classic finish for eggs and salmon.' },
+    { name: 'Fresh dill', why: 'Dill and smoked salmon are made for each other.' },
+    { name: 'Lemon zest', why: 'Cuts through the rich salmon.' },
+    { name: 'Capers', why: 'A salty pop that suits the bagel.' },
+  ],
+  curated_pesc_bf_salmon_sourdough: [
+    { name: 'Black pepper & dill', why: 'Pepper and dill lift eggs and salmon.' },
+    { name: 'Lemon', why: 'Brightens the smoked salmon.' },
+    { name: 'Chilli flakes', why: 'A little heat on the toast.' },
+    { name: 'Nutmeg', why: 'A pinch lifts the spinach.' },
+  ],
+  curated_pesc_tuna_sweetpot_salad: [
+    { name: 'Black pepper & spring onion', why: 'The classic tuna finish.' },
+    { name: 'Paprika or cumin', why: 'Earthy warmth for the sweet potato.' },
+    { name: 'A splash of vinegar', why: 'Sharpens the tuna mix.' },
+    { name: 'Chilli flakes', why: 'A little heat through the bowl.' },
+  ],
+  curated_pesc_salmon_quinoa_greenbeans: [
+    { name: 'Dill & lemon', why: 'The pairing salmon was born for.' },
+    { name: 'Garlic & black pepper', why: 'Savoury depth on the fish.' },
+    { name: 'Chilli flakes', why: 'A little heat against the rich salmon.' },
+    { name: 'Fresh mint', why: 'A fresh lift on the green beans.' },
+  ],
+  curated_pesc_cod_sweetpot_spinach: [
+    { name: 'Lemon & parsley', why: 'Clean and fresh with white fish.' },
+    { name: 'Paprika & cumin', why: 'Earthy spices for the sweet potato.' },
+    { name: 'Black pepper', why: 'Sharpens mild cod.' },
+    { name: 'Nutmeg', why: 'A pinch lifts the spinach.' },
+  ],
+  curated_pesc_prawn_tomato_pasta: [
+    { name: 'Garlic & basil', why: 'The heart of a tomato sauce.' },
+    { name: 'Chilli flakes', why: 'For an arrabbiata-style kick.' },
+    { name: 'Black pepper', why: 'Sharpens the sauce.' },
+    { name: 'Lemon', why: 'Brightens sweet prawns.' },
+  ],
+  curated_pesc_tuna_bean_rice: [
+    { name: 'Black pepper & spring onion', why: 'The proper tuna finish.' },
+    { name: 'A splash of vinegar', why: 'Sharpens the tuna mix.' },
+    { name: 'Chilli flakes', why: 'A little heat through the bowl.' },
+    { name: 'Fresh coriander', why: 'A fresh lift over the beans.' },
+  ],
+  curated_pesc_prawn_noodles: [
+    { name: 'Garlic & ginger', why: 'The aromatic base prawns love.' },
+    { name: 'A splash of soy sauce', why: 'Savoury glaze for the noodles.' },
+    { name: 'Chilli', why: 'Heat that suits sweet prawns.' },
+    { name: 'Lime & coriander', why: 'A fresh, zingy finish.' },
+  ],
+  curated_pesc_sn_salmon_cottage: [
+    { name: 'Black pepper & chives', why: 'Lifts smoked salmon and cottage cheese.' },
+    { name: 'Fresh dill', why: 'Dill and salmon are made for each other.' },
+    { name: 'Lemon zest', why: 'A fresh, bright twist.' },
+  ],
+  curated_pesc_sn_prawn_avocado: [
+    { name: 'Lime', why: 'Brightens the avocado.' },
+    { name: 'Chilli flakes', why: 'Heat to taste.' },
+    { name: 'Black pepper', why: 'Sharpens sweet prawns.' },
+    { name: 'Fresh coriander', why: 'A fresh, zingy lift.' },
+  ],
+
   // ─── VEGETARIAN ─────────────────────────────────────────────────────────
   curated_veg_protein_porridge: [
     { name: 'Cinnamon', why: 'Makes oats taste sweet with no sugar.' },
@@ -286,6 +347,57 @@ const MEAL_ADDITIONS = {
     { name: 'Cinnamon', why: 'Sweetens the skyr.' },
     { name: 'Vanilla extract', why: 'Softens the tang.' },
     { name: 'Lemon zest', why: 'Brightens the berries.' },
+  ],
+
+  // Phase B (2026-07-09)
+  curated_veg_bf_weetabix_banana: [
+    { name: 'Cinnamon', why: 'Warm sweetness, no sugar.' },
+    { name: 'Vanilla extract', why: 'Rounds out the milk and banana.' },
+    { name: 'Cocoa powder', why: 'A chocolate version.' },
+  ],
+  curated_veg_bf_cottage_granola: [
+    { name: 'Cinnamon', why: 'Natural sweetness, no sugar.' },
+    { name: 'Vanilla extract', why: 'A dessert-like finish.' },
+    { name: 'Lemon zest', why: 'A fresh, bright twist.' },
+  ],
+  curated_veg_paneer_curry: [
+    { name: 'Garam masala & turmeric', why: 'The base of a proper curry.' },
+    { name: 'Ginger & garlic', why: 'The aromatic heart of the dish.' },
+    { name: 'Fresh coriander', why: 'A fresh finish over the curry.' },
+    { name: 'Chilli', why: 'Heat to taste.' },
+  ],
+  curated_veg_halloumi_quinoa: [
+    { name: 'Dried oregano', why: 'A Mediterranean note for halloumi.' },
+    { name: 'Fresh mint', why: 'Mint and halloumi are a classic pair.' },
+    { name: 'Black pepper & chilli', why: 'Lifts the salty cheese.' },
+    { name: 'Lemon', why: 'Cuts through the richness.' },
+  ],
+  curated_veg_cottage_jacket: [
+    { name: 'Black pepper & chives', why: 'The fluffy-jacket classic.' },
+    { name: 'Paprika', why: 'Warm colour on top.' },
+    { name: 'Mustard', why: 'Sharpens the cottage cheese.' },
+    { name: 'Chilli flakes', why: 'A little heat through the salad.' },
+  ],
+  curated_veg_mushroom_omelette: [
+    { name: 'Black pepper & chives', why: 'The scramble classic.' },
+    { name: 'Garlic', why: 'Savoury depth in the mushrooms.' },
+    { name: 'Fresh thyme', why: 'A quiet, earthy aroma with mushrooms.' },
+    { name: 'Chilli flakes', why: 'Heat across the sourdough.' },
+  ],
+  curated_veg_sn_cheese_toast: [
+    { name: 'Black pepper', why: 'Sharpens melted cheese.' },
+    { name: 'Mustard', why: 'A classic sharp partner for cheese on toast.' },
+    { name: 'Chilli flakes', why: 'A little heat on top.' },
+  ],
+  curated_veg_sn_yogurt_granola_berries: [
+    { name: 'Cinnamon', why: 'Sweetens the yogurt, no sugar.' },
+    { name: 'Vanilla extract', why: 'A dessert-like finish.' },
+    { name: 'Lemon zest', why: 'Brightens the berries.' },
+  ],
+  curated_veg_sn_paneer_apple: [
+    { name: 'Cinnamon', why: 'Warm sweetness over the apple.' },
+    { name: 'Black pepper', why: 'A surprising savoury edge with paneer.' },
+    { name: 'Lemon zest', why: 'A fresh, bright twist.' },
   ],
 
   // ─── VEGAN ──────────────────────────────────────────────────────────────
@@ -438,6 +550,47 @@ const MEAL_ADDITIONS = {
     { name: 'Cinnamon', why: 'Pairs sweetly with banana.' },
     { name: 'Cocoa powder', why: 'A chocolate-banana shake.' },
     { name: 'Vanilla extract', why: 'Rounds out the shake.' },
+  ],
+
+  // Phase B (2026-07-09)
+  curated_vg_sn_chickpeas: [
+    { name: 'Smoked paprika & cumin', why: 'Turns plain chickpeas into a proper snack.' },
+    { name: 'Chilli powder', why: 'Dial the heat to taste.' },
+    { name: 'Lemon zest', why: 'A fresh, bright twist.' },
+  ],
+  curated_vg_sn_shake_apple: [
+    { name: 'Cinnamon', why: 'Warm sweetness, no sugar.' },
+    { name: 'Vanilla extract', why: 'Rounds out the shake.' },
+    { name: 'Cocoa powder', why: 'A chocolate version.' },
+  ],
+  curated_vg_sn_tofu_edamame: [
+    { name: 'Sea salt flakes & chilli', why: 'The classic edamame finish.' },
+    { name: 'A splash of soy sauce', why: 'Savoury, salty edge.' },
+    { name: 'Turmeric', why: 'Gives the tofu a golden colour.' },
+    { name: 'Lime', why: 'A fresh squeeze on top.' },
+  ],
+  curated_vg_sn_edamame_ricecakes: [
+    { name: 'Sea salt flakes & chilli', why: 'The classic edamame finish.' },
+    { name: 'A splash of soy sauce', why: 'Savoury, salty edge.' },
+    { name: 'Black pepper', why: 'A little sharpness.' },
+  ],
+  curated_vg_chickpea_quinoa_lentil_bowl: [
+    { name: 'Lemon & garlic', why: 'Brightens the chickpeas and quinoa.' },
+    { name: 'Cumin', why: 'Earthy warmth through the bowl.' },
+    { name: 'Fresh coriander', why: 'A fresh finish over the top.' },
+    { name: 'Chilli flakes', why: 'A little heat to taste.' },
+  ],
+  curated_vg_lentilpasta_tomato_spinach: [
+    { name: 'Garlic & oregano', why: 'The Italian ragu base.' },
+    { name: 'Fresh basil', why: 'Aromatic, stirred in at the end.' },
+    { name: 'Black pepper', why: 'Sharpens the tomato sauce.' },
+    { name: 'Chilli flakes', why: 'For an arrabbiata kick.' },
+  ],
+  curated_vg_tofu_asparagus_stirfry: [
+    { name: 'A splash of soy sauce', why: 'The savoury base of a stir-fry.' },
+    { name: 'Ginger & garlic', why: 'The aromatic heart of the wok.' },
+    { name: 'Chilli', why: 'Heat to taste.' },
+    { name: 'Lemon zest', why: 'Brightens the asparagus.' },
   ],
 };
 

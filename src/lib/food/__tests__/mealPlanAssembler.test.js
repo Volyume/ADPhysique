@@ -262,13 +262,19 @@ describe('assembleDayPlan', () => {
   });
 
   test('a crushed pool surfaces unfilled slots and is never "within tolerance" (food review E-M1)', () => {
-    // Vegan + no soya + no gluten leaves only 2 vegan meals (lentil chilli,
-    // chickpea & lentil curry); 4 meals/day cannot be filled. The day must
-    // REPORT the holes rather than silently return a short plan that looks
-    // like an ordinary off-target day.
+    // Vegan + no soya + no gluten + avoiding chickpeas leaves only 3 vegan
+    // meals (lentil chilli, black bean & sweet potato, lentil pasta); 4
+    // meals/day cannot be filled. The day must REPORT the holes rather than
+    // silently return a short plan that looks like an ordinary off-target
+    // day. (Dietary-needs Phase B, 2026-07-09: the library grew enough that
+    // soya + gluten alone no longer crushes the pool, so a food-avoid is
+    // added to keep this a genuine "not enough candidates" case.)
     const holey = assembleDayPlan({
       target: dayTarget(), band: BAND, seed: 9,
-      prefs: { mealsPerDay: 4, diet: 'vegan', excludeTags: ['soya', 'cereals_gluten'] },
+      prefs: {
+        mealsPerDay: 4, diet: 'vegan',
+        excludeTags: ['soya', 'cereals_gluten'], excludeFoodKeys: ['chickpeas'],
+      },
     });
     expect(holey.unfilledSlots.length).toBeGreaterThan(0);
     expect(holey.slots.length).toBe(4 - holey.unfilledSlots.length);
