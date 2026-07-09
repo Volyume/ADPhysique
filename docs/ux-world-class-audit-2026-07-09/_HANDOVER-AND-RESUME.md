@@ -403,3 +403,16 @@ OAuth SHA-1; Cut 4 seed walk.
   muscle from water. Photos can." on ProgressPhotoPrompt + ProgressPhotos
   empty state, inside existing suppression gates, 219 photo tests green.
   Pair 2 slot B done; slot A (superset mistag fix + builder nudge) still out.
+- FOUNDER MANDATE (2026-07-09): rate EVERY user-facing function of the app
+  out of 10 -> a scorecard doc (function | score | what keeps it off 10 |
+  what would make it 10), evidence-anchored in the existing audit corpus +
+  code checks, honest not flattering. Goal: all areas legitimately 10/10 or
+  as close as possible; the scorecard drives the next attention queue.
+  QUEUED as a Sonnet agent for the next free slot (paired with the D13
+  bundle). Output: docs/ux-world-class-audit-2026-07-09/SCORECARD.md.
+  Function list must cover: first-run/onboarding (free + Pro), Home, workout
+  logging, plans/builder/library, exercise library, rest timer, progress
+  (analytics, photos, body metrics), coach (weekly review, daily brief,
+  check-in, output), food (diary, search, barcode, label scan, curated/saved
+  meals, recipes, targets, per-day, dietary needs), partners, share cards,
+  settings (incl. app lock, widgets), notifications, lapse/read-only states.
