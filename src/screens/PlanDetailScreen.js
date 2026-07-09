@@ -12,6 +12,7 @@ import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
   activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan, getAllRoutineSetCounts,
+  updateRoutinePosition,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
@@ -24,6 +25,7 @@ import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
+import * as haptics from '../lib/haptics';
 
 // Same reading order the enrollment reveal uses: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -46,6 +48,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [activePlan, setActivePlanData] = useState(null);
   const [whyThis, setWhyThis] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
 
   useFocusEffect(
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,6 +158,36 @@ export default function PlanDetailScreen({ navigation, route }) {
     } catch (e) {
       logError('PlanDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId: routine?.id });
       toast.show("Couldn't start workout, try again", { variant: 'error' });
+    }
+  }
+
+  // Day-level plan reorder (old founder-GO item, verified unbuilt): reuses
+  // the same swap-adjacent-positions pattern already shipped for exercises
+  // within a day (RoutineDetailScreen.handleMoveExercise), one level up the
+  // hierarchy. No drag library, no new dependency.
+  async function handleMoveDay(routineId, direction) {
+    const index = workouts.findIndex(w => w.id === routineId);
+    if (index === -1) return;
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= workouts.length) return;
+    haptics.selection();
+
+    // Optimistic update.
+    const updated = [...workouts];
+    const temp = updated[index];
+    updated[index] = updated[swapIndex];
+    updated[swapIndex] = temp;
+    setWorkouts(updated);
+
+    // Persist both swapped items using their new positions.
+    try {
+      await updateRoutinePosition(updated[index].id, index);
+      await updateRoutinePosition(updated[swapIndex].id, swapIndex);
+    } catch (e) {
+      logError('PlanDetailScreen.handleMoveDay', e, { planId, routineId });
+      // Revert on failure.
+      setWorkouts(workouts);
+      toast.show("Couldn't reorder, try again", { variant: 'error' });
     }
   }
 
@@ -292,7 +325,21 @@ export default function PlanDetailScreen({ navigation, route }) {
 
         {/* Workouts list */}
         <View style={styles.section}>
-          <SectionLabel>Workouts</SectionLabel>
+          <View style={styles.sectionHeaderRow}>
+            <SectionLabel>Workouts</SectionLabel>
+            {!isLibrary && workouts.length > 1 && (
+              <TouchableOpacity
+                onPress={() => { haptics.selection(); setIsReordering(prev => !prev); }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={isReordering ? 'Done reordering workouts' : 'Reorder workouts'}
+              >
+                <Text style={[styles.reorderToggleText, isReordering && styles.reorderToggleTextActive]}>
+                  {isReordering ? 'Done' : 'Reorder'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {workouts.length === 0 ? (
             <Card padding="xl" style={styles.emptyCard}>
               <Text style={styles.emptyCardText}>
@@ -316,26 +363,53 @@ export default function PlanDetailScreen({ navigation, route }) {
                   )}
                 </View>
                 {!isLibrary && (
-                  <View style={styles.workoutActions}>
-                    <TouchableOpacity
-                      style={styles.editWorkoutBtn}
-                      onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Edit ${routine.name}`}
-                    >
-                      <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.startWorkoutBtn}
-                      onPress={() => handleStartWorkout(routine)}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Start ${routine.name}`}
-                    >
-                      <Ionicons name="play" size={13} color={colors.onPrimary} />
-                    </TouchableOpacity>
-                  </View>
+                  isReordering ? (
+                    <View style={styles.reorderActions}>
+                      <TouchableOpacity
+                        onPress={() => handleMoveDay(routine.id, 'up')}
+                        style={[styles.reorderBtn, i === 0 && styles.reorderBtnDisabled]}
+                        disabled={i === 0}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: i === 0 }}
+                        accessibilityLabel={`Move ${routine.name} up`}
+                      >
+                        <Ionicons name="chevron-up" size={16} color={i === 0 ? colors.border : colors.textMuted} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleMoveDay(routine.id, 'down')}
+                        style={[styles.reorderBtn, i === workouts.length - 1 && styles.reorderBtnDisabled]}
+                        disabled={i === workouts.length - 1}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: i === workouts.length - 1 }}
+                        accessibilityLabel={`Move ${routine.name} down`}
+                      >
+                        <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? colors.border : colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.workoutActions}>
+                      <TouchableOpacity
+                        style={styles.editWorkoutBtn}
+                        onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${routine.name}`}
+                      >
+                        <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.startWorkoutBtn}
+                        onPress={() => handleStartWorkout(routine)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Start ${routine.name}`}
+                      >
+                        <Ionicons name="play" size={13} color={colors.onPrimary} />
+                      </TouchableOpacity>
+                    </View>
+                  )
                 )}
               </Card>
             ))
@@ -418,6 +492,19 @@ const styles = StyleSheet.create({
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planStatLabel: { ...type.caption, color: colors.textMuted },
   section: { gap: spacing.md },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reorderToggleText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.regular },
+  reorderToggleTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  reorderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  reorderBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  reorderBtnDisabled: { opacity: 0.3 },
   // Card owns background/radius/padding/border here.
   emptyCard: {
     alignItems: 'center',

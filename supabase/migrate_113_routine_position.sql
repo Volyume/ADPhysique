@@ -1,0 +1,39 @@
+-- Migration 113: routines.position — day-level plan reorder.
+--
+-- Purpose:
+--   Old founder-GO item, verified unbuilt: a user could reorder exercises
+--   WITHIN a day (routine_exercises.order_in_routine, migrate_010) but had no
+--   way to reorder the DAYS/ROUTINES within a plan; routines carried no
+--   position column at all. This adds one additive, nullable integer column
+--   so a plan's day order can be set independently of created_at. Cloud
+--   counterpart of local schema v61 (src/lib/database.js SCHEMA_MIGRATIONS).
+--   App-side: getRoutinesForPlan / createRoutine / updateRoutinePosition /
+--   insertRoutineFromCloud in src/lib/database.js, the push row in
+--   src/lib/sync.js _pushRoutinesAndExercises, and the reorder UI in
+--   src/screens/PlanDetailScreen.js.
+--
+-- Data honesty:
+--   Nullable integer, no default. A NULL value is not "position 0" - every
+--   read (getRoutinesForPlan and the two plan-duplication queries) orders
+--   NULL positions last and falls back to the pre-existing created_at
+--   ordering for them, so a row that predates this migration is unaffected
+--   until the app explicitly assigns it a position (on next local backfill
+--   or the next reorder action).
+--
+-- ED-safety note: none. Training-plan day ordering only; does not touch
+--   nutritionEngine.js, coachApply.js, or any floor/gate logic.
+--
+-- Applied: LOCALLY via schema v61 (this file's local counterpart), remotely
+--   PENDING (founder-run, EU-Dublin). Not auto-applied - the app never runs
+--   cloud migrations, and the deploy-migrations workflow is manual-dispatch
+--   only. The app tolerates this column being absent: sync.js retries the
+--   routines push without `position` on a column-missing error, and the pull
+--   path selects `*` so it adapts automatically either way.
+-- Safe to re-run: YES (ADD COLUMN IF NOT EXISTS; no data rewrite).
+-- Rollback:
+--   ALTER TABLE public.routines DROP COLUMN IF EXISTS position;
+--   The client already tolerates this column's absence (see Applied above),
+--   so dropping it just returns every plan's day order to created_at, no
+--   other data loss.
+
+ALTER TABLE public.routines ADD COLUMN IF NOT EXISTS position integer;

@@ -727,6 +727,11 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         is_sample: !!r.isSample,
         is_library: !!r.isLibrary,
         source_routine_id: r.sourceRoutineId ?? null,
+        // Day-level plan reorder (migrate_113, founder-run). Column
+        // tolerance below (drop position and retry) keeps every other
+        // field syncing on installs that haven't had the migration applied
+        // yet, matching migrate_094/migrate_112's OPTIONAL_COLUMNS pattern.
+        position: r.position ?? null,
         updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
       }));
       // Chunk so a single row's RLS rejection doesn't take the whole
@@ -734,7 +739,13 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       let rPushed = 0;
       for (let i = 0; i < rows.length; i += 200) {
         const slice = rows.slice(i, i + 200);
-        const { error: rErr } = await sb.from('routines').upsert(slice, { onConflict: 'user_id,id' });
+        let { error: rErr } = await sb.from('routines').upsert(slice, { onConflict: 'user_id,id' });
+        if (rErr && /position/i.test(String(rErr?.message))) {
+          // migrate_113 not applied on this environment yet: drop the new
+          // column and retry so the rest of the row keeps syncing.
+          const withoutPosition = slice.map(({ position: _pos, ...rest }) => rest);
+          ({ error: rErr } = await sb.from('routines').upsert(withoutPosition, { onConflict: 'user_id,id' }));
+        }
         if (rErr) logPgErr('sync._pushRoutines', rErr);
         else rPushed += slice.length;
       }

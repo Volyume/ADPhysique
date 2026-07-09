@@ -1710,6 +1710,37 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE nutrition_targets ADD COLUMN goal TEXT',
     'ALTER TABLE nutrition_targets ADD COLUMN protein_approach TEXT',
   ],
+  // v61, day-level plan reorder (Ultimate-Audit decision-gated item, verified
+  // unbuilt: routines had no position column, so a plan's days/workouts could
+  // never be reordered independently of routine_exercises.order_in_routine,
+  // which only orders exercises WITHIN a day). Additive, nullable INTEGER
+  // column. Backfill assigns each existing routine its current display rank
+  // (0-based, restarting at 0 per programme_id) so an upgrading install's
+  // day order is preserved exactly as shown today, matching the
+  // `ORDER BY created_at ASC` fallback every plan-routines query already
+  // uses. Cloud counterpart: migrate_113 (founder-run). Duplicate-column
+  // errors are tolerated by the runner.
+  // Safe to re-run: yes.
+  // Rollback: ALTER TABLE routines DROP COLUMN position (SQLite 3.35+); every
+  // read falls back to the created_at ordering that was in place before this
+  // migration, so no behaviour is lost beyond the reorder feature itself.
+  [
+    'ALTER TABLE routines ADD COLUMN position INTEGER',
+    async (d) => {
+      const rows = await d.getAllAsync(
+        `SELECT id, programme_id FROM routines
+         WHERE position IS NULL
+         ORDER BY programme_id IS NULL, programme_id, created_at ASC`,
+      );
+      const counters = new Map();
+      for (const row of rows) {
+        const key = row.programme_id ?? '';
+        const next = counters.get(key) ?? 0;
+        await d.runAsync('UPDATE routines SET position = ? WHERE id = ?', [next, row.id]);
+        counters.set(key, next + 1);
+      }
+    },
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -2750,13 +2781,20 @@ export async function createRoutine(userId, name, description = null, splitType 
   const id = uid();
   const now = Date.now();
   const isSampleInt = isSample ? 1 : 0;
+  // Day-level plan reorder: append after this plan's current last day (or
+  // the templates pool when programmeId is null) so a freshly added routine
+  // never collides with an existing position.
+  const maxRow = programmeId
+    ? await d.getFirstAsync('SELECT MAX(position) as maxPos FROM routines WHERE programme_id = ?', [programmeId])
+    : await d.getFirstAsync('SELECT MAX(position) as maxPos FROM routines WHERE programme_id IS NULL');
+  const position = (maxRow?.maxPos ?? -1) + 1;
   await d.runAsync(
-    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, is_library, is_sample, source_routine_id, programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, name, description, splitType, isLibrary, isSampleInt, sourceRoutineId, programmeId, now, now],
+    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, is_library, is_sample, source_routine_id, programme_id, position, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, name, description, splitType, isLibrary, isSampleInt, sourceRoutineId, programmeId, position, now, now],
   );
   _scheduleSync();
-  return { id, userId, name, description, splitType, isActive: 1, isLibrary, isSample: isSampleInt, sourceRoutineId, programmeId, createdAt: now, updatedAt: now };
+  return { id, userId, name, description, splitType, isActive: 1, isLibrary, isSample: isSampleInt, sourceRoutineId, programmeId, position, createdAt: now, updatedAt: now };
 }
 
 export async function softDeleteRoutine(id) {
@@ -3139,6 +3177,18 @@ export async function updateRoutineExerciseOrder(id, newOrderIndex) {
   _scheduleSync();
 }
 
+// Day-level plan reorder: persists a routine's position among its plan's
+// other days (or the templates pool when it has no programme_id). Mirrors
+// updateRoutineExerciseOrder above, one level up the hierarchy.
+export async function updateRoutinePosition(id, newPosition) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE routines SET position = ?, updated_at = ? WHERE id = ?',
+    [newPosition, Date.now(), id],
+  );
+  _scheduleSync();
+}
+
 // ─── Plans (active plan logic, workout templates) ────────────────────
 
 export async function getActivePlan(userId) {
@@ -3240,8 +3290,12 @@ export async function getLibraryPlans() {
 
 export async function getRoutinesForPlan(planId) {
   const d = await db();
+  // Day-level plan reorder: order by the user-set position when present;
+  // rows that predate the migration (or arrived via an older cloud payload
+  // without the column) sort last, keeping their prior created_at order.
   const rows = await d.getAllAsync(
-    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
+     ORDER BY (position IS NULL), position ASC, created_at ASC`,
     [planId],
   );
   return rows.map(rowToCamel);
@@ -3268,16 +3322,20 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
   const newPlan = await createProgramme(userId, libPlan.name, libPlan.description, 0);
 
   const libRoutineRows = await d.getAllAsync(
-    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
+     ORDER BY (position IS NULL), position ASC, created_at ASC`,
     [libraryPlanId],
   );
 
-  for (const row of libRoutineRows) {
-    const libRoutine = rowToCamel(row);
+  for (let i = 0; i < libRoutineRows.length; i++) {
+    const libRoutine = rowToCamel(libRoutineRows[i]);
     const newRoutine = await duplicateRoutine(libRoutine.id, userId, libRoutine.name);
+    // Day order carries over from the library plan (loop index, not the
+    // position createRoutine assigned while the copy briefly had no
+    // programme_id).
     await d.runAsync(
-      'UPDATE routines SET programme_id = ?, is_library = 0, source_routine_id = ?, is_template = 0 WHERE id = ?',
-      [newPlan.id, libRoutine.id, newRoutine.id],
+      'UPDATE routines SET programme_id = ?, is_library = 0, source_routine_id = ?, is_template = 0, position = ? WHERE id = ?',
+      [newPlan.id, libRoutine.id, i, newRoutine.id],
     );
   }
 
@@ -3336,16 +3394,20 @@ export async function duplicatePlan(planId, userId) {
 
   const d = await db();
   const routineRows = await d.getAllAsync(
-    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
+     ORDER BY (position IS NULL), position ASC, created_at ASC`,
     [planId],
   );
 
-  for (const row of routineRows) {
-    const routine = rowToCamel(row);
+  for (let i = 0; i < routineRows.length; i++) {
+    const routine = rowToCamel(routineRows[i]);
     const newRoutine = await duplicateRoutine(routine.id, userId, routine.name);
+    // Day order carries over from the source plan (loop index), not the
+    // position createRoutine assigned while the copy briefly had no
+    // programme_id.
     await d.runAsync(
-      'UPDATE routines SET programme_id = ?, is_library = 0 WHERE id = ?',
-      [newPlan.id, newRoutine.id],
+      'UPDATE routines SET programme_id = ?, is_library = 0, position = ? WHERE id = ?',
+      [newPlan.id, i, newRoutine.id],
     );
   }
 
@@ -6052,8 +6114,8 @@ export async function insertRoutineFromCloud(userId, r) {
   await d.runAsync(
     `INSERT OR IGNORE INTO routines
       (id, user_id, name, description, split_type, day_of_week, is_active,
-       is_library, is_sample, source_routine_id, programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       is_library, is_sample, source_routine_id, programme_id, position, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       r.id, userId, r.name, r.description ?? null, r.split_type ?? r.splitType ?? null,
       r.day_of_week ?? r.dayOfWeek ?? null,
@@ -6062,6 +6124,9 @@ export async function insertRoutineFromCloud(userId, r) {
       r.is_sample ?? r.isSample ?? 0,
       r.source_routine_id ?? r.sourceRoutineId ?? null,
       r.programme_id ?? r.programmeId ?? null,
+      // position may be absent on a cloud row pulled before migrate_113 lands;
+      // null falls back to created_at ordering (getRoutinesForPlan).
+      r.position ?? null,
       typeof (r.created_at ?? r.createdAt) === 'string' ? new Date(r.created_at ?? r.createdAt).getTime() : (r.created_at ?? r.createdAt ?? Date.now()),
       Date.now(),
     ],
