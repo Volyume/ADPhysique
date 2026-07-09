@@ -1741,6 +1741,37 @@ const SCHEMA_MIGRATIONS = [
       }
     },
   ],
+  // v62, fix a muscle-taxonomy mistag on "Machine Shoulder Press" and generic
+  // "Shoulder Press": migration v2 above (:419-422) bundled these two
+  // front-delt-dominant overhead pushes into the side_delts UPDATE clause
+  // alongside genuinely side-delt moves (Lateral Raise / Upright Row). Correct
+  // is front_delts, matching Overhead Press / Military Press / Arnold Press /
+  // Seated Dumbbell Press in the v2 front_delts clause. This corrupted both
+  // superset pairing (planEngine's tier-2 compound->isolation rule treated a
+  // front-delt press and a side-delt raise as "same muscle") and front/
+  // side-delt weekly volume tracking system-wide. See
+  // docs/exercise-planning-2026-07-09/plan-D-intelligent-supersets.md
+  // section 1b (Option A/C, founder-confirmed).
+  // v2 has already run on every device and is not safe to edit in place, so
+  // this is a NEW, additive migration that re-corrects any row still holding
+  // the wrong tag. Exactly scoped by exact name match so no other Shoulder
+  // Press variant is touched (Dumbbell/Plate-Loaded/Half-Kneeling/Band
+  // Shoulder Press and the "(Front Delt Focus)" variant are already
+  // front_delts in seedExercises and are left untouched).
+  // No cloud counterpart: the canonical exercise catalogue (user_id NULL
+  // rows) is seeded locally per device and is never pushed to or pulled from
+  // Supabase (src/lib/sync.js only pulls `exercises` rows scoped to
+  // `user_id = <this user>`, i.e. legacy custom exercises); there is nothing
+  // to correct in EU-Dublin for this fix.
+  // Safe to re-run: yes (setting an already-correct row to the same value is
+  // a no-op).
+  // Rollback: UPDATE exercises SET primary_muscle = 'side_delts' WHERE name
+  // IN ('Machine Shoulder Press', 'Shoulder Press') (restores the pre-fix
+  // mistag; not recommended, kept only for the mandated rollback note).
+  [
+    `UPDATE exercises SET primary_muscle = 'front_delts'
+     WHERE name IN ('Machine Shoulder Press', 'Shoulder Press')`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -3008,7 +3039,8 @@ export async function getRoutineExercisesWithDetails(routineId) {
             e.default_rep_min,
             e.default_rep_max,
             e.fatigue_cost,
-            e.stimulus_to_fatigue_ratio
+            e.stimulus_to_fatigue_ratio,
+            e.equipment_category
      FROM routine_exercises re
      LEFT JOIN exercises e ON e.id = re.exercise_id
      WHERE re.routine_id = ? AND re.deleted_at IS NULL
@@ -3031,6 +3063,10 @@ export async function getRoutineExercisesWithDetails(routineId) {
       defaultRepMax: row.default_rep_max,
       fatigueCost: row.fatigue_cost,
       stimulusToFatigueRatio: row.stimulus_to_fatigue_ratio,
+      // plan-D builder nudge (docs/exercise-planning-2026-07-09/
+      // plan-D-intelligent-supersets.md): ManualBuilderScreen needs this to
+      // classify a superset pair the same way the auto-gen engine does.
+      equipmentCategory: row.equipment_category,
       // Flag for the UI: this row needs to be repaired by the user
       // because the exercise lookup failed. Active screens can render
       // an inline "Re-link exercise" affordance here.

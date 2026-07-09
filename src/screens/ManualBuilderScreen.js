@@ -25,6 +25,7 @@ import {
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
+import { classifySupersetPair } from '../lib/planEngine';
 import { logError } from '../lib/errorLog';
 import { GLOSSARY } from '../lib/coachGlossary';
 import useAppStore from '../store/useAppStore';
@@ -281,6 +282,10 @@ export default function ManualBuilderScreen({ navigation, route }) {
               id: exercise.id,
               name: exercise.name,
               primaryMuscle: (exercise.primaryMuscle || '').toLowerCase() || null,
+              // Plan-D builder nudge: carried so handleGroupSuperset can reuse
+              // the engine's own pairing classifier (classifySupersetPair).
+              equipmentCategory: exercise.equipmentCategory || null,
+              compoundIsolation: exercise.compoundIsolation || null,
               sets: routineExercise.recommendedSets ?? DEFAULT_SETS,
               repsMin: routineExercise.recommendedRepsMin ?? 8,
               repsMax: routineExercise.recommendedRepsMax ?? 12,
@@ -361,6 +366,10 @@ export default function ManualBuilderScreen({ navigation, route }) {
             id:           exercise.id,
             name:         exercise.name,
             primaryMuscle: (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase() || null,
+            // Plan-D builder nudge: carried so handleGroupSuperset can reuse
+            // the engine's own pairing classifier (classifySupersetPair).
+            equipmentCategory: exercise.equipmentCategory || exercise.equipment_category || null,
+            compoundIsolation: exercise.compoundIsolation || exercise.compound_isolation || null,
             sets:         DEFAULT_SETS,
             repsMin:      exercise.defaultRepMin || exercise.default_rep_min || 8,
             repsMax:      exercise.defaultRepMax || exercise.default_rep_max || 12,
@@ -534,6 +543,24 @@ export default function ManualBuilderScreen({ navigation, route }) {
       return;
     }
     haptics.selection();
+
+    // Plan-D Option B/C calm nudge (docs/exercise-planning-2026-07-09/
+    // plan-D-intelligent-supersets.md): reuse the auto-gen engine's own
+    // relationship + equipment-zone classifier so the builder shares the same
+    // "coach-logical" bar the engine already enforces, without enforcing it
+    // here. Never blocks; fires once, and only when both exercises resolve a
+    // muscle (an unclassifiable custom exercise never gets a false nudge).
+    const pair = (days[dayIndex]?.exercises || []).filter(ex => selected.has(ex.localId));
+    if (pair.length === 2 && pair[0].primaryMuscle && pair[1].primaryMuscle) {
+      const classification = classifySupersetPair(pair[0], pair[1]);
+      if (!classification.practical) {
+        toast.show(
+          'Supersets work best when both exercises share a station or target opposing muscles.',
+          { variant: 'info' },
+        );
+      }
+    }
+
     const groupId = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;

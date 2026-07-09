@@ -22,7 +22,8 @@
  * POOL metadata (eq / paramKey) so the test is an independent check, not a
  * re-export of the code under test.
  */
-import { generatePlan, POOL } from '../planEngine';
+import { generatePlan, POOL, classifySupersetPair } from '../planEngine';
+import { generatePoolFromLibrary } from '../poolGenerator';
 
 // name -> { muscle, paramKey, eq } from the hand-written POOL the engine
 // selects from when no library is supplied (as in generatePlan below).
@@ -199,5 +200,66 @@ describe('tiered practical superset matcher', () => {
     for (const { a, b } of pairs) {
       expect(Math.abs(a.idx - b.idx)).toBe(1);
     }
+  });
+});
+
+// plan-D (docs/exercise-planning-2026-07-09/plan-D-intelligent-supersets.md,
+// section 1b): the founder's literal reported pair, "Machine Shoulder Press" +
+// "Dumbbell Lateral Raise", was only one taxonomy bug away from clearing the
+// matcher's tier-2 "same muscle, compound(machine) -> isolation" rule: the old
+// v2 migration mistagged Machine Shoulder Press as side_delts (same bucket as
+// Dumbbell Lateral Raise), which is exactly the shape relationshipTier accepts.
+// With the corrected tag (front_delts, a genuinely different muscle to
+// side_delts) that tier-2 path is closed. This suite's earlier tests only
+// covered the hand-written POOL (already correctly front_delts, per the plan
+// doc's own note that POOL never carried the mistag), so these two tests close
+// the coverage gap flagged in the plan: one exercises the newly-exported
+// classifier directly with the corrected tags, the other drives the REAL
+// generatePoolFromLibrary against library-shaped rows (the actual seedExercises
+// shape, not a hand re-derivation) to prove the muscle bucket itself is right.
+describe('Machine Shoulder Press + Dumbbell Lateral Raise (founder-reported pair)', () => {
+  const machineShoulderPress = {
+    name: 'Machine Shoulder Press',
+    primaryMuscle: 'front_delts', // corrected, was side_delts pre-plan-D
+    equipmentCategory: 'machine_selectorised',
+    compoundIsolation: 'compound',
+  };
+  const dumbbellLateralRaise = {
+    name: 'Dumbbell Lateral Raise',
+    primaryMuscle: 'side_delts',
+    equipmentCategory: 'dumbbell',
+    compoundIsolation: 'isolation',
+  };
+
+  test('classifySupersetPair rejects the pair: not same-muscle-eligible, not antagonist/compatible, and cross-zone', () => {
+    const result = classifySupersetPair(machineShoulderPress, dumbbellLateralRaise);
+    expect(result.tier).toBeNull(); // never the tier-2 same-muscle compound->isolation shape
+    expect(result.proximity).toBe('far'); // machine vs dumbbell, opposite ends of the gym
+    expect(result.practical).toBe(false);
+  });
+
+  test('classifySupersetPair still rejects the pair even with the OLD (pre-fix) mistag, via the equipment-zone gate alone', () => {
+    // Guards against a false sense of safety: the equipment-zone bar alone
+    // already blocked the founder's literal machine-vs-dumbbell instance (plan
+    // doc section 1a). This pins that the modality gate keeps working
+    // independently of the muscle-tag fix, and is not the SOLE reason the
+    // pair now correctly rejects on relationship grounds too (previous test).
+    const mistagged = { ...machineShoulderPress, primaryMuscle: 'side_delts' };
+    const result = classifySupersetPair(mistagged, dumbbellLateralRaise);
+    expect(result.proximity).toBe('far');
+    expect(result.practical).toBe(false);
+  });
+
+  test('generatePoolFromLibrary buckets Machine Shoulder Press under front_delts, not side_delts, from real library-shaped rows', () => {
+    // Library-shaped rows (the actual seedExercises/exercises-table shape),
+    // not a hand re-derivation, driving the REAL poolGenerator function -
+    // this is the exact path the plan doc flagged as untested for this bug.
+    const library = [
+      { name: 'Machine Shoulder Press', primaryMuscle: 'front_delts', equipmentCategory: 'machine_selectorised', compoundIsolation: 'compound', equipmentProfiles: ['full_gym', 'machines_cables'], isCustom: 0 },
+      { name: 'Dumbbell Lateral Raise', primaryMuscle: 'side_delts', equipmentCategory: 'dumbbell', compoundIsolation: 'isolation', equipmentProfiles: ['full_gym', 'dumbbells_only', 'home_gym'], isCustom: 0 },
+    ];
+    const pool = generatePoolFromLibrary(library);
+    expect((pool.front_delts || []).some(e => e.n === 'Machine Shoulder Press')).toBe(true);
+    expect((pool.side_delts || []).some(e => e.n === 'Machine Shoulder Press')).toBe(false);
   });
 });

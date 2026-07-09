@@ -559,6 +559,11 @@ const RAW = [
   ['Seated Dumbbell Press',         'front_delts', ['triceps', 'side_delts'], 'dumbbell',  'push',      true,  8, 15,  3, 4],
   ['Z-Press',                       'front_delts', ['triceps', 'side_delts'], 'barbell',   'push',      true,  5, 10,  3, 3],
   ['Push Press',                    'front_delts', ['triceps', 'side_delts'], 'barbell',   'push',      true,  3, 8,   4, 3],
+  // Machine Shoulder Press: an overhead PUSH, front-delt dominant, moved here
+  // from the Side delts block below (plan-D, docs/exercise-planning-2026-07-09/
+  // plan-D-intelligent-supersets.md section 1b: it was mistagged side_delts,
+  // the same taxonomy bug corrected by database.js SCHEMA_MIGRATIONS v62).
+  ['Machine Shoulder Press',        'front_delts', ['triceps', 'side_delts'], 'machine',   'push',      true,  8, 15,  3, 4],
   ['Dumbbell Front Raise',          'front_delts', [],                    'dumbbell',     'isolation', false, 12, 20, 2, 3],
   ['Cable Front Raise',             'front_delts', [],                    'cable',        'isolation', false, 12, 20, 2, 3],
 
@@ -570,7 +575,6 @@ const RAW = [
   ['Landmine Lateral Raise',        'side_delts', [],                     'barbell',      'isolation', false, 12, 20, 2, 4],
   ['Seated Lateral Raise',          'side_delts', [],                     'dumbbell',     'isolation', false, 15, 25, 2, 5],
   ['Upright Row',                   'side_delts', ['biceps', 'traps'],    'barbell',      'pull',      false, 10, 15, 3, 3],
-  ['Machine Shoulder Press',        'side_delts', ['triceps', 'front_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
   ['Viking Press',                  'side_delts', ['triceps', 'front_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
   ['Leaning Cable Lateral Raise',   'side_delts', [],                     'cable',        'isolation', false, 15, 25, 2, 5],
   ['Plate Lateral Raise',           'side_delts', [],                     'barbell',      'isolation', false, 15, 25, 2, 4],

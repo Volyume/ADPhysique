@@ -6,7 +6,7 @@
 
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
-import { generatePoolFromLibrary } from './poolGenerator';
+import { generatePoolFromLibrary, deriveParamKey } from './poolGenerator';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -2282,7 +2282,7 @@ const SUPERSET_COMPATIBLE = {
   abs:         ['calves', 'biceps', 'triceps', 'side_delts', 'rear_delts', 'chest', 'back', 'quads', 'hamstrings', 'glutes'],
 };
 
-function canSuperset(muscleA, muscleB) {
+export function canSuperset(muscleA, muscleB) {
   if (!muscleA || !muscleB || muscleA === muscleB) return false;
   const compat = SUPERSET_COMPATIBLE[muscleA];
   return Array.isArray(compat) && compat.includes(muscleB);
@@ -2298,7 +2298,7 @@ const ANTAGONIST_PAIRS = [
   ['front_delts', 'rear_delts'], // shoulder flexion / horizontal abduction
 ];
 
-function isAntagonistPair(muscleA, muscleB) {
+export function isAntagonistPair(muscleA, muscleB) {
   return ANTAGONIST_PAIRS.some(
     ([x, y]) => (muscleA === x && muscleB === y) || (muscleA === y && muscleB === x),
   );
@@ -2307,7 +2307,7 @@ function isAntagonistPair(muscleA, muscleB) {
 // Param tier for an already-built exercise entry. Prefers the internal
 // `_paramKey` tag; falls back to the rest period (mod/heavy compound >= 150,
 // machine 120, isolation otherwise) so the matcher still works on any entry.
-function supersetParam(ex) {
+export function supersetParam(ex) {
   if (ex._paramKey) return ex._paramKey;
   const r = ex.restSec ?? 0;
   if (r >= 150) return 'mod_compound';
@@ -2324,7 +2324,7 @@ function supersetParam(ex) {
 // racks-and-platforms zone; bodyweight is portable. Derived from the granular
 // equipmentCategory when the library supplies it, else the exercise name, else
 // the equipment-profile list. Returns 'other' when genuinely ambiguous.
-function supersetModality(ex) {
+export function supersetModality(ex) {
   const cat = ex._equipmentCategory;
   if (cat) {
     if (cat === 'machine_selectorised' || cat === 'machine_plate_loaded' || cat === 'smith') return 'machine';
@@ -2363,7 +2363,7 @@ function supersetModality(ex) {
 // left neutral) is acceptable, 'far' means opposite ends of the gym and is
 // rejected outright.
 const MACHINE_ZONE = new Set(['machine', 'cable']);
-function modalityProximity(modA, modB) {
+export function modalityProximity(modA, modB) {
   if (modA === 'other' || modB === 'other') return 'adjacent';
   if (modA === 'bodyweight' || modB === 'bodyweight') return 'adjacent';
   if (modA === modB) return 'same';
@@ -2377,7 +2377,7 @@ function modalityProximity(modA, modB) {
 //   3  non-competing complementary (small-muscle filler, delt/arm, etc.)
 //  null  reject (same-muscle without the compound->isolation intent, or a
 //        synergist / incompatible relationship)
-function relationshipTier(exA, exB) {
+export function relationshipTier(exA, exB) {
   const mA = exA._muscle;
   const mB = exB._muscle;
   if (!mA || !mB) return null;
@@ -2394,6 +2394,43 @@ function relationshipTier(exA, exB) {
   if (isAntagonistPair(mA, mB)) return 1;
   if (canSuperset(mA, mB)) return 3;
   return null;
+}
+
+// Adapts a library/builder-shaped exercise (name, primaryMuscle,
+// equipmentCategory, compoundIsolation — the shape ManualBuilderScreen and
+// the exercises table use) into the internal `_muscle`/`_paramKey`/
+// `_equipmentCategory`/`_eq` shape relationshipTier/supersetModality expect.
+// Also accepts the internal shape directly (falls back to the `_`-prefixed
+// fields) so it works on either an already-built plan entry or a raw row.
+function toClassifierShape(ex) {
+  const equipmentCategory = ex.equipmentCategory ?? ex._equipmentCategory ?? null;
+  return {
+    _muscle: ex.primaryMuscle ?? ex.muscle ?? ex._muscle ?? null,
+    _paramKey: ex.paramKey ?? ex._paramKey ?? deriveParamKey(equipmentCategory, ex.compoundIsolation),
+    _equipmentCategory: equipmentCategory,
+    _eq: Array.isArray(ex.equipmentProfiles) ? ex.equipmentProfiles
+      : (Array.isArray(ex._eq) ? ex._eq : []),
+    exerciseName: ex.name ?? ex.exerciseName ?? '',
+  };
+}
+
+// Shared pairing classifier (plan-D Option B/C, docs/exercise-planning-
+// 2026-07-09/plan-D-intelligent-supersets.md): exposes the SAME relationship
+// + equipment-zone bars assignSupersets uses internally, so any caller
+// (ManualBuilderScreen's calm builder nudge) can ask "would the auto-gen
+// engine consider this pair practical?" without duplicating or drifting from
+// the engine's own rules. Pure, read-only: never mutates its inputs and does
+// not change assignSupersets' behaviour.
+export function classifySupersetPair(exA, exB) {
+  const a = toClassifierShape(exA);
+  const b = toClassifierShape(exB);
+  const tier = relationshipTier(a, b);
+  const proximity = modalityProximity(supersetModality(a), supersetModality(b));
+  return {
+    tier,             // 1 antagonist, 2 compound->isolation, 3 non-competing, null reject
+    proximity,        // 'same' | 'adjacent' | 'far'
+    practical: tier != null && proximity !== 'far',
+  };
 }
 
 // Goal families that benefit most from supersets (volume + pump emphasis).
