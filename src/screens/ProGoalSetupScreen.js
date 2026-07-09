@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   approachRangeActive: { color: colors.primaryDim },
   suggestedBadge: {
-    backgroundColor: withAlpha(colors.primary, 0.125), borderRadius: radius.full,
+    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
   suggestedBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },

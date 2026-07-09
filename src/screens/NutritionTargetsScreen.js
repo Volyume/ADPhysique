@@ -174,7 +174,7 @@ function WhySection({ icon, color, title, body }) {
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${title}. ${open ? 'Hide' : 'Show'} the explanation`}
       >
-        <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, 0.125) }]}>
+        <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, alpha.tint) }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
         <Text style={styles.whySectionTitle}>{title}</Text>
@@ -1779,7 +1779,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
+    borderColor: withAlpha(colors.primary, alpha.mid),
     backgroundColor: colors.surface2,
   },
   mealCountRecButtonText: {
@@ -1795,7 +1795,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.sm,
     borderWidth: 1,
-    borderColor: withAlpha(colors.warning, 0.251),
+    borderColor: withAlpha(colors.warning, alpha.edge),
   },
   perMealHintText: {
     ...type.captionTight,
@@ -1834,7 +1834,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.warning, 0.251),
+    borderColor: withAlpha(colors.warning, alpha.edge),
   },
   warningText: {
     ...type.bodySm,
@@ -1850,7 +1850,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.success, 0.251),
+    borderColor: withAlpha(colors.success, alpha.edge),
   },
   floorBannerText: {
     ...type.bodySm,
@@ -1973,7 +1973,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
+    borderColor: withAlpha(colors.primary, alpha.mid),
   },
   recalcBtnText: {
     ...type.label,
@@ -2004,7 +2004,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
+    borderColor: withAlpha(colors.primary, alpha.mid),
   },
   reconfigureBtnText: {
     fontSize: fontSize.xs,
@@ -2055,7 +2055,7 @@ const styles = StyleSheet.create({
   },
   approachCardDescActive: { color: colors.primaryDim },
   recommendedBadge: {
-    backgroundColor: withAlpha(colors.primary, 0.125),
+    backgroundColor: withAlpha(colors.primary, alpha.tint),
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,

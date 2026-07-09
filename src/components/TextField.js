@@ -1,6 +1,6 @@
 import { forwardRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { colors, spacing, radius, fontSize, fontWeight, lineHeight, type, withAlpha } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, lineHeight, type, withAlpha, alpha } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
 
 const SURFACES = {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
   },
-  fieldFocused: { borderColor: withAlpha(colors.primary, 0.65) },
+  fieldFocused: { borderColor: withAlpha(colors.primary, alpha.strong) },
   fieldMultiline: { alignItems: 'flex-start' },
   disabled: { opacity: 0.55 },
   leading: {
