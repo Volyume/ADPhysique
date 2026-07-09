@@ -53,21 +53,20 @@ in this session unless the founder asks.
   | 6 | Coaching & progress | WeeklyCheckIn/CoachReview/CoachOutput/WeeklyStory/Analytics/LiftProgress/Consistency/VolumeHeatmap/YearOfLifts/BodyMetrics/ProgressPhotos/ShareCard/BlockReflection, components/coachOutput | `facts-coaching.md` |
   | 7 | Paywall & settings | Paywall/paywallExcerpts/ProUpgrade/Subscription/CascadeGate/Settings*/NotificationSettings, TierComparisonStrip, CancelReasonSheet, PostLapseSheet, ProGate | `facts-paywall-settings.md` |
   | 8 | Cross-cutting sweep (Haiku) | greps: a11y props, haptics, animation libs, reduced motion, EmptyState/Skeleton/ActivityIndicator coverage, Alert.alert use, hard-coded hex colours, font scaling, media, largest files | `facts-cross-cutting.md` |
-- [x] **Stage 2 — collect facts (7 of 8 saved).** Saved verbatim:
-  `facts-onboarding.md`, `facts-home.md`, `facts-logging.md`,
-  `facts-plans.md`, `facts-nutrition.md`, `facts-paywall-settings.md`,
-  `facts-cross-cutting.md` (this one carries four hands-on accuracy caveats
-  in its header where the grep sweep conflicts with closer reads — read them
-  before trusting its numbers). STILL PENDING: `facts-coaching.md`
-  (Coaching & progress agent, Sonnet, still running at last update). If it
-  never lands, relaunch with the coverage-table row 6 prompt shape (flow map,
-  verbatim copy, state coverage, interaction, accessibility, friction,
-  standouts + rough edges; facts only, no recommendations).
-- [ ] **Stage 3 — judgement and synthesis (hands-on, main loop).** Write
-  `ASSESSMENT.md`: per-area verdict (what is already world class, what is
-  the gap), then a single prioritised improvement list across the whole app
-  (impact on user experience × effort, flagging any item that needs a founder
-  decision or touches a locked system). British English, no em dashes.
+- [x] **Stage 2 — collect facts (COMPLETE, 8 of 8 saved).** All eight
+  reports saved verbatim: `facts-onboarding.md`, `facts-home.md`,
+  `facts-logging.md`, `facts-plans.md`, `facts-nutrition.md`,
+  `facts-paywall-settings.md`, `facts-coaching.md`, and
+  `facts-cross-cutting.md` (this last carries four hands-on accuracy
+  caveats in its header where the grep sweep conflicts with closer reads —
+  read them before trusting its numbers).
+- [x] **Stage 3 — judgement and synthesis (COMPLETE).** `ASSESSMENT.md`
+  written hands-on: protect-list (what is already world class), eight
+  per-area verdicts, prioritised P1/P2/P3 gap list, eight explicit founder
+  decision questions (no-parking rule), and a what-NOT-to-do section.
+  Core verdict: brains/ethics/resilience already world class; the gap is
+  the sensory layer (media, haptics, drag, Live Activities, plate maths)
+  plus reach (dynamic type, hints) and a few built-but-dark features.
 - [ ] **Stage 4 — verify + ship.** `npm run lint && npm test` (docs-only
   change, but the rule is after EVERY change), report exact output, list
   files changed, commit, push with `git push -u origin
@@ -76,11 +75,29 @@ in this session unless the founder asks.
 - [ ] **Stage 5 — reply to founder.** Summarise the verdict and the top
   improvements in chat; surface any founder-decision items as explicit
   questions (no-parking rule).
+- [ ] **Stage 6 — NEW SCOPE (founder, mid-session 2026-07-09): dietary
+  preferences and allergen exclusions.** Founder's words: "ensure the meal
+  builder and planner builds the capability for the user to select dietary
+  preferences vegan vegi and so on and exclude allergies perhaps. Research
+  might be needed and maybe additions to meals and so on. Please scope this
+  out as well." Plan: one Sonnet fact-reader over the meal-suggestion /
+  meal-plan / recipe / food-DB domain (data model, suggestion engine,
+  ingestion sources, where user prefs live, sync surface), then a hands-on
+  scoping document `SCOPING-DIETARY-PREFERENCES.md` in this folder:
+  requirements, data-model options, UK/EU 14-allergen framing, data-source
+  reality (OpenFoodFacts allergen/ingredient-analysis tags vs bundled meal
+  set needing manual tagging), ED-safety considerations (exclusion UX must
+  not become a restriction tool; consult edPatternDetector context),
+  phasing options and founder decision questions. SCOPING ONLY, no build.
 
 ## Current position
 
-Stage 2 in progress: all 8 subagents launched and running in the background;
-none have reported yet. Nothing blocked. No founder decisions pending yet.
+Stages 0 to 3 complete. Stage 4 (lint + test + ship) in progress. After
+shipping, the only open work is Stage 5: the eight founder decision
+questions in `ASSESSMENT.md` section 5 need founder answers before any of
+the gated improvements (media, haptics, reorder, plate placement, RPE/RIR,
+billing default, review excerpts, apply-all/giant sets) may be built.
+No implementation has been started, deliberately.
 
 ## Decisions made this session (and why)
 
