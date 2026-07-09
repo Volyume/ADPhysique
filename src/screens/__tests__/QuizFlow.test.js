@@ -58,6 +58,60 @@ describe('QuizScreen', () => {
     act(() => chip.props.onPress());
     expect(store.setQuizField).toHaveBeenCalled();
   });
+
+  // Onboarding finish: every sibling wizard (ProOnboarding's fill bar,
+  // FreeStarterScreen's dot row) shows progress; this single-page quiz had
+  // no indicator at all. Pins the dot row (six questions, PHASE_PRE_ACCOUNT
+  // is on) lighting up as fields are answered, first/middle/last.
+  function findDots(tree) {
+    // The dot row is the only accessibilityElementsHidden View; its children
+    // are the individual dots.
+    const row = tree.root.findAll((n) => n.props.accessibilityElementsHidden)[0];
+    return row.props.children;
+  }
+
+  // A dot's style is [styles.dot, i < answeredCount && styles.dotActive]:
+  // styles.dot alone always carries a (border-coloured) backgroundColor, so
+  // "lit" means the second array slot resolved truthy (styles.dotActive),
+  // not merely that some backgroundColor is present.
+  function isLit(dot) {
+    const style = dot.props.style;
+    return Array.isArray(style) ? !!style[1] : false;
+  }
+
+  test('progress indicator: no dots lit before any question is answered (first)', () => {
+    store.onboardingQuiz = {};
+    let tree;
+    act(() => { tree = create(<QuizScreen navigation={nav} />); });
+    const dots = findDots(tree);
+    expect(dots.length).toBe(6);
+    expect(dots.filter(isLit).length).toBe(0);
+  });
+
+  test('progress indicator: partial answers light the matching number of dots (middle)', () => {
+    store.onboardingQuiz = { experience: 'beginner', daysPerWeek: 4, sessionLengthMinutes: 60 };
+    let tree;
+    act(() => { tree = create(<QuizScreen navigation={nav} />); });
+    const dots = findDots(tree);
+    expect(dots.length).toBe(6);
+    expect(dots.filter(isLit).length).toBe(3);
+  });
+
+  test('progress indicator: every dot lit once all six questions are answered (last)', () => {
+    store.onboardingQuiz = {
+      experience: 'beginner',
+      daysPerWeek: 4,
+      sessionLengthMinutes: 60,
+      equipment: 'full_gym',
+      trainingGoal: 'general',
+      trainingPhase: 'cut',
+    };
+    let tree;
+    act(() => { tree = create(<QuizScreen navigation={nav} />); });
+    const dots = findDots(tree);
+    expect(dots.length).toBe(6);
+    expect(dots.filter(isLit).length).toBe(6);
+  });
 });
 
 describe('PlanPreviewScreen', () => {

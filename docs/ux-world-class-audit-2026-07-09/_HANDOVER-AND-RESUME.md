@@ -753,3 +753,15 @@ OAuth SHA-1; Cut 4 seed walk.
   patched. EXTRA DRIFT flagged NOT amended (needs founder): B41 weekly
   check-in reminder strings; payment-failure push (appStore.ts:248) -
   both added to tomorrow's rounds queue.
+- BURST LANDING 2/8 FIRST-RUN (Sonnet, lead-reviewed): FR-2 raw auth
+  errors were ALREADY FIXED (c1addd5, calm fallback "That didn't go
+  through. Try again." - lead accepts this register over the suggested
+  literal); agent added the missing ProOnboarding guard test. Quiz
+  progress dots added to QuizScreen (the audit-named zero-indicator
+  screen; FreeStarter already had dots), reusing FreeStarter's exact
+  pattern; answered-count semantics (single-page quiz). NOTE: QuizScreen
+  sits behind ONBOARDING_QUIZ_FIRST=false (quizFlow.js:23) - not
+  user-reachable until founder flips the flag. 14 targeted tests green,
+  lint clean on touched files. WATCH: src/lib/widgets storage.test.js
+  reported failing on the shared tree mid-burst - verify at final
+  boundary (likely concurrent WIP interplay).

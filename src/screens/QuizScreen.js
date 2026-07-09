@@ -14,11 +14,23 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
 import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
 import { PHYSIQUE_GOALS, GOAL_LABELS, TRAINING_PHASES, PHASE_LABELS } from '../lib/coachingGoals';
 import { PHASE_PRE_ACCOUNT } from '../lib/onboarding/quizFlow';
+
+// Onboarding finish (quiz progress indicator): every sibling wizard in the
+// first-run path shows the user how far through they are (ProOnboarding's
+// numbered fill bar, FreeStarterScreen's dot row); this single-page quiz had
+// none at all. Reuses FreeStarterScreen's exact dot pattern rather than
+// inventing a new affordance, one dot per question actually answerable on
+// this screen, lit as it's answered. trainingPhase is included only when
+// PHASE_PRE_ACCOUNT is on, matching the question it gates below.
+const QUIZ_PROGRESS_FIELDS = [
+  'experience', 'daysPerWeek', 'sessionLengthMinutes', 'equipment', 'trainingGoal',
+  ...(PHASE_PRE_ACCOUNT ? ['trainingPhase'] : []),
+];
 
 const EXPERIENCE = [
   { value: 'beginner', label: 'New to lifting' },
@@ -41,6 +53,7 @@ export default function QuizScreen({ navigation }) {
   void touched;
 
   const ready = quiz.experience && quiz.daysPerWeek && quiz.trainingGoal;
+  const answeredCount = QUIZ_PROGRESS_FIELDS.filter((k) => quiz[k] !== undefined && quiz[k] !== null).length;
 
   function go() {
     markQuizStep('quiz_done');
@@ -49,18 +62,34 @@ export default function QuizScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.topBar}>
         {/* NAV-8: the flow had no way back (headerless stack screen), and the
             headline promised eight questions while rendering six. */}
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
+        {/* Quiz progress indicator: same dot pattern as FreeStarterScreen's
+            sibling quiz, decorative only (the questions themselves already
+            carry accessible state via each chip's radio role). */}
+        <View
+          style={styles.progressDots}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {QUIZ_PROGRESS_FIELDS.map((_, i) => (
+            <View key={i} style={[styles.dot, i < answeredCount && styles.dotActive]} />
+          ))}
+        </View>
+        {/* Spacer balances the back chevron so the dots sit centred */}
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.h1}>A few quick questions.</Text>
         <Text style={styles.lede}>Your plan takes shape as you answer.</Text>
 
@@ -151,8 +180,14 @@ export default function QuizScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  backBtn: { alignSelf: 'flex-start', marginBottom: spacing.sm },
   safe: { flex: 1, backgroundColor: colors.background },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md,
+  },
+  progressDots: { flexDirection: 'row', gap: spacing.sm },
+  dot: { width: 8, height: 8, borderRadius: circle(8), backgroundColor: colors.border },
+  dotActive: { backgroundColor: colors.primary },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black },
   lede: { ...type.body, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg },
