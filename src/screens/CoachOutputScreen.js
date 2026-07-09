@@ -41,6 +41,12 @@ import {
   resolveProgressScanCoachNote,
 } from '../lib/progressScanCoachResolver';
 import { getProgressScanHideExactPreference } from '../lib/progressScanPreferences';
+// Integration wave (integration-plan.md §6): the v2 assessment receipt that
+// extends the existing "Progress photo context" card. composeScanEvidencePacket
+// is the shared v1-evidence-then-v2-packet composition (progressScanCheckInEvidence.js)
+// also used by WeeklyCheckInScreen, so the two-step assembly lives in one place.
+import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
+import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 // Suppression unification (Wave 4): this screen already fails-closed on calm
 // mode / an open ED-pattern flag with its own raw reads, reused across many
 // features on this screen beyond the scan card (contest countdown, ED-lockout
@@ -780,6 +786,33 @@ function LoadErrorView({ onRetry, onClose }) {
   );
 }
 
+// Progress-scan assessment receipt helpers (integration-plan.md §6/§7).
+// Pure, exported for direct unit test (the rest of this screen's scan-context
+// behaviour is source-guarded, see progressScanCoachIsolation.guard.test.js;
+// these two are plain string helpers with no store/engine/screen state, so a
+// real test is cheaper and more precise than another regex guard).
+
+// The resolver's card body (progressScanCoachResolver.js decisionLine(), the
+// calorie branch) already carries the exact same literal sentence as the v2
+// receipt's usedSentence (progressScanCheckInEvidence.js NON_AUTHORITY_SENTENCE)
+// by design -- both exist so every scan-derived render path states the same
+// non-authority fact. Render it once: only surface the receipt's usedSentence
+// line when the card body does not already contain it verbatim.
+export function dedupeUsedSentence(bodyText, usedSentence) {
+  if (!usedSentence) return null;
+  if (typeof bodyText === 'string' && bodyText.includes(usedSentence)) return null;
+  return usedSentence;
+}
+
+// Accessibility label summarising the assessment block: the receipt headline,
+// plus the confidence tier in plain words when the scan was actually valid
+// (matching the block's own visible confidence chip).
+export function scanAssessmentAccessibilityLabel(packet) {
+  if (!packet?.receipt) return '';
+  const confidence = packet.status === 'valid' ? `, ${confidenceChipLabel(packet.confidenceTier)}` : '';
+  return `Progress scan assessment: ${packet.receipt.headline}${confidence}`;
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachOutputScreen({ navigation, route }) {
@@ -1452,12 +1485,36 @@ export default function CoachOutputScreen({ navigation, route }) {
       const resultEdPatternOpen = edPatternOpen
         || !!result.edPatternFired
         || !!(result.heldDecisions ?? []).some(d => d.type === 'ed_pattern_lockout');
-      setProgressScanCoachContext(resolveProgressScanCoachNote({
+      const scanNote = resolveProgressScanCoachNote({
         scan: scanCoachSummary,
         output: result,
         suppressed: isPhotoSuppressed(calmNow, resultEdPatternOpen),
         trendOnly: hideExactScanRanges,
-      }));
+      });
+      // v2 assessment receipt (integration-plan.md §6): classified from the
+      // engine's OWN outputs already in scope here (result.trend/goalPhase/
+      // heldDecisions/loadSignal), never from a re-run or a scan-derived
+      // value. Anchored to nowMs = this run's own moment: the screen re-runs
+      // runWeeklyCoach fresh on every load (result above), so the decision
+      // and this receipt always move together from the same live inputs.
+      // Anchoring to weekStart (Monday) would wrongly exclude the primary
+      // flow, a scan taken just before a mid-week check-in; and the evidence
+      // layer rejects any capturedAt after nowMs, so a scan can never enter
+      // a window that predates it. targetsChanged is derived from the
+      // calorie adjustment the card already shows, never invented.
+      const scanCalorieChange = result.adjustments?.calories?.change;
+      const scanTargetsChanged = Number.isFinite(scanCalorieChange) && scanCalorieChange !== 0;
+      const scanEvidencePacket = scanNote ? composeScanEvidencePacket({
+        scan: scanCoachSummary,
+        note: scanNote,
+        weightTrend: result.trend,
+        goalPhase: result.goalPhase,
+        targetsChanged: scanTargetsChanged,
+        heldDecisions: result.heldDecisions,
+        loadSignal: result.loadSignal,
+        nowMs: Date.now(),
+      }) : null;
+      setProgressScanCoachContext(scanNote ? { ...scanNote, packet: scanEvidencePacket } : null);
 
       // Persist ED-pattern state machine transition + telemetry.
       // Raise on first fire, clear on confirmed clearance.
@@ -1734,6 +1791,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   // always textPrimary (set on the value below), colour lives on the icon.
   const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
   const canShowProgressScanCoachContext = !!progressScanCoachContext && !isPhotoSuppressed(calmMode, edPatternOpen);
+  // v2 assessment receipt: dedupe the non-authority sentence against the
+  // card body BEFORE render (see dedupeUsedSentence above), computed once
+  // here rather than inline in JSX.
+  const scanAssessmentPacket = canShowProgressScanCoachContext ? (progressScanCoachContext.packet ?? null) : null;
+  const scanAssessmentUsedSentence = scanAssessmentPacket
+    ? dedupeUsedSentence(progressScanCoachContext.body, scanAssessmentPacket.receipt.usedSentence)
+    : null;
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
@@ -2056,6 +2120,21 @@ export default function CoachOutputScreen({ navigation, route }) {
             <Text style={styles.planEditBody}>
               {progressScanCoachContext.body}
             </Text>
+            {scanAssessmentPacket ? (
+              <View
+                style={styles.scanAssessmentBlock}
+                accessible
+                accessibilityLabel={scanAssessmentAccessibilityLabel(scanAssessmentPacket)}
+              >
+                <Text style={styles.scanAssessmentHeadline}>{scanAssessmentPacket.receipt.headline}</Text>
+                {scanAssessmentPacket.receipt.detail ? (
+                  <Text style={styles.scanAssessmentDetail}>{scanAssessmentPacket.receipt.detail}</Text>
+                ) : null}
+                {scanAssessmentUsedSentence ? (
+                  <Text style={styles.scanAssessmentDetail}>{scanAssessmentUsedSentence}</Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -2313,6 +2392,15 @@ const styles = StyleSheet.create({
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
+  scanAssessmentBlock: {
+    gap: spacing.xxs,
+    marginTop: spacing.xxs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  scanAssessmentHeadline: { ...type.bodySm, color: colors.textPrimary },
+  scanAssessmentDetail: { ...type.caption, color: colors.textSecondary },
   planEditLink: {
     flexDirection: 'row',
     alignItems: 'center',

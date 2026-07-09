@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeightShort } from '../lib/units';
-import { computeEWMA } from '../lib/weeklyCoach';
+import { computeEWMA, getLatestEwma, getEwmaSevenDaysAgo } from '../lib/weeklyCoach';
 import {
   saveWeeklyCheckin,
   getLatestCheckin,
@@ -21,7 +21,16 @@ import {
   getUserBodyProfile,
   getCardioLogRange,
   activityDayKey,
+  getLatestCoachOutput,
 } from '../lib/database';
+// Integration wave (integration-plan.md §5): optional progress-scan evidence
+// beside the week's data. Fail-closed via usePhotoSuppression(); never
+// persisted; a skipped/absent scan never blocks or delays the check-in.
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import { getProgressScanCoachSummary } from '../lib/progressScanStore';
+import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
+import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
+import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
@@ -121,6 +130,37 @@ function OptionRow({ options, selected, onSelect }) {
   );
 }
 
+// Optional pre-check-in scan prompt (integration-plan.md §5). Quiet,
+// dismissible, never blocking; "Not now" only sets component state, nothing
+// persisted, no streaks, no guilt copy.
+function ScanPromptCard({ onScan, onDismiss }) {
+  return (
+    <View style={styles.scanPromptCard}>
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <Text style={styles.scanPromptTitle}>Add a progress scan first?</Text>
+        <Text style={styles.scanPromptBody}>
+          A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.
+        </Text>
+        <View style={styles.scanPromptActions}>
+          <TouchableOpacity onPress={onScan} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Do a scan">
+            <Text style={styles.scanPromptActionPrimary}>Do a scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onDismiss} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Not now">
+            <Text style={styles.scanPromptActionSecondary}>Not now</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Accessibility label for the step-1 evidence block: plain-words status +
+// confidence (integration-plan.md §5, "Accessibility").
+function scanEvidenceAccessibilityLabel(packet) {
+  const confidence = packet.status === 'valid' ? `, ${confidenceChipLabel(packet.confidenceTier)}` : '';
+  return `Progress scan: ${packet.receipt.headline}${confidence}`;
+}
+
 const TOTAL_STEPS = 4;
 
 // --- Main screen --------------------------------------------------------------
@@ -143,6 +183,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // condensed card into the full four-step wizard. Lets the fast path stay an
   // offer, never a cage.
   const [forceFullWizard, setForceFullWizard] = useState(false);
+
+  // Optional progress-scan evidence (integration-plan.md §5). Fail-closed:
+  // usePhotoSuppression() defaults suppressed until both its reads resolve.
+  // scanEvidencePacket stays null while loading/on any read failure, so the
+  // whole evidence block and the prompt card render nothing until a real
+  // status is known (see renderStep1 and showScanPrompt below).
+  const photoScanSuppressed = usePhotoSuppression(user?.id);
+  const [scanEvidencePacket, setScanEvidencePacket] = useState(null);
+  // "Not now" dismisses the prompt for this visit only; component state,
+  // nothing persisted, no streaks, no guilt copy.
+  const [scanPromptDismissed, setScanPromptDismissed] = useState(false);
 
   // --- Gate state --------------------------------------------------------------
   // 'loading' | 'wrong_day' | 'day_late' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
@@ -486,6 +537,76 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const ewmaSeries = weekWeights.length > 0 ? computeEWMA(weekWeights) : [];
   const trendKg = ewmaSeries.length ? ewmaSeries[ewmaSeries.length - 1].ewmaKg : null;
 
+  // Optional progress-scan evidence (integration-plan.md §5). Resolved
+  // best-effort, entirely absent on any read failure (fail closed). Mirrors
+  // the same v1 producer chain CoachOutputScreen already uses
+  // (getProgressScanCoachSummary + resolveProgressScanCoachNote), composed
+  // into the v2 packet via composeScanEvidencePacket. runWeeklyCoach has not
+  // run for this week yet (check-in comes before the coach run), so the
+  // week-over-week delta is computed here with the engine's OWN exported
+  // helpers (getLatestEwma / getEwmaSevenDaysAgo, the exact formula
+  // runWeeklyCoach uses for trend.delta) over the last 14 days of morning
+  // weights. The shorter warm-up window can differ from the engine's value
+  // by a rounding hair, never in kind; the alternative, a first-to-last move
+  // across this week's few readings, reads as 'flat' most weeks and would
+  // bias the classification toward the recomposition message for someone
+  // genuinely losing on target. goalPhase comes from the last SAVED coach
+  // output when one exists; otherwise the packet defaults to 'maint'.
+  // Nothing here is persisted; a skipped/absent scan never blocks or delays
+  // submit (proven by the submit tests). Under photo suppression the packet
+  // is null, so every scan surface on this screen is entirely absent, not
+  // a neutral placeholder (fail closed, same contract as the coach card).
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) return undefined;
+    if (photoScanSuppressed) {
+      setScanEvidencePacket(null);
+      return undefined;
+    }
+    (async () => {
+      try {
+        const [scan, lastOutput, recentWeights] = await Promise.all([
+          getProgressScanCoachSummary(user.id, { suppressed: photoScanSuppressed }),
+          getLatestCoachOutput(user.id).catch(() => null),
+          getMorningWeightsLast14Days(user.id).catch(() => []),
+        ]);
+        const note = resolveProgressScanCoachNote({ scan, suppressed: photoScanSuppressed });
+        // Engine formula (weeklyCoach.js): ewma now vs ewma seven days ago,
+        // >= 3 readings, rounded to 2 dp; null (classifier: 'unknown',
+        // assessment 'inconclusive') when there is not enough weight data.
+        const ewmaNow = recentWeights.length >= 3 ? getLatestEwma(recentWeights) : null;
+        const ewmaPrior = recentWeights.length >= 3 ? getEwmaSevenDaysAgo(recentWeights, 0.1, Date.now()) : null;
+        const weightTrendDelta = (ewmaNow != null && ewmaPrior != null)
+          ? Math.round((ewmaNow - ewmaPrior) * 100) / 100
+          : null;
+        const packet = composeScanEvidencePacket({
+          scan,
+          note,
+          weightTrend: { delta: weightTrendDelta },
+          goalPhase: lastOutput?.goalPhase,
+          nowMs: Date.now(),
+        });
+        if (!cancelled) setScanEvidencePacket(packet);
+      } catch (_) {
+        // Fail closed: absent, never blocks the check-in.
+        if (!cancelled) setScanEvidencePacket(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, photoScanSuppressed]);
+
+  // Guidance, never a nag: the prompt shows only when there is NO recent
+  // scan at all for this window. A recent attempt that landed baseline /
+  // low-confidence / non-comparable already carries its own receipt and
+  // retake guidance on the scan surfaces; re-prompting here would push a
+  // second capture at someone who just did one. Suppressed fail-closed
+  // (packet is null while suppression is unresolved or active); waits for
+  // the packet to resolve so the prompt cannot flash on then vanish once a
+  // valid scan is discovered.
+  const showScanPrompt = !photoScanSuppressed && !scanPromptDismissed
+    && !!scanEvidencePacket
+    && (scanEvidencePacket.status === 'no_scan_ever' || scanEvidencePacket.status === 'no_recent_scan');
+
   // COMP-008 Fast Check-In eligibility: every field the wizard would ask is
   // already confidently auto-derived for this week, so the only things left to
   // gather are energy and soreness, the two inputs we deliberately never
@@ -751,6 +872,31 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <Text style={styles.skipNote}>
                 No morning weights logged this week. Log each morning from the Today tab. One reading per day makes the trend far more accurate.
               </Text>
+            )}
+          </View>
+        )}
+
+        {/* Progress scan evidence (integration-plan.md §5). Absent while
+            loading or on any read failure (fail closed, same idiom as the
+            weight-trend block above: nothing renders until data is ready).
+            A skipped/absent scan renders only the quiet, neutral line below;
+            never negative, never a block on the check-in. */}
+        {!loading && scanEvidencePacket && (
+          <View style={styles.section}>
+            <SectionLabel>Progress scan</SectionLabel>
+            {(scanEvidencePacket.status === 'no_scan_ever' || scanEvidencePacket.status === 'no_recent_scan') ? (
+              <Text style={styles.skipNote}>No photo set this period.</Text>
+            ) : (
+              <View accessible accessibilityLabel={scanEvidenceAccessibilityLabel(scanEvidencePacket)}>
+                <Text style={styles.scanEvidenceHeadline}>{scanEvidencePacket.receipt.headline}</Text>
+                {scanEvidencePacket.receipt.detail ? (
+                  <Text style={styles.scanEvidenceDetail}>{scanEvidencePacket.receipt.detail}</Text>
+                ) : null}
+                <Text style={styles.scanEvidenceDetail}>{scanEvidencePacket.receipt.usedSentence}</Text>
+                {scanEvidencePacket.status === 'valid' && (
+                  <Text style={styles.scanEvidenceConfidence}>{confidenceChipLabel(scanEvidencePacket.confidenceTier)}</Text>
+                )}
+              </View>
             )}
           </View>
         )}
@@ -1051,6 +1197,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
         icon: 'scale-outline',
         label: 'Weight',
         value: `${weekWeights.length} ${weekWeights.length === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+      },
+      // Progress scan context row (integration-plan.md §5): read-only,
+      // shown only when a valid packet exists for this window; absent
+      // otherwise (no nagging, no negative copy in the fast path).
+      scanEvidencePacket?.status === 'valid' && {
+        key: 'scan',
+        icon: 'body-outline',
+        label: 'Progress scan',
+        value: confidenceChipLabel(scanEvidencePacket.confidenceTier),
       },
     ].filter(Boolean).filter(r => r.value != null);
 
@@ -1369,6 +1524,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Optional pre-check-in scan prompt (integration-plan.md §5): at
+              the top, above both the wizard's first step and the Fast
+              Check-In card. Never rendered on later wizard steps. */}
+          {showScanPrompt && (fastEligible || step === 0) && (
+            <ScanPromptCard
+              onScan={() => navigation.navigate('ProgressPhotos')}
+              onDismiss={() => setScanPromptDismissed(true)}
+            />
+          )}
+
           {/* Ritual intro, only on the wizard's first step */}
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
@@ -1653,6 +1818,31 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+  },
+
+  // -- Progress scan evidence (integration-plan.md §5) ------------------------
+  scanEvidenceHeadline: { ...type.bodySm, color: colors.textPrimary },
+  scanEvidenceDetail: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
+  scanEvidenceConfidence: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  scanPromptCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  scanPromptTitle: { ...type.label, color: colors.textPrimary },
+  scanPromptBody: { ...type.captionTight, color: colors.textSecondary },
+  scanPromptActions: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs,
+  },
+  scanPromptActionPrimary: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+  scanPromptActionSecondary: {
+    fontSize: fontSize.sm, color: colors.textMuted,
   },
   autoDerivedNote: {
     ...type.caption, color: colors.textSecondary,

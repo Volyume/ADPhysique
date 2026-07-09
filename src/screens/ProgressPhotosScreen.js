@@ -1231,6 +1231,16 @@ export default function ProgressPhotosScreen({ navigation }) {
     const showRecalibrationNote = !suppressed && !!scanForDay
       && isRecalibratedAssessment(progressScanAssessmentForDisplay(scanForDay))
       && !seenRecalibrationIds.includes(scanForDay.id);
+    // Check-in value line (integration-plan.md §8): only on the most recent
+    // scan's card, only when it is genuinely check-in-eligible (buildScanReceipt's
+    // 'scored' outcome already means comparable + high/moderate confidence,
+    // never 'scored_downgraded'/'baseline'/'not_comparable'/'withheld' -- see
+    // progressScanResultsContract.js buildScanReceipt), Pro-gated (check-ins are
+    // a Pro feature; this line must never advertise Pro to a free/read-only
+    // viewer) and suppression fail-closed (receipt is already null when
+    // suppressed, so this adds the tier + latest-scan checks on top).
+    const isLatestScanCard = !!scanForDay && !!latestScan && scanForDay.id === latestScan.id;
+    const showCheckInValueLine = isLatestScanCard && !readOnly && receipt?.outcome === 'scored';
     const metaText = [weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
     return (
@@ -1308,6 +1318,11 @@ export default function ProgressPhotosScreen({ navigation }) {
                     <Text key={line} style={styles.scanReceiptWhyLine}>{line}</Text>
                   ))}
                 </CollapsibleSection>
+              ) : null}
+              {showCheckInValueLine ? (
+                <Text style={styles.scanCheckInValueLine}>
+                  If you check in this week, the coach can use this as context.
+                </Text>
               ) : null}
             </View>
           ) : null}
@@ -2277,6 +2292,7 @@ const styles = StyleSheet.create({
   scanReceiptSentence: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanRecalibrationNote: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   scanReceiptWhyLine: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
+  scanCheckInValueLine: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
     borderWidth: 1,

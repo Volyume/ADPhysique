@@ -20,6 +20,15 @@
  * timestamp is an explicit parameter (`nowMs`). Pure function in, pure
  * object out.
  *
+ * `composeScanEvidencePacket` (bottom of this file) additionally imports the
+ * v1 `buildProgressScanCoachEvidence` (`progressScanCoachEvidence.js`) --
+ * itself a pure, engine/store/database-import-free reshaping layer, same
+ * category as this module, not one of the guarded mutable-layer names below
+ * -- so `WeeklyCheckInScreen` and `CoachOutputScreen` can go straight from
+ * "scan summary + resolved note" to a v2 packet in one call instead of each
+ * repeating the two-step v1-then-v2 assembly (integration-plan.md §3, "Small
+ * lib addition").
+ *
  * ── Real vocabularies this module was built against (inspected, not
  * guessed; see integration-plan.md §2 "read the source" discipline) ──
  *
@@ -71,6 +80,8 @@
  * `{ type, reason }`; a `type: 'calories'` entry means the calorie target
  * was held (not changed) this run.
  */
+
+import { buildProgressScanCoachEvidence } from './progressScanCoachEvidence';
 
 // ── Frozen enums (integration-plan.md §4) ──────────────────────────────────
 
@@ -363,10 +374,13 @@ export function buildScanEvidencePacket({
   void loadSignal;
 
   const windowMs = windowDays * MS_PER_DAY;
-  const withinWindow = !!evidence
-    && Number.isFinite(evidence.capturedAt)
-    && Number.isFinite(nowMs)
-    && (nowMs - evidence.capturedAt) <= windowMs;
+  // Age must be non-negative: a capturedAt AFTER nowMs (device clock skew,
+  // or a caller anchoring nowMs in the past) must not slip into the window
+  // as a negative age. It fails closed to no_recent_scan below.
+  const scanAgeMs = evidence && Number.isFinite(evidence.capturedAt) && Number.isFinite(nowMs)
+    ? nowMs - evidence.capturedAt
+    : null;
+  const withinWindow = scanAgeMs !== null && scanAgeMs >= 0 && scanAgeMs <= windowMs;
 
   let status;
   let assessment;
@@ -448,4 +462,47 @@ export function buildScanEvidencePacket({
     usedFor: 'progress_assessment_context',
     affectsTargets: false,
   };
+}
+
+/**
+ * Composes a v2 packet directly from the v1 producer chain's own raw inputs
+ * (`scan`, `note`), so a caller that already has the bounded scan summary
+ * (`getProgressScanCoachSummary`) and its resolved note
+ * (`resolveProgressScanCoachNote`) does not have to repeat the two-step
+ * "build v1 evidence, then build the v2 packet" assembly (see module header
+ * and integration-plan.md §3 "Small lib addition"). A `null`/absent `scan`
+ * or `note` composes exactly like `buildScanEvidencePacket({ evidence: null,
+ * ... })` (`buildProgressScanCoachEvidence` already returns `null` for
+ * either), so suppressed/no-scan callers get the same `no_scan_ever` packet
+ * either way.
+ *
+ * @param {object} args
+ * @param {object|null} [args.scan] - `coachSummaryFromScan`'s bounded
+ *   summary (`getProgressScanCoachSummary`'s return value), or null.
+ * @param {object|null} [args.note] - `resolveProgressScanCoachNote`'s return
+ *   value for that same scan, or null.
+ * @param {object|null} [args.weightTrend]
+ * @param {string} [args.goalPhase]
+ * @param {boolean} [args.targetsChanged]
+ * @param {Array} [args.heldDecisions]
+ * @param {string} [args.loadSignal]
+ * @param {number} args.nowMs
+ * @param {number} [args.windowDays=10]
+ * @returns {object} the v2 packet (`buildScanEvidencePacket`'s return shape).
+ */
+export function composeScanEvidencePacket({
+  scan = null,
+  note = null,
+  weightTrend = null,
+  goalPhase = 'maint',
+  targetsChanged,
+  heldDecisions,
+  loadSignal,
+  nowMs,
+  windowDays = 10,
+} = {}) {
+  const evidence = buildProgressScanCoachEvidence({ scan, note });
+  return buildScanEvidencePacket({
+    evidence, weightTrend, goalPhase, targetsChanged, heldDecisions, loadSignal, nowMs, windowDays,
+  });
 }

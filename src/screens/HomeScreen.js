@@ -65,6 +65,9 @@ import { buildReadinessSummary } from '../lib/readinessSummary';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+// Integration wave (integration-plan.md §8): the check-in nudge's optional
+// scan subline, fail-closed via the shared photo-suppression hook.
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
 
 // Soft targets used only to size the weekly progress bars, not enforced
 
@@ -169,6 +172,11 @@ export default function HomeScreen({ navigation, route }) {
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
   const bwu = bodyWeightUnits || 'st';
+  // Integration wave (integration-plan.md §8): fail-closed (defaults
+  // suppressed until both the calm-mode and open-ED-flag reads resolve), so
+  // the check-in nudge's optional scan subline never flashes before that
+  // confirmation lands.
+  const photoScanSuppressed = usePhotoSuppression(user?.id);
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
@@ -1929,6 +1937,11 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.coachingNudgeBody}>
                 It's your check-in day. See how your week went and what to adjust.
               </Text>
+              {!photoScanSuppressed && (
+                <Text style={styles.coachingNudgeScanSubline}>
+                  If you like, add a progress scan first for extra visual context. Skipping it is fine.
+                </Text>
+              )}
               <TouchableOpacity
                 style={styles.coachingNudgeBtn}
                 accessibilityRole="button"
@@ -2719,6 +2732,9 @@ const styles = StyleSheet.create({
   },
   coachingNudgeBody: {
     ...type.captionTight, color: colors.textSecondary,
+  },
+  coachingNudgeScanSubline: {
+    ...type.captionTight, color: colors.textMuted,
   },
   coachingNudgeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,

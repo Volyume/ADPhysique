@@ -35,7 +35,9 @@ import {
   PROGRESS_SCAN_ASSESSMENT,
   buildScanEvidencePacket,
   buildScanEvidenceReceipt,
+  composeScanEvidencePacket,
 } from '../progressScanCheckInEvidence';
+import { buildProgressScanCoachEvidence } from '../progressScanCoachEvidence';
 
 const SOURCE = fs.readFileSync(path.resolve(__dirname, '../progressScanCheckInEvidence.js'), 'utf8');
 
@@ -117,6 +119,17 @@ describe('status path a: no_scan_ever / no_recent_scan', () => {
     const packet = buildScanEvidencePacket({ evidence: broken, nowMs: NOW });
     expect(packet.status).toBe('no_recent_scan');
     expect(packet.assessment).toBe('not_used');
+  });
+
+  test('evidence captured AFTER nowMs fails closed to no_recent_scan (negative age never slips into the window)', () => {
+    // Guards the anchor semantics: a caller anchoring nowMs in the past, or
+    // a device clock skew, must not let a later scan classify against an
+    // earlier decision window.
+    const future = scoredEvidence({ capturedAt: NOW + 2 * 86400000 });
+    const packet = buildScanEvidencePacket({ evidence: future, nowMs: NOW, weightTrend: trend(-2), goalPhase: 'mild_cut' });
+    expect(packet.status).toBe('no_recent_scan');
+    expect(packet.assessment).toBe('not_used');
+    expect(packet.eligibleForAssessment).toBe(false);
   });
 });
 
@@ -512,6 +525,73 @@ describe('packet shape: no calorie/macro/target-named key beyond the mandated af
       expect(key.toLowerCase()).not.toMatch(/calorie|kcal|macro|protein|carb|\bfat\b/);
     }
     expect(packet.affectsTargets).toBe(false);
+  });
+});
+
+describe('composeScanEvidencePacket (integration-plan.md §3 "Small lib addition")', () => {
+  // v1 bounded-summary/note fixtures, matching what
+  // getProgressScanCoachSummary/resolveProgressScanCoachNote actually
+  // produce (see progressScanCoachEvidence.js and progressScanCoachEvidence.test.js
+  // for the same shapes).
+  function fixtureScan(overrides = {}) {
+    return {
+      scanId: 'scan-1',
+      capturedAt: NOW - 2 * 86400000,
+      visualLeannessScore: 66,
+      leannessBandLabel: 'Lean',
+      comparableCount: 4,
+      trendMagnitudePctPoints: 3.2,
+      comparisonStatus: 'comparable',
+      limitations: [],
+      ...overrides,
+    };
+  }
+  function fixtureNote(overrides = {}) {
+    return {
+      leannessBand: 'lean',
+      leannessBandLabel: 'Lean',
+      confidence: 'moderate',
+      trendDirection: 'down',
+      usedFor: 'visual_trend_context_only',
+      ...overrides,
+    };
+  }
+
+  test('matches the manual buildProgressScanCoachEvidence -> buildScanEvidencePacket composition', () => {
+    const scan = fixtureScan();
+    const note = fixtureNote();
+    const args = { weightTrend: trend(-0.6), goalPhase: 'mild_cut', targetsChanged: true, nowMs: NOW };
+    const manual = buildScanEvidencePacket({ evidence: buildProgressScanCoachEvidence({ scan, note }), ...args });
+    const composed = composeScanEvidencePacket({ scan, note, ...args });
+    expect(composed).toEqual(manual);
+    expect(composed.status).toBe('valid');
+    expect(composed.assessment).toBe('supports');
+  });
+
+  test('null scan and null note compose to no_scan_ever, same as evidence: null', () => {
+    const composed = composeScanEvidencePacket({ scan: null, note: null, nowMs: NOW });
+    expect(composed).toEqual(buildScanEvidencePacket({ evidence: null, nowMs: NOW }));
+    expect(composed.status).toBe('no_scan_ever');
+  });
+
+  test('a scan with no note (suppressed/low-confidence upstream) composes to no_scan_ever, matching the v1 null-note contract', () => {
+    const composed = composeScanEvidencePacket({ scan: fixtureScan(), note: null, nowMs: NOW });
+    expect(composed.status).toBe('no_scan_ever');
+  });
+
+  test('deterministic: identical inputs produce a deeply-equal packet on repeated calls', () => {
+    const scan = fixtureScan();
+    const note = fixtureNote();
+    const args = { scan, note, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW };
+    expect(composeScanEvidencePacket(args)).toEqual(composeScanEvidencePacket({ ...args }));
+  });
+
+  test('carries targetsChanged/heldDecisions through to the receipt, exactly like buildScanEvidencePacket', () => {
+    const heldDecisions = [{ type: 'calories', reason: 'Calories held. Trend is on target.' }];
+    const composed = composeScanEvidencePacket({
+      scan: fixtureScan(), note: fixtureNote(), weightTrend: trend(-0.6), goalPhase: 'mild_cut', heldDecisions, nowMs: NOW,
+    });
+    expect(composed.receipt.detail).toBe('Your scan was considered as context. Targets were held based on your logged data, for the reasons above.');
   });
 });
 
