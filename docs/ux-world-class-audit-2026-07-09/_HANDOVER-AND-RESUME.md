@@ -170,3 +170,31 @@ NEXT BATCHES (tier-matched, ~4 at a time, in order):
 FOUNDER-SIDE (unchanged): migrations 110/111/112; App Groups + Live
 Activities provisioning; fresh EAS build (new native dep + widgets); Play
 OAuth SHA-1; Cut 4 seed walk.
+
+## STAGE RECORD (2026-07-09, running log — append at EVERY boundary; founder
+## rule: every change documented here so a cleared chat resumes from this file)
+
+- Dietary Phase A COMPLETE + pushed (38df2ff). Agent-built: preferences into
+  suggestion surfaces (curatedMeals/foodRoles/planPreferences/FoodSearchScreen/
+  useAppStore), allergen_excludes profile sync with 4-step column-tolerance
+  ladder + "only a real cloud array can change the local list" pull rule,
+  pescatarian axis, SettingsDietaryScreen with soft tier-blind 15-exclusion
+  nudge, migrate_112 (founder-run). Lead boundary fixes: profiles retry test
+  now simulates an unmigrated cloud faithfully (asserts final attempt drops
+  sex + allergen_excludes, core fields survive); SettingsDietaryScreen was
+  built but UNREACHABLE — registered in RootNavigator + Pro-gated "Dietary
+  needs" row (leaf-outline, "Diet, allergies and foods to avoid") in
+  SettingsScreen's nutrition block. Lint clean; dietary+nav suites 134/134.
+- Consolidated all-workstreams queue recorded (1c5f539) — see section above.
+- IN FLIGHT now (4 Sonnet agents): dietary Phase B (~25-40 diet-tagged curated
+  meals, data-only); haptics vocabulary rollout (builder/settings, existing
+  vocabulary, none on ED/weight surfaces); cohesion-01 flow/language audit ->
+  docs/ux-world-class-audit-2026-07-09/cohesion-01-flow-language.md;
+  cohesion-02 novice/psychology audit -> cohesion-02-novice-psychology.md.
+  Boundary on landing: builds get ED/food-naming grep + tests + reset-author
+  + push; audit docs get committed then synthesised into a ranked cohesion
+  build backlog (lens over the WHOLE queue above).
+- Operating rules in force: Fable coordinates only (no long code/heavy
+  reading); lowest capable agent tier; ~4 agents per batch to completion;
+  per-stage handover append + push at every boundary; NO attribution in
+  commits; reset-author rebase before every push.
