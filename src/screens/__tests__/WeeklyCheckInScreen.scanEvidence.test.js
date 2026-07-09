@@ -277,5 +277,18 @@ describe('WeeklyCheckInScreen submit is unaffected by scan state', () => {
     expect(database.saveWeeklyCheckin).toHaveBeenCalledTimes(1);
     const savedArgs = database.saveWeeklyCheckin.mock.calls[0][1];
     expect(Object.keys(savedArgs).join(' ')).not.toMatch(/scan|photo|progressScan/i);
+    // Submitting flips the primary Button into its success phase, which
+    // holds for SUCCESS_HOLD_MS (900ms, a real timer) before firing
+    // handleSubmitSettled. The test never lives that long, so without an
+    // explicit unmount here that timer outlives the test file: it later
+    // fires for real mid-suite (jest keeps one process for --runInBand),
+    // driving a setState on this already-torn-down tree outside any act(),
+    // which jest's frozen per-file console reports as "Cannot log after
+    // tests are done" and turns into a non-zero exit despite every suite
+    // passing. Unmounting here runs the Button's own cleanup effect
+    // (`return () => clearTimeout(timer)`), the same contract the source
+    // comment above `submitContinuationRef` documents for a mid-beat
+    // navigation-away, so the pending beat never fires.
+    await act(async () => { tree.unmount(); });
   });
 });
