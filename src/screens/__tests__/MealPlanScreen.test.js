@@ -64,7 +64,16 @@ import { updateMealPlan } from '../../lib/food/db';
 import { appAlert } from '../../components/AppAlert';
 import MealPlanScreen from '../MealPlanScreen';
 
-const nav = { goBack: jest.fn(), navigate: jest.fn() };
+// parentNavigate stands in for the tab navigator's own `navigate`, reached
+// via navigation.getParent() the way navigateCrossTab always does (see
+// src/navigation/navigateCrossTab.js). Needed for the Dietary needs row
+// below, which jumps from this screen's DiaryStack into ProfileTab.
+const parentNavigate = jest.fn();
+const nav = {
+  goBack: jest.fn(),
+  navigate: jest.fn(),
+  getParent: jest.fn(() => ({ navigate: parentNavigate })),
+};
 
 // A minimal plan: one day with a single dinner slot the swap acts on.
 function makePlan() {
@@ -135,6 +144,20 @@ beforeEach(() => {
 async function mountLoaded() {
   const { loadActiveMealPlan } = require('../../lib/food/mealPlanService');
   loadActiveMealPlan.mockResolvedValue({ id: 'rec1', plan: makePlan() });
+  let tree;
+  await act(async () => {
+    tree = create(<MealPlanScreen navigation={nav} />);
+  });
+  return tree;
+}
+
+// Mount the "no plan yet" state (Meal builder before anything is generated):
+// this is where the founder asked for the Dietary needs row to live, so
+// meal preferences (including diet) can be set before meals are built.
+async function mountEmpty(userProfile) {
+  const { loadActiveMealPlan } = require('../../lib/food/mealPlanService');
+  loadActiveMealPlan.mockResolvedValue(null);
+  useAppStore.mockImplementation((selector) => selector({ ...store, userProfile: userProfile || {} }));
   let tree;
   await act(async () => {
     tree = create(<MealPlanScreen navigation={nav} />);
@@ -332,5 +355,95 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain("source: 'meal_plan_no_target'");
     expect(source).toContain("returnToTab: 'DiaryTab'");
     expect(source).toContain("returnToScreen: 'MealPlan'");
+  });
+});
+
+// Founder ask (recorded 2026-07-09): a "Dietary needs" entry point inside the
+// Meal Builder's preferences area, opening the SAME registered SettingsDietary
+// screen Settings uses (single source of truth, no second store) with a live
+// summary. These tests prove that contract at the state level: same route,
+// same profile fields as SettingsDietaryScreen reads/writes.
+describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09)', () => {
+  const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
+
+  test('summarises the diet choice and combined exclusion count, the same fields SettingsDietaryScreen writes', async () => {
+    const tree = await mountEmpty({
+      dietPreference: 'vegetarian',
+      mealPlanExcludeTags: ['gluten'],
+      mealPlanExcludeFoods: ['peanut_butter'],
+    });
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Dietary needs');
+    expect(text).toContain('Vegetarian · 2 foods excluded');
+  });
+
+  test('reads "Not set" when no diet is chosen and nothing is excluded (omnivore default)', async () => {
+    const tree = await mountEmpty({ dietPreference: 'omnivore' });
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Not set');
+  });
+
+  test('reads "Not set" for a brand-new profile with no dietary fields at all', async () => {
+    const tree = await mountEmpty({});
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Not set');
+  });
+
+  test('a diet choice with no exclusions omits the exclusion clause entirely', async () => {
+    const tree = await mountEmpty({ dietPreference: 'vegan' });
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Vegan');
+    expect(text).not.toContain('excluded');
+  });
+
+  test('tapping the row navigates via navigateCrossTab to ProfileTab -> SettingsDietary, the exact route SettingsScreen registers', async () => {
+    const tree = await mountEmpty({ dietPreference: 'vegetarian', mealPlanExcludeTags: [], mealPlanExcludeFoods: [] });
+
+    const row = buttons(tree).find((b) => b.props.accessibilityLabel === 'Dietary needs');
+    expect(row).toBeTruthy();
+    act(() => row.props.onPress());
+
+    // navigateCrossTab always reaches the parent tab navigator (never a bare
+    // navigation.navigate, which silently no-ops across stacks, F4).
+    expect(nav.getParent).toHaveBeenCalled();
+    expect(parentNavigate).toHaveBeenCalledWith('ProfileTab', { screen: 'SettingsDietary', initial: false });
+  });
+
+  test('SettingsDietary resolves to the same SettingsDietaryScreen component RootNavigator registers for the Settings entry point', () => {
+    const rootNavSource = require('fs').readFileSync(
+      require('path').join(__dirname, '..', '..', 'navigation', 'RootNavigator.js'), 'utf8',
+    );
+    // Settings' own row (SettingsScreen.js) navigates straight to
+    // 'SettingsDietary'; RootNavigator registers exactly one screen under
+    // that name, backed by SettingsDietaryScreen. This screen's row must
+    // target the identical route name, not a fork or a duplicate screen.
+    expect(rootNavSource).toMatch(
+      /<Stack\.Screen name="SettingsDietary" component=\{SettingsDietaryScreen\}/,
+    );
+    expect(source).toContain("navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary')");
+  });
+
+  test('guard: the row sits inside the preferences area, ahead of the meals-per-day dial, in both the empty-builder and built-plan panels', () => {
+    // Anchored inside MealPreferencesControls (the one component rendered in
+    // both the pre-generation empty state and the built-plan collapsible
+    // panel), so the row appears wherever meal preferences render, not just
+    // one of the two.
+    const controlsBody = source.slice(
+      source.indexOf('function MealPreferencesControls'),
+      source.indexOf('export default function MealPlanScreen'),
+    );
+    expect(controlsBody).toContain('label="Dietary needs"');
+    expect(controlsBody.indexOf('label="Dietary needs"')).toBeLessThan(controlsBody.indexOf('label="Meals per day"'));
+    expect(controlsBody).toContain('sub={dietSummary}');
+    expect(controlsBody).toContain('onPress={onOpenDietary}');
+    // Rendered from both call sites (empty-state prefsPanel and the
+    // built-plan collapsible prefsPanel), each wired to the live summary
+    // and the same handler, not two divergent copies.
+    const callSites = source.match(/<MealPreferencesControls[^/]*\/>/g) || [];
+    expect(callSites.length).toBe(2);
+    callSites.forEach((call) => {
+      expect(call).toContain('dietSummary={dietSummary}');
+      expect(call).toContain('onOpenDietary={handleOpenDietary}');
+    });
   });
 });

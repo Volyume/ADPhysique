@@ -22,6 +22,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SettingRow } from '../components/SettingsPrimitives';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -97,6 +98,36 @@ function sumDayTotals(slots) {
   }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 }
 
+// Same wording as the diet radio group on SettingsDietaryScreen (kept as a
+// small local copy rather than an import so this screen never reaches into
+// another screen's module; both read the one label a user actually chose).
+const DIET_LABELS = {
+  omnivore: 'Omnivore',
+  pescatarian: 'Pescatarian',
+  vegetarian: 'Vegetarian',
+  vegan: 'Vegan',
+};
+
+// Live summary for the "Dietary needs" row (founder ask 2026-07-09): the diet
+// choice plus a single combined count of allergen excludes and individually
+// flagged foods, e.g. "Vegetarian · 2 foods excluded". Omnivore (the
+// unrestricted default) and zero exclusions read as "Not set" rather than
+// naming the default, so the row only speaks up when there is something to
+// report. Reads the SAME synced profile fields SettingsDietaryScreen writes
+// (dietPreference, mealPlanExcludeTags, mealPlanExcludeFoods) so there is one
+// source of truth: a choice made from either screen shows correctly on both.
+function dietaryNeedsSummary(userProfile) {
+  const diet = userProfile?.dietPreference;
+  const dietLabel = diet && diet !== 'omnivore' ? DIET_LABELS[diet] : null;
+  const tags = Array.isArray(userProfile?.mealPlanExcludeTags) ? userProfile.mealPlanExcludeTags : [];
+  const foods = Array.isArray(userProfile?.mealPlanExcludeFoods) ? userProfile.mealPlanExcludeFoods : [];
+  const excludedCount = tags.length + foods.length;
+  const parts = [];
+  if (dietLabel) parts.push(dietLabel);
+  if (excludedCount > 0) parts.push(`${excludedCount} food${excludedCount === 1 ? '' : 's'} excluded`);
+  return parts.length ? parts.join(' · ') : 'Not set';
+}
+
 // One labelled segmented row of preference options (a small radio group).
 function PrefRow({
   label, help, options, value, onSelect, busy,
@@ -128,9 +159,22 @@ function PrefRow({
   );
 }
 
-function MealPreferencesControls({ prefs, busy, onSetPref }) {
+function MealPreferencesControls({
+  prefs, busy, onSetPref, dietSummary, onOpenDietary,
+}) {
   return (
     <>
+      {/* Dietary needs: opens the SAME registered screen Settings uses
+          (SettingsDietary), so a choice made here IS the user's default and
+          shows ticked in Settings automatically (founder ask 2026-07-09, one
+          profile, no second store). Sits first because diet and exclusions
+          decide which meals are even eligible before any of the dials below. */}
+      <SettingRow
+        icon="leaf-outline"
+        label="Dietary needs"
+        sub={dietSummary}
+        onPress={onOpenDietary}
+      />
       <PrefRow
         label="Meals per day"
         help="Choose how many meals Volyume should build before snacks or pre-workout extras."
@@ -643,6 +687,19 @@ export default function MealPlanScreen({ navigation, route }) {
     const workoutMeals = prefs.periWorkoutSlots ? 'workout meals on' : 'workout meals off';
     return `${meals} meals, ${variety}, ${workoutMeals}`;
   }, [prefs.mealsPerDay, prefs.periWorkoutSlots, prefs.variety]);
+  // Reads the same `userProfile` this screen already selects from the store,
+  // so a change made on SettingsDietaryScreen (a different tab's stack)
+  // updates this instantly: Zustand subscribers re-render on any store
+  // change, not gated by screen focus, so no useFocusEffect/read-on-focus
+  // is needed here (unlike a screen reading through a local DB call).
+  const dietSummary = useMemo(() => dietaryNeedsSummary(userProfile), [userProfile]);
+  // F4 (audit NAV-2 idiom, see the no-target redirect above): SettingsDietary
+  // lives in ProfileStack; a bare navigation.navigate from DiaryStack would
+  // silently no-op, so this goes through navigateCrossTab like the existing
+  // NutritionTargets redirect.
+  const handleOpenDietary = useCallback(() => {
+    navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary');
+  }, [navigation]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const hasSwappableFoods = (day?.slots || []).some((slot) => (
     !!slot.components && (slot.items || []).some((it) => (it.foodRef || '').startsWith('curated:'))
@@ -719,7 +776,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={styles.preferencesHint}>Set these first. The plan uses them for today or the week.</Text>
           </View>
           <View style={styles.prefsPanel}>
-            <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} />
+            <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} />
           </View>
 
           <Card style={styles.planOption}>
@@ -839,7 +896,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
-              <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} />
+              <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} />
             </View>
           ) : null}
 
