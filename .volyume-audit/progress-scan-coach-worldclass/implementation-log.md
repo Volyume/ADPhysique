@@ -53,11 +53,38 @@ category).
   supportive scan must never infer the scan drove it), while `conflicts` keeps its
   mandated hierarchy sentence. 79 targeted tests green, 612 progress-sweep tests green,
   lint clean.
-- **Wave B (UI wiring, Sonnet agent)**: check-in optional scan prompt + step-1 evidence
-  block + Fast Check-In row; CoachOutputScreen card assessment receipt (nowMs anchored
-  to the coach output's own timestamp so receipts stay stable retroactively); Home
-  check-in nudge subline; ProgressPhotos post-scan value line (Pro + unsuppressed only).
-  Status: in progress.
+- **Wave B (UI wiring, Sonnet agent, commit `84cab3b`)**: check-in optional scan prompt +
+  step-1 evidence block + Fast Check-In row; CoachOutputScreen card assessment receipt;
+  Home check-in nudge subline; ProgressPhotos post-scan value line (Pro + unsuppressed
+  only, reusing `buildScanReceipt`'s existing 'scored' outcome as the eligibility test);
+  `composeScanEvidencePacket` composition helper added to the evidence layer; six new
+  test suites including a tone guard pinning every new string verbatim. Fable hands-on
+  review found and fixed THREE defects before commit:
+  1. **Anchor bug**: the coach card anchored the evidence window to `weekStart` (Monday),
+     but the evidence layer accepted negative scan age, so a scan captured AFTER the
+     anchor passed the window check — the exact opposite of the stated intent — and a
+     strict fix would instead have excluded the primary flow (a scan just before a
+     mid-week check-in). Resolution: the screen re-runs `runWeeklyCoach` fresh on every
+     load, so nothing is frozen; anchor at the run's own moment (`Date.now()`), and
+     harden the evidence layer to reject any `capturedAt` after `nowMs` (negative-age
+     fail-closed, new test). The agent's source-guard test that pinned the old anchor was
+     re-pinned to the corrected semantics.
+  2. **Suppression leak**: under calm/ED suppression the check-in packet resolved to a
+     `no_scan_ever` packet rather than null, so a suppressed user would still have seen a
+     "Progress scan" section with the neutral line. Fixed: suppression now nulls the
+     packet, making every scan surface on the screen entirely absent (single mechanism,
+     fail closed).
+  3. **Prompt nag**: the prompt showed for any non-valid status, so a user whose scan two
+     days ago landed baseline/low-confidence/non-comparable would be asked to scan again
+     at check-in. Fixed: prompt only for `no_scan_ever` / `no_recent_scan`; retake
+     guidance stays on the scan surfaces where it already exists.
+  Also upgraded in review: the check-in weight delta was a within-week first-to-last EWMA
+  move (reads 'flat' most weeks, biasing the classification toward the recomposition
+  message for someone genuinely losing on target); now computed with the engine's own
+  exported helpers (`getLatestEwma` / `getEwmaSevenDaysAgo`) over 14 days of morning
+  weights — the exact formula `runWeeklyCoach` uses for `trend.delta`. Test fixture
+  corrected to 14 flat readings (the old 7-row fixture actually sloped UPWARD and could
+  not produce a 7-day-old EWMA reading under the engine formula).
 
 ## Fable decisions
 
@@ -85,19 +112,44 @@ category).
 | 1 | Opus | Accuracy gate re-audit (read-only) | complete |
 | 2 | Opus | Integration attachment-point verification (read-only) | complete |
 | 3 | Sonnet | Wave A: evidence layer implementation | complete (reviewed, amended, committed `7fc4ba0`) |
-| 4 | Sonnet | Wave B: UI wiring implementation | running |
+| 4 | Sonnet | Wave B: UI wiring implementation | complete (reviewed, amended, committed `84cab3b`) |
+
+Total: 4 agents (2 Opus audit, 2 Sonnet implementation), within every cap in the founder
+instruction (accuracy re-audit max 3; scoring fixes max 2 — none needed; integration max 2).
 
 ## Files changed
 
-- `src/lib/progressScanCheckInEvidence.js` (new), `src/lib/__tests__/progressScanCheckInEvidence.test.js` (new)
-- `src/lib/progressScanCoachEvidence.js`, `src/lib/__tests__/progressScanCoachEvidence.test.js` (enum widening + pins)
-- Wave B files: pending
+- Wave A (commit `7fc4ba0`): `src/lib/progressScanCheckInEvidence.js` (new),
+  `src/lib/__tests__/progressScanCheckInEvidence.test.js` (new),
+  `src/lib/progressScanCoachEvidence.js` + its test (enum widening + pins).
+- Wave B (commit `84cab3b`): `src/lib/progressScanCheckInEvidence.js` (+compose helper,
+  negative-age hardening), its test (+wave-B cases), `src/screens/WeeklyCheckInScreen.js`,
+  `src/screens/CoachOutputScreen.js`, `src/screens/HomeScreen.js`,
+  `src/screens/ProgressPhotosScreen.js`, and new tests
+  `CoachOutputScreen.progressScanAssessment.test.js`, `HomeScreen.progressScanNudge.test.js`,
+  `ProgressPhotosScreen.checkInValueLine.test.js`, `WeeklyCheckInScreen.scanEvidence.test.js`,
+  `progressScanIntegrationTone.guard.test.js`.
+- Docs: `accuracy-gate.md`, `integration-plan.md`, this log, `final-completion-report.md`.
 
 ## Tests run
 
 - Wave A targeted: 4 suites, 79 tests, all passed. Progress sweep: 47 suites passed
   (1 skipped: pre-existing sandbox-only `progressScanVision`), 612 passed / 616 total.
-  `npm run lint` clean. Wave B: pending.
+- Wave B affected suites: 41 passed (1 skipped, same vision suite), 560 passed / 564.
+- Full `npm test`: `Test Suites: 3 failed, 1 skipped, 572 passed, 575 of 576 total;
+  Tests: 2 failed, 9 skipped, 7327 passed, 7338 total`. The three failing suites
+  (`progressScanVision` sandbox-only native artifact; `ProGate.featureCopy.guard`
+  "'Your week'" label in RootNavigator; `screen-mount` ActiveWorkoutScreen note-chip)
+  were re-verified by Fable via `git stash` to fail IDENTICALLY on the unmodified tree —
+  all pre-existing and unrelated to this pass.
+- `npm run lint` (`eslint . --max-warnings 0`): clean after every wave.
+
+## Skipped tests and why
+
+- `progressScanVision.test.js`: pre-existing sandbox-only skip (missing
+  `react-native-fast-tflite` native build artifact); present on the base branch.
+- iOS backup-exclusion attribute: not Jest-testable (wave 5 decision); remains on the
+  manual device checklist.
 
 ## Hard blockers
 
@@ -105,3 +157,8 @@ category).
    validation dataset.
 2. Scan-specific notification copy/category — locked founder doc requires explicit
    founder sign-off; integration is complete without it.
+
+## Final commit
+
+`84cab3b` (code) plus the docs commit recorded in `final-completion-report.md`. Branch
+`claude/codebase-audit-docs-pv6mjd`, pushed to origin.

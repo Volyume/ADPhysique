@@ -1,6 +1,8 @@
 # Progress Scan + Coach Integration Plan and Status
 
-Run: 2026-07-09. Lead: Fable. Status legend: PLANNED → BUILT → VERIFIED.
+Run: 2026-07-09. Lead: Fable. STATUS: BUILT AND VERIFIED (commits `7fc4ba0` evidence layer,
+`84cab3b` UI wiring). Sections below are updated to as-built where review changed the plan;
+each such change is marked "As built".
 
 ## 1. Accuracy gate status
 
@@ -41,8 +43,14 @@ caption) stays hard-blocked: it requires external ground-truth validation data.
 - Consumers: `WeeklyCheckInScreen` (evidence block + optional scan prompt), `CoachOutputScreen`
   (card extension), `HomeScreen` (nudge subline), `ProgressPhotosScreen` (post-scan value line).
 - Persistence: NONE. `weekly_checkins` and `coach_outputs` stay scan-free (existing guards).
-  Receipts recompute deterministically from stored scan rows + stored coach output; evidence
-  selection is windowed against the coach output's week so receipts are stable retroactively.
+  Receipts recompute deterministically from stored scan rows + the engine's own outputs.
+  **As built (anchoring):** `CoachOutputScreen` re-runs `runWeeklyCoach` fresh on every load,
+  so nothing on that screen is frozen; the packet is anchored to the run's own moment
+  (`Date.now()`), and the decision and receipt always move together from the same live inputs.
+  The originally planned weekStart anchoring was rejected in review: it would have excluded
+  the primary flow (a scan taken just before a mid-week check-in), and the evidence layer now
+  also rejects any `capturedAt` after `nowMs`, so a scan can never classify into a window that
+  predates it (negative-age fail-closed, test-pinned).
 - Suppression: every new surface fail-closed via `usePhotoSuppression()` (screens) or the pure
   `isPhotoSuppressed` where a screen already owns raw reads (CoachOutputScreen pattern).
   Suppressed = the surface is absent, indistinguishable from no-scan.
@@ -78,11 +86,14 @@ but NEVER count as positive or negative progress evidence.
 ## 5. Check-in flow
 
 `WeeklyCheckInScreen`:
-- **Optional pre-check-in scan prompt**: quiet dismissible card at the top of step 0 (and
-  mirrored above the Fast Check-In card): offer to do a scan first, "Do a scan" navigates to
-  ProgressPhotos, "Not now" dismisses for this check-in only (component state, nothing
-  persisted, no streaks, no guilt copy). Photo-suppression fail-closed; skipping never blocks
-  or delays the check-in.
+- **Optional pre-check-in scan prompt**: quiet dismissible card at the top, above both the
+  wizard's first step and the Fast Check-In card: "Do a scan" navigates to ProgressPhotos,
+  "Not now" dismisses for this visit only (component state, nothing persisted, no streaks, no
+  guilt copy). Photo-suppression fail-closed; skipping never blocks or delays the check-in.
+  **As built (no-nag rule):** the prompt shows ONLY when no recent scan exists for the window
+  (`no_scan_ever` / `no_recent_scan`). A recent attempt that landed baseline, low-confidence
+  or non-comparable already carries its own receipt and retake guidance on the scan surfaces;
+  re-prompting at check-in would push a second capture at someone who just did one.
 - **Evidence block in step 1 ("This week's data")**, after the weight-trend rows: scan status
   line + receipt + confidence chip for every state (valid / low confidence / withheld /
   non-comparable / baseline / none this period). Quiet neutral copy when absent; render nothing
@@ -158,26 +169,49 @@ integration is complete without it, and the founder may commission it separately
 
 ## 10. World-class polish completed
 
-(updated as built)
-- PLANNED: accessibility labels on every new block; loading/absent/error states on touched
-  surfaces; receipt readability pass on the coach card; check-in evidence summary row in Fast
-  Check-In; copy tone tests extended to all new strings.
+- Accessibility: `accessible` + plain-words `accessibilityLabel` (status + confidence) on the
+  check-in evidence block and the coach assessment block; `accessibilityRole="button"` +
+  labels on both prompt actions.
+- Loading/absent/error states: check-in evidence block absent while loading and on any read
+  failure (fail closed, same idiom as the screen's weight-trend block); prompt waits for the
+  packet to resolve so it cannot flash on and vanish; suppressed users get NO placeholder,
+  the surfaces are entirely absent.
+- Receipt readability: coach card renders headline / optional detail / non-authority sentence
+  as separated lines under a hairline divider; the non-authority sentence is deduplicated
+  against the resolver body so it appears exactly once.
+- Fast Check-In: read-only "Progress scan" context row when a valid packet exists.
+- Copy tone: a dedicated wave tone guard (`progressScanIntegrationTone.guard.test.js`) pins
+  every new screen string verbatim against source drift and bans shame/panic words, em dashes
+  and exclamation marks; the receipt layer's own tone guard covers every classifier string.
+- Consistency: the check-in classification uses the engine's own exported EWMA helpers over
+  14 days of morning weights, so check-in and coach card read the same trend the same way.
 
 ## 11. Tests added
 
-(updated as built — see implementation-log.md for run output)
-- Evidence layer: classifier determinism + every status/assessment path; low-confidence /
-  withheld / non-comparable → recorded-not-used; <3 comparable → inconclusive, never conflict;
-  receipt pattern coverage incl. banned-word/em-dash tone guard; `affectsTargets:false` literal
-  + enum pin (updated v1 pins); source guard that engine modules never import the new module and
-  the new module never imports mutation functions.
-- UI: check-in block renders per state; skipped scan does not block submit; `weekly_checkins`
-  COLS still scan-free; suppression parity on all four touched surfaces (fail-closed); coach
-  card shows assessment receipt incl. targets-held and targets-changed-for-other-reasons
-  wording; stable-weight + visual-change receipt; Home nudge subline suppression; post-scan
-  value line eligibility.
-- Safety: existing nine guard tests remain green and unweakened; byte-identical engine guard
-  untouched.
+- Evidence layer (`progressScanCheckInEvidence.test.js`, 83 tests with the wave B additions):
+  classifier determinism; every status/assessment path; low-confidence / withheld /
+  non-comparable → recorded-not-used, never supports/conflicts; <3 comparable → inconclusive,
+  never conflict; negative scan age (capturedAt after nowMs) fails closed to no_recent_scan;
+  verbatim receipt coverage incl. targets-changed/held variants on supports and
+  visual-change states and the conflicts hierarchy-sentence pin; tone guard over every
+  exported string; source guards (affectsTargets literal, pure-layer imports, engine never
+  imports it back); exact packet key set with no calorie/macro/target-named key.
+- v1 pins updated loudly (`progressScanCoachEvidence.test.js`): usedFor enum exactly the two
+  founder-approved values; affectsTargets pins re-asserted unchanged.
+- UI (`WeeklyCheckInScreen.scanEvidence.test.js`, real mounts): prompt renders/dismisses/
+  navigates, absent when a valid packet exists, absent under suppression; evidence block per
+  packet state; no-scan renders only the quiet neutral line; Fast row; submit unaffected with
+  no scan and no scan field persisted. (`CoachOutputScreen.progressScanAssessment.test.js`,
+  house source-guard style): packet composed from the engine's own result fields at the
+  run's own moment; targetsChanged derived from the calorie adjustment already on the card;
+  dedupe + accessibility helpers pinned; saveCoachOutput and runWeeklyCoach inputs carry no
+  scan/packet token. (`HomeScreen.progressScanNudge.test.js`): subline present unsuppressed,
+  absent suppressed. (`ProgressPhotosScreen.checkInValueLine.test.js`): value line only for
+  scored + high/moderate + Pro + unsuppressed, each condition individually.
+- Tone (`progressScanIntegrationTone.guard.test.js`): every new screen string clean and
+  verbatim-pinned to source.
+- Safety: all pre-existing guards (byte-identical engine output, floor isolation, coach
+  isolation, weekly_checkins COLS, suppression parity) untouched and green.
 
 ## 12. Hard blockers only
 
