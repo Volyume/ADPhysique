@@ -1,17 +1,109 @@
 # UX world-class audit — handover and resume note
 
-**Branch:** `claude/codebase-audit-docs-pv6mjd` (docs-only; no app code changes)
+**Branch:** `claude/codebase-audit-docs-pv6mjd` (began docs-only; now the
+live BUILD campaign branch — app code changes land here too)
 **Started:** 2026-07-09
-**Task (founder's words):** assess the main user-facing areas and judge the
-improvements that move the app from very good to world class. Judgement done
-hands-on in the main loop (Fable); all big reads delegated to cheap subagents
-(Sonnet for flow reads, Haiku for mechanical sweeps) per the CLAUDE.md agent
-tier rule. Output is a written assessment in this folder. No implementation
-in this session unless the founder asks.
+**Founder standing orders (in force):** the app must feel like ONE
+amalgamated application (cohesion mandate); Fable coordinates only, lowest
+capable agent tier does the work; agents run in GROUPS OF TWO to completion;
+ALL prior workstreams keep flowing; this handover is updated at EVERY
+landing so a fresh chat resumes from this file alone; founder questions go
+as structured multi-choice rounds, never walls of text.
+
+## JOB BOARD (rewritten 2026-07-09 late; supersedes every earlier queue list
+in this file — this section is the single source of truth for a fresh
+session. Update it in place, do not append competing lists.)
+
+### Running now (the current pair of two)
+1. **D9 unilateral logging BUILD** (Sonnet). Full spec =
+   `docs/exercise-planning-2026-07-09/plan-C-unilateral-logging.md` + D9
+   and its two amendments in
+   `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
+   Two-phase per-side on the clusterSet pattern; suggest-and-confirm via
+   laterality metadata (`src/lib/exerciseMetadata.js:130-135`, currently
+   unread); rest by exercise class (compound = half rest between EVERY
+   side; isolation = switch-sides prompt + full rest after the pair); ONE
+   workout_sets row, actual_reps = lower side; first-timer walkthrough via
+   the `@volyume_seen_*` one-time-hint convention. Lead reviews diff
+   before commit.
+2. **CO-1 "The Coach" naming sweep** (Sonnet). Rule = the actor-naming
+   addendum in `docs/COACHING_VOICE_SYNTHESIS_LOCKED.md` (~line 795);
+   approval = D14 Group B. ~20 sites / ~14 files; nutritionEngine.js:402
+   already restored HANDS-ON to "Precision Coaching has held your calorie
+   target." (68/68 engine tests green, committed with plan-F).
+
+### Queued next (fire as slots free, two at a time) — all founder-approved
+under D14 Group A (see DECISIONS-2026-07-09.md D14 for the full ruling)
+- **Home bundle:** AC-3 ink bug (`HomeScreen.js:1643,2391` →
+  `colors.onPrimary`) + banner cap (lead-ruled under founder delegation:
+  ONE attention banner max via the existing `pickAttentionVariant`
+  priority; others wait their turn).
+- **Charts bundle:** LT-6 gridline contrast (`VolyumeChart.js:236`) + CP-5
+  PR markers on the per-exercise trend line (highlightIndices).
+- **Picker bundle:** L07-F6 fuzzy/typo-tolerant search + L07-F7 recents row
+  in `ExercisePickerModal`.
+- **History bundle:** text search across workout history + session/workout
+  terminology drift (L01-B37).
+- **Food copy bundle:** `FoodSearchScreen.js:896` old additions intro;
+  L05-MR1 recipe-row macros; L05-MM2 "Check your connection" miscopy (3
+  screens, local reads); L05-FS1 "Custom" tab relabel.
+- **Smalls bundle:** AY-6 share-segment `accessibilityState` on
+  ShareCardScreen; CP-6 Settings "Workout & units" → own sub-screen;
+  Viking Press + Plate-Loaded Shoulder Press retag (same ruling as v62);
+  CO-2 "see your updated plan" link on the CoachOutput training card.
+
+### Founder rounds queued (bring as multi-choice, in this order — D14)
+1. Notifications: locked Surface 6 wording drift (restore vs amend the
+   locked doc) + rest-day notification A2 (re-specify / shelve / kill).
+2. Settings cluster: CP-10 restart-free theming (architectural), CP-9
+   Help/FAQ path, L08-B3 post-cancel calm forward link (billing-adjacent,
+   written test plan required per docs/rules/billing.md).
+3. Weigh-in edit/delete (NAV-2): edit-only / edit+delete+history / as-is.
+4. Plan-F photo corroboration (4 questions at the end of
+   `docs/exercise-planning-2026-07-09/plan-F-photo-corroboration.md`).
+5. Consolidated triage round: CP-10/LT-3 + the 6 truly-open items from the
+   parked-items triage (see stage log entry).
+NOT selected by founder this round: RPE/RIR revisit (stays settled-removed).
+
+### Investigations queued (plan-style, no build without a ruling)
+- Adherence/over-performance: does the engine accelerate when a user
+  over-performs, and is the benefit of following the programme explained?
+  (Founder asked 2026-07-09; treat as plan-first.)
+- SUBREGION_TRANSLATION.biceps pass-through once library subregion tags
+  exist (residue from the D8 engine fix).
+
+### HELD by explicit founder order (do NOT start)
+- **Adversarial whole-diff review** — held "until we are done everything
+  else". Recorded finding awaiting it: R1 = curated-meal additions carry
+  no FSA allergen tags/filtering (soya, mustard reachable by allergic
+  users — top scorecard risk; the fix belongs to the review's resumption).
+  R2 = CLOSED separately under D14 (the nutritionEngine.js:402 restore).
+- Exercise media (video/images) — founder HOLD.
+- iOS rest-timer Live Activity — founder HOLD.
+- Cut 4 seed→.dat — needs a dedicated window + first-install device walk.
+- Old task #128 (adversarial hunt) — fires with the held review.
+- Old task #86 (P5 growth: funnel events, review prompts, importers).
+
+### Founder-side actions outstanding (not Claude's to do)
+- Run supabase/migrate_110..113 on EU-Dublin (049/059 remain HELD).
+- Apple: App Groups (group.app.volyume.widget) + Live Activities
+  provisioning; fresh EAS build (new native dep expo-local-authentication).
+- Confirm Google Play OAuth SHA-1.
+
+### Key reference docs (full paths — read before acting)
+- Scorecard: `docs/ux-world-class-audit-2026-07-09/SCORECARD.md` (25
+  functions rated; the top-8 attention list drives the queue above).
+- Decisions D8–D14: `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`
+  (includes the REJECTED/never-re-propose register).
+- Exercise plans A–F: `docs/exercise-planning-2026-07-09/`.
+- Coverage synthesis: `docs/design-usability-audit-2026-07-09/coverage-00-SYNTHESIS.md`.
+- Locked voice + actor naming: `docs/COACHING_VOICE_SYNTHESIS_LOCKED.md`.
+- CI leak post-mortem: stage log entry "CI EXIT-1 LEAK FIXED" below.
 
 ## How to resume this work
 
-1. Read this file top to bottom.
+1. Read this file top to bottom (the JOB BOARD above is the truth for what
+   runs next; the stage log below is the history of every landing).
 2. Read every `facts-*.md` in this folder that exists (raw subagent fact
    extractions, saved verbatim; they are the evidence base).
 3. If `ASSESSMENT.md` exists, it is the deliverable; resume by checking the
