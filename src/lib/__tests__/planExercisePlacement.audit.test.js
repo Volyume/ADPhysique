@@ -12,7 +12,7 @@
  * Legs / Upper / Lower / Full Body) defines the allowed patterns.
  */
 
-import { generatePlan, DIVISION_MATRIX, MUSCLE_PATTERN, POOL } from '../planEngine';
+import { generatePlan, DIVISION_MATRIX, MUSCLE_PATTERN, POOL, capForEntry } from '../planEngine';
 
 const patternOf = (m) => MUSCLE_PATTERN[m] ?? 'other';
 
@@ -22,8 +22,14 @@ const patternOf = (m) => MUSCLE_PATTERN[m] ?? 'other';
 // it catches a chest press that ended up on a back day regardless of which slot
 // the engine thought it was filling.
 const NAME_TO_MUSCLE = {};
+// Reverse map: exercise name -> paramKey (D8 cap lookup). Built the same way,
+// used by the cap-violation sweep below.
+const NAME_TO_PARAM = {};
 for (const [muscle, list] of Object.entries(POOL)) {
-  for (const e of list) if (!(e.n in NAME_TO_MUSCLE)) NAME_TO_MUSCLE[e.n] = muscle;
+  for (const e of list) {
+    if (!(e.n in NAME_TO_MUSCLE)) NAME_TO_MUSCLE[e.n] = muscle;
+    if (!(e.n in NAME_TO_PARAM)) NAME_TO_PARAM[e.n] = e.p;
+  }
 }
 
 // Allowed movement patterns for a day, from its template muscle list. Side
@@ -168,6 +174,123 @@ describe('Plan-builder exercise placement audit (full combination sweep)', () =>
     } else {
       // eslint-disable-next-line no-console
       console.log(`\nPlacement audit clean across ${combos} combinations.\n`);
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
+// ── D8: per-exercise set cap sweep (founder ruling 2026-07-09) ─────────────
+// Reuses the same goal x days x experience x equipment x phase x weak-point
+// matrix above to check the founder's actual complaint: a muscle that needs
+// more than one exercise in a session must spread its sets across them
+// within the 4 (compound) / 3 (isolation) cap, never stack the overflow onto
+// one entry (the "6 sets of lat pulldown" bug).
+//
+// A muscle with only ONE exercise in a session is deliberately excluded from
+// the strict per-entry check here: selectExercisesForMuscle's anti-
+// fragmentation floor (no entry below 3 sets, a pre-existing, unrelated
+// invariant) can make a small session target un-splittable without either
+// fragmenting an entry below 3 sets or letting the sole entry exceed its
+// cap by a set or two (e.g. a 4-set rear-delt session choosing to relax Face
+// Pull to 4 rather than force a nonexistent 3+1 split) — this is the
+// documented plan-B §3 relax, exhaustively fuzzed with the exact
+// totalCapacity-vs-target math at engine-invariants.test.js's
+// "D8: selectExercisesForMuscle set-cap + spill invariants" describe block.
+// What must NEVER happen, on any equipment, is a MULTI-exercise group still
+// stacking one entry past its cap instead of spreading the load — that is
+// asserted here, strictly, with no exception.
+describe('D8: per-exercise set cap sweep (full combination sweep)', () => {
+  function capViolationsForPlan(plan, ctx) {
+    const violations = [];
+    for (const w of plan?.workouts ?? []) {
+      const byMuscle = new Map();
+      for (const ex of w.exercises) {
+        const m = NAME_TO_MUSCLE[ex.exerciseName];
+        if (m == null) continue; // not in POOL, can't cap-check
+        if (!byMuscle.has(m)) byMuscle.set(m, []);
+        byMuscle.get(m).push(ex);
+      }
+      for (const [m, group] of byMuscle) {
+        if (group.length < 2) continue; // sole-exercise relax, covered elsewhere
+        // Mirror the internal invariant (engine-invariants.test.js): the
+        // relax fallback may only ever apply to ONE entry (assignSupersets
+        // can reorder the output array to keep superset partners adjacent,
+        // so position in the final list isn't reliable here — this checks
+        // the COUNT of relaxed entries instead), and only when the group's
+        // real capacity (sum of each entry's 4/3 cap) falls short of what it
+        // actually delivered — i.e. the anti-fragmentation floor (no entry
+        // below 3 sets) made a further split arithmetically impossible. Two
+        // or more entries over cap, or ANY entry over cap when capacity WAS
+        // enough to spread properly, is the founder's actual complaint (a
+        // stack instead of a spread) and must never happen.
+        const capTotal = group.reduce((s, e) => s + capForEntry({ p: NAME_TO_PARAM[e.exerciseName] }), 0);
+        const deliveredTotal = group.reduce((s, e) => s + e.sets, 0);
+        const relaxAllowed = capTotal < deliveredTotal;
+        const overCap = group.filter(ex => ex.sets > capForEntry({ p: NAME_TO_PARAM[ex.exerciseName] }));
+        const allowedOverCount = relaxAllowed ? 1 : 0;
+        if (overCap.length > allowedOverCount) {
+          violations.push(
+            `${ctx} :: "${w.name}" ${m} group [${group.map(g => `${g.exerciseName}=${g.sets}`).join(', ')}] :: ` +
+            `${overCap.length} entries over cap (relax allows ${allowedOverCount})`,
+          );
+        }
+      }
+    }
+    return violations;
+  }
+
+  test('a muscle spread across 2+ exercises in a session never stacks one past its cap', () => {
+    const violations = [];
+    let combos = 0;
+    for (const goal of GOALS) {
+      for (const days of DAYS) {
+        for (const experience of EXPERIENCE) {
+          for (const equipment of EQUIPMENT) {
+            for (const phase of PHASES) {
+              for (const weakPoints of WEAKPOINTS) {
+                combos += 1;
+                const ctx = `${goal}/${days}d/${experience}/${equipment}/phase=${phase}/wp=[${weakPoints.join('+')}]`;
+                let plan;
+                try {
+                  plan = generatePlan({
+                    experience, daysPerWeek: days, sessionLengthMinutes: 75,
+                    equipment, goal, phase, weakPoints, recoveryRating: 'average',
+                  });
+                } catch (e) {
+                  violations.push(`THREW ${ctx}: ${e.message}`);
+                  continue;
+                }
+                violations.push(...capViolationsForPlan(plan, ctx));
+              }
+            }
+          }
+        }
+      }
+    }
+    if (violations.length) {
+      const sample = violations.slice(0, 40).join('\n');
+      // eslint-disable-next-line no-console
+      console.log(`\nSET-CAP VIOLATIONS: ${violations.length} across ${combos} combinations\n${sample}\n`);
+    }
+    expect(violations).toEqual([]);
+    expect(combos).toBeGreaterThan(50);
+  });
+
+  test("the founder's exact weak-point combo spreads across angle-diverse exercises rather than stacking, on every equipment profile", () => {
+    // WEAKPOINTS[4] above is literally documented as "the founder's exact set".
+    const weakPoints = ['Upper Chest', 'Side Delts', 'Lats / Back Width'];
+    const violations = [];
+    for (const goal of ['general', 'bodybuilding']) {
+      for (const days of DAYS) {
+        for (const equipment of EQUIPMENT) {
+          const ctx = `${goal}/${days}d/${equipment}`;
+          const plan = generatePlan({
+            experience: 'intermediate', daysPerWeek: days, sessionLengthMinutes: 75,
+            equipment, goal, phase: 'weak_point', weakPoints, recoveryRating: 'average',
+          });
+          violations.push(...capViolationsForPlan(plan, ctx));
+        }
+      }
     }
     expect(violations).toEqual([]);
   });

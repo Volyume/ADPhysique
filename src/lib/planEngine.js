@@ -600,7 +600,7 @@ function buildEffectivePool(exerciseLibrary) {
 // Subregion coverage requirements (weekly-level)
 // ---------------------------------------------------------------------------
 
-const SUBREGION_REQUIREMENTS = {
+export const SUBREGION_REQUIREMENTS = {
   back:       { minSets: 6,  required: ['vertical_pull', 'horizontal_row'] },
   hamstrings: { minSets: 6,  required: ['hip_extension', 'knee_flexion'] },
   // Glutes: Contreras split-by-type. Once volume is glute-led (Bikini/Wellness
@@ -624,6 +624,14 @@ const SUBREGION_REQUIREMENTS = {
   triceps:    { minSets: 8,  required: ['overhead'] },
   calves:     { minSets: 10, required: ['gastro', 'soleus'] },
   abs:        { minSets: 10, required: ['flexion', 'anti_extension'] },
+  // Biceps (D8, 2026-07-09): the pool already tags three real angle heads
+  // (long_head/short_head/brachialis, e.g. planEngine.js POOL biceps entries)
+  // but nothing required the engine to use them for diversity before this.
+  // Landmarks are the same shape as triceps (mev 6/mav 14/mrv 22), so the
+  // threshold mirrors triceps' minSets of 8; brachialis is left as the bonus
+  // third angle (picked by the diversity fallback once a weak-pointed
+  // session needs a 3rd exercise), the same role lower_lat plays for back.
+  biceps:     { minSets: 8,  required: ['long_head', 'short_head'] },
 };
 
 // ---------------------------------------------------------------------------
@@ -747,7 +755,19 @@ function clampDeliveredToMRV(workouts, goal, _landmarks) {
   const trimGroup = (exs, cap) => {
     let total = exs.reduce((s, e) => s + e.sets, 0);
     if (total <= cap) return;
-    for (const ex of [...exs].sort((a, b) => b.sets - a.sets)) {
+    // D8: prefer trimming an entry that already exceeds ITS OWN per-exercise
+    // cap (4 compound / 3 isolation, the thin-equipment/thin-metadata relax
+    // fallback in selectExercisesForMuscle) before touching an already-
+    // in-cap entry. Both routes bring the week under the weekly MRV total,
+    // but only trimming the cap-violator also resolves the D8 violation, so
+    // this pre-existing weekly safety net cooperates with the new cap
+    // instead of leaving it sitting over cap while shaving a smaller,
+    // compliant entry down to the floor.
+    const overOwnCap = (e) => e.sets > capForEntry({ p: e._paramKey });
+    for (const ex of [...exs].sort((a, b) => {
+      const capRank = (overOwnCap(b) ? 1 : 0) - (overOwnCap(a) ? 1 : 0);
+      return capRank !== 0 ? capRank : b.sets - a.sets;
+    })) {
       while (total > cap && ex.sets > 3) { ex.sets--; total--; }
     }
     if (total > cap) {
@@ -1002,11 +1022,37 @@ const DIVISION_SUBREGION_BIAS = {
   wellness:         { glutes: 'activator', quads: 'sweep' },
 };
 
+// Per-exercise set caps (D8, founder ruling 2026-07-09,
+// docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D8, and the
+// diagnosis at docs/exercise-planning-2026-07-09/plan-B-weak-point-sets.md):
+// 4 sets for a compound/machine-compound entry, 3 for a genuine isolation
+// movement, split off the pool's existing paramKey (`p`), which
+// poolGenerator.deriveParamKey already derives from the exercise library's
+// compound_isolation field — an entry with unknown/missing compound/
+// isolation data reads as a non-isolation paramKey there, so it defaults to
+// the 4-set cap. Replaces the old flat MAX_SETS_PER_ENTRY = 6, which let a
+// single exercise absorb an entire weak-pointed muscle's session target
+// (plan-B's "6 sets of lat pulldown" reproduction, planEngine.js:1160-177
+// pre-fix).
+export const CAP_COMPOUND = 4;
+export const CAP_ISOLATION = 3;
+const MIN_SETS_PER_ENTRY = 3;
+export function capForEntry(entry) {
+  return entry.p === 'isolation' ? CAP_ISOLATION : CAP_COMPOUND;
+}
+
 // How many exercises a session holds for a muscle, given its set target.
-// Extracted so difficulty gating can size its coverage threshold to the same
-// number the selection loop uses below.
+// Ceiling-driven (D8 R2): a muscle needs enough exercises that its session
+// target can be held within the 4/3 per-exercise cap, rather than the old
+// hard "1 exercise if <=5 sets, else always exactly 2, never 3+". Uses the
+// compound cap as the estimate (the sort already favours compound-tier picks
+// for the earliest slots); selectExercisesForMuscle grows this further below
+// if the exercises actually chosen turn out to need more (e.g. an
+// isolation-only muscle, capped at 3 each, not 4). Extracted so difficulty
+// gating can size its coverage threshold to the same number the selection
+// loop uses below.
 function numExHint(sessionTarget) {
-  return sessionTarget <= 5 ? 1 : 2;
+  return Math.max(1, Math.ceil(sessionTarget / CAP_COMPOUND));
 }
 
 // Assistance / regression lifts: the machine-assisted versions of bodyweight
@@ -1017,7 +1063,14 @@ function numExHint(sessionTarget) {
 // "Resisted" anything.
 const ASSISTED_RE = /\bassisted\b/i;
 
-function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
+// Exported for direct testing of D8's per-exercise cap + spill rule (the
+// engine-invariants / weak-point-set-cap regression tests below drive this
+// directly rather than only black-box through generatePlan, so the cap and
+// weekly-total-preservation invariants are checked at the exact layer that
+// decides them, unconfounded by the separate, pre-existing MRV safety clamp
+// that runs later in generatePlan and may legitimately trim delivered volume
+// for unrelated reasons).
+export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
   if (sessionTarget < 2) return [];
 
   let available = filterPool(muscle, equipment, goal);
@@ -1092,11 +1145,21 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     .sort((a, b) => a.score - b.score)
     .map(x => x.e);
 
-  // Determine how many exercises this session can hold for this muscle.
-  // Cap at 2 per session: each exercise needs at least 3 working sets for
-  // compounds (standard PT/coach minimum), so 6 sets minimum for two exercises.
-  // Three exercises per muscle per session fragments volume unnecessarily.
-  const numEx = numExHint(sessionTarget);
+  // Determine how many exercises this session can hold for this muscle
+  // (D8 R2): ceiling-driven from the 4/3 per-exercise cap rather than a
+  // fixed "always 1 or 2". numExHint's estimate can undershoot when the
+  // exercises actually chosen turn out to be isolation-capped (3 sets, not
+  // 4) more often than assumed; the growth loop below (after selection)
+  // corrects for that by adding one more distinct, angle-diverse exercise.
+  let numEx = numExHint(sessionTarget);
+  // Feasibility clamp: numExHint's ceil(sessionTarget / CAP_COMPOUND) can ask
+  // for more exercises than the anti-fragmentation floor allows for a small
+  // sessionTarget (e.g. ceil(5/4) = 2, but 2 exercises need at least
+  // MIN_SETS_PER_ENTRY x 2 = 6 sets combined, more than the 5 actually asked
+  // for) — the later distribution loop would then force-floor an entry above
+  // what was requested. Clamp down to what the floor can actually support so
+  // a small session target never grows an extra exercise it can't feed.
+  numEx = Math.min(numEx, Math.max(1, Math.floor(sessionTarget / MIN_SETS_PER_ENTRY)));
 
   const covered = new Set();
   const chosen = [];
@@ -1156,25 +1219,75 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     chosen.push(sorted[slot % sorted.length]);
   }
 
+  // D8 R2/R3 growth loop: if the exercises actually chosen can't hold
+  // sessionTarget within their REAL per-exercise caps (e.g. a muscle whose
+  // available library is mostly isolation movements, capped at 3 not 4), add
+  // one more distinct, angle-diverse exercise at a time rather than
+  // overloading the exercises already chosen — this is the founder's literal
+  // ask ("a new exercise... not more sets on top", plan-B intro). Bounded by
+  // two things: a genuinely unused candidate existing in the filtered pool
+  // (tryFill can't invent one — the thin-equipment/thin-metadata edge case),
+  // and the anti-fragmentation floor (an entry may never be pushed below
+  // MIN_SETS_PER_ENTRY, so growth stops once another split would require a
+  // sub-floor slice — the same floor the distribution below enforces).
+  while (
+    chosen.length > 0 &&
+    chosen.reduce((sum, e) => sum + capForEntry(e), 0) < sessionTarget &&
+    sessionTarget >= MIN_SETS_PER_ENTRY * (chosen.length + 1)
+  ) {
+    const before = chosen.length;
+    numEx += 1;
+    tryFill(false);
+    tryFill(true);
+    if (chosen.length === before) break; // pool exhausted, nothing left to spill into
+  }
+
   // Distribute sessionTarget sets across chosen exercises.
-  // Every entry gets 3-6 working sets (rebuild spec phase 1: no 2-set
-  // fragments; a single exercise holds at most 6 sets). The session target is
-  // spread as evenly as the chosen exercises allow, so a muscle's DELIVERED
-  // volume tracks its target instead of being capped at numEx*4 and dropping
-  // the remainder (the delivered-vs-target gap: a 5-set session with one
-  // isolation used to deliver 3). The reservation keeps later entries above the
-  // minimum.
-  const MIN_SETS_PER_ENTRY = 3;
-  const MAX_SETS_PER_ENTRY = 6;
+  // Every entry gets MIN_SETS_PER_ENTRY (3) up to its own type cap: 4 sets
+  // for compound/machine, 3 for isolation (D8, capForEntry above). The
+  // session target is spread as evenly as the chosen exercises allow, so a
+  // muscle's DELIVERED volume tracks its target instead of dropping the
+  // remainder (the delivered-vs-target gap: a 5-set session with one
+  // isolation used to deliver 3). The reservation keeps later entries above
+  // the minimum.
+  //
+  // Thin-equipment/thin-metadata relax (D8, plan-B §3 edge case; founder
+  // ruling: "if genuinely nothing else exists, allow the cap to relax rather
+  // than generate an unfillable plan"): if the growth loop above could not
+  // add enough distinct exercises to cover sessionTarget within everyone's
+  // real cap (totalCapacity < sessionTarget — a bodyweight-only or
+  // single-machine context with no second angle, or a target too small to
+  // split without breaching the anti-fragmentation floor), the LAST chosen
+  // exercise absorbs the shortfall rather than the week silently
+  // under-delivering the coach's weekly target. This is the only place a
+  // single entry may exceed its 4/3 cap, and only when there is genuinely
+  // nothing else to spill into.
   const n = chosen.length;
+  const totalCapacity = chosen.reduce((sum, e) => sum + capForEntry(e), 0);
   const result = [];
+  // D8 budget coherence: _req (the time-trim's "covers a required subregion"
+  // protection) is credited to only the FIRST chosen entry per required sub.
+  // Before D8 the 2-exercise ceiling made same-sub duplicates rare; the
+  // 3-exercise regime makes them routine (and the library pool's
+  // DEFAULT_SUBREGION collapses untagged muscles to one sub), and marking
+  // every duplicate _req made whole sessions untrimmable, blowing the session
+  // budget D8 explicitly bounds the spill by ("bounded by the existing
+  // session budget"). A second entry with the SAME sub adds no coverage, so
+  // it is honestly a bonus exercise the trim may drop when the clock demands.
+  const reqCredited = new Set();
   let remaining = sessionTarget;
   for (let i = 0; i < n; i++) {
     const entry = chosen[i];
+    const cap = capForEntry(entry);
     const slotsLeft = n - i;
     const slotsAfter = slotsLeft - 1;
     const reserveAfter = slotsAfter * MIN_SETS_PER_ENTRY;
-    const maxForThis = Math.min(MAX_SETS_PER_ENTRY, remaining - reserveAfter);
+    let maxForThis = Math.min(cap, remaining - reserveAfter);
+    if (i === n - 1 && totalCapacity < sessionTarget) {
+      // Relax: nothing left to spill into, so the last entry delivers
+      // whatever remains rather than the muscle under-shooting its target.
+      maxForThis = remaining;
+    }
     let s = Math.ceil(remaining / slotsLeft);
     s = Math.min(s, maxForThis);
     s = Math.max(MIN_SETS_PER_ENTRY, s);
@@ -1182,7 +1295,9 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     const exObj = makeEx(entry.n, entry.p, s, experience, nutritionPhase, goal, null);
     // Internal-only tags consumed by trimToTimeBudget, stripped before output.
     exObj._m = muscle;                              // owning muscle
-    exObj._req = covered.has(entry.sub) && requiredSubs.includes(entry.sub); // covers a required subregion
+    const isReq = covered.has(entry.sub) && requiredSubs.includes(entry.sub) && !reqCredited.has(entry.sub);
+    if (isReq) reqCredited.add(entry.sub);
+    exObj._req = isReq; // FIRST entry covering a required subregion (see reqCredited above)
     // Internal-only tags read by assignSupersets: the param tier (compound vs
     // machine vs isolation) and the equipment-modality proximity proxy. Both
     // are stripped before output alongside _m/_req/_muscle.
@@ -1258,6 +1373,11 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
     // ceiling (Brigatto/Nippard); a weak-point muscle flexes to 12 so its
     // boosted weekly volume can be expressed instead of being clipped at 8. The
     // weekly MRV cap still bounds the total.
+    // D8 coherence check (R5): both numbers still line up with the 4-set
+    // compound cap in selectExercisesForMuscle — 8 = 2 exercises x 4 sets,
+    // 12 = 3 exercises x 4 sets — so the numEx ceiling derived from
+    // sessionTarget naturally lands on 2 (normal) or 3 (weak-point) without
+    // needing a separate max-exercises constant here.
     const sessionCap = _weakPointKeys.includes(muscle) ? 12 : 8;
     const sessionTarget = Math.min(sessionCap, Math.round(wTarget / sessions));
     if (sessionTarget < 2) continue;
@@ -1482,9 +1602,18 @@ function buildWeakPointDay(weakPointKeys, weeklyTargets, landmarks, equipment, g
     experience, nutritionPhase, landmarks
   );
 
-  // Ensure at least 4 sets on first exercise
-  if (session.exercises.length > 0 && session.exercises[0].sets < 4) {
-    session.exercises[0] = { ...session.exercises[0], sets: 4 };
+  // Ensure the opening exercise carries a meaningful primary dose: at least
+  // its own D8 cap (4 compound, 3 isolation, read off the internal
+  // _paramKey selectExercisesForMuscle already stamped on it), so a
+  // weak-point day never opens on a token warm-up set count. This used to
+  // force exactly 4 regardless of type, which broke the isolation cap for
+  // the side_delts/biceps fallback muscles (line above) that are mostly
+  // isolation-only in the pool.
+  if (session.exercises.length > 0) {
+    const firstCap = session.exercises[0]._paramKey === 'isolation' ? CAP_ISOLATION : CAP_COMPOUND;
+    if (session.exercises[0].sets < firstCap) {
+      session.exercises[0] = { ...session.exercises[0], sets: firstCap };
+    }
   }
 
   return session;
@@ -1507,7 +1636,21 @@ function buildUpperLowerWPWorkouts(weeklyTargets, landmarks, equipment, goal, we
     for (const w of all) for (const ex of w.exercises) if (ex._muscle === m) total += ex.sets;
     let excess = total - cap;
     if (excess <= 0) continue;
-    const wpExs = wpDay.exercises.filter(ex => ex._muscle === m);
+    // D8: cut from an entry that already exceeds ITS OWN per-exercise cap
+    // (4 compound / 3 isolation, the thin-equipment relax fallback in
+    // selectExercisesForMuscle) before an already-in-cap entry, same
+    // cooperation fix as clampDeliveredToMRV below. Both routes bring the
+    // weak-pointed muscle's total under its MRV; only cutting the
+    // cap-violator first also resolves the D8 violation instead of leaving
+    // it sitting over cap while a compliant entry gets shaved for no cap
+    // benefit.
+    const wpExs = wpDay.exercises
+      .filter(ex => ex._muscle === m)
+      .sort((a, b) => {
+        const aOver = a.sets > capForEntry({ p: a._paramKey }) ? 1 : 0;
+        const bOver = b.sets > capForEntry({ p: b._paramKey }) ? 1 : 0;
+        return bOver - aOver || b.sets - a.sets;
+      });
     for (const ex of wpExs) {
       if (excess <= 0) break;
       const cut = Math.min(ex.sets - 3, excess);

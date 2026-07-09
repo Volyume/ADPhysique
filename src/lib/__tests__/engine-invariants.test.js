@@ -35,7 +35,10 @@ import {
   shouldSuggestDietBreak,
 } from '../nutritionEngine';
 import { emaValue, computeRecoveryEMAs } from '../recoveryEMA';
-import { generatePlan } from '../planEngine';
+import {
+  generatePlan, selectExercisesForMuscle, capForEntry,
+  SUBREGION_REQUIREMENTS, POOL,
+} from '../planEngine';
 
 // Deterministic PRNG so the fuzz run is reproducible across CI.
 function mulberry32(seed) {
@@ -559,6 +562,149 @@ describe('planEngine.generatePlan: invariants across goal/phase grid', () => {
       }
     }
     expect(combos).toBeGreaterThan(50); // sanity: we actually ran some combos
+  });
+});
+
+// ── D8: per-exercise set cap + weekly-volume-preserving spill ──────────────
+// Founder ruling 2026-07-09 (docs/ux-world-class-audit-2026-07-09/
+// DECISIONS-2026-07-09.md §D8), diagnosis at
+// docs/exercise-planning-2026-07-09/plan-B-weak-point-sets.md: "I don't want
+// more than 3-4 sets maximum per exercise... specialisation should add a
+// DIFFERENT exercise... not more sets on top." These pin the fix at the exact
+// layer that decides it (selectExercisesForMuscle), unconfounded by the
+// separate, pre-existing MRV safety clamp that runs later in generatePlan.
+describe('D8: selectExercisesForMuscle set-cap + spill invariants', () => {
+  const MUSCLES = Object.keys(POOL);
+  const EQUIPMENTS = ['full_gym', 'home_gym', 'bodyweight', 'dumbbells_only', 'machines_cables', 'barbell_plates'];
+  const GOALS = ['general', 'bodybuilding', 'mens_physique', 'bikini', 'strength_hypertrophy', 'weak_point_spec'];
+  const EXPERIENCES = ['beginner', 'intermediate', 'advanced'];
+
+  test('fuzz: no returned exercise ever exceeds its 4/3 cap, and delivered sets always equal the session target', () => {
+    for (let i = 0; i < 1000; i++) {
+      const muscle = pick(MUSCLES);
+      // sessionTarget starts at 3, not 2: a target of 2 hits a PRE-EXISTING,
+      // unrelated quirk (MIN_SETS_PER_ENTRY's unconditional floor already
+      // overshoots a 2-set ask to 3, before and after this D8 change) — out
+      // of scope for this fix, so it's excluded here rather than silently
+      // masked by a looser assertion.
+      const sessionTarget = rint(3, 12);
+      const equipment = pick(EQUIPMENTS);
+      const goal = pick(GOALS);
+      const experience = pick(EXPERIENCES);
+      const slot = rint(0, 2);
+      const usedNames = new Set();
+      let result;
+      expect(() => {
+        result = selectExercisesForMuscle(
+          muscle, sessionTarget, equipment, goal, slot, usedNames,
+          sessionTarget, {}, experience, 'maintain',
+        );
+      }).not.toThrow();
+
+      if (result.length === 0) continue; // no pool entries survive the equipment filter
+
+      // The only permitted overage is the documented thin-equipment/thin-
+      // metadata relax (plan-B §3): when the exercises actually available
+      // for this muscle/equipment combination cannot hold sessionTarget
+      // within their real caps (totalCapacity < sessionTarget — nothing
+      // left to spill into), the LAST entry may exceed its cap rather than
+      // under-deliver the weekly target. Every OTHER entry, and every entry
+      // when capacity was sufficient, must respect the cap with no
+      // exception — this is the founder's actual complaint (a stacked
+      // single exercise when a spill was possible).
+      const totalCapacity = result.reduce((s, e) => s + capForEntry({ p: e._paramKey }), 0);
+      const relaxAllowed = totalCapacity < sessionTarget;
+      result.forEach((ex, idx) => {
+        const cap = capForEntry({ p: ex._paramKey });
+        const isLast = idx === result.length - 1;
+        if (!(relaxAllowed && isLast)) {
+          expect(ex.sets).toBeLessThanOrEqual(cap);
+        }
+        expect(ex.sets).toBeGreaterThanOrEqual(1);
+      });
+
+      // R4: weekly volume is preserved (redistributed, never silently
+      // dropped) — the sum delivered always equals what was asked for.
+      const delivered = result.reduce((s, e) => s + e.sets, 0);
+      expect(delivered).toBe(sessionTarget);
+    }
+  });
+
+  test('a muscle needing more sets than 2 exercises can hold at the compound cap gets a 3rd, angle-diverse exercise, not a stacked single entry', () => {
+    // Back has 3 real angles in the pool (vertical_pull, horizontal_row,
+    // lower_lat) — exactly the founder's reported case.
+    const result = selectExercisesForMuscle(
+      'back', 11, 'full_gym', 'general', 0, new Set(), 21, {}, 'intermediate', 'maintain',
+    );
+    expect(result.length).toBe(3);
+    const sets = result.map(e => e.sets).sort((a, b) => a - b);
+    expect(sets).toEqual([3, 4, 4]); // 4+4+3 = 11, NOT 6+5
+    for (const ex of result) {
+      const cap = capForEntry({ p: ex._paramKey });
+      expect(ex.sets).toBeLessThanOrEqual(cap);
+    }
+    // Angle-diverse: 3 distinct subregions, not 2 exercises of the same angle
+    // plus a duplicate.
+    const subs = new Set(result.map(e => {
+      const entry = POOL.back.find(p => p.n === e.exerciseName);
+      return entry?.sub;
+    }));
+    expect(subs.size).toBe(3);
+  });
+
+  test('biceps is now covered by SUBREGION_REQUIREMENTS (D8: join the pool\'s existing long_head/short_head/brachialis tags)', () => {
+    expect(SUBREGION_REQUIREMENTS.biceps).toBeDefined();
+    expect(SUBREGION_REQUIREMENTS.biceps.required).toEqual(
+      expect.arrayContaining(['long_head', 'short_head']),
+    );
+  });
+
+  test('thin-equipment relax: a single available exercise absorbs the full target rather than under-delivering', () => {
+    // A tiny sessionTarget with a muscle/equipment combo that can only supply
+    // one distinct exercise still delivers the full target (relaxing the cap
+    // on that sole entry) rather than silently dropping volume.
+    const result = selectExercisesForMuscle(
+      'adductors', 6, 'bodyweight', 'general', 0, new Set(), 6, {}, 'intermediate', 'maintain',
+    );
+    if (result.length > 0) {
+      const delivered = result.reduce((s, e) => s + e.sets, 0);
+      expect(delivered).toBe(6);
+    }
+  });
+
+  test('deterministic: identical inputs always produce identical output (no randomness)', () => {
+    const args = ['back', 11, 'full_gym', 'general', 0, new Set(), 21, {}, 'intermediate', 'maintain'];
+    const a = selectExercisesForMuscle(...args);
+    const b = selectExercisesForMuscle('back', 11, 'full_gym', 'general', 0, new Set(), 21, {}, 'intermediate', 'maintain');
+    expect(a.map(e => ({ n: e.exerciseName, s: e.sets }))).toEqual(b.map(e => ({ n: e.exerciseName, s: e.sets })));
+  });
+
+  test('generatePlan-level reproduction: the founder\'s exact weak-point back scenario', () => {
+    // Intermediate, average recovery, maintain phase, 4-day upper/lower,
+    // weak-pointed "Lats / Back Width" (-> muscle key `back`) — the exact
+    // setup plan-B hand-traced to "6 sets of lat pulldown" pre-fix.
+    const plan = generatePlan({
+      experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 75,
+      equipment: 'full_gym', goal: 'general', phase: 'weak_point',
+      weakPoints: ['Lats / Back Width'], recoveryRating: 'average',
+      nutritionPhase: 'maintain', age: 35,
+    });
+    const upperA = plan.workouts.find(w => w.name === 'Upper A');
+    const upperB = plan.workouts.find(w => w.name === 'Upper B');
+    expect(upperA).toBeDefined();
+    expect(upperB).toBeDefined();
+
+    const nameToParam = {};
+    for (const e of POOL.back) nameToParam[e.n] = e.p;
+
+    for (const session of [upperA, upperB]) {
+      const backExercises = session.exercises.filter(ex => nameToParam[ex.exerciseName] != null);
+      expect(backExercises.length).toBeGreaterThanOrEqual(3); // spilled to a 3rd exercise, not stacked on 2
+      for (const ex of backExercises) {
+        const cap = capForEntry({ p: nameToParam[ex.exerciseName] });
+        expect(ex.sets).toBeLessThanOrEqual(cap); // no 6-set lat pulldown
+      }
+    }
   });
 });
 

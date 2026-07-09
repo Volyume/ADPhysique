@@ -565,6 +565,22 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // rest), the same Math.max/Math.min clamp BuildWorkoutScreen's target editors
   // use.
   function setExerciseNumber(dayIndex, exLocalId, field, value, min, max) {
+    // D8 calm nudge (founder ruling 2026-07-09): manual builder never blocks,
+    // but a quiet one-line note past 4 sets on one exercise matches the
+    // auto-gen cap's reasoning. Fires only on the crossing edge (<=4 -> >4),
+    // not on every further +1, so it stays one quiet line rather than
+    // nagging on 5->6->7. Read from the current `days` state directly
+    // (rather than inside the setDayList updater below) because a functional
+    // setState updater is not guaranteed to run synchronously, and a toast
+    // fired from inside it could double-fire under React's strict-mode
+    // double-invoke or fire out of step with the render that triggered it.
+    if (field === 'sets') {
+      const prevSets = days[dayIndex]?.exercises.find(ex => ex.localId === exLocalId)?.sets ?? 0;
+      const next = Math.max(min, Math.min(max, value));
+      if (next > 4 && prevSets <= 4) {
+        toast.show('A second exercise from a different angle usually beats piling more sets onto this one.', { variant: 'info' });
+      }
+    }
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
       return {
