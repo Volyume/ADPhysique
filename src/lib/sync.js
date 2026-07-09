@@ -234,6 +234,9 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       increment_kg: e.incrementKg ?? 2.5,
       subregion: e.subregion ?? null,
       notes: e.notes ?? null,
+      exercise_type: e.exerciseType ?? 'weight_reps', // migrate_091; mirrors
+      // insertOrUpdateExerciseFromCloud's read-side default so a custom
+      // exercise's type round-trips through sign-out/sign-in.
       updated_at: new Date(e.updatedAt ?? e.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < rows.length; i += 200) {

@@ -6502,8 +6502,8 @@ const _tsToMs = (v) => {
 // out on purpose rather than papering over with dead null-coalesces.
 // exercise_type IS a real cloud column on both tables (migrate_091) and IS
 // user-settable on a custom exercise (createExerciseType), so it round-trips
-// here even though syncExercises() does not yet push it (separate gap, owned
-// by the sync-layer migration this batch, not fixed here).
+// here; syncExercises() (sync.js) now pushes it too, so the value survives
+// a full sign-out/sign-in cycle end to end.
 export async function insertOrUpdateExerciseFromCloud(e) {
   if (!e?.id || !e?.name) return;
   const d = await db();
