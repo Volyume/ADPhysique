@@ -955,3 +955,29 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   QUEUE after: NAV-2 (waits for database.js to free), training-reminder
   habit rebuild (D17), CP-9 FAQ, CP-10 investigation, Ultimate-Audit
   11-16 round prep.
+- PLAN-F LANDED (0fef065, ENGINE HUNKS LEAD-REVIEWED HANDS-ON per D18):
+  corroborateConfidenceLevel pure one-step ladder (never lowers/originates,
+  data_hold unreachable, clamped high), suppressed under every hold incl.
+  scoffPositive+calmMode; CRITICAL judgement APPROVED: only the EMITTED
+  confidence field moves — plan-F §4.4's "no path into calorieAdjustment"
+  premise is WRONG (confidence.level feeds offTargetWeeksRequired), so
+  internals keep the base level and adjustments/heldDecisions/floors are
+  byte-identical (bounded-delta guard pins it). v65 local-only enum-only
+  classification-history table (no photo/score/text; absent from sync;
+  wipe-scoped), written post-check-in, never engine-read. Callers still
+  pass photoCorroboration=null (capability dark until display lands).
+- D19 band exception: ALREADY BUILT under D10 (883d3f8); D19-cited pins +
+  live-pool sweep tests landed (062c31f). Static allowlist judgement
+  flagged: if a future library add gives dumbbells/barbell/home a real
+  non-band vertical pull, exerciseMetadata.js needs a hand revisit.
+- PLAN-F FORKS: founder DELEGATED both to lead (answers registered as
+  "you decide and do the work"; founder also said a question failed to
+  display — rulings restated in chat for veto). LEAD RULINGS: (1) conflict
+  receipt line, exact wording in the agent brief ("Your logs and photos
+  point in slightly different directions this week. A steady weigh-in
+  routine, same time, same conditions, usually brings them back into
+  line."); (2) render-time-only caption transform on-device (nothing
+  photo-derived persisted/synced; NU-8 guard updated mechanically, dated).
+  IN FLIGHT: that implementation (Sonnet) + NAV-2 edit+delete+history
+  (Sonnet, BodyMetrics + weigh-in storage/sync, detection re-runs on
+  corrected series).
