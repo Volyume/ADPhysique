@@ -575,3 +575,15 @@ OAuth SHA-1; Cut 4 seed walk.
   ("Precision Coaching has held your calorie target."), verified against
   ae42b4d^ history; nutritionEngine suite 68/68 green. R2 finding CLOSED
   under D14 (founder-approved sweep), independent of the held review.
+- CO-1 NAMING SWEEP LANDED (Sonnet, lead-reviewed): 19 sites + 3 test
+  updates across 18 files brought into the D4 two-register rule ("Precision
+  Coaching" branded / "your coach" running prose). Included 3 case-variant
+  sites the original audit grep missed (PaywallScreen "Start Precision
+  Coaching", AttentionCard + ProSetupComplete methodology links). Left
+  alone: "Coach tab" navigation references (separate CO-6 finding),
+  lowercase common-noun "the coach" uses (flagged, not in D4 scope), code
+  comments. Judgement calls recorded in the agent report: CoachOutput:2435
+  and coachGlossary engineLog gloss read as branded surfaces. Lint clean;
+  97 screen suites green; restSuggest.test.js failure confirmed to come
+  from the unilateral agent's live WIP, not this sweep (stash-verified) -
+  MUST be green again when the unilateral build lands.

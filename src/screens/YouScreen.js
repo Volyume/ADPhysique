@@ -131,7 +131,7 @@ function buildPendingCoachCopy(readiness) {
   if (!readiness.firstWeightAt) {
     return {
       title: 'First check-in starts after your first morning weight',
-      body: 'Log your first morning weight from Today to start the baseline. The Coach will not change targets until enough data is in.',
+      body: 'Log your first morning weight from Today to start the baseline. Your coach will not change targets until enough data is in.',
     };
   }
   const rows = readiness.ledger?.rows || [];
@@ -349,7 +349,7 @@ export default function YouScreen({ navigation }) {
               ? latestReview
                 ? 'Open it to see what changed, what was held, and the exact signals behind it.'
                 : pendingCoachCopy.body
-              : 'The Coach reads your logs, applies safety limits, and explains every decision.'}
+              : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
 

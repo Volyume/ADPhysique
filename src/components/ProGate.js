@@ -44,7 +44,7 @@ const FEATURE_BENEFIT = {
   'Coaching decision': 'See the weekly decision, what changed, what held, and the signals behind it.',
   'Coaching reminders': 'Set reminders for your check-ins so the weekly coaching loop never slips.',
   'Pro goal setup': 'Set a division-specific goal so your plan and targets are built around it.',
-  'Adjust training': 'Change your schedule, equipment and training details while keeping the Coach in sync.',
+  'Adjust training': 'Change your schedule, equipment and training details while keeping Precision Coaching in sync.',
 };
 
 // Sensible default for any unmapped feature: the coaching-layer pitch the lock

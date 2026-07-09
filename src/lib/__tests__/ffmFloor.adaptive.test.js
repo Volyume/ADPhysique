@@ -112,7 +112,7 @@ describe('computeAdaptiveTDEEAdjustment + FFM floor integration', () => {
     });
     expect(result.floorHeld).toBe(true);
     expect(result.adjustmentKcal).toBe(0);
-    expect(result.insight).toMatch(/The Coach/);
+    expect(result.insight).toMatch(/Precision Coaching/);
     expect(result.insight).toMatch(/safety floor/);
     expect(result.insight).toMatch(/1800/); // mirrors back the actual intake
     expect(result.insight).toMatch(/2040/); // mirrors back the floor value

@@ -29,7 +29,7 @@ import BackHeader from '../components/BackHeader';
 
 // The always-open opener.
 const INTRO =
-  'The Coach follows clear rules. Each week it ' +
+  'Precision Coaching follows clear rules. Each week it ' +
   'reads your logged training, your morning-weight trend, your food data when ' +
   'you use Eat, and your weekly check-in answers. It then decides what should ' +
   'change, what should hold, and why.';
@@ -39,7 +39,7 @@ const INTRO =
 const SECTIONS = [
   {
     key: 'inputs',
-    title: 'What the coach reads',
+    title: 'What Precision Coaching reads',
     body:
       'The main inputs are your completed sessions, your morning-weight trend, ' +
       'your nutrition target and diary data if you use Eat, and the weekly ' +
@@ -55,7 +55,7 @@ const SECTIONS = [
       'Your calorie target normally changes at most once every two weeks, so the ' +
       'weight trend has time to settle. Acting faster than that just chases noise. ' +
       'The one exception is safety: if your weight is dropping faster than it should ' +
-      'and your energy is low, the Coach can raise your calories straight ' +
+      'and your energy is low, Precision Coaching can raise your calories straight ' +
       'away, without waiting for the two weeks.',
   },
   {
@@ -63,9 +63,9 @@ const SECTIONS = [
     title: 'Why holds happen',
     body:
       'When the trend is on target, when there is not enough data yet, when ' +
-      'recovery is low, or when a safety check applies, the Coach holds ' +
+      'recovery is low, or when a safety check applies, Precision Coaching holds ' +
       'rather than acts. The held-decision section in your coaching decision shows exactly ' +
-      'which of these applied. A held week is the Coach working, not asleep.',
+      'which of these applied. A held week is Precision Coaching working, not asleep.',
   },
   {
     key: 'training',
@@ -83,17 +83,17 @@ const SECTIONS = [
     // language, "lean mass", never "fat-free mass"/"FFM". The 30 kcal/kg
     // number and mechanism are unchanged.
     body:
-      'The Coach will not suggest a calorie cut if your average intake over ' +
+      'Precision Coaching will not suggest a calorie cut if your average intake over ' +
       'the last seven days is already at or below the energy floor for your lean ' +
       'mass. That floor is 30 calories per kilogram of lean mass a day, taken ' +
       'from sports-medicine guidance on energy availability. Below it, the body ' +
       'starts breaking down muscle to fuel itself. There is also a fixed minimum ' +
-      'below which the Coach never suggests cutting, whatever the maths says. These checks ' +
+      'below which Precision Coaching never suggests cutting, whatever the maths says. These checks ' +
       'are there by design. They are not bugs.',
   },
   {
     key: 'limits',
-    title: 'What the Coach cannot do',
+    title: 'What Precision Coaching cannot do',
     body:
       'It cannot see food you did not log. It cannot know how a set felt unless ' +
       'you log it or tell the check-in. It cannot diagnose injury, illness or body ' +
@@ -133,7 +133,7 @@ export default function MethodologyScreen({ route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="How the Coach works" />
+      <BackHeader title="How Precision Coaching works" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>{INTRO}</Text>
 

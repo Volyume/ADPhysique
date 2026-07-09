@@ -93,11 +93,11 @@ export default function AttentionCard({
           onPress={onMethodology}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
-          accessibilityLabel="How the Coach works"
+          accessibilityLabel="How Precision Coaching works"
           style={styles.trialMethodologyButton}
         >
           <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textSecondary} />
-          <Text style={styles.trialBannerLink}>How the Coach works</Text>
+          <Text style={styles.trialBannerLink}>How Precision Coaching works</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>

@@ -36,7 +36,7 @@ describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
 
   test('attention-card coach CTAs use contained neutral buttons, not loose amber text links', () => {
     const CARD = read('../../components/AttentionCard.js');
-    expect(CARD).toMatch(/accessibilityLabel="How the Coach works"[\s\S]*style=\{styles\.trialMethodologyButton\}/);
+    expect(CARD).toMatch(/accessibilityLabel="How Precision Coaching works"[\s\S]*style=\{styles\.trialMethodologyButton\}/);
     expect(CARD).toMatch(/accessibilityLabel="Pro reads the full story\. Learn about Pro coaching\."[\s\S]*style=\{styles\.freeCoachFooterButton\}/);
     expect(CARD).toMatch(/trialMethodologyButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(CARD).toMatch(/freeCoachFooterButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);

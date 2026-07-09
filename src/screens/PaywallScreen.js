@@ -199,7 +199,7 @@ export default function PaywallScreen({ navigation, route }) {
       <ModalHeader title="Upgrade" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Start the Coach</Text>
+        <Text style={styles.title}>Start Precision Coaching</Text>
         <Text style={styles.subtitle}>
           Volyume reads your training, weight, food and check-ins together, then updates your plan and targets with a written reason for every change.
         </Text>

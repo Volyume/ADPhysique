@@ -71,14 +71,14 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the plan library',
-    description: "Choose a ready-made plan. The Coach keeps adjusting whichever plan you're on.",
+    description: "Choose a ready-made plan. Your coach keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {
     id: 'manual',
     icon: 'create-outline',
     title: 'Create your own',
-    description: 'Create your own plan and choose every exercise. The Coach keeps reading your training the same way.',
+    description: 'Create your own plan and choose every exercise. Your coach keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -719,7 +719,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  The Coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
+                  Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>

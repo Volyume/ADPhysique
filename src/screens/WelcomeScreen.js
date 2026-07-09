@@ -26,7 +26,7 @@ const TRIAL_BULLETS = [
   'A plan built around your schedule, goals, and experience level.',
   'Your training and nutrition adjust as your body responds.',
   'Personalised calorie and protein targets, updated as your goals change.',
-  'The Coach explains what changed, what stayed the same, and why.',
+  'Your coach explains what changed, what stayed the same, and why.',
 ];
 
 const AFTER_TRIAL_BULLETS = [

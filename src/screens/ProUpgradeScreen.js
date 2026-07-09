@@ -384,7 +384,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </View>
 
           <Text style={styles.credentialNote}>
-            The Coach follows clear training rules and explains every change. It uses your recovery, food and progress.
+            Precision Coaching follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks

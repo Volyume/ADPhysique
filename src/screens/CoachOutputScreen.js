@@ -596,10 +596,10 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
               onPress={onLearnMore}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
-              accessibilityLabel="See how the Coach decides"
+              accessibilityLabel="See how Precision Coaching decides"
             >
               <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.heldLearnMoreText}>See how the Coach decides</Text>
+              <Text style={styles.heldLearnMoreText}>See how Precision Coaching decides</Text>
             </TouchableOpacity>
           ) : null}
         </>
@@ -795,7 +795,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         ) : null}
         <Text style={styles.insufficientBody}>
           {receipt?.rule ?? dataNote ??
-            'The Coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
+            'Your coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
         {receipt?.unlockLine ? (
           <Text style={styles.receiptUnlock}>{receipt.unlockLine}</Text>
@@ -2432,7 +2432,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             remaining dense terms in this credential line. */}
         <View style={styles.credentialNoteRow}>
           <Text style={styles.credentialNoteInline}>
-            The Coach is built on published training science: volume landmarks,{' '}
+            Precision Coaching is built on published training science: volume landmarks,{' '}
           </Text>
           <View style={styles.credentialTermRow}>
             <Text style={styles.credentialNoteInline}>autoregulation,</Text>

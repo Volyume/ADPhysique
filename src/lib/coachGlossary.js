@@ -44,7 +44,7 @@ export const GLOSSARY = {
     'How a body fat % was measured: Visual (eyeballed), BIA (a bioelectrical scale or handheld), Caliper (a skinfold pinch), DEXA (a clinical scan, the most accurate).',
   // U-E-1 / U-D-3 / U-F-5 terms: founder approved drafts 2026-06-13 (_SPEC-006).
   engineLog:
-    'A plain record of what the Coach changed in your training, and why.',
+    'A plain record of what Precision Coaching changed in your training, and why.',
   division:
     "The category you'd compete in (e.g. bodybuilding, classic physique, bikini); your plan is tailored to what that division is judged on.",
   phase:
