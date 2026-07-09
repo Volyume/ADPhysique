@@ -343,3 +343,13 @@ OAuth SHA-1; Cut 4 seed walk.
   must be floors-intact, calm-framed, adherence-neutral, suppressed under ED
   flag/calm mode, and lands as FOUNDER OPTIONS not a build. Same queue slot
   as before.
+- Library expansion LANDED (31c395b): 103 exercises (551->654), all plan-A
+  holes re-verified FIXED via live pool-generator runs (bands 0->21 + chip
+  works; hamstring hip_extension, rear-delt face_pull, incline chest, soleus,
+  front-delt machine press, unilateral gaps). Seed v3 top-up (existing
+  installs get them); canonical exercises confirmed local-only (no cloud
+  migration). FORK SURFACED (not picked): plan-A's band-tagging fix for the
+  loaded-plan vertical-pull hole contradicts the locked "bands never reach a
+  loaded plan / measurable staples only" founder rule + tests. Agent added
+  the band exercises (bodyweight context fixed), pinned current state in a
+  test, left the loaded-profile question OPEN -> founder round.
