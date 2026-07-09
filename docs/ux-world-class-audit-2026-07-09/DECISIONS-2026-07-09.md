@@ -102,3 +102,10 @@ pull at all. The rule stands for every other band exercise and context. The
 exception is documented in exerciseMetadata and pinned by updated tests
 (citations D10) replacing the blanket never-rule assertions. QUEUED into pair
 1's small-batch slot alongside the B-5 tail + approved-unbuilt items.
+
+## D11. Progress-photos loop rulings (founder, structured round, 2026-07-09)
+
+| Question | Ruling |
+|---|---|
+| Divergence handling | **Plan deeper corroboration** - commission a follow-up PLAN for photo-signal corroboration influencing coach recommendations. Constraints absolute: floors intact, ED-gated (calm/open-flag suppression), adherence-neutral, deterministic, no appearance-judgement language; the validation-data caveat from the existing blueprint must be addressed head-on in the plan (what data would validate the signal before it ever drives a recommendation). Plan only - no build without a further founder round. |
+| Benefit line | **Yes** - one calm factual line on the photo prompt + photos empty state (e.g. "The scale can't tell muscle from water. Photos can."), ED-suppression untouched. |
