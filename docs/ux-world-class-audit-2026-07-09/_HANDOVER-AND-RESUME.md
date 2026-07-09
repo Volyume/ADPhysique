@@ -300,3 +300,7 @@ OAuth SHA-1; Cut 4 seed walk.
   two-phase per-side flow on the clusterSet pattern, one workout_sets row,
   actual_reps = lower side, first-timer walkthrough like the superset modal,
   no schema change, engine volume/PR invariant preserved. Founder round next.
+- FOUNDER RULE (2026-07-09): max TWO agents at a time from now on (usage
+  protection); each pair runs to completion before the next launches. The 4
+  currently in flight (engine set-cap, library ~100, day-reorder, superset
+  plan) drain naturally; no new launches until <=2, then strict pairs.
