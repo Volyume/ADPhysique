@@ -46,6 +46,19 @@ function formatDate(ms) {
   }
 }
 
+// UK short date (DD/MM/YYYY) for the pending-coach-decision title, which sits
+// in a narrow card and wrapped to a second line with the long-form date
+// (founder D13.1, 2026-07-09). Same en-GB locale as every other date on this
+// screen, just the default numeric format instead of day/month/year options.
+function formatShortDate(ms) {
+  if (!ms) return null;
+  try {
+    return new Date(Number(ms)).toLocaleDateString('en-GB');
+  } catch (_) {
+    return null;
+  }
+}
+
 function NavRow({ icon, label, sub, onPress, pro }) {
   return (
     <Card
@@ -109,8 +122,8 @@ function buildPendingCoachCopy(readiness) {
   }
   if (readiness.edSuppressed) {
     return {
-      title: readiness.unlockLabel
-        ? `First check-in opens on ${readiness.unlockLabel}`
+      title: readiness.unlockDateMs
+        ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
         : 'First check-in not open yet',
       body: 'Volyume is keeping this calm and will not push weigh-in counts here. Use the check-in when it opens.',
     };
@@ -139,8 +152,8 @@ function buildPendingCoachCopy(readiness) {
     };
   }
   return {
-    title: readiness.unlockLabel
-      ? `First check-in opens on ${readiness.unlockLabel}`
+    title: readiness.unlockDateMs
+      ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
       : 'First check-in not open yet',
     body: 'Keep logging morning weight and training. Volyume waits for enough baseline data before it changes targets.',
   };
@@ -309,10 +322,12 @@ export default function YouScreen({ navigation }) {
         ) : null}
 
         {/* Audit item 3 (Coach-tab root reorder, 2026-07-08): the coach's own
-            read leads the screen, latest decision first, then this week's
-            check-in/decision entry points, THEN the athlete-profile card.
+            read leads the screen as the hero, ahead of every nav section.
             Account/settings is demoted to the header gear above, so nothing
-            about the app itself outranks the coaching content. */}
+            about the app itself outranks the coaching content. The athlete-
+            profile card used to follow the "This week" nav rows here; D13.3
+            (2026-07-09) moved it up to directly beneath this hero -- see the
+            comment below. */}
         <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
           <View style={styles.statusTop}>
             <View style={styles.statusIcon}>
@@ -336,6 +351,40 @@ export default function YouScreen({ navigation }) {
                 : pendingCoachCopy.body
               : 'The Coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>
+        </Card>
+
+        {/* D13.3 (2026-07-09 founder direct order): the profile card had
+            drifted to the bottom of "This week" after the 2026-07-08 reorg.
+            The founder likes that reorg overall (the coach's own read still
+            leads the screen as the hero above), but wants the profile back
+            as a prominent identity anchor rather than buried mid-scroll. It
+            sits directly under the hero, ahead of every nav section, rather
+            than literally first, so the coach's live decision keeps leading
+            per the liked reorg while the profile is the very next thing seen. */}
+        <Card
+          style={styles.profileCard}
+          onPress={() => navigation.navigate('AthleteProfile')}
+          accessibilityLabel="Open athlete profile"
+        >
+          <ProfileAvatarMark
+            avatarUri={avatarUri}
+            presetKey={userProfile?.avatarPreset}
+            displayName={displayName}
+            size={56}
+          />
+          <View style={styles.profileInfo}>
+            <View style={styles.profileNameRow}>
+              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              {isPro ? <ProBadge size="sm" /> : null}
+            </View>
+            {sessions != null ? (
+              <Text style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+            ) : user?.id ? (
+              <Skeleton width={110} height={12} />
+            ) : null}
+            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </Card>
 
         {isPro ? (
@@ -380,32 +429,6 @@ export default function YouScreen({ navigation }) {
             ) : null}
           </View>
         )}
-
-        <Card
-          style={styles.profileCard}
-          onPress={() => navigation.navigate('AthleteProfile')}
-          accessibilityLabel="Open athlete profile"
-        >
-          <ProfileAvatarMark
-            avatarUri={avatarUri}
-            presetKey={userProfile?.avatarPreset}
-            displayName={displayName}
-            size={56}
-          />
-          <View style={styles.profileInfo}>
-            <View style={styles.profileNameRow}>
-              <Text style={styles.profileName} numberOfLines={1}>{displayName}</Text>
-              {isPro ? <ProBadge size="sm" /> : null}
-            </View>
-            {sessions != null ? (
-              <Text style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
-            ) : user?.id ? (
-              <Skeleton width={110} height={12} />
-            ) : null}
-            {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
-        </Card>
 
         {isPro ? (
           <View style={styles.section}>

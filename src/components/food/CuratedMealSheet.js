@@ -64,7 +64,7 @@ export default function CuratedMealSheet({
             <View style={styles.section}>
               <View style={styles.addHead}>
                 <Ionicons name="leaf-outline" size={15} color={colors.primary} />
-                <SectionLabel>Add to taste, all free</SectionLabel>
+                <SectionLabel>Optional extras</SectionLabel>
               </View>
               <Text style={styles.intro}>{ADDITIONS_INTRO}</Text>
               {additions.map((a) => (

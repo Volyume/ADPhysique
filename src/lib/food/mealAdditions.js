@@ -24,8 +24,11 @@
 import { CURATED_MEALS } from './curatedMeals';
 
 // A short, honest, pro-food intro shown above the additions in the sheet.
+// Reframed (founder D12.4, 2026-07-09): the previous wording read like a
+// checklist to work through. This makes the optional, pick-any-for-flavour
+// nature explicit, and states plainly that the numbers do not move.
 export const ADDITIONS_INTRO =
-  'A starting point, not a rule. Season and tweak to taste with herbs, spices, citrus or sauces you enjoy.';
+  "Optional extras. Add any you fancy for flavour. They will not change the meal's numbers.";
 
 // An honesty footnote (some sauces do add up in large amounts).
 export const ADDITIONS_FOOTNOTE =
