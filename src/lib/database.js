@@ -6349,7 +6349,9 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
 export async function getCoachOutputHistory(userId, limit = 52) {
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT week_start, output_json FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT ?',
+    `SELECT week_start, output_json FROM coach_outputs
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY week_start DESC LIMIT ?`,
     [userId, limit],
   );
   return rows.map(r => {
