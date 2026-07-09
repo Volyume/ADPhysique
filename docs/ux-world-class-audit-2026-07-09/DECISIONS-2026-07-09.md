@@ -79,3 +79,15 @@ full normal recovery (it rests while the other works). Derived automatically
 from the exercise's existing rest setting (rounding: whole seconds, ceil);
 no separate user setting to learn; the usual timer adjust controls still work
 on the derived value.
+
+### D9 amendment 2 (founder, 2026-07-09, supersedes amendment 1's uniform
+rule): between-sides rest is set BY EXERCISE CLASS via the existing
+compound_isolation field:
+- COMPOUND unilateral (split squats, heavy rows): half the exercise's normal
+  rest between sides AND after the second side (120s -> L, 60, R, 60, L...).
+- ISOLATION unilateral (curls, raises, extensions): a "Switch sides" prompt
+  (no forced timer, swap when ready), then the FULL normal rest after both
+  sides.
+Rationale (expert review vs real-world practice): resting limb recovers while
+the other works; systemic fatigue only matters on compounds. One deterministic
+rule, no user configuration, self-explanatory in the flow.
