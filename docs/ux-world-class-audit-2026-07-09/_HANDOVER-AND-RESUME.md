@@ -628,3 +628,7 @@ OAuth SHA-1; Cut 4 seed walk.
   flagged deviation: recents row also hides when muscle/equipment filter
   chips are active (entry point into an untouched browse, not a filter) -
   keep. SCORECARD note: exercise library/picker gaps L07-F6/F7 now closed.
+- FOUNDER (2026-07-09, late): concurrency REVERTS to TWO agents max once
+  the current three in flight (Charts, History, Food-copy) land - token
+  budget running tight for the 5-hour window. Prefer cheaper tiers even
+  more aggressively; Smalls bundle fires only as part of a pair.
