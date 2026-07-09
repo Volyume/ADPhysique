@@ -17,8 +17,13 @@ const KCAL_STROKE = 14;
 // a deviation by colour, since for the at-risk subgroup colour-coded targets
 // drive the harm pattern. The numbers stay factual (value/target). Kept as a
 // function so the ring tint has a single source for call sites and tests.
+// Light-theme coverage audit LT-2/D7 (2026-07-09): this is the Skia ring
+// STROKE, not a text ink, so it takes the bright fill token (`primaryFill`,
+// the same one the LT-1 Button fix used), not the muted `primary` ink token
+// calibrated for text-on-light contrast. Colour choice only, no change to
+// the adherence-neutral behaviour above.
 export function bandColour() {
-  return colors.primary;
+  return colors.primaryFill;
 }
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {

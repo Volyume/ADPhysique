@@ -11,17 +11,20 @@ import MacroRings, { bandColour } from '../MacroRings';
 import { colors } from '../../../styles/theme';
 
 describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
-  test('always the brand amber, regardless of under or over target', () => {
-    expect(bandColour(0, 100)).toBe(colors.primary);
-    expect(bandColour(80, 100)).toBe(colors.primary);
-    expect(bandColour(100, 100)).toBe(colors.primary);
-    expect(bandColour(150, 100)).toBe(colors.primary);
+  // Light-theme coverage audit LT-2/D7 (2026-07-09): the ring is a Skia
+  // STROKE, so it takes the bright fill token (`primaryFill`), not the
+  // muted text-ink token (`primary`) - see MacroRings.js's bandColour comment.
+  test('always the brand amber fill, regardless of under or over target', () => {
+    expect(bandColour(0, 100)).toBe(colors.primaryFill);
+    expect(bandColour(80, 100)).toBe(colors.primaryFill);
+    expect(bandColour(100, 100)).toBe(colors.primaryFill);
+    expect(bandColour(150, 100)).toBe(colors.primaryFill);
   });
 
-  test('no target also resolves to the brand amber', () => {
-    expect(bandColour(100, null)).toBe(colors.primary);
-    expect(bandColour(0, undefined)).toBe(colors.primary);
-    expect(bandColour()).toBe(colors.primary);
+  test('no target also resolves to the brand amber fill', () => {
+    expect(bandColour(100, null)).toBe(colors.primaryFill);
+    expect(bandColour(0, undefined)).toBe(colors.primaryFill);
+    expect(bandColour()).toBe(colors.primaryFill);
   });
 
   test('never signals success-green or warning-amber (no colour judgement)', () => {
