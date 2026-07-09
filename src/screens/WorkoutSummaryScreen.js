@@ -122,12 +122,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sessionAdjustments = [],
   } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, units, userProfile, session, tier } = useAppStore(useShallow(s => ({
+  const { user, units, userProfile, session, tier, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
     userProfile: s.userProfile,
     session: s.session,
     tier: s.tier,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
   const toast = useToast();
   // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
@@ -1369,7 +1370,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       <Modal
         visible={templateModalVisible}
         transparent
-        animationType="fade"
+        animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => setTemplateModalVisible(false)}
       >
         <KeyboardAvoidingView

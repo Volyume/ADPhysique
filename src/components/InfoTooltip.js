@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type } from '../styles/theme';
 
 export default function InfoTooltip({ text, size = 14 }) {
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const [visible, setVisible] = useState(false);
   return (
     <>
@@ -18,7 +20,7 @@ export default function InfoTooltip({ text, size = 14 }) {
       >
         <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
       </TouchableOpacity>
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+      <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setVisible(false)}>
         <TouchableOpacity
           style={styles.overlay}
           activeOpacity={1}

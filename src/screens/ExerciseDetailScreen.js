@@ -870,7 +870,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       {/* Goal-setting bottom sheet */}
       <Modal
         visible={goalModalVisible}
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         transparent
         onRequestClose={() => setGoalModalVisible(false)}
       >

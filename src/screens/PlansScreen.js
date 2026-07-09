@@ -100,11 +100,12 @@ export default function PlansScreen({ navigation }) {
   // subscribed to every store mutation (rest timer ticks, PR queue
   // updates, set saves) which forced a full PlansScreen re-render every
   // second during a workout.
-  const { user, startWorkout, tier, userProfile } = useAppStore(useShallow(s => ({
+  const { user, startWorkout, tier, userProfile, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
     tier: s.tier,
     userProfile: s.userProfile,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
@@ -1010,7 +1011,7 @@ export default function PlansScreen({ navigation }) {
       <Modal
         visible={!!folderPrompt}
         transparent
-        animationType="fade"
+        animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => { if (!savingFolder) setFolderPrompt(null); }}
       >
         <KeyboardAvoidingView

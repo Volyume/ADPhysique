@@ -14,6 +14,7 @@
 // once near the app root.
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 
 let _enqueue = null;
@@ -31,6 +32,7 @@ export function appAlert(title, message, buttons, options) {
 }
 
 export function AppAlertHost() {
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const [current, setCurrent] = useState(null);
   const queueRef = useRef([]);
   const showingRef = useRef(false);
@@ -79,7 +81,7 @@ export function AppAlertHost() {
   const stacked = buttons.length > 2;
 
   return (
-    <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={onBackdrop}>
+    <Modal transparent animationType={reduceMotion ? 'none' : 'fade'} statusBarTranslucent onRequestClose={onBackdrop}>
       <TouchableOpacity
         style={styles.backdrop}
         activeOpacity={1}

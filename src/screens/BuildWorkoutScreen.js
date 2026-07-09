@@ -34,13 +34,14 @@ const DEFAULT_REST = 90;
 export default function BuildWorkoutScreen({ navigation }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs } = useAppStore(useShallow(s => ({
+  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
     units: s.units,
     defaultRestSeconds: s.defaultRestSeconds,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
   // Hydrate the device-local workout prefs so a cold build started before
   // visiting Settings/ActiveWorkout still picks up the user's saved default rest.
@@ -412,7 +413,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         </View>
       </BottomSheet>
 
-      <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
+      <Modal visible={showPicker} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setShowPicker(false)}>
         {/* Nested provider: a core RN <Modal> presents in its own window on iOS
             and would otherwise read top:0, jamming the search field against the
             status bar / Dynamic Island. */}

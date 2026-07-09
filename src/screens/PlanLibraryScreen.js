@@ -239,8 +239,9 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 export default function PlanLibraryScreen({ navigation, route }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user } = useAppStore(useShallow(s => ({
+  const { user, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
 
@@ -609,7 +610,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
       <Modal
         visible={quizVisible}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={dismissQuiz}
       >
         <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={dismissQuiz}>

@@ -50,6 +50,7 @@ const EXERCISE_TYPE_OPTIONS = [
 export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel, actionLabel }) {
   const toast = useToast();
   const userId = useAppStore(s => s.user?.id);
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const isSwapAction = buttonLabel.toLowerCase().includes('swap');
   const showBrowseFilters = !isSwapAction;
@@ -179,7 +180,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={showCreate ? () => setShowCreate(false) : onClose}>
+    <Modal visible={visible} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={showCreate ? () => setShowCreate(false) : onClose}>
       {/* A core RN <Modal> presents in its own window on iOS and does not
           inherit the root SafeAreaProvider's measured frame, so a bare
           SafeAreaView inside reads top:0 and the search field jams against the

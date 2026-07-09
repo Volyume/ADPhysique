@@ -2676,7 +2676,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         <Modal
           visible={!!supersetHeadsUp}
           transparent
-          animationType="fade"
+          animationType={reduceMotion ? 'none' : 'fade'}
           onRequestClose={() => setSupersetHeadsUp(null)}
         >
           {supersetHeadsUp ? (
@@ -2776,7 +2776,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
         {/* Stale workout recovery modal */}
-        <Modal visible={showStaleModal} transparent animationType="fade" onRequestClose={() => setShowStaleModal(false)}>
+        <Modal visible={showStaleModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowStaleModal(false)}>
           {showStaleModal ? (
           <View style={styles.staleOverlay}>
             <View style={styles.staleSheet}>
@@ -3211,7 +3211,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </WorkoutBottomSheet>
 
         {/* Exercise Swap Modal */}
-        <Modal visible={showSwapModal} animationType="slide" onRequestClose={() => setShowSwapModal(false)}>
+        <Modal visible={showSwapModal} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setShowSwapModal(false)}>
           {showSwapModal ? (
             <>
           {/* Nested provider: a core RN <Modal> presents in its own window on
@@ -3279,7 +3279,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
         </Modal>
         {/* Discard Workout Modal */}
-        <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
+        <Modal visible={showDiscardModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowDiscardModal(false)}>
           {showDiscardModal ? (
           <View style={styles.discardOverlay}>
             <View style={styles.discardSheet}>
@@ -3324,7 +3324,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         <Modal
           visible={editingSet != null}
           transparent
-          animationType="fade"
+          animationType={reduceMotion ? 'none' : 'fade'}
           onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
         >
           {editingSet != null ? (

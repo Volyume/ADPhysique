@@ -91,10 +91,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const toast = useToast();
   const { routineId } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, startWorkout } = useAppStore(useShallow(s => ({
+  const { user, userProfile, startWorkout, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     startWorkout: s.startWorkout,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
   const [routine, setRoutine] = useState(null);
   const [exercises, setExercises] = useState([]);
@@ -504,7 +505,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       {/* Edit exercise modal */}
       <Modal
         visible={!!editingExercise}
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         transparent
         onRequestClose={() => setEditingExercise(null)}
       >
@@ -606,7 +607,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       {/* Plan-level swap modal */}
       <Modal
         visible={swapState != null}
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => { setSwapState(null); setSwapCandidates([]); }}
       >
         {/* AY-4 (2026-07-09 design audit): traps screen-reader navigation to

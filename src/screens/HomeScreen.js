@@ -109,8 +109,8 @@ const READINESS_ROWS = [
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments, reduceMotion } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments, reduceMotion: s.accessibility?.reduceMotion }))
   );
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
@@ -2022,7 +2022,7 @@ export default function HomeScreen({ navigation, route }) {
       <Modal
         visible={showBlockShape}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => setShowBlockShape(false)}
       >
         <TouchableOpacity
@@ -2056,7 +2056,7 @@ export default function HomeScreen({ navigation, route }) {
       <Modal
         visible={showChangeWorkout}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => setShowChangeWorkout(false)}
       >
         <TouchableOpacity
@@ -2164,7 +2164,7 @@ export default function HomeScreen({ navigation, route }) {
       <Modal
         visible={showIntentPrompt}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
       >
         <View style={styles.intentOverlay}>
