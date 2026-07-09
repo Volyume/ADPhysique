@@ -255,3 +255,8 @@ OAuth SHA-1; Cut 4 seed walk.
   CuratedMealSheet. R2 (CO-1 subset): nutritionEngine.js:402 FFM-floor hold
   insight says "The Coach has held" (D4 violation in ED-safety copy) ->
   hands-on one-word fix pending guard-test check.
+- FOUNDER: adversarial whole-diff review HELD until everything else is done.
+  R1 (additions allergen filtering) and R2 (nutritionEngine:402 D4 actor) are
+  RECORDED ABOVE, NOT FIXED - do not fix until the review resumes. Exercise
+  plan decision rounds (plan-A 5 Qs + plan-B 6 Qs) ready whenever the founder
+  wants them; engine/library builds wait on those answers.
