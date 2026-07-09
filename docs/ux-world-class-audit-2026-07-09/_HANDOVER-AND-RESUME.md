@@ -355,6 +355,11 @@ OAuth SHA-1; Cut 4 seed walk.
   reading); lowest capable agent tier; ~4 agents per batch to completion;
   per-stage handover append + push at every boundary; NO attribution in
   commits; reset-author rebase before every push.
+- FOUNDER RULE (2026-07-09 resume session, standing): update and PUSH the
+  handover + decision documents after EVERY completed pair of agent tasks
+  (not just at session end), so a guardrail stop or chat loss never costs
+  progress — a clean context must be able to resume fully and in detail
+  from the docs alone. Max TWO agents in flight (re-affirmed).
 - Cohesion-01 (flow/language) LANDED: cohesion-01-flow-language.md, 7 findings
   (A1/B4/C2). Headline CO-1: D4 naming ("The Coach" banned) unimplemented at
   20 sites/14 files incl. YouScreen:337 headline, MethodologyScreen:32, and
