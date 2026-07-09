@@ -238,3 +238,24 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
 - **LT-3 light-theme elevation: IMPLEMENT THE POLICY** ("Do this", with
   lead judgement latitude): light-theme-only shadow token on the shared
   Card primitive; dark theme keeps the surface ladder untouched.
+
+## D18 — Plan-F progress-photo corroboration (founder, 2026-07-09, resume session)
+- **Founder ruling, verbatim intent: THERE IS NO STAGE 2. Everything that
+  needs coding gets coded now. No putting things off.** The staged-rollout
+  framing is dead: plan-F's ENTIRE coding surface builds now as one piece
+  of work — receipt copy (old Stage 0), the persisted classification-
+  history table + guard tests (old Stage 1), AND the bounded corroboration
+  attachment (photo signal may move confidence.level by exactly one
+  bounded step under the named rule in plan-F §4.4; the byte-identical
+  engine guard narrows to a bounded-delta guard as part of this build).
+- **Safety bounds are part of the build, not optional:** floors untouched,
+  one bounded step maximum, suppressed under ED flag/calm mode,
+  adherence-neutral framing, deterministic. Engine hunk gets hands-on
+  Fable lead review (or hands-on build) at landing per the standing
+  engine rule.
+- **Non-coding validation items (founder-side, not code):** Tier 1
+  volunteer study = leave as-is, revisit later. Tier 2 external programme
+  = not at this time. Neither blocks the code above — that is the
+  founder's explicit call.
+- Stage 0 receipt wording: builder reads plan-E's open question 2 context;
+  if a genuine wording fork remains, surface it, do not invent.
