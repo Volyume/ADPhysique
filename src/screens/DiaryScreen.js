@@ -46,7 +46,6 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import FirstFoodPrompt from '../components/food/FirstFoodPrompt';
-import MicronutrientPanel from '../components/food/MicronutrientPanel';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
@@ -292,11 +291,12 @@ export default function DiaryScreen({ navigation, route }) {
     try {
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
+      if (n > 0) dismissMarkEatenHint(); // discovery: bulk mark-as-eaten used
       toast.show(n > 0 ? `${n} planned ${n === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint]);
 
   // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
   // meal's planned rows, not the whole day, so staging a plan into the diary
@@ -309,11 +309,14 @@ export default function DiaryScreen({ navigation, route }) {
     try {
       const n = await confirmPlannedDay(userId, selectedDate, slotKey);
       await load();
-      if (n > 0) toast.show('Marked as eaten.', { variant: 'success' });
+      if (n > 0) {
+        dismissMarkEatenHint(); // discovery: per-meal mark-as-eaten used
+        toast.show('Marked as eaten.', { variant: 'success' });
+      }
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint]);
 
   const handleClearPlanned = useCallback(async () => {
     if (!userId || !canWrite()) return;
@@ -598,6 +601,11 @@ export default function DiaryScreen({ navigation, route }) {
   // discovery) or dismisses it directly, never again after.
   const [showFoodHint, setShowFoodHint] = useState(false);
   const [showWaterHint, setShowWaterHint] = useState(false);
+  // D12 item 3 (ux-world-class-audit-2026-07-09): a user's first sight of
+  // planned meals in the diary now has no bulk-mark button right there (it
+  // moved to the bottom of the page, D12 item 2), so this one-time hint
+  // teaches both ways to confirm a planned meal, same once-ever convention.
+  const [showMarkEatenHint, setShowMarkEatenHint] = useState(false);
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
@@ -605,6 +613,9 @@ export default function DiaryScreen({ navigation, route }) {
     }).catch(() => {});
     AsyncStorage.getItem(DIARY_WATER_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowWaterHint(true);
+    }).catch(() => {});
+    AsyncStorage.getItem(DIARY_MARKEATEN_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowMarkEatenHint(true);
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -615,6 +626,10 @@ export default function DiaryScreen({ navigation, route }) {
   const dismissWaterHint = useCallback(() => {
     setShowWaterHint(false);
     AsyncStorage.setItem(DIARY_WATER_HINT_KEY, 'true').catch(() => {});
+  }, []);
+  const dismissMarkEatenHint = useCallback(() => {
+    setShowMarkEatenHint(false);
+    AsyncStorage.setItem(DIARY_MARKEATEN_HINT_KEY, 'true').catch(() => {});
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
@@ -1265,16 +1280,6 @@ export default function DiaryScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        {/* MN-1 (audit §15 item 2): Pro-only, same tier check every other
-            write/Pro affordance on this screen already derives from the
-            store (`readOnly = tier !== 'pro'`). Collapsed by default inside
-            the component itself; nothing resolves until the user taps it. */}
-        {!readOnly ? (
-          <View style={styles.micronutrientWrap}>
-            <MicronutrientPanel entries={viewEntries} userId={userId} />
-          </View>
-        ) : null}
-
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
@@ -1336,37 +1341,20 @@ export default function DiaryScreen({ navigation, route }) {
           )
         ) : (
           <>
-            {plannedCount > 0 && !selectionMode && !readOnly ? (
-              <View style={styles.plannedBanner}>
-                <Text style={styles.plannedBannerText}>
-                  {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
-                  {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
-                </Text>
-                <View style={styles.plannedBannerRow}>
-                  {!isFutureDay ? (
-                    <Button
-                      title="Mark as eaten"
-                      onPress={handleConfirmPlanned}
-                      variant="primary"
-                      size="sm"
-                      fullWidth={false}
-                      style={styles.plannedBtnPrimary}
-                      textStyle={styles.plannedBtnPrimaryText}
-                      accessibilityLabel="Mark planned meals as eaten"
-                    />
-                  ) : null}
-                  <Button
-                    title="Clear"
-                    onPress={handleClearPlanned}
-                    variant="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    style={styles.plannedBtnGhostButton}
-                    textStyle={styles.plannedBtnGhost}
-                    accessibilityLabel="Clear the planned meals"
-                  />
-                </View>
-              </View>
+            {/* D12 item 3 (ux-world-class-audit-2026-07-09): the bulk
+                "mark all as eaten" banner used to live here; it is now at
+                the bottom of the page (D12 item 2). The first time a user
+                sees planned meals in the diary, this one-time hint (same
+                '@volyume_seen_*' once-ever convention as showFoodHint /
+                showWaterHint below) teaches both ways to confirm them, since
+                the bulk control is no longer visible at this scroll
+                position. Gone the moment it's dismissed or the user marks
+                any meal as eaten (individually or in bulk). */}
+            {plannedCount > 0 && !selectionMode && !readOnly && showMarkEatenHint ? (
+              <HintCaption
+                text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
+                onDismiss={dismissMarkEatenHint}
+              />
             ) : null}
             {/* Wave A C7: one quiet caption the first time the day's meals
                 render with content, covering both "hold a food" gestures a
@@ -1496,6 +1484,45 @@ export default function DiaryScreen({ navigation, route }) {
           showHint={showWaterHint}
           onDismissHint={dismissWaterHint}
         />
+
+        {/* D12 (ux-world-class-audit-2026-07-09, founder direct order): the
+            bulk "mark all planned meals as eaten" control demoted to the
+            bottom of the diary page. Per-meal marking (MealSection's
+            onConfirmPlanned, wired above) is the primary interaction; this
+            is the same confirm/clear pair and gating that used to sit above
+            the meal sections, unchanged in behaviour, just relocated. */}
+        {plannedCount > 0 && !selectionMode && !readOnly ? (
+          <View style={styles.plannedBanner}>
+            <Text style={styles.plannedBannerText}>
+              {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
+              {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
+            </Text>
+            <View style={styles.plannedBannerRow}>
+              {!isFutureDay ? (
+                <Button
+                  title="Mark as eaten"
+                  onPress={handleConfirmPlanned}
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.plannedBtnPrimary}
+                  textStyle={styles.plannedBtnPrimaryText}
+                  accessibilityLabel="Mark planned meals as eaten"
+                />
+              ) : null}
+              <Button
+                title="Clear"
+                onPress={handleClearPlanned}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={styles.plannedBtnGhostButton}
+                textStyle={styles.plannedBtnGhost}
+                accessibilityLabel="Clear the planned meals"
+              />
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
       </GestureDetector>
 
@@ -1780,6 +1807,7 @@ const WATER_TARGET_KEY = '@volyume_water_target_ml';
 // '@volyume_seen_workout_info' (ActiveWorkoutScreen).
 const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
 const DIARY_WATER_HINT_KEY = '@volyume_seen_diary_water_hint';
+const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 
 function WaterRow({
   ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false,
@@ -2015,7 +2043,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
-  micronutrientWrap: { marginBottom: spacing.lg },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,
