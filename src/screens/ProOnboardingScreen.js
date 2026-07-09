@@ -53,8 +53,15 @@ const PROTEIN_SHORT = {
   advanced:  'Upper end for competitive athletes and harder cuts.',
 };
 
-const TOTAL_STEPS = 5;
-const STEP_LABELS = ['Account', 'Baseline', 'Training week', 'Targets', 'Check-in rhythm'];
+// L04-6: Step 2 used to bundle two QuestionGroups (required details, then
+// starting body composition) on one scroll, up to 7 fields at the highest-
+// abandon-risk moment in onboarding, breaking the wizard's own "few fields
+// per step" rule that Steps 3-4 (now 4-5) already followed. Body composition
+// is now its own step (3), matching the one-QuestionGroup-per-step pattern
+// used everywhere else. TOTAL_STEPS moved from 5 to 6; every step after the
+// old Step 2 shifted up by one.
+const TOTAL_STEPS = 6;
+const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
@@ -62,20 +69,23 @@ const STEP_OUTCOMES = {
   ],
   2: [
     { icon: 'calculator-outline', label: 'Calorie baseline' },
-    { icon: 'barbell-outline', label: 'Protein target' },
     { icon: 'trending-up-outline', label: 'Weight trend' },
   ],
   3: [
+    { icon: 'analytics-outline', label: 'Body composition' },
+    { icon: 'barbell-outline', label: 'Protein target' },
+  ],
+  4: [
     { icon: 'calendar-outline', label: 'Training split' },
     { icon: 'time-outline', label: 'Session length' },
     { icon: 'fitness-outline', label: 'Exercise pool' },
   ],
-  4: [
+  5: [
     { icon: 'flag-outline', label: 'Goal phase' },
     { icon: 'body-outline', label: 'Muscle priorities' },
     { icon: 'restaurant-outline', label: 'Nutrition target' },
   ],
-  5: [
+  6: [
     { icon: 'pulse-outline', label: 'Recovery guardrails' },
     { icon: 'notifications-outline', label: 'Check-in rhythm' },
     { icon: 'heart-outline', label: 'Cardio setting' },
@@ -505,7 +515,7 @@ export default function ProOnboardingScreen({ navigation }) {
   }, [user]);
 
   // Debounced draft save on any answer/step change while the wizard is live.
-  // Skips step 1 (auth-owned) and the final submission (advanceFrom5 clears
+  // Skips step 1 (auth-owned) and the final submission (advanceFrom6 clears
   // the draft; a queued save after that would resurrect it).
   const draftTimerRef = useRef(null);
   useEffect(() => {
@@ -629,19 +639,29 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(3);
   }
 
+  // L04-6: body composition (body fat % + source) is entirely optional, so
+  // this step carries no required-field gate, unlike advanceFrom2. It is its
+  // own step purely so the required-details step (2) doesn't also have to
+  // carry it, matching the "few fields per step" rule the rest of the wizard
+  // follows.
   function advanceFrom3() {
-    // Step 3 is now logistics only (experience, session length, days, kit).
-    // The goal/phase questions moved to step 4 so neither step carries more
-    // than a handful of fields (the 3-5-per-step rule).
-    if (!experience || !sessionLengthMinutes || !equipment) {
-      appAlert('Complete all fields', 'Please fill out your training setup to continue.');
-      return;
-    }
     emitStepDone(3);
     setStep(4);
   }
 
   function advanceFrom4() {
+    // Step 4 is logistics only (experience, session length, days, kit). The
+    // goal/phase questions live in step 5 so neither step carries more than a
+    // handful of fields (the 3-5-per-step rule).
+    if (!experience || !sessionLengthMinutes || !equipment) {
+      appAlert('Complete all fields', 'Please fill out your training setup to continue.');
+      return;
+    }
+    emitStepDone(4);
+    setStep(5);
+  }
+
+  function advanceFrom5() {
     if (!trainingGoal || !trainingPhase) {
       appAlert('Almost there', 'Choose what you are focused on to continue.');
       return;
@@ -653,8 +673,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
     // screen under Coach for anyone who wants it.
-    emitStepDone(4);
-    setStep(5);
+    emitStepDone(5);
+    setStep(6);
   }
 
   // The four honest stage lines, mapped to real _generatePlanInner phases.
@@ -705,7 +725,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // Tidy the stage timers if the screen unmounts mid-sequence.
   useEffect(() => cancelSequenceTimers, []);
 
-  async function advanceFrom5() {
+  async function advanceFrom6() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -1033,7 +1053,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 2) {
     // Gate the Continue button on every required field (same pattern as steps
-    // 3-5), so the step visibly REFUSES to advance until they are all valid.
+    // 4-6), so the step visibly REFUSES to advance until they are all valid.
     // Biological sex is the critical one: it must be an explicit male/female
     // choice, a null must never progress (and must never be silently defaulted
     // downstream). Body weight and age are validated to their real ranges here
@@ -1247,6 +1267,43 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </QuestionGroup>
 
+            {!canContinue ? (
+              <Text style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
+            ) : null}
+
+            <Button
+              title="Continue"
+              trailingIcon="arrow-forward"
+              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+              onPress={canContinue ? advanceFrom2 : undefined}
+              disabled={!canContinue}
+              textStyle={styles.primaryBtnText}
+              accessibilityLabel="Continue"
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 3, Starting body composition ───────────────────────────────────────
+  // L04-6: split out of the old Step 2, which bundled this alongside the five
+  // required-details fields (up to 7 fields on one scroll). Body fat is
+  // optional, so this step carries no required-field gate (matches the old
+  // behaviour, where these fields never featured in canContinue).
+
+  if (step === 3) {
+    return (
+      <SafeAreaView key="step-3" style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <ProOnboardingHeader
+              step={step}
+              title="Add your starting body composition"
+              sub="An honest estimate sharpens your first plan. Skip this if you are not sure."
+              onBack={goBack}
+            />
+
             <QuestionGroup
               icon="analytics-outline"
               title="Starting body composition"
@@ -1288,16 +1345,11 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </QuestionGroup>
 
-            {!canContinue ? (
-              <Text style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
-            ) : null}
-
             <Button
               title="Continue"
               trailingIcon="arrow-forward"
-              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom2 : undefined}
-              disabled={!canContinue}
+              style={styles.primaryBtn}
+              onPress={advanceFrom3}
               textStyle={styles.primaryBtnText}
               accessibilityLabel="Continue"
             />
@@ -1307,13 +1359,13 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 3, Training setup (logistics) ──────────────────────────────────────
+  // ── Step 4, Training setup (logistics) ──────────────────────────────────────
 
-  if (step === 3) {
+  if (step === 4) {
     const canContinue = !!experience && !!sessionLengthMinutes && !!equipment;
 
     return (
-      <SafeAreaView key="step-3" style={styles.safe}>
+      <SafeAreaView key="step-4" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1382,7 +1434,7 @@ export default function ProOnboardingScreen({ navigation }) {
               title="Continue"
               trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom3 : undefined}
+              onPress={canContinue ? advanceFrom4 : undefined}
               disabled={!canContinue}
               textStyle={styles.primaryBtnText}
               accessibilityLabel="Continue"
@@ -1393,9 +1445,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 4, Goal ────────────────────────────────────────────────────────────
+  // ── Step 5, Goal ────────────────────────────────────────────────────────────
 
-  if (step === 4) {
+  if (step === 5) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
     const canContinue = !!trainingGoal && !!trainingPhase;
 
@@ -1435,7 +1487,7 @@ export default function ProOnboardingScreen({ navigation }) {
     }
 
     return (
-      <SafeAreaView key="step-4-goal" style={styles.safe}>
+      <SafeAreaView key="step-5-goal" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1572,7 +1624,7 @@ export default function ProOnboardingScreen({ navigation }) {
               title="Continue"
               trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom4 : undefined}
+              onPress={canContinue ? advanceFrom5 : undefined}
               disabled={!canContinue}
               textStyle={styles.primaryBtnText}
               accessibilityLabel="Continue"
@@ -1583,9 +1635,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5, Recovery & reminders ───────────────────────────────────────────
+  // ── Step 6, Recovery & reminders ───────────────────────────────────────────
 
-  if (step === 5) {
+  if (step === 6) {
     const canContinue = !!recoveryRating;
 
     // COMP-013: the staged setup sequence replaces the dead
@@ -1594,7 +1646,7 @@ export default function ProOnboardingScreen({ navigation }) {
     if (sequenceActive) {
       const lines = sequenceStages();
       return (
-        <SafeAreaView key="step-5-building" style={styles.safe}>
+        <SafeAreaView key="step-6-building" style={styles.safe}>
           <ScrollView contentContainerStyle={styles.seqScroll} keyboardShouldPersistTaps="handled">
             <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
               <View style={styles.brandRow}>
@@ -1641,7 +1693,7 @@ export default function ProOnboardingScreen({ navigation }) {
     }
 
     return (
-      <SafeAreaView key="step-5" style={styles.safe}>
+      <SafeAreaView key="step-6" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <ProOnboardingHeader
             step={step}
@@ -1812,7 +1864,7 @@ export default function ProOnboardingScreen({ navigation }) {
             title="Continue"
             trailingIcon="arrow-forward"
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy ? advanceFrom5 : undefined}
+            onPress={canContinue && !busy ? advanceFrom6 : undefined}
             disabled={!canContinue || busy}
             loading={busy}
             textStyle={styles.primaryBtnText}
@@ -1969,7 +2021,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
-  // A3: provisional energy line under the focus dropdown (step 4).
+  // A3: provisional energy line under the focus dropdown (step 5).
   provisionalKcal: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xs,
   },

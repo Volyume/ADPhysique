@@ -18,8 +18,11 @@ const DRAFT_VERSION = 1;
 
 // The wizard's persistable steps. Step 1 is the account/OAuth step whose
 // state is owned by auth, so it is never part of a draft.
+// L04-6: the wizard grew from 5 to 6 steps (Step 2's body-composition
+// QuestionGroup became its own step), so the persistable ceiling moved with
+// it, otherwise a draft saved on the new final step would fail to persist.
 const MIN_STEP = 2;
-const MAX_STEP = 5;
+const MAX_STEP = 6;
 
 export const DRAFT_DEBOUNCE_MS = 600;
 
