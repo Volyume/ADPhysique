@@ -123,3 +123,9 @@ exception is documented in exerciseMetadata and pinned by updated tests
    the end of the day (the bulk control now at the bottom). If no such
    explainer exists, add one using the app's existing one-time first-use
    hint convention.
+4. MEAL ADDITIONS FRAMING (founder): the additions list currently reads like
+   you should add every item. Reframe as optional pick-any-for-flavour:
+   heading/intro along the lines of "Optional extras. Add any you fancy for
+   flavour. They will not change the meal's numbers." (exact copy set at
+   build; calm, British, no em dash; the existing honesty footnote stays).
+   Queued for the next free agent slot (Haiku-grade exact-copy job).
