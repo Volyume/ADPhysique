@@ -21,6 +21,12 @@
  * A raising of TAP_BUDGET requires a structured founder decision made
  * IN ADVANCE (per CLAUDE.md §4: "Multiple approaches → present them.
  * Anything bigger than a one-liner → plan first, wait for 'go'").
+ *
+ * L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the
+ * write-affordance build. TAP #1 is unchanged (the "Add food" button, its
+ * addFoodButton style and onPress={onAdd} wiring); the new per-row edit
+ * chevron and the DiaryScreen doc comment on the unused onSavedMeals/onScan/
+ * onQuickAdd props do not touch any regex this file matches.
  */
 import fs from 'fs';
 import path from 'path';

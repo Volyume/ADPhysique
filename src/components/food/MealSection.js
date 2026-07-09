@@ -47,6 +47,13 @@ export default function MealSection({
   // the day, carry its free additions into the diary too. Only shows when the
   // slot's foods resolve to a real curated meal; null (hidden) otherwise.
   const seasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
+  // L05-D1/D6 (design-usability audit 2026-07-09, founder-gated build): a
+  // logged row already opens for edit on tap (EntryRow's own accessibility
+  // label says "Tap to edit"), but a sighted user had no visual cue at all.
+  // Same write-capability gate as the add-food hub below: a row is only
+  // presented as editable when the diary can be written to and the card
+  // is not currently a multi-select target.
+  const showRowEditHint = !selectionMode && !readOnly;
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -82,17 +89,30 @@ export default function MealSection({
           delete or add is no longer a jump-cut. Keys are entry ids (stable),
           which AnimatedRow requires. */}
       {entries.map((e) => (
-        <AnimatedRow key={e.id}>
-          <SwipeableEntryRow
-            entry={e}
-            onEdit={() => onEdit(e)}
-            onDelete={onDelete}
-            selectionMode={selectionMode}
-            selected={!!selectedIds?.has(e.id)}
-            onLongPress={() => onLongPressEntry?.(e)}
-            onToggleSelect={() => onToggleSelect?.(e)}
-            readOnly={readOnly}
-          />
+        <AnimatedRow key={e.id} style={styles.entryRowOuter}>
+          <View style={styles.entryFlex}>
+            <SwipeableEntryRow
+              entry={e}
+              onEdit={() => onEdit(e)}
+              onDelete={onDelete}
+              selectionMode={selectionMode}
+              selected={!!selectedIds?.has(e.id)}
+              onLongPress={() => onLongPressEntry?.(e)}
+              onToggleSelect={() => onToggleSelect?.(e)}
+              readOnly={readOnly}
+            />
+          </View>
+          {/* L05-D1/D6: decorative-only edit cue, matching the chevron
+              idiom already used for "this opens something" rows elsewhere
+              in the diary (e.g. the saved-meals sheet below). pointerEvents
+              "none" so it never competes with the row's own tap, long-press
+              or swipe-to-delete gesture; hidden the moment the row is not
+              actually editable (selection mode, read-only lapse view). */}
+          {showRowEditHint ? (
+            <View style={styles.entryChevron} pointerEvents="none">
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </View>
+          ) : null}
         </AnimatedRow>
       ))}
       {seasonAdds ? (
@@ -199,6 +219,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   addFoodText: { ...type.label, color: colors.textPrimary },
+  // L05-D1/D6: the entry row keeps its own full-bleed background/border
+  // (EntryRow.js, untouched by this fix); this outer row only adds a
+  // narrow decorative lane for the edit chevron, so the row itself must be
+  // wrapped with flex:1 to keep its existing full-width layout now that it
+  // shares a row-direction parent with that lane.
+  entryRowOuter: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  entryFlex: {
+    flex: 1,
+  },
+  entryChevron: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   // Per-meal "mark eaten" (food audit item 1). Same visual language as the
   // day-level planned banner (DiaryScreen `plannedBtnPrimary`): a quiet
   // caption plus a single primary-tinted button, no colour judgement, no

@@ -1,3 +1,11 @@
+/**
+ * L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the
+ * write-affordance build. The single quiet "Add food" action stays exactly
+ * as pinned below - MealSection now also adds a decorative chevron to each
+ * logged row (clearer edit affordance, entries.map block) and the DiaryScreen
+ * call site keeps a doc comment on why onSavedMeals/onScan/onQuickAdd stay
+ * wired-but-unused. Neither change touches anything this file asserts.
+ */
 import fs from 'fs';
 import path from 'path';
 

@@ -1361,6 +1361,20 @@ export default function DiaryScreen({ navigation, route }) {
                     usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
                     onLogUsual={(food) => onLogUsual(food, slot.key)}
                     onAdd={() => addFood(slot.key)}
+                    /* L05-D1/D6 (design-usability audit 2026-07-09): kept
+                       wired but intentionally unused by MealSection - a
+                       prior polish pass deliberately simplified the
+                       per-meal-card hub to the single "Add food" action
+                       (MealSection.polish.guard.test.js /
+                       foodComponents.test.js pin exactly that), so a
+                       4-button hub is not being restored here. Scan and
+                       quick-add/saved-meals stay reachable via
+                       Add food -> FoodSearchScreen's "More" tab; these
+                       three callbacks are left connected (not deleted) so
+                       addSavedMeal/scanForMeal/setQuickAddSlot and their
+                       sheets below stay live code, in case a future
+                       session is asked to wire a genuine second entry
+                       point rather than remove them outright. */
                     onSavedMeals={() => addSavedMeal(slot.key)}
                     onScan={() => scanForMeal(slot.key)}
                     onQuickAdd={() => setQuickAddSlot(slot.key)}

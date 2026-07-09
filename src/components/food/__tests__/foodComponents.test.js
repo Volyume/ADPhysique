@@ -234,6 +234,11 @@ describe('EntryRow', () => {
   });
 });
 
+// L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the
+// write-affordance build. The action-hub assertions below (single add-food
+// action, no saved/scan/quick-add buttons) still hold unchanged; MealSection
+// separately gained a decorative per-row edit chevron (entries.map block),
+// which carries no accessibilityLabel and cannot match any assertion here.
 describe('MealSection', () => {
   const slot = { key: 'breakfast', label: 'Breakfast' };
   const entries = [
