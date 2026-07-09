@@ -32,7 +32,7 @@ import Svg, {
 } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
 } from '../lib/chartGeometry';
@@ -304,5 +304,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   tooltipTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: theme.textPrimary },
-  tooltipSub: { fontSize: fontSize.xs, color: theme.textSecondary },
+  tooltipSub: { ...type.caption, color: theme.textSecondary },
 });

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   addName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   addWhy: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.hair },
-  footnote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.sm, lineHeight: fontSize.xs + 4 },
+  footnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.sm },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   cancelBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,

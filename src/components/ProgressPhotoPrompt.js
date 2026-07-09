@@ -37,7 +37,7 @@ import Button from './Button';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
 import {
-  colors, spacing, fontSize, fontWeight, withAlpha, circle, radius,
+  colors, spacing, fontSize, fontWeight, withAlpha, circle, radius, type,
 } from '../styles/theme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   optOutText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
 });

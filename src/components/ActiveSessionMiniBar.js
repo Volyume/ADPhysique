@@ -132,5 +132,5 @@ const styles = StyleSheet.create({
     color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },
-  statusText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  statusText: { ...type.captionStrong, color: colors.textMuted },
 });

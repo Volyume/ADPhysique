@@ -80,9 +80,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
   },
   badgeText: {
+    ...type.captionStrong,
     color: colors.onPrimary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
   },
   body: {
     ...type.bodySm,

@@ -540,6 +540,20 @@ export const type = {
     return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,
       lineHeight: Math.round(fontSize.xs * 1.45), letterSpacing: letterSpacing.caption };
   },
+  // The semibold sibling of `caption`: same 11px/1.35-line-height/neutral-
+  // tracking box, one weight step up, for small non-uppercase labels that
+  // want a touch more emphasis (form-field labels, data-adjacent chip/badge
+  // text). Design audit 03 coverage (AC-5): a fourth, unnamed micro-label
+  // combination -- fontSize.xs + an independently hand-picked fontWeight
+  // (medium/semibold/bold/black, or none at all) -- had drifted across ~29
+  // files with no shared name. Named once here; uppercase eyebrow labels
+  // stay on `overline` (a separate, already-tracked finding) and tabular
+  // numeric readouts stay raw (a different role, not a label).
+  get captionStrong() {
+    return { fontFamily: fontFamily.semibold, fontSize: fontSize.xs,
+      fontWeight: fontWeight.semibold,
+      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
+  },
 };
 
 // Numerals are the hero. Any text node rendering a number the user reads as

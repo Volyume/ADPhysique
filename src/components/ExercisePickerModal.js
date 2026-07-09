@@ -8,7 +8,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   createNameInputContainer: { gap: 0 },
   createNameInputField: { borderRadius: radius.md },
   createNameInputText: { ...type.bodyStrong, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted },
+  createLabel: { ...type.captionStrong, color: colors.textMuted },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs, flexGrow: 0,

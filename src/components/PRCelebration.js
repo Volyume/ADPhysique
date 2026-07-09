@@ -11,7 +11,7 @@ import {
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing, alpha, type } from '../styles/theme';
 
 const NUM_PARTICLES = 40;
 
@@ -374,9 +374,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   toastTitle: {
-    fontSize: fontSize.xs,
+    ...type.captionStrong,
     color: colors.textMuted,
-    fontWeight: fontWeight.semibold,
   },
   toastValue: {
     fontSize: fontSize.md,

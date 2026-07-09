@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.xs, alignSelf: 'stretch',
     marginBottom: spacing.lg,
   },
-  eyebrow: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  eyebrow: { ...type.captionStrong, color: colors.primary },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   sub: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   plates: { gap: spacing.sm },

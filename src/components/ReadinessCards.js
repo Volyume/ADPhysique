@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   milestoneUnlockedText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.gold },
-  milestoneNext: { fontSize: fontSize.xs, color: colors.textMuted },
+  milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   gaugeValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   gaugeLabel: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   gaugeScale: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
-  recoveryNote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
+  recoveryNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   cardioLoadNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     marginTop: spacing.sm, paddingTop: spacing.sm,
@@ -335,6 +335,6 @@ const styles = StyleSheet.create({
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   mfChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
   mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },
-  mfChipName: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  mfChipName: { ...type.captionStrong },
   mfChipLabel: { fontSize: fontSize.micro, fontWeight: fontWeight.semibold },
 });

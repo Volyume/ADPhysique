@@ -1346,7 +1346,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
-  phaseLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  phaseLabel: { ...type.captionStrong },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  measureTabText: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  measureTabText: { ...type.captionStrong, color: colors.textSecondary },
   measureTabTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   logBtn: {

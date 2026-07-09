@@ -37,7 +37,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fontSize, fontWeight, spacing, radius, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
 
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   subtitle: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },

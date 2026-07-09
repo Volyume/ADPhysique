@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  lockChipText: { ...type.captionStrong, color: colors.onPrimary },
 
   sheetContent: { alignItems: 'center', gap: spacing.md },
   sheetIconWrap: {

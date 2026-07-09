@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   freqToggleText: {
-    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium,
+    ...type.captionStrong, color: colors.primary,
   },
 
   // ── Workload Card (ACWR) ──

@@ -222,8 +222,8 @@ const styles = StyleSheet.create({
   glyph: { marginRight: 2 },
   glyphKey: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
   glyphKeyItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  glyphKeyLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  longest: { fontSize: fontSize.xs, color: colors.textMuted },
+  glyphKeyLabel: { ...type.caption, color: colors.textMuted },
+  longest: { ...type.caption, color: colors.textMuted },
   // D2 streak-repair line, calm, forgiving; primary tint (a positive bridge),
   // never a warning colour.
   repairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxs },

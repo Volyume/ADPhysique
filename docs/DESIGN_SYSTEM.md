@@ -144,6 +144,7 @@ guard flags raw `fontSize:`/`fontWeight:` literals in screens/components.
 | `bodyStrong` | 16 | 600 | 0 | 1.5 | emphasised body, primary data labels |
 | `label` | 13 | 500 | +0.2 | 1.35 | metadata, captions-with-weight |
 | `caption` | 11 | 400 | +0.4 | 1.35 | timestamps, finest print |
+| `captionStrong` | 11 | 600 | +0.4 | 1.35 | emphasised micro-label: form-field labels, chip/badge text (design audit 03 coverage AC-5) |
 
 Rules: one `display` element per screen, max. Negative tracking on display/
 headings only; never on body or smaller; positive on labels/captions.

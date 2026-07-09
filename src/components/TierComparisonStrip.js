@@ -117,8 +117,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   colCadence: {
+    ...type.caption,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
     marginBottom: spacing.md,
   },
   rowText: {

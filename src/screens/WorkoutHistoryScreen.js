@@ -880,9 +880,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   dayHeader: {
-    fontSize: fontSize.xs,
+    ...type.captionStrong,
     color: colors.textMuted,
-    fontWeight: fontWeight.semibold,
   },
   dayCircle: {
     width: 30,
@@ -999,9 +998,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   statChipText: {
-    fontSize: fontSize.xs,
+    ...type.captionStrong,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   exerciseBreakdown: {
     gap: spacing.sm,

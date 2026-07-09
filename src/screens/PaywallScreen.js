@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   reviewStars: { flexDirection: 'row', gap: 2 },
   reviewQuote: { ...type.bodySm, color: colors.textPrimary, fontStyle: 'italic' },
-  reviewMeta: { color: colors.textMuted, fontSize: fontSize.xs },
+  reviewMeta: { ...type.caption, color: colors.textMuted },
   periodSelector: { marginBottom: spacing.xl },
   ctaStack: { gap: spacing.md },
   terms: {

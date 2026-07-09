@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
-import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -362,14 +362,13 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   kcalSubLabel: {
+    ...type.caption,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
     marginTop: spacing.xxs,
   },
   kcalPlanned: {
+    ...type.captionStrong,
     color: colors.primary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
   },
   // The eaten total is now the quiet reference beside the remaining hero
@@ -384,8 +383,8 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   kcalEatenLabel: {
+    ...type.caption,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
     marginTop: spacing.xxs,
   },
   dayTypeChip: {
@@ -396,9 +395,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   dayTypeChipText: {
+    ...type.captionStrong,
     color: colors.textSecondary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
   },
   macroRow: {
     gap: spacing.md,
@@ -408,9 +406,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   macroBarLabel: {
+    ...type.captionStrong,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
   },
   macroBarLabelPrimary: {
     color: colors.textSecondary,
@@ -446,9 +443,8 @@ const styles = StyleSheet.create({
     opacity: 0.32,
   },
   macroBarPlanned: {
+    ...type.captionStrong,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
   },
   // Quiet descriptive sub-row under a bar: protein g/kg on the left, the
   // factual remaining ("Ng to go" / "Ng over") on the right. Both adherence-
@@ -475,7 +471,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   macroSplitCaption: {
+    ...type.caption,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
   },
 });

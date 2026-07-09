@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 
 /**
  * Planned vs actual weekly volume per muscle for the current training block.
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   week: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   row: {
@@ -82,9 +82,8 @@ const styles = StyleSheet.create({
   },
   muscle: {
     width: 88,
-    fontSize: fontSize.xs,
+    ...type.captionStrong,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   barBg: {
     flex: 1,

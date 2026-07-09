@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { appAlert } from '../AppAlert';
 import { View, Text, StyleSheet, Pressable, Keyboard } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
@@ -326,7 +326,7 @@ function MacroPill({ label, value }) {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
-  lastVerified: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  lastVerified: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
     textTransform: 'uppercase', fontWeight: fontWeight.semibold,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   macroPillValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  macroPillLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  macroPillLabel: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   // gap #16: a quiet secondary line for extra per-food nutrients, below the
   // primary kcal/P/C/F pills so it never competes with the macros that matter.
   extraRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm, paddingHorizontal: spacing.xxs },

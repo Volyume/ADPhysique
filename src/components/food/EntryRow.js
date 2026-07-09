@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -151,11 +151,11 @@ const styles = StyleSheet.create({
   },
   entryMain: { flex: 1 },
   entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.hair },
-  entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
+  entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
   entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  entryMacroLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  entryMacroLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   swipeDelete: {
     backgroundColor: colors.error,
     width: 90,
@@ -166,8 +166,7 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   swipeDeleteText: {
+    ...type.captionStrong,
     color: colors.textPrimary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
   },
 });

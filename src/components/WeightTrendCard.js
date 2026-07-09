@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   insight: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   maintenanceBlock: { gap: spacing.xxs },
   maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  maintenanceLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  maintenanceLabel: { ...type.caption, color: colors.textMuted },
   maintenanceBuilding: { ...type.bodySm, color: colors.textMuted },
   stepTrendLine: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic' },
 });
