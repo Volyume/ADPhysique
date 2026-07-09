@@ -203,3 +203,31 @@ choice form before continuing:
    applied unconditionally, since every path into that sheet (quick pick,
    guided ghost capture, or a broken scan session falling back to a plain
    single) produces a photo that can never become a scored scan asset.
+
+### Wave 5 -- validation, privacy and tests (COMPLETE, commit `559627f`)
+
+Agent: Sonnet, with the two 2026-07-09 founder decisions baked in (per-user
+wipe scope = scope to account; stale cloud table = header notes only, no
+delete). EXIF strip via pure-JS JPEG segment removal (no expo-image-manipulator
+dependency); iOS backup exclusion via the existing native module
+(setExcludedFromBackup); wipeAllUserData now account-scoped
+(wipeProgressPhotoDirectoryForUser refuses to run without a userId, fatal-on-
+failure preserved, two-user test green); DST grouping tests; Tier 1 test-retest
++ sensitivity harness script modes. No new dependency, no cloud/sync path, no
+table deleted. Verified by Fable: schema shows insertions only, wipe scoped +
+guarded, sync guard untouched, 172 targeted tests + full progress suite green,
+npm run lint clean.
+
+### Wave 4 -- coach/check-in evidence groundwork (COMPLETE, commit `65b115a`)
+
+Agent: Sonnet. Guarded groundwork only (no new coaching influence). Verified by
+Fable: affectsTargets:false intact, runWeeklyCoach output byte-identical
+with/without scan inputs (guard 1), weekly_checkins scan-free (guard 7),
+physique-tile suppression gap closed (fail-closed), used/not-used sentence made
+universal, ProgressScanCoachEvidence v1 added with honestly-documented gaps.
+106 targeted + 554 progress-suite tests green.
+
+Wave order `1 -> 2 -> 3 -> 5 -> 4` complete. The full accuracy + coach
+integration completion pass (`.volyume-audit/progress-scan-coach-worldclass/`)
+is to be run separately with Fable in a fresh session per founder instruction
+2026-07-09.
