@@ -436,3 +436,21 @@ OAuth SHA-1; Cut 4 seed walk.
   progress). Main CI still red on EVERY run in window with ALL TESTS PASSING
   and exit 1 - masked locally by the progressScanVision env failure.
   Diagnosing exit-code source (suspect: leaked process.exitCode / teardown).
+- SCORECARD LANDED (docs/ux-world-class-audit-2026-07-09/SCORECARD.md, Sonnet
+  agent, method: re-verified every low-score claim against branch tip 87ee57e,
+  not stale audit docs). 25 functions scored. Lowest (all 6/10): Home/Today,
+  Notifications, Curated meals/recipes/additions, Share cards, Widgets+Live
+  Activity. Highest (8/10): Progress analytics, Mesocycle engine, Plan
+  library, Daily brief, Food diary, Food search, Barcode. Top-8 attention
+  list inside; #1 Home banner cap + AC-3 ink-token bug (HomeScreen.js:1643,
+  2391 - two-line fix + founder nod on cap), #2 R1 allergen gap (HELD with
+  the adversarial review), #3 CO-1 "The Coach" naming sweep (D4 decided,
+  unbuilt, 20 sites incl. nutritionEngine.js:402 hands-on). Confirmed FIXED
+  since morning audits: AY-1/AY-2/AY-5, AC-1/AC-2/AC-5, LT-1 incl. billing,
+  MO-1, ShareCard fallback, biometric lock, iOS widget. Confirmed STILL OPEN:
+  CO-1, AC-3, CP-6, CO-2/CO-3, R1, AY-6 (share segment SR state), LT-6
+  (gridlines), L07-F6/F7 (fuzzy search/recents).
+- Android build GREEN on 87ee57e (signed APK+AAB success) - founder's "APKs
+  failing to build" ask RESOLVED (lockfile fix ef77eb5). Main CI still red =
+  the jest exit-1 leak only; Sonnet debug agent live on it (order-sensitive
+  leak in src/screens combination runs; instrumenting exitCode per suite).
