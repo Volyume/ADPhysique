@@ -118,3 +118,8 @@ exception is documented in exerciseMetadata and pinned by updated tests
 2. MOVE "mark all meals as eaten" to the BOTTOM of the page - individual
    per-meal marking is the preferred primary interaction; the bulk action is
    demoted, not removed.
+3. GUIDANCE: when meals are built/planned, ensure there is a calm indicator
+   explaining marking-as-eaten - meal by meal as you go, or all at once at
+   the end of the day (the bulk control now at the bottom). If no such
+   explainer exists, add one using the app's existing one-time first-use
+   hint convention.
