@@ -293,3 +293,10 @@ OAuth SHA-1; Cut 4 seed walk.
   only, staging untouched, not in ONBOARDING_SEQUENCE_LOCKED); NV-4 set/rep
   glossary entries surfaced via ActiveWorkout's existing once-ever first-use
   hint gate. Suite green. Cohesion-02's four SAFE items now ALL BUILT.
+- Unilateral plan LANDED (plan-C-unilateral-logging.md): THREE disconnected
+  prior attempts found (laterality computed never read exerciseMetadata:130;
+  orphaned unilateral.js toggle; dead legacy left/right_reps cols mig 054).
+  NO competitor has solved unilateral logging = differentiator. Rec Option 2:
+  two-phase per-side flow on the clusterSet pattern, one workout_sets row,
+  actual_reps = lower side, first-timer walkthrough like the superset modal,
+  no schema change, engine volume/PR invariant preserved. Founder round next.
