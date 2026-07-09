@@ -78,7 +78,7 @@ export default function PartnerPrivacyReceipt() {
       </View>
 
       <Text style={styles.footer}>
-        Either of you can end this at any time.
+        Either of you can end this at any time. Everything shared is deleted.
       </Text>
     </>
   );

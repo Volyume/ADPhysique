@@ -747,30 +747,40 @@ describe('milestone moment slot', () => {
 });
 
 describe('empty state', () => {
-  test('carries the plain-English pitch, the how-it-works explainer, and the primary + secondary actions', async () => {
+  // L06-F2 (2026-07-09 design audit, decision D5): the empty state now
+  // renders the full PartnerPrivacyReceipt as the pre-pairing pitch instead
+  // of an abbreviated "What your partner sees" summary, so the strongest
+  // trust copy in the app is visible before the user even opens the invite
+  // journey.
+  test('carries the plain-English pitch, the full privacy receipt, and the primary + secondary actions', async () => {
     mockHook.value = base({ pairs: [], pendingInvite: null });
     const text = allText(await mount());
     expect(text).toContain('Train with a partner');
     expect(text).toContain(
       'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the updates you choose to send. Food, photos, body metrics and notes stay private.',
     );
-    // The plain-English receipt explains what pairing actually exposes before
-    // the user invites anyone.
-    expect(text).toContain('What your partner sees');
+    // The full receipt explains what pairing actually exposes before the
+    // user invites anyone, not an abbreviated summary.
+    expect(text).toContain('What your partner can see');
+    expect(text).toContain('THEY WILL SEE');
+    expect(text).toContain('THEY NEVER SEE');
     expect(text).toContain('Whether you trained this week');
     expect(text).toContain('One fixed cheer a day');
-    expect(text).toContain('Only the updates you choose to send');
-    expect(text).toContain('No food, photos, body metrics or private notes');
     // The word "signal" is gone from the pitch.
     expect(text).not.toContain('signal');
     expect(text).toContain('Invite someone you train with');
     expect(text).toContain('I have a code');
   });
 
-  test('renders the privacy receipt with the exact copy of both columns', async () => {
+  test('renders the privacy receipt with the exact copy of both columns, already visible pre-pairing', async () => {
     mockHook.value = base({ pairs: [] });
     const tree = await mount();
-    expect(allText(tree)).not.toContain('THEY WILL SEE');
+    // L06-F2: the receipt is the pre-pairing pitch, so it is visible on
+    // first mount, not only after stepping into the invite journey.
+    const emptyStateText = allText(tree);
+    expect(emptyStateText).toContain('THEY WILL SEE');
+    expect(emptyStateText).toContain('THEY NEVER SEE');
+
     await press(tree, 'Invite someone you train with');
     await press(tree, 'Continue');
     const text = allText(tree);
@@ -794,8 +804,10 @@ describe('empty state', () => {
       'Coach notes or check-ins',
       'Your location',
     ]) expect(text).toContain(line);
-    expect(text).toContain('Either of you can end this at any time.');
-    expect(text).not.toContain('Shared partner data is deleted.');
+    // L06-F3/D5: the deletion-promise footer line is restored verbatim
+    // (DESIGN-SPEC B4), which is why the notice version bumped to
+    // PARTNER_PRIVACY_NOTICE_VERSION 3.
+    expect(text).toContain('Either of you can end this at any time. Everything shared is deleted.');
   });
 });
 

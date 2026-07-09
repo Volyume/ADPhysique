@@ -26,9 +26,14 @@ import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { getSupabaseClient } from '../supabase';
 
-// v2 is the shorter, plainer receipt copy introduced pre-launch with the
-// Partners clarity pass. Bump on any material receipt change from here on.
-export const PARTNER_PRIVACY_NOTICE_VERSION = 2;
+// v3 (2026-07-09 design and usability audit, findings L06-F2/L06-F3, decision
+// D5, founder-approved): restores the deletion-promise footer line
+// ("Everything shared is deleted") that v2's shorter copy had quietly
+// dropped, and the full receipt now also renders on the empty state as the
+// pre-pairing pitch rather than an abbreviated summary. Both changes are
+// receipt-copy/consent-notice material, hence the version bump. Bump again on
+// any further material receipt change.
+export const PARTNER_PRIVACY_NOTICE_VERSION = 3;
 
 /**
  * Append a partner_sharing consent_log row (granted true on accept, false on

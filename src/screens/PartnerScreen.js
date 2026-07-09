@@ -1157,23 +1157,11 @@ export default function PartnerScreen({ route }) {
               </View>
             ) : null}
 
-            <Card style={styles.howItWorks}>
-              <View style={styles.howHead}>
-                <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.howHeader}>What your partner sees</Text>
-              </View>
-              {[
-                ['calendar-outline', 'Whether you trained this week'],
-                ['hand-left-outline', 'One fixed cheer a day'],
-                ['trophy-outline', 'Only the updates you choose to send'],
-                ['lock-closed-outline', 'No food, photos, body metrics or private notes'],
-              ].map(([icon, line]) => (
-                <View key={line} style={styles.howLineRow}>
-                  <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} />
-                  <Text style={styles.howLine}>{line}</Text>
-                </View>
-              ))}
-            </Card>
+            {/* L06-F2 (2026-07-09 design audit, decision D5): the empty state
+                renders the full PartnerPrivacyReceipt as the pre-pairing pitch,
+                not an abbreviated summary, so the strongest trust copy in the
+                app is seen before the user commits to inviting anyone. */}
+            <PartnerPrivacyReceipt />
 
           </View>
         )}
@@ -2030,18 +2018,6 @@ const styles = StyleSheet.create({
   incomingShareNoticeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   incomingShareNoticeTitle: { ...type.label, color: colors.textPrimary },
   incomingShareNoticeText: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
-  // Plain-English partner receipt. Sits between the pitch and the full privacy
-  // receipt so the empty state explains the feature before the user pairs.
-  howItWorks: { gap: spacing.sm },
-  howHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  howHeader: { ...type.label, color: colors.textPrimary },
-  howLineRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  howLine: { ...type.bodySm, color: colors.textPrimary, lineHeight: 20, flex: 1 },
   secondaryFullButton: { marginTop: spacing.xs },
 
   // Code entry
