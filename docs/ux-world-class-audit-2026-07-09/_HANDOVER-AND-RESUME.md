@@ -665,3 +665,18 @@ OAuth SHA-1; Cut 4 seed walk.
   at the suggested-list tip site is correct (not a meal-detail additions
   section). 12 new tests; full suite 598 green (env exception only); lint
   clean. GROUP A STATUS: 5 of 6 bundles landed; Smalls bundle in flight.
+- PLAN-G LANDED (docs/exercise-planning-2026-07-09/plan-G-adherence-responsiveness.md,
+  Sonnet, read-only): VERDICT (1) engine DOES respond to over-performance
+  at two levels already (per-exercise top-of-band load suggestions,
+  algorithms.js:295-490; weekly -2..+3 set push from PRs + derived
+  trainingPerformance, weeklyCoach.js:170-203, MRV-clamped confirm-then-
+  apply) - the founder's "faster progress" case is partially served;
+  (2) the adherence-benefit "why" sentence EXISTS but hides behind an
+  info-icon tap (ReadinessCards.js:182) - same gap shape as plan-E's
+  photo benefit; T8 calm missed-week + streak surfaces confirmed correct;
+  (3) safest acceleration attachment = consecutiveExceededWeeks counter
+  mirroring consecutiveOffTargetWeeks, bounded one-step volumeSignal
+  escalation OR copy-only acknowledgement, floors/gates untouched;
+  (4) 4 founder questions at doc end - ADD to rounds queue after the
+  D14-selected three. JOB BOARD: investigations queue now empty (plan-G
+  done); awaiting Smalls bundle (last Group A item).
