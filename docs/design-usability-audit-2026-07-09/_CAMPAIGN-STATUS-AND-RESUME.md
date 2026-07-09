@@ -210,3 +210,22 @@ in container). cueCount to be fixed alongside Batch 2 per "fix, do not defer".
   lockout/cleared banners adopt the shared label without a new colour path.
 
 ## Next: Batch 3 (the six coverage-gap audit lanes, master index section 5).
+
+## Safe-build wave DONE (2026-07-09): lanes 04-07 SAFE + judgement findings
+- `877244f` partners (invite quiet-row L06-F7, held-invite toast L06-F8, deleted dead PartnerRow L06-F5).
+- `fa3c92f` flow/home (tappable Analytics session cards L04-1, dead PhysiqueOptIn removed L04-7, destructive-action isolation L04-9, label clarity L04-14/L01-B36).
+- `82f420b` workout (session->workout copy L01-B37/38/39, sentence-case sweep, off-scale tokens L02-B3/B4, exercise-picker recents row L07-F7 via read-only getRecentlyUsedExerciseIds).
+- `569441f` food (engine-diagnosis honesty line L05-A1/A2, food-swap chooser L05-MP1, local-read copy fix L05-MM2, barcode "type it in" L05-SB1, serving-vs-eaten + portion preview L05-ACF, recipe calorie rows L05-MR1 via read-only listRecipesWithTotals, tappable target hints, PerDay stepper value L05-PDT2, windowed comparison L05-FI4, "Custom"->"More" tab L05-FS1).
+- Both DB additions are SELECT-only, no schema/migration. Full suite 573/574 (env skip), lint clean.
+
+## GATED - awaiting a founder decision round (do NOT start):
+- Money: conversion-funnel set (PaywallScreen dead code, trial-length contradiction, silent trial start) - lane 08.
+- Legal/consent: Partners L06-F2 (empty-state privacy summary vs full receipt) + L06-F3 (restore "everything shared is deleted" footer + notice-version bump, 3-way); L04-13 SettingsPrivacy destructive row.
+- Product/coaching: L07-F1 RIR/RPE per-set entry; L05-D1 MealSection write-affordances (tangled w/ 3 guard tests); L05-D2/NT2 nutrition density redesign (touches adherence-neutral render); L04-11 CoachOutput tooltips.
+- Scope/deps: L07-F5 iOS Live Activity; L07-F9 drag-reorder dependency; L04-6 ProOnboarding Step-2 split; L05-NT1/PDT1 per-day-target schema + sync-registry; L05-MN1 MN-1 STATUS confirmation.
+
+## FOLLOW-ON builds (non-gated, session-queueable, larger than polish):
+- Dedicated ActiveWorkoutScreen pass (~15 buttons + L07-F2 PR re-detect on edit/delete + L07-F4 rest-timer "add exercise" action + L07-F10 finish-confirm).
+- Feature builds: L07-F6 exercise fuzzy search, L07-F8 custom-exercise type/secondary-muscle, L07-F11 workout-history text search, L05-FI5/SB2/SL1/ACF1/MM1.
+- Batch 2 partner Card/Button wave (L02-B1 7 cards, L02-B2 19 touchables); L03-C5 KeyboardAvoidingView 13-screen sweep; L04-10 WhatsNew version-key (needs marketing version bump).
+- Batch 3 original plan: 6 new coverage-gap audit lanes (light-theme parity, motion, aesthetic craft, a11y contrast/SR, first-run emotion, competitive Home/Progress/Settings).
