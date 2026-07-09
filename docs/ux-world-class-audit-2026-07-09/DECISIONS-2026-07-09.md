@@ -70,3 +70,12 @@ place untouched (additive schema, never removed); the orphaned unilateral.js
 toggle is absorbed/replaced by this build; laterality metadata becomes the
 suggestion trigger. BUILD QUEUED under the two-agent rule - fires when the
 current four agents drain.
+
+### D9 amendment (founder, 2026-07-09): between-sides rest = HALF the
+exercise's normal rest time, applied to EVERY pause in per-side mode (between
+sides and after the second side). Example given: 120s exercise -> arm 1, 60s,
+arm 2, 60s, arm 1 (next set), 60s... Each arm therefore still receives ~its
+full normal recovery (it rests while the other works). Derived automatically
+from the exercise's existing rest setting (rounding: whole seconds, ceil);
+no separate user setting to learn; the usual timer adjust controls still work
+on the derived value.
