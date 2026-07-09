@@ -117,8 +117,13 @@ export default function MealSection({
       ))}
       {seasonAdds ? (
         <View style={styles.seasonRow}>
+          {/* Founder 2026-07-09: the old label here read like an instruction
+              to add ALL of the listed items. Reframed to the same pick-any
+              register as ADDITIONS_INTRO/CuratedMealSheet's "Optional extras"
+              heading (src/lib/food/mealAdditions.js), so this inline row can't
+              be misread as a checklist. */}
           <Text style={styles.seasonText}>
-            <Text style={styles.seasonLabel}>Add these extras too: </Text>
+            <Text style={styles.seasonLabel}>Optional extras, add any you fancy: </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
         </View>

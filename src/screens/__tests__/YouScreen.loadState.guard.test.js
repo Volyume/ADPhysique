@@ -37,10 +37,15 @@ describe('YouScreen coach hub load state', () => {
 
 // Audit item 3 (Coach-tab root reorder, size M, 2026-07-08): the Coach
 // tab's root (YouScreen) must lead with coach content, not account chrome.
-// Settings moves to a header gear (a secondary entry point, never removed),
-// and the coach status card renders before the athlete-profile card so the
-// latest decision/next check-in outrank profile freshness, which outranks
-// setup/support/safety, which outrank nothing (Settings is header-only now).
+// Settings moves to a header gear (a secondary entry point, never removed).
+//
+// Ordering of the status card vs. the profile card was revisited twice on
+// 2026-07-09: D13.3 put the coach status card first (as the screen's hero)
+// with the profile card directly beneath it. Later the same day (resume
+// session), the founder gave a direct, superseding instruction: "move User
+// (Pro) profile above the Coach box." The test below now pins THAT order
+// (profile card first, coach status card second) -- this is intentional and
+// founder-directed, not a regression of the 2026-07-08/D13.3 reorder.
 describe('Audit item 3: Coach-tab root leads with coach content, not settings', () => {
   test('Settings moves to a header gear, not a first-class row', () => {
     // The old flat "App settings" section/NavRow is gone...
@@ -52,12 +57,12 @@ describe('Audit item 3: Coach-tab root leads with coach content, not settings', 
     expect(source).toMatch(/onPress={\(\) => navigation\.navigate\('Settings'\)}/);
   });
 
-  test('the coach status card renders before the athlete-profile card', () => {
+  test('the athlete-profile card renders before the coach status card (founder order, 2026-07-09 resume session)', () => {
     const statusIdx = source.indexOf('styles.statusCard');
     const profileIdx = source.indexOf('styles.profileCard');
     expect(statusIdx).toBeGreaterThan(-1);
     expect(profileIdx).toBeGreaterThan(-1);
-    expect(statusIdx).toBeLessThan(profileIdx);
+    expect(profileIdx).toBeLessThan(statusIdx);
   });
 
   test('the profile card renders before Setup/Support/Safety, which render before nothing settings-shaped', () => {

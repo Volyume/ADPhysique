@@ -321,46 +321,13 @@ export default function YouScreen({ navigation }) {
           </Card>
         ) : null}
 
-        {/* Audit item 3 (Coach-tab root reorder, 2026-07-08): the coach's own
-            read leads the screen as the hero, ahead of every nav section.
-            Account/settings is demoted to the header gear above, so nothing
-            about the app itself outranks the coaching content. The athlete-
-            profile card used to follow the "This week" nav rows here; D13.3
-            (2026-07-09) moved it up to directly beneath this hero -- see the
-            comment below. */}
-        <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
-          <View style={styles.statusTop}>
-            <View style={styles.statusIcon}>
-              <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <SectionLabel tone="primary">Coach</SectionLabel>
-              <Text style={styles.statusTitle}>
-                {isPro
-                  ? latestReview
-                    ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
-                    : pendingCoachCopy.title
-                  : 'Coach is available on Pro'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.statusBody}>
-            {isPro
-              ? latestReview
-                ? 'Open it to see what changed, what was held, and the exact signals behind it.'
-                : pendingCoachCopy.body
-              : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
-          </Text>
-        </Card>
-
-        {/* D13.3 (2026-07-09 founder direct order): the profile card had
-            drifted to the bottom of "This week" after the 2026-07-08 reorg.
-            The founder likes that reorg overall (the coach's own read still
-            leads the screen as the hero above), but wants the profile back
-            as a prominent identity anchor rather than buried mid-scroll. It
-            sits directly under the hero, ahead of every nav section, rather
-            than literally first, so the coach's live decision keeps leading
-            per the liked reorg while the profile is the very next thing seen. */}
+        {/* Founder direct order (2026-07-09, resume session): "move User (Pro)
+            profile above the Coach box." This supersedes the 2026-07-08 audit
+            reorder and D13.3 (2026-07-09 earlier same day), both of which put
+            the coach status card first as the screen's hero and the profile
+            card directly beneath it. The founder's later instruction reverses
+            that: the profile card is now the first thing seen, the coach
+            status card follows it, ahead of every nav section. */}
         <Card
           style={styles.profileCard}
           onPress={() => navigation.navigate('AthleteProfile')}
@@ -385,6 +352,31 @@ export default function YouScreen({ navigation }) {
             {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+        </Card>
+
+        <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
+          <View style={styles.statusTop}>
+            <View style={styles.statusIcon}>
+              <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <SectionLabel tone="primary">Coach</SectionLabel>
+              <Text style={styles.statusTitle}>
+                {isPro
+                  ? latestReview
+                    ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
+                    : pendingCoachCopy.title
+                  : 'Coach is available on Pro'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.statusBody}>
+            {isPro
+              ? latestReview
+                ? 'Open it to see what changed, what was held, and the exact signals behind it.'
+                : pendingCoachCopy.body
+              : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
+          </Text>
         </Card>
 
         {isPro ? (
