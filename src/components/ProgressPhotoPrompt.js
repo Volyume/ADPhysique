@@ -178,6 +178,7 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
             You've just hit a milestone. If you'd like, add a photo.
             Your own pace, always private to this phone.
           </Text>
+          <Text style={styles.body}>The scale can't tell muscle from water. Photos can.</Text>
         </View>
       </View>
       <View style={styles.actions}>

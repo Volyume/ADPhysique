@@ -1594,7 +1594,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <EmptyState
           icon="camera-outline"
           title={readOnly ? undefined : 'No saved photos yet'}
-          text={readOnly ? 'No photos on this device.' : 'Add front, back and side photos to start.'}
+          text={readOnly ? 'No photos on this device.' : 'Add front, back and side photos to start.\n\nThe scale can\'t tell muscle from water. Photos can.'}
         />
       );
     }
