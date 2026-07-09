@@ -148,18 +148,18 @@ export default function SettingsScreen({ navigation }) {
           sub="Text size, contrast, motion"
           onPress={() => navigation.navigate('SettingsDisplay')}
         />
-        {Platform.OS === 'android' && (
-          <SettingRow
-            icon="apps-outline"
-            label="Home screen widget"
-            sub="Your next session, right on your home screen"
-            onPress={() => appAlert(
-              'Home screen widget',
-              'Volyume has two home screen widgets: your next session, and this week\'s consistency. Long-press an empty spot on your home screen, choose Widgets, then find Volyume to add one.',
-              [{ text: 'Got it' }],
-            )}
-          />
-        )}
+        <SettingRow
+          icon="apps-outline"
+          label="Home screen widget"
+          sub="Your next session, right on your home screen"
+          onPress={() => appAlert(
+            'Home screen widget',
+            Platform.OS === 'android'
+              ? 'Volyume has two home screen widgets: your next session, and this week\'s consistency. Long-press an empty spot on your home screen, choose Widgets, then find Volyume to add one.'
+              : 'Volyume has home screen widgets for your next session and this week\'s consistency, plus a lock screen widget for your consistency. Long-press your home screen, tap the + in the corner, then find Volyume to add a widget. For the lock screen widget, long-press your lock screen, tap Customise, then add Volyume from the widget gallery.',
+            [{ text: 'Got it' }],
+          )}
+        />
         {healthOn && (
           <SettingRow
             icon="heart-outline"
