@@ -46,19 +46,35 @@ ruling under founder steer); B41 amend-to-live (lead-delegated);
 payment-failure drift VERIFIED NON-ISSUE, closed; AY-7 announce with
 exact visible text; LT-3 implement light-only Card shadow.
 
+LANDED this session: Home decomposition (51c65d5); smalls bundle B41+
+LT-3+AY-7 pin (df26d5a). D18 ruled: plan-F builds IN FULL, no staging.
+D19 ruled: RED-S = lead drafts for founder sign-off; VC-1 light palette
+APPROVED AS CODED (closed); plan-A band fork = narrowest exception
+(bands may enter a loaded plan ONLY when the equipment context has no
+measurable vertical-pull alternative) — QUEUED build.
+
 BUILD QUEUE (two agents max, pairs to completion):
-1. IN FLIGHT: Home decomposition/memoisation (Sonnet, no-commit, lead
-   reviews diff).
-2. IN FLIGHT: smalls bundle — B41 Surface 6 amendment + AY-7 announcement
-   + LT-3 light Card shadow (Sonnet, no-commit, lead reviews).
-3. NAV-2 weigh-in edit+delete+history (ED-adjacent bounds: floors/calm/
+1. IN FLIGHT: plan-F FULL build per D18 (Opus; engine hunks get hands-on
+   lead review at landing; no-commit).
+2. IN FLIGHT: founder new-asks pair (Sonnet): meal additions "Add these
+   extras too:" -> unambiguous optional/pick-any copy; Coach tab User
+   (Pro) profile moved ABOVE the Coach box (supersedes D13 order; guard
+   test update sanctioned with dated comment).
+3. NEW FOUNDER ASK (2026-07-09): elegant one-time hint after adding
+   meals from the meal builder to the diary — teach "select and Mark
+   eaten (one meal or all) at end of day"; @volyume_seen_* convention;
+   complements the existing D12 diary hint. NEXT SLOT.
+4. Plan-A band exception build (D19 wording above, test-pinned).
+5. NAV-2 weigh-in edit+delete+history (ED-adjacent bounds: floors/calm/
    ED suppression untouched, detection re-runs on corrected series).
-4. Training reminder habit-schedule rebuild + honest settings copy.
-5. CP-9 in-app FAQ screen (voice-locked content).
-6. L08-B3: WRITE billing test plan -> founder approval -> build.
-7. CP-10 restart-free theming plan-first investigation (big; then build).
-- Founder rounds remaining: plan-F photo questions (4), VC-1 light-theme
-  sign-off, RED-S tooltip wording, Ultimate-Audit 11-16 cluster.
+6. Training reminder habit-schedule rebuild + honest settings copy (D17).
+7. CP-9 in-app FAQ screen (voice-locked content).
+8. L08-B3: lead WRITES billing test plan -> founder approval -> build.
+9. CP-10 restart-free theming plan-first investigation (big; then build).
+- Lead hands-on outstanding: RED-S two glossary entries draft -> founder
+  sign-off; L08-B3 test plan; review plan-F engine hunks at landing.
+- Founder rounds remaining: Ultimate-Audit 11-16 cluster (needs
+  pass4-blueprint extraction first); plan-F Tier-1 study revisit (later).
 - HELD: adversarial review (R1 fix belongs to it), media, Live Activity,
   rest-day notification.
 
