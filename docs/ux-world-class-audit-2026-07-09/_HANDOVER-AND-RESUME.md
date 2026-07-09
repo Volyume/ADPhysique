@@ -304,3 +304,12 @@ OAuth SHA-1; Cut 4 seed walk.
   protection); each pair runs to completion before the next launches. The 4
   currently in flight (engine set-cap, library ~100, day-reorder, superset
   plan) drain naturally; no new launches until <=2, then strict pairs.
+- Superset plan LANDED (plan-D-intelligent-supersets.md): intelligence already
+  exists (assignSupersets planEngine:2278, shipped 5eb50d9 for this exact
+  complaint) but migration v2 (database.js:419-422) MISTAGS Machine Shoulder
+  Press/Shoulder Press as side_delts (should be front_delts) -> looks
+  same-muscle with lateral raises -> "legit" tier-2 pairing; manual builder
+  has zero pairing validation. QUEUED pair 2 (Option C): additive retag
+  migration (also fixes front/side-delt volume tracking corruption) + share
+  engine classifiers with builder for a calm non-blocking nudge. Agent health
+  check 17:16: all four builders actively writing (mtimes seconds old).
