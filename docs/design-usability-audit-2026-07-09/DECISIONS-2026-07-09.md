@@ -185,3 +185,38 @@ isolated pattern; `destructive` styling only when healthConsent === true;
 handleWithdrawConsent + its two-step confirm UNCHANGED (verified: diff is
 placement + one styling prop, consent logic byte-identical). So of the four D6
 gated items, L04-9-as-approved is DONE; L05-D1, L07-F9, L05-D2/NT2 remain.
+
+## D7. Coverage-audit decision round (founder, 2026-07-09)
+
+After the six coverage audits + synthesis, founder answered the decision surface:
+- **ED-safety-adjacent items: BUILD ALL FOUR** (each with LEAD hands-on diff
+  review before push): LT-2 MacroRings calorie-ring ink (colour only, keep
+  adherence-neutral, no red/green); MO-4 gate the ProSetupComplete plan-reveal
+  on calm mode + open-ED-flag (not just Reduce-Motion); FR-4 soften the
+  "Required" pill wording on weigh-in/check-in rows; AY-7 add a screen-reader
+  announcement to the ED-lockout/cleared card. AY-7 constraint: the SR
+  announcement must READ the already-approved on-screen locked copy verbatim -
+  do NOT invent new ED-safety wording.
+- **Nutrition-density redesign (L05-D2/NT2): BUILD, with LEAD hands-on review.**
+  Sonnet labour under tight constraints; lead reviews the full diff before push
+  (MacroRings remaining-hero + adherence-neutral intact, no red/green good-bad).
+  Supersedes D5/D6 HELD.
+- **Gated items: OPEN ALL FOUR:**
+  - LT-1 billing-screen sites (BillingPeriodSelector, ProUpgradeScreen) - the
+    primary-as-fill contrast swap on live billing screens. Founder sign-off given.
+  - CP-2 iOS home/lock-screen widget - net-new WidgetKit surface (managed
+    workflow via config plugin, mirror the existing Android widget data).
+  - AY-2 success/error-on-tint contrast - design-token decision (new ink tokens
+    or surface rule); lead proposes the token approach.
+  - **CP-7 biometric app-lock: APPROVED WITH THE NEW DEPENDENCY**
+    `expo-local-authentication` (Expo SDK module, MIT licence, managed-workflow
+    compatible, no eject). This is the founder's explicit dep yes per the
+    CLAUDE.md dependency gate. Purpose: Face ID / fingerprint lock over the app
+    (holds bodyweight/nutrition/ED-adjacent data).
+- **Home banner overload (AC-6/CP-1): PRIORITY-RANK, show top 1-2** above the
+  Start-Workout hero, collapse the rest behind a single "more" affordance.
+
+Still needs founder WORDING (separate, not resolved here): CoachOutput RED-S +
+autoregulation glossary entries. Lead will draft calm entries for confirmation.
+CP-10 (theme/a11y toggles need app restart - StyleSheet-baking) noted as
+architectural, not in this round.
