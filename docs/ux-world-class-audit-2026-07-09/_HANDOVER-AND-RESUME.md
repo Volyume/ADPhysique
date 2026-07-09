@@ -915,3 +915,11 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   QUEUE after: band exception (D19), NAV-2 (D16), training-reminder habit
   rebuild (D17), CP-9 FAQ, CP-10 investigation, Ultimate-Audit 11-16
   round prep (Haiku extraction of pass4 blueprints).
+- FOUNDER ASK (2026-07-09, resume session): dietary needs are hidden in
+  Settings — add a "Dietary needs" entry point in the Meal Builder's Meal
+  preferences so users can set needs BEFORE meals are built. Shape agreed:
+  a row inside Meal preferences opening the existing SettingsDietaryScreen
+  (single source of truth), with a live summary of current selections
+  (e.g. "Vegetarian · 2 foods excluded"). Pro surface (builder is Pro).
+  QUEUED NEXT — blocked until the mark-eaten agent lands (it is editing
+  MealPlanScreen.js right now).
