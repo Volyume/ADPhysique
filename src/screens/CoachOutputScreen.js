@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, AccessibilityInfo,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -657,6 +657,27 @@ function EdPatternLockoutBlock({ decision }) {
   async function openSupport() {
     try { await Linking.openURL(supportLink.url); } catch (_) {}
   }
+  useEffect(() => {
+    // AY-7/D7: announce the card the moment it appears, so a TalkBack user
+    // learns the hold happened without manually exploring the Coach tab
+    // (precedent: PRCelebration.js's "must be ANNOUNCED, not just shown").
+    // D7's hard constraint: read the already-approved on-screen copy
+    // verbatim, no new or paraphrased ED-safety wording. This joins exactly
+    // the same ED_PATTERN_LOCKOUT_COPY strings the Text nodes below render,
+    // in the same order, one per line.
+    try {
+      AccessibilityInfo.announceForAccessibility(
+        [
+          ED_PATTERN_LOCKOUT_COPY.header,
+          ED_PATTERN_LOCKOUT_COPY.title,
+          ED_PATTERN_LOCKOUT_COPY.body,
+          decision?.goalLockAdvanced ? ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension : null,
+          ED_PATTERN_LOCKOUT_COPY.bottomNote,
+        ].filter(Boolean).join('\n'),
+      );
+    } catch (_) { /* best-effort, no-op without a screen reader */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <View style={styles.edLockoutCard}>
       <Text style={styles.edLockoutHeader}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
@@ -688,6 +709,20 @@ function EdPatternLockoutBlock({ decision }) {
 }
 
 function EdPatternClearedBlock() {
+  useEffect(() => {
+    // AY-7/D7: same announce-on-appearance treatment as the lockout block
+    // above, reading ED_PATTERN_CLEARED_COPY verbatim (header, title, body,
+    // in the order the Text nodes below render them). No new wording.
+    try {
+      AccessibilityInfo.announceForAccessibility(
+        [
+          ED_PATTERN_CLEARED_COPY.header,
+          ED_PATTERN_CLEARED_COPY.title,
+          ED_PATTERN_CLEARED_COPY.body,
+        ].join('\n'),
+      );
+    } catch (_) { /* best-effort, no-op without a screen reader */ }
+  }, []);
   return (
     <View style={styles.edClearedCard}>
       <Text style={styles.edClearedHeader}>{ED_PATTERN_CLEARED_COPY.header}</Text>
