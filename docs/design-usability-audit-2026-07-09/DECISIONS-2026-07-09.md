@@ -102,3 +102,32 @@ recording this rule (the doc is locked; this decision is the recorded
 founder-delegated authority for the amendment). The copy agent sweeps
 non-locked surfaces; locked/ED-safety-adjacent and consent/billing surfaces
 are excluded from the agent's scope and handled hands-on.
+
+## D5. Gated-round outcomes (founder, 2026-07-09)
+
+Founder responses to the gated decision round:
+- **All trial / paywall / conversion-funnel work: LEAVE ALONE.** Do not touch
+  PaywallScreen dead code, trial-length "contradiction", or silent-vs-confirm
+  trial start. (Structure is intentional: 14 days free in-app, then 7 days via
+  Google Play / Apple.) Lane-08 conversion-funnel set is CLOSED - not built.
+- **RIR/RPE per-set entry (L07-F1): DO NOT BUILD.** Prior decision stands (Wave
+  D / T4: history-gated progressive disclosure). Not re-litigated.
+- **Partners consent footer + notice-version bump (L06-F3): APPROVED.** Restore
+  the "everything shared is deleted" footer and bump PARTNER_PRIVACY_NOTICE_VERSION;
+  also show the full PartnerPrivacyReceipt on the empty state (L06-F2).
+- **iOS Live Activity (L07-F5): APPROVED.** Build using the existing in-repo
+  `modules/live-activity` native module. If a NEW dependency is genuinely
+  required, name it + licence for a separate yes first (CLAUDE.md dep gate).
+- **"Keep going on all" (founder) is the decision-of-record** for the buildable
+  product/UX items: ProOnboarding Step-2 split (re-group fields only, sex-gate +
+  every required-field enforcement provably preserved), per-day-target
+  persistence code (with an additive migration the founder runs), and the
+  non-gated polish/feature backlog.
+
+HELD (not covered by "all"; still need an explicit founder call):
+- **Nutrition-density redesign (L05-D2/NT2): HELD.** Touches the locked
+  adherence-neutral rendering (ED-safety-adjacent, MacroRings remaining-hero /
+  no red-green). Not to be freelanced on a blanket instruction. Surface as its
+  own question if pursued.
+- **Drag-reorder dependency (L07-F9): HELD.** Founder did not approve a new dep
+  for it; leave alone unless it can be done with no new dependency.
