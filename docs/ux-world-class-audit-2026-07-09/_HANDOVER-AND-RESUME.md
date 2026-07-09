@@ -321,3 +321,13 @@ OAuth SHA-1; Cut 4 seed walk.
   (stash test) as the ENGINE agent's in-flight planEngine WIP - hold engine
   to a green suite at its boundary. Founder-run migration queue now: 110,
   111, 112, 113.
+- FOUNDER ASK (queued as plan-E, fires on next free slot per two-agent rule):
+  adherence feedback + engine responsiveness investigation -> docs/
+  exercise-planning-2026-07-09/plan-E-adherence-loop.md. Scope: (1) map every
+  signal weeklyCoach/mesocycle consume; (2) VERIFY whether consistent
+  OVER-performance accelerates progression or the engine only defends the
+  downside; (3) audit encouragement surfaces (daily brief, runway, badge,
+  mini-story, memory, missed-week) against "elegant, never pushy" + whether
+  the BENEFIT of following the programme is ever explained; (4) options +
+  short multi-choice round. Queue after: pair 1 (unilateral build +
+  small-batch bundle), pair 2 (superset mistag fix + builder nudge).
