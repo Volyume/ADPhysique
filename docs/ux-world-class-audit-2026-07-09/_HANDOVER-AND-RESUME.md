@@ -377,3 +377,12 @@ OAuth SHA-1; Cut 4 seed walk.
 - ALL PRE-PAIR WORK DRAINED. Pair 1 firing: plan-E progress-photos loop
   (Sonnet planner) + small-batch bundle (B-5 uppercase tail, D10 band
   exception, getCoachOutputHistory deleted_at + 2nd approved-unbuilt item).
+- Plan-E LANDED (plan-E-progress-photos-loop.md): encouragement loop already
+  strong (5 gated surfaces, dismissible, frequency-capped, usePhotoSuppression
+  fail-closed, tone-guarded); engine consumption = deterministic evidence/
+  receipt layer AROUND the engine (progressScanCoachEvidence/-CheckInEvidence,
+  affectsTargets:false hard-coded + guard) with the founder's divergence case
+  ALREADY the `conflicts` state (built by the parallel progress-scan
+  workstream, merged today, 7fc4ba0/84cab3b). ONE GAP: the benefit of photos
+  vs the scale is never explained anywhere. Founder round: confirm receipt
+  layer sufficient + add the benefit line.
