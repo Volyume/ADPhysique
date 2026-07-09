@@ -6,6 +6,7 @@ import {
   findThinMuscles,
 } from '../poolGenerator';
 import { deriveExerciseMetadata } from '../exerciseMetadata';
+import { generatePlan } from '../planEngine';
 
 describe('deriveParamKey', () => {
   test('isolation always reads isolation regardless of equipment', () => {
@@ -42,6 +43,17 @@ describe('translateSubregion', () => {
     expect(translateSubregion('quads', null)).toBe('vasti');
     expect(translateSubregion('biceps', undefined)).toBe('short_head');
     expect(translateSubregion('adductors', null)).toBe('adductor');
+  });
+
+  // D8 residue fix (2026-07-09): biceps had no SUBREGION_TRANSLATION entry
+  // at all, so every biceps exercise fell through to the untagged default
+  // above regardless of what seedExercises.js's SUBREGION_MAP said. Now that
+  // both exist, the pass-through must actually carry the real tag through,
+  // not just fall back to the default.
+  test('passes real biceps tags through unchanged (long_head/short_head/brachialis)', () => {
+    expect(translateSubregion('biceps', 'long_head')).toBe('long_head');
+    expect(translateSubregion('biceps', 'short_head')).toBe('short_head');
+    expect(translateSubregion('biceps', 'brachialis')).toBe('brachialis');
   });
 });
 
@@ -108,45 +120,49 @@ describe('findThinMuscles', () => {
   });
 });
 
+// Shared by the two "real seed library" describe blocks below (pool
+// coverage, and the biceps weak-point generator test), so the library is
+// parsed from source once and both blocks reason about the exact same
+// derivation the seed itself uses.
+const seedSrc = require('fs').readFileSync(
+  require('path').join(__dirname, '../seedExercises.js'), 'utf8',
+);
+function parseLibrary() {
+  const start = seedSrc.indexOf('const RAW = [');
+  const end = seedSrc.indexOf('\n];', start);
+  const body = seedSrc.slice(start, end);
+  // Pull the SUBREGION_MAP too so subregions match what the seed writes.
+  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
+  const smEnd = seedSrc.indexOf('\n};', smStart);
+  const smBody = seedSrc.slice(smStart, smEnd);
+  const subMap = {};
+  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
+
+  const rows = [];
+  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const base = {
+      name: m[1],
+      primaryMuscle: m[2],
+      equipment: m[4],
+      movementPattern: m[5],
+      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
+      fatigueCost: parseInt(m[9], 10),
+      stimulusToFatigueRatio: parseInt(m[10], 10),
+      subregion: subMap[m[1]] ?? null,
+    };
+    rows.push({ ...base, ...deriveExerciseMetadata(base) });
+  }
+  return rows;
+}
+
 // Integration: build the pool from the REAL seed library (derived the same
 // way the seed does) and assert it covers every muscle planEngine programs,
 // with the subregions SUBREGION_REQUIREMENTS needs actually present. This is
 // the guard that the generated pool is a viable replacement, not just a
 // shape match.
 describe('generated pool over the real seed library', () => {
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-  );
-  function parseLibrary() {
-    const start = seedSrc.indexOf('const RAW = [');
-    const end = seedSrc.indexOf('\n];', start);
-    const body = seedSrc.slice(start, end);
-    // Pull the SUBREGION_MAP too so subregions match what the seed writes.
-    const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-    const smEnd = seedSrc.indexOf('\n};', smStart);
-    const smBody = seedSrc.slice(smStart, smEnd);
-    const subMap = {};
-    for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-    const rows = [];
-    const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-    let m;
-    while ((m = re.exec(body)) !== null) {
-      const base = {
-        name: m[1],
-        primaryMuscle: m[2],
-        equipment: m[4],
-        movementPattern: m[5],
-        compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-        fatigueCost: parseInt(m[9], 10),
-        stimulusToFatigueRatio: parseInt(m[10], 10),
-        subregion: subMap[m[1]] ?? null,
-      };
-      rows.push({ ...base, ...deriveExerciseMetadata(base) });
-    }
-    return rows;
-  }
-
   const pool = generatePoolFromLibrary(parseLibrary());
 
   // The muscles planEngine builds plans around.
@@ -172,6 +188,10 @@ describe('generated pool over the real seed library', () => {
       triceps: ['overhead'],
       calves: ['gastro', 'soleus'],
       abs: ['flexion', 'anti_extension'],
+      // D8 residue fix (2026-07-09): biceps now carries real tags in
+      // seedExercises.js and a live SUBREGION_TRANSLATION.biceps entry, so
+      // this is finally provable the same way as every other muscle above.
+      biceps: ['long_head', 'short_head'],
     };
     const missing = [];
     for (const [muscle, subs] of Object.entries(REQUIRED)) {
@@ -179,6 +199,21 @@ describe('generated pool over the real seed library', () => {
       for (const s of subs) if (!present.has(s)) missing.push(`${muscle}/${s}`);
     }
     expect(missing).toEqual([]);
+  });
+
+  // ── D8 residue fix (2026-07-09): biceps subregion tag completeness ────────
+  test('every seeded biceps exercise carries an explicit subregion tag (no untagged fall-through)', () => {
+    const bicepsRows = parseLibrary().filter(ex => ex.primaryMuscle === 'biceps');
+    expect(bicepsRows.length).toBeGreaterThan(30); // sanity: we actually found the real library
+    const untagged = bicepsRows.filter(ex => !ex.subregion).map(ex => ex.name);
+    expect(untagged).toEqual([]);
+  });
+
+  test('the tagged biceps subregions are only the three real POOL angles (long_head/short_head/brachialis)', () => {
+    const bicepsRows = parseLibrary().filter(ex => ex.primaryMuscle === 'biceps');
+    const VALID = new Set(['long_head', 'short_head', 'brachialis']);
+    const invalid = bicepsRows.filter(ex => !VALID.has(ex.subregion)).map(ex => `${ex.name}:${ex.subregion}`);
+    expect(invalid).toEqual([]);
   });
 
   test('every generated entry has a valid paramKey and at least one equipment profile', () => {
@@ -270,5 +305,63 @@ describe('generated pool over the real seed library', () => {
       expect(cov.profiles.has('barbell_plates')).toBe(true);
       expect(cov.profiles.has('home_gym')).toBe(true);
     });
+  });
+});
+
+// ── D8 residue fix (2026-07-09): end-to-end proof over generatePlan ────────
+// The unit-level tests above prove the tag exists and the translation
+// carries it through to the generated pool. This proves the whole chain
+// actually binds where it matters: generatePlan(), given the REAL seed
+// library and a biceps weak-point request, produces a session whose biceps
+// exercises span both required heads (long_head AND short_head) — the exact
+// behaviour SUBREGION_REQUIREMENTS.biceps was added in D8 to enforce, which
+// could never fire before this fix because the library carried no tags.
+describe('generatePlan: biceps weak-point coverage over the real seed library', () => {
+  test('a biceps weak-point plan covers both long_head and short_head, not just one angle', () => {
+    const library = parseLibrary();
+    const pool = generatePoolFromLibrary(library);
+    const bicepsSubOf = new Map(pool.biceps.map(e => [e.n, e.sub]));
+
+    // Same shape as the founder's back weak-point reproduction in
+    // engine-invariants.test.js, just weak-pointed on Biceps and given the
+    // real, derived library instead of the hand-written fallback POOL (so
+    // this exercises seedExercises.js's SUBREGION_MAP and poolGenerator's
+    // SUBREGION_TRANSLATION.biceps, not the pre-tagged hardcoded POOL that
+    // already covered biceps before this fix).
+    const plan = generatePlan({
+      experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 75,
+      equipment: 'full_gym', goal: 'general', phase: 'weak_point',
+      weakPoints: ['Biceps'], recoveryRating: 'average',
+      nutritionPhase: 'maintain', age: 35, exerciseLibrary: library,
+    });
+
+    const subsSeen = new Set();
+    for (const workout of plan.workouts) {
+      for (const ex of workout.exercises) {
+        const sub = bicepsSubOf.get(ex.exerciseName);
+        if (sub) subsSeen.add(sub);
+      }
+    }
+    expect(subsSeen.has('long_head')).toBe(true);
+    expect(subsSeen.has('short_head')).toBe(true);
+  });
+
+  test('deterministic: the same weak-point inputs over the real library always produce the same biceps exercise selection', () => {
+    const library = parseLibrary();
+    const inputs = {
+      experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 75,
+      equipment: 'full_gym', goal: 'general', phase: 'weak_point',
+      weakPoints: ['Biceps'], recoveryRating: 'average',
+      nutritionPhase: 'maintain', age: 35, exerciseLibrary: library,
+    };
+    const bicepsNames = (plan) => plan.workouts
+      .flatMap(w => w.exercises)
+      .filter(ex => (generatePoolFromLibrary(library).biceps ?? []).some(e => e.n === ex.exerciseName))
+      .map(ex => ex.exerciseName)
+      .sort();
+
+    const a = generatePlan({ ...inputs });
+    const b = generatePlan({ ...inputs });
+    expect(bicepsNames(a)).toEqual(bicepsNames(b));
   });
 });

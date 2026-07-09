@@ -80,7 +80,13 @@ export function canonicalExerciseId(name) {
 }
 
 // Anatomical subregion tags, used by planEngine v2 to enforce balanced muscle coverage.
-// Muscles not listed here (e.g. biceps, forearms) do not have enforced subregion requirements.
+// Muscles not listed here (e.g. forearms) do not have enforced subregion requirements.
+// Biceps was in that "not listed" set until the D8 residue fix below (2026-07-09):
+// SUBREGION_REQUIREMENTS.biceps (planEngine.js) has required long_head/short_head
+// coverage since D8 landed, but this library carried no biceps tags at all, so
+// every biceps exercise fell through poolGenerator's DEFAULT_SUBREGION to
+// 'short_head' and the requirement could never see a long_head option. See the
+// "Biceps" block below.
 const SUBREGION_MAP = {
   // Back, vertical pull vs horizontal row
   'Lat Pulldown (Wide Grip)':        'vertical_pull',
@@ -462,6 +468,110 @@ const SUBREGION_MAP = {
   'Weighted Russian Twist (Medicine Ball)': 'rotation',
   'Cable Woodchop (Half-Kneeling)':  'rotation',
   'Single-Arm Cable Woodchop (Standing)': 'rotation',
+
+  // ─── BICEPS (D8 residue fix, 2026-07-09) ───────────────────────────────────
+  // long_head (outer): shoulder held in extension (arm behind the torso
+  // plane) so the long head is loaded from a stretched position - incline
+  // curls, "behind the body" cable curls, drag curls that pull the elbow
+  // back as they rise. short_head (inner): shoulder held in flexion (arm in
+  // front, preacher/concentration-style bracing) - this is also the vocab's
+  // "general/standard curl" bucket, matching poolGenerator's existing
+  // DEFAULT_SUBREGION.biceps fallback of 'short_head'. brachialis: neutral/
+  // hammer grip, a bonus third angle (SUBREGION_REQUIREMENTS.biceps.required
+  // only asks for long_head + short_head; brachialis is not required, same
+  // role lower_lat plays for back). This mirrors the vocab planEngine's
+  // hand-written POOL already used for biceps (planEngine.js :464-478)
+  // exactly, so the D8 requirement can now bind against the generated pool.
+  //
+  // long_head: incline / behind-the-body / drag-curl family (shoulder
+  // extension under load).
+  'Incline Dumbbell Curl':           'long_head',
+  'Spider Curl':                     'long_head',
+  'Prone Incline Curl':              'long_head',
+  // Bayesian Curl: cable curl performed with the cable behind the torso, so
+  // the shoulder stays extended through the full rep - the "24/7/365"-style
+  // long-head stretch position (Milo Wolf / evidence-based-hypertrophy
+  // biomechanics writing on shoulder position and long-head length-tension).
+  'Bayesian Curl':                   'long_head',
+  // Lying Cable Curl: lying supine, reaching back overhead to a low pulley -
+  // the same shoulder-extended stretch position as Bayesian/incline curls,
+  // just from the floor.
+  'Lying Cable Curl':                'long_head',
+  // Drag curls (Barbell / EZ Bar): the bar is dragged up the torso with the
+  // elbow driven backward as it flexes, extending the shoulder through the
+  // rep - functionally the same long-head-stretch mechanism as the incline
+  // and Bayesian variants above.
+  'Barbell Drag Curl':               'long_head',
+  'EZ Bar Drag Curl':                'long_head',
+  // Incline Hammer Curl: ambiguous / hybrid call. Incline positioning
+  // (shoulder extension) biases the long head the same way Incline Dumbbell
+  // Curl does; the neutral "hammer" grip on its own would bias brachialis.
+  // The incline shoulder angle is treated as the dominant signal here
+  // (matching the established Incline Dumbbell Curl precedent), with the
+  // grip's brachialis contribution noted as secondary, not the primary tag.
+  'Incline Hammer Curl':             'long_head',
+  // Chin-Up (Supinated): ambiguous / hybrid call. Not a curl at all, but a
+  // supinated-grip compound pull that drives the elbow from flexion into
+  // extension through the pulling arc - the same shoulder-extension
+  // mechanic that biases the long head in the isolation curls above.
+  'Chin-Up (Supinated)':             'long_head',
+  //
+  // short_head: preacher / concentration / plain standing curl family
+  // (shoulder flexion or neutral, no extension bias) - also this taxonomy's
+  // general/non-biased bucket for biceps.
+  'Barbell Curl':                    'short_head',
+  'EZ Bar Curl':                     'short_head',
+  'Dumbbell Curl':                   'short_head',
+  'Cable Curl':                      'short_head',
+  'Machine Curl':                    'short_head',
+  'Concentration Curl':              'short_head',
+  'Preacher Curl (Barbell)':         'short_head',
+  'Preacher Curl (Dumbbell)':        'short_head',
+  'Preacher Curl (EZ Bar)':          'short_head',
+  'EZ Bar Preacher Curl':            'short_head',
+  'Plate-Loaded Preacher Curl':      'short_head',
+  'Preacher Curl Machine':           'short_head',
+  'Cable Concentration Curl':        'short_head',
+  // Zottman Preacher Curl: hybrid call. Preacher bracing (shoulder flexion,
+  // short-head bias) sets the concentric groove; the zottman pronation twist
+  // only changes grip on the eccentric. The preacher position is treated as
+  // the dominant signal, consistent with the rest of the preacher family
+  // above.
+  'Zottman Preacher Curl':           'short_head',
+  // Waiter Curl: arm held in front of the torso carrying a single
+  // dumbbell/plate like a tray - a front-loaded, shoulder-neutral-to-flexed
+  // position closer to preacher/concentration than to an extended stretch.
+  'Waiter Curl':                     'short_head',
+  // High Cable Curl / Cable Overhead Bicep Curl: both keep the working arm
+  // in front of the torso at or above shoulder height (a peak-contraction
+  // "double-biceps pose" position) rather than reaching behind the body, so
+  // neither gets the long-head extension bias the Bayesian/overhead-pulley-
+  // from-behind variants above get.
+  'High Cable Curl':                 'short_head',
+  'Cable Overhead Bicep Curl':       'short_head',
+  // Genuinely non-biased "standard curl" entries: no shoulder-position or
+  // grip signal strong enough to place them in long_head or brachialis, so
+  // they take this vocab's general/default bucket (short_head), matching
+  // poolGenerator's existing DEFAULT_SUBREGION.biceps fallback value.
+  'Seated Dumbbell Curl':            'short_head',
+  'Band Bicep Curl':                 'short_head',
+  'TRX Curl':                        'short_head',
+  //
+  // brachialis: neutral/hammer grip (bonus third angle, not required by
+  // SUBREGION_REQUIREMENTS.biceps).
+  'Hammer Curl':                     'brachialis',
+  'Cable Hammer Curl (Rope)':        'brachialis',
+  'Cable Rope Hammer Curl':          'brachialis',
+  'Zottman Curl':                    'brachialis',
+  'Cross-Body Hammer Curl':          'brachialis',
+  // Reverse Curl / Cable Reverse Curl: fully pronated (overhand) grip -
+  // the same brachialis/brachioradialis-biased family as the hammer-grip
+  // entries above, just taken further than neutral. Both already carry
+  // ['forearms'] as a secondary muscle in RAW, the same secondary-muscle
+  // signature every other brachialis entry above carries, which is the
+  // library's own signal that these belong in this bucket.
+  'Reverse Curl':                    'brachialis',
+  'Cable Reverse Curl':              'brachialis',
 };
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]

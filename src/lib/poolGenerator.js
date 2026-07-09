@@ -38,6 +38,16 @@ const SUBREGION_TRANSLATION = {
   side_delts: { lateral_raise: 'side', overhead_press: 'press' },
   rear_delts: { face_pull: 'face_pull', horiz_abduction: 'horiz_abduction' },
   triceps:    { overhead: 'overhead', pushdown: 'lateral' },
+  // D8 residue fix (2026-07-09): seedExercises.js now tags biceps exercises
+  // with the same long_head/short_head/brachialis vocab planEngine's
+  // hand-written POOL already uses for biceps (planEngine.js POOL biceps
+  // entries), so this is a pure pass-through, the same shape as
+  // hamstrings/glutes below. Before this, biceps had no translation entry at
+  // all, so every generated biceps entry fell through to DEFAULT_SUBREGION's
+  // 'short_head' below regardless of its real tag, and SUBREGION_REQUIREMENTS
+  // .biceps (planEngine.js) could never see a long_head option to satisfy its
+  // required: ['long_head', 'short_head'] coverage.
+  biceps:     { long_head: 'long_head', short_head: 'short_head', brachialis: 'brachialis' },
   hamstrings: { hip_extension: 'hip_extension', knee_flexion: 'knee_flexion' },
   glutes:     { activator: 'activator', stretcher: 'stretcher', pumper: 'pumper' },
   calves:     { gastro: 'gastro', soleus: 'soleus' },

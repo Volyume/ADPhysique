@@ -826,3 +826,14 @@ plan-F 4 questions, rest-day spec FQ-1..5 incl. the possibly-dead
 Home decomposition, AY-7 wording. HELD: adversarial review + R1.
 Founder-side: migrations 110-113 (+ any new from tonight - CHECK
 supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
+- BURST LANDING 6/8 BICEPS SUBREGION (Sonnet, lead-reviewed): 36 seed tags
+  (9 long_head / 20 short_head incl. general bucket / 7 brachialis, tag
+  table + reasoning in agent report), migration v64 (idempotent, local
+  only, rollback documented; LIBRARY_VERSION top-up correctly N/A),
+  SUBREGION_TRANSLATION.biceps pass-through in poolGenerator.js (the
+  brief wrongly said planEngine - constant lives in poolGenerator,
+  correction accepted). D8's biceps requirement now binds: real-library
+  weak-point plan covers both heads, determinism checked. ALL 12
+  planengine suites / 240 tests pass untouched; 81/81 targeted; lint
+  clean. EMERGENCY SNAPSHOT above: item 2 now LANDED; plan-G and
+  height/DOB still in flight.

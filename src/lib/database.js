@@ -1805,6 +1805,67 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET primary_muscle = 'front_delts'
      WHERE name IN ('Viking Press', 'Plate-Loaded Shoulder Press')`,
   ],
+  // v64, biceps subregion tags (D8 residue fix, docs/ux-world-class-audit-
+  // 2026-06-13.../_HANDOVER-AND-RESUME.md "SUBREGION_TRANSLATION.biceps
+  // pass-through once library subregion tags exist"). D8 (2026-07-09) added
+  // SUBREGION_REQUIREMENTS.biceps to planEngine.js (required: ['long_head',
+  // 'short_head'], minSets 8) on the understanding that seedExercises.js
+  // would tag biceps exercises with the same long_head/short_head/brachialis
+  // vocab planEngine's hand-written POOL already used for biceps -- but the
+  // seeded library carried NO biceps subregion tags at all, so the
+  // requirement could never bind against the generated pool (every biceps
+  // exercise fell through poolGenerator's DEFAULT_SUBREGION to 'short_head'
+  // regardless of its real angle). seedExercises.js's SUBREGION_MAP now
+  // tags all 36 canonical biceps exercises and poolGenerator.js's
+  // SUBREGION_TRANSLATION.biceps passes those tags straight through; this
+  // migration applies the same 36 tags to exercises already seeded on
+  // existing installs (the seed early-returns once any rows exist, so a
+  // SUBREGION_MAP change alone never reaches a device that seeded before
+  // this landed).
+  // Applied: LOCALLY only, via this user_version bump. There is no cloud
+  // counterpart: the canonical exercise catalogue (user_id NULL rows) is
+  // seeded locally per device and is never pushed to or pulled from Supabase
+  // (src/lib/sync.js only pulls `exercises` rows scoped to `user_id = <this
+  // user>`, i.e. legacy custom exercises); there is nothing to correct in
+  // EU-Dublin for this fix. LIBRARY_VERSION_KEY's AsyncStorage top-up
+  // (seedExercises.js topUpNewExercisesIfNeeded) does not apply here either:
+  // it only inserts rows whose canonical ID is missing, and all 36 of these
+  // rows already exist on every install, so a version bump there would be a
+  // no-op -- this schema migration is the correct and only mechanism for a
+  // metadata-only change to already-seeded rows (the same reasoning behind
+  // backfillExerciseMetadataIfNeeded/rederiveExerciseMetadataIfNeeded above).
+  // Safe to re-run: yes (setting an already-correct row to the same value is
+  // a no-op; scoped by exact name AND primary_muscle = 'biceps' so it can
+  // never touch a differently-tagged row of the same name in another
+  // muscle).
+  // Rollback: UPDATE exercises SET subregion = NULL WHERE primary_muscle =
+  // 'biceps' (restores the pre-fix untagged state; not recommended, kept
+  // only for the mandated rollback note).
+  [
+    `UPDATE exercises SET subregion = 'long_head'
+     WHERE primary_muscle = 'biceps' AND name IN (
+       'Incline Dumbbell Curl', 'Spider Curl', 'Prone Incline Curl',
+       'Bayesian Curl', 'Lying Cable Curl', 'Barbell Drag Curl',
+       'EZ Bar Drag Curl', 'Incline Hammer Curl', 'Chin-Up (Supinated)'
+     )`,
+    `UPDATE exercises SET subregion = 'short_head'
+     WHERE primary_muscle = 'biceps' AND name IN (
+       'Barbell Curl', 'EZ Bar Curl', 'Dumbbell Curl', 'Cable Curl',
+       'Machine Curl', 'Concentration Curl', 'Preacher Curl (Barbell)',
+       'Preacher Curl (Dumbbell)', 'Preacher Curl (EZ Bar)',
+       'EZ Bar Preacher Curl', 'Plate-Loaded Preacher Curl',
+       'Preacher Curl Machine', 'Cable Concentration Curl',
+       'Zottman Preacher Curl', 'Waiter Curl', 'High Cable Curl',
+       'Cable Overhead Bicep Curl', 'Seated Dumbbell Curl',
+       'Band Bicep Curl', 'TRX Curl'
+     )`,
+    `UPDATE exercises SET subregion = 'brachialis'
+     WHERE primary_muscle = 'biceps' AND name IN (
+       'Hammer Curl', 'Cable Hammer Curl (Rope)', 'Cable Rope Hammer Curl',
+       'Zottman Curl', 'Cross-Body Hammer Curl', 'Reverse Curl',
+       'Cable Reverse Curl'
+     )`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

@@ -16,17 +16,27 @@
  * executes and is verified against real rows rather than a string match on
  * the migration source. Only the `exercises` table is created.
  *
- * Isolation note: runMigrations always runs from the given starting version
- * through to the true end of SCHEMA_MIGRATIONS (it has no "stop early"
- * option), so now that v63 sits after v62, isolating v62 alone by starting
- * one version below the array's top is no longer possible -- that offset
- * now runs v63 as well. Both migrations only ever touch the `exercises`
- * table (created fresh in every test here, so no earlier migration can
- * break on a missing table), so the v62 tests below run the last TWO
- * migrations together via `runLastMigrations(raw, 2)` and assert the
- * combined end state; the v63-only tests further down use
- * `runLastMigrations(raw, 1)`, which correctly isolates v63 as the true
- * last entry.
+ * Isolation note (original, pre-v64): runMigrations always runs from the
+ * given starting version through to the true end of SCHEMA_MIGRATIONS (it
+ * has no "stop early" option), so once v63 sat after v62, isolating v62
+ * alone by starting one version below the array's top was no longer
+ * possible -- that offset ran v63 as well. Both migrations only ever touch
+ * the `exercises` table (created fresh in every test here, so no earlier
+ * migration can break on a missing table), so the v62 tests originally ran
+ * the last TWO migrations together via `runLastMigrations(raw, 2)`; the
+ * v63-only tests used `runLastMigrations(raw, 1)`, which correctly isolated
+ * v63 as the true last entry.
+ *
+ * v64 addendum (D8 residue fix, 2026-07-09, biceps subregion tags): the same
+ * drift happens again now that v64 (`subregion` UPDATEs, scoped to
+ * primary_muscle = 'biceps') lands after v63. v64 shares the `exercises`
+ * table with v62/v63 and only needs a `subregion` column added to
+ * `freshExercisesDb` (a no-op UPDATE against these delt-press seed rows,
+ * none of which are biceps), so isolating v63 alone is no longer possible
+ * either: the v62 block below now runs the last THREE migrations
+ * (`runLastMigrations(raw, 3)`) and the v63 block runs the last TWO
+ * (`runLastMigrations(raw, 2)`), asserting the same end states as before.
+ * v64's own dedicated coverage lives in database.bicepsSubregion.test.js.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -71,10 +81,14 @@ async function totalMigrationCount() {
 
 function freshExercisesDb() {
   const raw = new DatabaseSync(':memory:');
+  // subregion is unused by v62/v63 but v64 (the next migration, biceps
+  // subregion tags) now runs alongside them in this file's "last N
+  // migrations" harness, and its UPDATE targets that column.
   raw.exec(`CREATE TABLE exercises (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    primary_muscle TEXT
+    primary_muscle TEXT,
+    subregion TEXT
   );`);
   return raw;
 }
@@ -122,7 +136,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('re-tags Machine Shoulder Press and generic Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
 
     const machine = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const generic = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -133,7 +147,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is exactly scoped by name: does not touch Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
 
     const untouched = ['ex-3', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -151,7 +165,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('Plate-Loaded Shoulder Press, out of v62\'s own scope, is retagged once v63 runs alongside it', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
 
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-4');
     expect(plateLoaded.primary_muscle).toBe('front_delts');
@@ -160,12 +174,12 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is idempotent: running the migrations a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 2);
+    const total = await runLastMigrations(raw, 3);
 
     // Re-run the exact same migration set (simulating a second boot that
     // still sees the pre-migration version, e.g. a restored snapshot) by
     // resetting user_version back to before both and running again.
-    raw.exec(`PRAGMA user_version = ${total - 2}`);
+    raw.exec(`PRAGMA user_version = ${total - 3}`);
     const d = adapt(raw);
     await expect(runMigrations(d)).resolves.not.toThrow();
 
@@ -192,7 +206,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('re-tags Viking Press and Plate-Loaded Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 1); // v63 is the true last migration
+    await runLastMigrations(raw, 2); // v63 is the true last migration
 
     const viking = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -203,7 +217,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is exactly scoped by name: does not touch Machine Shoulder Press (already corrected by v62), Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 1);
+    await runLastMigrations(raw, 2);
 
     const untouched = ['ex-3', 'ex-4', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -216,9 +230,9 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is idempotent: running the migration a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    const total = await runLastMigrations(raw, 1);
+    const total = await runLastMigrations(raw, 2);
 
-    raw.exec(`PRAGMA user_version = ${total - 1}`);
+    raw.exec(`PRAGMA user_version = ${total - 2}`);
     const d = adapt(raw);
     await expect(runMigrations(d)).resolves.not.toThrow();
 
