@@ -275,3 +275,14 @@ OAuth SHA-1; Cut 4 seed walk.
   QUEUED as a Sonnet judgement sweep - distinguish true section-label roles
   (convert) from legit uppercase (keep); GoalLockConsent + PartnerPrivacyReceipt
   are consent surfaces: convert style tokens only if at all, never copy.
+- Parked-items triage LANDED (parked-items-triage.md): the "18-item register"
+  NEVER EXISTED (task-description folklore). True state from primary sources:
+  33 items -> 4 done (verified), 19 superseded by recorded rulings (stay
+  settled), 8 open (2 of which = the exercise rounds now answered as D8, so
+  6 truly open: A2 rest-day notification re-spec, NAV-2 BodyMetrics
+  edit/delete, VC-1 light-brand sign-off, RED-S/autoregulation wording
+  (known), LT-3/CP-10 theming, Ultimate-Audit 11-16 (known)), and 2
+  approved-but-unbuilt SMALL builds (getCoachOutputHistory deleted_at filter
+  + see doc) -> QUEUED with the B-5 uppercase tail for the next small-batch
+  slot. Old task #105 satisfied by this triage; opens go to ONE consolidated
+  founder round later (not now - round fatigue).
