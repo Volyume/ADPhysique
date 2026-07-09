@@ -319,7 +319,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.statusEyebrow}>Coach</Text>
+              <SectionLabel tone="primary">Coach</SectionLabel>
               <Text style={styles.statusTitle}>
                 {isPro
                   ? latestReview
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  statusEyebrow: { ...type.caption, color: colors.primary, fontWeight: fontWeight.black, textTransform: 'uppercase' },
+  // B-5: statusEyebrow's typography now comes from SectionLabel (tone="primary").
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },

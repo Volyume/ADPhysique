@@ -15,6 +15,7 @@ import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
+import SectionLabel from '../components/SectionLabel';
 import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
@@ -1644,9 +1645,9 @@ export default function HomeScreen({ navigation, route }) {
           </PressableCard>
         ) : activePlan && nextWorkout ? (
           <Card surface="surfaceElevated" style={styles.heroCard}>
-            <Text style={styles.heroEyebrow} numberOfLines={1}>
+            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               {planProgress}
-            </Text>
+            </SectionLabel>
             <Text style={styles.workoutName} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
@@ -1688,30 +1689,25 @@ export default function HomeScreen({ navigation, route }) {
                 read as the wrong default, start the actual session). */}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, { marginTop: 0 }, isStartingWorkout && { opacity: 0.6 }]}
+                <Button
+                  title={isStartingWorkout ? 'Starting...' : 'Start workout'}
+                  icon="play"
                   onPress={() => handleStartNextWorkout(false)}
                   disabled={isStartingWorkout}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
                   accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-                >
-                  <Ionicons name="play" size={16} color={colors.onPrimary} />
-                  <Text style={styles.primaryBtnText}>
-                    {isStartingWorkout ? 'Starting...' : 'Start workout'}
-                  </Text>
-                </TouchableOpacity>
+                  style={[styles.primaryBtn, { marginTop: 0 }]}
+                />
               </View>
-              <TouchableOpacity
-                style={styles.workoutOptionsBtn}
+              <Button
+                variant="secondary"
+                title="Options"
+                icon="ellipsis-horizontal"
                 onPress={() => setShowChangeWorkout(true)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
                 accessibilityLabel="Workout options"
-              >
-                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textSecondary} />
-                <Text style={styles.workoutOptionsText}>Options</Text>
-              </TouchableOpacity>
+                fullWidth={false}
+                style={styles.workoutOptionsBtn}
+                textStyle={styles.workoutOptionsText}
+              />
             </View>
             {/* S2: the compact consistency echo + one-time forgiveness explainer,
                 same resolver as the Progress strip so the number never disagrees;
@@ -2069,7 +2065,7 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </TouchableOpacity>
             {planAllWorkouts.length > 0 ? (
-              <Text style={styles.sheetSectionLabel}>Choose a different workout</Text>
+              <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
             ) : null}
             {planAllWorkouts.map((routine, i) => {
               const isNext = i === nextWorkout?.idx && !selectedWorkoutOverride;
@@ -2402,12 +2398,9 @@ const styles = StyleSheet.create({
   heroCard: {
     gap: spacing.sm,
   },
-  heroEyebrow: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    fontWeight: fontWeight.semibold,
-  },
+  // B-5: typography now comes from SectionLabel (tone="muted"); only
+  // structural overrides remain local.
+  heroEyebrow: {},
   workoutName: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
@@ -2425,17 +2418,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  // B-5/Button adoption: box, fill, radius, padding and label typography now
+  // come from the shared <Button> primitive; only the local margin survives.
   primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
     marginTop: spacing.xs,
   },
-  primaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   // One primary action plus one secondary options door. View, change workout
   // and blank session live in the sheet so the hero keeps a single dominant CTA.
   startWorkoutRow: {
@@ -2444,19 +2431,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   startBtnSplit: { flex: 1, marginTop: 0 },
-  workoutOptionsBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  workoutOptionsText: { ...type.label, color: colors.textSecondary },
+  // Button adoption: box/fill/radius/padding now come from <Button
+  // variant="secondary">; only the label colour override survives (the
+  // shared secondary variant's default fg is textPrimary, this stays the
+  // slightly quieter textSecondary it always was).
+  workoutOptionsBtn: {},
+  workoutOptionsText: { color: colors.textSecondary },
 
   // Home workout options sheet
   sheetActionRow: {
@@ -2479,11 +2459,9 @@ const styles = StyleSheet.create({
   },
   sheetActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
   sheetActionSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  // B-5: typography now comes from SectionLabel (tone="muted"); only the
+  // structural padding remains local.
   sheetSectionLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: fontWeight.semibold,
-    textTransform: 'uppercase',
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },

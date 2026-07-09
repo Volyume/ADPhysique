@@ -395,10 +395,15 @@ function PhysiqueOptIn({ onEnable }) {
         Track your body weight and measurements over time. All data stays on your
         device. It is never shared or uploaded.
       </Text>
-      <TouchableOpacity style={styles.optInBtn} onPress={onEnable} accessibilityRole="button" accessibilityLabel="Enable Physique Tracking">
-        <Ionicons name="body-outline" size={18} color={colors.onPrimary} />
-        <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
-      </TouchableOpacity>
+      <Button
+        title="Enable Physique Tracking"
+        icon="body-outline"
+        onPress={onEnable}
+        accessibilityLabel="Enable Physique Tracking"
+        size="lg"
+        style={styles.optInBtn}
+        textStyle={styles.optInBtnText}
+      />
     </Card>
   );
 }
@@ -770,18 +775,17 @@ export default function BodyMetricsScreen() {
               You asked for a calmer experience. Body measurements can be a
               sensitive space. Open it only if it feels right for you today.
             </Text>
-            <TouchableOpacity
-              style={styles.confirmBtn}
+            <Button
+              title="Continue"
               onPress={() => {
                 bodyMetricsSessionConfirmed = true;
                 setSessionConfirmed(true);
               }}
-              activeOpacity={0.85}
-              accessibilityRole="button"
               accessibilityLabel="Continue"
-            >
-              <Text style={styles.confirmBtnText}>Continue</Text>
-            </TouchableOpacity>
+              size="lg"
+              style={styles.confirmBtn}
+              textStyle={styles.confirmBtnText}
+            />
             <Text style={styles.confirmHelpline}>{WELLBEING_HELPLINE}</Text>
           </View>
         </ScrollView>
@@ -1349,23 +1353,26 @@ const styles = StyleSheet.create({
   optInBody: {
     ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
   },
+  // Button adoption: box/fill/radius/padding now come from <Button size="lg">
+  // (primary variant); only the wider horizontal padding and top margin
+  // survive as local overrides.
   optInBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
+    paddingHorizontal: spacing.xl, marginTop: spacing.md,
   },
-  optInBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  optInBtnText: {},
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
   },
   confirmTitle: { ...type.h3, color: colors.textPrimary },
   confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
+  // Button adoption: box/fill/radius/padding now come from <Button size="lg">
+  // (primary variant, fullWidth default matches the original alignSelf:
+  // 'stretch'); only the top margin survives as a local override.
   confirmBtn: {
-    alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary,
-    borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
+    marginTop: spacing.sm,
   },
-  confirmBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  confirmBtnText: {},
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
   snapshotCard: {

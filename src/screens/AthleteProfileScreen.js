@@ -58,7 +58,7 @@ function formatDate(ms) {
 function StatTile({ label, value, sub }) {
   return (
     <Card style={styles.statTile}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <SectionLabel tone="muted">{label}</SectionLabel>
       <Text style={styles.statValue} numberOfLines={2}>{value}</Text>
       {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
     </Card>
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     minHeight: 112,
     gap: spacing.xs,
   },
-  statLabel: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', fontWeight: fontWeight.black },
+  // B-5: statLabel's typography now comes from SectionLabel (tone="muted").
   statValue: { ...type.bodyStrong, color: colors.textPrimary },
   statSub: { ...type.captionTight, color: colors.textSecondary },
   section: { gap: spacing.md },

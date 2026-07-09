@@ -101,6 +101,7 @@ import BackHeader from '../components/BackHeader';
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
 import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
@@ -753,9 +754,13 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
           <Text style={styles.receiptUnlock}>{receipt.unlockLine}</Text>
         ) : null}
       </Card>
-      <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
-        <Text style={styles.doneBtnText}>Got it</Text>
-      </TouchableOpacity>
+      <Button
+        title="Got it"
+        onPress={onClose}
+        size="lg"
+        style={styles.doneBtn}
+        textStyle={styles.doneBtnText}
+      />
     </ScrollView>
   );
 }
@@ -776,9 +781,17 @@ function LoadErrorView({ onRetry, onClose }) {
           dropped connection. Your logs are safe. Try again in a moment.
         </Text>
       </Card>
-      <TouchableOpacity style={styles.doneBtn} onPress={onRetry} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Try again">
-        <Text style={styles.doneBtnText}>Try again</Text>
-      </TouchableOpacity>
+      <Button
+        title="Try again"
+        onPress={onRetry}
+        size="lg"
+        accessibilityLabel="Try again"
+        style={styles.doneBtn}
+        textStyle={styles.doneBtnText}
+      />
+      {/* No Button variant matches this plain borderless quiet-text action
+          (all variants carry either a fill or a border); left hand-rolled
+          rather than force a visual mismatch (see final report). */}
       <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
         <Text style={styles.secondaryBtnText}>Close</Text>
       </TouchableOpacity>
@@ -2051,7 +2064,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             (on-target/holding), no hero shows. */}
         {heroCardEl ? (
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
+            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             {heroCardEl}
             {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
                 line here; the full WhyBlock further down keeps the detail. */}
@@ -2068,7 +2081,7 @@ export default function CoachOutputScreen({ navigation, route }) {
              When safety holds are active the copy defers to them rather than
              claiming the plan is simply working. */
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
+            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             <View style={styles.holdHeroCard}>
               <Text style={styles.holdHeroText}>
                 {heldDecisions && heldDecisions.length > 0
@@ -2523,12 +2536,9 @@ const styles = StyleSheet.create({
   heroZone: {
     gap: spacing.xs,
   },
+  // B-5: typography now comes from SectionLabel (tone="primary"); only the
+  // structural padding remains local.
   heroLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: letterSpacing.overline,
-    textTransform: 'uppercase',
-    color: colors.primary,
     paddingHorizontal: spacing.xs,
   },
   // Wave A B6: the one-line why beneath the hero decision.
@@ -2775,19 +2785,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Done button (secondary style, surface fill, border, no solid colour)
+  // Button adoption: fill/radius/padding now come from <Button size="lg">
+  // (primary variant); only the local margin and the larger-than-default
+  // label size survive as overrides.
   doneBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: spacing.sm,
   },
   doneBtnText: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.onPrimary,
   },
   // A1 one-amber rule: Done on the main card is a quiet text action (03 gap
   // #1). The solid doneBtn above stays for the insufficient-data and error

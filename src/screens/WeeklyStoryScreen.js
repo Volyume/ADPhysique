@@ -32,9 +32,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
+import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -127,7 +128,7 @@ export default function WeeklyStoryScreen() {
           <View key={c.key} style={styles.chapterCard}>
             <View style={styles.chapterHeaderRow}>
               <Ionicons name={c.icon} size={18} color={colors.primary} />
-              <Text style={styles.chapterHeading}>{c.heading}</Text>
+              <SectionLabel tone="muted">{c.heading}</SectionLabel>
             </View>
             <Text style={[styles.chapterBody, c.empty && styles.chapterBodyEmpty]}>{c.body}</Text>
           </View>
@@ -164,13 +165,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  chapterHeading: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: letterSpacing.overline,
-    textTransform: 'uppercase',
-  },
+  // B-5: chapterHeading's typography now comes from SectionLabel (tone="muted").
   chapterBody: {
     ...type.body,
     color: colors.textPrimary,

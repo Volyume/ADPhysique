@@ -34,6 +34,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import SectionLabel from '../components/SectionLabel';
 import { SkeletonCard } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import RollingNumber from '../components/RollingNumber';
@@ -446,7 +447,7 @@ function PairCard({
       </View>
 
       <View style={styles.partnerStatusBand}>
-        <Text style={styles.statusEyebrow}>This week together</Text>
+        <SectionLabel tone="primary">This week together</SectionLabel>
         {showHero ? (
           <View style={styles.hero}>
             <View style={styles.heroRow}>
@@ -1682,11 +1683,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     padding: spacing.md,
   },
-  statusEyebrow: {
-    ...type.caption,
-    color: colors.primary,
-    textTransform: 'uppercase',
-  },
+  // B-5: statusEyebrow's typography now comes from SectionLabel (tone="primary").
   hero: { gap: spacing.xs },
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: spacing.sm },
   heroNum: { ...type.display, color: colors.textPrimary },

@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle,
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
@@ -386,7 +387,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 ))}
                 {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
                   <View style={styles.whyPlanWrap}>
-                    <Text style={styles.whyPlanTitle}>Why this plan, for you</Text>
+                    <SectionLabel>Why this plan, for you</SectionLabel>
                     {WHY_ORDER.filter(k => whyThis[k]).map(k => (
                       <View key={k} style={styles.whyPlanItem}>
                         <View style={styles.whyPlanBullet} />
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
-  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase' },
+  // B-5: whyPlanTitle's typography now comes from SectionLabel (default tone).
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
