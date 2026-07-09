@@ -58,7 +58,10 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toContain('morningEnabled: true');
     expect(SOURCE).toContain('checkinEnabled: true');
     expect(SOURCE).toContain('styles.requiredPill');
-    expect(SOURCE).toContain('<Text style={styles.requiredPillText}>Required</Text>');
+    // FR-4/D7: pill copy softened to "Part of your coaching"; the reminder
+    // itself stays non-optional (morningEnabled/checkinEnabled true, no
+    // toggle handlers below) - tone only, gate assertions unchanged.
+    expect(SOURCE).toContain('<Text style={styles.requiredPillText}>Part of your coaching</Text>');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time"');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day"');
     expect(SOURCE).toContain('accessibilityState={{ checked: morningHour === h }}');

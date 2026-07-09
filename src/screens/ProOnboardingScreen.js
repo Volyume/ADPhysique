@@ -1751,8 +1751,11 @@ export default function ProOnboardingScreen({ navigation }) {
                     A quick morning weigh-in gives a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
-                <View style={styles.requiredPill} accessibilityLabel="Required coaching reminder">
-                  <Text style={styles.requiredPillText}>Required</Text>
+                {/* FR-4/D7: "Required" softened to "Part of your coaching" -
+                    tone only, this reminder is still non-optional; see
+                    coverage-05-first-run.md FR-4. */}
+                <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
+                  <Text style={styles.requiredPillText}>Part of your coaching</Text>
                 </View>
               </View>
 
@@ -1795,8 +1798,11 @@ export default function ProOnboardingScreen({ navigation }) {
                     Pick the day you are most likely to review training, food and recovery honestly.
                   </Text>
                 </View>
-                <View style={styles.requiredPill} accessibilityLabel="Required coaching reminder">
-                  <Text style={styles.requiredPillText}>Required</Text>
+                {/* FR-4/D7: "Required" softened to "Part of your coaching" -
+                    tone only, this reminder is still non-optional; see
+                    coverage-05-first-run.md FR-4. */}
+                <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
+                  <Text style={styles.requiredPillText}>Part of your coaching</Text>
                 </View>
               </View>
 
