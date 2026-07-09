@@ -786,7 +786,6 @@ const styles = StyleSheet.create({
     lineHeight: 100,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: 0,
   },
   statUnit: {
     ...type.h3,
@@ -805,7 +804,6 @@ const styles = StyleSheet.create({
     lineHeight: 48,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: 0,
   },
   heroSubline: {
     ...type.body,

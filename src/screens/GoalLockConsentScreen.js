@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
     fontWeight: fontWeight.semibold,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,

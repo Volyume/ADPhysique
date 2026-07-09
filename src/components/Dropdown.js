@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
+    color: colors.textMuted, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
   dropdownTrigger: {

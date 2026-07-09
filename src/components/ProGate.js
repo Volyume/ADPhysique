@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText: { fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
+  badgeText: { fontWeight: fontWeight.black, color: colors.onPrimary },
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });

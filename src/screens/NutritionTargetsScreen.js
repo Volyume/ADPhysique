@@ -1647,7 +1647,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    letterSpacing: 0,
   },
   macroPerKg: {
     ...type.caption,
@@ -1693,7 +1692,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.textMuted,
-    letterSpacing: 0,
   },
   perMealCenter: {
     alignItems: 'center',
@@ -1711,7 +1709,6 @@ const styles = StyleSheet.create({
   perMealUnit: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    letterSpacing: 0,
   },
   mealDotsRow: {
     flexDirection: 'row',

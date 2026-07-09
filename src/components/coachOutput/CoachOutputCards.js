@@ -189,7 +189,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.error,
-    letterSpacing: 0.3,
   },
   rapidLossBody: {
     fontSize: fontSize.sm,

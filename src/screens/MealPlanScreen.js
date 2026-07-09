@@ -12,7 +12,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions, Share,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -22,6 +22,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
@@ -617,7 +618,11 @@ export default function MealPlanScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'} onBack={() => navigation.goBack()} />
       {loading ? (
-        <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
+        <View style={styles.scroll}>
+          <SkeletonCard height={80} />
+          <SkeletonCard height={140} />
+          <SkeletonCard height={140} />
+        </View>
       ) : loadError ? (
         <View style={styles.emptyWrap}>
           <EmptyState
@@ -1101,7 +1106,6 @@ export default function MealPlanScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
   emptyScroll: {
     flexGrow: 1,
@@ -1220,7 +1224,7 @@ const styles = StyleSheet.create({
   planQuickActionText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   mealCard: { gap: spacing.xs },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
+  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
@@ -1233,7 +1237,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border, gap: 3,
   },
-  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0, marginBottom: 2 },
+  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, marginBottom: 2 },
   seasonLine: { ...type.bodySm, color: colors.textSecondary },
   seasonName: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   swapBtn: {
@@ -1292,7 +1296,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   prefRow: { gap: spacing.xs },
-  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0 },
+  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
   prefOptOn: { borderColor: colors.textSecondary, backgroundColor: colors.surface },

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, motion, shadow } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -196,9 +196,9 @@ const styles = StyleSheet.create({
   wordmark: {
     // eslint-disable-next-line no-restricted-syntax -- welcome hero title, intentional display size
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
-    letterSpacing: 0, marginTop: spacing.xs,
+    marginTop: spacing.xs,
   },
-  tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0 },
+  tagline: { fontSize: fontSize.sm, color: colors.textMuted },
 
   cards: { gap: spacing.md },
 
@@ -211,11 +211,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.primary,
     overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    ...shadow.glow,
   },
   proCardHeader: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,

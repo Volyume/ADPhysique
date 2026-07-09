@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 3,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 0 },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
@@ -1241,7 +1241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
+  actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary },
   actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
     borderColor: withAlpha(colors.primary, alpha.edge),
@@ -1313,7 +1313,7 @@ const styles = StyleSheet.create({
   },
   nextBlockPreLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.2,
+    color: colors.textMuted,
   },
   nextBlockHeadline: {
     ...type.bodyStrong, color: colors.textPrimary,

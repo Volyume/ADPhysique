@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, letterSpacing } from '../styles/theme';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontWeight: fontWeight.medium,
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },
   legend: {

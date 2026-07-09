@@ -7,7 +7,7 @@ import { endOfWeek } from 'date-fns/endOfWeek';
 import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
     marginBottom: spacing.md,
   },

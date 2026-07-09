@@ -221,6 +221,17 @@ module.exports = [
           selector: "Property[key.name='fontWeight'] > Literal",
           message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
         },
+        {
+          // D3 (design campaign 2026-07-09): letterSpacing stays neutral (0)
+          // everywhere except two named tokens. Raw literals drifted to 7
+          // different ad-hoc values on uppercase labels alone. Use
+          // letterSpacing.overline for uppercase section/eyebrow micro-labels,
+          // letterSpacing.wordmark for the two named brand-wordmark sites
+          // (SettingsAbout app name, PRCelebration hero), or omit the
+          // property entirely (0 is the RN default).
+          selector: "Property[key.name='letterSpacing'] > Literal[raw=/^-?[0-9]/]",
+          message: 'No raw letterSpacing literal. Use letterSpacing.overline, letterSpacing.wordmark, or omit the property (0 is the default).',
+        },
         // Voice-rule copy gate (CLAUDE.md "Voice and copy" + "No AI
         // fingerprint"). Guards displayed copy the way the rules above guard
         // colour: no em dashes, no machine-tell marketing words. Strings +
@@ -289,6 +300,10 @@ module.exports = [
         {
           selector: "Property[key.name='fontWeight'] > Literal",
           message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
+        },
+        {
+          selector: "Property[key.name='letterSpacing'] > Literal[raw=/^-?[0-9]/]",
+          message: 'No raw letterSpacing literal. Use letterSpacing.overline, letterSpacing.wordmark, or omit the property (0 is the default).',
         },
         {
           selector: "Literal[value=/\\u2014/]",

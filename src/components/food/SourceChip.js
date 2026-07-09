@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontVariant: ['tabular-nums'],
-    letterSpacing: 0,
   },
   verifiedRow: {
     flexDirection: 'row',

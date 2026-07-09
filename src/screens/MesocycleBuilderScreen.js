@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   activeBadgeText: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 1,
+    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.primary,
   },
   mesoName:   { ...type.title, color: colors.textPrimary },
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
   planCardTag: {
     fontSize: fontSize.xs, fontWeight: fontWeight.black,
-    color: colors.primary, letterSpacing: 1,
+    color: colors.primary,
   },
   planCardName: { ...type.h3, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },

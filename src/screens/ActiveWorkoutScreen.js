@@ -3420,7 +3420,7 @@ const styles = StyleSheet.create({
   // 700 ms flash, just the colour swaps.
   setEntryCardFlash: { borderColor: colors.primary },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  warmupBannerText: { ...type.caption, color: colors.warning, letterSpacing: 0 },
+  warmupBannerText: { ...type.caption, color: colors.warning },
   warmupOneTimeHint: {
     ...type.bodySm, color: colors.textMuted, paddingTop: spacing.xs,
   },
@@ -3454,7 +3454,7 @@ const styles = StyleSheet.create({
   // secondary via the tinted-outline override below.
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { ...type.bodyStrong, color: colors.onPrimary, letterSpacing: 0 },
+  completeBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
@@ -3469,7 +3469,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2,
   },
-  extraSetBtnPromotedText: { ...type.label, color: colors.textPrimary, letterSpacing: 0 },
+  extraSetBtnPromotedText: { ...type.label, color: colors.textPrimary },
   // C3: quiet inline row for the auto-advance countdown, sits under the
   // "Log another set" button so it reads as one calm sentence with a
   // tappable ending, not another banner competing for attention.
@@ -3503,7 +3503,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
-  clusterTitle: { ...type.label, color: colors.primary, letterSpacing: 0 },
+  clusterTitle: { ...type.label, color: colors.primary },
   clusterReps: { ...type.bodyStrong, color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   clusterInput: {
@@ -3539,7 +3539,7 @@ const styles = StyleSheet.create({
   },
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   loggedSection: { gap: spacing.xs2 },
-  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0 },
+  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, backgroundColor: colors.surface, borderRadius: radius.xs, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
@@ -3567,7 +3567,7 @@ const styles = StyleSheet.create({
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   infoTarget: { ...type.label, color: colors.primary },
   infoMuscle: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
-  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs, marginTop: spacing.sm },
+  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, marginBottom: spacing.xs, marginTop: spacing.sm },
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   // COMP-015 "Adjusted today" section in the info sheet
   adjustedSection: {
@@ -3581,7 +3581,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   adjustedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0 },
+  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   adjustedReason: { ...type.bodySm, color: colors.textPrimary },
   adjustedSignal: { ...type.caption, color: colors.textMuted },
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },

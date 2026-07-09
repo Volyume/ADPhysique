@@ -218,6 +218,26 @@ visually subordinate. Minimum tap target 48px.
 
 ---
 
+## Header components
+
+Three canonical headers cover every screen; every `Stack.Screen` in
+`RootNavigator.js` renders `headerShown: false` and one of these (or a
+documented justified custom header, e.g. a wizard step or the full-bleed
+Year-of-Lifts story deck) instead of the native React Navigation header.
+Never hand-roll a fourth header shape.
+
+| Component | Use for | Shape |
+|---|---|---|
+| `ScreenHeader` | Top-level tab screens (Today, Train, Eat, Progress, Coach) | Page title left, compact Volyume V (or a passed `right` node) on the right, optional `subtitle` line |
+| `BackHeader` | Any screen you navigate INTO (pushed detail/list/settings screens) | Back chevron (24px, `textPrimary`) left, title centred, optional `right` action; a fixed-width spacer keeps the title optically centred when `right` is absent |
+| `ModalHeader` | Full-screen modals presented over a tab (scanners, paywalls, add/edit sheets) | Close X on `closePosition` side (default right), title centred, optional `rightAccessory` on the opposite side (e.g. a Save button) |
+
+`SettingsPage` (in `SettingsPrimitives.js`) wraps `BackHeader` for the whole
+Settings family, so Settings screens pass a `title` prop rather than
+rendering `BackHeader` directly.
+
+---
+
 ## Motion
 
 Tokens in `theme.js` (`motion.*`). New everyday motion is built on

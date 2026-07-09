@@ -32,7 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.2,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },
   chapterBody: {

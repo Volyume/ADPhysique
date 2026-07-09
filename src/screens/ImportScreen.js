@@ -19,7 +19,7 @@ import BackHeader from '../components/BackHeader';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { colors, fontSize, fontWeight, spacing, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: letterSpacing.overline,
     marginBottom: spacing.md,
   },
   statRow: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
   },
   unmappedText: {
     ...type.bodySm,

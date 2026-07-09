@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   toggleTitle: { flex: 1 },
   pickerLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.2,
+    color: colors.textMuted,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
   chipRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, flexDirection: 'row' },

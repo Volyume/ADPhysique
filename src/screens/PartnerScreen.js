@@ -34,6 +34,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import { SkeletonCard } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import RollingNumber from '../components/RollingNumber';
 import PartnerPrivacyReceipt from '../components/PartnerPrivacyReceipt';
@@ -973,8 +974,9 @@ export default function PartnerScreen({ route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Partners" />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.content}>
+          <SkeletonCard height={132} />
+          <SkeletonCard height={132} />
         </View>
       </SafeAreaView>
     );
@@ -1625,7 +1627,6 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorWrap: { flex: 1, justifyContent: 'center', padding: spacing.lg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 

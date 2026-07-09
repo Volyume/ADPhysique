@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
 // silences them (the old raw expo-haptics calls bypassed it).
@@ -471,7 +471,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
-    letterSpacing: 0,
   },
   rowCompact: { minHeight: 56 },
   // eslint-disable-next-line no-restricted-syntax -- compact hero numeral on short screens
@@ -491,7 +490,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     flex: 1,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: letterSpacing.overline,
   },
   skipBtn: {
     minHeight: 44,

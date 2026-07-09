@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   },
   divisionGroupLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3,
+    color: colors.textMuted,
     marginBottom: spacing.sm,
   },
   divisionIntroDesc: {

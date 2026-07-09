@@ -15,7 +15,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   dayHeader: {
     fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary,
-    letterSpacing: 1, textTransform: 'uppercase',
+    letterSpacing: letterSpacing.overline, textTransform: 'uppercase',
     marginTop: spacing.md, marginBottom: spacing.xs, backgroundColor: colors.background,
   },
   row: {

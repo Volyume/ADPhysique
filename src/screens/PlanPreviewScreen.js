@@ -8,7 +8,7 @@
  */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, letterSpacing } from '../styles/theme';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { buildPlanPreview } from '../lib/onboarding/planPreview';
@@ -50,7 +50,7 @@ export default function PlanPreviewScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  kicker: { color: colors.textSecondary, fontSize: fontSize.sm, letterSpacing: 1, fontWeight: fontWeight.semibold },
+  kicker: { color: colors.textSecondary, fontSize: fontSize.sm, letterSpacing: letterSpacing.overline, fontWeight: fontWeight.semibold },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black, marginTop: spacing.xs, marginBottom: spacing.lg },
   card: { gap: spacing.sm },
   splitName: { color: colors.primary, fontSize: fontSize.xl, fontWeight: fontWeight.heavy },

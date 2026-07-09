@@ -1272,7 +1272,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.primary,
-    letterSpacing: 0.3,
     minWidth: 44,
   },
   dayNameFieldContainer: {
@@ -1494,7 +1493,6 @@ const balanceStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.textSecondary,
-    letterSpacing: 0.3,
   },
   grid: {
     flexDirection: 'row',

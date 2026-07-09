@@ -27,7 +27,7 @@
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, type, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, type, motion, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const ToastContext = createContext({ show: () => {} });
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    letterSpacing: 0.4,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },
 });

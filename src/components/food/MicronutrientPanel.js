@@ -20,7 +20,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../../styles/theme';
 import { resolveFoodRef } from '../../lib/food/sources/localCache';
 import { MICRONUTRIENTS, computeMicronutrientTotals, nrvPercent } from '../../lib/food/micronutrients';
 import { logError } from '../../lib/errorLog';
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   retryText: { ...type.bodySm, color: colors.primary, fontWeight: fontWeight.semibold },
   groupLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: spacing.xs,
+    textTransform: 'uppercase', letterSpacing: letterSpacing.overline, marginBottom: spacing.xs,
   },
   groupLabelSpacer: { marginTop: spacing.md },
   row: {

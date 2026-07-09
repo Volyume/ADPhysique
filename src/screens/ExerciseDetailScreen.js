@@ -985,7 +985,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0,
   },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
@@ -1128,7 +1127,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   prHighlightRow: {
@@ -1251,7 +1249,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   goalWeightRow: {

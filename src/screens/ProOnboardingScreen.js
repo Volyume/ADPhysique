@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, hitSlop } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, hitSlop, shadow } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
@@ -1842,7 +1842,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.black,
-    color: colors.onPrimary, letterSpacing: 0,
+    color: colors.onPrimary,
   },
 
   progressTrack: {
@@ -1966,7 +1966,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.sm,
+    color: colors.textMuted, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
   // A3: provisional energy line under the focus dropdown (step 4).
@@ -2002,7 +2002,7 @@ const styles = StyleSheet.create({
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
   wpLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0, marginBottom: spacing.xs,
+    color: colors.textMuted, marginBottom: spacing.xs,
   },
   wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
   wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
@@ -2098,7 +2098,7 @@ const styles = StyleSheet.create({
   toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
 
   timeRow: { marginTop: spacing.md },
-  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, letterSpacing: 0 },
+  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
@@ -2117,8 +2117,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.xl,
     borderWidth: 2, borderColor: colors.primary,
     padding: spacing.lg, marginBottom: spacing.xl,
-    shadowColor: colors.primary, shadowOpacity: 0.15,
-    shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+    ...shadow.glow,
   },
   offerBadgeRow: { marginBottom: spacing.sm },
   offerBadge: {
@@ -2126,7 +2125,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0 },
+  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },

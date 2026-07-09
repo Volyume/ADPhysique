@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0 },
+  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
-  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0 },
+  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase' },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },

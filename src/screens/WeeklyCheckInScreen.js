@@ -1907,12 +1907,12 @@ const styles = StyleSheet.create({
   // opacity 1 counteracts the Button primitive's default disabled dim so the
   // incomplete-form state keeps its shipped look (solid surface3, muted text).
   ctaBtnDisabled: { backgroundColor: colors.surface3, opacity: 1 },
-  ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0.3 },
+  ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
   // -- COMP-008 Fast Check-In ------------------------------------------------
-  headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted, letterSpacing: 0.3 },
+  headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted },
   fastSummaryCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

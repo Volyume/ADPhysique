@@ -1839,7 +1839,7 @@ const styles = StyleSheet.create({
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   moveTitle: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 0, textTransform: 'uppercase',
+    textTransform: 'uppercase',
     paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
   },
   moveOption: {

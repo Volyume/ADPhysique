@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
 import { useFeedback } from '../components/FeedbackSheet';
 import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
 
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxl,
     paddingBottom: spacing.lg,
   },
-  appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
+  appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: letterSpacing.wordmark },
   appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   betaBadge: {
     paddingHorizontal: spacing.sm,
@@ -112,7 +112,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.micro,
     fontWeight: fontWeight.bold,
     color: colors.onPrimary,
-    letterSpacing: 1,
   },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
   tagline: { ...type.caption, color: colors.textMuted },

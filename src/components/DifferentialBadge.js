@@ -105,7 +105,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    letterSpacing: 0.5,
   },
   body: {
     color: colors.textPrimary,

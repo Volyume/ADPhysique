@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   createNameInputContainer: { gap: 0 },
   createNameInputField: { borderRadius: radius.md },
   createNameInputText: { ...type.bodyStrong, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 0.3 },
+  createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   filterRow: {
     flexDirection: 'row', gap: spacing.xs, flexGrow: 0,

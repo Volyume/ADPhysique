@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
   brandTagline: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
-    letterSpacing: 0.3,
   },
   brandDivider: {
     height: 1,

@@ -394,7 +394,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    letterSpacing: 0,
   },
   macroRow: {
     gap: spacing.md,

@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0 },
+  resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary },
   resultName: { ...type.bodyStrong, color: colors.textPrimary },
   resultDesc: { ...type.bodySm, color: colors.textSecondary },
   resultMeta: { ...type.caption, color: colors.textMuted },

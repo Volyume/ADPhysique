@@ -66,6 +66,15 @@ axes ONLY. All sizes scale ×1.2 under the larger-text setting — another
 reason raw values are banned. 11px is a caption size, not a body size: if
 copy runs to sentences, it wears `bodySm` or larger.
 
+**Letter-spacing stays neutral (2026-07-09, D3).** Every `letterSpacing.*`
+role is 0 except two named exceptions: `letterSpacing.overline` (0.5) for
+uppercase section/eyebrow micro-labels, and `letterSpacing.wordmark` (2) for
+the two brand-wordmark sites (SettingsAbout app name, PRCelebration hero).
+No other non-zero value is permitted; a raw numeric `letterSpacing` literal
+in `src/screens/` or `src/components/` fails lint (same `no-restricted-syntax`
+bank as `fontSize`/`fontWeight`). Omit the property entirely for the neutral
+case (0 is the React Native default).
+
 ---
 
 ## SPACING, RADIUS, ICONS
@@ -127,6 +136,23 @@ primary/secondary/tertiary/destructive), `Card` (tone/elevated/padding),
 `SettingsPrimitives`, `Toast`, `AnimatedEntrance`, `Skeleton`. If a shared
 primitive is missing a variant, extend it — do not fork a local copy; local
 chip/section-header clones are exactly the drift the audits flagged.
+
+**Header trio.** Every screen chrome is one of three canonical headers (no
+fourth hand-rolled shape, no native React Navigation header — every
+`Stack.Screen` sets `headerShown: false`):
+- `ScreenHeader` — top-level tab screens (Today, Train, Eat, Progress, Coach):
+  title left, compact Volyume V (or a passed `right` node) on the right.
+- `BackHeader` — any pushed/detail/settings screen you navigate INTO: back
+  chevron left, title centred, optional `right` action. `SettingsPage` wraps
+  this for the whole Settings family.
+- `ModalHeader` — full-screen modals presented over a tab (scanners,
+  paywalls, add/edit sheets): close X on `closePosition` side (default
+  `'right'`), title centred, optional `rightAccessory` on the opposite side
+  (e.g. a Save button — pass `closePosition="left"` so the accessory renders
+  on the right).
+Justified exceptions (wizards, pre-account reveals, full-bleed story decks)
+are documented inline where they occur; see `docs/DESIGN_SYSTEM.md`'s
+"Header components" section for the full table.
 
 ---
 

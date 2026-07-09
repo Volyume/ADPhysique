@@ -2405,7 +2405,6 @@ const styles = StyleSheet.create({
   heroEyebrow: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    letterSpacing: 0,
     textTransform: 'uppercase',
     fontWeight: fontWeight.semibold,
   },
@@ -2485,7 +2484,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: fontWeight.semibold,
     textTransform: 'uppercase',
-    letterSpacing: 0,
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
@@ -2600,7 +2598,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0,
   },
   glanceRow: {
     flexDirection: 'row',
@@ -2637,7 +2634,7 @@ const styles = StyleSheet.create({
   },
   lastSessionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0,
+    color: colors.textMuted,
   },
   lastSessionMeta: {
     ...type.caption, color: colors.textMuted,

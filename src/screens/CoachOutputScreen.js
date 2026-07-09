@@ -104,7 +104,7 @@ import Button from '../components/Button';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion, letterSpacing } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -2498,7 +2498,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    letterSpacing: 0,
   },
   weekRange: {
     fontSize: fontSize.sm,
@@ -2527,7 +2526,7 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
-    letterSpacing: 0.4,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
     color: colors.primary,
     paddingHorizontal: spacing.xs,
@@ -2604,7 +2603,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    letterSpacing: 0.6,
+    letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },
   focusText: {
@@ -2654,7 +2653,7 @@ const styles = StyleSheet.create({
   },
   appliedChipText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.bold,
-    color: colors.success ?? colors.primary, letterSpacing: 0.4,
+    color: colors.success ?? colors.primary,
   },
   adjustmentNote: {
     ...type.bodySm,
@@ -2759,7 +2758,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    letterSpacing: 0.2,
   },
   // A1 verdict: heading-size title when the diet break IS the decision.
   dietBreakTitleHero: {
@@ -2886,7 +2884,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.warning,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
   },
   edLockoutTitle: {
     fontSize: fontSize.lg,
@@ -2963,7 +2961,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.success,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: letterSpacing.overline,
   },
   edClearedTitle: {
     fontSize: fontSize.lg,
@@ -2991,7 +2989,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.3,
     marginBottom: spacing.sm,
   },
   heldHistoryEntry: {

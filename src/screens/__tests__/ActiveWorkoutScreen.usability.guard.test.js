@@ -128,7 +128,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('high-impact workout text uses the semantic Inter type roles', () => {
     expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.primary }");
-    expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.onPrimary, letterSpacing: 0 }');
+    // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
+    // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
+    // value-identical to the RN default so the property is simply gone now.
+    expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
     expect(ACTIVE_WORKOUT).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
     expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');

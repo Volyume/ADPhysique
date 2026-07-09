@@ -103,7 +103,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     lineHeight: Math.round(fontSize.xs * lineHeight.snug),
-    letterSpacing: 0,
     color: colors.textSecondary,
   },
   field: {

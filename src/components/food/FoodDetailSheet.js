@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   lastVerified: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0, fontWeight: fontWeight.semibold,
+    textTransform: 'uppercase', fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
   // Unit selector (household serving vs grams) + amount stepper. The common

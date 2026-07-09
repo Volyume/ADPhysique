@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   diffAfter: { color: colors.textPrimary },
   diffAfterChanged: { fontWeight: fontWeight.bold },
   diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
-  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   diffBackBtn: { marginTop: spacing.sm },

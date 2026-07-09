@@ -37,6 +37,7 @@ import { searchFoods } from '../lib/food/waterfall';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
@@ -290,22 +291,23 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{recipeId ? 'Edit recipe' : 'New recipe'}</Text>
-        <Button
-          title="Save"
-          variant="tertiary"
-          size="sm"
-          onPress={onSave}
-          loading={saving}
-          disabled={!canSave}
-          fullWidth={false}
-          accessibilityLabel="Save recipe"
-        />
-      </View>
+      <ModalHeader
+        title={recipeId ? 'Edit recipe' : 'New recipe'}
+        closePosition="left"
+        onClose={() => navigation.goBack()}
+        rightAccessory={(
+          <Button
+            title="Save"
+            variant="tertiary"
+            size="sm"
+            onPress={onSave}
+            loading={saving}
+            disabled={!canSave}
+            fullWidth={false}
+            accessibilityLabel="Save recipe"
+          />
+        )}
+      />
 
       {loading ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
@@ -470,12 +472,6 @@ function MacroPill({ label, value }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { color: colors.textPrimary, ...type.title },
   loadError: { padding: spacing.lg },
 
   section: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
@@ -526,7 +522,7 @@ const styles = StyleSheet.create({
   qtyUnit: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 
   macros: { marginHorizontal: spacing.lg, marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
-  macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0, marginBottom: spacing.sm },
+  macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', marginBottom: spacing.sm },
   macrosRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   macrosSub: { color: colors.textMuted, ...type.num('caption') },
   pill: {

@@ -245,6 +245,5 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   label: {
     fontFamily: fontFamily.semibold,
-    letterSpacing: 0,
   },
 });

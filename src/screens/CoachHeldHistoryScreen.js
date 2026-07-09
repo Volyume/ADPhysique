@@ -292,7 +292,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.2,
     marginBottom: spacing.xs,
   },
 
