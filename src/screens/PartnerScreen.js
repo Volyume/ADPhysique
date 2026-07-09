@@ -243,7 +243,7 @@ function PartnerGuidedWeekCard({
     else onShareWins(pair);
   }
   return (
-    <View style={styles.supportPlanCard}>
+    <Card radius="md" padding="md" style={[styles.supportPlanCard, styles.supportPlanCardBorder]}>
       <View style={styles.supportPlanHead}>
         <View style={styles.supportPlanTitleRow}>
           <Ionicons name="eye-outline" size={iconSize.sm} color={colors.textSecondary} />
@@ -264,7 +264,7 @@ function PartnerGuidedWeekCard({
         </TouchableOpacity>
       ) : null}
       <Text style={styles.supportPlanPrivacy}>{supportPlan.privacyLine}</Text>
-    </View>
+    </Card>
   );
 }
 
@@ -312,7 +312,7 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
         const mine = card.senderId === userId;
         const date = formatWinCardDate(card.createdAt);
         return (
-          <View key={card.id} style={styles.partnerWinCard}>
+          <Card key={card.id} surface="surface2" radius="md" padding="md" style={[styles.partnerWinCard, styles.partnerWinCardBorder]}>
             <View style={styles.partnerWinTop}>
               <Text style={styles.partnerWinMeta}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
               {mine ? (
@@ -331,7 +331,7 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
             <Text style={styles.partnerWinTitle}>{card.title}</Text>
             <Text style={styles.partnerWinSummary}>{card.summary}</Text>
             <Text style={styles.partnerWinDetail}>{card.detail}</Text>
-          </View>
+          </Card>
         );
       })}
     </View>
@@ -370,10 +370,12 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
   const status = blockStatusCopy(block, partnerName, userId);
   if (!status) return null;
   return (
-    <TouchableOpacity
+    <Card
+      surface="surface2"
+      radius="md"
+      padding="md"
       style={styles.blockStatusCard}
       onPress={onOpen}
-      accessibilityRole="button"
       accessibilityLabel={`Training phase sharing, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
@@ -386,7 +388,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
         <Text style={styles.blockStatusActionText}>Sharing settings</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 }
 
@@ -1346,7 +1348,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
         })}
       </View>
       {selectedPreview ? (
-        <View style={styles.shareWinPreviewCard}>
+        <Card surface="surface2" radius="md" padding="md" style={[styles.shareWinPreviewCard, styles.shareWinPreviewCardBorder]}>
           <View style={styles.shareWinPreviewTop}>
             <Text style={styles.shareWinPreviewStatus}>{selectedPreview.status}</Text>
             <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
@@ -1388,7 +1390,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
             loading={sending}
             accessibilityLabel={`Send ${selectedPreview.draft.title.toLowerCase()} to ${partnerName}`}
           />
-        </View>
+        </Card>
       ) : null}
     </View>
   );
@@ -1425,7 +1427,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
     }
   }
   return (
-    <View style={styles.pendingCard}>
+    <Card style={styles.pendingCard} radius="lg" padding="lg">
       <View style={styles.pendingRow}>
         <Ionicons name="hourglass-outline" size={iconSize.md} color={colors.textSecondary} />
         <Text style={styles.pendingText}>Invitation sent. Waiting for your partner.</Text>
@@ -1433,38 +1435,27 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
       <Text style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
       <Text style={styles.pendingHint}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
       {checkLine ? <Text style={styles.pendingCheckLine}>{checkLine}</Text> : null}
-      <TouchableOpacity
+      <Button
+        title="Share invite again"
+        icon="share-outline"
         onPress={shareAgain}
-        style={[styles.pendingPrimary, sharing && styles.pendingPrimaryDisabled]}
         disabled={sharing}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: sharing }}
+        loading={sharing}
         accessibilityLabel="Share invite again"
-      >
-        {sharing ? (
-          <ActivityIndicator size="small" color={colors.onPrimary} />
-        ) : (
-          <Ionicons name="share-outline" size={iconSize.sm} color={colors.onPrimary} />
-        )}
-        <Text style={styles.pendingPrimaryText}>{sharing ? 'Opening share...' : 'Share invite again'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
+      />
+      <Button
+        title="Refresh status"
+        variant="outline"
+        icon="refresh-outline"
         onPress={checkConnection}
-        style={[styles.pendingSecondary, checking && styles.pendingPrimaryDisabled]}
         disabled={checking}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: checking }}
+        loading={checking}
         accessibilityLabel="Check invite status"
-      >
-        {checking ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.textSecondary} />
-        )}
-          <Text style={styles.pendingSecondaryText}>{checking ? 'Checking...' : 'Refresh status'}</Text>
-      </TouchableOpacity>
+      />
+      {/* Quiet-bordered destructive action (not a solid fill): Button's
+          destructive variant is a solid error fill and would visually regress
+          this outline treatment, so it stays hand-rolled (design campaign
+          2026-07-09, L02-B2 judgement call). */}
       <TouchableOpacity
         onPress={() => onCancel(pending)}
         style={styles.pendingDanger}
@@ -1475,7 +1466,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         <Ionicons name="close-circle-outline" size={iconSize.sm} color={colors.error} />
         <Text style={styles.cancelText}>Cancel invitation</Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 }
 
@@ -1719,14 +1710,15 @@ const styles = StyleSheet.create({
 
   keptLine: { ...type.body, color: colors.primary },
 
-  // Active-pair guided week
+  // Active-pair guided week. Card gives the surface/radius/padding; this
+  // keeps only the layout gap plus the tinted border override (Card's
+  // default is the neutral borderSubtle hairline, but this card keeps its
+  // original primary-tinted edge).
   supportPlanCard: {
     gap: spacing.sm,
-    borderWidth: 1,
+  },
+  supportPlanCardBorder: {
     borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
   },
   supportPlanHead: { gap: spacing.xs },
   supportPlanTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -1772,13 +1764,14 @@ const styles = StyleSheet.create({
   partnerShareSection: { gap: spacing.sm },
   partnerWins: { gap: spacing.sm },
   partnerWinsTitle: { ...type.label, color: colors.textPrimary },
+  // Card gives surface/radius/padding; this keeps the layout gap plus the
+  // original visible border colour (Card's own default is the quieter
+  // borderSubtle hairline).
   partnerWinCard: {
     gap: spacing.xxs,
-    borderRadius: radius.md,
-    borderWidth: 1,
+  },
+  partnerWinCardBorder: {
     borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
   },
   partnerWinTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   partnerWinMeta: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
@@ -1855,13 +1848,14 @@ const styles = StyleSheet.create({
   },
   shareWinChoiceTitle: { ...type.label, color: colors.textPrimary },
   shareWinChoiceTitleActive: { color: colors.primary },
+  // Card gives surface/radius/padding; this keeps the layout gap plus the
+  // original visible border colour (Card's own default is the quieter
+  // borderSubtle hairline).
   shareWinPreviewCard: {
     gap: spacing.xs,
-    borderWidth: 1,
+  },
+  shareWinPreviewCardBorder: {
     borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
   },
   shareWinPreviewTop: {
     flexDirection: 'row',
@@ -1944,12 +1938,9 @@ const styles = StyleSheet.create({
   },
   momentLine: { ...type.body, color: colors.textPrimary, flex: 1 },
 
-  // Shared-block status
+  // Shared-block status. Card gives the surface/radius/padding/press feel.
   blockStatusCard: {
     gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    padding: spacing.md,
   },
   blockStatusHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   blockStatusTitle: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
@@ -1996,42 +1987,21 @@ const styles = StyleSheet.create({
   },
   inviteAnotherText: { ...type.body, color: colors.primary },
 
-  // Pending card
+  // Pending card. Card gives surface/radius/padding; this keeps the layout
+  // gap plus the original visible border colour (Card's own default is the
+  // quieter borderSubtle hairline).
   pendingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.sm,
+    borderColor: colors.border,
   },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pendingText: { ...type.body, color: colors.textPrimary, flex: 1 },
   pendingExpiry: { ...type.caption, color: colors.textSecondary },
   pendingHint: { ...type.caption, color: colors.textSecondary, lineHeight: 18 },
   pendingCheckLine: { ...type.caption, color: colors.textPrimary, lineHeight: 18 },
-  pendingPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    minHeight: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryFill,
-    paddingHorizontal: spacing.md,
-  },
-  pendingSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    minHeight: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-  },
+  // pendingPrimary/pendingSecondary retired: both now render as shared
+  // Button (design campaign 2026-07-09, L02-B2). pendingDanger stays
+  // hand-rolled (see the render-side comment on the Cancel-invitation row).
   pendingDanger: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2044,9 +2014,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
   },
-  pendingPrimaryDisabled: { opacity: 0.68 },
-  pendingPrimaryText: { ...type.label, color: colors.onPrimary },
-  pendingSecondaryText: { ...type.label, color: colors.textSecondary },
   cancelText: { ...type.label, color: colors.error },
 
   // ── Empty state ──
