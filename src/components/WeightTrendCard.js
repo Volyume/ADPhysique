@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, stateColors, circle, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, stateColors, circle } from '../styles/theme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
 
@@ -130,7 +130,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  label: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
+  // B-5 uppercase consolidation: type.caption + a manual uppercase/overline
+  // override reproduced type.overline's fontSize/lineHeight/letterSpacing/
+  // textTransform exactly (no fontWeight override here), so this is a
+  // like-for-like swap onto the named shared token.
+  label: { ...type.overline, color: colors.textMuted },
   chartWrap: { width: '100%' },
   statRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },

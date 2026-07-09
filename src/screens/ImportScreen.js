@@ -375,11 +375,14 @@ const styles = StyleSheet.create({
   previewCard: {
     marginBottom: spacing.md,
   },
+  // B-5 uppercase consolidation: this eyebrow caption already matched
+  // type.overline's fontSize/letterSpacing/textTransform token-for-token
+  // and carried no fontWeight override, so folding it into the shared
+  // convention is a like-for-like swap (only fontFamily now resolves via
+  // the named role instead of the implicit default).
   previewSource: {
-    fontSize: fontSize.xs,
+    ...type.overline,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: letterSpacing.overline,
     marginBottom: spacing.md,
   },
   statRow: {
