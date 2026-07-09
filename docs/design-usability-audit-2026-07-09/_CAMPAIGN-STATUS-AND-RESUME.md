@@ -190,3 +190,23 @@ in container). cueCount to be fixed alongside Batch 2 per "fix, do not defer".
   "N cues"->"N notes" per 214b057, not a UI regression). Full lint exit 0.
 - Remaining Batch 2 (wave B): Button adoption on TRUE CTAs + section-label
   (B-5, ~25 sites) consolidation — split by screen domain to avoid collision.
+
+## Batch 2 wave B DONE (2026-07-09): Button + section-label adoption
+- `0328f77` home/progress/settings/pro (6 CTAs, 8 labels); `0ae718c` food/nutrition
+  (22 CTAs, 4 labels); `5d98870` workout/training (26 CTAs, 3 labels).
+- Shared-component fix by lead: `type.overline` getter now uses
+  `letterSpacing.overline` (0.5) per D3 (was hardcoded 0); stale theme guard
+  test updated with citation. Full suite 574 suites / 7329 tests green.
+- Agents' good safety judgement (deliberate non-conversions, NOT deferrals):
+  ED lockout/cleared banners, GoalLockConsent, ProUpgrade/Paywall billing CTAs,
+  WellbeingCheck, NutritionTargets "ease this cut" EA-caution button, and
+  quiet-text/pill/chip CTAs (Button variants would visually regress them).
+
+## Follow-ups surfaced (for a later wave, recorded not dropped)
+- ActiveWorkoutScreen: ~15 remaining hand-rolled action buttons (set-complete/
+  warmup/cluster/extra-set + modal button sets) deserve a DEDICATED Button-
+  adoption pass - densest guard-test coverage in the app; not to be rushed.
+- Optional: a SectionLabel warning/success tone variant would let the ED
+  lockout/cleared banners adopt the shared label without a new colour path.
+
+## Next: Batch 3 (the six coverage-gap audit lanes, master index section 5).

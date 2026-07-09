@@ -481,7 +481,7 @@ export const type = {
   },
   get overline() {
     return { fontFamily: fontFamily.medium, fontSize: fontSize.xs,
-      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: 0, textTransform: 'uppercase' };
+      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.overline, textTransform: 'uppercase' };
   },
   get caption() {
     return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,

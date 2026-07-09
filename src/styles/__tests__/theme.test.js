@@ -72,12 +72,15 @@ describe('type roles', () => {
     expect(type.display.fontWeight).toBeUndefined();
     expect(type.display.fontFamily).toBe(fontFamily.displayBold);
   });
-  test('overline is the shared section-label role and adds no tracking drift', () => {
+  test('overline is the shared section-label role and tracks at the overline token (D3 2026-07-09)', () => {
     expect(type.overline).toEqual({
       fontFamily: fontFamily.medium,
       fontSize: 11,
       lineHeight: Math.round(11 * lineHeight.snug),
-      letterSpacing: 0,
+      // D3 (DECISIONS-2026-07-09): uppercase 10-12px micro-labels track
+      // slightly open (letterSpacing.overline = 0.5) for legibility. Was 0
+      // pre-campaign; this is the sanctioned role value, not drift.
+      letterSpacing: letterSpacing.overline,
       textTransform: 'uppercase',
     });
   });
