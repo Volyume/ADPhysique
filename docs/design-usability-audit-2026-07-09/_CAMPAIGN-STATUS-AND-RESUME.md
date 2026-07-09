@@ -229,3 +229,33 @@ in container). cueCount to be fixed alongside Batch 2 per "fix, do not defer".
 - Feature builds: L07-F6 exercise fuzzy search, L07-F8 custom-exercise type/secondary-muscle, L07-F11 workout-history text search, L05-FI5/SB2/SL1/ACF1/MM1.
 - Batch 2 partner Card/Button wave (L02-B1 7 cards, L02-B2 19 touchables); L03-C5 KeyboardAvoidingView 13-screen sweep; L04-10 WhatsNew version-key (needs marketing version bump).
 - Batch 3 original plan: 6 new coverage-gap audit lanes (light-theme parity, motion, aesthetic craft, a11y contrast/SR, first-run emotion, competitive Home/Progress/Settings).
+
+## "Keep going on all" - Batch 1 DONE + PUSHED (2026-07-09)
+Founder directive "keep going on all" (build everything non-inviolable) + D5
+decisions. Three Sonnet agents, domain-partitioned, each self-verified
+lint+tests and committed its own scope. Lead did boundary full-lint (EXIT 0),
+notification-lock safety grep (EMPTY = locked mechanisms untouched), pushed.
+- `93cb4e8` Partners Card/Button (L02-B1 5 cards, L02-B2 2 CTAs). Consent
+  surface PartnerPrivacyReceipt deliberately untouched.
+- `e935be4` Exercise fuzzy search (L07-F6, new src/lib/exerciseFuzzySearch.js),
+  custom-exercise type + secondary muscles (L07-F8; columns already existed
+  database.js:161/172 + migrate_091), workout-history text search (L07-F11).
+- `69e1937` ActiveWorkoutScreen dedicated pass: 14 buttons->Button (guard-pinned
+  literals preserved; fixed a real clusterAddBtn tertiary bg-leak regression),
+  PR re-detect on edit/delete (L07-F2, detectPR untouched), finish/discard
+  confirm w/ hasInProgressSetEntry (L07-F10), REST_TIMER_ACTION.ADD_EXERCISE
+  (L07-F4, additive). Guard tests restTimerActions/p9Talkback updated w/ notes.
+
+### DATA-INTEGRITY BUG surfaced (genuine, for a fix wave - NOT dropped)
+`insertOrUpdateExerciseFromCloud` (database.js:6502) cloud-restore INSERT omits
+exercise_type, equipment_category, force, laterality, difficulty, machine_ok,
+home_ok, cue, equipment_profiles -> custom-exercise metadata LOST on
+sign-out/in. Local columns + migrate_091 already carry these. Additive fix
+(extend the INSERT column list + values); no schema change. Queued for batch 2.
+
+## "Keep going on all" - Batch 2 IN FLIGHT (2026-07-09)
+Per D5. Domain-partitioned Sonnet agents: ProOnboarding Step-2 split (gates
+provably preserved), per-day-target persistence code + founder-run migration,
+Partners consent footer + notice-version bump + full receipt (L06-F2/F3),
+iOS Live Activity via existing modules/live-activity (L07-F5), cloud-restore
+missing-columns fix (database.js:6502).
