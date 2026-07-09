@@ -2426,9 +2426,25 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.doneQuietText}>Done</Text>
         </TouchableOpacity>
 
-        <Text style={styles.credentialNote}>
-          The Coach is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
-        </Text>
+        {/* Founder-approved tooltips (2026-07-09): "volume" already has a
+            glossary entry + tooltip elsewhere on this screen (SectionHeader,
+            "Training next week"); autoregulation and RED-S were the two
+            remaining dense terms in this credential line. */}
+        <View style={styles.credentialNoteRow}>
+          <Text style={styles.credentialNoteInline}>
+            The Coach is built on published training science: volume landmarks,{' '}
+          </Text>
+          <View style={styles.credentialTermRow}>
+            <Text style={styles.credentialNoteInline}>autoregulation,</Text>
+            <InfoTooltip text={GLOSSARY.autoregulation} size={12} />
+          </View>
+          <Text style={styles.credentialNoteInline}> and </Text>
+          <View style={styles.credentialTermRow}>
+            <Text style={styles.credentialNoteInline}>RED-S</Text>
+            <InfoTooltip text={GLOSSARY.redS} size={12} />
+          </View>
+          <Text style={styles.credentialNoteInline}> safety limits, configured to your data.</Text>
+        </View>
 
         <Text style={styles.credentialNote}>
           Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
@@ -2920,6 +2936,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.md,
     marginTop: spacing.sm,
+  },
+  // Wraps the credential sentence as flex fragments so the autoregulation/
+  // RED-S InfoTooltips can sit directly beside their term.
+  credentialNoteRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
+  credentialNoteInline: {
+    ...type.caption,
+    color: colors.textMuted,
+    lineHeight: 17,
+  },
+  credentialTermRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   // Held decisions transparency card (box from <Card>; gap is the local extra)

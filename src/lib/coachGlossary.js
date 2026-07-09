@@ -55,4 +55,10 @@ export const GLOSSARY = {
     'How high your protein target is set per kilo of bodyweight: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors).',
   recomposition:
     'Your weight held steady while your shape or strength kept improving. A sign fat and muscle are both changing, even though the scale is not moving.',
+  // Footer credential line ("volume landmarks, autoregulation, and RED-S
+  // safety limits"): founder-approved copy, 2026-07-09.
+  autoregulation:
+    "Adjusting your training and targets week to week based on how you're actually recovering and performing, rather than following a fixed plan regardless.",
+  redS:
+    'Relative Energy Deficiency in Sport: when the body runs on too little energy, for too long, to fully support training and health. Your coach watches for the early signals so your plan stays safe.',
 };
