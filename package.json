@@ -21,6 +21,8 @@
     "progress-scan:bodym": "node scripts/run-progress-scan-bodym.cjs",
     "progress-scan:bodym-report": "node scripts/run-progress-scan-bodym-report.cjs",
     "progress-scan:full-audit": "node scripts/run-progress-scan-full-audit.cjs",
+    "progress-scan:retest-report": "node scripts/run-progress-scan-retest-report.cjs",
+    "progress-scan:sensitivity-report": "node scripts/run-progress-scan-sensitivity-report.cjs",
     "verify:android:16kb": "node scripts/verify-android-elf-page-size.cjs",
     "release:quality": "npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npm run release:quality && npm run release:audit",

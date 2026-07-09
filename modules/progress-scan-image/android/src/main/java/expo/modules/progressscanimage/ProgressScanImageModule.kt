@@ -130,6 +130,15 @@ class ProgressScanImageModule : Module() {
       }
     }
 
+    // iOS backup exclusion (safety-privacy-blueprint.md §6.3, wave 5). Android
+    // has no per-directory equivalent to NSURLIsExcludedFromBackupKey;
+    // android:allowBackup=false already covers Android app-wide (app.json).
+    // No-op that always resolves true so the shared JS call site at
+    // ensurePhotoDir never needs per-platform branching.
+    AsyncFunction("setExcludedFromBackup") { _: String, promise: Promise ->
+      promise.resolve(true)
+    }
+
     AsyncFunction("extractRgb") { uri: String, width: Int, height: Int, promise: Promise ->
       try {
         val context = appContext.reactContext

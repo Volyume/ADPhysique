@@ -248,6 +248,18 @@ CREATE TABLE IF NOT EXISTS body_metrics (
 );
 
 
+-- STALE / DEAD (noted 2026-07-09, safety-privacy-blueprint.md §6.7): this
+-- table is NOT part of the canonical schema. No supabase/migrate_NNN_*.sql
+-- file ever creates it (migrations are canonical per CLAUDE.md; this whole
+-- file is a stale snapshot). Progress photo IMAGE FILES are device-local
+-- only and never uploaded to Supabase Storage or any table -- see
+-- src/lib/progressPhotos.js and docs/BUDGET_POSTURE_LOCKED.md. The only
+-- live reference to this table name is a defensive, no-op
+-- "DELETE FROM progress_photos ... EXCEPTION WHEN undefined_table THEN NULL"
+-- inside the delete_user_data RPC, kept for safety on any environment that
+-- might still have this dead table lying around. Founder sign-off to
+-- delete this block outright was not granted as of this note; do not build
+-- from it, and do not assume it reflects live cloud storage.
 CREATE TABLE IF NOT EXISTS progress_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),

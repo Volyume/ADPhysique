@@ -37,6 +37,7 @@ type NativeShape = {
   segmentPersonMask?(uri: string, width: number, height: number): Promise<SegmentPersonMaskResult | null>;
   resolveBundledModel?(fileName: string): Promise<string | null>;
   diagnoseBundledModel?(fileName: string): Promise<BundledModelDiagnostic | null>;
+  setExcludedFromBackup?(path: string): Promise<boolean>;
 };
 
 let nativeModule: NativeShape | null = null;
@@ -70,6 +71,21 @@ export async function diagnoseBundledModel(fileName: string): Promise<BundledMod
   return nativeModule.diagnoseBundledModel(fileName);
 }
 
+// iOS backup exclusion (safety-privacy-blueprint.md §6.3, wave 5): marks a
+// directory/file excluded from iCloud/iTunes device backups
+// (NSURLIsExcludedFromBackupKey). Android has no equivalent attribute and
+// the native side no-ops there (allowBackup=false already covers Android
+// app-wide). Best-effort: never throws, resolves false on any failure.
+export async function setExcludedFromBackup(path: string): Promise<boolean> {
+  if (!nativeModule?.setExcludedFromBackup || !path) return false;
+  try {
+    return (await nativeModule.setExcludedFromBackup(path)) ?? false;
+  } catch (_e) {
+    return false;
+  }
+}
+
 export default {
   isAvailable, extractRgb, segmentPersonMask, resolveBundledModel, diagnoseBundledModel,
+  setExcludedFromBackup,
 };

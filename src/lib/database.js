@@ -4231,8 +4231,12 @@ export async function wipeAllUserData(userId) {
 
     try {
       // Lazy require keeps expo-file-system out of database.js's module graph.
+      // Per-user scope (founder decision 2026-07-09): wipe ONLY this account's
+      // photo subfolder, never the whole progress_photos/ tree, so a second
+      // account on a shared device keeps its photos after this account is
+      // wiped (evidence-gaps §7 Q5; safety-privacy-blueprint.md §6.4).
       // eslint-disable-next-line global-require
-      await require('./progressPhotos').wipeProgressPhotoDirectory();
+      await require('./progressPhotos').wipeProgressPhotoDirectoryForUser(userId);
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_files', e, { userId });
       throw e;

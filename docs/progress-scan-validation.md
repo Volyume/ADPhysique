@@ -167,6 +167,61 @@ Example real-case shape:
 ]
 ```
 
+## Tier 1 test-retest and sensitivity harnesses
+
+Two more Tier 1 gaps (scoring-accuracy-and-validation-blueprint.md §10 Tier 1
+items 2 and 3) have harness support alongside the calibration corpus and
+BodyM smoke checks above:
+
+```bash
+npm run progress-scan:retest-report
+npm run progress-scan:sensitivity-report
+```
+
+Both print a JSON report from the real scoring engine (never a re-implementation of it) and, like the replay commands above, accept an external, non-committed fixture file:
+
+```bash
+PROGRESS_SCAN_RETEST_FILE=/path/to/retest-sessions.json npm run progress-scan:retest-report
+PROGRESS_SCAN_SENSITIVITY_FILE=/path/to/sensitivity-sweeps.json npm run progress-scan:sensitivity-report
+```
+
+**Test-retest** (`src/lib/__tests__/progressScanRetestHarness.test.js`) scores
+every repeated capture in a session and reports the score spread, plus a
+"noise floor per confidence tier" summary across every subject. This is the
+harness for the founder-run study in the blueprint (>= 10 volunteers, 3
+repeats each, >= 3 phone models): the acceptance line — high-tier repeats
+within +/-3 points, else retune the tiers/thresholds — is judged against
+that REAL data via `PROGRESS_SCAN_RETEST_FILE`, never against the built-in
+smoke fixture, which only proves the harness's own parsing and maths are
+correct.
+
+**Sensitivity** (`src/lib/__tests__/progressScanSensitivityHarness.test.js`)
+scores one baseline capture plus single-factor variants (lighting, distance/
+framing, clothing/background, camera tilt) and reports which reason code
+fired, or whether confidence dropped, for each. The built-in smoke fixture
+degrades each factor clearly past the engine's own published quality gates
+so the harness can assert deterministically that the matching reason code
+fires; real cross-condition photos are what actually proves the gates catch
+what they claim to on real capture conditions.
+
+Fixture shapes for both are documented in each harness test file's header
+comment, reusing the same `ratios`/`quality` shape as the calibration corpus
+cases above.
+
+### Reconciliation with the scoring-accuracy-and-validation-blueprint
+
+No contradictions found between this doc and the blueprint. This doc already
+matches the blueprint's Tier 1 item 1 (internal consistency corpus,
+maintained with every threshold change) and its stance that the BodyM smoke
+test is shape/robustness evidence only, never a body-fat ground-truth claim
+— consistent with the blueprint §10 Tier 2 note that full ground-truth
+validation is a founder-commissioned programme, not a code task. This doc
+did not yet cover Tier 1 items 2 (test-retest) and 3 (sensitivity sweep)
+before this wave; the two harnesses above fill exactly that gap and nothing
+more. Item 4 (anchor audit) is already covered by the existing calibration
+corpus's anchor-clamp tests in `progressScanAnalysis.test.js` (wave 1); no
+harness change was needed there.
+
 ## Interpreting failures
 
 A failure is not automatically a bad test. It means one of three things:

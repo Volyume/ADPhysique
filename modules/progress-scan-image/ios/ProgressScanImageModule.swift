@@ -149,6 +149,24 @@ public class ProgressScanImageModule: Module {
       ]
     }
 
+    // iOS backup exclusion (safety-privacy-blueprint.md §6.3, wave 5): the
+    // progress-photos directory is excluded from iCloud/iTunes device
+    // backups via NSURLIsExcludedFromBackupKey. Called best-effort from JS
+    // on directory creation and again every time the photo screen/save path
+    // runs (healing existing installs whose directory predates this).
+    AsyncFunction("setExcludedFromBackup") { (path: String) -> Bool in
+      guard let resolved = imageUrl(from: path) else { return false }
+      var url = resolved
+      var values = URLResourceValues()
+      values.isExcludedFromBackup = true
+      do {
+        try url.setResourceValues(values)
+        return true
+      } catch {
+        return false
+      }
+    }
+
     AsyncFunction("segmentPersonMask") { (uri: String, width: Int, height: Int) -> [String: Any]? in
       guard width > 0, height > 0 else {
         return ["engine": "vision_person_segmentation", "errorCode": "invalid_target_size"]
