@@ -46,8 +46,12 @@ import { pickProductName } from '../lib/food/labelName';
 
 // C8 (Wave A): remembers a "skip the name step" choice across scans, so a
 // user who never bothers with front-of-pack photos isn't asked every time.
-// Set-only from the UI (skipName below); nothing in this screen ever clears
-// it, so the only way back to name capture is the per-scan "Add a name" link.
+// Set-only from the UI (skipName below); the per-scan "Add a name" link only
+// affects that one scan. L05-SL1 (design audit 2026-07-09): the global reset
+// lives in SettingsDataScreen.js as a two-way Switch reading/writing this
+// same key (hardcoded there, matching the '@volyume_*' key convention rather
+// than importing this screen's module) - toggling it off clears the flag, so
+// the next scan asks for a name again.
 export const SKIP_NAME_KEY = '@volyume_scan_skip_name';
 
 // Pure: the step to open on given the persisted flag's raw AsyncStorage

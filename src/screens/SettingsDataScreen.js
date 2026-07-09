@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text } from 'react-native';
+import { View, Text, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import * as haptics from '../lib/haptics';
@@ -15,14 +16,23 @@ import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
+import { colors, withAlpha } from '../styles/theme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles } from '../components/SettingsPrimitives';
+
+// L05-SL1 (design audit 2026-07-09): the global "skip the name step" flag
+// ScanLabelScreen.js sets when a label scan's "Skip name" is tapped
+// (SKIP_NAME_KEY there). Hardcoded here rather than importing that screen's
+// module, matching the existing '@volyume_*' key convention (see the
+// "Session readiness check" toggle in SettingsCoachingScreen.js) - keep this
+// in sync with ScanLabelScreen.js's SKIP_NAME_KEY if it ever changes.
+const SCAN_SKIP_NAME_KEY = '@volyume_scan_skip_name';
 
 // Your data: cloud sync, import from other apps, backup/restore, CSV export,
 // and clear-history. Backup/restore and clear-history are destructive, so
 // each carries its own confirmation.
 export default function SettingsDataScreen({ navigation }) {
   const toast = useToast();
-  const user = useAppStore(useShallow(s => s.user));
+  const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
 
   // Cloud sync status line (A2-006). Quiet, read from the runner snapshot;
   // syncingNow tracks the manual "tap to sync" so the row shows progress.
@@ -30,12 +40,31 @@ export default function SettingsDataScreen({ navigation }) {
   const [syncingNow, setSyncingNow] = useState(false);
   const [refreshingFood, setRefreshingFood] = useState(false);
   const [buildingReport, setBuildingReport] = useState(false);
+  // L05-SL1: mirrors the persisted flag so the row reflects the real state,
+  // not just an intent. Defaults false (asks for a name) until read on focus.
+  const [scanSkipName, setScanSkipName] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getSyncStatus().then(setSyncSnapshot).catch(() => {});
+      AsyncStorage.getItem(SCAN_SKIP_NAME_KEY)
+        .then(v => setScanSkipName(v === 'true')).catch(() => {});
     }, []),
   );
+
+  // L05-SL1: the settings-side control for the flag ScanLabelScreen's "Skip
+  // name" sets. Off clears it (removeItem, not setItem 'false' - the reader
+  // there treats anything other than the literal 'true' as "not skipping"),
+  // so the next label scan asks for a name again. On sets it the same way
+  // "Skip name" does, so this is a genuine two-way toggle, not reset-only.
+  async function toggleScanSkipName(value) {
+    haptics.selection();
+    setScanSkipName(value);
+    try {
+      if (value) await AsyncStorage.setItem(SCAN_SKIP_NAME_KEY, 'true');
+      else await AsyncStorage.removeItem(SCAN_SKIP_NAME_KEY);
+    } catch (_) { /* the scan screen re-reads the flag fresh each mount */ }
+  }
 
   // Manual cloud resync. The production-readiness lock allows a
   // manual resync from Settings; this routes through the same syncAll runner
@@ -233,6 +262,24 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={refreshingFood ? null : handleRefreshFoodLibrary}
           showArrow={!refreshingFood}
         />
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="text-outline"
+            label="Skip name on label scans"
+            sub={scanSkipName
+              ? 'On. Scanning a label goes straight to the nutrition panel, no name step. Turn off to be asked for a name again.'
+              : 'Off. Scanning a label asks for a name first.'}
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={scanSkipName}
+                onValueChange={toggleScanSkipName}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                thumbColor={scanSkipName ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+        ) : null}
         <SettingRow
           icon="swap-horizontal-outline"
           label="Import from another app"
