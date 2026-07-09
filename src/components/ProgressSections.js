@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import SvgBarSparkline from './SvgBarSparkline';
@@ -11,7 +11,6 @@ import { workloadTakeaway } from '../lib/chartWindows';
 // recovery views (training block, training load, session length, frequency,
 // training-day calendar). They were lifted out of AnalyticsScreen so the
 // landing and the Consistency surface draw the same cards from one place.
-const { width: SCREEN_W } = Dimensions.get('window');
 const FREQ_MAX_DISPLAY = 8;
 
 export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild }) {
@@ -94,6 +93,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 }
 
 export function TrainingCalendar({ values }) {
+  const { width: SCREEN_W } = useWindowDimensions();
   const trainedDates = new Set(values.map(v => v.date));
   const trainedCount = values.length;
   const today = new Date();

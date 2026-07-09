@@ -44,7 +44,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, Modal,
-  ScrollView, Dimensions,
+  ScrollView, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -153,7 +153,7 @@ export default function ProgressPhotoViewer({
   const navRef = useRef({ change: changePage });
   navRef.current.change = changePage;
 
-  const win = Dimensions.get('window');
+  const win = useWindowDimensions();
   const imgW = win.width;
   const imgH = Math.round(win.height * 0.62);
 

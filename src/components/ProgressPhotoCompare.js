@@ -29,7 +29,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, useWindowDimensions,
 } from 'react-native';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
@@ -446,7 +446,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
     setFailed((prev) => ({ ...prev, [item.name]: true }));
   }
 
-  const win = Dimensions.get('window');
+  const win = useWindowDimensions();
   // Bounded decode: two half-width panes for side-by-side, one single frame for
   // the slider and overlay. Every dimension is an explicit number kept inside
   // the window, paired with resizeMethod="resize" on the RN images.

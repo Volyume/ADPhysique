@@ -4,16 +4,15 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Dimensions,
   TouchableOpacity,
   AccessibilityInfo,
+  useWindowDimensions,
 } from 'react-native';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion } from '../styles/theme';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NUM_PARTICLES = 40;
 
 // Decorative confetti palette: brand tokens plus the two festive accents,
@@ -22,10 +21,10 @@ const NUM_PARTICLES = 40;
 const PR_PALETTE = [colors.primary, colors.gold, colors.success, colors.celebrationEmber, colors.celebrationViolet];
 const GOLD_PALETTE = [colors.gold, colors.celebrationEmber, colors.gold];
 
-function createParticle(index, palette = PR_PALETTE) {
+function createParticle(index, palette = PR_PALETTE, screenWidth, screenHeight) {
   return {
-    x: new Animated.Value(SCREEN_WIDTH / 2),
-    y: new Animated.Value(SCREEN_HEIGHT / 2),
+    x: new Animated.Value(screenWidth / 2),
+    y: new Animated.Value(screenHeight / 2),
     opacity: new Animated.Value(1),
     scale: new Animated.Value(0),
     angle: (index / NUM_PARTICLES) * Math.PI * 2,
@@ -44,15 +43,16 @@ function createParticle(index, palette = PR_PALETTE) {
  */
 export function MilestoneBurst({ onDone }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const particles = useRef(
-    reduceMotion ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, GOLD_PALETTE)),
+    reduceMotion ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, GOLD_PALETTE, screenWidth, screenHeight)),
   ).current;
 
   useEffect(() => {
     if (reduceMotion) { onDone?.(); return undefined; }
     const anims = particles.map((p, i) => {
-      const targetX = SCREEN_WIDTH / 2 + Math.cos(p.angle) * p.distance;
-      const targetY = SCREEN_HEIGHT / 2 + Math.sin(p.angle) * p.distance;
+      const targetX = screenWidth / 2 + Math.cos(p.angle) * p.distance;
+      const targetY = screenHeight / 2 + Math.sin(p.angle) * p.distance;
       return Animated.sequence([
         Animated.delay(i * 20),
         Animated.parallel([
@@ -113,6 +113,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // didn't pass subdued. This keeps the app's reduce-motion discipline intact
   // at a flagship moment rather than breaking it here.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   // Wave A A1: a first-ever lift is an honest first, not a record, it beats
   // nothing, so it never gets the confetti/heavy-haptic PERSONAL RECORD
   // treatment. It always renders as the quiet toast variant below.
@@ -123,7 +124,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // into translate constants instead of allocating new Animated.Values
   // every render (was a slow memory leak on long PR streaks).
   const particles = useRef(
-    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i)),
+    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, PR_PALETTE, screenWidth, screenHeight)),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.5)).current;
@@ -168,8 +169,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
     overlay.start();
 
     const particleAnims = particles.map((p, i) => {
-      const targetX = SCREEN_WIDTH / 2 + Math.cos(p.angle) * p.distance;
-      const targetY = SCREEN_HEIGHT / 2 + Math.sin(p.angle) * p.distance;
+      const targetX = screenWidth / 2 + Math.cos(p.angle) * p.distance;
+      const targetY = screenHeight / 2 + Math.sin(p.angle) * p.distance;
 
       return Animated.sequence([
         Animated.delay(i * 20),
@@ -265,7 +266,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       <Animated.View
         style={[
           styles.card,
-          { transform: [{ scale: cardScale }], opacity: cardOpacity },
+          { top: screenHeight / 2 - 160, transform: [{ scale: cardScale }], opacity: cardOpacity },
         ]}
       >
         <View style={styles.iconContainer}>
@@ -305,7 +306,6 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'absolute',
-    top: SCREEN_HEIGHT / 2 - 160,
     left: spacing.xl,
     right: spacing.xl,
     backgroundColor: colors.surface,
