@@ -325,3 +325,48 @@ database.js first, then NT1 re-dispatched onto the freed file.
   these are Opus-tier AUDITS that EXPAND campaign scope; recommend a founder
   go/no-go before spending on them vs finishing the remaining build backlog
   (food follow-ons L05-FI5/SB2/SL1/ACF1/MM1, L04-10 WhatsNew version-key).
+
+## "Keep going on all" - Batch 4 DONE (2026-07-09)
+Non-gated build backlog now EXHAUSTED. Boundary: lint EXIT 0, engine/ED files
+not in diff, exercise round-trip tests green.
+- `814a99a` sync.js syncExercises PUSH now sends exercise_type (default
+  weight_reps, mirrors restore) -> the custom-exercise-type sign-out/in round
+  trip is now closed END TO END (restore side was 38d94ab). +push test; stale
+  "open gap" comment in database.js cleaned.
+- Food follow-ons L05-FI5/SB2/SL1/ACF1/MM1: NOT built. CORRECTION - these were
+  mislabeled "SAFE follow-ons" in this doc's earlier backlog lines; the master
+  index classifies all five as JUDGEMENT, each a real design/scope fork (or
+  engine work for FI5). Agent correctly refused unreviewed defaults. All five
+  now in the founder-decision surface below.
+
+## CAMPAIGN STATE: non-gated backlog done. AWAITING FOUNDER DECISIONS.
+Batches 1-4 shipped every SAFE + delegated-judgement build that had an
+unambiguous answer. What remains all needs a founder call (recorded here so a
+fresh session resumes cleanly). Nothing below is parked - it is surfaced.
+
+A) FIVE JUDGEMENT food items (each a fork; recommend option in parens):
+   - L05-FI5 fibre aim: keep flat 30g NHS stopgap (rec) vs derive per-user aim
+     (needs deterministic-engine work = NOT delegated, founder-only).
+   - L05-SB2 manual barcode-number entry: build inline affordance on
+     ScanBarcodeScreen -> typed EAN -> existing lookup (rec) vs separate entry.
+   - L05-SL1 "Skip name" reset: add a Settings toggle to clear the flag
+     globally (rec); needs label + per-food-vs-global semantics confirmed.
+   - L05-ACF1 named/household serving units: form redesign (unit picker +
+     portion-calorie preview; column already exists, no migration). Scope fork.
+   - L05-MM1 saved-meal inspect: lightweight read-only inspect sheet (rec)
+     vs full edit flow. Do-less-vs-full fork.
+B) Coverage-gap audit lanes (6 Opus audits: light-theme parity, motion,
+   aesthetic craft, a11y contrast/SR, first-run emotion, competitive
+   benchmarks). SCOPE EXPANSION + Opus spend -> founder go/no-go.
+C) CoachOutput RED-S + autoregulation glossary entries (ED-adjacent copy):
+   need founder-reviewed wording before the footer tooltip can ship.
+D) GATED redesigns still awaiting the founder round:
+   - L05-D2/NT2 nutrition-density redesign (touches adherence-neutral render -
+     ED-adjacent).
+   - L07-F9 drag-reorder dependency (new dep - name/licence/yes required).
+   - L04-13 SettingsPrivacy destructive-row isolation.
+   - L05-D1 MealSection write-affordances (tangled with 3 guard tests).
+   - L04-10 WhatsNew version-key (needs a marketing version bump - founder).
+E) Founder-run migrations queued (manual, EU-Dublin): migrate_110 (per-day
+   offsets), migrate_111 (nutrition goal/protein). Both additive, benign
+   no-op until applied.
