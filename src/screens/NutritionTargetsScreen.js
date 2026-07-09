@@ -28,6 +28,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
+import HeightFeetInchesField from '../components/HeightFeetInchesField';
+import AgeYearsField from '../components/AgeYearsField';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -587,41 +589,16 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.fieldLabel}>Age</Text>
-                <NumericField
-                  value={age}
-                  onChangeText={setAge}
-                  placeholder="e.g. 28"
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  accessibilityLabel="Age"
-                />
+                <AgeYearsField value={age} onChangeText={setAge} />
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.fieldLabel}>Height</Text>
-                <View style={styles.heightRow}>
-                  <View style={styles.heightUnit}>
-                    <NumericField
-                      value={heightFt}
-                      onChangeText={setHeightFt}
-                      placeholder="5"
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      accessibilityLabel="Height, feet"
-                    />
-                    <Text style={styles.unitLabel}>ft</Text>
-                  </View>
-                  <View style={styles.heightUnit}>
-                    <NumericField
-                      value={heightIn}
-                      onChangeText={setHeightIn}
-                      placeholder="10"
-                      keyboardType="decimal-pad"
-                      maxLength={4}
-                      accessibilityLabel="Height, inches"
-                    />
-                    <Text style={styles.unitLabel}>in</Text>
-                  </View>
-                </View>
+                <HeightFeetInchesField
+                  feet={heightFt}
+                  onChangeFeet={setHeightFt}
+                  inches={heightIn}
+                  onChangeInches={setHeightIn}
+                />
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.fieldLabel}>Current weight (kg)</Text>
@@ -695,43 +672,18 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Age */}
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Age</Text>
-            <NumericField
-              value={age}
-              onChangeText={setAge}
-              placeholder="e.g. 28"
-              keyboardType="number-pad"
-              maxLength={3}
-              accessibilityLabel="Age"
-            />
+            <AgeYearsField value={age} onChangeText={setAge} />
           </View>
 
           {/* Height */}
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Height</Text>
-            <View style={styles.heightRow}>
-              <View style={styles.heightUnit}>
-                <NumericField
-                  value={heightFt}
-                  onChangeText={setHeightFt}
-                  placeholder="5"
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  accessibilityLabel="Height, feet"
-                />
-                <Text style={styles.unitLabel}>ft</Text>
-              </View>
-              <View style={styles.heightUnit}>
-                <NumericField
-                  value={heightIn}
-                  onChangeText={setHeightIn}
-                  placeholder="10"
-                  keyboardType="decimal-pad"
-                  maxLength={4}
-                  accessibilityLabel="Height, inches"
-                />
-                <Text style={styles.unitLabel}>in</Text>
-              </View>
-            </View>
+            <HeightFeetInchesField
+              feet={heightFt}
+              onChangeFeet={setHeightFt}
+              inches={heightIn}
+              onChangeInches={setHeightIn}
+            />
           </View>
 
           {/* Weight */}
@@ -1501,19 +1453,6 @@ const styles = StyleSheet.create({
     ...type.body,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-  },
-  heightRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  heightUnit: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  unitLabel: {
-    ...type.bodyStrong,
-    color: colors.textSecondary,
   },
 
   // ── Pills ────────────────────────────────────────────────────────────────────────

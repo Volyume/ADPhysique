@@ -837,3 +837,13 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   planengine suites / 240 tests pass untouched; 81/81 targeted; lint
   clean. EMERGENCY SNAPSHOT above: item 2 now LANDED; plan-G and
   height/DOB still in flight.
+- BURST LANDING 7/8 HEIGHT/DOB (Sonnet, lead-reviewed): CP-8 closed -
+  height + age editable on the free SettingsProfileScreen (the audit's
+  own proposed placement), shared HeightFeetInchesField/AgeYearsField
+  components extracted and NutritionTargets refactored onto them; saves
+  mirror the changeSex dual-write (user_body_profile + local profile),
+  on-blur like the name field; sex stays chip-only, NO weight field
+  (NAV-2 remains founder-gated). 13 new tests + mounts green, lint
+  clean. FLAGGED for a future round: NutritionTargets' own height/age
+  inputs remain calculation-ephemeral (never persisted) - founder may
+  want them persisting on Calculate too. ONLY PLAN-G still in flight.

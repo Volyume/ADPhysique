@@ -32,7 +32,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="person-outline"
           label="Profile"
-          sub="Name, sex and diet preference"
+          sub="Name, sex, height, date of birth and diet preference"
           onPress={() => navigation.navigate('SettingsProfile')}
         />
         <SettingRow
