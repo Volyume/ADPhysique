@@ -520,3 +520,41 @@ REMAINING D7 WORK (approved, not yet built):
 - RED-S + autoregulation glossary entries (CoachOutput footer tooltip) — needs
   founder-reviewed wording; lead to DRAFT for confirm.
 Founder-run migrations still queued: migrate_110, migrate_111.
+
+## ============ D7 PROGRAM COMPLETE (2026-07-09) ============
+Every D7-approved item is built, verified (each ED-adjacent diff lead-reviewed
+hands-on), and pushed. HEAD 9ad91b9.
+
+SHIPPED (this D7 build phase, on top of the earlier batches 1-4 + D6):
+- SAFE: MO-1 crash, AY-1 placeholder, FR-2 auth leak, AY-3/4/5 a11y, LT-6
+  gridline, AC-4 flame, AC-2 alpha literals (10 files) + hands-on food-surface
+  alpha (NutritionTargets/ProGoalSetup) + TextField focus ring.
+- LT-1 primary-as-fill (narrowed: buttons/chips=primaryFill, decorative=primary,
+  billing/consent CTAs hands-on).
+- ED-adjacent (lead-reviewed): LT-2 ring ink, FR-4 pill tone, AY-7 lockout SR
+  (verbatim copy), MO-4 plan-reveal calm/ED gate (fail-closed).
+- NT2 progressive disclosure + L05-D2 FirstFoodPrompt (MacroRings LEFT LOCKED;
+  reverted 2 out-of-scope MacroRings restyles - NT2's and AC-5's).
+- MO-2/3 Reduce-Motion (AppAlert + 17 Modals).
+- Gated: Home banner priority-rank; AY-2 onSuccessBg/onErrorBg tokens (+ MesoBuilder
+  deload); CP-7 biometric lock (dep expo-local-authentication, consent chain
+  byte-unchanged); CP-2 iOS home/lock widget (no new dep, no health data).
+- Design system: AC-7 chipInk token, AC-1 chevron standardisation (iconSize.sm +
+  textMuted, 63 sites), AC-5 type.captionStrong (33 sites), RED-S/autoregulation
+  glossary; SettingsScreen iOS widget copy.
+
+FOUNDER ACTIONS OUTSTANDING (native/provisioning, cannot be scripted):
+- CP-7: enable Face ID capability on the iOS App ID; EAS build to device-test.
+- CP-2: enable App Groups capability for app.volyume + app.volyume.widget, create
+  group group.app.volyume.widget, EAS credential re-sync; then TestFlight.
+- Founder-run migrations migrate_110 (per-day offsets) + migrate_111 (goal/protein).
+- Optional: TextField focus ring was converged 0.65->alpha.strong (0.4, the
+  documented focus-edge token) - a visible reduction; bump back if too faint on device.
+
+REMAINING (nothing D7-blocking; documented, not parked):
+- L05-FI5 fibre per-user target = engine work (founder deferred, keep 30g stopgap).
+- AC-3 HomeScreen "Continue workout" ink bug (withAlpha(colors.background,0.8)) -
+  a real light-theme bug flagged during AC-1, its own quick follow-up.
+- CP-10 theme/a11y toggles need app restart (StyleSheet-baking) - architectural.
+- CP-8 free-tier height/DOB correction path; FR-1/FR-3 presentation warmth;
+  AY-2 any remaining tint sites - all JUDGEMENT backlog for a future wave.
