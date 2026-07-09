@@ -179,3 +179,14 @@ assertion; `progressScanVision.test.js` (missing native react-native-fast-tflite
 in container). cueCount to be fixed alongside Batch 2 per "fix, do not defer".
 
 ## Next: Batch 2 (Card / Button / EmptyState / section-label adoption) + cueCount fix.
+
+## Batch 2 wave A DONE (2026-07-09): Card + EmptyState adoption + cueCount
+- `c35bbdd` — EmptyState adoption on 5 screens (WorkoutHistory, MesocycleBuilder,
+  FoodSearch, YearOfLifts, ProgressPhotos); EmptyState gained optional a11y-label
+  props (backward-compatible).
+- `fb623e5` — Card adoption on the 4 heaviest screens (NutritionTargets 13,
+  ActiveWorkout 2, WorkoutSummary 9, ExerciseDetail 9); banners/chips/animated/
+  tinted-callouts correctly left as non-cards. cueCount guard fixed (stale
+  "N cues"->"N notes" per 214b057, not a UI regression). Full lint exit 0.
+- Remaining Batch 2 (wave B): Button adoption on TRUE CTAs + section-label
+  (B-5, ~25 sites) consolidation — split by screen domain to avoid collision.
