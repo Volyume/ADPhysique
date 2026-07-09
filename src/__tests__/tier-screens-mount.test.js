@@ -188,7 +188,7 @@ describe('DifferentialBadge mount', () => {
       differential: {
         shown: true,
         trigger: 'deload',
-        with_food_data_message: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 14 days.",
+        with_food_data_message: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause. Try Pro free for 7 days.",
         paywall_cta: 'try_pro_14d',
       },
       pricingWindow: 'open_beta',
@@ -203,7 +203,7 @@ describe('DifferentialBadge mount', () => {
       differential: {
         shown: true,
         trigger: 'block_summary',
-        with_food_data_message: "Your training block ended. With food data, we'd show how fuel shaped your results.",
+        with_food_data_message: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
         paywall_cta: 'buy_pro',
       },
       pricingPriceText: '£2.99/month',

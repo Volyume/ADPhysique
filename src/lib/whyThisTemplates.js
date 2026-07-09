@@ -544,7 +544,7 @@ export const ED_PATTERN_LOCKOUT_COPY = {
   readMoreBody:
     "Low energy that sticks around alongside fast weight loss is the body's signal that fuel intake is too low for what training is demanding. The condition has a name in sports medicine: relative energy deficiency. It shows up first as low energy, then in training quality, then in hormones and bone health.\n\n" +
     "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. The pattern that worries us is the combination.\n\n" +
-    "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, the engine starts adjusting again.",
+    "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, Precision Coaching starts adjusting again.",
 };
 
 export const ED_PATTERN_CLEARED_COPY = {

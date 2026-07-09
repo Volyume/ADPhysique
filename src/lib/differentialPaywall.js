@@ -46,10 +46,10 @@
 // 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED). Stating 14 here would promise
 // a trial length the store will not honour.
 export const LOCKED_COPY = Object.freeze({
-  stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel. Try Pro free for 7 days.",
-  deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 7 days.",
-  missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn from your own data. 7 days free.",
-  block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results. Try Pro free for 7 days.",
+  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel. Try Pro free for 7 days.",
+  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause. Try Pro free for 7 days.",
+  missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses. Try Pro free for 7 days.",
+  block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results. Try Pro free for 7 days.",
 });
 
 // Alternate copy for users who've already used their cascade trial.
@@ -59,10 +59,10 @@ export const LOCKED_COPY = Object.freeze({
 // Play's localised price (usePlayPrices); until it loads the CTA shows
 // a price-free "Get Pro" rather than a hardcoded figure (PLAY-002).
 export const LOCKED_COPY_NO_TRIAL = Object.freeze({
-  stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel.",
-  deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause.",
-  missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn.",
-  block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results.",
+  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
+  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
+  missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+  block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
 });
 
 // Safety-adjacent distress contexts (extreme_soreness, energy_crash) were

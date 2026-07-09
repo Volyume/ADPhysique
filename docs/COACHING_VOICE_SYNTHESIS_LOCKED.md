@@ -789,3 +789,32 @@ and a one-line plain explanation is available on tap (the existing
 InfoTooltip pattern), which may name the technical term ("we call this
 a mesocycle"). This is progressive disclosure, not a blocklist
 exemption: the surface copy itself stays plain.
+
+---
+
+## Addendum 2026-07-09: actor-naming rule (two registers)
+
+Authority: founder delegation, in-session 2026-07-09, recorded in
+`docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md` (D4).
+Background: three Codex commits (`ae42b4d`, `b4bb808`, `617a3c1`,
+2026-07-07/08) mass-renamed "Precision Coaching" to "The Coach" with no
+recorded decision, landing six inconsistent actor variants and reverting
+locked Surface 4 text. This addendum resolves the naming for good.
+
+The rule (supersedes any single-name reading of Section 4 / Pattern 1):
+
+- **"Precision Coaching"** is the branded feature name. Used wherever the
+  feature is NAMED, EXPLAINED or SOLD: methodology surfaces, consent and
+  goal-lock explainers, paywall and tier copy, settings labels, glossary
+  title entries, and every LOCKED surface in Section 5 (whose text stays
+  verbatim as written, unchanged by this addendum).
+- **"your coach"** (lowercase, possessive) is the single informal actor in
+  running prose: coach output cards, weekly check-in copy, home-screen
+  briefs, notification bodies.
+- Still banned as coaching actors: "The Coach" / "the Coach" / "the coach"
+  as a proper noun, "the engine", "the system", and collaborative "we" for
+  an engine decision. "Volyume" names the APP only (app-level actions:
+  saving, syncing, reminders), never the coaching decider.
+- Safety copy is unaffected in substance: locked Surfaces 1-8 render their
+  locked text verbatim; where a locked surface names "Precision Coaching",
+  that is the text.

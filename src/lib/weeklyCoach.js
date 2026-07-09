@@ -303,7 +303,7 @@ const WHY_LIBRARY = {
     "Weight data is thin this week. The trend will sharpen with more daily logs.",
   ],
   ffm_floor_hold: [
-    "Your calorie target holds. Your seven-day average intake is at or below the safety floor for your fat-free mass.",
+    "Your calorie target holds. Your seven-day average intake is at or below the safety floor for your lean mass.",
   ],
   rapid_loss_corrected: [
     "Weight dropped fast this week with low energy, so calories go up now rather than waiting two weeks.",
