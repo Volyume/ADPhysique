@@ -399,3 +399,7 @@ OAuth SHA-1; Cut 4 seed walk.
   (--package-lock-only, +13 lines) and pushed. LESSON pinned: any agent
   adding a dependency MUST update the lockfile; lead checks lockfile sync at
   every boundary where package.json changed.
+- D11 benefit line LANDED (02fa63f, Haiku agent): "The scale can't tell
+  muscle from water. Photos can." on ProgressPhotoPrompt + ProgressPhotos
+  empty state, inside existing suppression gates, 219 photo tests green.
+  Pair 2 slot B done; slot A (superset mistag fix + builder nudge) still out.
