@@ -237,3 +237,21 @@ OAuth SHA-1; Cut 4 seed walk.
   the sole expo-haptics importer (importBan green). Full suite green.
   Batch state: builds done (Phase B bfaf8cf, haptics 273613b); 2 planners
   still out (plan-A library expansion, plan-B weak-point sets).
+- Exercise PLANS LANDED (docs/exercise-planning-2026-07-09/): plan-A library
+  expansion (449 exercises; VERIFIED holes: bands 0/449 with a live dead
+  filter chip, zero vertical pulls in 3 real equipment contexts, unfillable
+  rear-delt/hamstring patterns; rec = ~40 targeted fills; 5 founder Qs; note:
+  seedRoutines curated plans do NOT auto-pick-up new exercises). plan-B
+  weak-point sets (root cause: numExHint>5 threshold + MAX_SETS_PER_ENTRY=6
+  at planEngine.js:1008-1010/1168; founder case reproduced 6+5; rec = Option
+  2 cap 3-4 + numEx=ceil(target/cap) using existing angle metadata; 6 founder
+  Qs; engine build = FABLE HANDS-ON when answered).
+- FABLE ADVERSARIAL WHOLE-DIFF REVIEW (founder-chosen) IN PROGRESS. Findings
+  so far: allergen-order sync equality = non-bug (LWW self-heals); REAL
+  finding R1: mealAdditions carry no FSA tags + no exclusion filtering while
+  explicitly allowing soya + mustard (both FSA allergens) -> allergic user
+  can be shown their allergen as an addition on a filtered meal. Fix: tag
+  allergen-bearing additions + filter by profile exclusions in
+  CuratedMealSheet. R2 (CO-1 subset): nutritionEngine.js:402 FFM-floor hold
+  insight says "The Coach has held" (D4 violation in ED-safety copy) ->
+  hands-on one-word fix pending guard-test check.
