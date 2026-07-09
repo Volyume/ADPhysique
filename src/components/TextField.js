@@ -19,7 +19,12 @@ const TextField = forwardRef(function TextField({
   value,
   onChangeText,
   accessibilityLabel,
-  placeholderTextColor = colors.textDisabled,
+  // Default is textMuted, not textDisabled: textDisabled fails WCAG contrast
+  // for placeholder text in an enabled, editable field (measured 2.85-3.47:1
+  // across surfaces; see docs/design-usability-audit-2026-07-09/
+  // coverage-04-accessibility.md AY-1). textMuted clears 4.5:1 on every
+  // surface in both themes and is already what most explicit overrides use.
+  placeholderTextColor = colors.textMuted,
   surface = 'surface2',
   size = 'md',
   leading,
