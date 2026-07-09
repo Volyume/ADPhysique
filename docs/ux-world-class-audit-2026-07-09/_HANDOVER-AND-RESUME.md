@@ -363,3 +363,17 @@ OAuth SHA-1; Cut 4 seed walk.
   Option A - retune WEAKPOINT/STRUCTURAL_SESSION_FLOOR_CAP + trim ceiling so
   the honest time ceiling wins; agent resumed to implement + commit; lead
   hands-on review of the FULL engine diff before push.
+- ENGINE D8 LANDED + LEAD-REVIEWED + PUSHED (bf2e834): CAP_COMPOUND=4/
+  CAP_ISOLATION=3, numExHint=ceil(target/4), growth loop + angle-diverse
+  spill, biceps SUBREGION_REQUIREMENTS, 2 weekly-MRV trim bugs fixed, builder
+  nudge (calm, once, no block). Option A resolved WITHOUT constant changes:
+  root cause was _req protection granted to duplicate same-sub entries making
+  sessions untrimmable; now first-per-sub only -> the 4 blown combos are
+  79-96 min (ceiling 110). Founder repro = 4+4+3 angle-diverse. Lead review:
+  scope/determinism/ED-clean/copy verified; independent suite run 44/44;
+  lint 0. NOTE for library follow-up: live library has NO biceps subregion
+  tags yet (pool fallback only) - when plan-A tags land, poolGenerator needs
+  a SUBREGION_TRANSLATION.biceps pass-through.
+- ALL PRE-PAIR WORK DRAINED. Pair 1 firing: plan-E progress-photos loop
+  (Sonnet planner) + small-batch bundle (B-5 uppercase tail, D10 band
+  exception, getCoachOutputHistory deleted_at + 2nd approved-unbuilt item).
