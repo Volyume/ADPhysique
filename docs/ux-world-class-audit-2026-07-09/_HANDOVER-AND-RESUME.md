@@ -313,3 +313,11 @@ OAuth SHA-1; Cut 4 seed walk.
   migration (also fixes front/side-delt volume tracking corruption) + share
   engine classifiers with builder for a calm non-blocking nudge. Agent health
   check 17:16: all four builders actively writing (mtimes seconds old).
+- Day-level plan reorder LANDED (cd613a6) - OLD founder-GO closed: routines
+  .position (local v61 + backfill), migrate_113 (founder-run; column-tolerant
+  push retry until applied, per the 094/112 pattern), PlanDetailScreen
+  reorder toggle + chevrons (no drag lib, tier-blind, optimistic swap +
+  revert-on-failure), tests + source guard. Its 2 suite failures verified
+  (stash test) as the ENGINE agent's in-flight planEngine WIP - hold engine
+  to a green suite at its boundary. Founder-run migration queue now: 110,
+  111, 112, 113.
