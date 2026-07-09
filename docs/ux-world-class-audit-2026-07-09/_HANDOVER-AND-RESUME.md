@@ -219,3 +219,12 @@ OAuth SHA-1; Cut 4 seed walk.
   agents: 2 Sonnet planners running -> docs/exercise-planning-2026-07-09/
   plan-A-library-expansion.md + plan-B-weak-point-sets.md (diagnosis +
   options + founder multiple-choice; engine changes remain founder-gated).
+- Dietary Phase B LANDED (bfaf8cf): 26 new diet-tagged meals (94 total) -
+  pescatarian 10, vegetarian 9, vegan 7 - all from existing staples, authored
+  additions each, vegan 28g protein bar enforced (2 drafts resized not
+  shipped short), calm naming, no schema/dep. Pool sizes now clear the
+  no-repeat-more-than-twice-in-7-days bar on every restricted diet.
+  mealPlanAssembler crushed-pool fixture tightened (excludeFoodKeys chickpeas)
+  so the never-silently-under-fill invariant still genuinely bites.
+  WATCH: haptics agent WIP transiently fails BuildWorkoutScreen.travelSheet
+  guard - hold haptics to a green suite at its boundary.
