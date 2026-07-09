@@ -198,3 +198,11 @@ OAuth SHA-1; Cut 4 seed walk.
   reading); lowest capable agent tier; ~4 agents per batch to completion;
   per-stage handover append + push at every boundary; NO attribution in
   commits; reset-author rebase before every push.
+- Cohesion-01 (flow/language) LANDED: cohesion-01-flow-language.md, 7 findings
+  (A1/B4/C2). Headline CO-1: D4 naming ("The Coach" banned) unimplemented at
+  20 sites/14 files incl. YouScreen:337 headline, MethodologyScreen:32, and
+  nutritionEngine.js:402 (ED-safety FFM-floor line -> HANDS-ON restoration
+  only) + 2 guard tests pinning wrong copy. CO-2 volume card no deep-link;
+  CO-3 WorkoutSummary links; CO-5 "goal" 3 meanings; CO-6 tab-label grammar.
+  CO-4 TodayStrip weight-only = founder-awareness only. Strong: navigateCrossTab,
+  DiaryScreen training-day wiring, NAV-5 tab reset.
