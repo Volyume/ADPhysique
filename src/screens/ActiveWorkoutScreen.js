@@ -16,6 +16,7 @@ import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
@@ -2149,11 +2150,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <RestTimer />
 
           {/* Set Entry */}
-          <View style={[
-            styles.setEntryCard,
-            currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
-            logFlash && styles.setEntryCardFlash,
-          ]}>
+          <Card
+            radius="md"
+            padding="none"
+            style={[
+              styles.setEntryCard,
+              currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
+              logFlash && styles.setEntryCardFlash,
+            ]}
+          >
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
@@ -2361,7 +2366,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 textContentType="none"
               />
             ) : null}
-          </View>
+          </Card>
 
           {/* Cluster banner: drives myo-rep / rest-pause mini-sets. */}
           {cluster ? (
@@ -2584,7 +2589,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   Two exercises paired back-to-back with no rest between them.
                 </Text>
 
-                <View style={styles.supPairCard}>
+                <Card surface="surface2" radius="md" padding="md" style={styles.supPairCard}>
                   <View style={styles.supPairRow}>
                     <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
                     <Text style={styles.supPairName} numberOfLines={2}>
@@ -2598,7 +2603,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       {supersetHeadsUp?.exerciseBName}
                     </Text>
                   </View>
-                </View>
+                </Card>
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
@@ -3413,7 +3418,7 @@ const styles = StyleSheet.create({
   swapEmptyText: { ...type.caption, color: colors.textMuted },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 20 },
   targetText: { flex: 1, ...type.captionTight, color: colors.textMuted },
-  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs2, borderWidth: 1, borderColor: colors.border, gap: spacing.xxs },
+  setEntryCard: { padding: spacing.xs2, gap: spacing.xxs },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
@@ -3596,7 +3601,7 @@ const styles = StyleSheet.create({
   supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supTitle: { ...type.h3, color: colors.textPrimary },
   supSubtitle: { ...type.bodySm, color: colors.textSecondary },
-  supPairCard: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
+  supPairCard: { borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
   supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supPairChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   supPairChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },

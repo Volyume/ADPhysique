@@ -177,7 +177,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>Add exercise</Text>');
     expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
     expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>{noteActionLabel}</Text>');
-    expect(ACTIVE_WORKOUT).toContain('cue{cueCount !== 1 ? \'s\' : \'\'}');
+    // Stale pin -> corrected: commit 214b057 (design campaign 2026-07-09)
+    // renamed the collapsed banner rail from "N cues" to "N notes" per the
+    // U-A-1 contract (see ActiveWorkoutScreen.js:365,2036,2039,3342); the
+    // variable is noteCount, not cueCount. This assertion pins the current,
+    // correct wording.
+    expect(ACTIVE_WORKOUT).toContain('note{noteCount !== 1 ? \'s\' : \'\'}');
     expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');
     expect(ACTIVE_WORKOUT).not.toContain('secondaryActions: {');
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');

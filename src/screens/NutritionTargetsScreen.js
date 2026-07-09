@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, 
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
+import Card from '../components/Card';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
@@ -130,7 +131,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
         ? `${perKg} g/kg`
         : null;
   return (
-    <View style={styles.macroCard}>
+    <Card radius="md" padding="md" style={styles.macroCard}>
       <Text style={styles.macroGrams}>{grams}g</Text>
       <Text style={styles.macroLabel}>{label}</Text>
       {/* D3 (design audit 03): a thin proportional bar in the macro's
@@ -154,7 +155,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
       {kcalPercent != null ? (
         <Text style={styles.macroPercent}>{`~${kcalPercent}% of kcal`}</Text>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -511,11 +512,11 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Education entry point, surfaces a 5-min nutrition primer for
               users new to tracking. Doesn't change targets, just teaches. */}
-          <TouchableOpacity
-            style={styles.eduCard}
+          <Card
             onPress={() => navigation.navigate('NutritionEducation')}
-            activeOpacity={0.85}
-            accessibilityRole="button"
+            radius="md"
+            padding="md"
+            style={styles.eduCard}
             accessibilityLabel="New to calories and macros? Open the 5-minute guide"
           >
             <View style={styles.eduIconWrap}>
@@ -526,14 +527,14 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Text style={styles.eduBody}>5-minute guide to what these numbers mean and how to actually use them.</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          </Card>
 
           {/* U-C-1: "Set it for me" fast path. Gives a usable daily target from
               the prefilled body stats before the full form. Reuses the single
               handleCalculate path (engine floors + calm-mode goal filtering
               unchanged); the full form is one tap away via "Fine-tune". */}
           {formCollapsed && !results ? (
-            <View style={styles.fastCard}>
+            <Card style={styles.fastCard}>
               <Text style={styles.fastTitle}>Set it for me</Text>
               <Text style={styles.fastSubtitle}>
                 Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
@@ -544,11 +545,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                 {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
                   const active = goal === g.key;
                   return (
-                    <TouchableOpacity
+                    <Card
                       key={g.key}
-                      style={[styles.goalCard, active && styles.goalCardActive]}
                       onPress={() => setGoal(g.key)}
-                      accessibilityRole="button"
+                      radius="md"
+                      padding="md"
+                      style={[styles.goalCard, active && styles.goalCardActive]}
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`${g.label}, ${g.detail}`}
                     >
@@ -557,7 +559,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       )}
                       <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
                       <Text style={[styles.goalDetail, active && styles.goalDetailActive]}>{g.detail}</Text>
-                    </TouchableOpacity>
+                    </Card>
                   );
                 })}
               </View>
@@ -628,7 +630,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* The same GDPR consent the full form requires, bound to the same
                   state, only one of the two ever renders at a time. */}
-              <View style={styles.consentCard}>
+              <Card style={styles.consentCard}>
                 <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
                 <View style={styles.consentBody}>
                   <Text style={styles.consentText}>
@@ -641,7 +643,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     accessibilityLabel="I consent to storing this data on my device"
                   />
                 </View>
-              </View>
+              </Card>
 
               <TouchableOpacity
                 style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
@@ -670,7 +672,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="options-outline" size={14} color={colors.primary} />
                 <Text style={styles.fineTuneText}>Fine-tune these numbers</Text>
               </TouchableOpacity>
-            </View>
+            </Card>
           ) : null}
 
           {!formCollapsed ? (
@@ -791,11 +793,12 @@ export default function NutritionTargetsScreen({ navigation }) {
             {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
               const active = goal === g.key;
               return (
-                <TouchableOpacity
+                <Card
                   key={g.key}
-                  style={[styles.goalCard, active && styles.goalCardActive]}
                   onPress={() => setGoal(g.key)}
-                  accessibilityRole="button"
+                  radius="md"
+                  padding="md"
+                  style={[styles.goalCard, active && styles.goalCardActive]}
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={g.label}
                 >
@@ -813,7 +816,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Text style={[styles.goalDetail, active && styles.goalDetailActive]}>
                     {g.detail}
                   </Text>
-                </TouchableOpacity>
+                </Card>
               );
             })}
           </View>
@@ -838,12 +841,12 @@ export default function NutritionTargetsScreen({ navigation }) {
             const ap = PROTEIN_APPROACHES[key];
             const active = proteinApproach === key;
             return (
-              <TouchableOpacity
+              <Card
                 key={key}
-                style={[styles.approachCard, active && styles.approachCardActive]}
                 onPress={() => setProteinApproach(key)}
-                activeOpacity={0.8}
-                accessibilityRole="button"
+                radius="md"
+                padding="md"
+                style={[styles.approachCard, active && styles.approachCardActive]}
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={ap.label}
               >
@@ -880,13 +883,13 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <Text style={styles.customProteinUnit}>g / kg</Text>
                   </View>
                 )}
-              </TouchableOpacity>
+              </Card>
             );
           })}
 
           {/* ── GDPR Consent ───────────────────────────────────────────────────────────────────── */}
 
-          <View style={styles.consentCard}>
+          <Card style={styles.consentCard}>
             <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
             <View style={styles.consentBody}>
               <Text style={styles.consentText}>
@@ -899,12 +902,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="I consent to storing this data on my device"
               />
             </View>
-          </View>
+          </Card>
 
           </>) : null}
 
           {formCollapsed && results ? (
-            <View style={styles.collapsedSummary}>
+            <Card radius="md" padding="md" style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
                 <Ionicons name="nutrition" size={14} color={colors.textMuted} />
                 <Text style={styles.collapsedText} numberOfLines={1}>
@@ -917,7 +920,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="settings-outline" size={13} color={colors.primary} />
                 <Text style={styles.reconfigureBtnText}>Adjust</Text>
               </TouchableOpacity>
-            </View>
+            </Card>
           ) : null}
 
           {/* ── Calculate button, only shown when form is open ───────────────────────────── */}
@@ -954,7 +957,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const kMin = Math.round(Number(results.kcalMin) || tk * 0.9);
                 const kMax = Math.round(Number(results.kcalMax) || tk * 1.1);
                 return (
-                  <View style={styles.heroCard}>
+                  <Card elevated padding="xl" style={styles.heroCard}>
                     <Text style={styles.heroLabel}>Daily Energy Target</Text>
                     <Text style={styles.heroKcal}>
                       {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
@@ -971,7 +974,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         <Text style={styles.heroFloorText}>Held at your safe minimum</Text>
                       </View>
                     ) : null}
-                  </View>
+                  </Card>
                 );
               })()}
 
@@ -1026,7 +1029,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 }
 
                 return (
-                  <View style={styles.perMealCard}>
+                  <Card style={styles.perMealCard}>
                     <View style={styles.perMealHeader}>
                       <Text style={styles.perMealHeading}>PER MEAL</Text>
                       <InfoTooltip
@@ -1103,7 +1106,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         <Text style={styles.perMealHintText}>{windowHint}</Text>
                       </View>
                     )}
-                  </View>
+                  </Card>
                 );
               })()}
 
@@ -1111,7 +1114,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   phase and confidence merged into ONE card instead of three
                   same-shape siblings. Every element is unchanged; only the
                   grouping and header treatment moved. ── */}
-              <View style={styles.howCard}>
+              <Card style={styles.howCard}>
               <Text style={styles.howCardTitle}>Why these targets</Text>
 
               {/* Phase, may be absent when loaded from DB */}
@@ -1267,7 +1270,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 </View>
               ) : null}
 
-              </View>
+              </Card>
 
               {/* Warnings. NU-7: when a floor raised the target, the technical
                   floor lines collapse into one plain-register explanation (the
@@ -1328,7 +1331,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const awareness = femaleNutritionAwareness(sex);
                 if (!awareness) return null;
                 return (
-                  <View style={styles.awarenessCard}>
+                  <Card radius="md" padding="md" style={styles.awarenessCard}>
                     <View style={styles.awarenessHeader}>
                       <Ionicons name="nutrition-outline" size={16} color={colors.primary} />
                       <Text style={styles.awarenessTitle}>{awareness.title}</Text>
@@ -1342,15 +1345,16 @@ export default function NutritionTargetsScreen({ navigation }) {
                       </View>
                     ))}
                     <Text style={styles.awarenessFootnote}>{awareness.footnote}</Text>
-                  </View>
+                  </Card>
                 );
               })()}
 
               {/* How calculated (expandable) */}
-              <TouchableOpacity accessibilityRole="button"
-                style={styles.expandHeader}
+              <Card
                 onPress={() => setExpanded(v => !v)}
-                activeOpacity={0.7}
+                radius="md"
+                style={styles.expandHeader}
+                accessibilityLabel="How was this calculated?"
               >
                 <Text style={styles.expandTitle}>How was this calculated?</Text>
                 <Ionicons
@@ -1358,10 +1362,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                   size={18}
                   color={colors.textSecondary}
                 />
-              </TouchableOpacity>
+              </Card>
 
               {expanded && (
-                <View style={styles.expandBody}>
+                <Card radius="md" style={styles.expandBody}>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Formula</Text>
                     <Text style={styles.calcValue}>{results.bmrFormula}</Text>
@@ -1407,7 +1411,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Text style={styles.disclaimer}>
                     These targets are estimates, not medical advice. Consult a qualified professional before making significant dietary changes.
                   </Text>
-                </View>
+                </Card>
               )}
 
               {/* Recalculate */}
@@ -1442,9 +1446,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   // D3: neutral edge, a static education row does not spend the amber.
-  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.border, padding: spacing.md, marginTop: spacing.sm },
+  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.border, marginTop: spacing.sm },
   // U-C-1: "Set it for me" fast-path card.
-  fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
+  fastCard: { marginTop: spacing.md, gap: spacing.md },
   fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   fastSubtitle: { ...type.bodySm, color: colors.textSecondary },
   fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
@@ -1520,11 +1524,6 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     width: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.xxs,
   },
   goalCardActive: {
@@ -1554,11 +1553,6 @@ const styles = StyleSheet.create({
   consentCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'flex-start',
   },
   consentBody: {
@@ -1603,11 +1597,6 @@ const styles = StyleSheet.create({
   // D3: surfaceElevated ranks the hero (design audit 03 rule 4); the amber
   // lives in the kcal numeral itself, so the border is neutral.
   heroCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     gap: spacing.sm,
   },
@@ -1630,11 +1619,6 @@ const styles = StyleSheet.create({
   },
   macroCard: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     gap: spacing.xxs,
   },
@@ -1675,12 +1659,6 @@ const styles = StyleSheet.create({
 
   // Per-meal protein card, distribution guidance, daily total unchanged
   perMealCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.md,
   },
   perMealHeader: {
@@ -1900,11 +1878,6 @@ const styles = StyleSheet.create({
   // only warnings and the EA ease-nudge keep tint (design audit 03).
   awarenessCard: {
     marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     gap: spacing.sm,
   },
   awarenessHeader: {
@@ -1949,22 +1922,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   expandTitle: {
     ...type.label,
     color: colors.textSecondary,
   },
   expandBody: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   calcRow: {
@@ -2008,11 +1971,6 @@ const styles = StyleSheet.create({
   // ── Collapsed form summary ────────────────────────────────────────────────────────
 
   collapsedSummary: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   collapsedRow: {
@@ -2055,11 +2013,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   approachCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.xs,
   },
   approachCardActive: {
@@ -2130,11 +2083,6 @@ const styles = StyleSheet.create({
   // ── How we got here (D3: whys + phase + confidence in one card) ─────────────
 
   howCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.md,
   },
   howCardTitle: {

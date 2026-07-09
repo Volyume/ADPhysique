@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { SkeletonCard } from '../components/Skeleton';
@@ -361,7 +362,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <BackHeader title="Exercise" />
         <View style={styles.loadErrorWrap}>
-          <View style={styles.loadErrorCard} accessibilityRole="alert" accessibilityLabel="Exercise details could not be loaded">
+          <Card padding="xl" style={styles.loadErrorCard} accessibilityRole="alert" accessibilityLabel="Exercise details could not be loaded">
             <View style={styles.loadErrorIcon}>
               <Ionicons name="alert-circle-outline" size={22} color={colors.warning} />
             </View>
@@ -377,7 +378,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               accessibilityLabel="Try loading exercise details again"
               style={styles.loadErrorButton}
             />
-          </View>
+          </Card>
         </View>
       </SafeAreaView>
     );
@@ -462,7 +463,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Overview */}
         <AnimatedEntrance index={0}>
-        <View style={styles.overviewCard}>
+        <Card style={styles.overviewCard}>
           <View style={styles.tags}>
             <View style={styles.tag}><Text style={styles.tagText}>{primaryMuscle}</Text></View>
             {subregionLabel && (
@@ -534,7 +535,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={styles.sfrLabel}>Rep range</Text>
             </View>
           </View>
-        </View>
+        </Card>
         </AnimatedEntrance>
 
         {/* Personal Record highlight card */}
@@ -545,7 +546,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           const displayPR = pr1rm || prHeavy;
           if (!displayPR) return null;
           return (
-            <View style={styles.prHighlightCard}>
+            <Card tone="primary" style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
                 <Ionicons name="trophy" size={18} color={colors.primary} />
                 <Text style={styles.prHighlightTitle}>Personal bests</Text>
@@ -581,7 +582,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={styles.prHighlightDate}>
                 Achieved {format(new Date(displayPR.achieved_date), 'MMM d yyyy')}
               </Text>
-            </View>
+            </Card>
           );
         })()}
 
@@ -602,7 +603,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         )}
 
         {goal && (
-          <View style={styles.goalCard}>
+          <Card style={styles.goalCard}>
             <View style={styles.goalCardHeader}>
               <View style={styles.goalCardLeft}>
                 <Ionicons name="flag" size={14} color={colors.primary} />
@@ -641,7 +642,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 ? 'Goal reached.'
                 : `${goalKgToGo.toFixed(1)}${units} to go`}
             </Text>
-          </View>
+          </Card>
         )}
 
         {plateau && (
@@ -723,7 +724,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               const date = new Date(firstSet.createdAt);
               const sessionEst1RM = Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0)));
               return (
-                <View key={i} style={styles.historyCard}>
+                <Card radius="md" style={styles.historyCard} key={i}>
                   <Text style={styles.historyDate}>{format(date, 'MMM d')}</Text>
                   <View style={styles.historySets}>
                     {sessionSets.map((s, j) => (
@@ -737,7 +738,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   {sessionEst1RM > 0 && (
                     <Text style={styles.historyEst}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
                   )}
-                </View>
+                </Card>
               );
             })}
           </View>
@@ -745,7 +746,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
         {/* History empty state */}
         {history.length === 0 && exercise && (
-          <View style={styles.historyEmpty}>
+          <Card radius="md" style={styles.historyEmpty}>
             <Ionicons name="time-outline" size={20} color={colors.textMuted} />
             <Text style={styles.historyEmptyText}>
               You haven't logged this exercise yet. Add it to a session to start tracking your progress.
@@ -758,7 +759,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             >
               <Text style={styles.historyEmptyActionText}>Start workout</Text>
             </TouchableOpacity>
-          </View>
+          </Card>
         )}
 
         {/* PRs */}
@@ -766,7 +767,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <View style={styles.section}>
             <SectionLabel>All-time bests</SectionLabel>
             {prs.slice(0, 5).map((pr) => (
-              <View key={pr.id} style={styles.prRow}>
+              <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons
                   name={pr.record_type === '1rm_estimate' ? 'trophy-outline' :
                    pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
@@ -784,7 +785,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   </Text>
                 </View>
                 <Text style={styles.prDate}>{format(new Date(pr.achieved_date), 'MMM d yyyy')}</Text>
-              </View>
+              </Card>
             ))}
           </View>
         )}
@@ -801,12 +802,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               {substitutes.map(({ exercise: sub }) => {
                 const subPrimary = MUSCLE_DISPLAY_NAMES[(sub.primaryMuscle || '').toLowerCase()] || sub.primaryMuscle;
                 return (
-                  <TouchableOpacity
+                  <Card
                     key={sub.id}
-                    style={styles.subCard}
                     onPress={() => navigation.push('ExerciseDetail', { exerciseId: sub.id, exerciseName: sub.name })}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
+                    surface="surface2"
+                    radius="md"
+                    padding="md"
+                    style={styles.subCard}
                     accessibilityLabel={`View ${sub.name}`}
                   >
                     <Text style={styles.subCardName} numberOfLines={2}>{sub.name}</Text>
@@ -818,7 +820,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                         {sub.equipment || subPrimary || ''}
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Card>
                 );
               })}
             </ScrollView>
@@ -840,7 +842,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           return (
             <View style={styles.section}>
               <SectionLabel>How to do it</SectionLabel>
-              <View style={styles.notesCard}>
+              <Card radius="md" style={styles.notesCard}>
                 {steps.length >= 2 ? (
                   steps.map((step, i) => (
                     <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowSpaced]}>
@@ -853,7 +855,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 ) : (
                   <Text style={styles.notesText}>{instructionText}</Text>
                 )}
-              </View>
+              </Card>
             </View>
           );
         })()}
@@ -938,12 +940,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   overviewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   tag: {
@@ -989,11 +986,6 @@ const styles = StyleSheet.create({
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
   loadErrorCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.sm,
   },
@@ -1032,8 +1024,6 @@ const styles = StyleSheet.create({
   },
   historyEmpty: {
     flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   historyEmptyText: {
     ...type.bodySm,
@@ -1055,11 +1045,6 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.md },
   historyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   historyDate: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -1070,11 +1055,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   prInfo: { flex: 1 },
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
@@ -1088,9 +1068,6 @@ const styles = StyleSheet.create({
   subCard: {
     width: 140,
     height: 72,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.md,
     justifyContent: 'space-between',
   },
   subCardName: {
@@ -1111,11 +1088,6 @@ const styles = StyleSheet.create({
   },
   // PR highlight card
   prHighlightCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
     gap: spacing.sm,
   },
   prHighlightHeader: {
@@ -1155,13 +1127,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
   },
-  notesCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+  notesCard: {},
   notesText: { ...type.bodySm, color: colors.textSecondary },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   stepRowSpaced: { marginTop: spacing.md },
@@ -1228,11 +1194,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   goalCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
   },
   goalCardHeader: {

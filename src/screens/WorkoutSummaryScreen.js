@@ -10,6 +10,7 @@ import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -876,7 +877,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
         {milestone ? (
           <RevealSection delay={120}>
-            <View style={styles.milestoneCard}>
+            <Card tone="gold" style={styles.milestoneCard}>
               <View style={styles.milestoneIconWrap}>
                 <Ionicons name={milestone.icon} size={22} color={colors.gold} />
               </View>
@@ -893,7 +894,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               >
                 <Ionicons name="share-social-outline" size={18} color={colors.gold} />
               </TouchableOpacity>
-            </View>
+            </Card>
           </RevealSection>
         ) : null}
 
@@ -902,7 +903,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             comparison verdict fused into it; the remaining three stats step
             down to a compact row below. The hero is the screen's single
             amber object (the numeral); everything else is neutral or tint. */}
-        <View style={styles.heroCard}>
+        <Card elevated padding="xl" style={styles.heroCard}>
           <StatBox
             hero
             value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
@@ -948,7 +949,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
             );
           })()}
-        </View>
+        </Card>
 
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
@@ -969,7 +970,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && !calmSuppressed && tier === 'pro'
           && (partners.rowState === 'active' || partners.rowState === 'resting') && (
           <RevealSection delay={1130}>
-            <View style={styles.partnerBeatRow}>
+            <Card style={styles.partnerBeatRow}>
               <View style={styles.partnerBeatTop}>
                 <Ionicons name="people-outline" size={18} color={colors.primary} />
                 <Text style={styles.partnerBeatText}>
@@ -1003,7 +1004,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Card>
           </RevealSection>
         )}
 
@@ -1013,7 +1014,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             block. Reuses the same BlockShapeCard as Home and Consistency. */}
         {!readOnly && !calmSuppressed && mesoWeek?.plannedWeeks >= 2 && (
           <RevealSection delay={1160}>
-            <View style={styles.blockArcSection}>
+            <Card style={styles.blockArcSection}>
               <Text style={styles.sectionTitle}>Your block</Text>
               {mesoWeek.mesoName ? (
                 <Text style={styles.blockArcName}>{mesoWeek.mesoName}</Text>
@@ -1024,7 +1025,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 isDeload={mesoWeek.isDeload}
                 compact
               />
-            </View>
+            </Card>
           </RevealSection>
         )}
 
@@ -1034,7 +1035,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             : exerciseData.length > 0 ? exerciseData : [];
           if (!display.length) return null;
           return (
-            <View style={styles.exerciseList}>
+            <Card padding="none" style={styles.exerciseList}>
               {display.map((ex, i) => {
                 const workingSets = (ex.loggedSets ?? []).filter(
                   s => (s.setType ?? 'straight') !== 'warmup'
@@ -1058,7 +1059,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   </View>
                 );
               })}
-            </View>
+            </Card>
           );
         })()}</RevealSection>
 
@@ -1107,7 +1108,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
             {/* D3: one compressed card, hairline dividers between muscles,
                 instead of a stack of same-weight bordered cards. */}
-            <View style={styles.volumeCard}>
+            <Card padding="none" style={styles.volumeCard}>
             {musclesWorked.map((muscle, mi) => {
               const data = weeklyVolume[muscle];
               const { label, status } = getVolumeStatus(data.workingSets, muscle);
@@ -1156,7 +1157,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 </View>
               );
             })}
-            </View>
+            </Card>
           </View>
           </RevealSection>
         )}
@@ -1185,7 +1186,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             which falls back to the neutral link above. */}
         {!readOnly && blockStory && !calmSuppressed && (
           <RevealSection delay={1480}>
-            <View style={styles.phaseCard}>
+            <Card tone="gold" style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
                 <Ionicons name="flag" size={18} color={colors.gold} />
                 <Text style={styles.phaseTitle}>Block complete</Text>
@@ -1223,7 +1224,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   <Ionicons name="share-social-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Card>
           </RevealSection>
         )}
 
@@ -1247,7 +1248,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             the celebratory "what happened" zone above. Same controls, same
             handlers; only the grouping and header treatment changed. */}
         {!readOnly && (
-          <View style={styles.coachZoneCard}>
+          <Card style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Session feedback</Text>
               <Text style={styles.optionalLabel}>optional</Text>
@@ -1303,7 +1304,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               multiline
               numberOfLines={3}
             />
-          </View>
+          </Card>
         )}
 
         {!readOnly && !routineId && exerciseData.length > 0 && (
@@ -1371,7 +1372,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           style={styles.templateModalBg}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.templateModalCard}>
+          <Card radius="xl" padding="xl" style={styles.templateModalCard}>
             <Text style={styles.templateModalTitle}>Save as Workout Template</Text>
             <TextField accessibilityLabel="Workout template name"
               fieldStyle={styles.templateModalField}
@@ -1406,7 +1407,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 textStyle={styles.templateModalSaveText}
               />
             </View>
-          </View>
+          </Card>
         </KeyboardAvoidingView>
       </Modal>
       {/* D2: gold burst over the summary for the 50/100-session rungs. Set
@@ -1515,8 +1516,6 @@ const styles = StyleSheet.create({
   // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
   milestoneCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
   },
   milestoneIconWrap: {
     width: 40, height: 40, borderRadius: circle(40),
@@ -1533,8 +1532,6 @@ const styles = StyleSheet.create({
   // D2 phase-completion celebration card.
   phaseCard: {
     gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
   },
   phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   phaseTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -1556,8 +1553,6 @@ const styles = StyleSheet.create({
   // NEW-002 post-workout partner beat
   partnerBeatRow: {
     gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
   },
   partnerBeatTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   partnerBeatText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
@@ -1586,17 +1581,11 @@ const styles = StyleSheet.create({
   // sections, holding the reused BlockShapeCard (dots + effort word).
   blockArcSection: {
     gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
   },
   blockArcName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   // D3 hero: the one elevated object on the screen (surfaceElevated ranks
   // the hero, design audit 03 rule 4), carrying the display-size tonnage.
   heroCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.xl,
     gap: spacing.md,
     alignItems: 'center',
   },
@@ -1634,8 +1623,6 @@ const styles = StyleSheet.create({
   optionalLabel: { ...type.caption, color: colors.textMuted },
   // D3: the weekly-volume rows live in ONE card with hairline dividers.
   volumeCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
     overflow: 'hidden',
   },
   volumeRow: {
@@ -1667,9 +1654,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   // D3 "tell the coach" zone: the session's inputs as one distinct card.
   coachZoneCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.md,
+    gap: spacing.md,
   },
   coachZoneSubHeading: { ...type.label, color: colors.textSecondary },
   coachZoneDivider: { height: 1, backgroundColor: colors.borderSubtle },
@@ -1789,10 +1774,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   exerciseList: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
   },
   exerciseListRow: {
@@ -1834,8 +1815,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
   },
   templateModalCard: {
-    backgroundColor: colors.surface, borderRadius: radius.xl,
-    padding: spacing.xl, width: '100%', gap: spacing.md,
+    width: '100%', gap: spacing.md,
   },
   templateModalTitle: {
     ...type.title, color: colors.textPrimary,
