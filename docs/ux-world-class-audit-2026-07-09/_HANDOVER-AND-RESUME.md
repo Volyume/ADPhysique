@@ -260,3 +260,18 @@ OAuth SHA-1; Cut 4 seed walk.
   RECORDED ABOVE, NOT FIXED - do not fix until the review resumes. Exercise
   plan decision rounds (plan-A 5 Qs + plan-B 6 Qs) ready whenever the founder
   wants them; engine/library builds wait on those answers.
+- Haiku leftover-verify LANDED (first Haiku agent; cheap, decisive). OLD
+  CAMPAIGN LEFTOVERS NOW CLOSED as DONE: Partner/MealPlan SkeletonCard,
+  RecipeBuilder ModalHeader, ALL Dimensions.get migrations (comments only
+  remain), EmptyState 27 screens, Card 41 screens, styling.md header-trio +
+  letterSpacing docs, eslint.config.js raw-letterSpacing ban, WhatsNew
+  version-key (1.2.0 map). The stale "still outstanding" list in the
+  design-usability campaign doc is superseded by this.
+  ONE REAL TAIL: B-5 uppercase consolidation PARTIAL - 15 files hand-roll
+  textTransform uppercase outside SectionLabel (screens: CoachOutput,
+  CoachReview, DebugLog, GoalLockConsent, Import, PlanUpdate; components:
+  BodyDiagramHeatmap, PartnerPrivacyReceipt, RestTimer, Toast, WeightTrendCard,
+  FoodDetailSheet, MicronutrientPanel, QuickAddSheet, TodaysPlateTeaser).
+  QUEUED as a Sonnet judgement sweep - distinguish true section-label roles
+  (convert) from legit uppercase (keep); GoalLockConsent + PartnerPrivacyReceipt
+  are consent surfaces: convert style tokens only if at all, never copy.
