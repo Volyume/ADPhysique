@@ -7,7 +7,9 @@
  * the header plus builds a new one.
  *
  * Data: listRecipesWithTotals(userId) from src/lib/food/db.js (headers plus
- * a resolved macro total per row, L05-MR1 2026-07-09). The cloud sync layer
+ * a resolved whole-recipe macro total per row); the row displays that total
+ * divided into a per-serving figure via perServingTotals (src/lib/food/macros.js)
+ * and labelled "per serving" (L05-MR1 2026-07-09). The cloud sync layer
  * keeps the table in step with the cloud `recipes` table (migration 015 + 046).
  *
  * Voice rules from CLAUDE.md and COACHING_VOICE_SYNTHESIS_LOCKED.
@@ -30,6 +32,7 @@ import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { toEnergy, energyUnitLabel } from '../lib/format';
+import { perServingTotals } from '../lib/food/macros';
 import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -159,11 +162,14 @@ export default function MyRecipesScreen({ navigation, route }) {
               {item.notes ? ` - ${item.notes}` : ''}
             </Text>
             {/* L05-MR1 (2026-07-09 design audit): recipe rows showed no
-                calories/macros, unlike saved-meal rows. Whole-recipe total,
-                same format MyMeals uses. */}
+                calories/macros, unlike saved-meal rows. Shown per serving
+                (dividing the whole-recipe total by total_servings) and
+                labelled as such, since an unlabelled whole-recipe number
+                sitting next to "N servings" read as ambiguous about which
+                one it was. */}
             {item.totals ? (
               <Text style={styles.meta}>
-                {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {item.totals.protein}g
+                {toEnergy(perServingTotals(item.totals, item.total_servings).kcal, energyUnit)} {energyUnitLabel(energyUnit)} per serving - P {perServingTotals(item.totals, item.total_servings).protein}g
               </Text>
             ) : null}
           </View>

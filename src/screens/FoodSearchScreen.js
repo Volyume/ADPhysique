@@ -54,6 +54,7 @@ import Button from '../components/Button';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
+import { ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
 import HintCaption from '../components/HintCaption';
@@ -887,13 +888,16 @@ export default function FoodSearchScreen({ navigation, route }) {
             {/* Founder 2026-06-30: novices don't realise a suggested meal is a
                 base they can build on (season it, add veg, add flavour), not
                 a fixed prescription. A quiet, pro-food note,
-                framed around flavour/enjoyment, never diet-culture restriction,
-                and honest ("most", "basically") since sugar alcohols and trace
-                seasoning calories aren't literally zero. */}
+                framed around flavour/enjoyment, never diet-culture restriction.
+                L05 copy audit (2026-07-09): this used to paste its own copy of
+                the additions intro, which drifted from the canonical wording
+                when D12.4/D13 reframed it. Now imports ADDITIONS_INTRO from
+                mealAdditions.js (single source, also used by CuratedMealSheet)
+                so the two can never say different things again. */}
             <View style={styles.suggestNoteRow}>
               <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: spacing.hair }} />
               <Text style={styles.suggestNote}>
-                A starting point, not a rule. Season and tweak to taste with herbs, spices, citrus or sauces you enjoy.
+                {ADDITIONS_INTRO}
               </Text>
             </View>
           </View>

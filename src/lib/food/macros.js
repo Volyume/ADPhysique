@@ -96,6 +96,32 @@ export function scaleSodiumMg(per100, grams) {
 }
 
 /**
+ * Divide a whole-recipe macro total into a per-serving figure, so a recipe
+ * list row can show "how much is one serving" alongside its serving count
+ * rather than an unlabelled whole-recipe number (L05-MR1, 2026-07-09 design
+ * audit: recipe rows showed no calories/macros at all; once added, showing
+ * the bare whole-recipe total next to "4 servings" read as ambiguous — is
+ * that the whole recipe or one portion?). A missing, zero or otherwise
+ * invalid servings count is treated as one serving (the whole total passes
+ * through unchanged) rather than dividing by zero or inflating the numbers.
+ *
+ * @param totals    { kcal, protein, carbs, fat } for the whole recipe
+ * @param servings  number of servings the recipe makes (recipes.total_servings)
+ * @returns { kcal, protein, carbs, fat } for one serving
+ */
+export function perServingTotals(totals, servings) {
+  const s = Number(servings);
+  const divisor = Number.isFinite(s) && s > 0 ? s : 1;
+  const t = totals || {};
+  return {
+    kcal: Math.round((Number(t.kcal) || 0) / divisor),
+    protein: r1((Number(t.protein) || 0) / divisor),
+    carbs: r1((Number(t.carbs) || 0) / divisor),
+    fat: r1((Number(t.fat) || 0) / divisor),
+  };
+}
+
+/**
  * The serving size (g) to use for a one-tap add of a food. Food audit F-2:
  * prefer the user's LAST logged portion when the row carries one (the "Add
  * again" recents list does), so a one-tap re-add reuses the remembered portion;

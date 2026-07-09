@@ -653,3 +653,15 @@ OAuth SHA-1; Cut 4 seed walk.
   PR is a fact about the session, lens-independent). New VolyumeChart suite
   (9 tests) + 7 derivation tests; full suite 596 green (env exception
   only); lint clean.
+- FOOD COPY BUNDLE LANDED (Sonnet, lead-reviewed): FoodSearchScreen stale
+  additions intro now IMPORTS canonical ADDITIONS_INTRO (can never drift
+  twice; guard test pins it; verified the only remaining duplicate site).
+  Recipe rows now show energy+protein PER SERVING, labelled, via new pure
+  perServingTotals (macros.js, divide-by-zero guarded), respecting kcal/kJ
+  pref. L05-MM2 miscopy and L05-FS1 tab relabel were ALREADY FIXED in
+  569441f ("More" tab, reasoned + tested) - agent verified and added the
+  missing label regression test. LEAD BLESSED: keep "More" (honest for
+  scan/quick-add/recipes/saved contents); intro placement without heading
+  at the suggested-list tip site is correct (not a meal-detail additions
+  section). 12 new tests; full suite 598 green (env exception only); lint
+  clean. GROUP A STATUS: 5 of 6 bundles landed; Smalls bundle in flight.

@@ -9,6 +9,17 @@ describe('SEARCH_TABS (GAP row 28 + curated suggestions)', () => {
     ]);
   });
 
+  // L05-FS1 (2026-07-09 design audit): "Custom" read as "create a custom
+  // food" and buried everything else the tab actually holds (scan/quick-add/
+  // recipes/saved meals). Relabelled "More" so it honestly covers its
+  // contents. The `key` stays 'custom' deliberately (state, telemetry and
+  // empty-copy keys are unchanged) -- only the visible label changed.
+  test('the "custom" tab is labelled honestly ("More"), not "Custom"', () => {
+    const customTab = SEARCH_TABS.find((t) => t.key === 'custom');
+    expect(customTab.label).toBe('More');
+    expect(customTab.label).not.toBe('Custom');
+  });
+
   test('Suggested has no selectTabRows list (the screen renders meals, not rows)', () => {
     expect(selectTabRows({ activeTab: 'suggested', query: '', lists: {} })).toEqual([]);
   });

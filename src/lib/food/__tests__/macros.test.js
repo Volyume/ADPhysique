@@ -1,7 +1,7 @@
 /**
  * macros.test.js — the single per-100g -> portion scaler (food review U-M2).
  */
-import { scaleMacros, resolveServingG, scaleSugarG, scaleSodiumMg } from '../macros';
+import { scaleMacros, resolveServingG, scaleSugarG, scaleSodiumMg, perServingTotals } from '../macros';
 
 describe('scaleMacros', () => {
   test('scales the resolved/diary shape (kcal_100g ...) by grams', () => {
@@ -29,6 +29,37 @@ describe('scaleMacros', () => {
     expect(m.kcal).toBe(123);
     expect(m.proteinG).toBe(10);
     expect(m.carbsG).toBe(1.2);
+  });
+});
+
+describe('perServingTotals (L05-MR1: recipe-row per-serving figures)', () => {
+  test('divides a whole-recipe total by the servings count', () => {
+    expect(perServingTotals({ kcal: 800, protein: 60, carbs: 80, fat: 20 }, 4))
+      .toEqual({ kcal: 200, protein: 15, carbs: 20, fat: 5 });
+  });
+
+  test('rounds kcal to a whole number and macros to one decimal', () => {
+    expect(perServingTotals({ kcal: 1000, protein: 100, carbs: 10, fat: 1 }, 3))
+      .toEqual({ kcal: 333, protein: 33.3, carbs: 3.3, fat: 0.3 });
+  });
+
+  test('one serving passes the whole total through unchanged', () => {
+    expect(perServingTotals({ kcal: 350, protein: 28, carbs: 4, fat: 24 }, 1))
+      .toEqual({ kcal: 350, protein: 28, carbs: 4, fat: 24 });
+  });
+
+  test('a missing, zero or invalid servings count is treated as one serving, never divides by zero', () => {
+    const totals = { kcal: 350, protein: 28, carbs: 4, fat: 24 };
+    expect(perServingTotals(totals, 0)).toEqual(totals);
+    expect(perServingTotals(totals, null)).toEqual(totals);
+    expect(perServingTotals(totals, undefined)).toEqual(totals);
+    expect(perServingTotals(totals, -2)).toEqual(totals);
+    expect(perServingTotals(totals, 'not a number')).toEqual(totals);
+  });
+
+  test('a missing totals object yields all-zero figures rather than throwing', () => {
+    expect(perServingTotals(null, 4)).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    expect(perServingTotals(undefined, 4)).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
   });
 });
 
