@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     borderRadius: circle(BRAND_BOX),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.camera,
+    backgroundColor: colors.chipInk,
   },
   subtitle: {
     ...type.bodySm,

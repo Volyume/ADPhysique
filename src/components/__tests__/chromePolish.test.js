@@ -100,6 +100,6 @@ describe('shared chrome polish', () => {
     ].join('');
     expect(BRAND_MARK).toContain(compactIconRequire);
     expect(BRAND_MARK).toContain('source={V_ICON_COMPACT}');
-    expect(SCREEN_HEADER).toContain('backgroundColor: colors.camera');
+    expect(SCREEN_HEADER).toContain('backgroundColor: colors.chipInk');
   });
 });

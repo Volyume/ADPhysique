@@ -129,6 +129,15 @@ const baseColors = {
   // "no hardcoded hex" rule stays absolute in the scanner screens.
   camera: '#000000',
 
+  // Decorative chip backing (e.g. ScreenHeader's brand-mark V) that is meant
+  // to stay a fixed black backing in BOTH themes, same theme-invariant shape
+  // as `camera`/`appleBtnBg` above. Split out as its own token (design
+  // usability audit 2026-07-09, AC-7) because `ScreenHeader.js` was borrowing
+  // `colors.camera` — a narrowly-scoped, semantically-named token reserved
+  // for the live-viewfinder surround — for an unrelated decorative chip.
+  // Same value as `camera`, so this is a pure rename: zero visual change.
+  chipInk: '#000000',
+
   // Celebration particle colours (PRCelebration confetti). Fixed festive hues
   // on the dark celebration scrim in both themes; never used as semantic
   // status. Tokenised from the two remaining raw hexes (design audit 03, D0).

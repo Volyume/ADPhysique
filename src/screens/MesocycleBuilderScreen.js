@@ -400,7 +400,7 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
             size={14}
             color={deloadCopy.urgent ? colors.error : colors.warning}
           />
-          <Text style={[styles.deloadBannerText, deloadCopy.urgent && { color: colors.error }]}>
+          <Text style={[styles.deloadBannerText, deloadCopy.urgent && { color: colors.onErrorBg }]}>
             {deloadCopy.text}
           </Text>
         </View>
