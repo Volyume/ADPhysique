@@ -765,3 +765,13 @@ OAuth SHA-1; Cut 4 seed walk.
   lint clean on touched files. WATCH: src/lib/widgets storage.test.js
   reported failing on the shared tree mid-burst - verify at final
   boundary (likely concurrent WIP interplay).
+- BURST LANDING 3/8 WORKOUT FINISH + PR (Sonnet + lead edge-case fix):
+  L07-F10 finish confirm now conditional via pure
+  shouldConfirmBeforeFinish (confirm when zero sets OR a planned
+  non-timeCrunchSkipped exercise has none; instant finish otherwise).
+  LEAD closed the flagged edge hands-on: skip path also requires
+  !hasInProgressSetEntry() so a typed-but-unlogged set never silently
+  drops. L07-F2 PR re-detect was ALREADY BUILT (69e1937, verified
+  line-by-line); agent added the missing contract tests (revoke on
+  edit-down, award on edit-up, delete prunes, sibling survives). All
+  suites green, lint clean.

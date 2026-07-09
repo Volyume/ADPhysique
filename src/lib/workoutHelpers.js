@@ -72,6 +72,30 @@ export function prefillRepsForTarget(anchorSet, target) {
 }
 
 /**
+ * L07-F10: whether finishing the workout right now needs the "Finish
+ * workout?" confirm.
+ *
+ * The confirm exists to stop a silent discard: either nothing was logged at
+ * all, or a planned exercise is about to be left with zero sets. When every
+ * exercise the session actually intends to work (i.e. not one Time Crunch
+ * consciously dropped via `_timeCrunchSkipped` - that's a deliberate choice,
+ * not an abandonment) already carries at least one logged set, AND at least
+ * one set has been logged overall, finishing loses nothing, so the confirm
+ * can be skipped.
+ *
+ * @param {Array} workoutExercises  session exercise entries ({ sets, _timeCrunchSkipped })
+ * @returns {boolean} true when the "Finish workout?" confirm should show
+ */
+export function shouldConfirmBeforeFinish(workoutExercises) {
+  const entries = workoutExercises ?? [];
+  const totalLoggedSets = entries.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
+  if (totalLoggedSets === 0) return true; // zero sets logged: warn accurately
+  const planned = entries.filter(e => !e._timeCrunchSkipped);
+  const everyPlannedExerciseLogged = planned.length > 0 && planned.every(e => (e.sets?.length ?? 0) > 0);
+  return !everyPlannedExerciseLogged; // true = a planned exercise would be silently abandoned
+}
+
+/**
  * Whether a weight entry may be logged. Bodyweight movements accept any (no
  * load needed); everything else needs a positive numeric load, so a blank or
  * zero field blocks the save rather than silently persisting a 0 kg set.

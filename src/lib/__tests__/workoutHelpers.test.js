@@ -14,6 +14,7 @@ import {
   validateSetEntryValue,
   formatLoggedSet,
   formatSeconds,
+  shouldConfirmBeforeFinish,
 } from '../workoutHelpers';
 
 describe('countProgressSets', () => {
@@ -253,6 +254,45 @@ describe('validateSetEntryValue', () => {
       actualReps: 24,
       weight: 50,
     });
+  });
+});
+
+describe('shouldConfirmBeforeFinish (L07-F10)', () => {
+  test('case 1: zero sets logged anywhere -> confirm (warn accurately)', () => {
+    const workoutExercises = [
+      { sets: [] },
+      { sets: [] },
+    ];
+    expect(shouldConfirmBeforeFinish(workoutExercises)).toBe(true);
+  });
+
+  test('case 2: at least one set logged but a planned exercise has none -> confirm (would silently abandon it)', () => {
+    const workoutExercises = [
+      { sets: [{ id: '1' }, { id: '2' }] },
+      { sets: [] }, // planned, nothing logged yet
+    ];
+    expect(shouldConfirmBeforeFinish(workoutExercises)).toBe(true);
+  });
+
+  test('case 3: every planned exercise has at least one set -> skip the confirm', () => {
+    const workoutExercises = [
+      { sets: [{ id: '1' }] },
+      { sets: [{ id: '2' }, { id: '3' }] },
+    ];
+    expect(shouldConfirmBeforeFinish(workoutExercises)).toBe(false);
+  });
+
+  test('an exercise Time Crunch consciously dropped is not "planned" and does not force a confirm', () => {
+    const workoutExercises = [
+      { sets: [{ id: '1' }] },
+      { sets: [], _timeCrunchSkipped: true },
+    ];
+    expect(shouldConfirmBeforeFinish(workoutExercises)).toBe(false);
+  });
+
+  test('empty/undefined session is treated as zero sets logged -> confirm', () => {
+    expect(shouldConfirmBeforeFinish([])).toBe(true);
+    expect(shouldConfirmBeforeFinish(undefined)).toBe(true);
   });
 });
 

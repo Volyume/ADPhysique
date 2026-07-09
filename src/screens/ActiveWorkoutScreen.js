@@ -42,6 +42,7 @@ import {
   prefillRepsForTarget,
   validateSetEntryValue,
   formatLoggedSet,
+  shouldConfirmBeforeFinish,
 } from '../lib/workoutHelpers';
 import {
   formatPerSide, loadUnilateralExercises, setUnilateralExercise,
@@ -1943,162 +1944,176 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       workoutId: activeWorkout?.id ?? null,
       loggedSetCount: loggedSets.length,
     });
-    // L07-F10: name the unlogged set explicitly so the existing confirm
-    // covers the "unsaved/in-progress" case, not just the logged-set count.
+
+    // Capture everything needed for the finish before the rating sheet might
+    // cause a re-render that loses closure values.
+    const snapshotExercises = workoutExercises;
+    const snapshotElapsed = elapsedSeconds;
+
+    async function doFinish() {
+      // WK-2: count from the DB, not the in-memory exercise list, so
+      // sets logged on an exercise later swapped out or removed still
+      // count towards the workout total. Those rows stay in the DB and
+      // in history/volume aggregates; snapshotExercises drops them,
+      // which under-reported the finished workout. Fall back to memory
+      // if the read fails.
+      let allSets;
+      try {
+        const dbRows = await getWorkoutSetsForWorkout(activeWorkout.id);
+        allSets = (dbRows && dbRows.length) ? dbRows : snapshotExercises.flatMap(e => e.sets);
+      } catch (_) {
+        allSets = snapshotExercises.flatMap(e => e.sets);
+      }
+      const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
+      const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
+      const sessionName = shareSessionName(null, exerciseNames);
+      await updateWorkout(activeWorkout.id, {
+        endedAt: Date.now(),
+        durationMinutes: Math.round(snapshotElapsed / 60),
+        isCompleted: true,
+        name: sessionName,
+        setCount: workingSetCount,
+        totalVolume: tonnage,
+      });
+      // LB-8: the core value event. Counts + duration only, no
+      // exercise names or loads.
+      try {
+        const uid = useAppStore.getState().user?.id;
+        if (uid) {
+          // eslint-disable-next-line global-require
+          const { track } = require('../lib/engineTelemetry');
+          track(uid, 'workout_completed', {
+            set_count: workingSetCount,
+            duration_min: Math.round(snapshotElapsed / 60),
+            exercise_count: snapshotExercises.length,
+          }).catch(() => {});
+          // E7.2 activation funnel: first-ever completed workout.
+          // eslint-disable-next-line global-require
+          const { trackFirst } = require('../lib/telemetry/firsts');
+          trackFirst(uid, 'first_workout_logged').catch(() => {});
+        }
+      } catch (_) { /* tolerate */ }
+      // COMP-019: refresh the home-screen widget snapshot (consistency
+      // tick) and NEW-002: push my own week signal to active partners.
+      // Both fire-and-forget; neither blocks the finish flow.
+      try {
+        const uid2 = useAppStore.getState().user?.id;
+        if (uid2) {
+          // eslint-disable-next-line global-require
+          require('../lib/widgets/writer').writeWidgetSnapshot(uid2).catch(() => {});
+          // Pass the sender's SCOFF score so an outbound freeze (§5)
+          // fires on SCOFF >= 2 with no open flag exactly as on an open
+          // flag; the writer applies the Number.isFinite && >= 2 rule.
+          // eslint-disable-next-line global-require
+          require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2, useAppStore.getState().userProfile?.scoffScore).catch(() => {});
+          // S6: a session just landed, so lay the next activation-nudge
+          // stage (or clear it once activated). Self-guarding and
+          // best-effort; never blocks the finish flow.
+          // eslint-disable-next-line global-require
+          require('../lib/notifications/scheduler').scheduleActivationNudge(uid2).catch(() => {});
+        }
+      } catch (_) { /* tolerate */ }
+      // Push to cloud IMMEDIATELY on finish. Previously the
+      // syncWorkout call only fired when the user tapped Close
+      // on the Workout Summary screen, if they swiped away to
+      // another tab or backgrounded the app between Finish and
+      // Close, the completed workout never reached the cloud.
+      // Cross-device sign-in then restored everything except
+      // workouts and sets. Fire-and-forget; failures fall into
+      // pending_sync_ops via syncWorkout's own retry path.
+      try {
+        const supabaseUserId = useAppStore.getState().session?.user?.id;
+        if (supabaseUserId) {
+          // eslint-disable-next-line global-require
+          const { syncWorkout } = require('../lib/sync');
+          syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
+        }
+      } catch (_) { /* tolerate */ }
+      // COMP-015: capture the session's real (nonzero, non-reverted)
+      // adjustments BEFORE endWorkout clears the slice, so the summary
+      // can show its confirmation row.
+      const finishedAdjustments = (useAppStore.getState().sessionAdjustments || [])
+        .filter(a => a.setDelta !== 0 && !a.reverted)
+        .map(a => ({ muscle: a.muscle, setDelta: a.setDelta }));
+      endWorkout();
+      // D2: the whole-workout completion beat (the vocabulary event
+      // existed but was never called anywhere).
+      hapticsVocab.workoutComplete();
+      // eslint-disable-next-line global-require
+      try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
+      navigation.replace('WorkoutSummary', {
+        workoutId: activeWorkout.id,
+        sessionAdjustments: finishedAdjustments,
+        routineId: activeWorkout.routineId || null,
+        startedAt: activeWorkout.startedAt,
+        endedAt: Date.now(),
+        durationMinutes: Math.round(snapshotElapsed / 60),
+        exerciseCount: snapshotExercises.length,
+        setCount: totalSets,
+        workingSetCount,
+        tonnage,
+        exerciseNames,
+        detectedPRs,
+        exerciseData: snapshotExercises.map(e => ({
+          exerciseId: e.exercise?.id,
+          name: e.exercise?.name,
+          recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
+          repsMin: e.routineExercise?.recommendedRepsMin || 8,
+          repsMax: e.routineExercise?.recommendedRepsMax || 12,
+          loggedSets: e.sets.map(s => ({
+            weight: s.weight,
+            reps: s.actualReps ?? s.reps,
+            setType: s.setType,
+          })),
+        })).filter(e => e.exerciseId),
+      });
+    }
+
+    async function runFinish() {
+      try {
+        await doFinish();
+      } catch (e) {
+        logError('ActiveWorkoutScreen.handleFinishWorkout', e, {
+          userId: user?.id,
+          workoutId: activeWorkout?.id,
+          setCount: snapshotExercises.flatMap(ex => ex.sets).length,
+        });
+        // Reset the double-tap guard so the user can retry. On the
+        // happy path the guard stays set forever because we've
+        // already navigated away from this screen.
+        finishingRef.current = false;
+        appAlert(
+          'Couldn\'t finish workout',
+          'Your sets are still saved, but the workout did not close. Check your connection and tap Finish workout again.',
+        );
+      }
+    }
+
+    // L07-F10: an unconditional confirm on every finish warned even when
+    // nothing was at risk. shouldConfirmBeforeFinish (lib/workoutHelpers.js)
+    // is the shared, unit-tested rule: it says "warn" only when the session
+    // has zero logged sets, or a planned exercise (excluding one Time Crunch
+    // consciously dropped via _timeCrunchSkipped) is about to be finished
+    // with no sets at all. When every planned exercise already has a set,
+    // there is nothing to silently discard, so finish immediately. A typed
+    // but unlogged entry still counts as something at risk, so it keeps the
+    // confirm even when every exercise is covered.
+    if (!shouldConfirmBeforeFinish(snapshotExercises) && !hasInProgressSetEntry()) {
+      await runFinish();
+      return;
+    }
+
+    // Name the unlogged set explicitly so the confirm covers the "unsaved/
+    // in-progress" case too, not just the logged-set count.
     const inProgressNote = hasInProgressSetEntry()
       ? ` You also have an unlogged set for ${exercise?.name || 'this exercise'} that will be lost.`
       : '';
     appAlert(
       'Finish workout?',
-      `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.${inProgressNote}`,
+      `You've logged ${snapshotExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${snapshotExercises.length} exercises.${inProgressNote}`,
       [
         { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
-        {
-          text: 'Finish workout',
-          onPress: async () => {
-            // Capture everything needed for the finish before the rating sheet might
-            // cause a re-render that loses closure values.
-            const snapshotExercises = workoutExercises;
-            const snapshotElapsed = elapsedSeconds;
-
-            async function doFinish() {
-              // WK-2: count from the DB, not the in-memory exercise list, so
-              // sets logged on an exercise later swapped out or removed still
-              // count towards the workout total. Those rows stay in the DB and
-              // in history/volume aggregates; snapshotExercises drops them,
-              // which under-reported the finished workout. Fall back to memory
-              // if the read fails.
-              let allSets;
-              try {
-                const dbRows = await getWorkoutSetsForWorkout(activeWorkout.id);
-                allSets = (dbRows && dbRows.length) ? dbRows : snapshotExercises.flatMap(e => e.sets);
-              } catch (_) {
-                allSets = snapshotExercises.flatMap(e => e.sets);
-              }
-              const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
-              const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
-              const sessionName = shareSessionName(null, exerciseNames);
-              await updateWorkout(activeWorkout.id, {
-                endedAt: Date.now(),
-                durationMinutes: Math.round(snapshotElapsed / 60),
-                isCompleted: true,
-                name: sessionName,
-                setCount: workingSetCount,
-                totalVolume: tonnage,
-              });
-              // LB-8: the core value event. Counts + duration only, no
-              // exercise names or loads.
-              try {
-                const uid = useAppStore.getState().user?.id;
-                if (uid) {
-                  // eslint-disable-next-line global-require
-                  const { track } = require('../lib/engineTelemetry');
-                  track(uid, 'workout_completed', {
-                    set_count: workingSetCount,
-                    duration_min: Math.round(snapshotElapsed / 60),
-                    exercise_count: snapshotExercises.length,
-                  }).catch(() => {});
-                  // E7.2 activation funnel: first-ever completed workout.
-                  // eslint-disable-next-line global-require
-                  const { trackFirst } = require('../lib/telemetry/firsts');
-                  trackFirst(uid, 'first_workout_logged').catch(() => {});
-                }
-              } catch (_) { /* tolerate */ }
-              // COMP-019: refresh the home-screen widget snapshot (consistency
-              // tick) and NEW-002: push my own week signal to active partners.
-              // Both fire-and-forget; neither blocks the finish flow.
-              try {
-                const uid2 = useAppStore.getState().user?.id;
-                if (uid2) {
-                  // eslint-disable-next-line global-require
-                  require('../lib/widgets/writer').writeWidgetSnapshot(uid2).catch(() => {});
-                  // Pass the sender's SCOFF score so an outbound freeze (§5)
-                  // fires on SCOFF >= 2 with no open flag exactly as on an open
-                  // flag; the writer applies the Number.isFinite && >= 2 rule.
-                  // eslint-disable-next-line global-require
-                  require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2, useAppStore.getState().userProfile?.scoffScore).catch(() => {});
-                  // S6: a session just landed, so lay the next activation-nudge
-                  // stage (or clear it once activated). Self-guarding and
-                  // best-effort; never blocks the finish flow.
-                  // eslint-disable-next-line global-require
-                  require('../lib/notifications/scheduler').scheduleActivationNudge(uid2).catch(() => {});
-                }
-              } catch (_) { /* tolerate */ }
-              // Push to cloud IMMEDIATELY on finish. Previously the
-              // syncWorkout call only fired when the user tapped Close
-              // on the Workout Summary screen, if they swiped away to
-              // another tab or backgrounded the app between Finish and
-              // Close, the completed workout never reached the cloud.
-              // Cross-device sign-in then restored everything except
-              // workouts and sets. Fire-and-forget; failures fall into
-              // pending_sync_ops via syncWorkout's own retry path.
-              try {
-                const supabaseUserId = useAppStore.getState().session?.user?.id;
-                if (supabaseUserId) {
-                  // eslint-disable-next-line global-require
-                  const { syncWorkout } = require('../lib/sync');
-                  syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
-                }
-              } catch (_) { /* tolerate */ }
-              // COMP-015: capture the session's real (nonzero, non-reverted)
-              // adjustments BEFORE endWorkout clears the slice, so the summary
-              // can show its confirmation row.
-              const finishedAdjustments = (useAppStore.getState().sessionAdjustments || [])
-                .filter(a => a.setDelta !== 0 && !a.reverted)
-                .map(a => ({ muscle: a.muscle, setDelta: a.setDelta }));
-              endWorkout();
-              // D2: the whole-workout completion beat (the vocabulary event
-              // existed but was never called anywhere).
-              hapticsVocab.workoutComplete();
-              // eslint-disable-next-line global-require
-              try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
-              navigation.replace('WorkoutSummary', {
-                workoutId: activeWorkout.id,
-                sessionAdjustments: finishedAdjustments,
-                routineId: activeWorkout.routineId || null,
-                startedAt: activeWorkout.startedAt,
-                endedAt: Date.now(),
-                durationMinutes: Math.round(snapshotElapsed / 60),
-                exerciseCount: snapshotExercises.length,
-                setCount: totalSets,
-                workingSetCount,
-                tonnage,
-                exerciseNames,
-                detectedPRs,
-                exerciseData: snapshotExercises.map(e => ({
-                  exerciseId: e.exercise?.id,
-                  name: e.exercise?.name,
-                  recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
-                  repsMin: e.routineExercise?.recommendedRepsMin || 8,
-                  repsMax: e.routineExercise?.recommendedRepsMax || 12,
-                  loggedSets: e.sets.map(s => ({
-                    weight: s.weight,
-                    reps: s.actualReps ?? s.reps,
-                    setType: s.setType,
-                  })),
-                })).filter(e => e.exerciseId),
-              });
-            }
-
-            try {
-              await doFinish();
-            } catch (e) {
-              logError('ActiveWorkoutScreen.handleFinishWorkout', e, {
-                userId: user?.id,
-                workoutId: activeWorkout?.id,
-                setCount: snapshotExercises.flatMap(ex => ex.sets).length,
-              });
-              // Reset the double-tap guard so the user can retry. On the
-              // happy path the guard stays set forever because we've
-              // already navigated away from this screen.
-              finishingRef.current = false;
-              appAlert(
-                'Couldn\'t finish workout',
-                'Your sets are still saved, but the workout did not close. Check your connection and tap Finish workout again.',
-              );
-            }
-          },
-        },
+        { text: 'Finish workout', onPress: runFinish },
       ],
     );
   }
