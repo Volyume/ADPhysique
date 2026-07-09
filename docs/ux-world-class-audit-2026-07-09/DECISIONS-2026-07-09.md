@@ -137,3 +137,9 @@ exception is documented in exerciseMetadata and pinned by updated tests
    "check-in opens" to locate; keep any surrounding logic/gating untouched.
 2. (With D12 item 4) additions-list reframe - both queued as ONE Haiku
    exact-copy agent for the next free slot.
+3. Coach layout: the profile block has ended up mid-screen (bottom of "This
+   Week") after the reorg. Founder likes the reorg overall but the PROFILE
+   belongs at the TOP (it is the user's identity anchor) - move it to the
+   top of the Coach screen, or if that genuinely collides with the existing
+   hero, the most prominent sensible position (record the choice). The
+   queued copy bundle upgrades to ONE SONNET agent covering D13 items 1-3.
