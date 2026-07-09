@@ -131,3 +131,43 @@ HELD (not covered by "all"; still need an explicit founder call):
   own question if pursued.
 - **Drag-reorder dependency (L07-F9): HELD.** Founder did not approve a new dep
   for it; leave alone unless it can be done with no new dependency.
+
+## D6. Post-batch-4 decision round (founder, 2026-07-09)
+
+After batches 1-4 shipped the non-gated backlog, the founder answered the
+consolidated decision surface (AskUserQuestion):
+
+- **Coverage-gap audit lanes: RUN ALL SIX** (light-theme parity, motion quality,
+  aesthetic craft, a11y contrast/screen-reader, first-run emotion, competitive
+  Home/Progress/Settings benchmarks).
+- **TIER CORRECTION (founder, 2026-07-09, INTERRUPT):** "Do not use opus if
+  sonnet will do the job also." Overrides the CLAUDE.md default of Opus-for-audits
+  for THIS work: the six coverage audits (and comparable well-specified fan-out)
+  run on SONNET, with a hands-on (Fable) synthesis/review step to catch gaps.
+  Reserve Opus only where the task genuinely needs it. One light-theme audit
+  agent was briefly launched on Opus and STOPPED on this instruction.
+- **Food JUDGEMENT items: BUILD FOUR** - L05-SB2 (manual barcode-number entry),
+  L05-ACF1 (named/household serving units + portion-calorie preview), L05-SL1
+  (Settings toggle to reset the "Skip name" flag), L05-MM1 (saved-meal
+  inspect - lightweight read-only inspect sheet was the recommended shape).
+  NOT selected: **L05-FI5** - keep the flat 30g fibre stopgap; do NOT do the
+  per-user engine work (engine changes are not delegated anyway).
+- **Gated items: OPEN ALL FOUR** - L07-F9 (drag-reorder), L05-D2/NT2 (nutrition
+  density), L04-13 (SettingsPrivacy destructive-row isolation), L05-D1
+  (MealSection write-affordances).
+  - **L07-F9 constraint:** reuse the EXISTING no-dependency reorder pattern
+    already in the codebase (Wave D / T7 shipped a no-new-dep drag reorder).
+    Do NOT add a dependency; if a no-dep build is genuinely impossible, STOP and
+    name the specific dep + licence for a fresh yes. Supersedes D5's HELD.
+  - **L05-D2/NT2 constraint (ED-safety-adjacent):** the redesign touches the
+    locked adherence-neutral rendering (MacroRings remaining-hero, no red/green
+    good-bad framing). Founder has approved OPENING it, NOT loosening any
+    ED-safety inviolable. Labour may be delegated to Sonnet under tight
+    constraints, but the ED-safety review of the diff is done HANDS-ON (Fable)
+    at the boundary before push: grep for red/green connotation, adherence
+    framing, MacroRings changes; verify adherence-neutral tests stay green.
+    Supersedes D5's HELD.
+
+Not raised in this round, still open: CoachOutput RED-S + autoregulation
+glossary entries (ED-adjacent copy) - need founder-reviewed wording before the
+footer tooltip can ship.

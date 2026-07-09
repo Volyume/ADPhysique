@@ -370,3 +370,86 @@ D) GATED redesigns still awaiting the founder round:
 E) Founder-run migrations queued (manual, EU-Dublin): migrate_110 (per-day
    offsets), migrate_111 (nutrition goal/protein). Both additive, benign
    no-op until applied.
+
+## ================= HANDOVER (2026-07-09, paused by founder) =================
+Read this whole section, then DECISIONS-2026-07-09.md D6, then the SOURCE lane
+files, before resuming. Branch: claude/codebase-audit-docs-pv6mjd. HEAD at
+handover: 3cf8971 (all work pushed, tree clean, nothing unpushed).
+
+### WHERE WE ARE
+Batches 1-4 shipped the entire non-gated + delegated-judgement build backlog.
+The founder then answered the decision surface (recorded as D6) authorising the
+next program, and immediately interrupted with two instructions:
+  1. "Pause" (this handover).
+  2. "Do not use opus if sonnet will do the job also" -> the six coverage
+     audits and comparable well-specified work run on SONNET, not Opus, with a
+     hands-on Fable synthesis/review step. (One light-theme audit agent was
+     launched on Opus and STOPPED; nothing it did reached the tree.)
+
+### OPERATING MODEL (unchanged, reconfirmed this session)
+- Main loop = Fable, coordination + boundary lint/push + safety-critical
+  judgement ONLY. All build/audit labour goes to agents.
+- Agents: explicit model EVERY time (hook-enforced). Default SONNET for the
+  approved program below; Opus only where genuinely needed; Fable never in a
+  subagent. Batch ~4 agents at a time, domain-partitioned so no two touch the
+  same file, each self-verifies `npm run lint && npm test` and commits its own
+  scope; lead does the boundary (full lint, ED/consent safety greps, migration
+  idempotency check, gate regression tests, reset-author rebase, push, doc).
+- Known env-only test failure: progressScanVision.test.js (missing
+  react-native-fast-tflite in container). NOT a defect. Everything else green.
+- Commit rule: NO attribution. British English. No em dash in user copy.
+- Committer identity: `git config user.email noreply@anthropic.com` +
+  user.name Claude already set; at each boundary run
+  `git rebase --exec "git commit --amend --no-edit --reset-author" origin/<branch>`
+  then push (commits are unsigned in this env - that is fine).
+
+### THE APPROVED PROGRAM (D6) - NOT YET STARTED, do in batches:
+BATCH 5 - six coverage-gap audits (SONNET, READ-ONLY, one findings doc each in
+  docs/design-usability-audit-2026-07-09/, format = the lane files, IDs per
+  lane, SAFE/JUDGEMENT/GATED per finding, cite file:line, don't re-report
+  existing findings). Lanes: (1) light-theme parity -> coverage-01-light-theme.md
+  [prompt already drafted below]; (2) motion/animation quality; (3) aesthetic
+  design-language craft; (4) accessibility contrast + screen-reader/TalkBack;
+  (5) first-run emotional quality; (6) competitive benchmarks Home/Progress/
+  Settings. Then a HANDS-ON (Fable) synthesis pass to merge into the master
+  index + rank a new build backlog.
+BATCH 6 - four food JUDGEMENT builds (SONNET, domain-partitioned):
+  L05-SB2 manual barcode-number entry (inline affordance on ScanBarcodeScreen
+    -> typed EAN -> existing lookup path);
+  L05-ACF1 named/household serving units + portion-calorie preview on
+    AddCustomFoodScreen (serving_label column already exists, NO migration);
+  L05-SL1 Settings toggle to clear the global "Skip name" flag
+    (ScanLabelScreen flag; confirm per-food-vs-global reset semantics);
+  L05-MM1 saved-meal read-only INSPECT sheet before logging (MyMealsScreen;
+    inspect-only was the chosen shape, NOT a full edit flow).
+  ED-safety: food is Pro; keep gates; no floors/engine/MacroRings/red-green
+  touched; calm voice. FI5 is NOT in scope (keep flat 30g stopgap).
+BATCH 7 - four gated builds:
+  L04-13 SettingsPrivacy destructive-row isolation (SONNET, low risk);
+  L05-D1 MealSection write-affordances (SONNET; tangled with 3 guard tests -
+    update tests only to match intent, keep them meaningful, inline-cite);
+  L07-F9 drag-reorder REUSING the existing no-new-dep reorder pattern (Wave D/T7
+    shipped one - find it, copy it). If truly impossible without a dep, STOP and
+    name it + licence for a fresh founder yes. Do NOT add a dep.
+  L05-D2/NT2 nutrition-density redesign - ED-SAFETY-ADJACENT. Delegate labour to
+    Sonnet under tight constraints (adherence-neutral render preserved, no
+    red/green good-bad framing, MacroRings remaining-hero intact), but the
+    LEAD REVIEWS THE DIFF HANDS-ON before push: grep red/green + adherence
+    framing + MacroRings; confirm adherence-neutral tests stay green. This is
+    the one item where the lead must not rubber-stamp the agent.
+
+### STILL OPEN (not in D6, needs a founder answer before building):
+- CoachOutput RED-S + autoregulation glossary entries (ED-adjacent copy) - the
+  batch-3 agent correctly refused to draft these; the footer tooltip waits on
+  founder-reviewed wording.
+- exercise_type end-to-end is DONE (restore 38d94ab + push 814a99a); no action.
+
+### FOUNDER-RUN MIGRATIONS QUEUED (manual, EU-Dublin; app never runs them):
+- migrate_110 (per-day-target offsets), migrate_111 (nutrition goal/protein).
+  Both additive/idempotent/RLS, benign no-op until applied.
+
+### SHIPPED THIS SESSION (all pushed on the branch):
+Batch 1: 93cb4e8, e935be4, 69e1937.  Batch 2: 3e82b18, fe9ba44, 8bfd692
+(+ L07-F5 already built at 0c4d8b2).  Batch 3: 38d94ab, 7f6974b, d5e6ed0,
+7abac35.  Batch 4: 814a99a.  Plus status/decision doc commits.
+=========================================================================
