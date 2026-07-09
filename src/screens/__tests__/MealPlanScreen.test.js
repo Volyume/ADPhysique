@@ -49,6 +49,7 @@ jest.mock('../../lib/food/mealPlanService', () => ({
   repeatPlanDayOnActivePlan: jest.fn(),
   swapMealInPlan: jest.fn(),
   swapFoodInMeal: jest.fn(),
+  findRoleAlternatives: jest.fn(() => []),
 }));
 jest.mock('../../lib/food/db', () => ({
   updateMealPlan: jest.fn(),

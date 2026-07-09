@@ -41,6 +41,7 @@ import {
   repeatPlanDayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
+  findRoleAlternatives,
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
@@ -196,6 +197,11 @@ export default function MealPlanScreen({ navigation, route }) {
   // The meal-swap sheet: a generous, style-diverse list of alternatives for
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
+  // Food-level swap sheet (L05-MP1, 2026-07-09 design audit): gives the
+  // single-food swap the same chooser pattern as the meal-level swap above,
+  // instead of silently applying the engine's single best match.
+  // { slotKey, foodKeyOut, options: [{ foodIn, name, totals }] } when open.
+  const [foodSwapSheet, setFoodSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
   const [repeatSheet, setRepeatSheet] = useState(false); // "repeat this day" target picker
   const planStartDate = useMemo(() => normaliseDayKey(route?.params?.entryDate), [route?.params?.entryDate]);
@@ -475,16 +481,50 @@ export default function MealPlanScreen({ navigation, route }) {
 
   // Swap one food inside a plate for a same-role alternative at the grams
   // that hold the role macro (the "don't like the rice" path, R1/R2).
-  const handleSwapFood = useCallback(async (slotKey, foodKey) => {
+  //
+  // L05-MP1 (2026-07-09 design audit): this used to apply the engine's
+  // single best-match alternative immediately with no choice, unlike the
+  // meal-level swap above which always offers a chooser sheet. It now opens
+  // the same style of sheet: every in-tolerance alternative the engine can
+  // solve for, ranked closest-first, nothing applied until a tap.
+  const handleSwapFood = useCallback((slotKey, foodKey) => {
     if (!user?.id || !record || !day || busy) return;
     const slot = day.slots.find((s) => s.slot === slotKey);
     if (!slot?.components) {
       toast.show('This meal cannot be part-swapped.', { variant: 'info' });
       return;
     }
-    const res = swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: plan.prefs });
-    if (!res) {
+    const candidates = findRoleAlternatives(foodKey, plan.prefs);
+    const options = candidates
+      .map((foodIn) => {
+        const res = swapFoodInMeal({
+          components: slot.components, foodKeyOut: foodKey, prefs: plan.prefs, preferKey: foodIn,
+        });
+        return (res && res.swap?.foodIn === foodIn)
+          ? { foodIn, name: res.swap.foodInName, totals: res.totals }
+          : null;
+      })
+      .filter(Boolean);
+    if (!options.length) {
       toast.show('No close match for that food with your preferences.', { variant: 'info' });
+      return;
+    }
+    setFoodSwapSheet({ slotKey, foodKeyOut: foodKey, options });
+  }, [user?.id, record, plan, day, busy, toast]);
+
+  // Apply the chosen food alternative (the highlighted closest match or any
+  // option in the sheet) to the slot, persist it, and close the sheet. Same
+  // persistence path the old immediate swap used before.
+  const applyFoodChoice = useCallback(async (slotKey, foodKeyOut, foodKeyIn) => {
+    if (!user?.id || !record || !day || busy) return;
+    const slot = day.slots.find((s) => s.slot === slotKey);
+    if (!slot?.components) return;
+    const res = swapFoodInMeal({
+      components: slot.components, foodKeyOut, prefs: plan.prefs, preferKey: foodKeyIn,
+    });
+    if (!res) {
+      toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
+      setFoodSwapSheet(null);
       return;
     }
     setBusy(true);
@@ -496,6 +536,7 @@ export default function MealPlanScreen({ navigation, route }) {
       const nextPlan = { ...plan, days, lastEditType: 'rotation' };
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
+      setFoodSwapSheet(null);
       // Guard the receipt fields: a missing swap object must not throw AFTER a
       // successful write and surface a false "couldn't swap" error (food review U-M10).
       const { swap } = res;
@@ -611,6 +652,10 @@ export default function MealPlanScreen({ navigation, route }) {
 
   const honestyLine = useMemo(() => {
     if (!day || day.withinTolerance) return null;
+    // L05-A1/A2 (2026-07-09 design audit): use the engine's own diagnosis
+    // (reason/severity/hint) instead of one generic sentence, so a genuinely
+    // unfilled slot or an over-budget pin reads differently to a near-miss.
+    if (day.diagnosis?.hint) return day.diagnosis.hint;
     return 'Close. Your preferences make this day hard to hit exactly; the totals below are honest.';
   }, [day]);
 
@@ -1007,6 +1052,48 @@ export default function MealPlanScreen({ navigation, route }) {
                   </View>
                   <Text style={styles.swapOptionMacros}>
                     {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${meal.totals.protein} g`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+      </BottomSheet>
+
+      {/* Food-swap sheet (L05-MP1, 2026-07-09 design audit): the same chooser
+          pattern as the meal-swap sheet above, so replacing one ingredient
+          gets the same control as replacing the whole plate. */}
+      <BottomSheet
+        visible={!!foodSwapSheet}
+        onClose={() => setFoodSwapSheet(null)}
+        accessibilityLabel="Swap this food"
+      >
+        {foodSwapSheet ? (
+          <>
+            <Text style={styles.swapSheetTitle}>Swap this food</Text>
+            <Text style={styles.swapSheetSub}>
+              Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
+            </Text>
+            <ScrollView
+              style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
+              contentContainerStyle={styles.swapListContent}
+              showsVerticalScrollIndicator
+            >
+              {foodSwapSheet.options.map(({ foodIn, name, totals }, i) => (
+                <TouchableOpacity
+                  key={foodIn}
+                  style={[styles.swapOption, i === 0 && styles.swapOptionOn]}
+                  onPress={() => applyFoodChoice(foodSwapSheet.slotKey, foodSwapSheet.foodKeyOut, foodIn)}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
+                >
+                  <View style={styles.swapOptionMain}>
+                    <Text style={styles.swapOptionName}>{name}</Text>
+                    {i === 0 ? <Text style={styles.swapOptionTag}>Closest match</Text> : null}
+                  </View>
+                  <Text style={styles.swapOptionMacros}>
+                    {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
                   </Text>
                 </TouchableOpacity>
               ))}

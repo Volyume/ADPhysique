@@ -32,6 +32,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
   getRollupsForRange, getFoodEntriesForRange,
 } from '../lib/food/db';
@@ -106,10 +107,24 @@ export default function FoodInsightsScreen({ navigation }) {
   const loadRequestRef = useRef(0);
   const isWeekly = windowDays > WEEKLY_THRESHOLD;
 
+  // L05-cross (2026-07-09 design audit): the "set a calorie target" hints
+  // below named a screen ("Coach") with no way to actually get there.
+  // Nutrition targets lives in the Profile tab (titled "Coach" in the tab
+  // bar), a different stack from this screen, so a cross-tab jump is needed.
+  const goToNutritionTargets = useCallback(() => {
+    navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets');
+  }, [navigation]);
+
   // Re-keyed on windowDays so startDate/endDate and the range queries recompute.
   const days = useMemo(() => lastNDayIsoList(windowDays), [windowDays]);
   const startDate = days[0];
   const endDate = days[days.length - 1];
+  // L05-FI4 (2026-07-09 design audit): the period-vs-previous-period
+  // comparison below needs rollups for TWICE the selected window (the
+  // window itself plus the equal span immediately before it), so the fetch
+  // range is widened to match rather than only ever covering the charts'
+  // narrower `days` window.
+  const fetchStartDate = useMemo(() => lastNDayIsoList(windowDays * 2)[0], [windowDays]);
 
   const load = useCallback(async () => {
     const requestId = loadRequestRef.current + 1;
@@ -126,7 +141,7 @@ export default function FoodInsightsScreen({ navigation }) {
     setLoadError(false);
     try {
       const [rs, t] = await Promise.all([
-        getRollupsForRange(userId, startDate, endDate),
+        getRollupsForRange(userId, fetchStartDate, endDate),
         getNutritionTargets(userId),
       ]);
       if (!isCurrentRequest()) return;
@@ -141,7 +156,7 @@ export default function FoodInsightsScreen({ navigation }) {
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
-  }, [userId, startDate, endDate]);
+  }, [userId, fetchStartDate, endDate]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -254,10 +269,16 @@ export default function FoodInsightsScreen({ navigation }) {
     return proteinLine.map(() => ({ value: t }));
   }, [proteinLine, targets]);
 
-  // Weekly-average summary: avg kcal/day over the last 7 logged days vs the 7
-  // before that. Factual, no valence colour, just "this week / last week / the
-  // change", so a quieter or busier week reads neutrally (locked coaching voice).
-  const weeklyAvg = useMemo(() => {
+  // Period-average summary: avg kcal/day over the selected window vs the same
+  // number of days immediately before it. Factual, no valence colour, just
+  // "this period / last period / the change", so a quieter or busier spell
+  // reads neutrally (locked coaching voice).
+  //
+  // L05-FI4 (2026-07-09 design audit): this used to be hardcoded to a 7-vs-7
+  // split no matter which window (7/14/30/90) was selected, so the headline
+  // stayed "THIS WEEK" even for a 90-day view. Now scoped to `windowDays` on
+  // both sides of the comparison, and the headline/copy below follow suit.
+  const periodAvg = useMemo(() => {
     const avgOf = (isoList) => {
       let sum = 0, n = 0;
       for (const iso of isoList) {
@@ -266,15 +287,16 @@ export default function FoodInsightsScreen({ navigation }) {
       }
       return n > 0 ? { avg: Math.round(sum / n), n } : null;
     };
-    // Build the last 14 calendar days independently of the selected window so
-    // the "this week / last week" read is stable across 7/14/30/90.
-    const last14 = lastNDayIsoList(14);
-    const thisWeek = avgOf(last14.slice(7));   // most recent 7 days
-    const lastWeek = avgOf(last14.slice(0, 7)); // the 7 before that
-    if (!thisWeek) return null;
-    const delta = lastWeek ? thisWeek.avg - lastWeek.avg : null;
-    return { thisWeek, lastWeek, delta };
-  }, [rollupByDate]);
+    const span = lastNDayIsoList(windowDays * 2);
+    const current = avgOf(span.slice(windowDays));   // the selected window
+    const previous = avgOf(span.slice(0, windowDays)); // the same span before it
+    if (!current) return null;
+    const delta = previous ? current.avg - previous.avg : null;
+    return { current, previous, delta };
+  }, [rollupByDate, windowDays]);
+  const periodIsWeek = windowDays === 7;
+  const periodPhrase = periodIsWeek ? 'this week' : `over the last ${windowDays} days`;
+  const periodHeadline = periodIsWeek ? 'THIS WEEK' : `LAST ${windowDays} DAYS`;
 
   async function onExport(kind = 'csv') {
     if (!userId || exporting) return;
@@ -347,36 +369,36 @@ export default function FoodInsightsScreen({ navigation }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load nutrition insights"
-            text="Check your connection and try again."
+            text="Something went wrong loading these. Try again."
             actionLabel="Try again"
             onAction={load}
           />
         ) : (
         <>
-        {/* Weekly-average summary: avg kcal/day this week + a neutral, factual
-            "vs last week" delta (no good/bad colour). Above the chart so the
-            headline number reads first. */}
-        {weeklyAvg ? (
+        {/* Period-average summary: avg kcal/day over the selected window + a
+            neutral, factual "vs the period before" delta (no good/bad
+            colour). Above the chart so the headline number reads first. */}
+        {periodAvg ? (
           <>
-            <SectionLabel style={styles.sectionLabelSpacing}>THIS WEEK</SectionLabel>
+            <SectionLabel style={styles.sectionLabelSpacing}>{periodHeadline}</SectionLabel>
             <Card style={styles.card}>
               <Text
                 style={styles.summaryValue}
-                accessibilityLabel={`Averaging ${toEnergy(weeklyAvg.thisWeek.avg, energyUnit)} ${energyWord} a day this week`}
+                accessibilityLabel={`Averaging ${toEnergy(periodAvg.current.avg, energyUnit)} ${energyWord} a day ${periodPhrase}`}
               >
-                {formatEnergy(weeklyAvg.thisWeek.avg, energyUnit)} {energyUnitLabel(energyUnit)}/day
+                {formatEnergy(periodAvg.current.avg, energyUnit)} {energyUnitLabel(energyUnit)}/day
               </Text>
               <Text style={styles.summaryCaption}>
-                Average over {weeklyAvg.thisWeek.n} {weeklyAvg.thisWeek.n === 1 ? 'day' : 'days'} logged this week.
+                Average over {periodAvg.current.n} {periodAvg.current.n === 1 ? 'day' : 'days'} logged{periodIsWeek ? ' this week' : ` in the last ${windowDays} days`}.
               </Text>
-              {weeklyAvg.delta != null ? (
+              {periodAvg.delta != null ? (
                 <Text style={styles.summaryDelta}>
-                  {weeklyAvg.delta === 0
-                    ? 'Same as last week.'
-                    : `${weeklyAvg.delta > 0 ? '+' : '−'}${formatEnergy(Math.abs(weeklyAvg.delta), energyUnit)} ${energyUnitLabel(energyUnit)}/day vs last week.`}
+                  {periodAvg.delta === 0
+                    ? `Same as the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`
+                    : `${periodAvg.delta > 0 ? '+' : '−'}${formatEnergy(Math.abs(periodAvg.delta), energyUnit)} ${energyUnitLabel(energyUnit)}/day vs the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`}
                 </Text>
               ) : (
-                <Text style={styles.summaryDelta}>No logged days last week to compare.</Text>
+                <Text style={styles.summaryDelta}>No logged days before that to compare.</Text>
               )}
             </Card>
           </>
@@ -412,11 +434,20 @@ export default function FoodInsightsScreen({ navigation }) {
                   };
                 }}
               />
-              <Text style={styles.cardFootnote}>
-                {targets?.targetKcal
-                  ? `Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`
-                  : 'Each point is a logged day. Set a calorie target in Coach to see the target line.'}
-              </Text>
+              {targets?.targetKcal ? (
+                <Text style={styles.cardFootnote}>
+                  {`Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`}
+                </Text>
+              ) : (
+                <Text
+                  style={[styles.cardFootnote, styles.cardFootnoteLink]}
+                  onPress={goToNutritionTargets}
+                  accessibilityRole="link"
+                  accessibilityLabel="Set a calorie target in Nutrition targets to see the target line"
+                >
+                  Each point is a logged day. Set a calorie target in Nutrition targets to see the target line.
+                </Text>
+              )}
             </>
           ) : (
             <Text style={styles.emptyText}>
@@ -456,8 +487,13 @@ export default function FoodInsightsScreen({ navigation }) {
                 : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
             </Text>
           ) : (
-            <Text style={styles.cardFootnote}>
-              Set your calorie target in Coach to see target colours.
+            <Text
+              style={[styles.cardFootnote, styles.cardFootnoteLink]}
+              onPress={goToNutritionTargets}
+              accessibilityRole="link"
+              accessibilityLabel="Set a calorie target in Nutrition targets to see target colours"
+            >
+              Set your calorie target in Nutrition targets to see target colours.
             </Text>
           )}
         </Card>
@@ -632,6 +668,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
+  // L05-cross (2026-07-09 design audit): the tappable variant of the
+  // footnote above, used only when it links through to Nutrition targets.
+  cardFootnoteLink: { color: colors.primary, textDecorationLine: 'underline' },
   proteinHeadline: { ...type.title, color: colors.textPrimary },
   proteinChartWrap: { marginTop: spacing.md },
   emptyActionStack: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },

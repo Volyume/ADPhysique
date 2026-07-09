@@ -6,9 +6,9 @@
  * row to choose servings and log it; visible row actions edit or delete;
  * the header plus builds a new one.
  *
- * Data: listRecipes(userId) from src/lib/food/db.js. The cloud
- * sync layer keeps the table in step with the cloud
- * `recipes` table (migration 015 + 046).
+ * Data: listRecipesWithTotals(userId) from src/lib/food/db.js (headers plus
+ * a resolved macro total per row, L05-MR1 2026-07-09). The cloud sync layer
+ * keeps the table in step with the cloud `recipes` table (migration 015 + 046).
  *
  * Voice rules from CLAUDE.md and COACHING_VOICE_SYNTHESIS_LOCKED.
  * No em dashes; plain spoken voice; British English.
@@ -29,13 +29,15 @@ import Stepper from '../components/Stepper';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
-import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
+import { toEnergy, energyUnitLabel } from '../lib/format';
+import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 
 export default function MyRecipesScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
 
@@ -61,7 +63,7 @@ export default function MyRecipesScreen({ navigation, route }) {
     setLoading(true);
     setLoadError(false);
     try {
-      const rows = await listRecipes(userId);
+      const rows = await listRecipesWithTotals(userId);
       setRecipes(rows);
     } catch (e) {
       logError('MyRecipesScreen.reload', e, { userId });
@@ -156,6 +158,14 @@ export default function MyRecipesScreen({ navigation, route }) {
               {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
               {item.notes ? ` - ${item.notes}` : ''}
             </Text>
+            {/* L05-MR1 (2026-07-09 design audit): recipe rows showed no
+                calories/macros, unlike saved-meal rows. Whole-recipe total,
+                same format MyMeals uses. */}
+            {item.totals ? (
+              <Text style={styles.meta}>
+                {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {item.totals.protein}g
+              </Text>
+            ) : null}
           </View>
           {busy
             ? <ActivityIndicator size="small" color={colors.primary} />
@@ -213,7 +223,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         <EmptyState
           icon="warning-outline"
           title="Couldn't load recipes"
-          text="Check your connection and try again. Your saved recipes have not been changed."
+          text="Something went wrong loading these. Your saved recipes have not been changed."
           actionLabel="Try again"
           onAction={reload}
         />

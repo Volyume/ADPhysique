@@ -88,6 +88,13 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     setPermission(next);
   }, []);
 
+  // L05-SB1 (2026-07-09 design audit): matches ScanLabelScreen's escape hatch
+  // so declining the camera permission (or having no camera device) never
+  // traps the user — they can still add the food by hand.
+  const gotoManual = useCallback(() => {
+    navigation.replace('AddCustomFood', { mealSlot, entryDate, from: 'scan_manual' });
+  }, [navigation, mealSlot, entryDate]);
+
   // First arrival: attempt the native OS permission dialog. We fire for
   // ANY non-granted status, not just 'not-determined', because on
   // Android a prior 'denied' is still re-askable, and some OS /
@@ -197,6 +204,12 @@ export default function ScanBarcodeScreen({ navigation, route }) {
               accessibilityLabel="Allow camera"
             />
           )}
+          <Button
+            title="Type it in instead"
+            variant="tertiary"
+            onPress={gotoManual}
+            accessibilityLabel="Type it in instead"
+          />
         </View>
       </SafeAreaView>
     );
@@ -209,6 +222,12 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         <View style={styles.permissionWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.permissionTitle}>No camera available</Text>
+          <Button
+            title="Type it in instead"
+            variant="tertiary"
+            onPress={gotoManual}
+            accessibilityLabel="Type it in instead"
+          />
         </View>
       </SafeAreaView>
     );

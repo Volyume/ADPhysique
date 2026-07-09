@@ -49,14 +49,17 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../lib/food/db', () => ({
-  listRecipes: jest.fn(),
+  // L05-MR1 (2026-07-09 design audit): the screen now reads
+  // listRecipesWithTotals (headers + resolved macro total) so recipe rows
+  // can show calories/macros, matching MyMeals — was listRecipes.
+  listRecipesWithTotals: jest.fn(),
   deleteRecipe: jest.fn(),
   applyRecipeToDiary: jest.fn(),
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 import MyRecipesScreen from '../MyRecipesScreen';
-import { listRecipes } from '../../lib/food/db';
+import { listRecipesWithTotals } from '../../lib/food/db';
 import { logError } from '../../lib/errorLog';
 
 function flattenText(node) {
@@ -79,7 +82,7 @@ describe('MyRecipesScreen load states', () => {
   });
 
   test('shows a retryable error instead of the empty recipe prompt when recipes fail to load', async () => {
-    listRecipes.mockRejectedValue(new Error('offline'));
+    listRecipesWithTotals.mockRejectedValue(new Error('offline'));
     const navigation = { navigate: jest.fn(), goBack: jest.fn() };
     let tree;
 
@@ -91,7 +94,10 @@ describe('MyRecipesScreen load states', () => {
     let text = flattenText(tree.toJSON());
     expect(text).toContain('Recipes');
     expect(text).toContain("Couldn't load recipes");
-    expect(text).toContain('Check your connection and try again.');
+    // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
+    // not a network failure — "Check your connection and try again." ->
+    // "Something went wrong loading these. Your saved recipes have not been changed."
+    expect(text).toContain('Something went wrong loading these. Your saved recipes have not been changed.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Create your first recipe');
     expect(logError).toHaveBeenCalledWith('MyRecipesScreen.reload', expect.any(Error), { userId: 'u1' });
@@ -102,13 +108,13 @@ describe('MyRecipesScreen load states', () => {
     });
     await flush();
 
-    expect(listRecipes).toHaveBeenCalledTimes(2);
+    expect(listRecipesWithTotals).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load recipes");
   });
 
   test('keeps the genuine empty state when recipes load successfully but none exist', async () => {
-    listRecipes.mockResolvedValue([]);
+    listRecipesWithTotals.mockResolvedValue([]);
     const navigation = { navigate: jest.fn(), goBack: jest.fn() };
     let tree;
 

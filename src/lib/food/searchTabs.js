@@ -10,12 +10,17 @@
 // "Add again" (COMP-002): the first tab is the slot-aware recents list,
 // filtered to the meal slot being logged with last-used portions pre-filled.
 // The key stays 'recents' so state, telemetry and empty-copy keys are stable.
+// L05-FS1 (2026-07-09 design audit): the last tab holds scan/quick-add/
+// recipes/saved-meals as well as "add a custom food", so labelling it
+// "Custom" read as "create a custom food" and buried the rest. "More"
+// matches how those other actions are actually being found. The `key`
+// stays 'custom' (state, telemetry and empty-copy keys are unchanged).
 export const SEARCH_TABS = [
   { key: 'recents', label: 'Recent' },
   { key: 'suggested', label: 'Suggested' },
   { key: 'favourites', label: 'Favourites' },
   { key: 'frequents', label: 'Frequents' },
-  { key: 'custom', label: 'Custom' },
+  { key: 'custom', label: 'More' },
 ];
 
 // Which food rows the list shows for the current query.

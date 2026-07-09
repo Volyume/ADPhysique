@@ -835,6 +835,64 @@ export async function listRecipes(userId) {
 }
 
 /**
+ * Active recipes (not tombstoned) with a computed whole-recipe macro
+ * total, so "My recipes" can show numbers on the list without opening
+ * each recipe first (L05-MR1, 2026-07-09 design audit: recipe rows
+ * showed no calories/macros, unlike saved-meal rows). Unlike saved
+ * meals, a recipe's ingredients only store food_ref + quantity_g (no
+ * macro snapshot), so this resolves each DISTINCT food referenced
+ * across every recipe once (memoised locally) rather than per-recipe.
+ * A recipe with an unresolvable ingredient still returns a partial
+ * total rather than throwing.
+ */
+export async function listRecipesWithTotals(userId) {
+  const recipes = await listRecipes(userId);
+  if (!recipes.length) return recipes;
+  const d = await db();
+  const ids = recipes.map((r) => r.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const ingredientRows = await d.getAllAsync(
+    `SELECT recipe_id, food_ref, quantity_g
+     FROM recipe_ingredients
+     WHERE user_id = ? AND recipe_id IN (${placeholders}) AND deleted_at IS NULL`,
+    [userId, ...ids]
+  );
+  const byRecipe = new Map();
+  for (const row of ingredientRows) {
+    if (!byRecipe.has(row.recipe_id)) byRecipe.set(row.recipe_id, []);
+    byRecipe.get(row.recipe_id).push(row);
+  }
+  const foodCache = new Map();
+  const resolveCached = async (ref) => {
+    if (foodCache.has(ref)) return foodCache.get(ref);
+    const food = await resolveFoodRef(userId, ref);
+    foodCache.set(ref, food);
+    return food;
+  };
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const out = [];
+  for (const recipe of recipes) {
+    const ingredients = byRecipe.get(recipe.id) || [];
+    let kcal = 0, protein = 0, carbs = 0, fat = 0;
+    for (const ing of ingredients) {
+      // eslint-disable-next-line no-await-in-loop
+      const food = await resolveCached(ing.food_ref);
+      if (!food) continue;
+      const factor = (Number(ing.quantity_g) || 0) / 100;
+      kcal += (Number(food.kcal_100g) || 0) * factor;
+      protein += (Number(food.protein_100g) || 0) * factor;
+      carbs += (Number(food.carbs_100g) || 0) * factor;
+      fat += (Number(food.fat_100g) || 0) * factor;
+    }
+    out.push({
+      ...recipe,
+      totals: { kcal: Math.round(kcal), protein: round1(protein), carbs: round1(carbs), fat: round1(fat) },
+    });
+  }
+  return out;
+}
+
+/**
  * Recipe header + ingredients in order. Returns null when the recipe
  * doesn't exist or has been deleted.
  */

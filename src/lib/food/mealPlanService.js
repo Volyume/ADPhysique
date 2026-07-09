@@ -30,7 +30,7 @@ import {
   clearPlannedDay,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
-import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
+import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
@@ -585,4 +585,4 @@ export async function restoreUnbankedPlannedFood(userId, { perDayDeltaKcal, star
   }
 }
 
-export { swapFoodInMeal, swapMealInPlan };
+export { swapFoodInMeal, swapMealInPlan, findRoleAlternatives };

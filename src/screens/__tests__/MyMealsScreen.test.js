@@ -125,7 +125,10 @@ describe('MyMealsScreen row tap (C6)', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load saved meals");
-    expect(text).toContain('Check your connection and try again.');
+    // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
+    // not a network failure — "Check your connection and try again." ->
+    // "Something went wrong loading these. Try again."
+    expect(text).toContain('Something went wrong loading these. Try again.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Save your go-to meals');
   });

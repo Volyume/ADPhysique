@@ -211,7 +211,7 @@ export default function MyMealsScreen({ navigation, route }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load saved meals"
-            text="Check your connection and try again."
+            text="Something went wrong loading these. Try again."
             actionLabel="Try again"
             onAction={reload}
           />

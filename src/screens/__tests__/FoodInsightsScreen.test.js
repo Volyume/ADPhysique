@@ -144,7 +144,10 @@ describe('FoodInsightsScreen — protein-consistency headline (ULTIMATE-NUT-04)'
     await flush();
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load nutrition insights");
-    expect(text).toContain('Check your connection and try again.');
+    // L05-MM2 (2026-07-09 design audit): this is a local SQLite read failure,
+    // not a network failure, so "check your connection" was misleading —
+    // "Check your connection and try again." -> "Something went wrong loading these. Try again."
+    expect(text).toContain('Something went wrong loading these. Try again.');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Log food on a few days to see this view fill out.');
   });

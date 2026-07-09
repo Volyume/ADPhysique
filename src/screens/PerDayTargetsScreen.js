@@ -26,7 +26,7 @@ import {
 // floor); the clamp is shown live so a user always sees the real, safe number.
 const STEP_KCAL = 50;
 
-export default function PerDayTargetsScreen() {
+export default function PerDayTargetsScreen({ navigation }) {
   const { userId, energyUnit, sex } = useAppStore(useShallow((s) => ({
     userId: s.user?.id ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
@@ -106,7 +106,15 @@ export default function PerDayTargetsScreen() {
               Base target: {toEnergy(baseKcal, energyUnit)} {unitLabel}. No day can go below your safe floor of {toEnergy(floorKcal, energyUnit)} {unitLabel}.
             </Text>
           ) : (
-            <Text style={local.baseLine}>
+            // L05-cross (2026-07-09 design audit): this named a screen with
+            // no way to actually get there. Same stack as this screen, so a
+            // plain in-stack navigate is enough (no cross-tab jump needed).
+            <Text
+              style={[local.baseLine, local.baseLineLink]}
+              onPress={() => navigation.navigate('NutritionTargets')}
+              accessibilityRole="link"
+              accessibilityLabel="Set your calorie target in Nutrition targets first, then plan per-day offsets here"
+            >
               Set your calorie target in Nutrition targets first, then plan per-day offsets here.
             </Text>
           )}
@@ -142,7 +150,13 @@ export default function PerDayTargetsScreen() {
                   decreaseLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
                   increaseLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
                   valueLabel={`${WEEKDAY_LABELS[key]} target offset ${offset}`}
-                  formatValue={() => ''}
+                  // L05-PDT2 (2026-07-09 design audit): the control showed no
+                  // numeric value between its +/- buttons, reading as empty.
+                  // Was formatValue={() => ''}.
+                  formatValue={(v) => {
+                    const n = toEnergy(v, energyUnit);
+                    return n === 0 ? '0' : `${n > 0 ? '+' : ''}${n}`;
+                  }}
                   onChange={(next) => setOffset(key, next)}
                 />
               </View>
@@ -172,6 +186,9 @@ const local = StyleSheet.create({
   section: { marginBottom: spacing.lg },
   intro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   baseLine: { ...type.bodySm, color: colors.textSecondary },
+  // L05-cross (2026-07-09 design audit): the tappable variant above, used
+  // only when the line links through to Nutrition targets.
+  baseLineLink: { color: colors.primary, textDecorationLine: 'underline' },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,

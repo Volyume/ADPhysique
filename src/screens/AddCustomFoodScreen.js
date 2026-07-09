@@ -12,7 +12,7 @@ import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
@@ -135,6 +135,24 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     && fin(carbs) && Number(carbs) >= 0
     && fin(fat) && Number(fat) >= 0
     && (!fibre.trim() || (fin(fibre) && Number(fibre) >= 0));
+
+  // L05-ACF2 (2026-07-09 design audit): a live preview of what "Eaten (g)"
+  // actually works out to, scaled from the per-100g figures above, so the
+  // user can sanity-check the portion before saving rather than only
+  // finding out the logged kcal at save time. Display-only; never feeds
+  // into what gets saved.
+  const portionPreview = useMemo(() => {
+    const qty = Number(quantityG);
+    if (!fin(quantityG) || qty <= 0 || !fin(kcal)) return null;
+    const factor = qty / 100;
+    const round1 = (n) => Math.round(n * 10) / 10;
+    return {
+      kcal: Math.round((Number(kcal) || 0) * factor),
+      protein: round1((Number(protein) || 0) * factor),
+      carbs: round1((Number(carbs) || 0) * factor),
+      fat: round1((Number(fat) || 0) * factor),
+    };
+  }, [quantityG, kcal, protein, carbs, fat]);
 
   async function onSave() {
     if (!canSave || saving) return;
@@ -309,6 +327,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
           <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
         </View>
+        {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side by
+            side with no explanation of which drives what. */}
+        <Text style={styles.unsureNote}>
+          Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
+        </Text>
+        {portionPreview ? (
+          <Text style={styles.portionPreview}>
+            {`${quantityG} g works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
+          </Text>
+        ) : null}
 
         {/* MN-1 (audit §15 item 2): fully optional per-100g vitamin/mineral
             entry. Collapsed by default so the common case (just the macros
@@ -406,6 +434,8 @@ const styles = StyleSheet.create({
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
   numWrapUnsure: { borderColor: colors.primary },
   unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },
+  // L05-ACF2 (2026-07-09 design audit): the live portion-calorie preview.
+  portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
 
   saveBtn: { marginTop: spacing.xl },
 });
