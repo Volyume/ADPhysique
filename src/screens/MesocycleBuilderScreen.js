@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   dashName:   { ...type.title, color: colors.textPrimary },
   dashWeek:   { ...type.num('caption'), color: colors.textSecondary },
   progTrack:  { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
+  progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   tonnageWrap: { gap: spacing.xs },
   tonnageLabel: { ...type.caption, color: colors.textMuted },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   weekLabel:  { ...type.num('label'), color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
   weekDot:    { flex: 1, height: 8, borderRadius: radius.xs, backgroundColor: colors.surface2 },
-  weekDotActive: { backgroundColor: colors.primaryFill },
+  weekDotActive: { backgroundColor: colors.primary },
   weekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
   deloadLabel: { ...type.num('caption'), color: colors.warning },
 
@@ -503,6 +503,6 @@ const styles = StyleSheet.create({
   planWeekLabelDeload: { color: colors.warning },
   planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
   planWeekDot:       { flex: 1, height: 6, borderRadius: radius.hair, backgroundColor: colors.surface2 },
-  planWeekDotActive: { backgroundColor: colors.primaryFill },
+  planWeekDotActive: { backgroundColor: colors.primary },
   planWeekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
 });

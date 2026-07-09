@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
   },
-  progressFill: { width: '100%', height: '100%', borderRadius: radius.hair, backgroundColor: colors.primaryFill },
+  progressFill: { width: '100%', height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   doneEyebrow: { ...type.num('caption'), color: colors.primary, fontWeight: fontWeight.semibold },
 
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   macroBarValue: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   macroBarValuePrimary: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   macroTrack: { height: 6, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
+  macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   // B-5: whyPlanTitle's typography now comes from SectionLabel (default tone).
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primaryFill, marginTop: 7 },
+  whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   startBtn: { marginTop: spacing.md },

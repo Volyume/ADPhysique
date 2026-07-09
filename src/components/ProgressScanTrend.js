@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   marker: { width: 14, height: 14, borderRadius: 7 },
-  markerSolid: { backgroundColor: colors.primaryFill },
+  markerSolid: { backgroundColor: colors.primary },
   markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.primary },
   markerUnscored: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
   pointCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },

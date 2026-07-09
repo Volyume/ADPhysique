@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     overflow: 'hidden',
   },
-  pipFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primaryFill },
+  pipFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
   pipFillFull: { height: '100%', width: '100%', borderRadius: radius.hair, backgroundColor: colors.textSecondary },
   shareBtn: {
     marginLeft: spacing.sm,

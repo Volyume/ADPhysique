@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   milestoneUnlockedText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.gold },
   milestoneNext: { fontSize: fontSize.xs, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
+  milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
   recoveryCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,

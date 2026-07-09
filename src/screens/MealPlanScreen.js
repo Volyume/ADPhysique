@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
   dayLetter: { ...type.label, color: colors.textSecondary },
   dayLetterOn: { color: colors.textPrimary },
   dayDot: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.border, marginTop: 4 },
-  dayDotTrain: { backgroundColor: colors.primaryFill },
+  dayDotTrain: { backgroundColor: colors.primary },
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   dayTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   dayLabel: { ...type.label, color: colors.textPrimary },

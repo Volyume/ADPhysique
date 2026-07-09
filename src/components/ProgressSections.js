@@ -132,7 +132,7 @@ export function TrainingCalendar({ values }) {
       <View style={styles.calLegend}>
         <View style={[styles.calDot, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]} />
         <Text style={styles.calLegendText}>Rest</Text>
-        <View style={[styles.calDot, { backgroundColor: colors.primaryFill }]} />
+        <View style={[styles.calDot, { backgroundColor: colors.primary }]} />
         <Text style={styles.calLegendText}>Trained</Text>
         <Text style={[styles.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     height: 4, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
-  mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
+  mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { ...type.num('caption'), color: colors.textMuted },
   sparkWrap:           { marginTop: spacing.xs },
   sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },

@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   progressDots: { flexDirection: 'row', gap: spacing.sm },
   dot: { width: 8, height: 8, borderRadius: circle(8), backgroundColor: colors.border },
-  dotActive: { backgroundColor: colors.primaryFill },
+  dotActive: { backgroundColor: colors.primary },
 
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   question: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },

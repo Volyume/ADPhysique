@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     width: 8, height: 8, borderRadius: circle(8),
     backgroundColor: colors.border,
   },
-  quizDotActive: { backgroundColor: colors.primaryFill },
+  quizDotActive: { backgroundColor: colors.primary },
   quizQuestion: {
     fontSize: fontSize.lg, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',

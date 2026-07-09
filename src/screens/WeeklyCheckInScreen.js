@@ -1731,7 +1731,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3,
   },
   stepDotDone: { backgroundColor: withAlpha(colors.primary, 0.376) },
-  stepDotActive: { backgroundColor: colors.primaryFill },
+  stepDotActive: { backgroundColor: colors.primary },
 
   scroll: { flex: 1 },
   scrollContent: {

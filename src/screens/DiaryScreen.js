@@ -2137,7 +2137,7 @@ const styles = StyleSheet.create({
     height: 6, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
-  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primaryFill },
+  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   // waterRow already pads/gaps its children; HintCaption's own padding would
   // double up, so this instance is flush.
   waterHint: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },

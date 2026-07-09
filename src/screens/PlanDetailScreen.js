@@ -460,6 +460,6 @@ const styles = StyleSheet.create({
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },
-  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primaryFill, marginTop: 7 },
+  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });

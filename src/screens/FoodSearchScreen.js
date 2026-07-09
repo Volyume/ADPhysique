@@ -1135,7 +1135,7 @@ const styles = StyleSheet.create({
     height: 2, width: '100%', backgroundColor: 'transparent',
     borderRadius: radius.hair,
   },
-  tabUnderlineActive: { backgroundColor: colors.primaryFill },
+  tabUnderlineActive: { backgroundColor: colors.primary },
 
   searchBar: {
     margin: spacing.md,

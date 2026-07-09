@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  barFill: { height: '100%', backgroundColor: colors.primaryFill, borderRadius: radius.sm },
+  barFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.sm },
   barValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 56, textAlign: 'right' },
 
   adherenceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  adherenceFill: { height: '100%', backgroundColor: colors.primaryFill, borderRadius: 4 },
+  adherenceFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 },
   adherenceValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 44, textAlign: 'right' },
 
   // Nutrient averages (build gap #18): a plain two-column factual row, "Protein

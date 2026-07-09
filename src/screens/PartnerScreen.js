@@ -1692,7 +1692,7 @@ const styles = StyleSheet.create({
   },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: spacing.sm, height: spacing.sm, borderRadius: circle(spacing.sm) },
-  dotActive: { backgroundColor: colors.primaryFill },
+  dotActive: { backgroundColor: colors.primary },
   dotResting: { backgroundColor: stateColors.watch },
   personText: { ...type.body, color: colors.textPrimary, flex: 1 },
 
@@ -2090,7 +2090,7 @@ const styles = StyleSheet.create({
   journeyHeadSpacer: { width: iconSize.lg },
   dots: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   progressDot: { width: spacing.xs2, height: spacing.xs2, borderRadius: circle(spacing.xs2) },
-  progressDotOn: { backgroundColor: colors.primaryFill },
+  progressDotOn: { backgroundColor: colors.primary },
   progressDotOff: { backgroundColor: withAlpha(colors.primary, alpha.tint) },
   journeyContent: { flexGrow: 1, padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   beat: { gap: spacing.lg },
