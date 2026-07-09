@@ -171,3 +171,17 @@ consolidated decision surface (AskUserQuestion):
 Not raised in this round, still open: CoachOutput RED-S + autoregulation
 glossary entries (ED-adjacent copy) - need founder-reviewed wording before the
 footer tooltip can ship.
+
+## D6 correction (2026-07-09): SettingsPrivacy isolation is L04-9, not L04-13
+The "SettingsPrivacy destructive-row isolation" item approved in D6 and built
+this session (commit a876b1d) is master-index **L04-9** (SAFE: destructive rows
+mixed inline vs an isolated section, fix = match SettingsAccountScreen pattern),
+NOT L04-13. True L04-13 (master index:139) is "founder-awareness only, no change
+proposed" about the permanently-red delete-account label wording - left ALONE,
+as it says. The approved WORK (isolate the row) = L04-9's fix exactly; only the
+ID label in D6 was wrong. BUILT: health-data-consent-withdrawal row moved to its
+own bordered "Health-data consent" section, reusing SettingsAccountScreen's
+isolated pattern; `destructive` styling only when healthConsent === true;
+handleWithdrawConsent + its two-step confirm UNCHANGED (verified: diff is
+placement + one styling prop, consent logic byte-identical). So of the four D6
+gated items, L04-9-as-approved is DONE; L05-D1, L07-F9, L05-D2/NT2 remain.
