@@ -156,3 +156,26 @@ range carve-out.
 3. Continue the first unfinished batch item above; keep the batch
    discipline (max 3-4 Sonnet agents, complete before next batch).
 4. Update this file + commit at every phase boundary.
+
+## Batch 1 CLOSED (2026-07-09, verified by lead)
+
+All Batch-1 residue finished; full `npm run lint` exit 0. Commits:
+- `1b47687` — salvage of the 3 stalled agents' 16 in-flight files + YearOfLifts
+  useWindowDimensions completion + 5 stale-copy test fixes.
+- `ea6460b` — stale `ffm_floor_hold` copy assertion fixed (FFM->"lean mass"
+  per COACHING_VOICE_SYNTHESIS_LOCKED.md; ED-safety FLOOR UNCHANGED, numeric
+  floor test still green — verified not a regression).
+- `965e36d` — lane-03: the 4 remaining Dimensions.get -> useWindowDimensions
+  migrations (ProgressSections, PRCelebration, ProgressPhotoCompare,
+  ProgressPhotoViewer).
+- `c0186de` — lane-02: full letterSpacing token sweep (~90 sites) + ESLint ban,
+  Partner/MealPlan skeletons, RecipeBuilder ModalHeader, shadow.glow x3 Pro
+  sites, header-trio docs. ED lockout/cleared banner label styles touched
+  (letterSpacing token only, value-identical, no text/logic) - lead-verified safe.
+
+Known pre-existing failures (NOT caused by this campaign, confirmed via
+git-stash on HEAD): `ActiveWorkoutScreen.usability.guard.test.js` cueCount
+assertion; `progressScanVision.test.js` (missing native react-native-fast-tflite
+in container). cueCount to be fixed alongside Batch 2 per "fix, do not defer".
+
+## Next: Batch 2 (Card / Button / EmptyState / section-label adoption) + cueCount fix.
