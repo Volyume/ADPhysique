@@ -393,3 +393,9 @@ OAuth SHA-1; Cut 4 seed walk.
   Cut 4 (seed->.dat), the already-known founder-gated dedicated-window item -
   stays gated, not a fork. Pair 1 fully drained. NEXT: re-ask the photo round
   (transport error ate it), then pair 2: superset mistag fix + builder nudge.
+- CI BREAK FIXED: both GitHub workflows (Android APK/AAB + Main CI) failed
+  from the CP-7 push onward - expo-local-authentication was in package.json
+  but NOT package-lock.json, so npm ci died at install. Lockfile regenerated
+  (--package-lock-only, +13 lines) and pushed. LESSON pinned: any agent
+  adding a dependency MUST update the lockfile; lead checks lockfile sync at
+  every boundary where package.json changed.
