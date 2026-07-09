@@ -10,7 +10,7 @@ import {
   getConsent as getOffWritebackConsent,
   setConsent as setOffWritebackConsent,
 } from '../lib/food/writeback';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 
 // Privacy & legal: health-data consent withdrawal, the two data-sharing
 // toggles (Open Food Facts, anonymous usage), and the privacy policy.
@@ -40,18 +40,6 @@ export default function SettingsPrivacyScreen({ navigation }) {
   return (
     <SettingsPage title="Privacy">
       <View style={styles.section}>
-        <SettingRow
-          icon="shield-checkmark-outline"
-          label={healthConsent === true ? 'Delete account and withdraw consent' : 'Health-data consent'}
-          sub={healthConsent === true
-            ? 'Destructive action. This withdraws health-data consent and permanently deletes your Volyume account, cloud data and local data.'
-            : healthConsent === false
-              ? 'Withdrawn. Account deletion is in progress or complete.'
-              : 'Not recorded yet.'}
-          value={healthConsent === true ? 'Delete account' : healthConsent === false ? 'Withdrawn' : '-'}
-          onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
-          showArrow={healthConsent === true}
-        />
         <SettingRow
           icon="share-social-outline"
           label="Share scanned labels with Open Food Facts"
@@ -84,6 +72,31 @@ export default function SettingsPrivacyScreen({ navigation }) {
           icon="document-text-outline"
           label="Privacy policy"
           onPress={() => navigation.navigate('PrivacyPolicy')}
+        />
+      </View>
+
+      {/* L04-13/D6 (2026-07-09 design audit): isolate health-data consent
+          withdrawal below the routine sharing toggles, in its own
+          bordered section, matching SettingsAccountScreen.js's isolated
+          destructive-row pattern, so a destructive tap is never mistaken
+          for a benign one. Only visually destructive (red icon/label)
+          when the row is actually the delete action (healthConsent ===
+          true); the underlying withdraw-consent behaviour and its
+          existing two-step confirm are unchanged. */}
+      <SectionHeader title="Health-data consent" />
+      <View style={styles.section}>
+        <SettingRow
+          icon="shield-checkmark-outline"
+          label={healthConsent === true ? 'Delete account and withdraw consent' : 'Health-data consent'}
+          sub={healthConsent === true
+            ? 'Destructive action. This withdraws health-data consent and permanently deletes your Volyume account, cloud data and local data.'
+            : healthConsent === false
+              ? 'Withdrawn. Account deletion is in progress or complete.'
+              : 'Not recorded yet.'}
+          value={healthConsent === true ? 'Delete account' : healthConsent === false ? 'Withdrawn' : '-'}
+          onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
+          showArrow={healthConsent === true}
+          destructive={healthConsent === true}
         />
       </View>
     </SettingsPage>
