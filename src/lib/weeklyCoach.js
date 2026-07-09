@@ -299,6 +299,13 @@ const WHY_LIBRARY = {
   push_volume: [
     "Recovery and performance both look clean, so there's more work in the plan.",
   ],
+  // D15 (founder ruling 2026-07-09): fires only when exceededEscalationApplied
+  // is true, i.e. only on the week the bounded one-step escalation actually
+  // moves a number. No streak/shame framing, no mention of weight, body or
+  // intake (training-volume-only), matches the existing push_volume register.
+  exceeded_escalation: [
+    "You have been ahead of your plan for three weeks running, so your coach is moving you along a little faster this week.",
+  ],
   low_data_weight: [
     "Weight data is thin this week. The trend will sharpen with more daily logs.",
   ],
@@ -371,6 +378,13 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number}        inputs.weeksInPhase               - weeks since phase was set
  * @param {number}        inputs.consecutiveOffTargetWeeks  - weeks trend has been off-target same direction
  * @param {number}        inputs.consecutivePoorRecoveryWeeks
+ * @param {number}        inputs.consecutiveExceededWeeks   - D15 (founder ruling 2026-07-09): consecutive
+ *   PRIOR weeks whose check-in trainingPerformance verdict was 'exceeded' (checkinDerive.js's
+ *   over-performance case). Caller-derived from logged history exactly like the two counters
+ *   above; gates the bounded one-step volume escalation below, never invents the underlying signal.
+ * @param {boolean}       inputs.calmMode                   - D15: wellbeing calm-mode read. Gates ONLY
+ *   the sustained over-performance escalation (never the base weekly push signal, which stays
+ *   unsuppressed like every other training-only surface in this file).
  * @param {string|null}   inputs.lastCalAdjustmentDirection - 'up'|'down'|null
  * @param {number}        inputs.lastCalAdjustmentWeeksAgo  - weeks since last cal change (cooldown)
  * @param {number|null}   inputs.currentCalTarget           - kcal/day, or null if not set
@@ -400,6 +414,17 @@ export function runWeeklyCoach(inputs) {
     goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
+    // D15 (founder ruling 2026-07-09, plan-G section 3): sustained
+    // over-performance counter, threaded in exactly like the two counters
+    // above rather than recomputed inside the engine, so the engine stays
+    // pure and the derivation lives with the other consecutive-week reads
+    // at the caller (CoachOutputScreen). Default 0 keeps every existing
+    // caller (tests, the simulator harness) byte-identical.
+    consecutiveExceededWeeks = 0,
+    // D15: defaults false so every existing caller is unaffected. See the
+    // ED-SAFETY note above the escalation block below for why this is the
+    // one training-only signal in this file that IS calm-mode-gated.
+    calmMode = false,
     lastCalAdjustmentDirection: _lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
@@ -550,6 +575,7 @@ export function runWeeklyCoach(inputs) {
       ffmFloorContext: null,
       adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
       volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
+      exceededEscalationApplied: false,
     };
   }
 
@@ -719,7 +745,12 @@ export function runWeeklyCoach(inputs) {
   const loadSignal = trainingSignal === 'push' ? 'progress' : trainingSignal;
 
   const baseTrainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
-  const trainingNote = safetyHoldNote ? `${safetyHoldNote} ${baseTrainingNote}` : baseTrainingNote;
+  // D15: reassignable. The sustained-escalation block below only ever
+  // overwrites this AFTER confirming safetyHold is false (so safetyHoldNote
+  // is guaranteed null at that point) and recomputes it from the same
+  // getTrainingNote helper with the escalated volumeSignal, never hand-rolling
+  // new copy.
+  let trainingNote = safetyHoldNote ? `${safetyHoldNote} ${baseTrainingNote}` : baseTrainingNote;
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
@@ -1279,6 +1310,46 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── SUSTAINED OVER-PERFORMANCE ESCALATION (D15) ───────────────────────────
+  // Founder ruling 2026-07-09 (D15 / plan-G section 3.2, "BOTH (a) and (b)"):
+  // once the check-in's own trainingPerformance verdict has read 'exceeded'
+  // for consecutiveExceededWeeks running (the new caller-supplied counter
+  // above) AND this week's own autoregulation read is ALREADY a push, the
+  // push may move exactly one extra step, never past autoregulationMatrix's
+  // own existing +3 ceiling (line ~196 above) and never bypassing
+  // computeVolumeApply's downstream [mev, mrv] clamp (coachApply.js:283-307)
+  // — that clamp is untouched by this change. It moves nothing on a
+  // hold/reduce week and never invents a push that was not already there.
+  //
+  // Gated off entirely (weaker signal always wins) while ANY safety hold is
+  // open: a surfaced deload suggestion, the matrix's own deload read, poor
+  // recovery, the joint-pain/illness/injury safety hold, the FFM-floor
+  // calorie hold, an open or just-fired ED-pattern flag, the rapid
+  // weight-loss safety correction, a positive wellbeing-screen restriction
+  // flag, or calm mode. Deterministic: a new named input, same-input-same-
+  // output, no I/O, no randomness.
+  const EXCEEDED_ESCALATION_WEEKS = 3;
+  const MATRIX_PUSH_CEILING = 3; // autoregulationMatrix's own existing ceiling
+  const exceededEscalationEligible = (
+    consecutiveExceededWeeks >= EXCEEDED_ESCALATION_WEEKS &&
+    trainingSignal === 'push' &&
+    !deloadSuggested &&
+    !matrixDeload &&
+    !poorRecovery &&
+    !safetyHold &&
+    !ffmFloorHeld &&
+    !edPatternHeld &&
+    !rapidWeightLossFlag &&
+    !scoffPositive &&
+    !calmMode
+  );
+  let exceededEscalationApplied = false;
+  if (exceededEscalationEligible && volumeSignal < MATRIX_PUSH_CEILING) {
+    volumeSignal = Math.min(volumeSignal + 1, MATRIX_PUSH_CEILING);
+    trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+    exceededEscalationApplied = true;
+  }
+
   // ── WHAT'S WORKING ────────────────────────────────────────────────────────
   const whatWorking = [];
 
@@ -1341,6 +1412,11 @@ export function runWeeklyCoach(inputs) {
   else if (deloadSuggested)                     whyKeys.push('deload_suggested');
   else if (dietBreakSuggested)                  whyKeys.push('diet_break_suggested');
   else if (poorRecovery)                        whyKeys.push('recovery_lagging');
+  // D15: the sustained-escalation receipt takes precedence over the plain
+  // push_volume line (it is a more specific instance of the same push,
+  // only ever set when exceededEscalationApplied is true, which itself
+  // requires trainingSignal === 'push' with every safety hold clear).
+  else if (exceededEscalationApplied)           whyKeys.push('exceeded_escalation');
   else if (volumeSignal >= 1 && excellentRec)   whyKeys.push('push_volume');
   else if (calorieAdjustment?.change > 0)       whyKeys.push('off_target_cal_up');
   else if (calorieAdjustment?.change < 0)       whyKeys.push('off_target_cal_down');
@@ -1365,6 +1441,7 @@ export function runWeeklyCoach(inputs) {
     diet_break_suggested: 'dietBreak',
     recovery_lagging: 'training',
     push_volume: 'training',
+    exceeded_escalation: 'training',
     off_target_cal_up: 'calories',
     off_target_cal_down: 'calories',
     steps_bump: 'steps',
@@ -1452,6 +1529,11 @@ export function runWeeklyCoach(inputs) {
     volumeSignal,
     loadSignal,
     recoveryFlag,
+    // D15: true only on the week the bounded one-step escalation actually
+    // moved volumeSignal. Drives the exceeded_escalation copy (whyKeys
+    // above) and lets the caller persist it into the saved output (so next
+    // run's consecutiveExceededWeeks derivation and telemetry both have it).
+    exceededEscalationApplied,
     // PIPE-002 / PIPE-003: surface the safety context so the caller and
     // telemetry can see why progression was held this week.
     jointPainFlagged,
@@ -1501,6 +1583,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     loadSignal: 'progress',
     recoveryFlag: 'normal',
     goalPhase: 'maint',
+    exceededEscalationApplied: false,
   };
 }
 
@@ -1533,5 +1616,6 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     loadSignal: 'hold',
     recoveryFlag: 'normal',
     goalPhase: 'maint',
+    exceededEscalationApplied: false,
   };
 }

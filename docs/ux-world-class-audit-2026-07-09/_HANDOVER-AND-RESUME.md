@@ -847,3 +847,22 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   clean. FLAGGED for a future round: NutritionTargets' own height/age
   inputs remain calculation-ephemeral (never persisted) - founder may
   want them persisting on Calculate too. ONLY PLAN-G still in flight.
+- BURST LANDING 8/8 PLAN-G BUILD (Sonnet, ENGINE HUNK LEAD-REVIEWED
+  HANDS-ON at weeklyCoach.js:1313-1351 - approved: escalation requires an
+  existing push, exactly one step, +3 matrix ceiling AND downstream MRV
+  clamp untouched, blocked by deload/matrixDeload/poorRecovery/safetyHold/
+  ffmFloorHeld/edPatternHeld/rapidWeightLoss/scoffPositive/calmMode,
+  deterministic named inputs): consecutiveExceededWeeks derived in
+  CoachOutputScreen mirroring consecutivePoorRecoveryWeeks; ack line
+  "You have been ahead of your plan for three weeks running..." fires
+  only with the escalation; adherence-why lines at ProSetupComplete +
+  first coach output (both avoid weight references; ED-flag render test
+  included). exceededEscalationApplied returned explicitly (avoids the
+  latent consecutiveOffTargetWeeks persistence gap - that pre-existing
+  gap NOTED for a future fix, not touched). 29 new tests; 252 lib suites
+  /3571 tests green; lint clean. FLAGGED (accepted by lead): diet-break
+  copy shadows the ack line on coinciding weeks, matching the existing
+  push_volume precedent.
+- ALL 8 BURST LANDINGS COMMITTED. Session PAUSED here by founder order
+  (budget). Emergency snapshot above is now historical - tree is CLEAN.
+  Resume from "After the burst (tomorrow's queue)" in the job board.

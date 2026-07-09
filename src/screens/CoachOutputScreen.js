@@ -133,6 +133,13 @@ import {
   WhyBlock,
 } from '../components/coachOutput/CoachOutputCards';
 
+// D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3 "both" placement):
+// the adherence-why line's one-time seen-flag, same '@volyume_seen_*'
+// once-ever convention as ActiveWorkoutScreen's info tip / DiaryScreen's
+// hint captions. Shown once on the first real (non-baseline) weekly coach
+// output, then never again. The other placement is ProSetupCompleteScreen.
+const ADHERENCE_WHY_SEEN_KEY = '@volyume_seen_coach_adherence_why';
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 // M4 settle wrappers (audit 03b §3.3b). ApplyExit fades the Apply button
@@ -940,6 +947,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // the coach has enough data).
   const [holdReceipt, setHoldReceipt] = useState(null);
   const [calmMode, setCalmMode] = useState(false);
+  // D15: the adherence-why line, shown only on the user's first real weekly
+  // coach output (see ADHERENCE_WHY_SEEN_KEY above).
+  const [showAdherenceWhy, setShowAdherenceWhy] = useState(false);
   const [progressScanCoachContext, setProgressScanCoachContext] = useState(null);
   const [checkinDayName, setCheckinDayName] = useState(null);
   // U-B-1 §3: the "More adjustments" secondary zone is collapsed by default.
@@ -1431,6 +1441,21 @@ export default function CoachOutputScreen({ navigation, route }) {
         ? (lastOutput?.consecutiveOffTargetWeeks ?? 0) + 1
         : 0;
 
+      // D15 (founder ruling 2026-07-09, plan-G section 3): consecutiveExceededWeeks,
+      // same derivation style as consecutivePoorRecoveryWeeks directly above
+      // (iterate the same recentCheckins rows, most-recent-first, count the
+      // unbroken run, break at the first non-match). "Exceeded" is the
+      // check-in's own stored trainingPerformance verdict (checkinDerive.js's
+      // over-performance case), not a newly invented metric.
+      const consecutiveExceededWeeks = (() => {
+        let count = 0;
+        for (const ci of recentCheckins) {
+          if (ci.trainingPerformance === 'exceeded') count++;
+          else break;
+        }
+        return count;
+      })();
+
       // Last calorie adjustment direction (from previous output)
       const lastCalAdjustmentDirection = lastOutput?.adjustments?.calories?.change
         ? (lastOutput.adjustments.calories.change > 0 ? 'up' : 'down')
@@ -1521,6 +1546,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         goalStartDate: userProfile?.goalStartDate ?? null,
         consecutiveOffTargetWeeks,
         consecutivePoorRecoveryWeeks,
+        // D15: sustained over-performance escalation input + its calm-mode
+        // gate. calmNow was already read above (the same wellbeing check
+        // every other suppression on this screen uses).
+        consecutiveExceededWeeks,
+        calmMode: calmNow,
         lastCalAdjustmentDirection,
         lastCalAdjustmentWeeksAgo,
         currentCalTarget: nutrition?.targetKcal ?? null,
@@ -1709,6 +1739,17 @@ export default function CoachOutputScreen({ navigation, route }) {
       if (result.hasEnoughData) {
         AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${weekStart}`, 'true').catch(() => {});
         useAppStore.getState().setHasUnseenCoachChange(false);
+
+        // D15: adherence-why, said once, on the first REAL weekly output
+        // (baseline/insufficient-data runs never reach this branch). The
+        // other placement is ProSetupCompleteScreen, shown once at setup.
+        try {
+          const seenAdherenceWhy = await AsyncStorage.getItem(ADHERENCE_WHY_SEEN_KEY);
+          if (seenAdherenceWhy !== 'true') {
+            setShowAdherenceWhy(true);
+            await AsyncStorage.setItem(ADHERENCE_WHY_SEEN_KEY, 'true');
+          }
+        } catch (_) { /* best-effort; a read/write failure just skips the one-off line */ }
       }
 
       // A3 (audit 04 §4): when the coach holds for thin data, build the full
@@ -2091,6 +2132,19 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.weekLabel}>{weekLabel}</Text>
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
         </Reanimated.View>
+
+        {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once
+            ever, on the first real weekly output (showAdherenceWhy is set at
+            load time from the '@volyume_seen_*' flag and never re-shown).
+            The other placement is ProSetupCompleteScreen, at Pro setup. */}
+        {showAdherenceWhy ? (
+          <View style={styles.cardioNoteRow}>
+            <Ionicons name="bulb-outline" size={14} color={colors.primary} />
+            <Text style={styles.cardioNoteText}>
+              Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
+            </Text>
+          </View>
+        ) : null}
 
         {/* U-B-3 §4: the local headline duplicate was dropped, the engine
             coachResponse lead below is the single narration source. */}

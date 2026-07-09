@@ -447,6 +447,24 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. Your coach then explains any calorie or training change before you apply it.`
                     : 'At the end of your training week, review how it went. Your coach then explains any calorie or training change before you apply it.'}
                 </Text>
+                {/* D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3
+                    "both" placement): the adherence-why line, said once here.
+                    Adapted from ReadinessCards.js:182's approved substance
+                    ("Consistency is the biggest predictor of long-term
+                    progress... the better Volyume understands how your body
+                    responds, so it can suggest the right weights, spot when
+                    your reps are slipping, and time your lighter weeks
+                    correctly"), shortened for this card's register. Sessions
+                    only, deliberately no mention of weight/weigh-ins (this
+                    screen already treats "keep logging your weight" as
+                    sensitive enough to drop under an ED flag/calm mode a few
+                    lines above; keeping this line to training-session
+                    logging only means it never needs that same gate). The
+                    other placement is CoachOutputScreen's first real weekly
+                    output. */}
+                <Text style={styles.routineBody}>
+                  The more sessions you log, the better your coach understands how your body responds, so it can get your weights and your lighter weeks right.
+                </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}
                 <Text style={styles.routineBody}>
