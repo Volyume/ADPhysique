@@ -11,7 +11,6 @@ import { format } from 'date-fns/format';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import ConsistencyEcho from '../components/ConsistencyEcho';
-import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
@@ -20,6 +19,13 @@ import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
+import CoachBriefCard, { BRIEF_ICON_COLOR } from '../components/CoachBriefCard';
+import HomeWelcomeCard from '../components/HomeWelcomeCard';
+import HomeProTeaserCard from '../components/HomeProTeaserCard';
+import HomeLastSessionCard from '../components/HomeLastSessionCard';
+import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
+import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
+import { buildCoachBrief } from '../lib/homeCoachBrief';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -43,7 +49,6 @@ import { buildCoachLedger } from '../lib/coachLedger';
 import CoachDailyBrief from '../components/CoachDailyBrief';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
-import { GLOSSARY } from '../lib/coachGlossary';
 import { activePlanLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -60,7 +65,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -596,10 +601,12 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  function dismissWelcome() {
+  // useCallback: HomeWelcomeCard is memoised (React.memo), so a stable
+  // handler identity actually stops it re-rendering on every Home tick.
+  const dismissWelcome = useCallback(() => {
     setWelcomeDismissed(true);
     if (welcomeKey) AsyncStorage.setItem(welcomeKey, 'true').catch(() => {});
-  }
+  }, [welcomeKey]);
 
   async function loadScheduleContext() {
     try {
@@ -1165,7 +1172,9 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  async function handleRepeatLastSession() {
+  // useCallback: HomeLastSessionCard is memoised (React.memo), so a stable
+  // handler identity actually stops it re-rendering on every Home tick.
+  const handleRepeatLastSession = useCallback(async () => {
     if (!lastSession) return;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
 
@@ -1202,7 +1211,7 @@ export default function HomeScreen({ navigation, route }) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
       toast.show("Couldn't load last session, try again", { variant: 'error' });
     }
-  }
+  }, [lastSession, user?.id, toast]);
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
@@ -1331,6 +1340,17 @@ export default function HomeScreen({ navigation, route }) {
   // Free line still outranks the differential badge within their shared slot.
   const showFreeCoachLine = freeCoachLineEligible && showAttentionSlot;
   const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;
+
+  // Pre-formatted for HomeLastSessionCard (memoised): keeps the component a
+  // pure renderer of already-derived data rather than importing the helper.
+  const lastSessionRelativeDay = lastSession ? getRelativeDay(lastSession.startedAt) : null;
+
+  // Stable handler identities for the memoised (React.memo) extracted
+  // components below, so passing them as props doesn't defeat the memo.
+  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade'), [navigation]);
+  const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
+  const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
+  const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1626,33 +1646,7 @@ export default function HomeScreen({ navigation, route }) {
             docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
             states. No weight/calorie line here (ED-safety). */}
         {!initialLoading && totalSessions === 0 && !welcomeDismissed && activePlan && nextWorkout && (
-          <Card style={styles.welcomeCard}>
-            <View style={styles.welcomeHead}>
-              <Text style={styles.welcomeTitle}>Welcome to Volyume</Text>
-              <TouchableOpacity
-                onPress={dismissWelcome}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss the welcome guide"
-              >
-                <Ionicons name="close" size={18} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.welcomeStep}>
-              <View style={styles.welcomeStepNum}><Text style={styles.welcomeStepNumText}>1</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.welcomeStepTitle}>Start a session below</Text>
-                <Text style={styles.welcomeStepBody}>Begin from your plan, or just log freely. Tap Start workout and log each set as you go.</Text>
-              </View>
-            </View>
-            <View style={styles.welcomeStep}>
-              <View style={styles.welcomeStepNum}><Text style={styles.welcomeStepNumText}>2</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.welcomeStepTitle}>Your coach learns as you train</Text>
-                <Text style={styles.welcomeStepBody}>Every session you log sharpens your plan. There is nothing to set up.</Text>
-              </View>
-            </View>
-          </Card>
+          <HomeWelcomeCard onDismiss={dismissWelcome} />
         )}
 
         {/* ── Primary workout area ── */}
@@ -1872,29 +1866,11 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
             hero with the same hero-first reorder. */}
         {tier === 'free' && totalSessions >= 3 && (
-          <TouchableOpacity
-            style={styles.proTeaserCard}
-            onPress={() => navigation.navigate('ProUpgrade')}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="Learn about Pro coaching"
-          >
-            <View style={styles.proTeaserLeft}>
-              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.proTeaserTitle}>
-                  {teaserInsight?.progressed && teaserInsight?.stalled
-                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
-                    : teaserInsight?.progressed
-                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
-                      : totalSessions >= 10
-                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
-                        : 'Add a coach that adjusts your plan each week.'}
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
-          </TouchableOpacity>
+          <HomeProTeaserCard
+            totalSessions={totalSessions}
+            teaserInsight={teaserInsight}
+            onPress={goToProUpgrade}
+          />
         )}
 
         {/* ── Last session (D3, design audit 03): demoted to one slim row.
@@ -1902,51 +1878,13 @@ export default function HomeScreen({ navigation, route }) {
             compressed to a label line, a one-line name and an inline meta
             line instead of a card-sized sibling to the hero. ── */}
         {lastSession && (
-          <Card
-            style={styles.lastSessionCard}
-            onPress={() => navigation.navigate('WorkoutHistory')}
-            padding="none"
-            accessibilityLabel="Open workout history"
-          >
-            <View style={{ flex: 1, gap: spacing.xxs }}>
-              <Text style={styles.lastSessionLabel}>
-                Last session - {getRelativeDay(lastSession.startedAt)}
-              </Text>
-              <Text style={styles.lastSessionName} numberOfLines={1}>
-                {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
-                    & Thickness"). The workout's own `name` is overwritten at
-                    finish with an exercise-derived summary ("Cable & Iso-Lateral"),
-                    so it is only the right label for a blank session with no
-                    routine. */}
-                {lastSession.routineName || lastSession.name || 'Session'}
-              </Text>
-              {(() => {
-                const meta = [
-                  lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
-                  lastSession.setCount ? `${lastSession.setCount} sets` : null,
-                  lastSession.totalVolume
-                    ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg`
-                    : lastSessionTonnage
-                      ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg`
-                      : null,
-                ].filter(Boolean).join(' - ');
-                return meta ? (
-                  <Text style={styles.lastSessionMeta} numberOfLines={1}>{meta}</Text>
-                ) : null;
-              })()}
-            </View>
-            <TouchableOpacity
-              style={styles.repeatBtn}
-              onPress={e => { e.stopPropagation(); handleRepeatLastSession(); }}
-              activeOpacity={0.75}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Repeat last session"
-            >
-              <Ionicons name="refresh-outline" size={13} color={colors.primary} />
-              <Text style={styles.repeatBtnText}>Repeat</Text>
-            </TouchableOpacity>
-          </Card>
+          <HomeLastSessionCard
+            lastSession={lastSession}
+            lastSessionTonnage={lastSessionTonnage}
+            relativeDay={lastSessionRelativeDay}
+            onOpenHistory={goToWorkoutHistory}
+            onRepeat={handleRepeatLastSession}
+          />
         )}
 
 
@@ -2000,146 +1938,28 @@ export default function HomeScreen({ navigation, route }) {
       {/* COMP-010: the shape of the current training block, opened from the
           meso chip. Makes periodisation visible and the recovery week a
           destination rather than a dip. */}
-      <Modal
+      <HomeBlockShapeSheet
         visible={showBlockShape}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => setShowBlockShape(false)}
-      >
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowBlockShape(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        />
-        <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Your block</Text>
-          {currentMesoWeek?.mesoName ? <Text style={styles.sheetSub}>{currentMesoWeek.mesoName}</Text> : null}
-          <View style={{ paddingVertical: spacing.md }}>
-            <BlockShapeCard
-              weekIndex={currentMesoWeek?.weekIndex}
-              plannedWeeks={currentMesoWeek?.plannedWeeks}
-              isDeload={currentMesoWeek?.isDeload}
-            />
-          </View>
-          {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
-              definitions of its terms live here, in the sheet it opens. */}
-          <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
-          <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)} accessibilityRole="button" accessibilityLabel="Close">
-            <Text style={styles.sheetCancelText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+        onClose={closeBlockShape}
+        currentMesoWeek={currentMesoWeek}
+        reduceMotion={reduceMotion}
+        insetsBottom={insets.bottom}
+      />
 
-      <Modal
+      <HomeChangeWorkoutSheet
         visible={showChangeWorkout}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => setShowChangeWorkout(false)}
-      >
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowChangeWorkout(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        />
-        <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Workout options</Text>
-          {activePlan && <Text style={styles.sheetSub}>{activePlan.name}</Text>}
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {displayWorkout?.routine?.id ? (
-              <TouchableOpacity
-                style={styles.sheetActionRow}
-                onPress={() => {
-                  setShowChangeWorkout(false);
-                  navigation.navigate('PlansTab', {
-                    screen: 'RoutineDetail',
-                    params: { routineId: displayWorkout.routine.id },
-                    initial: false,
-                  });
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
-              >
-                <View style={styles.sheetActionIcon}>
-                  <Ionicons name="reader-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetActionTitle}>View workout</Text>
-                  <Text style={styles.sheetActionSub}>Review the exercises before you start.</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
-              </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity
-              style={styles.sheetActionRow}
-              onPress={() => {
-                setShowChangeWorkout(false);
-                navigation.navigate('BuildWorkout');
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Start a blank workout"
-            >
-              <View style={styles.sheetActionIcon}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sheetActionTitle}>Blank workout</Text>
-                <Text style={styles.sheetActionSub}>Log freely without changing your plan.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
-            </TouchableOpacity>
-            {planAllWorkouts.length > 0 ? (
-              <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
-            ) : null}
-            {planAllWorkouts.map((routine, i) => {
-              const isNext = i === nextWorkout?.idx && !selectedWorkoutOverride;
-              const isSel = selectedWorkoutOverride?.idx === i;
-              return (
-                <TouchableOpacity
-                  key={routine.id ?? i}
-                  style={[styles.pickerRow, (isNext || isSel) && styles.pickerRowActive]}
-                  onPress={() => {
-                    setSelectedWorkoutOverride(
-                      i === nextWorkout?.idx ? null : { routine, total: planAllWorkouts.length, idx: i },
-                    );
-                    setShowChangeWorkout(false);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Day ${i + 1}, ${routine.name}`}
-                  accessibilityState={{ selected: isNext || isSel }}
-                >
-                  <View style={[styles.dayBadge, (isNext || isSel) && styles.dayBadgeActive]}>
-                    <Text style={[styles.dayNum, (isNext || isSel) && styles.dayNumActive]}>
-                      D{i + 1}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.pickerName} numberOfLines={1}>{routine.name}</Text>
-                    {exerciseCounts[routine.id] ? (
-                      <Text style={styles.pickerMeta}>{exerciseCounts[routine.id]} exercises</Text>
-                    ) : null}
-                  </View>
-                  {isNext && (
-                    <View style={styles.nextBadge}>
-                      <Text style={styles.nextBadgeText}>Next up</Text>
-                    </View>
-                  )}
-                  {isSel && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)} accessibilityRole="button" accessibilityLabel="Cancel">
-            <Text style={styles.sheetCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+        onClose={closeChangeWorkout}
+        activePlan={activePlan}
+        displayWorkout={displayWorkout}
+        planAllWorkouts={planAllWorkouts}
+        nextWorkout={nextWorkout}
+        exerciseCounts={exerciseCounts}
+        selectedWorkoutOverride={selectedWorkoutOverride}
+        onSelectOverride={setSelectedWorkoutOverride}
+        navigation={navigation}
+        reduceMotion={reduceMotion}
+        insetsBottom={insets.bottom}
+      />
 
       {/* ── Pre-workout intent prompt ── */}
       <Modal
@@ -2245,85 +2065,8 @@ export default function HomeScreen({ navigation, route }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Derive a 1-3 sentence coaching brief from available training data.
- * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
- */
-function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
-  // Rule 1, deload suggested
-  if (deloadSuggestion) {
-    return {
-      headline: 'Recovery week',
-      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight. This is how you come back stronger.',
-      type: 'recover',
-    };
-  }
-
-  // Rule 2, high fatigue (avg of last 2 sessions ≥ 3.5)
-  if (fatigueHistory.length >= 2) {
-    const recent = fatigueHistory.slice(0, 2);
-    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-    if (avg >= 3.5) {
-      return {
-        headline: 'Fatigue building',
-        body: 'Fatigue is building. Consider reducing weight by 10% today and focusing on quality reps.',
-        type: 'caution',
-      };
-    }
-  }
-
-  // Rule 3, long gap since last session
-  if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
-    return {
-      headline: 'Good to see you back',
-      body: "It's been a while since your last session. Ease in. Don't try to catch up in one workout.",
-      type: 'go',
-    };
-  }
-
-  // Rule 4, 2+ muscles below MEV this week (only meaningful if the user has
-  // actually been training). For brand-new users with zero workouts every
-  // muscle reads as below-MEV at 0 sets, so this rule used to fire on the
-  // very first launch with "Several muscle groups are below their weekly
-  // minimum", which is technically true but useless advice. Require the
-  // user to have logged something so we're commenting on real adherence.
-  if (blockProgress && blockProgress.length > 0) {
-    const totalSetsThisWeek = blockProgress.reduce((s, p) => s + (p.actual ?? 0), 0);
-    const belowMev = blockProgress.filter(p => {
-      const landmarks = VOLUME_LANDMARKS[p.muscle];
-      return landmarks && landmarks.mev > 0 && p.actual < landmarks.mev;
-    });
-    if (totalSetsThisWeek > 0 && belowMev.length >= 2) {
-      const muscleName = belowMev[0].label;
-      return {
-        headline: 'Muscle groups need attention',
-        body: `A few muscle groups haven't had much work this week. Today's a good day to give ${muscleName} some attention.`,
-        type: 'go',
-      };
-    }
-  }
-
-  // Rule 5, volume on track, low fatigue
-  if (fatigueHistory.length >= 1) {
-    const recent = fatigueHistory.slice(0, 2);
-    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-    if (avg <= 2) {
-      return {
-        headline: 'Looking good',
-        body: 'Training is on track. Push the quality today.',
-        type: 'go',
-      };
-    }
-  }
-
-  // Rule 6, default
-  return {
-    headline: 'Ready when you are',
-    body: 'Ready when you are.',
-    type: 'go',
-  };
-}
+// buildCoachBrief moved to src/lib/homeCoachBrief.js (behaviour-preserving
+// decomposition); imported at the top of this file, unchanged.
 
 function getRelativeDay(ts) {
   // Compare LOCAL calendar dates rather than epoch-ms deltas so a
@@ -2342,47 +2085,16 @@ function getRelativeDay(ts) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+// CoachBriefCard moved to src/components/CoachBriefCard.js (behaviour-
+// preserving decomposition), imported at the top of this file. BRIEF_ICON_COLOR
+// is re-exported from there since the readiness-summary chip below reuses its
+// tone colours.
 
-// ── Coach Brief Card ──────────────────────────────────────────────────────────
-
-const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
 // S15#7 readiness aggregate chip: its own icon set (kept distinct from
-// BRIEF_ICON's card-sized icons) but the SAME tone colours (BRIEF_ICON_COLOR
-// below) so the chip and the coaching brief card read as one family.
+// CoachBriefCard's BRIEF_ICON card-sized icons) but the SAME tone colours
+// (BRIEF_ICON_COLOR, imported above) so the chip and the coaching brief card
+// read as one family.
 const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outline', recover: 'bed-outline' };
-const BRIEF_BORDER = {
-  go:      withAlpha(colors.primary, alpha.soft),
-  caution: withAlpha(colors.warning, alpha.soft),
-  recover: withAlpha(colors.success, alpha.soft),
-};
-const BRIEF_ICON_COLOR = {
-  go:      colors.primary,
-  caution: colors.warning,
-  recover: colors.success,
-};
-
-function CoachBriefCard({ brief, onDismiss }) {
-  const borderColor = BRIEF_BORDER[brief.type] ?? BRIEF_BORDER.go;
-  const iconColor   = BRIEF_ICON_COLOR[brief.type] ?? BRIEF_ICON_COLOR.go;
-  const iconName    = BRIEF_ICON[brief.type] ?? BRIEF_ICON.go;
-
-  return (
-    <View style={[styles.coachBriefCard, { borderColor }]}>
-      <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: spacing.xxs }} />
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={styles.coachBriefHeadline}>{brief.headline}</Text>
-        <Text style={styles.coachBriefBody}>{brief.body}</Text>
-      </View>
-      <TouchableOpacity
-        onPress={onDismiss}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        accessibilityLabel="Dismiss coaching brief"
-      >
-        <Ionicons name="close" size={14} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -2468,80 +2180,7 @@ const styles = StyleSheet.create({
   workoutOptionsBtn: {},
   workoutOptionsText: { color: colors.textSecondary },
 
-  // Home workout options sheet
-  sheetActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 64,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  sheetActionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
-  },
-  sheetActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  sheetActionSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
-  // B-5: typography now comes from SectionLabel (tone="muted"); only the
-  // structural padding remains local.
-  sheetSectionLabel: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-
   // No plan, plan-first section
-  // First-launch welcome guide
-  welcomeCard: {
-    gap: spacing.md,
-  },
-  welcomeHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  welcomeTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  welcomeStep: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  welcomeStepNum: {
-    width: 22,
-    height: 22,
-    borderRadius: circle(22),
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.hair,
-  },
-  welcomeStepNumText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  welcomeStepTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  welcomeStepBody: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-    lineHeight: fontSize.sm + 5,
-  },
-
   noPlanSection: { gap: spacing.md },
   proRecoverBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
@@ -2631,89 +2270,6 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: colors.border,
   },
-
-  // Last session (D3: one slim row, not a card-sized sibling to the hero)
-  lastSessionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  lastSessionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-  },
-  lastSessionMeta: {
-    ...type.caption, color: colors.textMuted,
-  },
-  repeatBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-  },
-  repeatBtnText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
-  lastSessionName: {
-    ...type.label, color: colors.textPrimary,
-  },
-
-  // Change workout sheet
-  sheetBackdrop: { flex: 1, backgroundColor: colors.scrim },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxxl,
-    maxHeight: '80%',
-  },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: radius.hair,
-    backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg,
-  },
-  sheetTitle: {
-    ...type.h3,
-    color: colors.textPrimary, marginBottom: spacing.xs,
-  },
-  sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
-  pickerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  pickerRowActive: {
-    backgroundColor: colors.primaryBg,
-    marginHorizontal: -spacing.xl,
-    paddingHorizontal: spacing.xl,
-  },
-  dayBadge: {
-    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
-  },
-  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, alpha.strong) },
-  dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  dayNumActive: { color: colors.primary },
-  pickerName: { ...type.bodyStrong, color: colors.textPrimary },
-  pickerMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  nextBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
-  },
-  nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  sheetDefn: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
-  sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
-  sheetCancelText: { ...type.body, color: colors.textSecondary },
 
   // Block progress card
   // Pro coaching discovery nudge
@@ -2857,28 +2413,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
-  proTeaserCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  proTeaserLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  proTeaserTitle: {
-    ...type.bodySm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    flex: 1,
-  },
   // Fresh coach review banner. D3 (design audit 03): banners are one slim
   // line above the hero, not card-sized siblings, tighter padding, no
   // extra bottom margin (the content gap carries the rhythm).
@@ -2956,26 +2490,6 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
-  },
-
-  // Pre-workout coaching brief card
-  coachBriefCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: spacing.md,
-  },
-  coachBriefHeadline: {
-    ...type.bodySm,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  coachBriefBody: {
-    ...type.captionTight,
-    color: colors.textSecondary,
   },
 
   // Quick-start card (empty state fast path)
