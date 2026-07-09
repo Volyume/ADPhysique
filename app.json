@@ -29,6 +29,11 @@
       "bundleIdentifier": "app.volyume",
       "buildNumber": "9",
       "requireFullScreen": true,
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.volyume.widget"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,

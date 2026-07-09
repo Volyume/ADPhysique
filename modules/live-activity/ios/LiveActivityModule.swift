@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import ActivityKit
+import WidgetKit
 
 /**
  * LiveActivityModule
@@ -23,6 +24,16 @@ import ActivityKit
  *
  * Concurrency: ActivityKit APIs are async; all Promises resolve on
  * the main actor so Expo can hand them back to JS safely.
+ *
+ * CP-2 (design-usability-audit-2026-07-09, coverage-06-competitive-hps.md):
+ * this module is also the bridge for the home/lock-screen WidgetKit widgets
+ * (widget/VolyumeHomeWidgets.swift, registered in VolyumeWidgetBundle.swift
+ * alongside the Live Activity). Those widgets are a *separate process* from
+ * the app, so — unlike the Live Activity's ContentState, which ActivityKit
+ * itself carries across the process boundary — they can only read data the
+ * app writes into the shared App Group container. Reusing this module (not
+ * a second native module) avoids a second Expo-module registration for one
+ * more small bridge function.
  */
 public class LiveActivityModule: Module {
   public func definition() -> ModuleDefinition {
@@ -106,6 +117,25 @@ public class LiveActivityModule: Module {
           await activity.end(dismissalPolicy: .immediate)
         }
       }
+    }
+
+    // CP-2: publish the already-built widget snapshot (src/lib/widgets/
+    // snapshot.js, JSON string) to the shared App Group UserDefaults the
+    // WidgetKit home/lock-screen widgets read (widget/VolyumeHomeWidgets.swift),
+    // then ask WidgetKit to redraw every placed Volyume widget. Independent
+    // of ActivityKit/areActivitiesEnabled — a user who disabled Live
+    // Activities can still have the home-screen widget. The App Group
+    // ("group.app.volyume.widget") must match the entitlement the config
+    // plugin writes for both the app target (app.json ios.entitlements) and
+    // the extension target (plugins/withVolyumeWidget.js) — a founder
+    // provisioning step (App Groups capability on both App IDs), the same
+    // shape as the Live Activities capability step already documented in
+    // docs/LIVE_ACTIVITY_IOS.md.
+    AsyncFunction("writeWidgetSnapshot") { (json: String) -> Bool in
+      guard let defaults = UserDefaults(suiteName: "group.app.volyume.widget") else { return false }
+      defaults.set(json, forKey: "widget_snapshot_v1")
+      WidgetCenter.shared.reloadAllTimelines()
+      return true
     }
   }
 }

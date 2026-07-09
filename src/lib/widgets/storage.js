@@ -2,11 +2,13 @@
  * COMP-019 Stage 2 — the shared-store bridge for home-screen widgets.
  *
  * The widget binaries read a small JSON snapshot from a shared store the app
- * writes (blueprint §"Data pipeline"): iOS App Group via @bacons/apple-targets
- * ExtensionStorage, Android via react-native-android-widget's storage. This
- * adapter hides the native module behind a lazy require so the JS unit tests,
- * Expo Go, and any build without the native targets degrade to a benign no-op
- * (the snapshot writer must never throw on a device that lacks the extension).
+ * writes (blueprint §"Data pipeline"): iOS App Group via the existing
+ * `live-activity` native module (modules/live-activity, reused rather than a
+ * new dependency — CP-2, design-usability-audit-2026-07-09), Android via
+ * react-native-android-widget's storage. This adapter hides the native
+ * module behind a lazy require so the JS unit tests, Expo Go, and any build
+ * without the native targets degrade to a benign no-op (the snapshot writer
+ * must never throw on a device that lacks the extension).
  *
  * The snapshot is the ONLY thing that crosses the boundary — keep widget code
  * dumb so logic fixes ship OTA in snapshot.js / writer.js, never the binary.
@@ -15,6 +17,10 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Must match the literal the native side uses: LiveActivityModule.swift's
+// "writeWidgetSnapshot" (UserDefaults suiteName) and the entitlement the
+// config plugin writes for both targets (app.json ios.entitlements,
+// plugins/withVolyumeWidget.js).
 const APP_GROUP = 'group.app.volyume.widget';
 const SNAPSHOT_KEY = 'widget_snapshot_v1';
 // AsyncStorage lives in the app sandbox, which the Android headless widget task
@@ -22,11 +28,14 @@ const SNAPSHOT_KEY = 'widget_snapshot_v1';
 export const WIDGET_SNAPSHOT_ASYNC_KEY = '@volyume_widget_snapshot_v1';
 const ANDROID_WIDGETS = ['NextSession', 'WeeklyConsistency'];
 
-// Lazy, defensive native requires. Absent module -> null -> no-op.
-function iosExtensionStorage() {
+// Lazy, defensive native require. Absent module (Android, Expo Go, a build
+// predating the widget extension) -> null -> no-op. `live-activity` is
+// already a first-party dependency (package.json "live-activity":
+// "file:./modules/live-activity"), not a new one.
+function iosWidgetBridge() {
   try {
     // eslint-disable-next-line global-require
-    return require('@bacons/apple-targets').ExtensionStorage || null;
+    return require('live-activity') || null;
   } catch (_) { return null; }
 }
 function androidWidgetApi() {
@@ -47,13 +56,11 @@ export async function persistWidgetSnapshot(snapshot) {
   try { await AsyncStorage.setItem(WIDGET_SNAPSHOT_ASYNC_KEY, json); } catch (_) { /* best-effort */ }
   try {
     if (Platform.OS === 'ios') {
-      const Storage = iosExtensionStorage();
-      if (!Storage) return false;
-      const store = new Storage(APP_GROUP);
-      store.set(SNAPSHOT_KEY, json);
-      // Reload all of this app's widget timelines.
-      if (typeof Storage.reloadWidget === 'function') Storage.reloadWidget();
-      return true;
+      const bridge = iosWidgetBridge();
+      if (!bridge || typeof bridge.writeWidgetSnapshot !== 'function') return false;
+      // The native side writes into APP_GROUP/SNAPSHOT_KEY and reloads every
+      // placed widget timeline itself (LiveActivityModule.swift).
+      return await bridge.writeWidgetSnapshot(json);
     }
     if (Platform.OS === 'android') {
       const api = androidWidgetApi();

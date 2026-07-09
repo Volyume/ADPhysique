@@ -19,6 +19,12 @@
  *     buttons in the app) — the system widget reflects the change.
  *   - endRestActivity() dismisses the Live Activity when the user
  *     stops the timer or the rest finishes.
+ *   - writeWidgetSnapshot() (CP-2, design-usability-audit-2026-07-09)
+ *     publishes the home/lock-screen widget snapshot to the shared
+ *     App Group the WidgetKit extension reads. Unrelated to the rest
+ *     timer/ActivityKit lifecycle above — called from
+ *     src/lib/widgets/storage.js, independent of whether Live
+ *     Activities are enabled.
  *
  * The Live Activity widget extension itself (the SwiftUI view, the
  * Dynamic Island presentations, the activity attributes) lives in
@@ -52,6 +58,7 @@ type NativeShape = {
   update(activityId: string, options: UpdateOptions): Promise<boolean>;
   end(activityId: string): Promise<void>;
   endAll(): Promise<void>;
+  writeWidgetSnapshot(json: string): Promise<boolean>;
 };
 
 let nativeModule: NativeShape | null = null;
@@ -126,4 +133,23 @@ export async function endAllActivities(): Promise<void> {
   if (!isAvailable()) return;
   currentActivityId = null;
   try { await nativeModule!.endAll(); } catch (_e) { /* tolerate */ }
+}
+
+/**
+ * Publish the home/lock-screen widget snapshot (already-built JSON string
+ * from src/lib/widgets/snapshot.js) to the shared App Group UserDefaults the
+ * WidgetKit extension reads (widget/VolyumeHomeWidgets.swift), then ask
+ * WidgetKit to reload every placed Volyume widget. Gated only on the native
+ * module being present — NOT on isAvailable()/isSupported(), since those
+ * report ActivityKit's Live-Activities toggle, which is unrelated to whether
+ * a home-screen widget is placed. A no-op on Android, Expo Go, or a build
+ * that predates the widget extension.
+ */
+export async function writeWidgetSnapshot(json: string): Promise<boolean> {
+  if (Platform.OS !== 'ios' || !nativeModule) return false;
+  try {
+    return await nativeModule.writeWidgetSnapshot(json);
+  } catch (_e) {
+    return false;
+  }
 }
