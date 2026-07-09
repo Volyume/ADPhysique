@@ -454,3 +454,16 @@ OAuth SHA-1; Cut 4 seed walk.
   failing to build" ask RESOLVED (lockfile fix ef77eb5). Main CI still red =
   the jest exit-1 leak only; Sonnet debug agent live on it (order-sensitive
   leak in src/screens combination runs; instrumenting exitCode per suite).
+- CI EXIT-1 LEAK FIXED (ac28db2, Sonnet debug agent): culprit was
+  WeeklyCheckInScreen.scanEvidence.test.js "submit with no scan" test.
+  Submit flips Button into its success phase (SUCCESS_HOLD_MS = 900ms REAL
+  setTimeout); the test never unmounted, so under --runInBand the timer
+  fired ~900ms later mid-later-suite, setState on a torn-down tree outside
+  act() -> jest frozen-console "Cannot log after tests are done" -> sets
+  process.exitCode = 1 (jest-runner runTest.js:149) with ALL suites passing.
+  Fix: await act(unmount) at test end, running Button's own clearTimeout
+  cleanup. Verified by agent: screens repro exit 0 (95 suites/700 tests),
+  full suite exit 0 (592 suites/7,537 tests), lint clean, test-file-only
+  diff. LESSON pinned: tests that trigger the Button success beat must
+  unmount (or the beat leaks a real timer process-wide under --runInBand).
+  Awaiting Main CI green on GitHub to close the founder's build ask fully.
