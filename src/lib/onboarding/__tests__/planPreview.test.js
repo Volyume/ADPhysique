@@ -40,7 +40,10 @@ describe('buildPlanPreview', () => {
     const p = buildPlanPreview({ daysPerWeek: 4, trainingGoal: 'bikini', trainingPhase: 'cut' });
     const blob = JSON.stringify(p).toLowerCase();
     // The only mention of calories is the honesty note that they come LATER.
-    expect(p.nutritionNote).toContain('they need your weight');
+    // Copy updated by the no-em-dash sweep: "come after — they need your weight"
+    // -> "come after. They need your weight" (D4/em-dash campaign, capital T
+    // because it now starts a new sentence).
+    expect(p.nutritionNote).toContain('They need your weight');
     expect(blob).not.toMatch(/\d+\s*kcal|\d+\s*calories|protein\s*\d/);
   });
 

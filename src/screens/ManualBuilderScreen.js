@@ -1008,7 +1008,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             onPress={() => moveExercise(dayIdx, ex.localId, 'up')}
                             disabled={isFirst}
                             style={[styles.reorderBtn, isFirst && styles.reorderBtnDisabled]}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityRole="button"
                             accessibilityLabel={`Move ${ex.name} up`}
                             accessibilityState={{ disabled: isFirst }}
@@ -1019,7 +1019,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             onPress={() => moveExercise(dayIdx, ex.localId, 'down')}
                             disabled={isLast}
                             style={[styles.reorderBtn, isLast && styles.reorderBtnDisabled]}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityRole="button"
                             accessibilityLabel={`Move ${ex.name} down`}
                             accessibilityState={{ disabled: isLast }}

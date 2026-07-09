@@ -60,7 +60,9 @@ describe('PlanPreviewScreen', () => {
     // from the division matrix (X-Frame), mirroring the builder — not the
     // generic day-count "Upper / Lower".
     expect(t).toContain('X-Frame');
-    expect(t).toContain('they need your weight');
+    // Copy updated by the no-em-dash sweep: "come after — they need your weight"
+    // -> "come after. They need your weight" (D4/em-dash campaign).
+    expect(t).toContain('They need your weight');
     expect(t).toContain('Create an account to keep it');
   });
 

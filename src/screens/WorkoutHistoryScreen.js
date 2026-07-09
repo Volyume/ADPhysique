@@ -625,7 +625,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   styles.dayNum,
                   trained && styles.dayNumTrained,
                   isSelected && styles.dayNumSelected,
-                ]}>
+                ]} maxFontSizeMultiplier={1.3}>
                   {dayNum}
                 </Text>
               </View>

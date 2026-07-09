@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -107,7 +107,6 @@ const MEASUREMENTS = [
 ];
 
 const NUTRITION_KEY = '@volyume_nutrition_targets';
-const SCREEN_W = Dimensions.get('window').width;
 
 // ─── Phase detection ──────────────────────────────────────────────────────────
 
@@ -145,6 +144,10 @@ const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
 const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
 function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
+  // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
+  // up the correct chart width, matching RestTimer.js's useWindowDimensions
+  // pattern rather than a frozen module-scope Dimensions.get().
+  const { width: windowWidth } = useWindowDimensions();
   // All weight entries with a usable date, oldest → newest (no count slicing,
   // COMP-019 windows by date instead).
   const allWeights = useMemo(() => entries
@@ -188,7 +191,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   const win = windowByKey(TREND_WINDOWS, windowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
   const windowed = filterByWindow(allWeights, weightDateOf, win.days);
   const coversAll = windowed.length === allWeights.length;
-  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+  const chartWidth = windowWidth - spacing.lg * 2 - 32;
 
   const sparse = windowed.length < 2;
   const weights = windowed.map(e => e.body_weight);
@@ -252,6 +255,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
 // ─── Body Fat Trend Chart ─────────────────────────────────────────────────────
 
 function BodyFatTrendChart({ entries }) {
+  const { width: windowWidth } = useWindowDimensions();
   const withData = useMemo(() => {
     return entries
       // DATA-001: > 0, not just non-null (a 0 or negative body fat is corrupt).
@@ -287,7 +291,7 @@ function BodyFatTrendChart({ entries }) {
   }));
   const rawData = values.map(v => ({ value: v }));
 
-  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+  const chartWidth = windowWidth - spacing.lg * 2 - 32;
 
   return (
     <View style={chartStyles.wrap}>
@@ -318,6 +322,7 @@ function BodyFatTrendChart({ entries }) {
 // ─── Measurement Trend Chart ──────────────────────────────────────────────────
 
 function MeasurementTrendChart({ entries, measureKey, label }) {
+  const { width: windowWidth } = useWindowDimensions();
   const withData = useMemo(() => {
     return entries
       // DATA-001: > 0, not just non-null, so an impossible measurement is dropped.
@@ -347,7 +352,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
       : '',
   }));
 
-  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+  const chartWidth = windowWidth - spacing.lg * 2 - 32;
 
   return (
     <View style={chartStyles.wrap}>

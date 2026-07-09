@@ -390,7 +390,7 @@ export default function LiftProgressScreen({ navigation }) {
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
                 <Text style={styles.lastTime}>
-                  Last time: {item.latestWeight}{units} - e1RM {item.latestE1rm}{units}
+                  Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>

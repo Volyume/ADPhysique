@@ -7,7 +7,7 @@ import useAppStore from '../store/useAppStore';
 import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { appAlert } from '../components/AppAlert';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles } from '../components/SettingsPrimitives';
 import NumericStepper from '../components/Stepper';
 import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
 
@@ -191,7 +191,7 @@ export default function SettingsScreen({ navigation }) {
       {/* Workout & units (Hevy teardown R1/R2). Inline editable rows over the
           store setters: body-weight unit, barbell weight, default rest, and
           auto-start rest. Gym weights remain kg-only by design. */}
-      <Text style={styles.sectionHeader}>WORKOUT &amp; UNITS</Text>
+      <SectionHeader title="Workout & units" />
       <View style={styles.section}>
         <View style={styles.settingRow}>
           <View style={styles.settingIcon}>

@@ -1636,7 +1636,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Ionicons name="play" size={20} color={colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.continueTitle}>Session in Progress</Text>
+                <Text style={styles.continueTitle}>Workout in progress</Text>
                 <Text style={styles.continueSub}>Tap to return to your workout</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.background, 0.8)} />

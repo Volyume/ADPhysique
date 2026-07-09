@@ -191,7 +191,7 @@ export default function ShareCardScreen({ route }) {
         cardType: 'session', isSquare, showVolume, showDate, showPlanName, showExercises,
         date: showDate ? formatLongDate(s.date) : '',
         planName: showPlanName ? (s.planName || '') : '',
-        sessionName: s.sessionName || 'Session Complete',
+        sessionName: s.sessionName || 'Workout complete',
         workingSets: s.workingSets || 0,
         duration: s.duration || 0,
         tonnage: s.tonnage || 0,

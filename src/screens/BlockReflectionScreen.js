@@ -55,7 +55,7 @@ function buildNarrative(data) {
     if (tonnageDelta > 5) {
       lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week.`);
     } else if (tonnageDelta < -5) {
-      lines.push(`Volume was lower in the final week than the first, likely a deload.`);
+      lines.push(`Volume was lower in the final week than the first, likely a recovery week.`);
     } else {
       lines.push(`Volume was consistent across the block.`);
     }

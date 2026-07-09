@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -48,6 +48,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { useToast } from '../components/Toast';
+import ModalHeader from '../components/ModalHeader';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
@@ -91,6 +92,9 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Energy DISPLAY unit (kcal | kj): display-only, applied at the render sites
   // below. plateKcal and every macros.kcal stay kcal for the maths/log writes.
   const toast = useToast();
+  // This screen is a root-stack modal outside the tab navigator (RootNavigator.js),
+  // so nothing else absorbs the bottom system inset for the sticky plateBar footer.
+  const insets = useSafeAreaInsets();
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
@@ -930,23 +934,7 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerSide}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            style={styles.headerButton}
-          >
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.headerTitleBlock}>
-          <Text style={styles.headerTitle}>Add food</Text>
-        </View>
-        <View style={styles.headerSide} />
-      </View>
+      <ModalHeader title="Add food" onClose={() => navigation.goBack()} />
 
       <ScrollView
         horizontal
@@ -1025,7 +1013,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       )}
 
       {!isRecipePick && plate.length > 0 ? (
-        <View style={styles.plateBar}>
+        <View style={[styles.plateBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
           <TouchableOpacity
             style={styles.plateInfo}
             onPress={() => setShowPlate(true)}
@@ -1131,29 +1119,6 @@ export default function FoodSearchScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerSide: {
-    width: 48,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-    marginHorizontal: spacing.sm,
-    alignItems: 'center',
-  },
-  headerTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
 
   tabBar: {
     // flexShrink: 0 so the strip keeps its intrinsic height and never gets
@@ -1178,7 +1143,7 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   tabUnderline: {
     height: 2, width: '100%', backgroundColor: 'transparent',
-    borderRadius: 1,
+    borderRadius: radius.hair,
   },
   tabUnderlineActive: { backgroundColor: colors.primary },
 

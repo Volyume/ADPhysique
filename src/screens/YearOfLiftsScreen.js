@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar, Animated,
+  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, useWindowDimensions, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,7 +37,6 @@ import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
 
-const { width: SCREEN_W } = Dimensions.get('window');
 // How long each story card holds before auto-advancing (Instagram-story feel).
 const STORY_MS = 5000;
 
@@ -412,9 +411,9 @@ export function buildBlockCards(data, units) {
  * Single card. Layout varies by type (stat = big number, list = top-5,
  * intro/outro = headline + subline only).
  */
-function StoryCard({ card }) {
+function StoryCard({ card, width }) {
   return (
-    <View style={styles.cardWrap}>
+    <View style={[styles.cardWrap, { width }]}>
       <GradientCard
         tone={card.tone || 'primary'}
         intensity={0.28}
@@ -476,6 +475,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     units: s.units,
   })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const { width: SCREEN_W } = useWindowDimensions();
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -682,7 +682,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
               const next = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
               if (next !== index) setIndex(next);
             }}
-            renderItem={({ item }) => <StoryCard card={item} />}
+            renderItem={({ item }) => <StoryCard card={item} width={SCREEN_W} />}
             getItemLayout={(_, i) => ({ length: SCREEN_W, offset: SCREEN_W * i, index: i })}
           />
 
@@ -759,7 +759,6 @@ const styles = StyleSheet.create({
 
   // Cards
   cardWrap: {
-    width: SCREEN_W,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },

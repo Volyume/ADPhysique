@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, KeyboardAvoidingView, Platform, Animated,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -67,8 +67,6 @@ function parseLooseDate(str) {
 
   return null;
 }
-
-const SCREEN_W = Dimensions.get('window').width;
 
 // The five lenses the detail chart can draw. Mirrors LiftProgressScreen's
 // metric switcher (best set / heaviest / total reps / volume) and adds best-set
@@ -166,6 +164,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     units: s.units,
   })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
+  // up the correct chart width, matching RestTimer.js's useWindowDimensions
+  // pattern rather than a frozen module-scope Dimensions.get().
+  const { width: windowWidth } = useWindowDimensions();
   const [exercise, setExercise] = useState(null);
   const [loadingExercise, setLoadingExercise] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -587,7 +589,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, { opacity: congratsOpacity }]}>
             <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-            <Text style={styles.congratsText}>You've hit your target! Set a new one.</Text>
+            <Text style={styles.congratsText}>You've hit your target. Set a new one.</Text>
           </Animated.View>
         )}
 
@@ -679,7 +681,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <View style={styles.chartContainer}>
                 <VolyumeChart
                   data={windowedPoints.map(d => ({ value: d[activeYKey] }))}
-                  width={SCREEN_W - spacing.lg * 2 - spacing.md * 2}
+                  width={windowWidth - spacing.lg * 2 - spacing.md * 2}
                   height={96}
                   color={colors.primary}
                   thickness={2}
@@ -765,10 +767,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <SectionLabel>All-time bests</SectionLabel>
             {prs.slice(0, 5).map((pr) => (
               <View key={pr.id} style={styles.prRow}>
-                <Text style={styles.prIcon}>
-                  {pr.record_type === '1rm_estimate' ? '🥇' :
-                   pr.record_type === 'heaviest_weight' ? '🏋️' : '🔁'}
-                </Text>
+                <Ionicons
+                  name={pr.record_type === '1rm_estimate' ? 'trophy-outline' :
+                   pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
+                  size={22}
+                  color={colors.gold}
+                />
                 <View style={styles.prInfo}>
                   <Text style={styles.prLabel}>
                     {pr.record_type === '1rm_estimate' ? 'Estimated max' :
@@ -1073,8 +1077,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // eslint-disable-next-line no-restricted-syntax -- PR medal glyph, intentional large size
-  prIcon: { fontSize: 22 },
   prInfo: { flex: 1 },
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
   prValue: { ...type.num('bodyStrong'), color: colors.textPrimary },

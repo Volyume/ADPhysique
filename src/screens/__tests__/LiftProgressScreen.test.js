@@ -223,10 +223,12 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
     expect(benchRow.latestWeight).toBe(60);
     expect(squatRow.latestWeight).toBe(100);
 
+    // Copy sweep replaced the "e1RM" jargon with plain "est. max" (D4-adjacent
+    // no-jargon pass); the underlying value is unchanged.
     const benchText = renderedText(capturedListProps.renderItem({ item: benchRow, index: 0 }));
-    expect(benchText).toContain(`Last time: 60kg - e1RM ${benchE1rm}kg`);
+    expect(benchText).toContain(`Last time: 60kg - est. max ${benchE1rm}kg`);
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
-    expect(squatText).toContain(`Last time: 100kg - e1RM ${squatE1rm}kg`);
+    expect(squatText).toContain(`Last time: 100kg - est. max ${squatE1rm}kg`);
   });
 });

@@ -18,7 +18,7 @@
  */
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -73,7 +73,6 @@ const FIBRE_AIM_G = 30;
 
 // Charts are drawn at the ScrollView content width (screen minus the lg padding
 // on each side and the Card's lg padding on each side), mirroring BodyMetrics.
-const CHART_WIDTH = Dimensions.get('window').width - spacing.lg * 2 - spacing.lg * 2;
 
 function dayLabel(iso) {
   const d = parseLocalDay(iso); // TZ-1: parse the key as local, not UTC
@@ -92,6 +91,11 @@ export default function FoodInsightsScreen({ navigation }) {
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const userId = user?.id;
   const toast = useToast();
+  // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
+  // up the correct chart width, matching RestTimer.js's useWindowDimensions
+  // pattern rather than a frozen module-scope Dimensions.get().
+  const { width: windowWidth } = useWindowDimensions();
+  const CHART_WIDTH = useMemo(() => windowWidth - spacing.lg * 2 - spacing.lg * 2, [windowWidth]);
 
   const [rollups, setRollups] = useState([]);
   const [targets, setTargets] = useState(null);

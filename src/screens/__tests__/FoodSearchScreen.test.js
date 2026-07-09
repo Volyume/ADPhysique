@@ -153,7 +153,15 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).toMatch(/<BottomSheet[\s\S]*visible=\{showPlate\}[\s\S]*accessibilityLabel="Selected foods"/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityRole="header"[\s\S]*Selected foods \(\{plate\.length\}\)/);
     expect(SCREEN_SOURCE).not.toMatch(/<Modal visible=\{showPlate\}/);
-    expect(SCREEN_SOURCE).not.toMatch(/useSafeAreaInsets/);
+    // The blanket "no useSafeAreaInsets anywhere in this file" ban dates from
+    // when the plate sheet was a raw Modal doing its own manual inset maths;
+    // that anti-pattern is what the two guards above and below rule out. The
+    // design-usability sweep (batch 1, lane-03) legitimately reintroduced
+    // useSafeAreaInsets for a DIFFERENT, unrelated purpose: this screen is a
+    // root-stack modal outside the tab navigator, so it must pad its own
+    // sticky plateBar footer for the bottom system inset. The plate SHEET
+    // itself still takes its chrome entirely from shared BottomSheet, which
+    // is what this test actually pins.
     expect(SCREEN_SOURCE).not.toMatch(/plateModalBackdrop/);
   });
 
@@ -166,10 +174,14 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
   });
 
   test('keeps the plate log button slot-neutral on screen', () => {
-    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.headerTitle\}>Add food<\/Text>/);
+    // Batch 1 lane-03 moved the top header onto the shared ModalHeader
+    // component (was a bespoke <View style={styles.header}> with its own
+    // styles.headerTitle Text); the title itself is unchanged ("Add food",
+    // never the meal slot), which is what this test guards.
+    expect(SCREEN_SOURCE).toMatch(/<ModalHeader title="Add food" onClose=\{/);
     expect(SCREEN_SOURCE).not.toMatch(/headerSubtitle/);
     expect(SCREEN_SOURCE).not.toMatch(/>to \{mealSlotLabel\(mealSlot\)\}/);
-    expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.headerTitle\}>Add to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
+    expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.plateLogText\}>Log selected<\/Text>/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel=\{`Log \$\{plate\.length\} to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.plateLogText\}>Log \{plate\.length\} to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);

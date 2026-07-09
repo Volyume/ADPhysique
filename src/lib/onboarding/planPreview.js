@@ -76,7 +76,7 @@ export function buildPlanPreview(quiz = {}) {
 
   // The headline line that updates with the division selection (§4A/§4B).
   const headline = `Your plan ${bias}.`;
-  const structure = `${split.name} — ${split.detail}, around ${sessionMins} minutes a session.`;
+  const structure = `${split.name}: ${split.detail}, around ${sessionMins} minutes a session.`;
 
   return {
     splitName: split.name,
@@ -87,6 +87,6 @@ export function buildPlanPreview(quiz = {}) {
     phaseLine: phaseLine(quiz.trainingPhase),
     weakPoints,
     // The honesty line the blueprint mandates (no hidden surprise later).
-    nutritionNote: 'Calories and protein come after — they need your weight, and we ask permission first.',
+    nutritionNote: 'Calories and protein come after. They need your weight, and we ask permission first.',
   };
 }

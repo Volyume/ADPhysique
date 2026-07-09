@@ -871,7 +871,7 @@ export function buildPhysiqueAssessment({
 }
 
 export function progressScanAssessmentCopy(assessment = null) {
-  if (!assessment) return 'Progress photos saved. I could not read enough from the photos for a useful score.';
+  if (!assessment) return 'Progress photos saved. Volyume could not read enough from the photos for a useful score.';
   if (assessment.visualLeannessScore == null) {
     return 'Progress photos saved, but the photo read did not have enough confidence for a score. Retake with clearer lighting, your full body in frame, and a similar camera setup next time.';
   }
@@ -1032,7 +1032,7 @@ export function scanComparability(currentScan = null, previousScan = null) {
   const currentStatus = currentScan.analysisStatus ?? currentScan.analysis_status ?? 'measured';
   const previousStatus = previousScan.analysisStatus ?? previousScan.analysis_status ?? 'measured';
   if (!['complete', 'measured'].includes(currentStatus) || !['complete', 'measured'].includes(previousStatus)) {
-    return { comparable: false, status: 'not_comparable', reason: 'One scan was withheld by the quality gate.', comparableCount: 0 };
+    return { comparable: false, status: 'not_comparable', reason: "One scan didn't pass the quality check.", comparableCount: 0 };
   }
   if (!hasRequiredPoseSet(currentScan) || !hasRequiredPoseSet(previousScan)) {
     return { comparable: false, status: 'not_comparable', reason: 'Front and back photos are needed on both scans.', comparableCount: 0 };
@@ -1118,9 +1118,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       comparableCount: 0,
       trendDirection: 'uncertain',
       lines: [comparability.reason],
-      summary: `This scan is saved, but I am not comparing it yet. ${comparability.reason}`,
+      summary: `This scan is saved, but Volyume is not comparing it yet. ${comparability.reason}`,
       trendSummary: 'Not enough comparable photo data yet.',
-      coachSummary: 'Progress photos are saved, but I am not using them as a comparison because the setup changed too much.',
+      coachSummary: 'Progress photos are saved, but Volyume is not using them as a comparison because the setup changed too much.',
     };
   }
 
@@ -1204,9 +1204,9 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
       comparableCount: 0,
       trendDirection: 'uncertain',
       lines: ['There are not enough measured scan signals to compare these photos yet.'],
-      summary: 'This photo set is saved, but I am not comparing it yet. There are not enough measured signals to make a fair comparison.',
+      summary: 'This photo set is saved, but Volyume is not comparing it yet. There are not enough measured signals to make a fair comparison.',
       trendSummary: 'Not enough measured scan data yet.',
-      coachSummary: 'Progress photos are saved, but I am not using them as a comparison because the measured signals are incomplete.',
+      coachSummary: 'Progress photos are saved, but Volyume is not using them as a comparison because the measured signals are incomplete.',
     };
   }
 
@@ -1249,7 +1249,7 @@ export function explainMeasuredScanDelta({ currentScan = null, previousScan = nu
     lines,
     summary: `${lines.slice(0, 3).join(' ')} This is a visual physique signal for progress context only.`,
     trendSummary,
-    coachSummary: `${trendSummary} I am treating it as photo context only.`,
+    coachSummary: `${trendSummary} Volyume is treating it as photo context only.`,
   };
 }
 

@@ -51,7 +51,7 @@ export const MILESTONES = Object.freeze([
   Object.freeze({
     key: 'first_week', kind: 'first_week', icon: 'calendar-outline',
     title: 'Your first training week',
-    body: 'Three sessions inside a week. That is what a training habit looks like — and you are building one.',
+    body: 'Three sessions inside a week. That is what a training habit looks like, and you are building one.',
     heroValue: '1', heroUnit: 'week in',
   }),
   Object.freeze({
