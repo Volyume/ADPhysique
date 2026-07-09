@@ -416,3 +416,9 @@ OAuth SHA-1; Cut 4 seed walk.
   check-in, output), food (diary, search, barcode, label scan, curated/saved
   meals, recipes, targets, per-day, dietary needs), partners, share cards,
   settings (incl. app lock, widgets), notifications, lapse/read-only states.
+- D12 diary de-clutter LANDED (03e3c1d): MicronutrientPanel deleted (VERIFIED
+  diary-only; femaleNutritionAwareness on NutritionTargets is separate,
+  untouched); mark-all banner moved below WaterRow (same gating/copy, position
+  only, per-meal primary); one-time mark-eaten hint via the @volyume_seen_*
+  convention, dismisses on first successful mark. 14-assertion D12 guard test.
+  Suite green (env exception only; 1 lint warning = superset agent's live WIP).
