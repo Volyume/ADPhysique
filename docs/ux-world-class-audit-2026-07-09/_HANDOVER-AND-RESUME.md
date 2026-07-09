@@ -36,14 +36,31 @@ Running at pause time:
    scope - weight is the NAV-2 founder round).
 8. Workout summary onward links (CO-3, cohesion mandate register).
 
-### After the burst (tomorrow's queue)
-- Founder rounds remaining: Settings cluster (CP-10 restart-free theming,
-  CP-9 Help/FAQ, L08-B3 post-cancel link), weigh-in edit/delete (NAV-2),
-  plan-F photo questions (4), rest-day spec sign-off, consolidated triage
-  round (LT-3 + 6 open items).
-- Home decomposition/memoisation (scorecard; deferred as higher-risk).
-- AY-7 ED lockout SR announcement (needs founder wording).
-- HELD: adversarial review (R1 fix belongs to it), media, Live Activity.
+### After the burst (RESUMED 2026-07-09 late session; D16+D17 landed)
+DECIDED this session (see DECISIONS D16/D17): CP-10 BUILD (plan-first
+step approved as part of the build); CP-9 in-app FAQ screen; L08-B3 build
+with billing test plan first; NAV-2 edit+delete+history; rest-day HELD
+(gated+Variant A recorded for unblock; FQ-4/5 lead-ruled); training
+reminder rebuilt on habit-derived weekdays + honest settings copy (lead
+ruling under founder steer); B41 amend-to-live (lead-delegated);
+payment-failure drift VERIFIED NON-ISSUE, closed; AY-7 announce with
+exact visible text; LT-3 implement light-only Card shadow.
+
+BUILD QUEUE (two agents max, pairs to completion):
+1. IN FLIGHT: Home decomposition/memoisation (Sonnet, no-commit, lead
+   reviews diff).
+2. IN FLIGHT: smalls bundle — B41 Surface 6 amendment + AY-7 announcement
+   + LT-3 light Card shadow (Sonnet, no-commit, lead reviews).
+3. NAV-2 weigh-in edit+delete+history (ED-adjacent bounds: floors/calm/
+   ED suppression untouched, detection re-runs on corrected series).
+4. Training reminder habit-schedule rebuild + honest settings copy.
+5. CP-9 in-app FAQ screen (voice-locked content).
+6. L08-B3: WRITE billing test plan -> founder approval -> build.
+7. CP-10 restart-free theming plan-first investigation (big; then build).
+- Founder rounds remaining: plan-F photo questions (4), VC-1 light-theme
+  sign-off, RED-S tooltip wording, Ultimate-Audit 11-16 cluster.
+- HELD: adversarial review (R1 fix belongs to it), media, Live Activity,
+  rest-day notification.
 
 ### Superseded original section (kept for history):
 ### Running now (the current pair of two)

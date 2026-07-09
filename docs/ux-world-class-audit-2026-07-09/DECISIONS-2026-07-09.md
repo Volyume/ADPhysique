@@ -189,3 +189,52 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   responds within a mesocycle); adherence-why surfaces BOTH at Pro setup
   completion and once in the first weekly coach output (one calm line
   each, said once, never repeated).
+
+## D16 — Settings cluster + weigh-in rulings (founder, 2026-07-09, resume session)
+- **CP-10 restart-free theming: BUILD.** Full architectural change so the
+  theme becomes a live, reactive value across all screens. Proceeds via a
+  plan-first investigation (blast radius, options, risk, staged rollout)
+  before the build itself; the investigation is a step of the approved
+  build, not a gate to re-ask.
+- **CP-9 Help/FAQ: IN-APP FAQ SCREEN.** Native Settings sub-screen with
+  curated FAQ content in the locked coaching voice, maintained in-repo,
+  works offline. (Contact/email row not selected this round.)
+- **L08-B3 post-cancel forward link: BUILD, TEST PLAN FIRST.** Written
+  billing test plan per docs/rules/billing.md comes first and gets founder
+  approval; then the calm forward link ships. Link and copy only — no
+  purchase/restore/entitlement/cascade logic is touched.
+- **NAV-2 weigh-in management: EDIT + DELETE + HISTORY.** Full management
+  on Body Metrics: edit any entry, delete entries, visible history list.
+  ED-safety intact: floors, calm mode and ED-flag suppression untouched;
+  trend-based detection re-runs on the corrected series after any edit or
+  delete.
+
+## D17 — Rest-day/reminder, B41, AY-7, LT-3 (founder + delegated lead rulings, 2026-07-09, resume session)
+- **Rest-day notification: HELD** (FQ-1 option 3) until the schedule gap is
+  otherwise resolved. Recorded for when it unblocks: gated by ED-flag/calm
+  suppression (FQ-2), copy Variant A plan-anchored (FQ-3). FQ-4/FQ-5
+  DELEGATED to lead — ruling: folded into the existing Training reminders
+  card sharing its enablement, default 09:00 local (distinct from the
+  training reminder's 08:00).
+- **Training-day reminder dead substrate: FOUNDER STEER** — "Rest days are
+  not strictly adhered to, user trains on the days they want and have
+  lives." Lead ruling under that steer: do NOT wire a rigid plan-day
+  schedule writer. Rebuild the reminder's schedule on habit-derived
+  weekdays from completed-workout history, and amend the
+  NotificationSettingsScreen copy to describe it honestly. Quiet
+  hours/push-budget gates unchanged. QUEUED as a build.
+- **B41 check-in reminder drift: DELEGATED to lead** — ruling: amend
+  Surface 6 of COACHING_VOICE_SYNTHESIS_LOCKED.md to the live string
+  ("How has your week gone{, First}" / "A two-minute check-in is all it
+  takes, and your coach tunes next week around it."), dated amendment; the
+  live string already matches NOTIFICATIONS_LOCKED and D15 set the
+  amend-to-live precedent. Payment-failure push VERIFIED NON-DRIFT (Apple
+  handler says "the App Store", Play handler says "Google Play" — both
+  match the locked platform bracket). CLOSED.
+- **AY-7 ED lockout/cleared screen-reader announcement: APPROVED** —
+  announce using the EXACT visible header text (ED_PATTERN_LOCKOUT_COPY /
+  ED_PATTERN_CLEARED_COPY), mirroring PRCelebration's pattern. No new
+  wording, no ED-safety logic change.
+- **LT-3 light-theme elevation: IMPLEMENT THE POLICY** ("Do this", with
+  lead judgement latitude): light-theme-only shadow token on the shared
+  Card primitive; dark theme keeps the surface ladder untouched.
