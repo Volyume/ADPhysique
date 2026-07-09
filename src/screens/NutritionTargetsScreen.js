@@ -216,7 +216,13 @@ export default function NutritionTargetsScreen({ navigation }) {
   // ── Results / UI state ──────────────────────────────────────────────────────────
   const [results,      setResults]      = useState(null);
   const [expanded,     setExpanded]     = useState(false);
-  const [whyExpanded,  setWhyExpanded]  = useState(true);
+  // L05-NT2 (design audit 2026-07-09): was default-expanded, which forced all
+  // four "why" disclosures open on first read and was the single biggest
+  // contributor to the ~11-block stacked scroll the finding flagged. Now
+  // collapsed by default, matching the "How was this calculated?" disclosure
+  // (`expanded`, above) it sits beside. Nothing inside either disclosure
+  // changed, still one tap away.
+  const [whyExpanded,  setWhyExpanded]  = useState(false);
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
   // U-C-1: the full form starts collapsed behind the "Set it for me" fast path;
@@ -1023,7 +1029,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                 }
 
                 return (
-                  <Card style={styles.perMealCard}>
+                  // L05-NT2: padding="md" (was the Card default "lg") so this
+                  // secondary detail card sits visually below the heroCard's
+                  // padding="xl", tightening the results stack without
+                  // changing any of its content.
+                  <Card padding="md" style={styles.perMealCard}>
                     <View style={styles.perMealHeader}>
                       <Text style={styles.perMealHeading}>PER MEAL</Text>
                       <InfoTooltip
@@ -1108,7 +1118,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                   phase and confidence merged into ONE card instead of three
                   same-shape siblings. Every element is unchanged; only the
                   grouping and header treatment moved. ── */}
-              <Card style={styles.howCard}>
+              {/* L05-NT2: padding="md" (was Card default "lg"), same density
+                  rationale as perMealCard above. */}
+              <Card padding="md" style={styles.howCard}>
               <Text style={styles.howCardTitle}>Why these targets</Text>
 
               {/* Phase, may be absent when loaded from DB */}
@@ -1347,6 +1359,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Card
                 onPress={() => setExpanded(v => !v)}
                 radius="md"
+                padding="md"
                 style={styles.expandHeader}
                 accessibilityLabel="How was this calculated?"
               >
@@ -1359,7 +1372,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               </Card>
 
               {expanded && (
-                <Card radius="md" style={styles.expandBody}>
+                <Card radius="md" padding="md" style={styles.expandBody}>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Formula</Text>
                     <Text style={styles.calcValue}>{results.bmrFormula}</Text>
@@ -1585,8 +1598,11 @@ const styles = StyleSheet.create({
 
   // ── Results section ──────────────────────────────────────────────────────────────────
 
+  // L05-NT2: tightened from spacing.md so the ~8-block results stack reads
+  // as one dense scannable column rather than loosely separated cards. No
+  // block was removed; this only reduces the whitespace between them.
   resultsSection: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
 

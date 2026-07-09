@@ -334,12 +334,15 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
 }
 
 const styles = StyleSheet.create({
+  // L05-D2 (design audit 2026-07-09): tightened from spacing.lg so the card
+  // reads as one dense, scannable block instead of loosely spaced rows.
+  // Content and every value/colour rule below are unchanged.
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   kcalRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -400,8 +403,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
   },
+  // L05-D2: a quiet top divider groups the four macro bars as one distinct
+  // "detail" zone below the kcal hero, same borderSubtle/paddingTop pattern
+  // NutritionTargetsScreen already uses for its own disclosure groups.
+  // Hierarchy/spacing only, no colour judgement, no content change.
   macroRow: {
-    gap: spacing.md,
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.md,
   },
   macroBar: { gap: spacing.xs2 },
   macroBarTop: {
