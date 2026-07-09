@@ -3,13 +3,20 @@
  * paywall re-homed from the Pro-guarded CoachOutput (where its free-tier
  * audience could never see it) to HomeScreen's banner stack.
  *
+ * Priority-slot mechanics updated for AC-6/CP-1 (design-usability-audit-
+ * 2026-07-09), founder decision D7: the old strict one-banner invariant is
+ * replaced by a ranked list that shows the top two eligible banners and
+ * collapses the rest behind one "more updates" affordance. The differential
+ * badge shares the lowest-priority "attention" slot with the free coach line
+ * (AttentionCard's own pickAttentionVariant still decides between the two).
+ *
  * The detector itself is behaviourally tested in differentialPaywall.test.js;
  * the Home wiring is a screen load effect + JSX, exercised on device per the
  * repo convention, so these are scoped source guards in the plateauBanner
  * style. They pin:
  *  - the dead render never returns to CoachOutput (the original NAV-4 bug);
- *  - the banner's priority slot: the LOWEST in the stack, below the free
- *    coach line, keeping the one-banner invariant;
+ *  - the banner's priority slot: the LOWEST in the ranked list, sharing it
+ *    with the free coach line, which still outranks it within that slot;
  *  - the free-tier gate and the pure locked detector as the only trigger;
  *  - ED-flag / calm-mode suppression BEFORE any detection (the trigger keys
  *    off adherence gaps, squarely inside COMP-004's weight/food scope);
@@ -46,23 +53,29 @@ describe('NAV-4: the dead CoachOutput render stays removed', () => {
   });
 });
 
-describe('NAV-4: banner priority slot (one-banner invariant)', () => {
-  test('renders only when EVERY other banner is absent, free coach line included', () => {
+describe('NAV-4: banner priority slot (D7 ranked-list mechanics)', () => {
+  test('the eligibility trigger is unchanged: free tier, detector shown, not dismissed', () => {
     expect(HOME).toMatch(
-      /const showDifferentialBadge = tier === 'free' && !!differentialBanner\?\.shown && !differentialDismissed\s*\n\s*&& !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner\s*\n\s*&& !showPlateauBanner && !showActivationBanner && !showFreeCoachLine;/,
+      /const differentialBadgeEligible = tier === 'free' && !!differentialBanner\?\.shown && !differentialDismissed;/,
     );
   });
 
-  test('the banners above it do not consult it (their priorities untouched)', () => {
-    for (const decl of [
-      'const showCoachBanner', 'const showTrialCountdownBanner', 'const showDeloadBanner',
-      'const showPhaseBanner', 'const showPlateauBanner', 'const showFreeCoachLine',
-    ]) {
-      const site = HOME.indexOf(decl);
-      expect(site).toBeGreaterThan(-1);
-      const next = HOME.indexOf('const show', site + decl.length);
-      expect(HOME.slice(site, next)).not.toMatch(/Differential/);
-    }
+  test('shares the lowest-priority "attention" slot with the free coach line', () => {
+    const site = HOME.indexOf('const BANNER_PRIORITY = [');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, HOME.indexOf('];', site));
+    const order = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention']
+      .map((key) => block.indexOf(`key: '${key}'`));
+    expect(order.every((i) => i > -1)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    // The attention slot's own eligibility is free-line-or-differential.
+    expect(block).toMatch(/key: 'attention', eligible: freeCoachLineEligible \|\| differentialBadgeEligible/);
+  });
+
+  test('within the shared slot, the free coach line still outranks it', () => {
+    expect(HOME).toMatch(
+      /const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;/,
+    );
   });
 });
 

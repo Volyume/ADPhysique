@@ -1,13 +1,19 @@
 /**
  * B3 (audit/05-enhancements.md): proactive plateau-break surfacing on Home.
  *
- * The selection logic is behavioural-tested in lib/__tests__/plateauSurfacing;
- * the Home wiring is a screen load effect + JSX, exercised on device per the
- * repo convention, so these are scoped source guards in the
- * checkinCoachAudit/navigationTargets style. They pin:
- *  - the banner's priority slot: BELOW coach review, trial ledger, deload and
- *    phase (recovery and targets outrank a lift plateau), ABOVE the free
- *    coach line, keeping the one-banner invariant;
+ * Priority-slot mechanics updated for AC-6/CP-1 (design-usability-audit-
+ * 2026-07-09), founder decision D7: the old strict one-banner invariant
+ * (every lower banner hidden until the winner above it was dismissed) is
+ * replaced by a ranked list that shows the top two eligible banners and
+ * collapses the rest behind one "more updates" affordance. The plateau
+ * banner's own trigger (plateauBannerEligible) is untouched; only how many
+ * banners can show alongside it changed. These are scoped source guards in
+ * the checkinCoachAudit/navigationTargets style (screen wiring is exercised
+ * on device, not jest-mounted). They pin:
+ *  - the banner's eligibility trigger, unchanged by D7;
+ *  - its priority rank in BANNER_PRIORITY: below coach, trial, deload and
+ *    phase (recovery and targets still outrank a lift plateau), above the
+ *    free/differential attention slot;
  *  - the cross-stack navigation form (ExerciseDetail lives in the Progress
  *    stack; a bare navigate from Home is the F4/NAV-1 silent no-op);
  *  - per-plateau dismissal keyed by exercise + local week;
@@ -32,26 +38,27 @@ function fnBody(src, decl) {
   return next === -1 ? src.slice(start) : src.slice(start, start + decl.length + next);
 }
 
-describe('B3 plateau banner priority slot', () => {
-  test('renders only when coach, trial, deload AND phase banners are absent', () => {
+describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
+  test('the eligibility trigger is unchanged: plateauBanner set and not dismissed', () => {
     expect(HOME).toMatch(
-      /const showPlateauBanner = !!plateauBanner && !plateauBannerDismissed\s*\n\s*&& !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;/,
+      /const plateauBannerEligible = !!plateauBanner && !plateauBannerDismissed;/,
     );
   });
 
-  test('the free coach line stays lowest: it also yields to the plateau banner', () => {
-    const site = HOME.indexOf('const showFreeCoachLine');
+  test('ranks below coach, trial, deload and phase; above the activation and attention slots', () => {
+    const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
-    expect(HOME.slice(site, site + 400)).toMatch(/!showPlateauBanner/);
+    const block = HOME.slice(site, HOME.indexOf('];', site));
+    const order = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention']
+      .map((key) => block.indexOf(`key: '${key}'`));
+    expect(order.every((i) => i > -1)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test('the existing banners above it do not consult the plateau banner (their priorities untouched)', () => {
-    for (const decl of ['const showCoachBanner', 'const showTrialCountdownBanner', 'const showDeloadBanner', 'const showPhaseBanner']) {
-      const site = HOME.indexOf(decl);
-      expect(site).toBeGreaterThan(-1);
-      const next = HOME.indexOf('const show', site + decl.length);
-      expect(HOME.slice(site, next)).not.toMatch(/PlateauBanner/);
-    }
+  test('renders only when it wins one of the top two slots (direct or expanded-overflow)', () => {
+    expect(HOME).toMatch(
+      /const showPlateauBanner = topBannerKeys\.has\('plateau'\) \|\| \(bannersExpanded && overflowBannerKeys\.has\('plateau'\)\);/,
+    );
   });
 });
 
