@@ -122,13 +122,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sessionAdjustments = [],
   } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, units, userProfile, session, tier, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, units, userProfile, session, tier, reduceMotion, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
     userProfile: s.userProfile,
     session: s.session,
     tier: s.tier,
     reduceMotion: s.accessibility?.reduceMotion,
+    // CO-3 (cohesion audit 2026-07-09): the SAME unseen-coach-change signal
+    // that drives the Coach-tab icon badge (T2), reused here so the summary
+    // only ever links to Coach when there's a genuinely relevant, fresh
+    // review to see, never a generic upsell.
+    hasUnseenCoachChange: s.hasUnseenCoachChange,
   })));
   const toast = useToast();
   // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
@@ -181,13 +186,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // the shared wellbeing read in loadVolumeAndHistory.
   const [calmSuppressed, setCalmSuppressed] = useState(false);
   // C3 milestone moment for the post-workout partner beat: when the engine has a
-  // moment for the active pair, the beat shows its calm line (with the same
-  // inline cheer) instead of the generic tick line. getVisibleMoments already
+  // moment for one of the active pairs, that pair's beat row shows its calm line
+  // (with the same inline cheer) instead of the generic tick line. Keyed by
+  // pairId so a Pro user with 2-3 paired partners (L06-F4) gets its own moment
+  // per pair, never just the single "primary" one. getVisibleMoments already
   // applies the fail-closed ED/calm/SCOFF suppression and the frequency caps, so
-  // this holds null under any suppressed state. Marked seen on cheer or unmount.
-  const [partnerMoment, setPartnerMoment] = useState(null);
-  const [postWorkoutCheerSending, setPostWorkoutCheerSending] = useState(false);
-  const partnerMomentRef = useRef(null);
+  // this holds {} under any suppressed state. Marked seen on cheer or unmount.
+  const [partnerMomentsByPair, setPartnerMomentsByPair] = useState({});
+  // Per-pair in-flight guard (keyed by pairId): each paired partner is its own
+  // private world (DESIGN-SPEC B2), so a cheer in flight to one partner never
+  // blocks sending to another.
+  const [sendingCheerPairIds, setSendingCheerPairIds] = useState({});
+  const partnerMomentsRef = useRef({});
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
   // coaching loop, but only open when the lifter deliberately rates the session.
@@ -242,32 +252,49 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [routineId]);
 
-  // C3 milestone moment: only when the beat itself would render (paired live
-  // path, Pro, not calm/ED-suppressed). getVisibleMoments is fail-closed and
-  // additionally suppresses internally, so this is a second gate, never the
-  // safety boundary. Keeps the ref in step for the unmount mark-seen.
-  const beatEligible = !readOnly && !calmSuppressed && tier === 'pro'
-    && (partners.rowState === 'active' || partners.rowState === 'resting');
-  const activePairId = partners.partnership?.id;
+  // The post-workout beat surfaces EVERY currently active/resting paired
+  // partner (L06-F4 fix), not just the single "primary" pair usePartners kept
+  // for the legacy single-pair consumers. Pro-only, never read-only, never
+  // under calm/ED suppression — the same gating the single-partner beat always
+  // had, just applied per pair instead of to one partnership.
+  const activeBeatPairs = (!readOnly && !calmSuppressed && tier === 'pro')
+    ? (partners.pairs || []).filter((pp) => pp.rowState === 'active' || pp.rowState === 'resting')
+    : [];
+  const beatEligible = activeBeatPairs.length > 0;
+  const activeBeatPairIds = activeBeatPairs.map((pp) => pp.id).join('|');
+
+  // C3 milestone moments: only when the beat itself would render. getVisibleMoments
+  // is fail-closed and additionally suppresses internally, so this is a second
+  // gate, never the safety boundary. Keeps the ref in step for the unmount
+  // mark-seen. One fetch covers every visible pair; each moment is matched back
+  // to its own pairId so a pair without a moment simply falls back to its tick
+  // line while a sibling pair's moment still shows.
   useEffect(() => {
     let cancelled = false;
-    if (!beatEligible || !user?.id || !activePairId) {
-      setPartnerMoment(null);
-      partnerMomentRef.current = null;
+    if (!beatEligible || !user?.id || !activeBeatPairIds) {
+      setPartnerMomentsByPair({});
+      partnerMomentsRef.current = {};
       return undefined;
     }
+    const idSet = new Set(activeBeatPairIds.split('|'));
     getVisibleMoments(user.id).then((moments) => {
       if (cancelled) return;
-      const m = (moments || []).find((x) => x.pairId === activePairId) || null;
-      setPartnerMoment(m);
-      partnerMomentRef.current = m;
+      const byPair = {};
+      for (const m of (moments || [])) {
+        if (m?.pairId && idSet.has(m.pairId)) byPair[m.pairId] = m;
+      }
+      setPartnerMomentsByPair(byPair);
+      partnerMomentsRef.current = byPair;
     }).catch(() => { /* fail quiet: the beat falls back to the tick line */ });
     return () => { cancelled = true; };
-  }, [beatEligible, user?.id, activePairId]);
+  }, [beatEligible, user?.id, activeBeatPairIds]);
 
-  // Mark the moment seen on unmount (the user saw it). Cheer marks it too.
+  // Mark every still-shown moment seen on unmount (the user saw the whole
+  // beat). Cheering a given pair marks that pair's own moment seen too.
   useEffect(() => () => {
-    if (partnerMomentRef.current?.id) markMomentSeen(partnerMomentRef.current.id).catch(() => {});
+    for (const m of Object.values(partnerMomentsRef.current || {})) {
+      if (m?.id) markMomentSeen(m.id).catch(() => {});
+    }
   }, []);
 
   // Contextual feedback prompt, fires ONCE after the user has
@@ -716,13 +743,31 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigation.navigate('ShareCard', { sessionData, prData, prList: detectedPRs });
   }
 
-  function handlePreviewPartnerWin() {
+  // CO-3: destination for the quiet "See your progress" link. A PR routes
+  // straight to that lift's own trend (the most relevant single number to
+  // check right now); otherwise the general lift-progress list, since no
+  // single exercise is what the volume verdict is about.
+  function handleSeeProgress() {
+    if (firstPrWithExercise) {
+      navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: firstPrWithExercise.exerciseId });
+      return;
+    }
+    navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress');
+  }
+
+  // pairId, when known, routes straight to that partner's Send-an-update sheet
+  // (PartnerScreen already reads route.params.pairId/partnerPairId) so choosing
+  // "Preview win" under a specific paired partner's own beat row never re-opens
+  // Partners' "choose who receives it" picker for a pair the user already
+  // picked here.
+  function handlePreviewPartnerWin(pairId) {
     const firstPr = detectedPRs.length > 0 ? detectedPRs[0] : null;
     const completedAt = formatPartnerWinDate(endedAt || startedAt || Date.now());
     if (firstPr) {
       navigateCrossTab(navigation, 'ProgressTab', 'Partner', {
         source: 'workout_summary_partner_win',
         shareWinType: 'personal_record',
+        pairId: pairId || undefined,
         shareWinPayload: {
           liftName: firstPr.exerciseName || firstPr.exercise || 'A lift',
           recordLabel: partnerRecordLabel(firstPr),
@@ -733,6 +778,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigateCrossTab(navigation, 'ProgressTab', 'Partner', {
       source: 'workout_summary_partner_win',
       shareWinType: 'workout_summary',
+      pairId: pairId || undefined,
       shareWinPayload: {
         workoutName: shareSessionName(routineName, exerciseNames),
         completedAt,
@@ -740,31 +786,43 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     });
   }
 
-  async function handlePostWorkoutCheer() {
-    if (!partners?.cheerEnabled || postWorkoutCheerSending) return;
-    if (!partners.partnership?.id) {
-      toast.show('Refresh Partners and try again.', { variant: 'error' });
+  // Per-pair cheer send (L06-F4): `pair` is one entry of partners.pairs, so
+  // every currently paired partner gets its own independent send, its own
+  // reciprocal-tick read and its own in-flight/rate-limit state.
+  async function handlePostWorkoutCheer(pair) {
+    const pairId = pair?.id;
+    if (!pair?.cheerEnabled || !pairId || sendingCheerPairIds[pairId]) {
+      if (pair?.cheerEnabled && !pairId) toast.show('Refresh Partners and try again.', { variant: 'error' });
       return;
     }
-    setPostWorkoutCheerSending(true);
+    setSendingCheerPairIds((prev) => ({ ...prev, [pairId]: true }));
     try {
-      const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
-      const result = await partners.cheer(partners.partnership.id, undefined, !!reciprocal);
+      const reciprocal = pair.partnerWeek?.weekMet || (pair.partnerWeek?.done > 0);
+      const result = await partners.cheer(pairId, undefined, !!reciprocal);
       if (result?.ok || result?.error === 'already_cheered') {
-        if (partnerMoment?.id) {
-          markMomentSeen(partnerMoment.id).catch(() => {});
-          partnerMomentRef.current = null;
-          setPartnerMoment(null);
+        const moment = partnerMomentsRef.current?.[pairId];
+        if (moment?.id) {
+          markMomentSeen(moment.id).catch(() => {});
+          delete partnerMomentsRef.current[pairId];
+          setPartnerMomentsByPair((prev) => {
+            const next = { ...prev };
+            delete next[pairId];
+            return next;
+          });
         }
         toast.show(result?.error === 'already_cheered' ? 'Cheer already sent today' : 'Cheer sent', { variant: 'success' });
         return;
       }
-      logError('WorkoutSummaryScreen.postWorkoutCheer', new Error(result?.error || 'unknown'), { userId: user?.id });
+      logError('WorkoutSummaryScreen.postWorkoutCheer', new Error(result?.error || 'unknown'), { userId: user?.id, pairId });
       toast.show(partnerCheerFailureMessage(result?.error), {
         variant: result?.error === 'partner_syncing' || result?.error === 'not_active' ? 'warning' : 'error',
       });
     } finally {
-      setPostWorkoutCheerSending(false);
+      setSendingCheerPairIds((prev) => {
+        const next = { ...prev };
+        delete next[pairId];
+        return next;
+      });
     }
   }
 
@@ -828,6 +886,30 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .slice(0, 6);
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
+
+  // CO-3 (cohesion audit 2026-07-09, docs/ux-world-class-audit-2026-07-09/
+  // cohesion-01-flow-language.md): quiet onward links so workout completion
+  // gestures at the rest of the app instead of dead-ending. Live path only,
+  // readOnly is a history view where neither signal below is meaningful.
+  //
+  // Progress: only when this session set a PR (link straight to that lift's
+  // own trend) or logged meaningful volume against the 4-week baseline (the
+  // 'best'/'up' comparison verdict already computed above for the hero
+  // card). Training-only, never a weight/body/intake reference.
+  const firstPrWithExercise = detectedPRs.find(pr => pr?.exerciseId) || null;
+  const showProgressLink = !readOnly
+    && (!!firstPrWithExercise || comparison?.verdict === 'best' || comparison?.verdict === 'up');
+  const progressLinkLabel = firstPrWithExercise
+    ? `See your progress on ${firstPrWithExercise.exerciseName || firstPrWithExercise.exercise || 'that lift'}`
+    : 'See your progress';
+
+  // Coach: only when there is a genuinely relevant state to point at, never
+  // a generic upsell. tier is re-checked here even though hasUnseenCoachChange
+  // is only ever set true for a pro user (HomeScreen's showCoachBanner
+  // mirror) -- the same defence-in-depth this screen already applies to the
+  // partner beat below, and the CoachOutput route itself is withProGuard-
+  // wrapped in RootNavigator.js, so a free-tier tap still can't reach it.
+  const showCoachLink = !readOnly && tier === 'pro' && hasUnseenCoachChange;
 
   // Photos LOOP-3 (D4): the competence-event id the photo invitation dedupes on.
   // COMPETENCE ONLY — a claimed session/consistency milestone (its stable rung
@@ -964,52 +1046,59 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
         </View>
 
-        {/* NEW-002 rebuild: the post-workout partner beat, where a cheer is
-            most natural (you just trained; here is where your partner stands).
+        {/* NEW-002 rebuild, widened under L06-F4: the post-workout partner
+            beat, where a cheer is most natural (you just trained; here is
+            where your partner stands). One row per currently active/resting
+            paired partner, so a Pro user with 2-3 paired partners gets a
+            cheer affordance for EACH of them, not just one "primary" pair.
             Paired + live path only; inherits calm/ED suppression; a resting
             partner never reads as a fail. */}
-        {!readOnly && !calmSuppressed && tier === 'pro'
-          && (partners.rowState === 'active' || partners.rowState === 'resting') && (
-          <RevealSection delay={1130}>
-            <Card style={styles.partnerBeatRow}>
-              <View style={styles.partnerBeatTop}>
-                <Ionicons name="people-outline" size={18} color={colors.primary} />
-                <Text style={styles.partnerBeatText}>
-                  {partnerMoment
-                    ? partnerMoment.line
-                    : partners.rowState === 'resting'
-                      ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
-                      : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
-                </Text>
-              </View>
-              <View style={styles.partnerBeatActions}>
-                <Button
-                  title="Preview win"
-                  icon="trophy-outline"
-                  variant="outline"
-                  size="sm"
-                  fullWidth={false}
-                  onPress={handlePreviewPartnerWin}
-                  style={styles.partnerWinBtn}
-                  textStyle={styles.partnerCheerText}
-                  accessibilityLabel="Preview this workout win for a partner"
-                />
-                <Button
-                  title={postWorkoutCheerSending ? 'Sending' : partners.cheerEnabled ? 'Cheer' : 'Sent'}
-                  icon={postWorkoutCheerSending ? 'hourglass-outline' : 'hand-left-outline'}
-                  variant="tertiary"
-                  size="sm"
-                  fullWidth={false}
-                  onPress={handlePostWorkoutCheer}
-                  disabled={!partners.cheerEnabled || postWorkoutCheerSending}
-                  style={[styles.partnerCheerBtn, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerBtnDone]}
-                  textStyle={[styles.partnerCheerText, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerTextDone]}
-                  accessibilityLabel={postWorkoutCheerSending ? 'Sending cheer' : partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
-                />
-              </View>
-            </Card>
-          </RevealSection>
-        )}
+        {activeBeatPairs.map((pair) => {
+          const moment = partnerMomentsByPair[pair.id];
+          const sending = !!sendingCheerPairIds[pair.id];
+          const partnerName = pair.partnerFirstName || 'Your partner';
+          return (
+            <RevealSection key={pair.id} delay={1130}>
+              <Card style={styles.partnerBeatRow}>
+                <View style={styles.partnerBeatTop}>
+                  <Ionicons name="people-outline" size={18} color={colors.primary} />
+                  <Text style={styles.partnerBeatText}>
+                    {moment
+                      ? moment.line
+                      : pair.rowState === 'resting'
+                        ? `${partnerName} is resting this week.`
+                        : `${partnerName}: ${ticksLabel({ done: pair.partnerWeek?.done, planned: pair.partnerWeek?.planned })} this week.`}
+                  </Text>
+                </View>
+                <View style={styles.partnerBeatActions}>
+                  <Button
+                    title="Preview win"
+                    icon="trophy-outline"
+                    variant="outline"
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => handlePreviewPartnerWin(pair.id)}
+                    style={styles.partnerWinBtn}
+                    textStyle={styles.partnerCheerText}
+                    accessibilityLabel={`Preview this workout win for ${partnerName}`}
+                  />
+                  <Button
+                    title={sending ? 'Sending' : pair.cheerEnabled ? 'Cheer' : 'Sent'}
+                    icon={sending ? 'hourglass-outline' : 'hand-left-outline'}
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => handlePostWorkoutCheer(pair)}
+                    disabled={!pair.cheerEnabled || sending}
+                    style={[styles.partnerCheerBtn, (!pair.cheerEnabled || sending) && styles.partnerCheerBtnDone]}
+                    textStyle={[styles.partnerCheerText, (!pair.cheerEnabled || sending) && styles.partnerCheerTextDone]}
+                    accessibilityLabel={sending ? `Sending cheer to ${partnerName}` : pair.cheerEnabled ? `Send a cheer to ${partnerName}` : 'Cheer sent'}
+                  />
+                </View>
+              </Card>
+            </RevealSection>
+          );
+        })}
 
         {/* D2: programme-arc strip, where this session sits in the block, so
             the work reads as a journey towards the recovery week, not an
@@ -1075,6 +1164,44 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {prExerciseNames ? ` - ${prExerciseNames}` : ''}
             </Text>
           </View>
+          </RevealSection>
+        )}
+
+        {/* CO-3 (cohesion audit 2026-07-09): quiet onward links, so workout
+            completion gestures at the rest of the app instead of dead-ending.
+            Same register as CoachOutputScreen's "See your updated plan" link
+            (CO-2): a quiet pill, not a banner. Training-only copy, no weight/
+            body/intake references. Each link appears only under its own
+            genuinely-relevant state (see showProgressLink/showCoachLink
+            above), never as a generic upsell. */}
+        {(showProgressLink || showCoachLink) && (
+          <RevealSection delay={1360}>
+            <View style={styles.onwardLinksRow}>
+              {showProgressLink && (
+                <TouchableOpacity
+                  style={styles.onwardLink}
+                  activeOpacity={0.85}
+                  onPress={handleSeeProgress}
+                  accessibilityRole="button"
+                  accessibilityLabel={progressLinkLabel}
+                >
+                  <Ionicons name="trending-up-outline" size={14} color={colors.textSecondary} />
+                  <Text style={styles.onwardLinkText}>{progressLinkLabel}</Text>
+                </TouchableOpacity>
+              )}
+              {showCoachLink && (
+                <TouchableOpacity
+                  style={styles.onwardLink}
+                  activeOpacity={0.85}
+                  onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
+                  accessibilityRole="button"
+                  accessibilityLabel="See this week's coaching review"
+                >
+                  <Ionicons name="pulse-outline" size={14} color={colors.textSecondary} />
+                  <Text style={styles.onwardLinkText}>See this week&apos;s coaching review</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </RevealSection>
         )}
 
@@ -1619,6 +1746,17 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
   },
   prRowText: { ...type.label, flex: 1, color: colors.warning },
+  // CO-3: quiet onward links, same register as CoachOutputScreen's
+  // planEditLink ("See your updated plan") -- a neutral pill, never amber.
+  onwardLinksRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  onwardLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    alignSelf: 'flex-start', gap: spacing.xs, minHeight: 40,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  onwardLinkText: { ...type.label, color: colors.textPrimary },
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

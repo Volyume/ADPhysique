@@ -775,3 +775,15 @@ OAuth SHA-1; Cut 4 seed walk.
   line-by-line); agent added the missing contract tests (revoke on
   edit-down, award on edit-up, delete prunes, sibling survives). All
   suites green, lint clean.
+- BURST LANDINGS 4+5/8 WORKOUT SUMMARY (joint commit, shared file,
+  lead-reviewed combined): L06-F4 partners - one cheer card per active
+  paired partner (activeBeatPairs map, per-pair send state/moments/a11y
+  labels; pairId passed to Preview win; no schema change - cheer RPC was
+  already per-pair; PartnerRow stays dead). CO-3 cohesion links - quiet
+  pill row after the PR banner: "See your progress[ on {lift}]" (PR or
+  strong 4-week verdict) and "See this week's coaching review" (reuses
+  the T2 hasUnseenCoachChange badge signal, pro + withProGuard
+  triple-safe; never generic upsell; read-only view shows neither).
+  LEAD BLESSED: per-partner cards idiom, pairId preview targeting, link
+  placement at the PR-banner seam, two-variant progress copy. 32
+  guard/contract tests green on the combined file, lint clean.
