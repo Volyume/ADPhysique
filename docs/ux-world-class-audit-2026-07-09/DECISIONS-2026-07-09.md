@@ -259,3 +259,17 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   founder's explicit call.
 - Stage 0 receipt wording: builder reads plan-E's open question 2 context;
   if a genuine wording fork remains, surface it, do not invent.
+
+## D19 — RED-S wording, VC-1, plan-A band fork (founder, 2026-07-09, resume session)
+- **RED-S / autoregulation footer tooltip: DRAFT FOR REVIEW.** Lead drafts
+  the two ED-adjacent glossary entries hands-on against the locked voice
+  doc; exact strings return to the founder for sign-off before the
+  tooltip ships.
+- **VC-1 light-theme brand palette: APPROVED AS CODED** (primary ink
+  #8A5200, warning #6E6300 and the rest of the light ramp in theme.js).
+  VC-1 CLOSED.
+- **Plan-A band fork: AMEND THE RULE FOR THIS CASE.** Dated ruling: band
+  exercises may enter a LOADED plan ONLY when the user's equipment
+  context has no measurable vertical-pull alternative — the narrowest
+  possible exception, test-pinned. The general "bands never reach a
+  loaded plan" rule stands everywhere else. QUEUED as a build.
