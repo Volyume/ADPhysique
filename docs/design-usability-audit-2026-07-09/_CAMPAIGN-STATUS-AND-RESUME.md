@@ -463,3 +463,20 @@ byte-identical), reset-author + pushed. REMAINING D6: food L05-SB2 (manual
 barcode entry) + L05-ACF1 (serving units); gated L05-D1 (MealSection, test-
 tangled) + L07-F9 (drag-reorder, REUSE no-dep pattern) + L05-D2/NT2 (nutrition
 density, ED-adjacent - lead reviews diff hands-on); six coverage audits (Sonnet).
+
+## D6 COVERAGE AUDITS DONE (2026-07-09) — 6 Sonnet lanes + synthesis
+All four D6 builds shipped + pushed (be2db4d..d286217): ACF1 ef0ee76, SB2
+e8cf690, L07-F9 4d04883, L05-D1 0f52744. Then 6 read-only coverage audits
+(coverage-01..06) + coverage-00-SYNTHESIS.md. ~44 findings; see synthesis for
+the ranked cross-lane backlog (SAFE / JUDGEMENT / ED-adjacent / GATED / dropped).
+Headline SAFE items: MO-1 (photo-compare runtime crash), AY-1 (TextField
+placeholder contrast, app-wide), LT-1/AC-3 (primary-as-fill light bug, 88 sites),
+FR-2 (auth-error leak). Convergent: Home banner overload (AC-6/CP-1). ED-adjacent
+(lead reviews hands-on): LT-2 MacroRings ring ink, MO-4 calm-gate plan reveal,
+FR-4 pill tone, AY-7 lockout SR copy, LT-3 light elevation policy. GATED: LT-1
+billing sites, AY-2 success/error-on-tint, CP-7 biometric (new dep), CP-2 iOS
+widget, CP-10 theme-restart. Dropped: FR-5 (trial, per D5).
+NEXT: SAFE-fix wave (section A) is buildable now; ED-adjacent + GATED + the
+bigger JUDGEMENT/product-IA items (Home banner cap) need a founder nod. Still
+also pending from earlier: L05-D2/NT2 nutrition-density (its own ED-adjacent
+pass) + CoachOutput RED-S/autoregulation glossary (founder wording).
