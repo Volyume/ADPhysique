@@ -1,0 +1,48 @@
+-- Migration 111: goal + protein_approach columns on nutrition_targets.
+--
+-- Purpose:
+--   Design-usability audit 2026-07-09, finding L05-NT1 (founder "keep going
+--   on all" directive + D5 decisions,
+--   docs/design-usability-audit-2026-07-09/_CAMPAIGN-STATUS-AND-RESUME.md).
+--   The nutrition goal key (e.g. 'mild_cut') and protein-approach choice
+--   ('standard' | 'optimised' | 'advanced') were never columns in the cloud
+--   nutrition_targets table, so the rich "Why these targets" explanation on
+--   NutritionTargetsScreen (phase description, protein-approach label) was
+--   reconstructed only from a device-local AsyncStorage copy written by the
+--   same save. On a new device or reinstall, the DB row synced but
+--   AsyncStorage did not, so goal/proteinApproach came back null and the
+--   explanation silently degraded to blanks/defaults. Cloud counterpart of
+--   local schema v60 (database.js). App-side: saveNutritionTargets /
+--   insertNutritionTargetsFromCloud in src/lib/database.js and the push row
+--   in src/lib/sync/tables/nutritionTargets.js now carry both fields.
+--
+-- Data honesty:
+--   Both columns are nullable text. A missing value stays NULL and the
+--   screen already falls back to inverting the phase label / a hardcoded
+--   default when null (NutritionTargetsScreen.js:271-274), so existing rows
+--   are unaffected and behaviour for rows that predate this migration is
+--   unchanged.
+--
+-- ED-safety note: these two fields are user-preference labels only (which
+--   goal button and which protein-approach chip were picked). They do not
+--   feed BMR/TDEE/macro calculation or any floor check on reload -
+--   hydrateLoadedTargets (src/lib/nutritionTargetsView.js) spreads the
+--   already-computed, already-floor-clamped stored numerics through
+--   unchanged and only derives display-only fields from them. This
+--   migration does not touch nutritionEngine.js, coachApply.js, or any
+--   floor logic.
+--
+-- Applied: LOCALLY/staging via db push; PRODUCTION only on the founder
+--   running this file explicitly (run against production). Not
+--   auto-applied - the app never runs cloud migrations, and the
+--   deploy-migrations workflow is manual-dispatch only.
+-- Safe to re-run: YES (ADD COLUMN IF NOT EXISTS).
+-- Rollback:
+--   ALTER TABLE public.nutrition_targets DROP COLUMN IF EXISTS goal;
+--   ALTER TABLE public.nutrition_targets DROP COLUMN IF EXISTS protein_approach;
+--   The client falls back to the AsyncStorage-only reconstruction that was
+--   already in place before this migration; no data loss beyond the two new
+--   columns themselves.
+
+ALTER TABLE public.nutrition_targets ADD COLUMN IF NOT EXISTS goal text;
+ALTER TABLE public.nutrition_targets ADD COLUMN IF NOT EXISTS protein_approach text;

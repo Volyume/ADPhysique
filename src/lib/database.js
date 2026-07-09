@@ -1695,6 +1695,21 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE progress_photo_meta ADD COLUMN unscored INTEGER NOT NULL DEFAULT 0',
   ],
+  // v60, L05-NT1 (design-usability audit 2026-07-09, founder "keep going on
+  // all" + D5): persist the nutrition goal key and protein-approach choice on
+  // the nutrition_targets row itself. Previously these two fields lived only
+  // in an AsyncStorage copy written alongside the same save, so the rich "Why
+  // these targets" explanation (phase description, protein-approach label)
+  // silently degraded to blanks/defaults on a new device once the DB row
+  // synced without the local AsyncStorage copy. Additive, nullable TEXT
+  // columns; existing rows keep NULL (screen already falls back to inverting
+  // the phase label / hardcoded default when null, so this is pure
+  // data-portability, not a behaviour change). Cloud counterpart: migrate_111
+  // (founder-run). Duplicate-column errors are tolerated by the runner.
+  [
+    'ALTER TABLE nutrition_targets ADD COLUMN goal TEXT',
+    'ALTER TABLE nutrition_targets ADD COLUMN protein_approach TEXT',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -3756,7 +3771,7 @@ export async function saveNutritionTargets(userId, targets) {
       `UPDATE nutrition_targets SET
         bmr=?, tdee=?, target_kcal=?, protein_g=?, carbs_g=?, fat_g=?,
         phase=?, bmr_method=?, activity_level=?, confidence=?, warnings=?,
-        gdpr_consented=?, updated_at=?
+        gdpr_consented=?, goal=?, protein_approach=?, updated_at=?
        WHERE user_id=?`,
       [
         targets.bmr ?? null, targets.tdee ?? null, targets.targetKcal ?? null,
@@ -3765,6 +3780,7 @@ export async function saveNutritionTargets(userId, targets) {
         targets.confidence ?? null,
         targets.warnings ? JSON.stringify(targets.warnings) : null,
         targets.gdprConsented ? 1 : 0,
+        targets.goal ?? null, targets.proteinApproach ?? null,
         now, userId,
       ],
     );
@@ -3775,8 +3791,9 @@ export async function saveNutritionTargets(userId, targets) {
   await d.runAsync(
     `INSERT INTO nutrition_targets
       (id, user_id, bmr, tdee, target_kcal, protein_g, carbs_g, fat_g,
-       phase, bmr_method, activity_level, confidence, warnings, gdpr_consented, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       phase, bmr_method, activity_level, confidence, warnings, gdpr_consented,
+       goal, protein_approach, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId,
       targets.bmr ?? null, targets.tdee ?? null, targets.targetKcal ?? null,
@@ -3784,7 +3801,8 @@ export async function saveNutritionTargets(userId, targets) {
       targets.phase ?? null, targets.bmrMethod ?? null, targets.activityLevel ?? null,
       targets.confidence ?? null,
       targets.warnings ? JSON.stringify(targets.warnings) : null,
-      targets.gdprConsented ? 1 : 0, now, now,
+      targets.gdprConsented ? 1 : 0,
+      targets.goal ?? null, targets.proteinApproach ?? null, now, now,
     ],
   );
   pushToCloud();
@@ -6229,7 +6247,7 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
       `UPDATE nutrition_targets SET
         bmr=?, tdee=?, target_kcal=?, protein_g=?, carbs_g=?, fat_g=?,
         phase=?, bmr_method=?, activity_level=?, confidence=?, warnings=?,
-        gdpr_consented=?, updated_at=?
+        gdpr_consented=?, goal=?, protein_approach=?, updated_at=?
        WHERE user_id=?`,
       [
         t.bmr ?? null, t.tdee ?? null, t.target_kcal ?? null,
@@ -6237,6 +6255,7 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
         t.phase ?? null, t.bmr_method ?? null, t.activity_level ?? null,
         t.confidence ?? null, warningsStr,
         t.gdpr_consented ? 1 : 0,
+        t.goal ?? null, t.protein_approach ?? null,
         updatedAt, userId,
       ],
     );
@@ -6247,8 +6266,8 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
     `INSERT OR IGNORE INTO nutrition_targets
       (id, user_id, bmr, tdee, target_kcal, protein_g, carbs_g, fat_g,
        phase, bmr_method, activity_level, confidence, warnings,
-       gdpr_consented, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       gdpr_consented, goal, protein_approach, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId,
       t.bmr ?? null, t.tdee ?? null, t.target_kcal ?? null,
@@ -6256,6 +6275,7 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
       t.phase ?? null, t.bmr_method ?? null, t.activity_level ?? null,
       t.confidence ?? null, warningsStr,
       t.gdpr_consented ? 1 : 0,
+      t.goal ?? null, t.protein_approach ?? null,
       createdAt, updatedAt,
     ],
   );

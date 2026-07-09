@@ -541,6 +541,36 @@ describe('nutrition_targets', () => {
     const result = await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
     expect(result.errors).toBe(1);
   });
+
+  // L05-NT1: goal + proteinApproach must round-trip through push and pull so
+  // the "Why these targets" explanation survives a new device/reinstall
+  // instead of relying solely on the device-local AsyncStorage copy.
+  test('T7 L05-NT1: goal + proteinApproach land in the push row', async () => {
+    db.getNutritionTargets.mockResolvedValue({
+      targetKcal: 2000, goal: 'mild_cut', proteinApproach: 'optimised',
+    });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
+    expect(sb._calls.upserts[0].rows).toMatchObject({
+      goal: 'mild_cut', protein_approach: 'optimised',
+    });
+  });
+
+  test('T8 L05-NT1: pull forwards goal/protein_approach to insertNutritionTargetsFromCloud', async () => {
+    const sb = makePullSb({
+      data: { user_id: 'u1', target_kcal: 2200, goal: 'build', protein_approach: 'advanced' },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    db.insertNutritionTargetsFromCloud.mockResolvedValue(undefined);
+
+    await pullTable('nutrition_targets', { userId: 'u1' });
+
+    expect(db.insertNutritionTargetsFromCloud).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ goal: 'build', protein_approach: 'advanced' }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -43,6 +43,8 @@ export async function pushNutritionTargets(sb, { userId, localUserId } = {}) {
       confidence: targets.confidence ?? null,
       warnings: targets.warnings ?? null,
       gdpr_consented: !!targets.gdprConsented,
+      goal: targets.goal ?? null,
+      protein_approach: targets.proteinApproach ?? null,
       updated_at: new Date().toISOString(),
     };
     const { error } = await sb
