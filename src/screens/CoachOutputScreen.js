@@ -320,7 +320,7 @@ function NextWeekCard({
 // no button.
 function TrainingNextWeekCard({
   output, onApply, canApply, applyStateFor, onApplySettled,
-  deloadSuggested, deloadNote, onApplyDeload, hero,
+  deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
 }) {
   const signal = output.volumeSignal ?? 0;
   const applied = isApplied(output, 'training');
@@ -383,6 +383,21 @@ function TrainingNextWeekCard({
               This sets next week's starting volume. Your plan still fine-tunes each session as you train.
             </Text>
           </View>
+          {/* CO-2: this card said what changed ("N updated") but never linked
+              to the plan it changed, unlike its nutrition-side sibling two
+              lines away (the food-level receipt's "See your meal plan" link,
+              same component/style/a11y). Same pattern here, once applied. */}
+          {applied && output.appliedAdjustments?.training?.musclesChanged && navigation ? (
+            <TouchableOpacity
+              style={styles.planEditLink}
+              onPress={() => navigation.navigate('PlansTab', { screen: 'Plans', initial: false })}
+              accessibilityRole="button"
+              accessibilityLabel="See your updated plan"
+            >
+              <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.planEditLinkText}>See your updated plan</Text>
+            </TouchableOpacity>
+          ) : null}
         </>
       )}
     </Card>
@@ -1970,6 +1985,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       deloadNote={deloadNote}
       onApplyDeload={handleApplyDeload}
       hero={zones.heroKind === 'training'}
+      navigation={navigation}
     />
   );
   const nutritionCardEl = (

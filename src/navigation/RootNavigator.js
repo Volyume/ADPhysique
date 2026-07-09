@@ -72,6 +72,7 @@ const ExerciseDetailScreen = lazyScreen(() => require('../screens/ExerciseDetail
 const AnalyticsScreen = lazyScreen(() => require('../screens/AnalyticsScreen').default);
 const VolumeHeatmapScreen = lazyScreen(() => require('../screens/VolumeHeatmapScreen').default);
 const SettingsScreen = lazyScreen(() => require('../screens/SettingsScreen').default);
+const SettingsWorkoutScreen = lazyScreen(() => require('../screens/SettingsWorkoutScreen').default);
 const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccountScreen').default);
 const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
@@ -470,6 +471,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />

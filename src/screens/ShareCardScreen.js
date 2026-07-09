@@ -528,6 +528,12 @@ function SegmentBtn({ label, active, onPress, icon }) {
     <TouchableOpacity accessibilityRole="button"
       style={[styles.segment, active && styles.segmentActive]}
       onPress={onPress}
+      // AY-6: the segmented control (card type / format / background) never
+      // announced which segment was selected to a screen reader. Mirrors the
+      // in-repo pattern already used for the "which PR" chips above
+      // (accessibilityState={{ selected }}) and the Settings body-weight-unit
+      // segmented control (SettingsWorkoutScreen.js).
+      accessibilityState={{ selected: active }}
     >
       {icon}
       <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>

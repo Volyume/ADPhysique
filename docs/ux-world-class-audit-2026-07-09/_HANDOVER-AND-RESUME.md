@@ -680,3 +680,23 @@ OAuth SHA-1; Cut 4 seed walk.
   (4) 4 founder questions at doc end - ADD to rounds queue after the
   D14-selected three. JOB BOARD: investigations queue now empty (plan-G
   done); awaiting Smalls bundle (last Group A item).
+- SMALLS BUNDLE: 3 of 4 LANDED (Sonnet, lead-reviewed): AY-6 share
+  segments announce selection (shared SegmentBtn fix covers all three
+  rows); CP-6 "Workout & units" moved wholesale to new
+  SettingsWorkoutScreen (same keys/behaviour; root row after Coaching -
+  lead blessed placement); CO-2 "See your updated plan" link on the
+  training card (same style/a11y as the nutrition sibling; targets Plans
+  landing - no plan id on this screen). 14 new tests; lint clean.
+- RETAG HELD - FOUNDER FORK OPEN (no-parking rule, surfaced immediately):
+  the approved Viking Press + Plate-Loaded Shoulder Press front_delts
+  retag (v63 migration, written and working) trips the FOUNDER-SET
+  division-specialisation gate: planengineRebuildPhase2.test.js
+  overlapPct(bikini, mensPhysique) rises 0.50 -> 0.56 (stash-verified
+  cause; poolGenerator.js:55 maps all front_delts to sub 'press' while
+  side_delts:38 only maps overhead_press). Retag diff sits UNCOMMITTED in
+  the tree (database.js v63, seedExercises.js, frontDeltMigration tests -
+  9/9 pass). Founder options: (a) pool-rule fix so overlap returns <50,
+  (b) raise the gate, (c) narrow the retag. DO NOT commit until ruled.
+  ALSO PENDING: founder decision round (notifications drift, rest-day A2,
+  plan-G acceleration + adherence-why) - asked once, founder deferred;
+  re-raise when founder is ready, never silently drop.
