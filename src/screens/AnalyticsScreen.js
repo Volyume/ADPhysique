@@ -31,7 +31,7 @@ import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, for
 import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
-import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
+import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan,
@@ -554,11 +554,11 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Partners (spec B8): promoted from the Explore grid to directly
-            after the insight stack. A NavTile in a full-width row so it reads
-            as a proper destination, not a buried grid cell. Keeps the Pro
-            lock; label only (NavTile shows no sub-line outside the locked
-            countdown state, so no component surgery). ── */}
+        {/* ── Partners (spec B8): promoted from the More-stats grid to
+            directly after the insight stack. A NavTile in a full-width row
+            so it reads as a proper destination, not a buried grid cell.
+            Keeps the Pro lock; label only (NavTile shows no sub-line outside
+            the locked countdown state, so no component surgery). ── */}
         <View style={styles.section}>
           <View style={styles.navGrid}>
             <NavTile
@@ -614,9 +614,38 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Text style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
             </View>
-            {recentSessions.map(w => (
-              <SessionCard key={w.id} workout={w} />
-            ))}
+            {recentSessions.map(w => {
+              // L04-1 (design audit 2026-07-09): these cards used to render
+              // with no onPress while sharing the same tappable-looking Card
+              // styling as every other navigating card on this screen. Wire
+              // them to WorkoutSummary (read-only), computing the same stats
+              // WorkoutHistoryScreen derives from allSets/exerciseMap so the
+              // summary isn't just zeros.
+              const mySets = allSets.filter(s => s.workoutId === w.id);
+              const workingSets = mySets.filter(s => s.setType !== 'warmup');
+              const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
+              const exerciseNames = exerciseIds.slice(0, 4)
+                .map(id => exerciseMap[id]?.name)
+                .filter(Boolean);
+              return (
+                <SessionCard
+                  key={w.id}
+                  workout={w}
+                  onPress={() => navigation.navigate('WorkoutSummary', {
+                    workoutId: w.id,
+                    durationMinutes: w.durationMinutes,
+                    exerciseCount: exerciseIds.length,
+                    setCount: mySets.length,
+                    workingSetCount: workingSets.length,
+                    tonnage: calculateTonnage(mySets),
+                    exerciseNames,
+                    startedAt: w.startedAt,
+                    endedAt: w.endedAt,
+                    readOnly: true,
+                  })}
+                />
+              );
+            })}
           </View>
         )}
 
@@ -689,8 +718,12 @@ export default function AnalyticsScreen({ navigation, route }) {
         )}
 
         {/* ── Quick nav tiles ────────────────────────────────── */}
+        {/* L04-14 (design audit 2026-07-09): "Explore" was a generic label
+            over Consistency/Lifts/Body Metrics/Full History/Recaps/Year of
+            Lifts (prior audit R6). "More stats" says what the grid actually
+            is, matching the app's own "progress stats" terminology. */}
         <View style={styles.section}>
-          <SectionLabel>Explore</SectionLabel>
+          <SectionLabel>More stats</SectionLabel>
           <View style={styles.navGrid}>
             <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
@@ -962,12 +995,17 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
   );
 }
 
-function SessionCard({ workout }) {
+function SessionCard({ workout, onPress }) {
   const name = workout.name || 'Session';
   const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
   const diff = workout.sessionDifficulty ?? null;
   return (
-    <Card radius="md" style={styles.sessionCard}>
+    <Card
+      radius="md"
+      style={styles.sessionCard}
+      onPress={onPress}
+      accessibilityLabel={`View summary for ${name}`}
+    >
       <View style={styles.sessionLeft}>
         <Text style={styles.sessionName} numberOfLines={1}>{name}</Text>
         <Text style={styles.sessionMeta}>
@@ -982,6 +1020,7 @@ function SessionCard({ workout }) {
           </Text>
         </View>
       )}
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </Card>
   );
 }

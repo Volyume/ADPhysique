@@ -384,30 +384,6 @@ const chartStyles = StyleSheet.create({
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
 
-// ─── Opt-in gate ─────────────────────────────────────────────────────────────
-
-function PhysiqueOptIn({ onEnable }) {
-  return (
-    <Card radius="xl" padding="xxl" style={styles.optInCard}>
-      <Ionicons name="lock-closed-outline" size={36} color={colors.textMuted} />
-      <Text style={styles.optInTitle}>Physique Tracking</Text>
-      <Text style={styles.optInBody}>
-        Track your body weight and measurements over time. All data stays on your
-        device. It is never shared or uploaded.
-      </Text>
-      <Button
-        title="Enable Physique Tracking"
-        icon="body-outline"
-        onPress={onEnable}
-        accessibilityLabel="Enable Physique Tracking"
-        size="lg"
-        style={styles.optInBtn}
-        textStyle={styles.optInBtnText}
-      />
-    </Card>
-  );
-}
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen() {
@@ -674,11 +650,6 @@ export default function BodyMetricsScreen() {
     } catch (_e) { setRecentIntake(null); }
   }
 
-  async function enablePhysique() {
-    await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true');
-    setPhysiqueEnabled(true);
-  }
-
   async function saveMetrics() {
     // Live-tier re-check (hostile review E10 #1 class): a pro-to-free flip
     // while the form is open must not let this closure write.
@@ -748,19 +719,14 @@ export default function BodyMetricsScreen() {
     );
   }
 
-  // Opt-in gate. Read-only users skip it (hostile review E10 #7): it is a
-  // tracking pitch, and the lapse state is about SEEING history, not
-  // enabling tracking. The calm-mode re-confirmation below still applies.
-  if (!physiqueEnabled && !readOnly) {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <BackHeader title="Body metrics" />
-        <ScrollView contentContainerStyle={styles.optInContent}>
-          <PhysiqueOptIn onEnable={enablePhysique} />
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  // L04-7 (design audit 2026-07-09): the opt-in gate that used to render here
+  // was confirmed dead code — Pro users have physiqueEnabled force-set true
+  // above before this point ever runs, and read-only (free) users are
+  // excluded by the readOnly guard itself, so no real user could ever reach
+  // it. Removed rather than re-gated: there is no live scenario today where a
+  // user should see a tracking pitch on a screen they were already routed
+  // into (Pro users already have tracking on; free users only land here via
+  // withReadOnlyProGuard once they already have history to view).
 
   // Calmer experience: gentle re-confirmation once per app session.
   if (calm && !sessionConfirmed) {
@@ -1345,21 +1311,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   readOnlyCta: { ...type.label, color: colors.textPrimary },
-  optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
-  optInCard: {
-    alignItems: 'center', gap: spacing.lg,
-  },
-  optInTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  optInBody: {
-    ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
-  },
-  // Button adoption: box/fill/radius/padding now come from <Button size="lg">
-  // (primary variant); only the wider horizontal padding and top margin
-  // survive as local overrides.
-  optInBtn: {
-    paddingHorizontal: spacing.xl, marginTop: spacing.md,
-  },
-  optInBtnText: {},
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',

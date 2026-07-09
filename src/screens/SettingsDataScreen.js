@@ -15,7 +15,7 @@ import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles } from '../components/SettingsPrimitives';
 
 // Your data: cloud sync, import from other apps, backup/restore, CSV export,
 // and clear-history. Backup/restore and clear-history are destructive, so
@@ -270,6 +270,14 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={buildingReport ? null : exportCoachReport}
           showArrow={!buildingReport}
         />
+      </View>
+
+      {/* L04-9 (design audit 2026-07-09): isolated below the routine sync/
+          export/backup rows, matching SettingsAccountScreen's "Account
+          access" pattern, so a destructive tap is never next to a routine
+          action. */}
+      <SectionHeader title="Clear history" />
+      <View style={styles.section}>
         <SettingRow
           icon="trash-outline"
           label="Clear workout history"

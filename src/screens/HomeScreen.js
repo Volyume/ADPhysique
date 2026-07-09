@@ -2059,7 +2059,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sheetActionTitle}>Blank session</Text>
+                <Text style={styles.sheetActionTitle}>Blank workout</Text>
                 <Text style={styles.sheetActionSub}>Log freely without changing your plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />

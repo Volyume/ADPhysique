@@ -32,6 +32,17 @@ export const WHATS_NEW = {
     { icon: 'speedometer-outline', text: 'Long lists scroll smoother across the app.' },
     { icon: 'apps-outline', text: 'A home screen widget shows your next session or weekly consistency (Android). Add it from Settings.' },
   ],
+  // L04-10 (design audit 2026-07-09): app.json's marketing version is still
+  // 1.2.0 (no bump has happened since), so a new dated key can't safely be
+  // added here yet - guessing the wrong version string means the entry
+  // silently never fires, per this file's own "a version with no entry shows
+  // nothing" contract. When the next version bump ships, add its entry here
+  // with (at least) the features below, which have shipped since 1.2.0 was
+  // written and have never been announced: tap-to-edit/delete on logged sets,
+  // rest-timer lock-screen/notification Skip and +/-15 actions, plan->diary
+  // "mark as eaten" adherence, the micronutrient panel, the connected weekly
+  // story/recap surface. Founder/release-owner call on the version string;
+  // not a design/usability judgement this session can make.
 };
 
 export default function WhatsNewSheet() {
