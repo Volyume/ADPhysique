@@ -9,6 +9,7 @@ import Chip from '../components/Chip';
 import { DIETS } from '../lib/food/curatedMeals';
 import { ALLERGENS } from '../lib/food/foodRoles';
 import { CURATED_FOODS } from '../lib/food/curatedFoods';
+import * as haptics from '../lib/haptics';
 
 const DIET_LABELS = {
   omnivore: 'Omnivore',
@@ -48,6 +49,7 @@ export default function SettingsDietaryScreen() {
     ? userProfile.mealPlanExcludeFoods : [];
 
   function toggleAllergen(tag) {
+    haptics.selection();
     const isSelected = excludedTags.includes(tag);
     const next = isSelected
       ? excludedTags.filter((t) => t !== tag)
@@ -56,6 +58,7 @@ export default function SettingsDietaryScreen() {
   }
 
   function removeFood(foodKey) {
+    haptics.commit();
     removeMealPlanExcludedFood(foodKey);
   }
 
@@ -80,7 +83,7 @@ export default function SettingsDietaryScreen() {
                   key={opt.value}
                   label={opt.label}
                   selected={active}
-                  onPress={() => { setDiet(opt.value); setDietPreference(opt.value); }}
+                  onPress={() => { haptics.selection(); setDiet(opt.value); setDietPreference(opt.value); }}
                   accessibilityRole="radio"
                   accessibilityLabel={`Diet preference ${opt.label}`}
                   style={styles.gridChip}

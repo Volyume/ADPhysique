@@ -28,6 +28,7 @@ import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import * as haptics from '../lib/haptics';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -371,6 +372,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     // No "Are you sure?" Alert, the safety net is the Undo button.
     // Captures the removed exercise so Undo can put it back at its
     // original index, not the end.
+    haptics.commit();
     let removed = null;
     let removedIndex = -1;
     setDayList(prev => prev.map((d, i) => {
@@ -387,6 +389,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       action: {
         label: 'Undo',
         onPress: () => {
+          haptics.selection();
           setDayList(prev => prev.map((d, i) => {
             if (i !== dayIndex) return d;
             const next = d.exercises.slice();
@@ -399,6 +402,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   }
 
   function handleAddDay() {
+    haptics.selection();
     setDayList(prev => [
       ...prev,
       { localId: `day-${Date.now()}`, name: `Day ${prev.length + 1}`, exercises: [], routineId: null },
@@ -414,6 +418,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     // stale.
     const removed = days[dayIndex];
     if (!removed) return;
+    haptics.commit();
     setDayList(prev => prev.filter((_, i) => i !== dayIndex));
     // S5 edit mode: this day may already be a saved routine. Nothing is
     // written until Save, so mark it for soft-delete then (persistDays)
@@ -426,6 +431,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       action: {
         label: 'Undo',
         onPress: () => {
+          haptics.selection();
           setDayList(prev => {
             const next = prev.slice();
             next.splice(dayIndex, 0, removed);
@@ -472,6 +478,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     // clone gets a brand new routine on Save, so it always reloads last. Placing
     // it last here keeps the on-screen order identical to the saved-and-reloaded
     // order, instead of showing it mid-list then having it jump to the end.
+    haptics.selection();
     setDayList(prev => [...prev, clone]);
     toast.show(`Duplicated ${original.name}`, { variant: 'success' });
   }
@@ -494,6 +501,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
       return;
     }
+    haptics.selection();
     setSupersetSelection(prev => {
       const next = new Set(prev[dayIndex] || []);
       if (next.has(exLocalId)) next.delete(exLocalId);
@@ -518,6 +526,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
       return;
     }
+    haptics.selection();
     const groupId = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
@@ -532,6 +541,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   }
 
   function handleUngroupSuperset(dayIndex, groupId) {
+    haptics.commit();
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
       return {
@@ -579,6 +589,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // persist and reload correctly (getRoutineExercisesWithDetails reads back
   // `ORDER BY re.order_in_routine ASC`).
   function moveExercise(dayIndex, exLocalId, direction) {
+    let moved = false;
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
       // Reorder at the level of superset BLOCKS, not individual rows. A pair
@@ -599,10 +610,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
       if (bIdx === -1) return d;
       const swapIdx = direction === 'up' ? bIdx - 1 : bIdx + 1;
       if (swapIdx < 0 || swapIdx >= blocks.length) return d;
+      moved = true;
       const next = blocks.slice();
       [next[bIdx], next[swapIdx]] = [next[swapIdx], next[bIdx]];
       return { ...d, exercises: next.flat() };
     }));
+    if (moved) haptics.selection();
   }
 
   // ── Validation & persistence ──────────────────────────────────────────────
@@ -796,7 +809,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     key={g.key}
                     label={g.label}
                     selected={selectedGoal === g.key}
-                    onPress={() => setGoal(g.key)}
+                    onPress={() => { haptics.selection(); setGoal(g.key); }}
                     accessibilityLabel={g.label}
                     style={styles.pill}
                     labelStyle={styles.pillText}
@@ -814,7 +827,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     key={n}
                     label={String(n)}
                     selected={daysPerWeek === n}
-                    onPress={() => setDaysPerWeek(n)}
+                    onPress={() => { haptics.selection(); setDaysPerWeek(n); }}
                     accessibilityLabel={`${n} training days per week`}
                     style={styles.dayCountPill}
                     labelStyle={styles.pillText}

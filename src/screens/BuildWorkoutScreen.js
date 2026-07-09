@@ -23,6 +23,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 const DEFAULT_SETS = 3;
 // The shipped global default rest (defaultRestSeconds starts at 90, Hevy
@@ -71,6 +72,7 @@ export default function BuildWorkoutScreen({ navigation }) {
     // this exercise (compound 180s, isolation 90s) and label it "suggested".
     // A user-set default (anything other than 90) always wins, so nobody who
     // chose their own rest sees it change. Editable via the stepper as before.
+    haptics.selection();
     const hasCustomDefault =
       Number.isFinite(defaultRestSeconds) && defaultRestSeconds !== DEFAULT_REST;
     setExercises(prev => [...prev, {
@@ -87,6 +89,7 @@ export default function BuildWorkoutScreen({ navigation }) {
   }
 
   function removeExercise(key) {
+    haptics.commit();
     setExercises(prev => prev.filter(e => e.key !== key));
   }
 
@@ -391,7 +394,7 @@ export default function BuildWorkoutScreen({ navigation }) {
               icon={opt.icon}
               selected={travelEquipment === opt.id}
               accessibilityRole="radio"
-              onPress={() => setTravelEquipment(opt.id)}
+              onPress={() => { haptics.selection(); setTravelEquipment(opt.id); }}
               style={styles.travelOptionChip}
             />
           ))}

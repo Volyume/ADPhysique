@@ -10,6 +10,7 @@ import Chip from '../components/Chip';
 import { appAlert } from '../components/AppAlert';
 import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 const DIET_OPTIONS = [
   { value: 'omnivore', label: 'Omnivore' },
@@ -43,6 +44,7 @@ export default function SettingsProfileScreen() {
   // per founder direction the next weekly check-in picks up the new sex.
   async function changeSex(value) {
     if (!user?.id || (value !== 'male' && value !== 'female')) return;
+    haptics.selection();
     const previous = sex;
     setSex(value);
     try {
@@ -142,7 +144,7 @@ export default function SettingsProfileScreen() {
                   key={opt.value}
                   label={opt.label}
                   selected={active}
-                  onPress={() => { setDiet(opt.value); setDietPreference(opt.value); }}
+                  onPress={() => { haptics.selection(); setDiet(opt.value); setDietPreference(opt.value); }}
                   accessibilityRole="radio"
                   accessibilityLabel={`Diet preference ${opt.label}`}
                   style={styles.dietChip}

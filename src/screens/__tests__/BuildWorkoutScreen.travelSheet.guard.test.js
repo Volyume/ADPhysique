@@ -10,8 +10,11 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
     expect(source).toMatch(
       /<BottomSheet[\s\S]*visible=\{showTravelModal\}[\s\S]*onClose=\{\(\) => setShowTravelModal\(false\)\}[\s\S]*accessibilityLabel="Travel or hotel gym equipment picker"/,
     );
+    // Haptics rollout (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
+    // the equipment pick now fires haptics.selection() before setTravelEquipment,
+    // so the onPress body is a block rather than a bare call.
     expect(source).toMatch(
-      /<Chip[\s\S]*selected=\{travelEquipment === opt\.id\}[\s\S]*accessibilityRole="radio"[\s\S]*onPress=\{\(\) => setTravelEquipment\(opt\.id\)\}/,
+      /<Chip[\s\S]*selected=\{travelEquipment === opt\.id\}[\s\S]*accessibilityRole="radio"[\s\S]*onPress=\{\(\) => \{ haptics\.selection\(\); setTravelEquipment\(opt\.id\); \}\}/,
     );
     expect(source).not.toMatch(/styles\.travelOverlay/);
     expect(source).not.toMatch(/styles\.travelOpt[\],)]/);

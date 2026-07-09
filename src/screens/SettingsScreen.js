@@ -10,6 +10,7 @@ import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles } from '../components/SettingsPrimitives';
 import NumericStepper from '../components/Stepper';
 import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
+import * as haptics from '../lib/haptics';
 
 // Body-weight unit options. Gym weights stay kg-only by design (UK); this
 // only controls how a user's own body weight is shown/entered.
@@ -217,7 +218,7 @@ export default function SettingsScreen({ navigation }) {
                   <TouchableOpacity
                     key={opt.value}
                     style={[local.segBtn, active && local.segBtnActive]}
-                    onPress={() => { if (!active) setBodyWeightUnits(opt.value); }}
+                    onPress={() => { if (!active) { haptics.selection(); setBodyWeightUnits(opt.value); } }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={opt.label}
@@ -260,7 +261,7 @@ export default function SettingsScreen({ navigation }) {
           rightElement={
             <Switch
               value={!!autoStartRestTimer}
-              onValueChange={v => setAutoStartRestTimer(v)}
+              onValueChange={v => { haptics.selection(); setAutoStartRestTimer(v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={autoStartRestTimer ? colors.primary : colors.textMuted}
             />
@@ -278,7 +279,7 @@ export default function SettingsScreen({ navigation }) {
           rightElement={
             <Switch
               value={!!restEndAlertEnabled}
-              onValueChange={v => setRestEndAlertEnabled(v)}
+              onValueChange={v => { haptics.selection(); setRestEndAlertEnabled(v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={restEndAlertEnabled ? colors.primary : colors.textMuted}
             />

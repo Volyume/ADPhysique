@@ -26,6 +26,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import ExercisePickerModal from '../components/ExercisePickerModal';
+import * as haptics from '../lib/haptics';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
 function computeMuscleCoverage(exercises) {
@@ -155,11 +156,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function removeExercise(routineExercise) {
+    haptics.commit();
     await removeExerciseFromRoutine(routineExercise.id);
     await loadRoutine();
   }
 
   async function addExercise(exercise) {
+    haptics.selection();
     await addExerciseToRoutine(
       routineId,
       exercise.id,
@@ -221,6 +224,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         {
           text: 'Swap',
           onPress: async () => {
+            haptics.selection();
             await updateRoutineExerciseExercise(swapState.routineExerciseId, newExercise.id);
             setSwapState(null);
             setSwapCandidates([]);
@@ -236,6 +240,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     if (index === -1) return;
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= exercises.length) return;
+    haptics.selection();
 
     // Optimistic update
     const updated = [...exercises];
@@ -302,7 +307,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   const reorderToggle = (
     <TouchableOpacity
-      onPress={() => setIsReordering(prev => !prev)}
+      onPress={() => { haptics.selection(); setIsReordering(prev => !prev); }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}

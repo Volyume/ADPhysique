@@ -7,6 +7,7 @@ import useAppStore from '../store/useAppStore';
 import { colors, withAlpha, spacing, radius, type } from '../styles/theme';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
+import * as haptics from '../lib/haptics';
 
 // COMP-029: appearance is a FREE display setting (never Pro-gated). Default
 // Dark; Light is opt-in; Match phone follows the OS scheme.
@@ -91,6 +92,7 @@ export default function SettingsDisplayScreen() {
                 selected={active}
                 onPress={async () => {
                   if (active) return;
+                  haptics.selection();
                   // Await the write before prompting reload (a fast tap can tear
                   // down the VM before the pref persists).
                   await setAccessibilityPref('theme', opt.value);
@@ -120,7 +122,7 @@ export default function SettingsDisplayScreen() {
                 key={opt.value}
                 label={opt.label}
                 selected={active}
-                onPress={() => { if (!active) setAccessibilityPref('energyUnit', opt.value); }}
+                onPress={() => { if (!active) { haptics.selection(); setAccessibilityPref('energyUnit', opt.value); } }}
                 accessibilityRole="radio"
                 accessibilityLabel={opt.value === 'kj' ? 'Kilojoules' : 'Kilocalories'}
                 style={local.segChip}
@@ -141,7 +143,7 @@ export default function SettingsDisplayScreen() {
           rightElement={
             <Switch
               value={accessibility.showHomeNutrition !== false}
-              onValueChange={(v) => setAccessibilityPref('showHomeNutrition', v)}
+              onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showHomeNutrition', v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={(accessibility.showHomeNutrition !== false) ? colors.primary : colors.textMuted}
             />
@@ -162,7 +164,7 @@ export default function SettingsDisplayScreen() {
           rightElement={
             <Switch
               value={accessibility.showFibre !== false}
-              onValueChange={(v) => setAccessibilityPref('showFibre', v)}
+              onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showFibre', v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={(accessibility.showFibre !== false) ? colors.primary : colors.textMuted}
             />
@@ -176,7 +178,7 @@ export default function SettingsDisplayScreen() {
           rightElement={
             <Switch
               value={accessibility.showSugar !== false}
-              onValueChange={(v) => setAccessibilityPref('showSugar', v)}
+              onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSugar', v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={(accessibility.showSugar !== false) ? colors.primary : colors.textMuted}
             />
@@ -190,7 +192,7 @@ export default function SettingsDisplayScreen() {
           rightElement={
             <Switch
               value={accessibility.showSodium !== false}
-              onValueChange={(v) => setAccessibilityPref('showSodium', v)}
+              onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSodium', v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={(accessibility.showSodium !== false) ? colors.primary : colors.textMuted}
             />
@@ -208,6 +210,7 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={!!accessibility.largerText}
               onValueChange={async v => {
+                haptics.selection();
                 // Await the AsyncStorage write before prompting reload, otherwise
                 // a fast "Reload now" tap can tear down the JS VM before the pref
                 // persists, and the user sees no change on restart.
@@ -228,6 +231,7 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={!!accessibility.higherContrast}
               onValueChange={async v => {
+                haptics.selection();
                 await setAccessibilityPref('higherContrast', v);
                 promptRestartForA11y('Higher contrast');
               }}
@@ -245,6 +249,7 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={!!accessibility.colorBlindSafe}
               onValueChange={async v => {
+                haptics.selection();
                 await setAccessibilityPref('colorBlindSafe', v);
                 promptRestartForA11y('Colour-blind safe palette');
               }}
@@ -261,7 +266,7 @@ export default function SettingsDisplayScreen() {
           rightElement={
             <Switch
               value={!!accessibility.reduceMotion}
-              onValueChange={v => setAccessibilityPref('reduceMotion', v)}
+              onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotion', v); }}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={accessibility.reduceMotion ? colors.primary : colors.textMuted}
             />

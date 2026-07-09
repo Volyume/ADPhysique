@@ -7,6 +7,7 @@ import useAppStore from '../store/useAppStore';
 import { colors, withAlpha } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 import {
   isHealthAvailable, getHealthProviderLabel,
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights, importNewCardio,
@@ -61,6 +62,7 @@ export default function SettingsHealthScreen() {
   }
 
   async function handleToggleWeight(next) {
+    haptics.selection();
     if (!next) {
       // Health Connect / HealthKit deliberately don't expose a "revoke"
       // API to the app. Send the user to the system Settings where they
@@ -95,6 +97,7 @@ export default function SettingsHealthScreen() {
   }
 
   async function handleToggleCardio(next) {
+    haptics.selection();
     if (!next) {
       toast.show('Open Health settings to turn cardio reading off', { variant: 'info' });
       await openSystemHealthSettings();
@@ -126,6 +129,7 @@ export default function SettingsHealthScreen() {
   }
 
   async function handleToggleWorkout(next) {
+    haptics.selection();
     if (!next) {
       toast.show('Open Health settings to turn workout writing off', { variant: 'info' });
       await openSystemHealthSettings();
