@@ -27,7 +27,7 @@ import {
   getExerciseById, getWorkoutSetsForExercise, getAllExercises,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
 } from '../lib/database';
-import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
+import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR } from '../lib/algorithms';
 import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
@@ -128,6 +128,74 @@ export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeByI
     volume: series.volume[i] ?? 0,
     bestSetVolume: Math.round(sess.topWeight * sess.topReps),
   }));
+}
+
+// CP-5 (scorecard): which sessions earned a personal best, for the trend
+// chart's PR markers. Reuses `detectPR` — the SAME per-set PR engine
+// ActiveWorkoutScreen calls at log time — rather than a second set of PR
+// rules; this just replays it over history instead of inventing new logic.
+// Working sets are replayed oldest -> newest, each compared against every
+// set logged strictly before it (all-time, mirrors ActiveWorkoutScreen's
+// prHistory), and grouped into sessions the same way buildDetailMetricPoints
+// does. A session counts as a PR session only when detectPR fires AND the
+// history it fired against was non-empty; the very first-ever set for an
+// exercise always "beats" the empty history (detectPR's baseline
+// heaviest_weight entry) but the app already treats that honestly as a
+// first-lift acknowledgement, not a personal record (Wave A A1, see
+// ActiveWorkoutScreen's `prs.length > 0 && prHistory.length === 0` gate and
+// src/lib/__tests__/detectPR.firstLift.test.js) - this mirrors that exact
+// gate rather than re-deciding it. Mirrors ActiveWorkoutScreen's
+// isWeightReps check too: distance/duration exercises (which reuse the
+// weight column for metres/seconds) never produce a marker. Pure and
+// exported for unit testing. Returns a Set of session timestamps (the same
+// `date` buildDetailMetricPoints assigns each point), so a caller can match
+// markers to whichever window is currently shown without re-deriving
+// indices per window.
+export function derivePRSessionDates(allSessions, exercise, exerciseTypeById) {
+  const dates = new Set();
+  const exerciseId = exercise?.id;
+  if (exerciseId == null) return dates;
+  const exerciseType = exerciseTypeById?.get(exerciseId) ?? exercise?.exerciseType ?? 'weight_reps';
+  if (exerciseType === 'distance' || exerciseType === 'duration') return dates;
+
+  const workingSets = (allSessions || []).flat().filter(s => (
+    s
+    && (s.setType ?? s.set_type) !== 'warmup'
+    && (s.exerciseId ?? s.exercise_id) === exerciseId
+    && (Number(s.weight) || 0) > 0
+    && (Number(s.actualReps ?? s.actual_reps) || 0) > 0
+  ));
+  workingSets.sort((a, b) => (
+    (Number(a.createdAt ?? a.created_at) || 0) - (Number(b.createdAt ?? b.created_at) || 0)
+  ));
+
+  // Group into sessions (workoutId) purely to report the session's own `at`
+  // (max createdAt among its sets), identical to buildDetailMetricPoints, so
+  // a marker can be matched to a chart point by date.
+  const bySession = new Map();
+  for (const s of workingSets) {
+    const at = Number(s.createdAt ?? s.created_at) || 0;
+    const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
+    if (!bySession.has(sessionId)) bySession.set(sessionId, { at: 0, sets: [] });
+    const sess = bySession.get(sessionId);
+    sess.at = Math.max(sess.at, at);
+    sess.sets.push(s);
+  }
+  const orderedSessions = [...bySession.values()].sort((a, b) => a.at - b.at);
+
+  const history = [];
+  for (const sess of orderedSessions) {
+    let sessionHasPR = false;
+    for (const s of sess.sets) {
+      const prs = detectPR(s, history, exercise, 'kg');
+      // Same gate as ActiveWorkoutScreen: a hit against empty history is the
+      // honest "first lift", not a personal record.
+      if (prs.length > 0 && history.length > 0) sessionHasPR = true;
+      history.push(s);
+    }
+    if (sessionHasPR) dates.add(sess.at);
+  }
+  return dates;
 }
 
 // Split form-tip / notes prose into ordered steps for numbered rendering.
@@ -438,6 +506,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const chartCoversAll = windowedPoints.length === allChartPoints.length;
   const activeYKey = chartMetric;
   const activeMetricIsWeight = WEIGHT_METRICS.has(chartMetric);
+
+  // CP-5: sessions that earned a personal best, mapped onto the CURRENTLY
+  // windowed points so the chart's highlightIndices always match what's on
+  // screen (derived from all-time history, independent of the window/metric).
+  const prSessionDates = derivePRSessionDates(allSessions, exercise, exerciseTypeById);
+  const prHighlightIndices = windowedPoints.reduce((acc, p, i) => {
+    if (prSessionDates.has(p.date)) acc.push(i);
+    return acc;
+  }, []);
   const chartTakeaway = (windowedPoints.length >= 2 && activeMetricIsWeight)
     ? e1rmTakeaway({
         windowKey: chartWindowKey, coversAll: chartCoversAll, points: windowedPoints,
@@ -697,6 +774,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   areaBottomColor={colors.chartFill}
                   curved
                   interactive
+                  highlightIndices={prHighlightIndices}
                   accessibilityLabel={`${CHART_METRICS.find(m => m.key === chartMetric)?.label ?? 'Strength'} trend chart`}
                   formatTooltip={(i) => {
                     const p = windowedPoints[i];

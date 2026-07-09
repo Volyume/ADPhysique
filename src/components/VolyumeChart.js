@@ -23,7 +23,9 @@
 // Data shape: [{ value:number, label?:string }]; pass
 // `data2` for a faint secondary series (e.g. raw behind a smoothed trend).
 // `interactive` enables the scrub; `formatTooltip(index) => { title, sub }` lets
-// the host phrase the tooltip from its own (dated) data.
+// the host phrase the tooltip from its own (dated) data. `highlightIndices`
+// (line variant only) marks personal-best points with a small gold ring, and
+// folds "Personal best" into the scrub announcement for a marked point.
 
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
@@ -77,6 +79,14 @@ export default function VolyumeChart({
   barWidth = null,
   barGap = 2,
   onScrubIndex = null,
+  // CP-5 (scorecard): indices into `data` (line variant only) that earned a
+  // personal best. Rendered as a small ring-and-dot marker in the gold trophy
+  // token (matching the app's existing PR iconography, e.g. ExerciseDetailScreen's
+  // "Personal bests" card) and folded into the scrub announcement ("Personal
+  // best") where the chart already speaks the scrubbed point. No celebratory
+  // copy beyond that: training-performance data, not weight/body, so no
+  // ED-suppression gating applies (ED-safety note, CP-5).
+  highlightIndices = null,
 }) {
   const isBar = variant === 'bar';
   const gradId = useRef(`volyumeFill${Math.random().toString(36).slice(2, 9)}`).current;
@@ -138,7 +148,11 @@ export default function VolyumeChart({
       if (onScrubIndex) onScrubIndex(idx);
       if (formatTooltip) {
         const t = formatTooltip(idx);
-        if (t) AccessibilityInfo.announceForAccessibility(`${t.title}${t.sub ? `, ${t.sub}` : ''}`);
+        if (t) {
+          const isPR = Array.isArray(highlightIndices) && highlightIndices.includes(idx);
+          const announcement = `${t.title}${t.sub ? `, ${t.sub}` : ''}${isPR ? ', Personal best' : ''}`;
+          AccessibilityInfo.announceForAccessibility(announcement);
+        }
       }
     }
   }
@@ -256,6 +270,20 @@ export default function VolyumeChart({
         {showDots && points.map((p, i) => (
           <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={color} />
         ))}
+
+        {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
+            bounded by points.length so a stale index (e.g. a narrower window)
+            marks nothing rather than the wrong point. */}
+        {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
+          const p = idx >= 0 && idx < points.length ? points[idx] : null;
+          if (!p) return null;
+          return (
+            <React.Fragment key={`pr-${idx}`}>
+              <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={theme.gold} strokeWidth={1.5} />
+              <Circle cx={p.x} cy={p.y} r={1.5} fill={theme.gold} />
+            </React.Fragment>
+          );
+        })}
 
         {/* Scrub crosshair + active point */}
         {active ? (

@@ -641,3 +641,15 @@ OAuth SHA-1; Cut 4 seed walk.
   screen's "X sessions" header/calendar labels are internally consistent,
   left alone (screen-wide rename would be a drive-by). 4 new tests; full
   suite 595/596 green (env exception only); lint clean.
+- CHARTS BUNDLE LANDED (Sonnet, lead-reviewed): LT-6 was already fixed
+  (9c44e2d removed the 0.5 gridline alpha); agent added the missing
+  contrast regression tests (border vs surface/background: dark 3.45/3.81,
+  light 3.25/3.10 - all clear WCAG 3:1). CP-5 PR markers: VolyumeChart
+  highlightIndices prop (line variant, theme.gold ring, bounds-checked,
+  scrub announcement appends ", Personal best"); ExerciseDetailScreen
+  derivePRSessionDates replays detectPR (algorithms.js:538, same engine as
+  log time) chronologically with the Wave-A first-lift exclusion mirrored.
+  LEAD BLESSED the flagged call: markers show on ALL five chart lenses (a
+  PR is a fact about the session, lens-independent). New VolyumeChart suite
+  (9 tests) + 7 derivation tests; full suite 596 green (env exception
+  only); lint clean.
