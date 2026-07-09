@@ -91,8 +91,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null); // Date | null
-  // L07-F11: find a past workout by exercise or workout name. Filters the
-  // list already loaded by loadWorkouts, no extra query.
+  // L07-F11: find a past workout by workout name, routine name, or exercise
+  // name. Filters the list already loaded by loadWorkouts, no extra query -
+  // routineName already comes back on each row from the getRecentCompletedWorkouts
+  // JOIN in database.js, so no new database read is needed here.
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
       });
-      toast.show('Couldn\'t repeat session. Try again.', { variant: 'error' });
+      toast.show('Couldn\'t repeat workout. Try again.', { variant: 'error' });
     }
   }
 
@@ -208,7 +210,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   function handleDeleteWorkout(workout) {
     appAlert(
       'Delete this workout?',
-      'The session and all its sets are removed from your history, and your stats recalculate. This cannot be undone.',
+      'The workout and all its sets are removed from your history, and your stats recalculate. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -293,6 +295,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     if (q) {
       result = result.filter(item =>
         item.workout.name?.toLowerCase().includes(q) ||
+        item.workout.routineName?.toLowerCase().includes(q) ||
         item.allExerciseNames.some(n => n.toLowerCase().includes(q)),
       );
     }

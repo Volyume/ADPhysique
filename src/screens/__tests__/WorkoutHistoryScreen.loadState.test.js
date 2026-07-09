@@ -272,6 +272,107 @@ describe('WorkoutHistoryScreen load states', () => {
     expect(text).not.toContain('No matches for');
   });
 
+  test('L07-F11: search matches workout name, routine name and exercise name case-insensitively, and composes with the "This month" date filter', async () => {
+    const longAgo = new Date(2000, 0, 15, 10, 0, 0).getTime();
+    getRecentCompletedWorkouts.mockResolvedValue([
+      {
+        id: 'workout-name-match', userId: 'u1', startedAt: Date.now(), endedAt: Date.now() + 1800000,
+        isCompleted: true, name: 'Deadlift Day',
+      },
+      {
+        // Only this row carries the routine name, and it is dated long
+        // before the current month - it is the one the date-filter
+        // composition test below must exclude.
+        id: 'routine-name-match', userId: 'u1', startedAt: longAgo, endedAt: longAgo + 1800000,
+        isCompleted: true, name: 'Session B', routineName: 'Push Pull Legs',
+      },
+      {
+        id: 'exercise-name-match', userId: 'u1', startedAt: Date.now(), endedAt: Date.now() + 1800000,
+        isCompleted: true, name: 'Session C',
+      },
+      {
+        id: 'no-match', userId: 'u1', startedAt: Date.now(), endedAt: Date.now() + 1800000,
+        isCompleted: true, name: 'Random',
+      },
+    ]);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([
+      { workoutId: 'workout-name-match', exerciseId: 'ex-bench', setType: 'straight' },
+      { workoutId: 'exercise-name-match', exerciseId: 'ex-split-squat', setType: 'straight' },
+      { workoutId: 'no-match', exerciseId: 'ex-bench', setType: 'straight' },
+    ]);
+    getAllExercises.mockResolvedValue([
+      { id: 'ex-bench', name: 'Bench Press' },
+      { id: 'ex-split-squat', name: 'Bulgarian Split Squat' },
+    ]);
+
+    let tree;
+    await act(async () => {
+      tree = create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    const search = tree.root.findByType(SearchBar);
+
+    // Workout-name match, case-insensitive.
+    act(() => { search.props.onChangeText('deadLIFT'); });
+    expect(flattenText(tree.toJSON())).not.toContain('No matches for');
+
+    // Routine-name match, case-insensitive (routineName is not on any other
+    // row here, so a non-empty result proves the routine name is searched).
+    act(() => { search.props.onChangeText('PUSH pull LEGS'); });
+    expect(flattenText(tree.toJSON())).not.toContain('No matches for');
+
+    // Exercise-name match, case-insensitive, for an exercise logged inside
+    // the session rather than in its name or routine.
+    act(() => { search.props.onChangeText('bulgarian SPLIT'); });
+    expect(flattenText(tree.toJSON())).not.toContain('No matches for');
+
+    // A query matching none of the four rows falls into the search-empty
+    // state, proving the filter is not accidentally permissive.
+    act(() => { search.props.onChangeText('nonexistentmove'); });
+    expect(flattenText(tree.toJSON())).toContain('No matches for "nonexistentmove"');
+
+    // Composition with the date filter: the routine-name match is the only
+    // row dated outside the current month, so pairing that same search term
+    // with "This month" must turn a non-empty result into the search-empty
+    // state - proving search and date filter combine rather than the date
+    // filter being bypassed.
+    act(() => { search.props.onChangeText('PUSH pull LEGS'); });
+    expect(flattenText(tree.toJSON())).not.toContain('No matches for');
+    act(() => {
+      tree.root.findByProps({ accessibilityLabel: 'Filter: This month' }).props.onPress();
+    });
+    expect(flattenText(tree.toJSON())).toContain('No matches for "PUSH pull LEGS"');
+  });
+
+  test('L07-F11: clearing the search field directly (not via "Show all sessions") restores the full, unfiltered list', async () => {
+    getRecentCompletedWorkouts.mockResolvedValue([{
+      id: 'leg-day', userId: 'u1', startedAt: Date.now(), endedAt: Date.now() + 1800000,
+      isCompleted: true, name: 'Leg Day',
+    }]);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
+    getAllExercises.mockResolvedValue([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    const search = tree.root.findByType(SearchBar);
+
+    act(() => { search.props.onChangeText('nonexistentmove'); });
+    expect(flattenText(tree.toJSON())).toContain('No matches for "nonexistentmove"');
+
+    // An empty query is not itself a narrowing filter: clearing the field
+    // (as the SearchBar's own clear button does) must show the full list
+    // again, the same as it was before any search was typed.
+    act(() => { search.props.onChangeText(''); });
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toContain('No matches for');
+    expect(text).not.toContain('No sessions match this view');
+  });
+
   test('ignores stale overlapping refresh results before fetching sets', async () => {
     const older = deferred();
     const newer = deferred();
@@ -369,6 +470,25 @@ describe('WorkoutHistoryScreen summary polish', () => {
     expect(WORKOUT_HISTORY_SOURCE).toContain('fullSummaryBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(WORKOUT_HISTORY_SOURCE).toContain('repeatBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(WORKOUT_HISTORY_SOURCE).not.toMatch(/repeatBtnText: \{[\s\S]*color: colors\.primary/);
+  });
+
+  test('L01-B37: history-card repeat/delete copy is normalised to "workout" (the app\'s dominant term), not mixed with "session"', () => {
+    // Source-level guard: pins the actual strings the repeat and delete
+    // handlers show the user, so a future edit cannot silently reintroduce
+    // the same-card "Repeat session" / "Delete workout" drift the audit
+    // flagged (L01-B37). "workout" is the dominant term app-wide (grepped
+    // 2026-07-09: src/screens+src/components sentence-like copy, "workout"
+    // 62 vs "session" 39; raw string occurrences 228 vs 174).
+    expect(WORKOUT_HISTORY_SOURCE).toContain("Couldn\\'t repeat workout. Try again.");
+    expect(WORKOUT_HISTORY_SOURCE).toContain(
+      'The workout and all its sets are removed from your history, and your stats recalculate. This cannot be undone.',
+    );
+    expect(WORKOUT_HISTORY_SOURCE).not.toContain("Couldn\\'t repeat session");
+    expect(WORKOUT_HISTORY_SOURCE).not.toContain('The session and all its sets are removed');
+    // The repeat/delete action labels themselves already said "workout"
+    // before this fix; pin them too so the whole action group stays aligned.
+    expect(WORKOUT_HISTORY_SOURCE).toContain("accessibilityLabel=\"Repeat workout\"");
+    expect(WORKOUT_HISTORY_SOURCE).toContain("accessibilityLabel=\"Delete workout\"");
   });
 
   test('calendar reset uses a contained neutral control', () => {

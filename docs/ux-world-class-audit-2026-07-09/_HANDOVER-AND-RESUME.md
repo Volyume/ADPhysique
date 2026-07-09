@@ -632,3 +632,12 @@ OAuth SHA-1; Cut 4 seed walk.
   the current three in flight (Charts, History, Food-copy) land - token
   budget running tight for the 5-hour window. Prefer cheaper tiers even
   more aggressively; Smalls bundle fires only as part of a pair.
+- HISTORY BUNDLE LANDED (Sonnet, lead-reviewed): history text search was
+  mostly pre-built (e935be4); agent closed the routine-name gap (predicate
+  now matches workout name, routine name, exercise names - data already on
+  the row, no db change) and fixed L01-B37 card drift ("Couldn't repeat
+  session" -> workout; delete-confirm body "session" -> workout; "workout"
+  is the dominant app term 228:174). LEAD BLESSED the scoping call: the
+  screen's "X sessions" header/calendar labels are internally consistent,
+  left alone (screen-wide rename would be a drive-by). 4 new tests; full
+  suite 595/596 green (env exception only); lint clean.
