@@ -36,6 +36,7 @@ import { track } from '../lib/engineTelemetry';
 import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
+import EmptyState from '../components/EmptyState';
 
 // How long each story card holds before auto-advancing (Instagram-story feel).
 const STORY_MS = 5000;
@@ -653,19 +654,14 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {!loading && cards.length === 0 && (
         <View style={styles.loadingWrap}>
-          <Ionicons name="barbell-outline" size={36} color={colors.textMuted} />
-          <Text style={styles.emptyTitle}>{variant === 'week' ? 'No sessions this week' : 'No sessions yet'}</Text>
-          <Text style={styles.emptyBody}>
-            {variant === 'week' ? 'Log a session and your week starts filling in.' : "Come back here once you've logged a few sessions."}
-          </Text>
-          <TouchableOpacity
-            style={styles.doneBtn}
-            onPress={() => navigation.goBack()}
-            accessibilityRole="button"
-            accessibilityLabel="Done"
-          >
-            <Text style={styles.doneBtnText}>Done</Text>
-          </TouchableOpacity>
+          <EmptyState
+            icon="barbell-outline"
+            title={variant === 'week' ? 'No sessions this week' : 'No sessions yet'}
+            text={variant === 'week' ? 'Log a session and your week starts filling in.' : "Come back here once you've logged a few sessions."}
+            actionLabel="Done"
+            onAction={() => navigation.goBack()}
+            actionAccessibilityLabel="Done"
+          />
         </View>
       )}
 
@@ -754,8 +750,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, gap: spacing.md,
   },
   loadingText: { fontSize: fontSize.sm, color: colors.textMuted },
-  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  emptyBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
 
   // Cards
   cardWrap: {
@@ -861,17 +855,4 @@ const styles = StyleSheet.create({
   // A faint light wash while pressed: enough to acknowledge the tap on an
   // otherwise invisible zone without competing with the card artwork.
   tapPressed: { backgroundColor: withAlpha(colors.textPrimary, 0.08), borderRadius: radius.md },
-
-  doneBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    marginTop: spacing.md,
-  },
-  doneBtnText: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-  },
 });

@@ -9,11 +9,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import Button from '../components/Button';
+import EmptyState from '../components/EmptyState';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { SkeletonCard } from '../components/Skeleton';
 import {
-  colors, spacing, radius, fontSize, fontWeight, type, iconSize,
+  colors, spacing, radius, fontWeight, type, iconSize,
 } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
@@ -1578,50 +1579,34 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     if (loadError && photos.length === 0) {
       return (
-        <View style={styles.empty}>
-          <Ionicons name="warning-outline" size={32} color={colors.warning} />
-          <Text style={styles.emptyTitle}>Couldn't load progress photos</Text>
-          <Text style={styles.emptyHint}>
-            Try again. Volyume has not deleted or changed your photo library.
-          </Text>
-          <Button
-            title="Try again"
-            variant="secondary"
-            onPress={refresh}
-            style={styles.emptyAdd}
-            accessibilityLabel="Try loading progress photos again"
-          />
-        </View>
+        <EmptyState
+          icon="warning-outline"
+          title="Couldn't load progress photos"
+          text="Try again. Volyume has not deleted or changed your photo library."
+          actionLabel="Try again"
+          onAction={refresh}
+          actionAccessibilityLabel="Try loading progress photos again"
+        />
       );
     }
     if (photos.length === 0) {
       return (
-        <View style={styles.empty}>
-          <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
-          {readOnly ? (
-            <Text style={styles.emptyText}>No photos on this device.</Text>
-          ) : (
-            <>
-              <Text style={styles.emptyTitle}>No saved photos yet</Text>
-              <Text style={styles.emptyHint}>
-                Add front, back and side photos to start.
-              </Text>
-            </>
-          )}
-        </View>
+        <EmptyState
+          icon="camera-outline"
+          title={readOnly ? undefined : 'No saved photos yet'}
+          text={readOnly ? 'No photos on this device.' : 'Add front, back and side photos to start.'}
+        />
       );
     }
     return (
-      <View style={styles.empty}>
-        <Ionicons name="images-outline" size={32} color={colors.textMuted} />
-        <Text style={styles.emptyText}>
-          {poseFilter !== 'all' && hasRange
-            ? 'No photos match this pose and date range.'
-            : hasRange
-              ? 'No photos in this date range.'
-              : 'No photos with this pose yet.'}
-        </Text>
-      </View>
+      <EmptyState
+        icon="images-outline"
+        text={poseFilter !== 'all' && hasRange
+          ? 'No photos match this pose and date range.'
+          : hasRange
+            ? 'No photos in this date range.'
+            : 'No photos with this pose yet.'}
+      />
     );
   }
 
@@ -2465,10 +2450,4 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
-  emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  emptyHint: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
-  emptySupport: { ...type.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
-  emptyAdd: { marginTop: spacing.md },
 });

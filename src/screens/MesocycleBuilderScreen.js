@@ -14,6 +14,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
+import EmptyState from '../components/EmptyState';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
@@ -295,17 +296,13 @@ export default function MesocycleBuilderScreen({ navigation }) {
               <SkeletonCard height={72} />
             </View>
           ) : activeStats ? null : (
-            <View style={styles.empty}>
-              <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
-              <Text style={styles.emptyTitle}>
-                {activePlan ? 'No block running yet' : 'Your training blocks start here'}
-              </Text>
-              <Text style={styles.emptyText}>
-                {activePlan
-                  ? 'Your plan is active and ready to train. A training block adds week-by-week tracking on top, and one starts when you activate a plan.'
-                  : 'Training blocks start when you activate a plan. Activate one to track week-by-week progress across a training phase.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="calendar-outline"
+              title={activePlan ? 'No block running yet' : 'Your training blocks start here'}
+              text={activePlan
+                ? 'Your plan is active and ready to train. A training block adds week-by-week tracking on top, and one starts when you activate a plan.'
+                : 'Training blocks start when you activate a plan. Activate one to track week-by-week progress across a training phase.'}
+            />
           )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
@@ -488,9 +485,6 @@ const styles = StyleSheet.create({
 
   // Empty
   skeletonWrap: { gap: spacing.md },
-  empty:      { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
-  emptyTitle: { ...type.h3, color: colors.textSecondary },
-  emptyText:  { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
 
   summaryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,

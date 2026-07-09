@@ -20,6 +20,11 @@ import { create, act } from 'react-test-renderer';
 
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
+// The screen's renderEmpty() now goes through the shared EmptyState -> Button
+// primitive (Batch 2 EmptyState adoption), which pulls in expo-haptics
+// transitively; expo-haptics throws under the Jest node environment when not
+// mocked (see WeeklyCheckInScreen.scanEvidence.test.js for the same pattern).
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn(), press: jest.fn(), error: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),

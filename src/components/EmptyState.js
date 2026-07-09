@@ -12,7 +12,9 @@ import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme
  *   title      - short headline
  *   text       - one or two sentence explanation
  *   actionLabel / onAction         - primary CTA (optional)
+ *   actionAccessibilityLabel       - overrides the primary CTA's a11y label (defaults to actionLabel, same as Button)
  *   secondaryLabel / onSecondary   - secondary CTA (optional)
+ *   secondaryAccessibilityLabel    - overrides the secondary CTA's a11y label (defaults to secondaryLabel)
  *   ghost      - if true, renders faint/dismissible "your data will look like this" style
  *   onDismiss  - if provided with ghost, shows a dismiss control
  *   compact    - tighter padding for inline use
@@ -23,8 +25,10 @@ export default function EmptyState({
   text,
   actionLabel,
   onAction,
+  actionAccessibilityLabel,
   secondaryLabel,
   onSecondary,
+  secondaryAccessibilityLabel,
   ghost = false,
   onDismiss,
   compact = false,
@@ -69,10 +73,23 @@ export default function EmptyState({
       {(actionLabel || secondaryLabel) && (
         <View style={styles.actions}>
           {actionLabel && onAction && (
-            <Button title={actionLabel} onPress={onAction} size="md" fullWidth={false} />
+            <Button
+              title={actionLabel}
+              onPress={onAction}
+              size="md"
+              fullWidth={false}
+              accessibilityLabel={actionAccessibilityLabel}
+            />
           )}
           {secondaryLabel && onSecondary && (
-            <Button title={secondaryLabel} onPress={onSecondary} variant="secondary" size="md" fullWidth={false} />
+            <Button
+              title={secondaryLabel}
+              onPress={onSecondary}
+              variant="secondary"
+              size="md"
+              fullWidth={false}
+              accessibilityLabel={secondaryAccessibilityLabel}
+            />
           )}
         </View>
       )}

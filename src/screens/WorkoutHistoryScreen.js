@@ -16,8 +16,7 @@ import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
-import Button from '../components/Button';
-import { EmptyWorkoutsIllustration } from '../components/Illustrations';
+import EmptyState from '../components/EmptyState';
 import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
@@ -740,45 +739,29 @@ export default function WorkoutHistoryScreen({ navigation }) {
               <SkeletonRow />
             </View>
           ) : loadError ? (
-            <View style={styles.empty}>
-              <View style={styles.errorIconWrap}>
-                <Ionicons name="alert-circle-outline" size={24} color={colors.warning} />
-              </View>
-              <Text style={styles.emptyTitle}>Couldn't load workout history</Text>
-              <Text style={styles.emptyText}>
-                Check your connection and try again. Your saved sessions have not been changed.
-              </Text>
-              <Button
-                title="Try again"
-                variant="secondary"
-                onPress={loadWorkouts}
-                accessibilityLabel="Try loading workout history again"
-                style={styles.emptyAction}
-              />
-            </View>
+            <EmptyState
+              icon="alert-circle-outline"
+              title="Couldn't load workout history"
+              text="Check your connection and try again. Your saved sessions have not been changed."
+              actionLabel="Try again"
+              onAction={loadWorkouts}
+              actionAccessibilityLabel="Try loading workout history again"
+            />
           ) : hasNarrowedEmpty ? (
-            <View style={styles.empty}>
-              <View style={styles.errorIconWrap}>
-                <Ionicons name={viewMode === 'calendar' ? 'calendar-outline' : 'filter-outline'} size={24} color={colors.textMuted} />
-              </View>
-              <Text style={styles.emptyTitle}>{narrowedEmptyTitle}</Text>
-              <Text style={styles.emptyText}>{narrowedEmptyText}</Text>
-              <Button
-                title="Show all sessions"
-                variant="secondary"
-                onPress={showAllSessions}
-                accessibilityLabel="Show all workout sessions"
-                style={styles.emptyAction}
-              />
-            </View>
+            <EmptyState
+              icon={viewMode === 'calendar' ? 'calendar-outline' : 'filter-outline'}
+              title={narrowedEmptyTitle}
+              text={narrowedEmptyText}
+              actionLabel="Show all sessions"
+              onAction={showAllSessions}
+              actionAccessibilityLabel="Show all workout sessions"
+            />
           ) : (
-            <View style={styles.empty}>
-              <EmptyWorkoutsIllustration size={140} />
-              <Text style={styles.emptyTitle}>Your sessions will appear here</Text>
-              <Text style={styles.emptyText}>
-                Completed workouts appear here. Each session is saved automatically when you finish.
-              </Text>
-            </View>
+            <EmptyState
+              icon="barbell-outline"
+              title="Your sessions will appear here"
+              text="Completed workouts appear here. Each session is saved automatically when you finish."
+            />
           )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
@@ -1082,30 +1065,4 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textPrimary,
   },
-  empty: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
-    gap: spacing.md,
-  },
-  errorIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface2,
-  },
-  emptyTitle: {
-    ...type.title,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  emptyAction: { alignSelf: 'stretch', marginTop: spacing.sm },
 });

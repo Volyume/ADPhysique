@@ -23,6 +23,11 @@ const mockToastShow = jest.fn();
 
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
+// The screen's renderEmpty() now goes through the shared EmptyState -> Button
+// primitive (Batch 2 EmptyState adoption), which pulls in expo-haptics
+// transitively; expo-haptics throws under the Jest node environment when not
+// mocked (see WeeklyCheckInScreen.scanEvidence.test.js for the same pattern).
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn(), press: jest.fn(), error: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -197,9 +202,15 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).toMatch(/import \{ navigateCrossTab \} from '\.\.\/navigation\/navigateCrossTab';/);
     expect(SCREEN_SOURCE).toMatch(/Set your targets first and Volyume can suggest meals that fit them\./);
     expect(SCREEN_SOURCE).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionTargets'\)/);
-    expect(SCREEN_SOURCE).toMatch(/accessibilityLabel="Set nutrition targets"/);
-    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.emptyActionText\}>Set nutrition targets<\/Text>/);
-    expect(SCREEN_SOURCE).toMatch(/emptyActionText: \{ \.\.\.type\.label, color: colors\.onPrimary \}/);
+    // Batch 2 EmptyState adoption (2026-07-09): this block was a hand-rolled
+    // emptyWrap/emptyActionText pair, now the shared EmptyState primitive.
+    // old -> new: accessibilityLabel="Set nutrition targets" on a raw
+    // TouchableOpacity -> actionAccessibilityLabel="Set nutrition targets" on
+    // EmptyState (same accessible name, same tap target); the hand-rolled
+    // <Text style={styles.emptyActionText}> label -> EmptyState's actionLabel
+    // prop, rendered through the shared Button primitive.
+    expect(SCREEN_SOURCE).toMatch(/actionLabel="Set nutrition targets"/);
+    expect(SCREEN_SOURCE).toMatch(/actionAccessibilityLabel="Set nutrition targets"/);
   });
 
   test('the custom tab labels saved meal surfaces plainly', () => {

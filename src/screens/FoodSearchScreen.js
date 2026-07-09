@@ -29,6 +29,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 import {
   logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
@@ -66,6 +67,12 @@ const EMPTY_COPY = {
   recents: 'Your recent foods will appear here after you log them.',
   favourites: 'No favourites yet. Hold a food to star it.',
   frequents: 'Foods you log often will appear here.',
+};
+
+const EMPTY_ICON = {
+  recents: 'time-outline',
+  favourites: 'star-outline',
+  frequents: 'repeat-outline',
 };
 
 // The "Add again" re-log tabs (Move #1): a row tap here logs the food in one
@@ -804,40 +811,23 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (query.trim().length >= 2) {
       if (searching) return null;
       return (
-        <View style={styles.noResults}>
-          <Text style={styles.noResultsText}>
-            {searchOffline
-              ? "You're offline, so live search can't check the food database. Saved foods still work, or add a custom food."
-              : `No matches for "${query.trim()}".`}
-          </Text>
-          <View style={styles.noResultsActions}>
-            <TouchableOpacity
-              style={[styles.noResultsBtn, styles.noResultsBtnSecondary]}
-              onPress={() => setQuery('')}
-              accessibilityRole="button"
-              accessibilityLabel="Clear food search"
-            >
-              <Text style={styles.noResultsBtnSecondaryText}>Clear search</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.noResultsBtn}
-              onPress={gotoCustomReplace}
-              accessibilityRole="button"
-              accessibilityLabel="Add custom food"
-            >
-              <Text style={styles.noResultsBtnText}>Add custom food</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <EmptyState
+          icon={searchOffline ? 'cloud-offline-outline' : 'search-outline'}
+          text={searchOffline
+            ? "You're offline, so live search can't check the food database. Saved foods still work, or add a custom food."
+            : `No matches for "${query.trim()}".`}
+          actionLabel="Add custom food"
+          onAction={gotoCustomReplace}
+          actionAccessibilityLabel="Add custom food"
+          secondaryLabel="Clear search"
+          onSecondary={() => setQuery('')}
+          secondaryAccessibilityLabel="Clear food search"
+        />
       );
     }
     const copy = EMPTY_COPY[activeTab];
     if (!copy) return null;
-    return (
-      <View style={styles.emptyWrap}>
-        <Text style={styles.emptyText}>{copy}</Text>
-      </View>
-    );
+    return <EmptyState icon={EMPTY_ICON[activeTab]} text={copy} />;
   }
 
   function renderSuggested() {
@@ -853,25 +843,21 @@ export default function FoodSearchScreen({ navigation, route }) {
     }
     if (suggestMeta && !suggestMeta.hasTargets) {
       return (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Set your targets first and Volyume can suggest meals that fit them.</Text>
-          <TouchableOpacity
-            style={styles.emptyAction}
-            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
-            accessibilityRole="button"
-            accessibilityLabel="Set nutrition targets"
-          >
-            <Text style={styles.emptyActionText}>Set nutrition targets</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.onPrimary} />
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="restaurant-outline"
+          text="Set your targets first and Volyume can suggest meals that fit them."
+          actionLabel="Set nutrition targets"
+          onAction={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
+          actionAccessibilityLabel="Set nutrition targets"
+        />
       );
     }
     if (!suggestions.length) {
       return (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>No suggestions ready for this meal. Try search, or create meals from your targets.</Text>
-        </View>
+        <EmptyState
+          icon="restaurant-outline"
+          text="No suggestions ready for this meal. Try search, or create meals from your targets."
+        />
       );
     }
     return (
@@ -1162,23 +1148,6 @@ const styles = StyleSheet.create({
   },
   ctaText: { ...type.bodyStrong, color: colors.textPrimary, marginLeft: spacing.md, flex: 1 },
 
-  emptyWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, alignItems: 'center' },
-  emptyText: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
-  emptyAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-    minHeight: 44,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  emptyActionText: { ...type.label, color: colors.onPrimary },
-
   suggestHint: {
     ...type.caption, color: colors.textMuted,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
@@ -1201,33 +1170,6 @@ const styles = StyleSheet.create({
   },
   suggestName: { ...type.bodyStrong, color: colors.textPrimary },
   suggestMacros: { ...type.caption, color: colors.textSecondary, marginTop: 3 },
-
-  noResults: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  noResultsText: { ...type.body, color: colors.textSecondary, marginBottom: spacing.md, textAlign: 'center' },
-  noResultsActions: {
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  noResultsBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  noResultsBtnText: { color: colors.onPrimary, fontWeight: fontWeight.bold },
-  noResultsBtnSecondary: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  noResultsBtnSecondaryText: { color: colors.textPrimary, fontWeight: fontWeight.bold },
 
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
