@@ -14,7 +14,7 @@ import { clampRestDelta } from '../lib/restTimerMath';
 // Live lock-screen rest-timer notification (U1 / 13-engagement R3). The old
 // "Set N of M" bug that disabled the workout notification is solved by
 // countProgressSets (workoutHelpers); this surface shows only the rest
-// countdown + the four action buttons, no set numbering, so it can't recur.
+// countdown + the action buttons (L07-F4 added a fifth), no set numbering, so it can't recur.
 import {
   presentRestTimerNotification,
   dismissRestTimerNotification,

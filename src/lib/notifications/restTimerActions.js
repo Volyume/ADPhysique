@@ -69,6 +69,13 @@ export function handleRestTimerAction(actionId, { store } = {}) {
         // notification's opensAppToForeground brings it forward to act. We
         // must not stop/restart the rest from here or we'd race the screen.
         return false;
+      case REST_TIMER_ACTION.ADD_EXERCISE:
+        // L07-F4: deliberately NOT handled here, same reason as COMPLETE_SET.
+        // Opening the exercise picker is an ActiveWorkoutScreen-owned UI
+        // action (openAddExercisePicker), not a store mutation, so it is
+        // routed by that screen's own notification listener; this store-only
+        // handler has nothing to dispatch for it.
+        return false;
       default:
         return false;
     }

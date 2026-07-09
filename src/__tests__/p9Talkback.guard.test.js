@@ -37,8 +37,21 @@ describe('P9: logging a set is spoken', () => {
     expect(src).toMatch(/announceForAccessibility\('Set updated'\)/);
   });
   test('the three save-path buttons expose the in-flight state', () => {
-    const hits = src.match(/accessibilityState=\{\{ disabled: saving \}\}/g) ?? [];
-    expect(hits.length).toBeGreaterThanOrEqual(3);
+    // Stale pin -> corrected: the ActiveWorkoutScreen dedicated Button-
+    // adoption pass (design campaign 2026-07-09) moved these three CTAs
+    // (Finish cluster, Log another set, the main Log set/warm-up/Start
+    // cluster button) onto the shared <Button>, which unconditionally
+    // merges `disabled` into accessibilityState itself
+    // (components/Button.js: `mergedAccessibilityState` sets
+    // `disabled: isDisabled`), so the inline
+    // `accessibilityState={{ disabled: saving }}` literal this test used to
+    // pin is now redundant at the call site, not dropped a11y coverage. Pin
+    // the equivalent guarantee instead: a Button-rendered save-path CTA
+    // wired with `disabled={saving}`, backed by Button.js always merging it.
+    const buttonDisabledHits = src.match(/<Button[\s\S]{0,300}?disabled=\{saving\}/g) ?? [];
+    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(3);
+    const buttonSrc = read('src/components/Button.js');
+    expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });
 });
 

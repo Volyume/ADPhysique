@@ -2,12 +2,17 @@
  * Rest-timer notification: category actions + response→store mapping.
  *
  * Locks two contracts (U1 / 13-engagement-notifications R3):
- *   1. the 'rest_timer' category exposes EXACTLY four actions with the
- *      right ids (complete_set, rest_plus_15, rest_minus_15, rest_skip),
- *      and registerRestTimerCategory registers them on the right id.
+ *   1. the 'rest_timer' category exposes EXACTLY five actions with the
+ *      right ids (complete_set, rest_plus_15, rest_minus_15, rest_skip,
+ *      add_exercise), and registerRestTimerCategory registers them on the
+ *      right id. (Stale pin -> corrected: design-usability audit
+ *      2026-07-09 L07-F4 added the fifth "Add exercise" action, Hevy
+ *      parity; was "exactly four" before this change.)
  *   2. handleRestTimerAction maps each action id to the correct store
- *      call, routes ±15 through clampRestDelta, and is a NO-OP whenever
- *      there is no active workout + running rest (stale-tap guard).
+ *      call, routes ±15 through clampRestDelta, is a documented no-op for
+ *      add_exercise (owned by the screen path, same as complete_set), and
+ *      is a NO-OP whenever there is no active workout + running rest
+ *      (stale-tap guard).
  *
  * CLAUDE.md Rule 5: runtime-critical notification surface, tested in the
  * same change. expo-notifications is mocked locally per the file's own
@@ -30,10 +35,12 @@ const { handleRestTimerAction } = require('../restTimerActions');
 beforeEach(() => { mockSetCategory.mockClear(); });
 
 describe('rest-timer category actions', () => {
-  test('exposes exactly four actions with the expected ids', () => {
-    expect(REST_TIMER_ACTIONS).toHaveLength(4);
+  test('exposes exactly five actions with the expected ids', () => {
+    // Stale pin -> corrected: was toHaveLength(4) / four-id list before
+    // L07-F4 (design-usability audit 2026-07-09) added add_exercise.
+    expect(REST_TIMER_ACTIONS).toHaveLength(5);
     expect(REST_TIMER_ACTIONS.map(a => a.identifier)).toEqual([
-      'complete_set', 'rest_plus_15', 'rest_minus_15', 'rest_skip',
+      'complete_set', 'rest_plus_15', 'rest_minus_15', 'rest_skip', 'add_exercise',
     ]);
     // ids line up with the action enum
     expect(REST_TIMER_ACTION).toMatchObject({
@@ -41,6 +48,7 @@ describe('rest-timer category actions', () => {
       PLUS_15: 'rest_plus_15',
       MINUS_15: 'rest_minus_15',
       SKIP: 'rest_skip',
+      ADD_EXERCISE: 'add_exercise',
     });
     // every action carries a non-empty British-English title; the visible
     // set action follows the in-app CTA wording.
@@ -50,14 +58,16 @@ describe('rest-timer category actions', () => {
     });
     expect(REST_TIMER_ACTIONS[0].buttonTitle).toBe('Log set');
     expect(REST_TIMER_ACTIONS.map(a => a.buttonTitle)).not.toContain('Complete set');
+    expect(REST_TIMER_ACTIONS.map(a => a.buttonTitle)).toContain('Add exercise');
   });
 
-  test('registerRestTimerCategory registers the four actions on the rest_timer id', async () => {
+  test('registerRestTimerCategory registers the five actions on the rest_timer id', async () => {
     await registerRestTimerCategory();
     expect(mockSetCategory).toHaveBeenCalledTimes(1);
     expect(mockSetCategory.mock.calls[0][0]).toBe(REST_TIMER_CATEGORY_ID);
     expect(mockSetCategory.mock.calls[0][0]).toBe('rest_timer');
-    expect(mockSetCategory.mock.calls[0][1]).toHaveLength(4);
+    // Stale pin -> corrected: was toHaveLength(4), see L07-F4 note above.
+    expect(mockSetCategory.mock.calls[0][1]).toHaveLength(5);
   });
 });
 
@@ -104,6 +114,13 @@ describe('handleRestTimerAction — mapping + active-rest guard', () => {
   test('complete_set is a no-op here (owned by the screen path)', () => {
     const { store, calls } = makeStore();
     expect(handleRestTimerAction(REST_TIMER_ACTION.COMPLETE_SET, { store })).toBe(false);
+    expect(calls.stopRestTimer).toBe(0);
+    expect(calls.addRestTime).toEqual([]);
+  });
+
+  test('add_exercise is a no-op here (L07-F4, owned by the screen path, same as complete_set)', () => {
+    const { store, calls } = makeStore();
+    expect(handleRestTimerAction(REST_TIMER_ACTION.ADD_EXERCISE, { store })).toBe(false);
     expect(calls.stopRestTimer).toBe(0);
     expect(calls.addRestTime).toEqual([]);
   });

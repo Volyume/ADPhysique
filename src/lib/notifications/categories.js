@@ -53,8 +53,8 @@ export const CATEGORY = Object.freeze({
 export const REST_TIMER_CATEGORY_ID = 'rest_timer';
 
 /**
- * The four action-button identifiers on the rest-timer notification.
- * These are matched on response.actionIdentifier in the response handler
+ * The action-button identifiers on the rest-timer notification. These are
+ * matched on response.actionIdentifier in the response handler
  * (restTimerActions.js) and mapped to the store rest-timer actions.
  * British-English titles; functional, no shame, no loss framing.
  */
@@ -63,20 +63,27 @@ export const REST_TIMER_ACTION = Object.freeze({
   PLUS_15: 'rest_plus_15',
   MINUS_15: 'rest_minus_15',
   SKIP: 'rest_skip',
+  // L07-F4 (design-usability audit 2026-07-09): mirrors Hevy's
+  // rest_timer_add_exercise_button_text. Opens the app straight to the
+  // exercise picker (ActiveWorkoutScreen's notification listener), same
+  // opens-app pattern as COMPLETE_SET.
+  ADD_EXERCISE: 'add_exercise',
 });
 
 /**
  * Action descriptors for setNotificationCategoryAsync. Exported so the
- * test can assert exactly four actions with the right ids without
- * reaching into expo. opensAppToForeground:false on ±15/skip lets the
- * user adjust without yanking the app open; Log set opens the app
- * because logging a set runs through the in-app completion path.
+ * test can assert the exact ids without reaching into expo.
+ * opensAppToForeground:false on ±15/skip lets the user adjust without
+ * yanking the app open; Log set and Add exercise open the app because both
+ * run through in-app-only paths (the shared complete-set flow and the
+ * exercise picker, respectively).
  */
 export const REST_TIMER_ACTIONS = Object.freeze([
   { identifier: REST_TIMER_ACTION.COMPLETE_SET, buttonTitle: 'Log set', options: { opensAppToForeground: true } },
   { identifier: REST_TIMER_ACTION.PLUS_15, buttonTitle: '+15s', options: { opensAppToForeground: false } },
   { identifier: REST_TIMER_ACTION.MINUS_15, buttonTitle: '−15s', options: { opensAppToForeground: false } },
   { identifier: REST_TIMER_ACTION.SKIP, buttonTitle: 'Skip rest', options: { opensAppToForeground: false } },
+  { identifier: REST_TIMER_ACTION.ADD_EXERCISE, buttonTitle: 'Add exercise', options: { opensAppToForeground: true } },
 ]);
 
 /**
@@ -141,7 +148,7 @@ export const CATEGORY_CHANNELS = Object.freeze({
 });
 
 /**
- * Register the rest-timer notification category with its four action
+ * Register the rest-timer notification category with its action
  * buttons. Must run before the first rest-timer notification is
  * presented (the OS attaches the buttons by category id). Idempotent —
  * re-registering simply replaces the definition. Call once at app boot.

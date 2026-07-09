@@ -623,10 +623,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setShowExercisePicker(true);
   }
 
+  // L07-F10: whether the CURRENT exercise has real unsaved work sitting in
+  // the entry that a Cancel/Finish tap would silently drop -- a typed-but-
+  // not-yet-logged set, a cluster mid-way through its mini-sets, or an
+  // unsaved note. Shared by handleCancelWorkout (widens its confirm gate)
+  // and handleFinishWorkout (names the set in its existing confirm copy).
+  function hasInProgressSetEntry() {
+    return !!cluster
+      || (currentSet.weight !== '' && currentSet.weight != null)
+      || currentSet.reps !== DEFAULT_SET.reps
+      || noteText.trim().length > 0;
+  }
+
   function handleCancelWorkout() {
     const store = useAppStore.getState();
     const totalSets = store.workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
-    if (totalSets === 0) {
+    // A genuinely empty session (no logged sets AND nothing typed/in-
+    // progress) can discard silently, one tap, no dialog. But a typed-not-
+    // yet-logged set, an in-progress cluster, or an unsaved note is real
+    // unsaved work the old totalSets===0 check discarded with zero
+    // confirmation, so widen the gate to cover it with the same calm
+    // discard-confirm the app already uses once any set is logged.
+    if (totalSets === 0 && !hasInProgressSetEntry()) {
       store.endWorkout();
       // eslint-disable-next-line global-require
       try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
@@ -842,7 +860,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response?.notification?.request?.content?.data;
       if (data?.type !== 'rest_timer') return;
-      if (response?.actionIdentifier !== 'complete_set') return;
+      const actionId = response?.actionIdentifier;
+      if (actionId === 'add_exercise') {
+        // L07-F4: opening the picker is a plain UI action, not a set-logging
+        // or rest-math call, so unlike complete_set it doesn't need the
+        // active-rest guard below -- adding an exercise still makes sense
+        // even if the rest happened to end just before the tap landed. It
+        // still requires a live workout so a stale tap on a notification
+        // left over from a finished/discarded session is a no-op.
+        const stAdd = useAppStore.getState();
+        if (!stAdd.activeWorkout?.id) return;
+        try { openAddExercisePicker(); } catch (_) { /* never crash on a tap */ }
+        return;
+      }
+      if (actionId !== 'complete_set') return;
       // Active-rest guard: only act on a live, running rest.
       const st = useAppStore.getState();
       if (!st.activeWorkout?.id || !st.restTimerActive) return;
@@ -1229,9 +1260,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // Keep one PR per exercise (the most significant), so a multi-set,
         // multi-exercise session reports a handful of PRs, not dozens. The
         // per-set celebration above still fires each time a new best lands.
+        // L07-F2: setId tags which logged set earned this PR, so an edit or
+        // delete of that exact set (below, handleSaveEditedSet /
+        // handleDeleteEditedSet) can correct a now-stale badge without
+        // touching detectPR itself.
         setDetectedPRs(prev => bestPRPerExercise([
           ...prev,
-          ...prs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units })),
+          ...prs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: setData.id })),
         ]));
       }
 
@@ -1383,6 +1418,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       await updateWorkoutSet(editingSet.id, { weight, actualReps });
       updateSetInCurrentExercise(editingSet.id, { weight, actualReps });
       setLoggedSets(prev => prev.map(s => (s.id === editingSet.id ? { ...s, weight, actualReps } : s)));
+
+      // L07-F2: re-run PR detection so an edited-up set can still trigger the
+      // celebration, and an edited-DOWN set clears its own now-stale badge.
+      // Mirrors the log-time detection above (handleCompleteSet) exactly:
+      // history excludes this set's own (pre-edit) sessionSetsRef entry so it
+      // can never match itself, detectPR itself is untouched.
+      sessionSetsRef.current = sessionSetsRef.current.map(s => (
+        s.id === editingSet.id ? { ...s, weight, actualReps } : s
+      ));
+      if (validation.isWeightReps) {
+        const editPrHistory = [
+          ...allTimeSets,
+          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id),
+        ];
+        const editedPrs = detectPR({ weight, actualReps }, editPrHistory, exercise, units);
+        if (editedPrs.length > 0 && editPrHistory.length > 0) {
+          showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
+        }
+        setDetectedPRs(prev => {
+          const withoutThisSet = prev.filter(p => p.setId !== editingSet.id);
+          if (editedPrs.length === 0 || editPrHistory.length === 0) return withoutThisSet;
+          return bestPRPerExercise([
+            ...withoutThisSet,
+            ...editedPrs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units, setId: editingSet.id })),
+          ]);
+        });
+      }
+
       setEditingSet(null);
       setEditValue(null);
       updateLastActivity();
@@ -1439,6 +1502,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }
               removeSetFromCurrentExercise(target.id);
               setLoggedSets(prev => prev.filter(s => s.id !== target.id));
+              // L07-F2: drop this set from the session PR-detection ref so a
+              // later set in the same exercise never compares against a
+              // deleted set, and clear any PR badge this exact set earned so
+              // it doesn't linger stale for the rest of the session (derived
+              // analytics elsewhere recompute correctly from the DB anyway).
+              sessionSetsRef.current = sessionSetsRef.current.filter(s => s.id !== target.id);
+              setDetectedPRs(prev => prev.filter(p => p.setId !== target.id));
               setEditingSet(null);
               setEditValue(null);
               updateLastActivity();
@@ -1663,9 +1733,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       workoutId: activeWorkout?.id ?? null,
       loggedSetCount: loggedSets.length,
     });
+    // L07-F10: name the unlogged set explicitly so the existing confirm
+    // covers the "unsaved/in-progress" case, not just the logged-set count.
+    const inProgressNote = hasInProgressSetEntry()
+      ? ` You also have an unlogged set for ${exercise?.name || 'this exercise'} that will be lost.`
+      : '';
     appAlert(
       'Finish workout?',
-      `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
+      `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.${inProgressNote}`,
       [
         { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         {
@@ -2391,27 +2466,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   returnKeyType="done"
                   onSubmitEditing={addMiniSet}
                 />
-                <TouchableOpacity
+                <Button
+                  variant="tertiary"
+                  fullWidth={false}
                   style={styles.clusterAddBtn}
                   onPress={addMiniSet}
-                  accessibilityRole="button"
                   accessibilityLabel="Add mini-set"
                 >
                   <Ionicons name="add" size={20} color={colors.primary} />
                   <Text style={styles.clusterAddBtnText}>Mini-set</Text>
-                </TouchableOpacity>
+                </Button>
               </View>
-              <TouchableOpacity
-                style={[styles.completeBtn, saving && styles.btnDisabled]}
+              <Button
+                variant="primary"
+                style={styles.completeBtn}
                 onPress={finishCluster}
                 disabled={saving}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: saving }}
                 accessibilityLabel="Finish cluster and log the set"
               >
                 <Ionicons name="checkmark-circle" size={20} color={colors.onPrimary} />
                 <Text style={styles.completeBtnText}>Finish cluster</Text>
-              </TouchableOpacity>
+              </Button>
               <TouchableOpacity onPress={cancelCluster} style={styles.clusterCancel} accessibilityLabel="Cancel cluster">
                 <Text style={styles.clusterCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -2424,19 +2499,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               outline button in the exact pixels the primary used to occupy,
               so the muscle-memory tap logs a set instead of navigating. */}
           {cluster ? null : (targetComplete && !extraSetArmed) ? (
-            <TouchableOpacity
+            <Button
               testID="volyume-btn-extra-set"
-              style={[styles.extraSetBtnPromoted, saving && styles.btnDisabled]}
+              variant="secondary"
+              style={styles.extraSetBtnPromoted}
               onPress={() => setExtraSetArmed(true)}
               disabled={saving}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: saving }}
               accessibilityLabel="Log another set"
               accessibilityHint="Opens one more set below; nothing is logged until you confirm"
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
               <Text style={styles.extraSetBtnPromotedText}>Log another set</Text>
-            </TouchableOpacity>
+            </Button>
           ) : null}
 
           {/* C3 (audit 2026-07-03): the 1.8s move to the next exercise used
@@ -2510,36 +2584,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[styles.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
             {targetComplete && !extraSetArmed ? (
               isLastExercise ? (
-                <TouchableOpacity
+                <Button
                   testID="volyume-btn-finish-primary"
+                  variant="primary"
                   style={styles.completeBtn}
                   onPress={handleFinishWorkout}
-                  accessibilityRole="button"
                   accessibilityLabel="Finish workout"
                 >
                   <Ionicons name="checkmark-done" size={20} color={colors.onPrimary} />
                   <Text style={styles.completeBtnText}>Finish workout</Text>
-                </TouchableOpacity>
+                </Button>
               ) : (
-                <TouchableOpacity
+                <Button
                   testID="volyume-btn-next-exercise"
+                  variant="primary"
                   style={styles.completeBtn}
                   onPress={handleNextExercise}
-                  accessibilityRole="button"
                   accessibilityLabel="Move to next exercise"
                 >
                   <Ionicons name="arrow-forward-circle" size={20} color={colors.onPrimary} />
                   <Text style={styles.completeBtnText}>Next exercise</Text>
-                </TouchableOpacity>
+                </Button>
               )
             ) : (
-              <TouchableOpacity
+              <Button
                 testID="volyume-btn-complete-set"
-                style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
+                variant="primary"
+                style={[styles.completeBtn, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
                 onPress={handleCompleteSetPress}
                 disabled={saving}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: saving }}
                 accessibilityLabel={
                   currentSet.setType === 'warmup' ? 'Log warm-up'
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
@@ -2550,7 +2623,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {currentSet.setType === 'warmup' ? 'Log warm-up'
                     : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
                 </Text>
-              </TouchableOpacity>
+              </Button>
             )}
           </View>
         )}
@@ -2629,40 +2702,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   Tip: if you can't grab both stations right now, unlink and do them as normal sets.
                 </Text>
 
-                <TouchableOpacity
+                <Button
+                  variant="primary"
                   style={styles.supPrimaryBtn}
                   onPress={() => setSupersetHeadsUp(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Got it, start"
-                >
-                  <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
-                </TouchableOpacity>
+                  title="Got it, start"
+                  textStyle={styles.supPrimaryBtnText}
+                />
 
                 <View style={styles.supSecondaryRow}>
-                  <TouchableOpacity
+                  <Button
+                    variant="outline"
                     style={styles.supSecondaryBtn}
                     onPress={() => {
                       handleTogglePair(); // unpair
                       setSupersetHeadsUp(null);
                     }}
-                    accessibilityRole="button"
                     accessibilityLabel="Unlink the superset"
                   >
                     <Ionicons name="unlink" size={14} color={colors.textSecondary} />
                     <Text style={styles.supSecondaryBtnText}>Unlink</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </Button>
+                  <Button
+                    variant="outline"
                     style={styles.supSecondaryBtn}
                     onPress={() => {
                       setSupersetHeadsUp(null);
                       handleOpenSwap();
                     }}
-                    accessibilityRole="button"
                     accessibilityLabel="Swap exercise"
                   >
                     <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
                     <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
-                  </TouchableOpacity>
+                  </Button>
                 </View>
               </ScrollView>
             </View>
@@ -2680,12 +2752,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.staleBody}>
                 This workout has been inactive for a while. What would you like to do?
               </Text>
-              <TouchableOpacity style={styles.staleResume} onPress={() => { updateLastActivity(); setShowStaleModal(false); }} accessibilityRole="button" accessibilityLabel="Resume workout">
-                <Text style={styles.staleResumeText}>Resume</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.staleFinish} onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }} accessibilityRole="button" accessibilityLabel="Finish workout">
-                <Text style={styles.staleFinishText}>Finish workout</Text>
-              </TouchableOpacity>
+              <Button
+                variant="primary"
+                style={styles.staleResume}
+                onPress={() => { updateLastActivity(); setShowStaleModal(false); }}
+                title="Resume"
+                textStyle={styles.staleResumeText}
+                accessibilityLabel="Resume workout"
+              />
+              <Button
+                variant="secondary"
+                style={styles.staleFinish}
+                onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }}
+                title="Finish workout"
+                textStyle={styles.staleFinishText}
+              />
               <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
                 appAlert('Discard workout?', 'All logged sets will be lost.', [
                   { text: 'Cancel', style: 'cancel' },
@@ -3147,9 +3228,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.discardBody}>
                 This will delete the current workout session. Your plan will not advance.
               </Text>
-              <TouchableOpacity style={styles.keepTrainingBtn} onPress={() => setShowDiscardModal(false)} accessibilityRole="button" accessibilityLabel="Keep training">
+              <Button
+                variant="primary"
+                style={styles.keepTrainingBtn}
+                onPress={() => setShowDiscardModal(false)}
+                accessibilityLabel="Keep training"
+              >
                 <Text style={styles.keepTrainingBtnText}>Keep training</Text>
-              </TouchableOpacity>
+              </Button>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
                 accessibilityRole="button"
@@ -3206,15 +3292,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                     />
                   )}
-                  <TouchableOpacity
-                    style={[styles.editSetSaveBtn, saving && styles.btnDisabled]}
+                  <Button
+                    variant="primary"
+                    style={styles.editSetSaveBtn}
                     onPress={handleSaveEditedSet}
                     disabled={saving}
-                    accessibilityRole="button"
+                    title="Save"
+                    textStyle={styles.editSetSaveText}
                     accessibilityLabel="Save set changes"
-                  >
-                    <Text style={styles.editSetSaveText}>Save</Text>
-                  </TouchableOpacity>
+                  />
                   <TouchableOpacity
                     style={styles.editSetCancelBtn}
                     onPress={() => { setEditingSet(null); setEditValue(null); }}
@@ -3289,10 +3375,16 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         <Ionicons name="barbell-outline" size={64} color={colors.surface3} />
         <Text style={styles.emptyTitle}>Add your first exercise</Text>
         <Text style={styles.emptySubtitle}>Search the exercise library to get started</Text>
-        <TouchableOpacity style={styles.addFirstBtn} onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add exercise">
+        <Button
+          variant="primary"
+          fullWidth={false}
+          style={styles.addFirstBtn}
+          onPress={onAdd}
+          accessibilityLabel="Add exercise"
+        >
           <Ionicons name="add" size={22} color={colors.onPrimary} />
           <Text style={styles.addFirstBtnText}>Add exercise</Text>
-        </TouchableOpacity>
+        </Button>
       </View>
     </View>
   );
@@ -3526,6 +3618,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    // Explicit transparent: the Button `tertiary` variant this now renders
+    // as (components/Button.js) fills with colors.primaryBg by default;
+    // this outlined-only look (border, no fill) is a deliberate quieter
+    // treatment for the mini-set add action, so it must override that.
+    backgroundColor: 'transparent',
   },
   clusterAddBtnText: { ...type.label, color: colors.primary },
   clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },

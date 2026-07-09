@@ -29,7 +29,7 @@ const CHANNEL_ID = 'volyume_active_workout';
 // The live rest-timer notification (U1 / 13-engagement-notifications R3).
 // Separate id + the silent 'rest-timer' channel (channels.js) so updating
 // the countdown body every tick never buzzes the phone. categoryIdentifier
-// attaches the four action buttons registered via registerRestTimerCategory().
+// attaches the action buttons registered via registerRestTimerCategory().
 const REST_NOTIF_ID = 'volyume_rest_timer';
 const REST_CHANNEL_ID = 'rest-timer';
 
@@ -228,7 +228,7 @@ async function ensureRestChannel() {
 }
 
 /**
- * Present (or refresh) the persistent rest-timer notification with the four
+ * Present (or refresh) the persistent rest-timer notification with its
  * action buttons. Posted ONCE per rest, and again only when the rest is
  * re-anchored (a ±15s adjust) — NOT on every tick. It shows a STATIC end time
  * ("Ends HH:MM"), so the shade never re-animates every second, the value never
