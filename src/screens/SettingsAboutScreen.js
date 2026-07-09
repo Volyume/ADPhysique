@@ -22,21 +22,16 @@ export default function SettingsAboutScreen({ navigation }) {
           icon="star-outline"
           label="Rate Volyume"
           sub="A rating helps other lifters find it"
-          onPress={async () => {
-            // Prefer the in-app review sheet. Fall back to the store page.
-            // Note: Google only shows the in-app sheet (and a public store
-            // page) once the app is on a public track, so in closed testing
-            // this may still land on a "not available" page.
-            try {
-              const StoreReview = await import('expo-store-review');
-              if (await StoreReview.isAvailableAsync()) {
-                await StoreReview.requestReview();
-                return;
-              }
-            } catch (_) { /* fall through to the store URL */ }
-            // Platform-specific store fallback. iOS must never open a Play URL
-            // (it lands on a dead page); send it to the App Store review deep
-            // link, falling back to the https App Store URL.
+          onPress={() => {
+            // Founder 2026-07-09: this row previously tried the in-app review
+            // sheet first, but Google's API is allowed to silently decline
+            // (quota, eligibility, or any build not installed via the Play
+            // Store), which made the row do nothing at all. The in-app sheet
+            // is for unprompted organic moments (src/lib/storeReview.js); an
+            // explicit "Rate Volyume" tap goes straight to the store page.
+            // Platform-specific: iOS must never open a Play URL (it lands on
+            // a dead page); send it to the App Store review deep link,
+            // falling back to the https App Store URL.
             if (Platform.OS === 'ios') {
               const APPLE_APP_ID = '6777083702';
               const appStore = `apps.apple.com/app/id${APPLE_APP_ID}?action=write-review`;
