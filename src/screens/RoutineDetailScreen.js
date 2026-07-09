@@ -517,8 +517,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
           style={styles.editModalKeyboard}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-        <TouchableOpacity accessibilityRole="button" style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
-          <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
+          {/* AY-4 (2026-07-09 design audit): capture layer for the sheet
+              itself, not the backdrop; accessible={false} stops the
+              backdrop's "Close" label from swallowing the form fields
+              below, and accessibilityViewIsModal traps screen-reader
+              navigation to the sheet (same pattern as AppAlert.js). */}
+          <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1} accessible={false} accessibilityViewIsModal>
             <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
@@ -604,7 +609,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
         animationType="slide"
         onRequestClose={() => { setSwapState(null); setSwapCandidates([]); }}
       >
-        <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
+        {/* AY-4 (2026-07-09 design audit): traps screen-reader navigation to
+            this sheet while it's the modal's own content (matches
+            BottomSheet.js/AppAlert.js/FeedbackSheet.js/PeekMenu.js). */}
+        <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']} accessibilityViewIsModal>
           <View style={styles.swapHeader}>
             <Text style={styles.swapTitle}>Swap exercise</Text>
             <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">

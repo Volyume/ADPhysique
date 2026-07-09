@@ -612,7 +612,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
         animationType="slide"
         onRequestClose={dismissQuiz}
       >
-        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={dismissQuiz}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={dismissQuiz}>
           <Pressable style={styles.quizSheet} onPress={() => {}} accessible={false}>
             <View style={styles.sheetHandle} />
 

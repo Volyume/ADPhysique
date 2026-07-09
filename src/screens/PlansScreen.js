@@ -1017,7 +1017,7 @@ export default function PlansScreen({ navigation }) {
           style={styles.folderModalFill}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable accessibilityRole="button" style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
             <Pressable style={styles.folderSheet} onPress={() => {}} accessible={false}>
               <Text style={styles.folderSheetTitle}>Rename folder</Text>
               <TextField
