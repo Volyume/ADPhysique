@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -216,7 +216,7 @@ function Row({ icon, label, sub, onPress, pro, status = null }) {
           <Text style={[styles.statusPillText, styles[`statusPillText_${status}`]]}>{statusLabel}</Text>
         </View>
       ) : null}
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </Card>
   );
 }
@@ -584,7 +584,7 @@ export default function AthleteProfileScreen({ navigation }) {
             <Text style={styles.photoOptionTitle}>Photo from phone</Text>
             <Text style={styles.photoOptionSub}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
         <Text style={styles.avatarGalleryLabel}>Choose an avatar</Text>
         <View style={styles.avatarPresetGrid}>

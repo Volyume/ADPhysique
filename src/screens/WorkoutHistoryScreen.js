@@ -11,7 +11,7 @@ import { getDay } from 'date-fns/getDay';
 import { addMonths } from 'date-fns/addMonths';
 import { subMonths } from 'date-fns/subMonths';
 import { isSameDay } from 'date-fns/isSameDay';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Button from '../components/Button';
@@ -443,7 +443,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                     <Text style={styles.exerciseBreakdownSummary} numberOfLines={1}>
                       {ex.summary}
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                    <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                   </TouchableOpacity>
                 ))}
               </View>

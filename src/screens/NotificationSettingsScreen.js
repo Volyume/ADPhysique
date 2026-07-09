@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import {
   scheduleMorningWeightNotification,
@@ -627,7 +627,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 Morning weight and weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -665,7 +665,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <Text style={styles.timePickerValue}>
                   {`${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           )}
@@ -733,7 +733,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                   <Text style={styles.timePickerValue}>
                     {`${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`}
                   </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -774,7 +774,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <Text style={styles.timePickerValue}>
                   {`${String(quietHours.startHour).padStart(2, '0')}:${String(quietHours.startMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.timePickerRow}
@@ -786,7 +786,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <Text style={styles.timePickerValue}>
                   {`${String(quietHours.endHour).padStart(2, '0')}:${String(quietHours.endMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             </>
           )}

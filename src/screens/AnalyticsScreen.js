@@ -7,7 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle, iconSize } from '../styles/theme';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import RollingNumber from '../components/RollingNumber';
@@ -876,7 +876,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
             </View>
           ))}
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
       </View>
       <View style={styles.volStackBar}>
         {segments.map(seg => (
@@ -1020,7 +1020,7 @@ function SessionCard({ workout, onPress }) {
           </Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </Card>
   );
 }

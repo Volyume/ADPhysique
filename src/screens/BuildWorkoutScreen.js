@@ -7,7 +7,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SearchBar from '../components/SearchBar';
@@ -220,7 +220,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
           <Ionicons name="airplane-outline" size={15} color={colors.textSecondary} />
           <Text style={styles.travelChipText}>Travel / hotel gym</Text>
-          <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
 
         {exercises.map((item, index) => (

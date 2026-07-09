@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -63,7 +63,7 @@ function NavRow({ icon, label, sub, onPress, pro }) {
         </View>
         {sub ? <Text style={styles.navRowSub}>{sub}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </Card>
   );
 }
@@ -404,7 +404,7 @@ export default function YouScreen({ navigation }) {
             ) : null}
             {profileFocus ? <Text style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </Card>
 
         {isPro ? (

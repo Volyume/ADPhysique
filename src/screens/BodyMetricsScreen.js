@@ -30,7 +30,7 @@ import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
@@ -812,7 +812,7 @@ export default function BodyMetricsScreen() {
         >
           <Ionicons name="camera-outline" size={20} color={colors.primary} />
           <Text style={styles.photosRowText}>Progress photos</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
         {/* Body Metrics is for body weight + measurements only. Nutrition

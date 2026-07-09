@@ -111,7 +111,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion, letterSpacing, iconSize } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -637,7 +637,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           accessibilityLabel="See all coaching decisions"
         >
           <Text style={styles.heldSeeAllText}>See all weeks</Text>
-          <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       ) : null}
     </Card>

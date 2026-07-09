@@ -27,7 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
@@ -754,7 +754,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         >
           <Ionicons name={item.icon} size={20} color={colors.primary} />
           <Text style={styles.ctaText}>{item.label}</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       );
     }

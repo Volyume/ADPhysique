@@ -268,6 +268,18 @@ feature 32. **Outline = available/inactive, filled = active/done/selected.**
 Utility icons `textSecondary`/`textMuted`; amber only for active/affordance
 icons.
 
+**Disclosure chevron (design-consistency sweep 2026-07-09, AC-1).** The
+trailing `chevron-forward` that means "this row opens/navigates somewhere" is
+always `iconSize.sm` (16) / `colors.textMuted`. `colors.primary` is reserved
+strictly for a chevron on a singular, amber-tinted CTA banner where the tinted
+element itself is the whole action (e.g. `AttentionCard`'s trial banner, and
+Home's phase-sync/plateau banners); every nested "learn more" link, list row
+or in-card action chevron uses the muted default even when its neighbouring
+text is amber. Excluded from this rule (different role, left as-is): back
+chevrons, expand/collapse disclosure toggles, paired date/month stepper
+controls, and a chevron acting as a row's own primary action icon (e.g.
+alternating with `add-circle` in the same slot).
+
 ---
 
 ## Interaction feedback & haptics

@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import ConsistencyEcho from '../components/ConsistencyEcho';
 import BlockShapeCard from '../components/BlockShapeCard';
@@ -1473,7 +1473,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
             >
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={dismissPhaseBanner}
@@ -1500,7 +1500,7 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.plateauBannerLeft}>
               <Ionicons name="analytics-outline" size={18} color={colors.primary} />
               <Text style={styles.plateauBannerText} numberOfLines={2}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
             </View>
             <TouchableOpacity
               onPress={dismissPlateauBanner}
@@ -1726,7 +1726,7 @@ export default function HomeScreen({ navigation, route }) {
                   color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
                 />
                 <Text style={styles.mesoBriefText}>{readinessSummary.line}</Text>
-                <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             )}
             {coachBrief && (
@@ -1860,7 +1860,7 @@ export default function HomeScreen({ navigation, route }) {
                   <Text style={styles.quickStartTitle}>Start your first workout</Text>
                   <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </PressableCard>
             )}
 
@@ -1873,7 +1873,7 @@ export default function HomeScreen({ navigation, route }) {
               >
                 <Ionicons name="play-outline" size={14} color={colors.textSecondary} />
                 <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank workout</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -1912,7 +1912,7 @@ export default function HomeScreen({ navigation, route }) {
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -1998,7 +1998,7 @@ export default function HomeScreen({ navigation, route }) {
                 activeOpacity={0.8}
               >
                 <Text style={styles.coachingNudgeBtnText}>Open check-in</Text>
-                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
             <TouchableOpacity
@@ -2092,7 +2092,7 @@ export default function HomeScreen({ navigation, route }) {
                   <Text style={styles.sheetActionTitle}>View workout</Text>
                   <Text style={styles.sheetActionSub}>Review the exercises before you start.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
@@ -2111,7 +2111,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.sheetActionTitle}>Blank workout</Text>
                 <Text style={styles.sheetActionSub}>Log freely without changing your plan.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
             {planAllWorkouts.length > 0 ? (
               <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
@@ -2191,7 +2191,7 @@ export default function HomeScreen({ navigation, route }) {
                   <Text style={styles.intentOptionLabel}>{opt.label}</Text>
                   <Text style={styles.intentOptionSub}>{opt.sub}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
 

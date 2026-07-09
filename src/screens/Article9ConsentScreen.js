@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
@@ -241,7 +241,7 @@ export default function Article9ConsentScreen({ navigation }) {
         <TouchableOpacity onPress={openPrivacyPolicy} style={styles.ctaGhost} accessibilityRole="link">
           <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.ctaGhostText}>Read the full privacy policy</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* OB-6: a factual exit affordance for a hesitant user, whose only

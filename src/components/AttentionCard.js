@@ -60,7 +60,7 @@ export default function AttentionCard({
         <View style={styles.trialBannerTopRow}>
           <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
           <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
           <TouchableOpacity
             onPress={onTrialDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

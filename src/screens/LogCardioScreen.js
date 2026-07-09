@@ -14,7 +14,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, type } from '../styles/theme';
+import { colors, fontSize, spacing, type, iconSize } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ModalHeader from '../components/ModalHeader';
@@ -253,7 +253,7 @@ function ActivityList({ items, onPick }) {
         <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
           <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={colors.primary} style={styles.activityIcon} />
           <Text style={styles.activityName} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       ))}
     </View>

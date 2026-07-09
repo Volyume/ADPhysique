@@ -288,7 +288,7 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
           Send a workout, PR, or progress update. You approve the preview before {name} sees it.
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -386,7 +386,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       <Text style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
         <Text style={styles.blockStatusActionText}>Sharing settings</Text>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
       </View>
     </Card>
   );
@@ -405,7 +405,7 @@ function LocalReadNotice({ onRefresh }) {
         <Text style={styles.localReadNoticeTitle}>Refresh partner data</Text>
         <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh.</Text>
       </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textSecondary} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -1066,7 +1066,7 @@ export default function PartnerScreen({ route }) {
                 accessibilityLabel="Invite another partner"
               >
                 <Text style={styles.inviteAnotherText}>Invite another partner</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             ) : null}
 

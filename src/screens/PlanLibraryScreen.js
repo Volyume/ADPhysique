@@ -10,7 +10,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -499,7 +499,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Text style={styles.quizBannerTitle}>Not sure where to start?</Text>
                 <Text style={styles.quizBannerBody}>Answer two quick questions and we'll point you to the right plan.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </Card>
           ) : null
         }
@@ -648,7 +648,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                         <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
                       )}
                       <Text style={styles.quizOptionText}>{opt.label}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                     </Card>
                   ))}
                 </View>

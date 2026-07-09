@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
@@ -533,7 +533,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Text style={styles.eduTitle}>New to calories and macros?</Text>
               <Text style={styles.eduBody}>5-minute guide to what these numbers mean and how to actually use them.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </Card>
 
           {/* U-C-1: "Set it for me" fast path. Gives a usable daily target from

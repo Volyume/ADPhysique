@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, KeyboardAv
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion, iconSize } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
@@ -1178,7 +1178,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             >
               <Ionicons name="film-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.blockRecapText}>You&apos;ve finished this block. Have a look back at how it went.</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           </RevealSection>
         )}

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, iconSize } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -96,7 +96,7 @@ export default function FoodRow({
           <Text style={styles.addBtnText}>{addLabel}</Text>
         </TouchableOpacity>
       ) : (
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />
       )}
     </TouchableOpacity>
   );

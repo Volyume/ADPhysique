@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import {
@@ -1223,7 +1223,7 @@ export default function DiaryScreen({ navigation, route }) {
             >
               <Ionicons name="information-circle-outline" size={13} color={colors.textSecondary} />
               <Text style={styles.targetsChangedText}>Targets updated. See why</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
           {showFirstFoodPrompt ? (
@@ -1450,7 +1450,7 @@ export default function DiaryScreen({ navigation, route }) {
                     <Text style={styles.buildPlanLabel}>Meal builder</Text>
                     <Text style={styles.buildPlanSub}>Create today or the week from your targets. You review everything before it is logged.</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               </>
             ) : null}
@@ -1538,7 +1538,7 @@ export default function DiaryScreen({ navigation, route }) {
             <Text style={styles.savedFoodOptionTitle}>Saved meals</Text>
             <Text style={styles.savedFoodOptionSub}>Foods you saved together from the diary.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.savedFoodOption}
@@ -1553,7 +1553,7 @@ export default function DiaryScreen({ navigation, route }) {
             <Text style={styles.savedFoodOptionTitle}>Recipes</Text>
             <Text style={styles.savedFoodOptionSub}>Recipes with ingredients and servings.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       </BottomSheet>
 
@@ -1702,7 +1702,7 @@ export default function DiaryScreen({ navigation, route }) {
             <Text style={styles.diaryToolTitle}>Copy from another day</Text>
             <Text style={styles.diaryToolText}>Choose a recent logged day and copy its foods into this one.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.diaryToolRow}
@@ -1717,7 +1717,7 @@ export default function DiaryScreen({ navigation, route }) {
             <Text style={styles.diaryToolTitle}>Trends and export</Text>
             <Text style={styles.diaryToolText}>See calorie, macro and consistency trends, or export your diary.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       </BottomSheet>
 

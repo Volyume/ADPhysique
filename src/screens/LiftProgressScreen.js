@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns/format';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
@@ -286,7 +286,7 @@ export default function LiftProgressScreen({ navigation }) {
               Add your body weight once and we'll show you how your lifts compare to your body weight.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       ) : null}
 
@@ -413,7 +413,7 @@ export default function LiftProgressScreen({ navigation }) {
                 ) : (
                   <Text style={styles.trendBuilding}>Building</Text>
                 )}
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </View>
             </PressableCard>
             </AnimatedEntrance>

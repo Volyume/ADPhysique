@@ -6,7 +6,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion, iconSize } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -293,7 +293,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={styles.eduLearnText}>
                   New to calories and macros? 5-minute guide
                 </Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               {/* The kcal ring is the Nutrition tab's signature, so the reveal
                   shows the same shape the first time these numbers appear.
@@ -361,7 +361,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Text style={styles.eduLearnText}>
                     {buildingMeals ? 'Creating your week' : 'Create my first week of meals'}
                   </Text>
-                  {!buildingMeals ? <Ionicons name="chevron-forward" size={14} color={colors.primary} /> : null}
+                  {!buildingMeals ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} /> : null}
                 </TouchableOpacity>
               )}
             </Card>
@@ -467,7 +467,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
             >
               <Ionicons name="bulb-outline" size={14} color={colors.primary} />
               <Text style={styles.eduLearnText}>How the Coach works</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
           </Animated.View>

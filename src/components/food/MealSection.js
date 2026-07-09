@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
@@ -110,7 +110,7 @@ export default function MealSection({
               actually editable (selection mode, read-only lapse view). */}
           {showRowEditHint ? (
             <View style={styles.entryChevron} pointerEvents="none">
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </View>
           ) : null}
         </AnimatedRow>

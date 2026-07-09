@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, iconSize } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
@@ -957,7 +957,7 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.trainingBlocksLabel}>Training blocks</Text>
             <Text style={styles.trainingBlocksSub}>View completed blocks and long-term progress</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </Card>
 
         {/* Decision Hub, visible to everyone. Section title and copy adapt:
@@ -994,7 +994,7 @@ export default function PlansScreen({ navigation }) {
                   </View>
                   <Text style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={featured ? colors.primary : colors.textMuted} />
               </Card>
             );
           })}

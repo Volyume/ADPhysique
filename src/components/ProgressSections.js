@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -55,7 +55,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
             }
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
       </View>
 
       {/* Progress bar, only for mesocycles with a known duration */}

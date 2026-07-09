@@ -1273,7 +1273,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 {metaText}
               </Text>
             </View>
-            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} /> : null}
+            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} /> : null}
           </View>
           {scanSummary ? (
             <View style={styles.libraryScoreRow}>
@@ -1861,7 +1861,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                           </View>
                         ) : null}
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>

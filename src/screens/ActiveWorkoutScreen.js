@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize } from '../styles/theme';
 import { workoutLoggerSize } from '../styles/layout';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
@@ -162,7 +162,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       {!isWarmup && est1RM > 0 && (
         <Text style={styles.loggedEst1RM}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
-      <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </TouchableOpacity>
   );
 });
@@ -2297,7 +2297,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityLabel={`${orientationLabel}, tap to change set type`}
             >
               <Text style={styles.orientationText}>{orientationLabel}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
 
             {/* Target line (U-A-1): the sets/reps prescription, moved off
@@ -2434,7 +2434,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
                         : targetReason}
                 </Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
               </TouchableOpacity>
             )}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
@@ -3245,7 +3245,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={styles.swapItemName}>{item.exercise.name}</Text>
                     <Text style={styles.swapItemReason}>{item.reason}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={

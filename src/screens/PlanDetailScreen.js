@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
@@ -368,18 +368,18 @@ export default function PlanDetailScreen({ navigation, route }) {
               <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Edit plan</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Duplicate plan</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={colors.error} />
                   <Text style={[styles.manageRowText, { color: colors.error }]}>Archive plan</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </Card>

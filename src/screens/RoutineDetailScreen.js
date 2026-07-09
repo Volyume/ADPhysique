@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, KeyboardAv
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -642,7 +642,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Text style={styles.swapItemName}>{item.exercise.name}</Text>
                   <Text style={styles.swapItemReason}>{item.reason}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </Card>
             )}
             ListEmptyComponent={

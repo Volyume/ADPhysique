@@ -10,7 +10,7 @@
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type, hitSlop } from '../../styles/theme';
+import { colors, spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
 import Button from '../Button';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet.';
@@ -41,7 +41,7 @@ export default function EmptyDiary({
             <Text style={styles.planTitle}>Meal builder</Text>
             <Text style={styles.planText}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
       ) : null}
       <View style={styles.actions}>

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import {
@@ -178,7 +178,7 @@ export default function FreeStarterScreen({ navigation, route }) {
                     <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
                   ) : null}
                   <Text style={styles.optionText}>{opt.label}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
             </View>

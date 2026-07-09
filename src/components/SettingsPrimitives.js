@@ -2,7 +2,7 @@ import { cloneElement, isValidElement } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
 import SectionLabel from './SectionLabel';
@@ -39,7 +39,7 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
           ? cloneElement(rightElement, { accessibilityLabel: label })
           : rightElement}
         {showArrow && onPress && !rightElement ? (
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         ) : null}
       </View>
     </Wrapper>
