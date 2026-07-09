@@ -943,3 +943,15 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   hunks pending hands-on review); dietary-needs entry point in Meal
   Builder preferences (Sonnet, single-source-of-truth via
   SettingsDietaryScreen route + cross-reflection test).
+- Dietary-needs builder entry point LANDED (04a3bbe, lead-reviewed):
+  "Dietary needs" SettingRow leads MealPreferencesControls on both builder
+  surfaces, live summary from the same synced profile fields Settings
+  writes (one store, two doors), navigateCrossTab to the registered
+  SettingsDietary route; 6 tests incl. cross-reflection + route guard.
+  IN FLIGHT: plan-F FULL build (Opus, engine hunks pending hands-on
+  review — touching weeklyCoach/progressScan*/database.js/
+  WeeklyCheckInScreen/CoachOutputScreen); D19 band exception build
+  (Sonnet, poolGenerator/planEngine, files disjoint from plan-F).
+  QUEUE after: NAV-2 (waits for database.js to free), training-reminder
+  habit rebuild (D17), CP-9 FAQ, CP-10 investigation, Ultimate-Audit
+  11-16 round prep.
