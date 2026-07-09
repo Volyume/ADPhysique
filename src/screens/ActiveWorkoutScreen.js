@@ -148,7 +148,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       accessibilityHint="Opens a sheet to change or delete this logged set"
     >
       {isWarmup ? (
-        <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
+        <Ionicons name="flame-outline" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
         <View style={styles.setNumBadge}>
           <Text style={styles.setNumText} maxFontSizeMultiplier={1.3}>{progressNum}</Text>

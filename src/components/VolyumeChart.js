@@ -233,7 +233,7 @@ export default function VolyumeChart({
           return (
             <React.Fragment key={`rule-${i}`}>
               <Line x1={box.left} y1={y} x2={box.left + box.width} y2={y}
-                stroke={rulesColor} strokeWidth={1} strokeDasharray="3 4" opacity={0.5} />
+                stroke={rulesColor} strokeWidth={1} strokeDasharray="3 4" />
               <SvgText x={box.left - 6} y={y + 3} fontSize={9} fill={labelColor} textAnchor="end">
                 {`${formatTick(tv, span)}${yAxisSuffix}`}
               </SvgText>
