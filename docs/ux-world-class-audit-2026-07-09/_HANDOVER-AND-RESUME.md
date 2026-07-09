@@ -14,6 +14,38 @@ as structured multi-choice rounds, never walls of text.
 in this file — this section is the single source of truth for a fresh
 session. Update it in place, do not append competing lists.)
 
+### FINAL BURST 2026-07-09 (founder-ordered: 8 agents in flight, then
+### PAUSE - resume tomorrow. On resume: check every landing below was
+### committed; anything not landed appears in the stage log or sits
+### uncommitted in the tree with a note.)
+Running at pause time:
+1. Notifications: amend locked Surface 6 to current app strings (D15) +
+   rest-day notification spec doc (returns for founder sign-off).
+2. Plan-G build: consecutiveExceededWeeks (N=3), bounded escalation +
+   calm acknowledgement (D15 "Both"), adherence-why at Pro setup
+   completion + first coach output (lead-delegated placements). ENGINE
+   DIFF NEEDS HANDS-ON LEAD REVIEW at landing.
+3. Workout finish confirm conditions (L07-F10) + PR re-detect on
+   edit/delete (L07-F2).
+4. First-run: FR-2 raw auth errors -> calm mapping + quiz progress bar.
+5. Biceps subregion tags (seed + migration v64? check head) +
+   SUBREGION_TRANSLATION.biceps pass-through (D8 residue). ENGINE-ADJACENT,
+   lead review; agent told to STOP on any pinned-test conflict.
+6. Partners cheer to ALL paired partners (L06-F4).
+7. Free-tier height/DOB edit path (CP-8; sex + weight explicitly out of
+   scope - weight is the NAV-2 founder round).
+8. Workout summary onward links (CO-3, cohesion mandate register).
+
+### After the burst (tomorrow's queue)
+- Founder rounds remaining: Settings cluster (CP-10 restart-free theming,
+  CP-9 Help/FAQ, L08-B3 post-cancel link), weigh-in edit/delete (NAV-2),
+  plan-F photo questions (4), rest-day spec sign-off, consolidated triage
+  round (LT-3 + 6 open items).
+- Home decomposition/memoisation (scorecard; deferred as higher-risk).
+- AY-7 ED lockout SR announcement (needs founder wording).
+- HELD: adversarial review (R1 fix belongs to it), media, Live Activity.
+
+### Superseded original section (kept for history):
 ### Running now (the current pair of two)
 1. **D9 unilateral logging BUILD** (Sonnet). Full spec =
    `docs/exercise-planning-2026-07-09/plan-C-unilateral-logging.md` + D9
