@@ -230,6 +230,94 @@ describe('lineHeight / letterSpacing scales', () => {
   });
 });
 
+// ─── AY-2/D7: on-tint ink tokens ────────────────────────────────────────────
+// design-usability-audit-2026-07-09/coverage-04-accessibility.md AY-2: the
+// flat `success`/`error` inks fail 4.5:1 body text once composited on a real
+// surface behind their own semi-transparent `successBg`/`errorBg` tint (e.g.
+// AthleteProfileScreen's status pills, sitting on a Card's `surface`).
+// `onSuccessBg`/`onErrorBg` are the dedicated on-tint ink, pinned here (same
+// WCAG 2.x method as the rest of this file) to clear 4.5:1 against their OWN
+// `*Bg` tint composited on EVERY surface-ladder step, in both themes and both
+// colour-blind-safe variants, so a badge/banner is safe at any elevation.
+describe('AY-2 on-tint ink tokens (successBg/errorBg text)', () => {
+  function relLum(hex) {
+    const h = String(hex).replace('#', '');
+    const ch = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  }
+  function ratio(a, b) {
+    const la = relLum(a);
+    const lb = relLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  // Composite an rgba() tint over an opaque hex surface (same maths as the
+  // real renderer: alpha-blend, no gamma correction needed pre-luminance).
+  function composite(rgbaStr, surfaceHex) {
+    const m = rgbaStr.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,?\s*([\d.]+)?\s*\)/);
+    const [, r, g, b, a = '1'] = m;
+    const sh = surfaceHex.replace('#', '');
+    const sr = parseInt(sh.slice(0, 2), 16);
+    const sg = parseInt(sh.slice(2, 4), 16);
+    const sb = parseInt(sh.slice(4, 6), 16);
+    const alpha = parseFloat(a);
+    const blend = (fg, bg) => Math.round(fg * alpha + bg * (1 - alpha));
+    const toHex = (v) => v.toString(16).padStart(2, '0');
+    return `#${toHex(blend(parseFloat(r), sr))}${toHex(blend(parseFloat(g), sg))}${toHex(blend(parseFloat(b), sb))}`;
+  }
+
+  afterEach(() => applyAccessibility({}));
+
+  function expectInkClearsAtEveryElevation(ink, tintRgba) {
+    const surfaces = [
+      colors.background,
+      colors.surface,
+      colors.surfaceElevated,
+      colors.surface2,
+      colors.surface3,
+    ];
+    for (const s of surfaces) {
+      expect(ratio(ink, composite(tintRgba, s))).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+
+  test('dark: onErrorBg clears 4.5:1 on errorBg at every elevation (was 4.09:1 on surface)', () => {
+    applyAccessibility({ theme: 'dark' });
+    expectInkClearsAtEveryElevation(colors.onErrorBg, colors.errorBg);
+  });
+
+  test('dark: onSuccessBg clears 4.5:1 on successBg at every elevation', () => {
+    applyAccessibility({ theme: 'dark' });
+    expectInkClearsAtEveryElevation(colors.onSuccessBg, colors.successBg);
+  });
+
+  test('light: onSuccessBg clears 4.5:1 on successBg at every elevation (was 4.36:1 on surface, failed at every step)', () => {
+    applyAccessibility({ theme: 'light' });
+    expectInkClearsAtEveryElevation(colors.onSuccessBg, colors.successBg);
+  });
+
+  test('light: onErrorBg clears 4.5:1 on errorBg at every elevation', () => {
+    applyAccessibility({ theme: 'light' });
+    expectInkClearsAtEveryElevation(colors.onErrorBg, colors.errorBg);
+  });
+
+  test('colour-blind-safe: onSuccessBg/onErrorBg are re-derived for the swapped hue, not left as the default green/red ink', () => {
+    applyAccessibility({ theme: 'dark', colorBlindSafe: true });
+    expect(colors.onSuccessBg).not.toBe('#77C27A');
+    expect(colors.onErrorBg).not.toBe('#F88A82');
+    expectInkClearsAtEveryElevation(colors.onSuccessBg, colors.successBg);
+    expectInkClearsAtEveryElevation(colors.onErrorBg, colors.errorBg);
+
+    applyAccessibility({ theme: 'light', colorBlindSafe: true });
+    expect(colors.onSuccessBg).not.toBe('#266729');
+    expect(colors.onErrorBg).not.toBe('#AE2323');
+    expectInkClearsAtEveryElevation(colors.onSuccessBg, colors.successBg);
+    expectInkClearsAtEveryElevation(colors.onErrorBg, colors.errorBg);
+  });
+});
+
 // ─── COMP-029 light theme: contrast + composition ──────────────────────────
 // The standout move (blueprint §4f): the light table's WCAG ratios are
 // executable, so it can never silently drift below its bar on a future edit.

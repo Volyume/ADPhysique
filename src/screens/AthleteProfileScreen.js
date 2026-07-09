@@ -698,9 +698,13 @@ const styles = StyleSheet.create({
   statusPill_soon: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
   statusPill_attention: { backgroundColor: colors.errorBg, borderColor: withAlpha(colors.error, alpha.edge) },
   statusPillText: { ...type.caption, fontWeight: fontWeight.black },
-  statusPillText_fresh: { color: colors.success },
+  // AY-2/D7: text-on-tint ink, not the flat success/error mark. Composited
+  // on a real Card surface (default `surface`), the flat marks fail 4.5:1
+  // (light "Fresh" 4.36:1, dark "Update" 4.09:1) — see theme.js onSuccessBg/
+  // onErrorBg. `warning` is untouched: warningBg already clears 4.5:1 here.
+  statusPillText_fresh: { color: colors.onSuccessBg },
   statusPillText_soon: { color: colors.warning },
-  statusPillText_attention: { color: colors.error },
+  statusPillText_attention: { color: colors.onErrorBg },
   avatarSheetHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',

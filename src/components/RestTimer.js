@@ -547,6 +547,8 @@ const styles = StyleSheet.create({
   doneText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
-    color: colors.success,
+    // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
+    // fails 4.5:1 composited on successBg in light theme at every elevation).
+    color: colors.onSuccessBg,
   },
 });

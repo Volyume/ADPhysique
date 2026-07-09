@@ -3754,7 +3754,9 @@ const styles = StyleSheet.create({
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },
   adjustedRevertText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
-  targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
+  // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
+  // fails 4.5:1 composited on successBg in light theme at every elevation).
+  targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal
   supOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '88%', borderTopWidth: 1, borderColor: colors.border, overflow: 'hidden' },

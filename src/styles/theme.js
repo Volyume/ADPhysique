@@ -85,6 +85,21 @@ const baseColors = {
   error: '#F44336',
   errorBg: 'rgba(244, 67, 54, 0.15)',
 
+  // Text/icon ink reserved for rendering ON the matching `*Bg` tint (status
+  // pills, banners) rather than on a flat background, analogous to how
+  // `onPrimary`/`onError` are the ink for text on a FILL colour (design
+  // usability audit 2026-07-09, AY-2, founder decision D7). `successBg`/
+  // `errorBg` are semi-transparent tints, so their rendered colour depends on
+  // whatever surface they sit over; the flat `success`/`error` inks fail
+  // 4.5:1 body text once composited on a raised Card (`surface` and above).
+  // These values are chosen to clear >=4.5:1 against their own `*Bg` tint
+  // composited on EVERY surface-ladder step (background..surface3), so a
+  // badge is safe at any elevation, verified in theme.test.js. `warning` is
+  // not given one: `warningBg` already clears 4.5:1 at every elevation in
+  // both themes (Okabe-Ito yellow is bright enough).
+  onSuccessBg: '#77C27A',
+  onErrorBg: '#F88A82',
+
   // Text hierarchy
   textPrimary: '#FFFFFF',  // 19.44:1 on bg, AAA
   textSecondary: '#9E9E9E', // 7.25:1 on bg, AAA body, AA on raised surfaces
@@ -180,6 +195,12 @@ const lightColors = {
   successBg: 'rgba(46, 125, 50, 0.12)',
   error: '#C62828',
   errorBg: 'rgba(198, 40, 40, 0.10)',
+  // Text/icon ink for text ON the `*Bg` tint (see baseColors comment, AY-2/
+  // D7). Darkened further than the flat `success`/`error` inks so the light
+  // theme's "Fresh" pill etc. clear 4.5:1 at every surface-ladder step,
+  // where the flat ink fails even on the plain screen background.
+  onSuccessBg: '#266729',
+  onErrorBg: '#AE2323',
   textPrimary: '#1A1A18',      // warm ink, AAA
   textSecondary: '#555553',    // ~7.5:1
   textMuted: '#5C5C5A',        // >=5.5:1 on every surface
@@ -226,12 +247,21 @@ const darkCVD = {
   successBg: 'rgba(86, 180, 233, 0.15)',
   error:     '#CC79A7',
   errorBg:   'rgba(204, 121, 167, 0.15)',
+  // On-tint ink (AY-2/D7) re-derived for the CVD hue swap above: without
+  // these, a colour-blind-safe user would still get the DEFAULT (green/red)
+  // onSuccessBg/onErrorBg ink sitting on the swapped blue/pink tint, which
+  // is both a colour mismatch and, for the error case, a fresh contrast
+  // fail. Same >=4.5:1-at-every-elevation method as the base tokens.
+  onSuccessBg: '#6ABDEC',
+  onErrorBg:   '#DA9FC0',
 };
 const lightCVD = {
   success:   '#0072B2',
   successBg: 'rgba(0, 114, 178, 0.10)',
   error:     '#9C4D76',
   errorBg:   'rgba(156, 77, 118, 0.10)',
+  onSuccessBg: '#006096',
+  onErrorBg:   '#854164',
 };
 
 // Light shadows are the PRIMARY elevation cue (dark carries it via the surface
