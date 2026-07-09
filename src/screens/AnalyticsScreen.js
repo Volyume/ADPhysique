@@ -328,6 +328,22 @@ export default function AnalyticsScreen({ navigation, route }) {
     AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
   };
 
+  // Founder 2026-07-09 (resume session): the near-empty "Good start" momentum
+  // note used to sit as a permanent text block for anyone with one or two
+  // sessions. It is now closable like the Today hints; once dismissed the
+  // space collapses and the insight stack moves up. One-time key: dismissing
+  // it means it never returns.
+  const [trendsStartHidden, setTrendsStartHidden] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_seen_trends_start')
+      .then(v => setTrendsStartHidden(v === 'dismissed'))
+      .catch(() => setTrendsStartHidden(false));
+  }, []);
+  const dismissTrendsStart = () => {
+    setTrendsStartHidden(true);
+    AsyncStorage.setItem('@volyume_seen_trends_start', 'dismissed').catch(() => {});
+  };
+
   // Re-check the lifetime-tonnage landmark whenever the workout count changes
   // (tonnage only grows when a session is logged). The CTA persists until the
   // user taps the share-image CTA (markTonnageMilestoneSeen on tap), so it never
@@ -511,12 +527,23 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum ── */}
-        {!loading && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateBody}>
+        {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum.
+            Closable (founder 2026-07-09): dismissing collapses the space so
+            the stack moves up, rather than a constant block of text or a big
+            blank area before the charts arrive. ── */}
+        {!loading && !trendsStartHidden && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
+          <View style={styles.momentumRow}>
+            <Text style={styles.momentumText}>
               Good start. A couple more sessions and your trends really take shape.
             </Text>
+            <TouchableOpacity
+              onPress={dismissTrendsStart}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1206,17 +1233,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
     textAlign: 'center',
   },
-  // ── Analytics empty state ──
-  emptyState: {
+  // ── Near-empty momentum note (closable; founder 2026-07-09) ──
+  momentumRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxxl,
     gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  emptyStateBody: {
+  momentumText: {
+    flex: 1,
     fontSize: fontSize.sm,
     color: colors.textSecondary,
-    textAlign: 'center',
     lineHeight: 22,
   },
 });
