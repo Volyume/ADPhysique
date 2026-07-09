@@ -273,3 +273,13 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   context has no measurable vertical-pull alternative — the narrowest
   possible exception, test-pinned. The general "bands never reach a
   loaded plan" rule stands everywhere else. QUEUED as a build.
+
+## D19 addendum (founder, 2026-07-09, resume session)
+- **RED-S / autoregulation tooltip wording: APPROVED AS WRITTEN.** The two
+  live coachGlossary strings (autoregulation + redS, surfaced as
+  InfoTooltips on the CoachOutput credential footer) are founder-signed-off
+  verbatim. The stale "needs founder wording" triage entry is CLOSED.
+- **Standing order re-affirmed: agents stay at the LOWEST tier that gets
+  the job done to standard, at all times, to preserve tokens.** Sonnet for
+  builds, Haiku for mechanical work; Opus only where engine-grade
+  judgement is unavoidable; Fable never dispatched.
