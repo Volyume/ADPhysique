@@ -67,6 +67,17 @@ describe('fuzzyScore', () => {
   test('an unrelated query does not match', () => {
     expect(fuzzyScore('xyz123qq', 'Bench Press')).toBe(0);
   });
+
+  test('L07-F6 spec example: "dumbell press" finds Dumbbell Press variants', () => {
+    expect(fuzzyScore('dumbell press', 'Dumbbell Press')).toBeGreaterThan(0);
+    expect(fuzzyScore('dumbell press', 'Incline Dumbbell Press')).toBeGreaterThan(0);
+    expect(fuzzyScore('dumbell press', 'Decline Dumbbell Press')).toBeGreaterThan(0);
+  });
+
+  test('L07-F6 spec example: "lat pulldwon" finds Lat Pulldown', () => {
+    expect(fuzzyScore('lat pulldwon', 'Lat Pulldown')).toBeGreaterThan(0);
+    expect(fuzzyScore('lat pulldwon', 'Wide Grip Lat Pulldown')).toBeGreaterThan(0);
+  });
 });
 
 describe('fuzzySearch', () => {
@@ -86,6 +97,25 @@ describe('fuzzySearch', () => {
     expect(result.map(e => e.name)).toEqual(['Bulgarian Split Squat']);
   });
 
+  test('L07-F6 spec example: "dumbell press" finds Dumbbell Press variants, ranked', () => {
+    const list = [
+      { name: 'Dumbbell Press' },
+      { name: 'Incline Dumbbell Press' },
+      { name: 'Barbell Squat' },
+    ];
+    const result = fuzzySearch(list, 'dumbell press', e => e.name);
+    expect(result.map(e => e.name)).toEqual(['Dumbbell Press', 'Incline Dumbbell Press']);
+  });
+
+  test('L07-F6 spec example: "lat pulldwon" finds Lat Pulldown', () => {
+    const list = [
+      { name: 'Lat Pulldown' },
+      { name: 'Barbell Squat' },
+    ];
+    const result = fuzzySearch(list, 'lat pulldwon', e => e.name);
+    expect(result.map(e => e.name)).toEqual(['Lat Pulldown']);
+  });
+
   test('ranks a closer match above a looser one', () => {
     const list = [
       { name: 'Squat' }, // exact token match
@@ -93,5 +123,53 @@ describe('fuzzySearch', () => {
     ];
     const result = fuzzySearch(list, 'squat', e => e.name);
     expect(result[0].name).toBe('Squat');
+  });
+
+  test('an exact substring match always outranks a typo/fuzzy match', () => {
+    const list = [
+      { name: 'Lat Pulldown' }, // typo'd query matches this via edit distance only
+      { name: 'Wide Grip Lat Pulldown' }, // contains the exact query as a substring
+    ];
+    // "lat pulldwon" is an exact substring of neither name once tokenized
+    // ("pulldwon" only fuzzy-matches "pulldown"), so use a query where one
+    // candidate is hit exactly and the other only via the typo tolerance.
+    const resultExact = fuzzySearch(list, 'lat pulldown', e => e.name);
+    expect(resultExact.map(e => e.name)).toEqual(['Lat Pulldown', 'Wide Grip Lat Pulldown']);
+
+    const mixed = [
+      { name: 'Bench Press' }, // exact match for "bench press"
+      { name: 'Bench Prsss' }, // hypothetical typo'd custom exercise name: only a fuzzy hit
+    ];
+    const resultMixed = fuzzySearch(mixed, 'bench press', e => e.name);
+    expect(resultMixed[0].name).toBe('Bench Press');
+  });
+
+  test('is deterministic: repeated runs over the same input return the same order', () => {
+    const list = [
+      { name: 'Bulgarian Split Squat' },
+      { name: 'Back Squat' },
+      { name: 'Front Squat' },
+      { name: 'Goblet Squat' },
+      { name: 'Overhead Squat' },
+      { name: 'Bench Press' },
+      { name: 'Lat Pulldown' },
+    ];
+    const queries = ['squat', 'bul garian', 'lat pulldwon', 'dumbell press', ''];
+    for (const q of queries) {
+      const first = fuzzySearch(list, q, e => e.name).map(e => e.name);
+      for (let i = 0; i < 5; i++) {
+        const again = fuzzySearch(list, q, e => e.name).map(e => e.name);
+        expect(again).toEqual(first);
+      }
+    }
+  });
+
+  test('nonsense input finds nothing', () => {
+    const list = [
+      { name: 'Bulgarian Split Squat' },
+      { name: 'Dumbbell Press' },
+      { name: 'Lat Pulldown' },
+    ];
+    expect(fuzzySearch(list, 'qzxjklw999', e => e.name)).toEqual([]);
   });
 });

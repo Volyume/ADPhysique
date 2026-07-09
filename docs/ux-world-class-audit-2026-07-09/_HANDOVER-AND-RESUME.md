@@ -616,3 +616,15 @@ OAuth SHA-1; Cut 4 seed walk.
   model; 97 screen suites/720 tests + 4 banner guards/28 tests green, lint
   clean. JOB BOARD: Home bundle DONE; Charts + Picker bundles running;
   History bundle firing into the third slot.
+- PICKER BUNDLE CLOSED (Sonnet verify+tests): L07-F6 fuzzy search and
+  L07-F7 recents row were ALREADY BUILT on this branch (commits 82f420b,
+  e935be4 - pre-existing, spec-verified solid: token AND-matching,
+  exact>prefix>substring>subsequence>Levenshtein, deterministic ties;
+  getRecentlyUsedExerciseIds database.js:~2465; free-tier; recents hidden
+  during search/filters/swap). Agent added the missing test coverage: 5
+  tests for the recents DB read + spec-literal fuzzy cases ("dumbell
+  press", "lat pulldwon"), determinism, exact-outranks-fuzzy. 29/29 green,
+  lint clean. Timing sub-frame (worst ~18ms full-list). LEAD BLESSED the
+  flagged deviation: recents row also hides when muscle/equipment filter
+  chips are active (entry point into an untouched browse, not a filter) -
+  keep. SCORECARD note: exercise library/picker gaps L07-F6/F7 now closed.
