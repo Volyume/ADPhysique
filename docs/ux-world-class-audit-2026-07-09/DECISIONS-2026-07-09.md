@@ -56,3 +56,17 @@ exists; biceps (and similar already-tagged muscles) join SUBREGION_REQUIREMENTS.
 Build split: library agent owns seedExercises DATA + tags ONLY; engine agent
 owns ALL planEngine.js changes; engine diff gets LEAD hands-on review before
 push (deterministic, replay/invariant tests extended).
+
+## D9. Unilateral logging rulings (founder, structured round, 2026-07-09)
+
+| Question | Ruling |
+|---|---|
+| Design | **Two-phase per-side flow** (plan-C Option 2): Log set -> left effort, then right effort; ONE workout_sets row; lower side drives progression/PR maths; first-timer walkthrough modelled on the superset modal. No schema change. |
+| Activation | **Suggest, user confirms**: metadata-flagged unilateral exercises get a one-time calm prompt ("Log this one side at a time?"); the choice sticks per exercise. |
+| Between sides | **Mini timer**: a short configurable intra-set timer between left and right, full rest timer only after both sides. |
+
+Delegated detail (recorded): legacy left/right_reps columns (mig 054) stay in
+place untouched (additive schema, never removed); the orphaned unilateral.js
+toggle is absorbed/replaced by this build; laterality metadata becomes the
+suggestion trigger. BUILD QUEUED under the two-agent rule - fires when the
+current four agents drain.
