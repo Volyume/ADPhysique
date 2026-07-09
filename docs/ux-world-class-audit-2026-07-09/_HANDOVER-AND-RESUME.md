@@ -787,3 +787,42 @@ OAuth SHA-1; Cut 4 seed walk.
   LEAD BLESSED: per-partner cards idiom, pairId preview targeting, link
   placement at the PR-banner seam, two-variant progress copy. 32
   guard/contract tests green on the combined file, lint clean.
+
+## EMERGENCY SNAPSHOT (2026-07-09, ~4% of budget left - READ THIS FIRST ON RESUME)
+Committed+pushed through "Cheer every paired partner..." (5 of 8 burst
+landings done: notifications docs, first-run, workout-finish+PR,
+partners+summary-links joint). Main CI green as of faf12f0 lineage.
+
+3 AGENTS WERE STILL IN FLIGHT; their WIP sits UNCOMMITTED in the tree:
+1. PLAN-G BUILD (D15 "Both", N=3): weeklyCoach.js, CoachOutputScreen.js,
+   ProSetupCompleteScreen.js (+ likely lib tests). ENGINE-ADJACENT: on
+   resume, get/read the agent's final report if it landed; otherwise
+   review the diff hands-on against plan-G-adherence-responsiveness.md +
+   D15 (bounds: one extra step max, MRV clamp, confirm-then-apply, resets
+   on non-exceeded week, blocked by every hold/ED flag; ack copy only
+   when escalation fires; adherence-why at ProSetupComplete + first coach
+   output once each). Run src/lib/__tests__ engine suites before commit.
+2. BICEPS SUBREGION (D8 residue): seedExercises.js, database.js (new
+   migration after v63 - verify number + header), poolGenerator.js (?!),
+   database.bicepsSubregion.test.js, frontDeltMigration.test.js,
+   poolGenerator.test.js. NOTE poolGenerator.js was NOT in its brief -
+   check that diff carefully; agent was told to STOP on pinned-test
+   conflicts, so a poolGenerator edit may be its translation pass-through
+   (SUBREGION_TRANSLATION lives there or planEngine) - verify against
+   the D8 pattern; planEngine suites must ALL pass, no threshold changes.
+3. HEIGHT/DOB (CP-8): SettingsProfileScreen.js (new-ish),
+   SettingsScreen.js, NutritionTargetsScreen.js, AthleteProfileScreen.js,
+   new AgeYearsField.js + HeightFeetInchesField.js components + test.
+   Bounds: sex + weight NOT editable there; shared components with the
+   Pro surface; free-reachable.
+IF the agents' reports are lost: the diffs themselves + the briefs above
+are sufficient to review and land each; nothing else was in flight.
+
+AFTER LANDING THOSE THREE: full lint + jest (ignore progressScanVision
+env failure), stage-log each landing, push. Then TOMORROW'S QUEUE (see
+job board above): founder rounds (Settings cluster, NAV-2 weigh-in,
+plan-F 4 questions, rest-day spec FQ-1..5 incl. the possibly-dead
+@volyume_schedule_v1 finding, B41 check-in drift, payment-failure drift),
+Home decomposition, AY-7 wording. HELD: adversarial review + R1.
+Founder-side: migrations 110-113 (+ any new from tonight - CHECK
+supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
