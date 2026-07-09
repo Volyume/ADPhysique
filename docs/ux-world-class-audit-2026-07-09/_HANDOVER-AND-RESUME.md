@@ -930,3 +930,16 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   profile fields — one store, two doors, can never disagree). The build
   agent must include a test proving a selection made via the builder
   entry point is reflected in Settings state and vice versa.
+- PAIR LANDED (2026-07-09): mark-eaten add-flow teach + L08-B3 post-cancel
+  Subscription link (f626eea, lead-reviewed; hint one-time via
+  @volyume_seen_diary_planadded_hint, mutually exclusive with D12's hint,
+  both dismiss on first mark; L08-B3 built exactly to the approved billing
+  test plan, 11/11 plan tests, sandbox device walk still owed before
+  release). HANDS-ON founder fixes landed same window: Analytics "Good
+  start" momentum note now closable, space collapses (085fa3b); Rate
+  Volyume row goes straight to the store page — in-app review sheet
+  silently declines on non-Play installs/quota, which was the founder's
+  "does nothing" (d89efa9). IN FLIGHT: plan-F FULL build (Opus, engine
+  hunks pending hands-on review); dietary-needs entry point in Meal
+  Builder preferences (Sonnet, single-source-of-truth via
+  SettingsDietaryScreen route + cross-reflection test).
