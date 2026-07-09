@@ -4,12 +4,15 @@ import path from 'path';
 
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native');
-  const chain = { duration: () => chain, delay: () => chain };
+  // MO-4/D7: a distinct, truthy sentinel per entry animation kind so tests
+  // below can tell "an entering animation object was passed" apart from
+  // "entering is undefined" without caring about duration/delay values.
+  const chain = (kind) => ({ __kind: kind, duration: () => chain(kind), delay: () => chain(kind) });
   return {
     __esModule: true,
     default: { View },
-    FadeInDown: { duration: () => chain },
-    FadeInUp: { duration: () => chain },
+    FadeInDown: { duration: () => chain('FadeInDown') },
+    FadeInUp: { duration: () => chain('FadeInUp') },
   };
 });
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
@@ -45,6 +48,7 @@ import {
   getMorningWeightsLast14Days,
   getOpenEdPatternFlag,
 } from '../../lib/database';
+import { WELLBEING_KEY } from '../../lib/wellbeing';
 import ProSetupCompleteScreen from '../ProSetupCompleteScreen';
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'ProSetupCompleteScreen.js'), 'utf8');
@@ -63,6 +67,19 @@ const store = {
   accessibility: { reduceMotion: true, energyUnit: 'kcal' },
   completeFirstRun: jest.fn(),
 };
+
+// MO-4/D7: walk the rendered JSON tree and collect every `entering` prop
+// value seen (undefined for a static mount, or the {__kind} sentinel from
+// the reanimated mock above for a staged FadeInDown/FadeInUp mount).
+function collectEnteringProps(node, acc = []) {
+  if (node == null || typeof node !== 'object') return acc;
+  if (node.props && Object.prototype.hasOwnProperty.call(node.props, 'entering')) {
+    acc.push(node.props.entering);
+  }
+  const children = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+  children.forEach(c => collectEnteringProps(c, acc));
+  return acc;
+}
 
 async function flush() {
   await act(async () => {
@@ -84,6 +101,17 @@ async function renderScreen() {
   });
   await flush();
   return flattenText(tree.toJSON());
+}
+
+// MO-4/D7: same render, but returns the raw JSON tree so tests can inspect
+// the `entering` props the staged reveal actually mounted with.
+async function renderScreenTree() {
+  let tree;
+  await act(async () => {
+    tree = create(<ProSetupCompleteScreen navigation={{ navigate: jest.fn() }} />);
+  });
+  await flush();
+  return tree.toJSON();
 }
 
 describe('ProSetupCompleteScreen ED-safety copy', () => {
@@ -142,5 +170,81 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(SOURCE).toContain('Create or choose a routine before your first session.');
     expect(SOURCE).toMatch(/eduLearnRow: \{[\s\S]*minHeight: 44/);
     expect(SOURCE).toMatch(/eduLearnText: \{ color: colors\.textPrimary/);
+  });
+});
+
+// MO-4/D7 (docs/design-usability-audit-2026-07-09/coverage-02-motion.md):
+// the staged reveal (including the kcal-ring hero beat) was gated on
+// Reduce Motion only. It must also collapse to instant/static under calm
+// mode or an open ED-pattern flag, mirroring this file's own copy-side gate
+// on the exact same flag (proven above). reduceMotion is false throughout
+// this block so only the new calm/ED-flag gate is under test.
+describe('ProSetupCompleteScreen staged-reveal motion gate (MO-4/D7)', () => {
+  const motionStore = { ...store, accessibility: { reduceMotion: false, energyUnit: 'kcal' } };
+  const NUTRITION_TARGETS_KEY = '@volyume_nutrition_targets';
+  const nutritionTargets = JSON.stringify({ targetKcal: 2200, proteinG: 180, carbsG: 220, fatG: 70 });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useAppStore.mockImplementation((selector) => selector(motionStore));
+    getActivePlan.mockResolvedValue(null);
+    getRoutinesForPlan.mockResolvedValue([]);
+    getMorningWeightsLast14Days.mockResolvedValue([{ loggedAt: Date.UTC(2026, 6, 5) }]);
+    getOpenEdPatternFlag.mockResolvedValue(null);
+    AsyncStorage.getItem.mockImplementation((key) => {
+      if (key === NUTRITION_TARGETS_KEY) return Promise.resolve(nutritionTargets);
+      if (key === WELLBEING_KEY) return Promise.resolve('normal');
+      return Promise.resolve(null);
+    });
+  });
+
+  test('a healthy non-flagged, non-calm read keeps the staged reveal playing (no regression on the celebration)', async () => {
+    const json = await renderScreenTree();
+    const enterings = collectEnteringProps(json);
+
+    // The header, weigh-in, kcal-ring/macro, split and check-in blocks plus
+    // the Start-training button: 6 Animated.View entering sites in total.
+    expect(enterings.length).toBe(6);
+    expect(enterings.every((e) => e && e.__kind)).toBe(true);
+  });
+
+  test('an open ED-pattern flag collapses the staged reveal (incl. the kcal-ring block) to instant/static', async () => {
+    getOpenEdPatternFlag.mockResolvedValueOnce({ id: 'flag-1' });
+
+    const json = await renderScreenTree();
+    const enterings = collectEnteringProps(json);
+
+    expect(enterings.length).toBe(6);
+    expect(enterings.every((e) => e === undefined)).toBe(true);
+  });
+
+  test('calm mode collapses the staged reveal (incl. the kcal-ring block) to instant/static', async () => {
+    AsyncStorage.getItem.mockImplementation((key) => {
+      if (key === NUTRITION_TARGETS_KEY) return Promise.resolve(nutritionTargets);
+      if (key === WELLBEING_KEY) return Promise.resolve('calm');
+      return Promise.resolve(null);
+    });
+
+    const json = await renderScreenTree();
+    const enterings = collectEnteringProps(json);
+
+    expect(enterings.length).toBe(6);
+    expect(enterings.every((e) => e === undefined)).toBe(true);
+  });
+
+  test('a read failure fails CLOSED on motion too, not just copy', async () => {
+    getOpenEdPatternFlag.mockRejectedValueOnce(new Error('read failed'));
+
+    const json = await renderScreenTree();
+    const enterings = collectEnteringProps(json);
+
+    expect(enterings.length).toBe(6);
+    expect(enterings.every((e) => e === undefined)).toBe(true);
+  });
+
+  test('stage() and the Start-training button both gate on reduceMotion OR motionSuppressed', () => {
+    expect(SOURCE).toContain('(reduceMotion || motionSuppressed) ? undefined : FadeInDown.duration(duration).delay(i * motion.micro)');
+    expect(SOURCE).toContain("(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)");
+    expect(SOURCE).toContain('MO-4/D7');
   });
 });

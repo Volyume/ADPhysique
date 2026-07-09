@@ -22,6 +22,8 @@ import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import { planReady } from '../lib/haptics';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -55,6 +57,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // to say only "end of your training week". Name the actual date, computed
   // with the same helper the check-in gate honours (kept-promise rule).
   const [firstReviewLabel, setFirstReviewLabel] = useState(null);
+  // MO-4/D7 (docs/design-usability-audit-2026-07-09/coverage-02-motion.md):
+  // the staged reveal's motion (stage(), including the kcal-ring hero beat)
+  // collapses to instant/static under calm mode or an open ED-pattern flag,
+  // mirroring the copy-side gate on the same flag in the effect below.
+  // Default false (not yet suppressed): the celebratory reveal is a
+  // one-shot Reanimated `entering` mount, so an initial "fail closed" true
+  // would silently disable it for every user, flagged or not, since
+  // `entering` never replays after a later state flip. Every block after
+  // the header stages at least motion.micro later, which is margin enough
+  // for the read below (local SQLite + AsyncStorage) to land first.
+  const [motionSuppressed, setMotionSuppressed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,10 +78,25 @@ export default function ProSetupCompleteScreen({ navigation }) {
         // surface stays on the generic weight-free copy like Home's ledger
         // and CoachOutput's receipt. (Re-onboarding can reach this screen
         // with a flag already open.)
+        //
+        // MO-4/D7: the same flag, OR'd with calm mode via the shared
+        // isPhotoSuppressed() helper (CoachOutputScreen's exact idiom: a raw
+        // wellbeing read, fail CLOSED on a read error), also decides
+        // motionSuppressed above.
+        let flag = null;
         try {
-          const flag = user?.id ? await getOpenEdPatternFlag(user.id).catch(() => 'read_failed') : null;
+          const [f, wbMode] = await Promise.all([
+            user?.id ? getOpenEdPatternFlag(user.id).catch(() => 'read_failed') : Promise.resolve(null),
+            AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+          ]);
+          flag = f;
+          const calmNow = isCalm(wbMode) || wbMode === 'read_failed';
+          if (!cancelled) setMotionSuppressed(isPhotoSuppressed(calmNow, flag));
           if (flag) return;
-        } catch (_) { return; /* unknown flag state: keep the neutral copy */ }
+        } catch (_) {
+          if (!cancelled) setMotionSuppressed(true); // unknown state: fail closed on motion too
+          return; /* unknown flag state: keep the neutral copy */
+        }
         let checkinDay = 0;
         const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
         if (raw) {
@@ -111,8 +139,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // sequence on the UI thread (Reanimated entering); the step is the micro
   // token so the whole page settles inside ~a second. Under Reduce Motion
   // every block renders in place immediately.
+  // MO-4/D7: also collapses to instant under calm mode or an open
+  // ED-pattern flag (motionSuppressed, set above) — the reveal must never
+  // play a celebratory beat over a possibly-flagged user's calorie/macro
+  // targets (the kcal-ring block below stages through this same helper).
   const stage = (i, duration = motion.enter) =>
-    reduceMotion ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
+    (reduceMotion || motionSuppressed) ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
 
   useEffect(() => {
     AsyncStorage.getItem('@volyume_nutrition_targets')
@@ -442,7 +474,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
         </View>
 
-        <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
+        <Animated.View entering={(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
           <Button
             title="Start training"
             trailingIcon="arrow-forward"
