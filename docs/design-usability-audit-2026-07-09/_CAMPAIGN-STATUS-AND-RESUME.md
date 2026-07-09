@@ -480,3 +480,43 @@ NEXT: SAFE-fix wave (section A) is buildable now; ED-adjacent + GATED + the
 bigger JUDGEMENT/product-IA items (Home banner cap) need a founder nod. Still
 also pending from earlier: L05-D2/NT2 nutrition-density (its own ED-adjacent
 pass) + CoachOutput RED-S/autoregulation glossary (founder wording).
+
+## ================= D7 BUILD PHASE (2026-07-09) — status =================
+After the 6 coverage audits + synthesis, founder answered D7 (see DECISIONS
+D7). This build phase SHIPPED + PUSHED (all reset-author, lint EXIT 0, ED/gate
+guards green, each ED-adjacent diff lead-reviewed hands-on):
+
+SAFE fixes:
+- MO-1 photo-compare runOnJS crash fix (b4ea4c9); AY-1 TextField placeholder
+  textDisabled→textMuted (6cc353e); FR-2 auth-error calm mapping (6b050fc);
+  AY-3/4/5 a11y attrs (1299a43). LT-6 gridline opacity + AC-4 flame-outline (5a15a1b).
+LT-1 primary-as-fill (narrowed per founder): blanket 82 (28eefa7) → revert 24
+  decorative marks to primary (fd15c2b) → 4 billing/consent CTA fills (a800b16).
+  NET: buttons/chips/CTAs=primaryFill, dots/bars/bullets=primary. MacroRings left for LT-2.
+ED-adjacent bundle (all lead-reviewed): LT-2 ring stroke primaryFill (9433415,
+  adherence-neutral intact); FR-4 "Required"→"Part of your coaching" (7fc104c,
+  gate intact); AY-7 lockout SR announcement of EXISTING copy verbatim (c03fbc2);
+  MO-4 plan-reveal gated on calm||edFlag, FAIL-CLOSED on read error (a1ca844).
+NT2 progressive disclosure (NutritionTargetsScreen "Why" collapsed by default +
+  tighter stack, 0382492) — LEAD REVERTED the agent's out-of-scope MacroRings
+  restyle (acd25b1); MacroRings stays the locked component the audit says it is.
+Gated: Home banner priority-rank top-2 + "more" (85cbf36, safety banners still
+  suppress in loaders, untouched); AY-2 onSuccessBg/onErrorBg ink tokens (cc9f24a).
+
+REMAINING D7 WORK (approved, not yet built):
+- CP-7 biometric app-lock — APPROVED WITH new dep expo-local-authentication
+  (MIT, managed-workflow). Sizeable. Not started.
+- CP-2 iOS home/lock-screen widget — approved, net-new WidgetKit surface. Not started.
+- SAFE sweeps to ENUMERATE + control like LT-1: AC-2 raw alpha literals (~15
+  files → tint tokens); MO-2/MO-3 Reduce-Motion gating on AppAlert.js:82 + 16
+  raw Modal sites.
+- L05-D2 REAL fix NOT built: new-account progressive disclosure for the dense
+  MacroRings (show less before first food log). Touches the LOCKED ED-adjacent
+  ring → do carefully / surface, do NOT freelance.
+- Small: AC-7 add a chipInk-style token (ScreenHeader chip currently borrows
+  colors.camera); AC-1 chevron-forward standardisation, AC-5 4th micro-label
+  role (both JUDGEMENT/design-delegated); MesocycleBuilder deload banner
+  (remaining AY-2 site).
+- RED-S + autoregulation glossary entries (CoachOutput footer tooltip) — needs
+  founder-reviewed wording; lead to DRAFT for confirm.
+Founder-run migrations still queued: migrate_110, migrate_111.
