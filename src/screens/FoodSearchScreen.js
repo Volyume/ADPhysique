@@ -50,6 +50,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
+import Button from '../components/Button';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
@@ -983,15 +984,15 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
           activeTab !== 'custom' && query.trim().length >= 2 && results.length > 0 ? (
-            <TouchableOpacity
-              style={styles.footerBtn}
+            <Button
+              title="Add custom food"
+              icon="add"
               onPress={gotoCustomReplace}
-              accessibilityRole="button"
+              variant="secondary"
+              style={styles.footerBtn}
+              textStyle={styles.footerBtnText}
               accessibilityLabel="Add custom food"
-            >
-              <Ionicons name="add" size={18} color={colors.textPrimary} />
-              <Text style={styles.footerBtnText}>Add custom food</Text>
-            </TouchableOpacity>
+            />
           ) : null
         }
       />
@@ -1009,14 +1010,15 @@ export default function FoodSearchScreen({ navigation, route }) {
             <Text style={styles.plateCount}>{plate.length} selected</Text>
             <Text style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.plateLogBtn}
+          <Button
+            title={`Log ${plate.length}`}
             onPress={logPlate}
-            accessibilityRole="button"
+            variant="primary"
+            fullWidth={false}
+            style={styles.plateLogBtn}
+            textStyle={styles.plateLogText}
             accessibilityLabel={`Log ${plate.length} foods to ${mealSlotLabel(mealSlot)}`}
-          >
-            <Text style={styles.plateLogText}>Log {plate.length}</Text>
-          </TouchableOpacity>
+          />
         </View>
       ) : null}
 
@@ -1046,22 +1048,24 @@ export default function FoodSearchScreen({ navigation, route }) {
           ))}
         </ScrollView>
         <View style={styles.plateModalActions}>
-          <TouchableOpacity
-            style={styles.plateClearBtn}
+          <Button
+            title="Clear"
             onPress={() => { setPlate([]); setShowPlate(false); }}
-            accessibilityRole="button"
+            variant="outline"
+            fullWidth={false}
+            style={styles.plateClearBtn}
+            textStyle={styles.plateClearText}
             accessibilityLabel="Clear selected foods"
-          >
-            <Text style={styles.plateClearText}>Clear</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.plateLogBtnWide}
+          />
+          <Button
+            title="Log selected"
             onPress={logPlate}
-            accessibilityRole="button"
+            variant="primary"
+            fullWidth={false}
+            style={styles.plateLogBtnWide}
+            textStyle={styles.plateLogText}
             accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
-          >
-            <Text style={styles.plateLogText}>Log selected</Text>
-          </TouchableOpacity>
+          />
         </View>
       </BottomSheet>
 

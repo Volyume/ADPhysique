@@ -187,7 +187,9 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/headerSubtitle/);
     expect(SCREEN_SOURCE).not.toMatch(/>to \{mealSlotLabel\(mealSlot\)\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
-    expect(SCREEN_SOURCE).toMatch(/<Text style=\{styles\.plateLogText\}>Log selected<\/Text>/);
+    // Batch 2 wave B (B-2 Button adoption): the hand-rolled TouchableOpacity +
+    // raw <Text> pair is now <Button title="Log selected" textStyle={styles.plateLogText}>.
+    expect(SCREEN_SOURCE).toMatch(/title="Log selected"[\s\S]{0,220}textStyle=\{styles\.plateLogText\}/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel=\{`Log \$\{plate\.length\} to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.plateLogText\}>Log \{plate\.length\} to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
   });

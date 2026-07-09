@@ -57,6 +57,7 @@ import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
@@ -1250,16 +1251,18 @@ export default function DiaryScreen({ navigation, route }) {
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
             <View style={styles.offCardRow}>
-              <TouchableOpacity
+              <Button
+                title="Not now"
                 onPress={onDismissOffCard}
-                hitSlop={8}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
                 style={[styles.offCardButton, styles.offCardButtonMuted]}
-                accessibilityRole="button"
+                textStyle={styles.offCardDismiss}
                 accessibilityLabel="Not now"
-              >
-                <Text style={styles.offCardDismiss}>Not now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              />
+              <Button
+                title="Sharing settings"
                 // F4 (audit NAV-3): SettingsPrivacy lives in ProfileStack; the
                 // old bare navigate silently no-opped AFTER dismissing the
                 // card, destroying the affordance. Navigate first (cross-tab),
@@ -1268,13 +1271,13 @@ export default function DiaryScreen({ navigation, route }) {
                   navigateCrossTab(navigation, 'ProfileTab', 'SettingsPrivacy');
                   onDismissOffCard();
                 }}
-                hitSlop={8}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
                 style={styles.offCardButton}
-                accessibilityRole="button"
+                textStyle={styles.offCardCta}
                 accessibilityLabel="Open sharing settings"
-              >
-                <Text style={styles.offCardCta}>Sharing settings</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         ) : null}
@@ -1311,24 +1314,27 @@ export default function DiaryScreen({ navigation, route }) {
                 </Text>
                 <View style={styles.plannedBannerRow}>
                   {!isFutureDay ? (
-                    <TouchableOpacity
+                    <Button
+                      title="Mark as eaten"
                       onPress={handleConfirmPlanned}
+                      variant="primary"
+                      size="sm"
+                      fullWidth={false}
                       style={styles.plannedBtnPrimary}
-                      accessibilityRole="button"
+                      textStyle={styles.plannedBtnPrimaryText}
                       accessibilityLabel="Mark planned meals as eaten"
-                    >
-                      <Text style={styles.plannedBtnPrimaryText}>Mark as eaten</Text>
-                    </TouchableOpacity>
+                    />
                   ) : null}
-                  <TouchableOpacity
+                  <Button
+                    title="Clear"
                     onPress={handleClearPlanned}
-                    hitSlop={8}
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
                     style={styles.plannedBtnGhostButton}
-                    accessibilityRole="button"
+                    textStyle={styles.plannedBtnGhost}
                     accessibilityLabel="Clear the planned meals"
-                  >
-                    <Text style={styles.plannedBtnGhost}>Clear</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
             ) : null}
@@ -1376,15 +1382,15 @@ export default function DiaryScreen({ navigation, route }) {
             ))}
             {!selectionMode && !readOnly ? (
               <>
-                <TouchableOpacity
-                  style={styles.addMealRow}
+                <Button
+                  title="Add meal"
+                  icon="add"
                   onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
-                  accessibilityRole="button"
+                  variant="outline"
+                  style={styles.addMealRow}
+                  textStyle={styles.addMealLabel}
                   accessibilityLabel="Add another meal"
-                >
-                  <Ionicons name="add" size={18} color={colors.textSecondary} />
-                  <Text style={styles.addMealLabel}>Add meal</Text>
-                </TouchableOpacity>
+                />
                 {/* Keep planning reachable after food is logged without adding
                     another diary summary block above the meals. */}
                 <TouchableOpacity
@@ -1413,17 +1419,15 @@ export default function DiaryScreen({ navigation, route }) {
             ring at the top (founder 2026-06-20). Only when banking is allowed
             (not floored / cycling / refeed / ED flag). */}
         {bankingAvailable && !selectionMode && !readOnly ? (
-          <TouchableOpacity
-            style={styles.bankRow}
+          <Button
+            title="Plan a higher-calorie day"
+            icon="restaurant-outline"
             onPress={() => setBankSheetVisible(true)}
-            accessibilityRole="button"
+            variant="secondary"
+            style={styles.bankRow}
+            textStyle={styles.bankRowText}
             accessibilityLabel="Plan a higher-calorie day"
-          >
-            <Ionicons name="restaurant-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.bankRowText}>
-              Plan a higher-calorie day
-            </Text>
-          </TouchableOpacity>
+          />
         ) : null}
         {/* NU-2: when a split or refeed is what closed banking, say so
             instead of vanishing the row (the old silent disappearance). A
@@ -1570,7 +1574,7 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setMovePickerVisible(false)}
         accessibilityLabel="Move selected foods"
       >
-        <Text style={styles.moveTitle}>Move to</Text>
+        <SectionLabel style={styles.moveTitle}>Move to</SectionLabel>
         {mealSlots.map((s) => (
           <TouchableOpacity
             key={s.key}
@@ -1590,7 +1594,7 @@ export default function DiaryScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Save as meal"
       >
-        <Text style={styles.moveTitle}>Save as meal</Text>
+        <SectionLabel style={styles.moveTitle}>Save as meal</SectionLabel>
         <Text style={styles.saveMealHint}>
           {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
         </Text>
@@ -1637,7 +1641,7 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setDiaryToolsOpen(false)}
         accessibilityLabel="Diary tools"
       >
-        <Text style={styles.moveTitle}>Day tools</Text>
+        <SectionLabel style={styles.moveTitle}>Day tools</SectionLabel>
         <Text style={styles.saveMealHint}>
           Copy foods from another day, check nutrition trends, or export your diary.
         </Text>
@@ -1678,7 +1682,7 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setCopyDays(null)}
         accessibilityLabel="Copy from another day"
       >
-        <Text style={styles.moveTitle}>Copy from another day</Text>
+        <SectionLabel style={styles.moveTitle}>Copy from another day</SectionLabel>
         {copyDays && copyDays.length === 0 ? (
           <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
         ) : (
@@ -1838,8 +1842,6 @@ const styles = StyleSheet.create({
   selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   moveTitle: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
     paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
   },
   moveOption: {

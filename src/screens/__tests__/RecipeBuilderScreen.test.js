@@ -155,10 +155,13 @@ describe('RecipeBuilderScreen edit load recovery', () => {
 
 describe('RecipeBuilderScreen polish guards', () => {
   test('add ingredient renders as a contained neutral control', () => {
-    expect(RECIPE_BUILDER_SOURCE).toContain('<Ionicons name="add" size={15} color={colors.textSecondary} />');
-    expect(RECIPE_BUILDER_SOURCE).toContain('<Text style={styles.addLink}>Add ingredient</Text>');
+    // Batch 2 wave B (B-2 Button adoption): the hand-rolled TouchableOpacity +
+    // raw <Ionicons>/<Text> pair now renders as <Button icon="add" variant="secondary">,
+    // so the icon/label are props on Button, not raw JSX children.
+    expect(RECIPE_BUILDER_SOURCE).toContain('icon="add"');
+    expect(RECIPE_BUILDER_SOURCE).toContain('title="Add ingredient"');
     expect(RECIPE_BUILDER_SOURCE).toMatch(/addIngredientBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(RECIPE_BUILDER_SOURCE).toContain('addLink: { ...type.label, color: colors.textPrimary }');
-    expect(RECIPE_BUILDER_SOURCE).not.toContain('<Text style={styles.addLink}>+ Add ingredient</Text>');
+    expect(RECIPE_BUILDER_SOURCE).not.toContain('title="+ Add ingredient"');
   });
 });

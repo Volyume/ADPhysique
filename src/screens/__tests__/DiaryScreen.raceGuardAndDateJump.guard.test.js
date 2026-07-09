@@ -146,7 +146,9 @@ describe('DiaryScreen diary tools', () => {
   test('copy and insights live in a clear tools sheet, not a generic alert', () => {
     expect(SRC).toMatch(/accessibilityLabel="Open diary tools"/);
     expect(SRC).toMatch(/accessibilityLabel="Diary tools"/);
-    expect(SRC).toMatch(/<Text style=\{styles\.moveTitle\}>Day tools<\/Text>/);
+    // Batch 2 wave B (B-5 section-label consolidation): moveTitle is now a raw
+    // <Text> routed through the shared SectionLabel overline role, not a plain <Text>.
+    expect(SRC).toMatch(/<SectionLabel style=\{styles\.moveTitle\}>Day tools<\/SectionLabel>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
     expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
     expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
@@ -176,7 +178,10 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
     expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
-    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{16\} color=\{colors\.textSecondary\} \/>/);
+    // Batch 2 wave B (B-2 Button adoption): bankRow's hand-rolled TouchableOpacity
+    // + Ionicons + Text now renders as <Button icon="restaurant-outline" variant="secondary">,
+    // so the icon is a prop, not a raw <Ionicons> child.
+    expect(SRC).toMatch(/icon="restaurant-outline"[\s\S]{0,80}variant="secondary"[\s\S]{0,40}style=\{styles\.bankRow\}/);
     expect(SRC).toMatch(/bankRow: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toContain('bankRowText: { ...type.label, color: colors.textPrimary }');
     expect(SRC).not.toMatch(/bankRowText: \{ color: colors\.primary/);

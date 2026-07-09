@@ -39,6 +39,7 @@ import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
+import SectionLabel from '../components/SectionLabel';
 import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -406,10 +407,17 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         <View style={styles.section}>
           <View style={styles.ingHeader}>
             <Text style={styles.label}>Ingredients</Text>
-            <TouchableOpacity style={styles.addIngredientBtn} onPress={onPickIngredient} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add ingredient">
-              <Ionicons name="add" size={15} color={colors.textSecondary} />
-              <Text style={styles.addLink}>Add ingredient</Text>
-            </TouchableOpacity>
+            <Button
+              title="Add ingredient"
+              icon="add"
+              onPress={onPickIngredient}
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              style={styles.addIngredientBtn}
+              textStyle={styles.addLink}
+              accessibilityLabel="Add ingredient"
+            />
           </View>
 
           {ingredients.length === 0 ? (
@@ -444,7 +452,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         </View>
 
         <View style={styles.macros}>
-          <Text style={styles.macrosTitle}>Per serving</Text>
+          <SectionLabel style={styles.macrosTitle}>Per serving</SectionLabel>
           <View style={styles.macrosRow}>
             <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.perServing.kcal, energyUnit)} />
             <MacroPill label="P" value={`${macros.perServing.protein}g`} />
@@ -522,7 +530,7 @@ const styles = StyleSheet.create({
   qtyUnit: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 
   macros: { marginHorizontal: spacing.lg, marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
-  macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', marginBottom: spacing.sm },
+  macrosTitle: { marginBottom: spacing.sm },
   macrosRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   macrosSub: { color: colors.textMuted, ...type.num('caption') },
   pill: {

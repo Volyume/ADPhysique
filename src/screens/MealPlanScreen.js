@@ -102,7 +102,7 @@ function PrefRow({
 }) {
   return (
     <View style={styles.prefRow}>
-      <Text style={styles.prefLabel}>{label}</Text>
+      <SectionLabel style={styles.prefLabel}>{label}</SectionLabel>
       <View style={styles.prefOpts} accessibilityRole="radiogroup">
         {options.map((opt) => {
           const selected = opt.value === value;
@@ -820,7 +820,7 @@ export default function MealPlanScreen({ navigation, route }) {
                   accessibilityLabel={`${planSlotLabel(slot.slot)}: ${slot.name}, ${formatEnergy(slot.totals.kcal, energyUnit)} ${energyWord}. Tap for details.`}
                 >
                   <View style={styles.mealHead}>
-                    <Text style={styles.mealSlot} numberOfLines={1} ellipsizeMode="tail">{planSlotLabel(slot.slot)}</Text>
+                    <SectionLabel style={styles.mealSlot} numberOfLines={1} ellipsizeMode="tail">{planSlotLabel(slot.slot)}</SectionLabel>
                     <Text style={styles.mealKcal}>{formatEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <Text style={styles.mealName} numberOfLines={2} ellipsizeMode="tail">{slot.name}</Text>
@@ -869,17 +869,18 @@ export default function MealPlanScreen({ navigation, route }) {
                     })()}
                   </View>
                 ) : null}
-                <TouchableOpacity
-                  style={styles.swapBtn}
+                <Button
+                  title="Swap"
+                  icon="swap-horizontal"
                   onPress={() => handleSwapMeal(slot.slot)}
                   disabled={busy}
-                  hitSlop={hitSlop}
-                  accessibilityRole="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.swapBtn}
+                  textStyle={styles.swapText}
                   accessibilityLabel={`Swap ${slot.name} for something else`}
-                >
-                  <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
-                  <Text style={styles.swapText}>Swap</Text>
-                </TouchableOpacity>
+                />
               </Card>
             );
           })}
@@ -914,48 +915,56 @@ export default function MealPlanScreen({ navigation, route }) {
               <Button title="Add this week" onPress={handleLogWeek} loading={busy} fullWidth />
             )}
             <View style={styles.planQuickActions}>
-              <TouchableOpacity
-                style={styles.planQuickAction}
+              <Button
+                title="Refresh meals"
+                icon="refresh-outline"
                 onPress={handleRegenerate}
                 disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Refresh meals"
-              >
-                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Refresh meals</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
                 style={styles.planQuickAction}
+                textStyle={styles.planQuickActionText}
+                accessibilityLabel="Refresh meals"
+              />
+              <Button
+                title="Shopping list"
+                icon="basket-outline"
                 onPress={() => setGrocerySheet(buildGroceryList(plan))}
                 disabled={busy}
-                accessibilityRole="button"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={styles.planQuickAction}
+                textStyle={styles.planQuickActionText}
                 accessibilityLabel="Shopping list"
-              >
-                <Ionicons name="basket-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>Shopping list</Text>
-              </TouchableOpacity>
+              />
               {!isDayPlan && planDayCount > 1 ? (
-                <TouchableOpacity
-                  style={styles.planQuickAction}
+                <Button
+                  title="Repeat day"
+                  icon="copy-outline"
                   onPress={openRepeatDay}
                   disabled={busy}
-                  accessibilityRole="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.planQuickAction}
+                  textStyle={styles.planQuickActionText}
                   accessibilityLabel="Repeat this day onto another day"
-                >
-                  <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                  <Text style={styles.planQuickActionText}>Repeat day</Text>
-                </TouchableOpacity>
+                />
               ) : null}
-              <TouchableOpacity
-                style={[styles.planQuickAction, styles.planQuickActionMode]}
+              <Button
+                title={isDayPlan ? 'Create week' : 'Create day'}
+                icon="swap-horizontal-outline"
                 onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
                 disabled={busy}
-                accessibilityRole="button"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.planQuickAction, styles.planQuickActionMode]}
+                textStyle={styles.planQuickActionText}
                 accessibilityLabel={isDayPlan ? 'Create a week instead' : 'Create one day instead'}
-              >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.planQuickActionText}>{isDayPlan ? 'Create week' : 'Create day'}</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </ScrollView>
@@ -1019,16 +1028,17 @@ export default function MealPlanScreen({ navigation, route }) {
             <View style={styles.grocerySheetHead}>
               <Text style={styles.swapSheetTitle}>Shopping list</Text>
               {!grocerySheet.isEmpty ? (
-                <TouchableOpacity
-                  style={styles.groceryShareBtn}
+                <Button
+                  title="Share"
+                  icon="share-outline"
                   onPress={handleShareGroceryList}
-                  hitSlop={hitSlop}
-                  accessibilityRole="button"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.groceryShareBtn}
+                  textStyle={styles.groceryShareBtnText}
                   accessibilityLabel="Share shopping list"
-                >
-                  <Ionicons name="share-outline" size={15} color={colors.primary} />
-                  <Text style={styles.groceryShareBtnText}>Share</Text>
-                </TouchableOpacity>
+                />
               ) : null}
             </View>
             {grocerySheet.isEmpty ? (
@@ -1224,7 +1234,7 @@ const styles = StyleSheet.create({
   planQuickActionText: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   mealCard: { gap: spacing.xs },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
+  mealSlot: {},
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
@@ -1296,7 +1306,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   prefRow: { gap: spacing.xs },
-  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
+  prefLabel: {},
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
   prefOptOn: { borderColor: colors.textSecondary, backgroundColor: colors.surface },

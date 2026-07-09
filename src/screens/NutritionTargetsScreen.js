@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, 
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
@@ -645,23 +646,16 @@ export default function NutritionTargetsScreen({ navigation }) {
                 </View>
               </Card>
 
-              <TouchableOpacity
-                style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+              <Button
+                title={calculating ? 'Setting…' : 'Set my targets'}
+                icon={calculating ? 'hourglass-outline' : 'calculator-outline'}
                 onPress={handleCalculate}
                 disabled={!formComplete || calculating}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !formComplete || calculating }}
+                variant="primary"
+                style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+                textStyle={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}
                 accessibilityLabel="Set my targets"
-              >
-                <Ionicons
-                  name={calculating ? 'hourglass-outline' : 'calculator-outline'}
-                  size={20}
-                  color={formComplete ? colors.onPrimary : colors.textDisabled}
-                />
-                <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
-                  {calculating ? 'Setting…' : 'Set my targets'}
-                </Text>
-              </TouchableOpacity>
+              />
 
               <TouchableOpacity
                 style={styles.fineTuneLink}
@@ -916,33 +910,33 @@ export default function NutritionTargetsScreen({ navigation }) {
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn} accessibilityRole="button" accessibilityLabel="Adjust">
-                <Ionicons name="settings-outline" size={13} color={colors.primary} />
-                <Text style={styles.reconfigureBtnText}>Adjust</Text>
-              </TouchableOpacity>
+              <Button
+                title="Adjust"
+                icon="settings-outline"
+                onPress={() => setFormCollapsed(false)}
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                style={styles.reconfigureBtn}
+                textStyle={styles.reconfigureBtnText}
+                accessibilityLabel="Adjust"
+              />
             </Card>
           ) : null}
 
           {/* ── Calculate button, only shown when form is open ───────────────────────────── */}
 
           {!formCollapsed && (
-            <TouchableOpacity
-              style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+            <Button
+              title={calculating ? 'Calculating…' : 'Calculate targets'}
+              icon={calculating ? 'hourglass-outline' : 'calculator-outline'}
               onPress={handleCalculate}
               disabled={!formComplete || calculating}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !formComplete || calculating }}
+              variant="primary"
+              style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+              textStyle={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}
               accessibilityLabel="Calculate targets"
-            >
-              <Ionicons
-                name={calculating ? 'hourglass-outline' : 'calculator-outline'}
-                size={20}
-                color={formComplete ? colors.onPrimary : colors.textDisabled}
-              />
-              <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
-                {calculating ? 'Calculating…' : 'Calculate targets'}
-              </Text>
-            </TouchableOpacity>
+            />
           )}
 
           {/* ── RESULTS ─────────────────────────────────────────────────────────────────────── */}
@@ -1087,17 +1081,17 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </Text>
 
                     {mealsPerDay !== null && mealsPerDay !== recommended && (
-                      <TouchableOpacity
-                        style={styles.mealCountRecButton}
+                      <Button
+                        title="Use recommended"
+                        icon="checkmark-circle-outline"
                         onPress={() => changeMealsPerDay(recommended)}
-                        accessibilityRole="button"
+                        variant="outline"
+                        size="sm"
+                        fullWidth={false}
+                        style={styles.mealCountRecButton}
+                        textStyle={styles.mealCountRecButtonText}
                         accessibilityLabel={`Use Volyume's recommended ${recommended} meals per day`}
-                      >
-                        <Ionicons name="checkmark-circle-outline" size={13} color={colors.primary} />
-                        <Text style={styles.mealCountRecButtonText}>
-                          Use recommended
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     )}
 
                     {windowHint && (
@@ -1415,14 +1409,16 @@ export default function NutritionTargetsScreen({ navigation }) {
               )}
 
               {/* Recalculate */}
-              <TouchableOpacity accessibilityRole="button"
-                style={styles.recalcBtn}
+              <Button
+                title="Recalculate"
+                icon="refresh-outline"
                 onPress={handleCalculate}
                 disabled={!formComplete || calculating}
-              >
-                <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                <Text style={styles.recalcBtnText}>Recalculate</Text>
-              </TouchableOpacity>
+                variant="outline"
+                style={styles.recalcBtn}
+                textStyle={styles.recalcBtnText}
+                accessibilityLabel="Recalculate"
+              />
             </View>
           ) : null}
 

@@ -44,6 +44,7 @@ import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -184,13 +185,17 @@ export default function ScanBarcodeScreen({ navigation, route }) {
             Volyume uses the camera to scan barcodes. Turn it on in Settings.
           </Text>
           {permission === 'denied' ? (
-            <TouchableOpacity style={styles.permissionBtn} onPress={() => Linking.openSettings()} accessibilityRole="button" accessibilityLabel="Open Settings">
-              <Text style={styles.permissionBtnText}>Open Settings</Text>
-            </TouchableOpacity>
+            <Button
+              title="Open Settings"
+              onPress={() => Linking.openSettings()}
+              accessibilityLabel="Open Settings"
+            />
           ) : (
-            <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} accessibilityRole="button" accessibilityLabel="Allow camera">
-              <Text style={styles.permissionBtnText}>Allow camera</Text>
-            </TouchableOpacity>
+            <Button
+              title="Allow camera"
+              onPress={requestPermission}
+              accessibilityLabel="Allow camera"
+            />
           )}
         </View>
       </SafeAreaView>

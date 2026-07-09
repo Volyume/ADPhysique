@@ -18,7 +18,22 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../../components/BackHeader', () => () => null);
-jest.mock('../../components/Button', () => () => null);
+// Batch 2 wave B (B-2 Button adoption): swap/repeat/shopping-list/share are now
+// <Button> instead of raw TouchableOpacity, so the old `() => null` mock made
+// them invisible to the buttons(tree) helper below. Render a real TouchableOpacity
+// preserving accessibilityRole/onPress/accessibilityLabel so existing assertions
+// (which search the tree, not a captured-props reference) still find them.
+jest.mock('../../components/Button', () => {
+  const React = require('react');
+  const { Text, TouchableOpacity } = require('react-native');
+  return ({ title, onPress, disabled, accessibilityLabel }) => (
+    React.createElement(
+      TouchableOpacity,
+      { accessibilityRole: 'button', onPress, disabled, accessibilityLabel: accessibilityLabel || title },
+      React.createElement(Text, null, title),
+    )
+  );
+});
 jest.mock('../../components/Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
