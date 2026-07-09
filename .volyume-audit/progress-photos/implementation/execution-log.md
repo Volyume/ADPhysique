@@ -185,3 +185,21 @@ summary), plus 8 test files (106 tests).
 Tests: `npx jest --testPathPattern="progressScanResultsContract|progressScanTrendViewModel|ProgressScanMeaningMoment|ProgressScanTrend|ProgressPhotosScreen.resultsContract|progressScanPreferences|ProgressPhotosScreen.addFlow"`
 -> 8 suites, 106 tests, all passed. `ProgressPhotoCompare.js`'s own suite (12
 tests) re-run to confirm no cross-contamination. `npm run lint` clean.
+
+## Founder decisions (2026-07-09, mid-run)
+
+Two questions surfaced by the review (one from wave 2's deferred item, one
+that is also wave 5's own founder gate) were put to the founder in multiple-
+choice form before continuing:
+
+1. **Per-user wipe scope** (wave 5 founder gate, evidence-gaps §7 Q5):
+   founder chose "scope to account (recommended)" -- wipeAllUserData(userId)
+   should scope the photo wipe to that account on sign-out/delete; a full
+   local reset keeps whole-directory semantics. This will be built in wave 5.
+2. **Guided-singles same-day-fallback edge** (wave 2 deferred item): founder
+   chose "tag guided singles unscored too (recommended)". Built immediately
+   (commit `181e835`): onDetailsConfirm's unscored tag, previously only
+   applied when reached via the quick pick route (pendingUri set), is now
+   applied unconditionally, since every path into that sheet (quick pick,
+   guided ghost capture, or a broken scan session falling back to a plain
+   single) produces a photo that can never become a scored scan asset.
