@@ -129,3 +129,11 @@ exception is documented in exerciseMetadata and pinned by updated tests
    flavour. They will not change the meal's numbers." (exact copy set at
    build; calm, British, no em dash; the existing honesty footnote stays).
    Queued for the next free agent slot (Haiku-grade exact-copy job).
+
+## D13. Small copy fixes register (founder direct orders, 2026-07-09)
+
+1. Coach: "First check-in opens on <long date>" wraps to a second line.
+   Shorten to "First check-in: DD/MM/YYYY" (UK short date, en-GB). Grep
+   "check-in opens" to locate; keep any surrounding logic/gating untouched.
+2. (With D12 item 4) additions-list reframe - both queued as ONE Haiku
+   exact-copy agent for the next free slot.
