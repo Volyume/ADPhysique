@@ -11,7 +11,7 @@ import {
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing, alpha } from '../styles/theme';
 
 const NUM_PARTICLES = 40;
 
@@ -313,13 +313,13 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.376),
+    borderColor: withAlpha(colors.gold, alpha.strong),
   },
   iconContainer: {
     width: 88,
     height: 88,
     borderRadius: circle(88),
-    backgroundColor: withAlpha(colors.gold, 0.125),
+    backgroundColor: withAlpha(colors.gold, alpha.tint),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,

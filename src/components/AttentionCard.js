@@ -25,7 +25,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  colors, spacing, radius, fontWeight, type, withAlpha, iconSize,
+  colors, spacing, radius, fontWeight, type, withAlpha, iconSize, alpha,
 } from '../styles/theme';
 import DifferentialBadge from './DifferentialBadge';
 
@@ -144,7 +144,7 @@ export default function AttentionCard({
 const styles = StyleSheet.create({
   trialBanner: {
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   trialBannerTopRow: {
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   trialBannerLink: { ...type.label, color: colors.textPrimary, flex: 1 },
   freeCoachCard: {
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.xs,
   },

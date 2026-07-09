@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   freqRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.xs,
-    borderBottomWidth: 1, borderBottomColor: withAlpha(colors.border, 0.376),
+    borderBottomWidth: 1, borderBottomColor: withAlpha(colors.border, alpha.strong),
   },
   freqMuscle: {
     ...type.label, color: colors.textPrimary,

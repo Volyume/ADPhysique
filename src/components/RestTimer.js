@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing, alpha } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
 // silences them (the old raw expo-haptics calls bypassed it).
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
+    borderColor: withAlpha(colors.primary, alpha.mid),
     backgroundColor: colors.primaryBg,
   },
   adjBtnNeg: {

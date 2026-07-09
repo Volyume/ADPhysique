@@ -7,7 +7,7 @@ import { endOfWeek } from 'date-fns/endOfWeek';
 import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing, alpha } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -191,7 +191,7 @@ function VolumeRow({ muscle, data }) {
       <View style={[styles.volumeDot, { backgroundColor: dot }]} />
       <Text style={styles.volumeMuscleName}>{displayName}</Text>
       <Text style={styles.volumeSetCount}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
-      <View style={[styles.volumeBadge, { backgroundColor: withAlpha(dot, 0.133) }]}>
+      <View style={[styles.volumeBadge, { backgroundColor: withAlpha(dot, alpha.tint) }]}>
         <Text style={[styles.volumeBadgeText, { color: dot }]}>{label}</Text>
       </View>
     </View>
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
     borderRadius: circle(22),
     backgroundColor: colors.primaryBg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.333),
+    borderColor: withAlpha(colors.primary, alpha.mid),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,

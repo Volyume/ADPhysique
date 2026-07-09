@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha } from '../../styles/theme';
 
 // L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
 // pattern already shipped on 26 other files (BodyMetricsScreen, EngineLog,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorBg ?? colors.warningBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.error, 0.314),
+    borderColor: withAlpha(colors.error, alpha.mid),
     padding: spacing.lg,
     gap: spacing.sm,
   },

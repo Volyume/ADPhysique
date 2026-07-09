@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import InfoTooltip from './InfoTooltip';
 
 // Inline dropdown, expands in place, no modal needed. Shared by the Pro
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
   },
-  dropdownTriggerFilled: { borderColor: withAlpha(colors.primary, 0.376) },
+  dropdownTriggerFilled: { borderColor: withAlpha(colors.primary, alpha.strong) },
   dropdownTriggerOpen: { borderColor: colors.primary, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   dropdownValue: { fontSize: fontSize.md, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
   dropdownPlaceholder: { color: colors.textDisabled },

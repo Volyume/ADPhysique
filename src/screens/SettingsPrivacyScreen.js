@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
-import { colors, withAlpha } from '../styles/theme';
+import { colors, withAlpha, alpha } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import {
   getConsent as getOffWritebackConsent,
@@ -86,7 +86,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={offConsent}
               onValueChange={toggleOffConsent}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
               thumbColor={offConsent ? colors.primary : colors.textMuted}
             />
           }
@@ -100,7 +100,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={!privacy?.analyticsOptOut}
               onValueChange={v => setAnalyticsOptOut(!v)}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
               thumbColor={!privacy?.analyticsOptOut ? colors.primary : colors.textMuted}
             />
           }
@@ -136,7 +136,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
               value={appLockOn}
               onValueChange={toggleAppLock}
               disabled={checkingLock || (!appLockOn && !biometricAvailable)}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
               thumbColor={appLockOn ? colors.primary : colors.textMuted}
             />
           }

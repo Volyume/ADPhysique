@@ -45,7 +45,7 @@ import TextField from '../components/TextField';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -1730,7 +1730,7 @@ const styles = StyleSheet.create({
     width: 20, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.surface3,
   },
-  stepDotDone: { backgroundColor: withAlpha(colors.primary, 0.376) },
+  stepDotDone: { backgroundColor: withAlpha(colors.primary, alpha.strong) },
   stepDotActive: { backgroundColor: colors.primary },
 
   scroll: { flex: 1 },
@@ -1817,7 +1817,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, color: colors.primary,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
 
   // -- Progress scan evidence (integration-plan.md §5) ------------------------

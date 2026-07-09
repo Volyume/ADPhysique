@@ -14,7 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type, alpha } from '../styles/theme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
@@ -227,7 +227,7 @@ export default function ReadinessCards({ userId, tier }) {
               </View>
               <View style={styles.mfChipGrid}>
                 {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
-                  <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, 0.267), backgroundColor: withAlpha(color, 0.071) }]}>
+                  <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
                     <View style={[styles.mfDot, { backgroundColor: dot }]} />
                     <Text style={[styles.mfChipName, { color: colors.textPrimary }]}>{displayName}</Text>
                     <Text style={[styles.mfChipLabel, { color }]}>{label}</Text>
@@ -320,8 +320,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, 0.251) },
-  trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, 0.251) },
+  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, alpha.edge) },
+  trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
   trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   mfCard: {
