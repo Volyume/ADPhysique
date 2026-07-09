@@ -93,6 +93,7 @@ jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 import WorkoutHistoryScreen, { formatHistoryExerciseSummary } from '../WorkoutHistoryScreen';
 import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises } from '../../lib/database';
 import { logError } from '../../lib/errorLog';
+import SearchBar from '../../components/SearchBar';
 
 const WORKOUT_HISTORY_SOURCE = require('fs').readFileSync(
   require('path').resolve(__dirname, '../WorkoutHistoryScreen.js'),
@@ -215,6 +216,60 @@ describe('WorkoutHistoryScreen load states', () => {
     text = flattenText(tree.toJSON());
     expect(text).toContain('1 session');
     expect(text).not.toContain('No upper sessions found');
+  });
+
+  test('L07-F11: search by exercise name narrows workout history, unmatched shows a search-specific empty state', async () => {
+    getRecentCompletedWorkouts.mockResolvedValue([
+      {
+        id: 'leg-day', userId: 'u1', startedAt: Date.now(), endedAt: Date.now() + 1800000,
+        isCompleted: true, name: 'Leg Day',
+      },
+      {
+        id: 'push-day', userId: 'u1', startedAt: Date.now() - 10000, endedAt: Date.now() - 8000,
+        isCompleted: true, name: 'Push Day',
+      },
+    ]);
+    getWorkoutSetsForWorkoutIds.mockResolvedValue([
+      { workoutId: 'leg-day', exerciseId: 'ex-squat', setType: 'straight' },
+      { workoutId: 'push-day', exerciseId: 'ex-bench', setType: 'straight' },
+    ]);
+    getAllExercises.mockResolvedValue([
+      { id: 'ex-squat', name: 'Squat' },
+      { id: 'ex-bench', name: 'Bench Press' },
+    ]);
+
+    let tree;
+    await act(async () => {
+      tree = create(<WorkoutHistoryScreen navigation={{ navigate: jest.fn() }} />);
+    });
+    await flush();
+
+    let text = flattenText(tree.toJSON());
+    expect(text).toContain('2 sessions');
+
+    const search = tree.root.findByType(SearchBar);
+
+    // Matches an exercise name in only one of the two sessions: the list
+    // narrows without falling into the search-empty state.
+    act(() => { search.props.onChangeText('squat'); });
+    text = flattenText(tree.toJSON());
+    expect(text).not.toContain('No matches for');
+
+    // A query matching nothing (neither workout name nor any exercise name)
+    // shows the search-specific empty state, not a generic one.
+    act(() => { search.props.onChangeText('nonexistentmove'); });
+    text = flattenText(tree.toJSON());
+    expect(text).toContain('No matches for "nonexistentmove"');
+    expect(text).toContain('Try a different exercise or workout name');
+    expect(text).toContain('Show all sessions');
+
+    // Clearing the search (via "Show all sessions") returns to the full list.
+    act(() => {
+      tree.root.findByProps({ accessibilityLabel: 'Show all workout sessions' }).props.onPress();
+    });
+    text = flattenText(tree.toJSON());
+    expect(text).toContain('2 sessions');
+    expect(text).not.toContain('No matches for');
   });
 
   test('ignores stale overlapping refresh results before fetching sets', async () => {

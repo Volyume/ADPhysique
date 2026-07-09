@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
+import { fuzzySearch } from '../lib/exerciseFuzzySearch';
 import useAppStore from '../store/useAppStore';
 import Chip from './Chip';
 import SearchBar from './SearchBar';
@@ -28,6 +29,20 @@ import { useToast } from './Toast';
 // the existing syncExercises push covers them.
 const PICKER_MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
+
+// L07-F8: the exercise TYPE axis a custom exercise can pick, matching the
+// existing exercise_type CHECK constraint (supabase/migrate_091_exercise_type.sql,
+// database.js exercise_type migration) so a custom exercise renders the same
+// set-input schema (SetEntry.js) and joins the same duration/distance volume
+// exclusions as a seeded library exercise. Defaulting to weight_reps keeps
+// every exercise that never touches this row byte-identical to before.
+const EXERCISE_TYPE_OPTIONS = [
+  { key: 'weight_reps', label: 'Weight & reps' },
+  { key: 'weighted_bodyweight', label: 'Bodyweight + added weight' },
+  { key: 'reps_only', label: 'Reps only' },
+  { key: 'duration', label: 'Time' },
+  { key: 'distance', label: 'Distance & time' },
+];
 
 // saveLabel / actionLabel are aliases for the create-form's save button text
 // (RoutineDetail/ManualBuilder pass saveLabel, ActiveWorkout passes
@@ -48,6 +63,10 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const [createName, setCreateName] = useState('');
   const [createMuscle, setCreateMuscle] = useState('');
   const [createEquipment, setCreateEquipment] = useState('');
+  // L07-F8: secondary muscles (multi-select) + exercise type, so a custom
+  // exercise carries the same fields a seeded library exercise does.
+  const [createSecondaryMuscles, setCreateSecondaryMuscles] = useState([]);
+  const [createExerciseType, setCreateExerciseType] = useState('weight_reps');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -77,12 +96,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     : [];
 
   useEffect(() => {
-    const q = query.trim().toLowerCase();
-    setFiltered(allExercises.filter(e =>
-      (!q || e.name.toLowerCase().includes(q)) &&
+    // L07-F6: fuzzy, typo-tolerant search. Muscle/equipment chips still
+    // narrow the candidate list first (an AND with the text search); the
+    // text search itself now tolerates typos, partial words and words typed
+    // out of order (e.g. "bul garian" finds "Bulgarian Split Squat").
+    const base = allExercises.filter(e =>
       matchesMuscleFilter(e, muscleFilter) &&
       matchesEquipmentFilter(e, equipmentFilter),
-    ));
+    );
+    setFiltered(fuzzySearch(base, query, e => e.name));
   }, [query, muscleFilter, equipmentFilter, allExercises]);
 
   async function handleCreate() {
@@ -95,7 +117,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       const created = await insertExercise({
         name: createName.trim(),
         primaryMuscle: createMuscle || null,
+        // L07-F8: secondary muscles, so a custom exercise's volume/muscle
+        // tracking counts the same secondary-muscle contribution a seeded
+        // exercise's secondary_muscles column already gives it.
+        secondaryMuscles: createSecondaryMuscles.length ? createSecondaryMuscles : null,
         equipment: createEquipment || null,
+        // L07-F8: the exercise type axis, so e.g. a custom plank or carry
+        // gets the duration/distance SetEntry schema instead of always
+        // defaulting to weight_reps.
+        exerciseType: createExerciseType,
         // SFR is left null/unknown, never a guessed midpoint: the swap and plan
         // engines treat a missing stimulus-to-fatigue ratio as "no data" and
         // skip the SFR scoring term. A hard-coded value (e.g. 3) would make a
@@ -109,7 +139,14 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       // never hands back an id-less exercise (which would log a set against a
       // null exercise_id) if the name lookup misses.
       const newEx = all.find(e => e.name === createName.trim())
-        || { id: created?.id, name: createName.trim(), primaryMuscle: createMuscle, equipment: createEquipment };
+        || {
+          id: created?.id,
+          name: createName.trim(),
+          primaryMuscle: createMuscle,
+          secondaryMuscles: createSecondaryMuscles.length ? createSecondaryMuscles : null,
+          equipment: createEquipment,
+          exerciseType: createExerciseType,
+        };
       onSelect(newEx);
       onClose();
     } catch (_e) {
@@ -123,7 +160,22 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     setCreateName(query.trim());
     setCreateMuscle('');
     setCreateEquipment('');
+    setCreateSecondaryMuscles([]);
+    setCreateExerciseType('weight_reps');
     setShowCreate(true);
+  }
+
+  // Choosing a primary muscle drops it from the secondary set, so the same
+  // muscle can never be both primary and secondary at once.
+  function selectPrimaryMuscle(m) {
+    setCreateMuscle(prev => (prev === m ? '' : m));
+    setCreateSecondaryMuscles(prev => prev.filter(x => x !== m));
+  }
+
+  function toggleSecondaryMuscle(m) {
+    setCreateSecondaryMuscles(prev => (
+      prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]
+    ));
   }
 
   return (
@@ -177,9 +229,30 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     key={m}
                     label={MUSCLE_DISPLAY_NAMES[m]}
                     selected={createMuscle === m}
-                    onPress={() => setCreateMuscle(prev => prev === m ? '' : m)}
+                    onPress={() => selectPrimaryMuscle(m)}
                   />
                 ))}
+              </View>
+              {/* L07-F8: secondary muscles, multi-select, so a custom
+                  exercise's volume/muscle tracking counts a secondary
+                  contribution the same way a seeded exercise's
+                  secondary_muscles column already does. The current primary
+                  muscle is left out of the list so the same muscle cannot be
+                  picked as both. */}
+              <Text style={styles.createLabel}>Secondary muscles (optional)</Text>
+              <View style={styles.chipRow}>
+                {PICKER_MUSCLES.filter(m => m !== createMuscle).map(m => {
+                  const selected = createSecondaryMuscles.includes(m);
+                  return (
+                    <Chip
+                      key={m}
+                      label={MUSCLE_DISPLAY_NAMES[m]}
+                      selected={selected}
+                      onPress={() => toggleSecondaryMuscle(m)}
+                      accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${MUSCLE_DISPLAY_NAMES[m]} as a secondary muscle`}
+                    />
+                  );
+                })}
               </View>
               <Text style={styles.createLabel}>Equipment</Text>
               <View style={styles.chipRow}>
@@ -189,6 +262,22 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     label={eq}
                     selected={createEquipment === eq}
                     onPress={() => setCreateEquipment(prev => prev === eq ? '' : eq)}
+                  />
+                ))}
+              </View>
+              {/* L07-F8: exercise type, matching the schema's existing
+                  exercise_type enum so a custom plank/carry/sprint can get the
+                  correct SetEntry input schema instead of always defaulting
+                  to weight_reps. */}
+              <Text style={styles.createLabel}>Exercise type</Text>
+              <View style={styles.chipRow}>
+                {EXERCISE_TYPE_OPTIONS.map(opt => (
+                  <Chip
+                    key={opt.key}
+                    label={opt.label}
+                    selected={createExerciseType === opt.key}
+                    onPress={() => setCreateExerciseType(opt.key)}
+                    accessibilityLabel={`Exercise type: ${opt.label}`}
                   />
                 ))}
               </View>

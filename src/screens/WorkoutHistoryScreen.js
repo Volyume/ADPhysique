@@ -18,6 +18,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
+import SearchBar from '../components/SearchBar';
 import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
@@ -90,6 +91,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null); // Date | null
+  // L07-F11: find a past workout by exercise or workout name. Filters the
+  // list already loaded by loadWorkouts, no extra query.
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadWorkouts();
@@ -128,9 +132,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
         const mySets = setsByWorkout.get(w.id) || [];
         const workingSets = mySets.filter(s => s.setType !== 'warmup');
         const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
-        const exerciseNames = exerciseIds.slice(0, 4)
-          .map(id => exerciseMap[id]?.name)
-          .filter(Boolean);
+        // allExerciseNames is the FULL list (search needs every exercise in
+        // the session); exerciseNames stays capped at 4 for the card summary
+        // line, unchanged from before.
+        const allExerciseNames = exerciseIds.map(id => exerciseMap[id]?.name).filter(Boolean);
+        const exerciseNames = allExerciseNames.slice(0, 4);
         return {
           workout: w,
           setCount: mySets.length,
@@ -138,6 +144,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           exerciseCount: exerciseIds.length,
           tonnage: calculateTonnage(mySets),
           exerciseNames,
+          allExerciseNames,
         };
       });
       setWorkouts(withSets);
@@ -279,6 +286,17 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const filteredWorkouts = useMemo(() => {
     let result = workouts;
 
+    // L07-F11: text search runs first, so it composes with the calendar day/
+    // month narrowing and filter chips below rather than being bypassed by
+    // them (a search should still narrow a selected calendar day).
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter(item =>
+        item.workout.name?.toLowerCase().includes(q) ||
+        item.allExerciseNames.some(n => n.toLowerCase().includes(q)),
+      );
+    }
+
     // Calendar day selection takes priority in calendar mode
     if (viewMode === 'calendar' && selectedDay) {
       return result.filter(item => isSameDay(new Date(workoutDayMs(item.workout)), selectedDay));
@@ -324,7 +342,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
 
     return result;
-  }, [workouts, filter, viewMode, calendarDate, selectedDay]);
+  }, [workouts, filter, viewMode, calendarDate, selectedDay, search]);
 
   // ─── Calendar helpers ────────────────────────────────────────────────────────
   const trainedDatesSet = useMemo(() => {
@@ -526,6 +544,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const hasNarrowedEmpty = !loading && !loadError && workouts.length > 0 && filteredWorkouts.length === 0;
   const activeFilterLabel = FILTERS.find(f => f.key === filter)?.label || 'selected';
   const narrowedEmptyTitle = (() => {
+    if (search.trim()) return `No matches for "${search.trim()}"`;
     if (viewMode === 'calendar' && selectedDay) return `No session on ${format(selectedDay, 'd MMM')}`;
     if (filter === 'month') return 'No sessions this month';
     if (filter !== 'all') return `No ${activeFilterLabel.toLowerCase()} sessions found`;
@@ -533,6 +552,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
     return 'No sessions match this view';
   })();
   const narrowedEmptyText = (() => {
+    if (search.trim()) {
+      return 'Try a different exercise or workout name, or clear the search to see everything.';
+    }
     if (viewMode === 'calendar' && selectedDay) {
       return 'That day has no completed workout. Show all sessions to get back to your full history.';
     }
@@ -546,6 +568,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     setFilter('all');
     setSelectedDay(null);
     setViewMode('list');
+    setSearch('');
   }
 
   function renderCalendarHeader() {
@@ -663,6 +686,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
           />
         </TouchableOpacity>
       </View>
+
+      {/* L07-F11: search past workouts by exercise or workout name */}
+      <SearchBar
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search by exercise or workout name"
+        accessibilityLabel="Search workout history by exercise or workout name"
+      />
 
       {/* Filter chips */}
       <View style={styles.filterRow}>
