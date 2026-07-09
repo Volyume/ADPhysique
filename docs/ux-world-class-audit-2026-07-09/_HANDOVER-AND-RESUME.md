@@ -467,3 +467,19 @@ OAuth SHA-1; Cut 4 seed walk.
   diff. LESSON pinned: tests that trigger the Button success beat must
   unmount (or the beat leaks a real timer process-wide under --runInBand).
   Awaiting Main CI green on GitHub to close the founder's build ask fully.
+- MAIN CI GREEN CONFIRMED on faf12f0 (first green in the window); Android
+  build green on 87ee57e and running on faf12f0. Founder build ask CLOSED.
+- PLAN-F LANDED (docs/exercise-planning-2026-07-09/plan-F-photo-corroboration.md,
+  Sonnet, plan only, no source touched): validation answer = NO evidence yet
+  (Tier 1 volunteer study never run; Tier 2 DEXA programme not started);
+  photos never leave device (no sync registry entry, zero upload calls);
+  engine attachment point identified = assessDataConfidence -> confidence.level
+  (weeklyCoach.js:1407); staged rollout 0/1/2 with 4 founder questions at
+  the end (bring as a structured round AFTER the current D14 clusters).
+- D14 RECORDED (see DECISIONS-2026-07-09.md): Group A approved in full,
+  CO-1 sweep approved, banner cap delegated -> lead ruled ONE banner max,
+  Group C rounds = notifications, Settings cluster, weigh-in edit/delete.
+- HANDS-ON: nutritionEngine.js:402 restored to pre-drift locked register
+  ("Precision Coaching has held your calorie target."), verified against
+  ae42b4d^ history; nutritionEngine suite 68/68 green. R2 finding CLOSED
+  under D14 (founder-approved sweep), independent of the held review.

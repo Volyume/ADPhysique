@@ -143,3 +143,26 @@ exception is documented in exerciseMetadata and pinned by updated tests
    top of the Coach screen, or if that genuinely collides with the existing
    hero, the most prominent sensible position (record the choice). The
    queued copy bundle upgrades to ONE SONNET agent covering D13 items 1-3.
+
+## D14 — Scorecard targeting round (founder, 2026-07-09)
+Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
+- **Group A (14 mechanical fixes): APPROVED in full.** Ship in agent waves,
+  two at a time, lead-reviewed at each boundary. Items: AC-3 Home ink bug,
+  AY-6 share-segment SR state, LT-6 gridlines, CP-5 PR markers, history
+  text search + session/workout wording, L07-F6 fuzzy search + L07-F7
+  recents row, L05-FS1 "Custom" tab relabel, CP-6 Settings Workout & units
+  sub-page, FoodSearchScreen:896 old additions intro, Viking Press +
+  Plate-Loaded Shoulder Press retag, CO-2 "see your updated plan" link,
+  L05-MR1 recipe-row macros, L05-MM2 connection miscopy (3 screens).
+- **Group B (CO-1 naming sweep): APPROVED.** Execute D4 register across all
+  ~20 sites. The ED-safety line nutritionEngine.js:402 restored HANDS-ON by
+  the lead to the exact pre-drift string ("Precision Coaching has held your
+  calorie target.", verified byte-identical against pre-ae42b4d history).
+- **Home banner cap: DELEGATED to the lead** ("You decide what will be
+  best"). Lead ruling: ONE attention banner max above the Start-Workout
+  hero, chosen by the existing pickAttentionVariant priority order; others
+  wait their turn (strongest match to the one-hero Materials Policy).
+- **Group C rounds selected (in order): notifications wording + rest-day
+  (A2), Settings cluster (CP-10 restart-free theming, CP-9 Help/FAQ,
+  L08-B3 post-cancel link), weigh-in edit/delete (NAV-2).** RPE/RIR
+  revisit NOT selected this round (stays settled-removed).
