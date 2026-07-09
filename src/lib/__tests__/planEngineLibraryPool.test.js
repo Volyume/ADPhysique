@@ -105,11 +105,18 @@ describe('generatePlan with a library pool', () => {
   // and weighted calisthenics (assume the unloaded version first). Allowed:
   // bodyweight ISOLATION (crunch, hanging leg raise, plank), the staples
   // anyone can do, plus the no-equipment 'bodyweight' profile keeps everything.
-  test('loaded plans drop bodyweight compounds, weighted calisthenics and bands', () => {
+  //
+  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
+  // ONE named exception carved out of the band blanket rule below — Band Lat
+  // Pulldown and Band Assisted Pull-Up, the only vertical pull otherwise
+  // available in Dumbbells Only / Barbell & Plates / Home Gym.
+  const D10_BAND_EXCEPTIONS = new Set(['Band Lat Pulldown', 'Band Assisted Pull-Up']);
+
+  test('loaded plans drop bodyweight compounds, weighted calisthenics and bands (except the D10 exception)', () => {
     const blocked = new Set(
       LIBRARY
         .filter(e =>
-          e.equipmentCategory === 'band' ||
+          (e.equipmentCategory === 'band' && !D10_BAND_EXCEPTIONS.has(e.name)) ||
           (e.equipmentCategory === 'bodyweight' && e.compoundIsolation === 'compound'),
         )
         .map(e => e.name),
@@ -118,6 +125,21 @@ describe('generatePlan with a library pool', () => {
       const plan = generatePlan({ ...BASE_INPUTS, equipment, exerciseLibrary: LIBRARY });
       const offenders = allExerciseNames(plan).filter(n => blocked.has(n));
       expect({ equipment, offenders }).toEqual({ equipment, offenders: [] });
+    }
+  });
+
+  test('D10 exception: Band Lat Pulldown / Band Assisted Pull-Up can be selected into Dumbbells Only, Barbell & Plates and Home Gym plans', () => {
+    // The named exception only widens where these two exercises MAY be
+    // picked from; the engine still selects deterministically by its normal
+    // scoring, so assert reachability via deriveEquipmentProfiles (the same
+    // source the pool filter reads) rather than requiring the generator to
+    // pick them on every run.
+    const exceptionExercises = LIBRARY.filter(e => D10_BAND_EXCEPTIONS.has(e.name));
+    expect(exceptionExercises.length).toBe(2);
+    for (const ex of exceptionExercises) {
+      for (const profile of ['dumbbells_only', 'barbell_plates', 'home_gym']) {
+        expect(ex.equipmentProfiles).toContain(profile);
+      }
     }
   });
 });

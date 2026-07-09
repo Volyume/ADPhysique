@@ -74,8 +74,23 @@ describe('deriveEquipmentProfiles', () => {
     expect(deriveEquipmentProfiles('bodyweight', 'Weighted Pull-Up', 'compound')).toEqual([]);
     expect(deriveEquipmentProfiles('bodyweight', 'Weighted Dips (Chest)', 'compound')).toEqual([]);
   });
-  test('bands never reach a loaded plan', () => {
+  test('bands never reach a loaded plan (except the two D10-named exceptions)', () => {
     expect(deriveEquipmentProfiles('band', 'Band Curl', 'isolation')).toEqual(['bodyweight']);
+    expect(deriveEquipmentProfiles('band', 'Band Lateral Raise', 'isolation')).toEqual(['bodyweight']);
+    expect(deriveEquipmentProfiles('band', 'Banded Row', 'isolation')).toEqual(['bodyweight']);
+  });
+  // D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
+  // Band Lat Pulldown and Band Assisted Pull-Up are the ONE named exception
+  // to the rule above, because Dumbbells Only / Barbell & Plates / Home Gym
+  // otherwise have no vertical pull at all. Every other band exercise (all
+  // remaining rows in the seed) must still assert the blanket rule above.
+  test('D10 exception: Band Lat Pulldown and Band Assisted Pull-Up reach Dumbbells Only / Barbell & Plates / Home Gym', () => {
+    expect(deriveEquipmentProfiles('band', 'Band Lat Pulldown', 'compound')).toEqual(
+      ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'],
+    );
+    expect(deriveEquipmentProfiles('band', 'Band Assisted Pull-Up', 'compound')).toEqual(
+      ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'],
+    );
   });
   test('returns a fresh array each call (no shared mutation)', () => {
     const a = deriveEquipmentProfiles('barbell');

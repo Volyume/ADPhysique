@@ -254,25 +254,21 @@ describe('generated pool over the real seed library', () => {
     });
 
     // Section 2.2 (back vertical_pull for Dumbbells Only / Barbell & Plates /
-    // Home Gym): documented as OPEN, not closed. Fixing it the way plan-A
-    // section 2.2 specifies requires tagging Band Lat Pulldown / Band
-    // Assisted Pull-Up with home_gym + dumbbells_only + barbell_plates
-    // equipment profiles, which directly conflicts with the existing,
-    // separately locked founder rule that bands never reach a loaded plan
-    // (exerciseMetadata.js deriveEquipmentProfiles, "measurable staples
-    // only", guarded by this same suite's `deriveEquipmentProfiles` test and
-    // by planEngineLibraryPool.test.js's "loaded plans drop bodyweight
-    // compounds, weighted calisthenics and bands"). This was surfaced back
-    // to the founder rather than silently resolved either way; this test
-    // pins the CURRENT true state so the gap cannot regress into a false
-    // "fixed" claim, and so it flips loudly (not silently) once a founder
-    // decision lands.
-    test('section 2.2: back vertical_pull for Dumbbells Only / Barbell & Plates / Home Gym remains open pending a founder decision on the band-loaded-plans rule', () => {
+    // Home Gym): CLOSED by the founder's D10 ruling
+    // (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10) —
+    // Band Lat Pulldown and Band Assisted Pull-Up are a named exception to
+    // the "bands never reach a loaded plan" rule, carved out specifically
+    // because these three profiles otherwise have no vertical pull at all.
+    // The blanket rule stands for every other band exercise (see
+    // exerciseMetadata.test.js and planEngineLibraryPool.test.js's "loaded
+    // plans drop bodyweight compounds, weighted calisthenics and bands
+    // (except the D10 exception)").
+    test('section 2.2: back vertical_pull now reaches Dumbbells Only / Barbell & Plates / Home Gym via the D10 band exception', () => {
       const cov = coverage('back', 'vertical_pull');
-      expect(cov.profiles.has('bodyweight')).toBe(true); // the bodyweight side IS fixed (Band Lat Pulldown, Band Assisted Pull-Up, Wide-Grip Pull-Up)
-      expect(cov.profiles.has('dumbbells_only')).toBe(false);
-      expect(cov.profiles.has('barbell_plates')).toBe(false);
-      expect(cov.profiles.has('home_gym')).toBe(false);
+      expect(cov.profiles.has('bodyweight')).toBe(true); // Band Lat Pulldown, Band Assisted Pull-Up, Wide-Grip Pull-Up
+      expect(cov.profiles.has('dumbbells_only')).toBe(true);
+      expect(cov.profiles.has('barbell_plates')).toBe(true);
+      expect(cov.profiles.has('home_gym')).toBe(true);
     });
   });
 });

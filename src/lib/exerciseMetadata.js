@@ -88,11 +88,24 @@ const PROFILES_BY_CATEGORY = {
 const BW_LOADED_PROFILES = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'];
 const WEIGHTED_BW_RE = /\bweighted\b/i;
 
+// D10 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D10):
+// ONE named exception to "bands never reach a loaded plan (measurable
+// staples only)". Band Lat Pulldown and Band Assisted Pull-Up become
+// available as accessories in Dumbbells Only / Barbell & Plates / Home Gym,
+// because those three profiles otherwise have NO vertical pull at all. The
+// rule stands unchanged for every other band exercise and every other
+// profile (band stays confined to `bodyweight` there).
+const D10_BAND_LOADED_EXCEPTION_NAMES = new Set(['Band Lat Pulldown', 'Band Assisted Pull-Up']);
+const D10_BAND_LOADED_EXCEPTION_PROFILES = ['bodyweight', 'dumbbells_only', 'barbell_plates', 'home_gym'];
+
 export function deriveEquipmentProfiles(equipmentCategory, name, compoundIsolation) {
   if (equipmentCategory === 'bodyweight') {
     if (compoundIsolation === 'isolation') return [...BW_LOADED_PROFILES];
     if (WEIGHTED_BW_RE.test(String(name || ''))) return [];
     return ['bodyweight'];
+  }
+  if (equipmentCategory === 'band' && D10_BAND_LOADED_EXCEPTION_NAMES.has(String(name || ''))) {
+    return [...D10_BAND_LOADED_EXCEPTION_PROFILES];
   }
   return [...(PROFILES_BY_CATEGORY[equipmentCategory] ?? ['full_gym'])];
 }
