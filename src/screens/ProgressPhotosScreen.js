@@ -449,14 +449,22 @@ export default function ProgressPhotosScreen({ navigation }) {
       if (name) {
         // Creates the metadata row and snapshots the weigh-in nearest takenAt
         // (or re-snapshots for a captured photo whose date the user moved).
-        // `pendingUri` only ever comes from the quick camera/library route
-        // (openDetailsForNew, called only by pickFrom), so this is the
-        // permanent quick-add fence tag (founder gate F2, tag route): once
-        // true it can never be cleared by a later edit.
+        // onDetailsConfirm is reached from exactly two routes: the quick
+        // camera/library pick (openDetailsForNew -> pendingUri) and a guided
+        // single capture (openDetailsForCaptured -> pendingName only, either
+        // the non-scan ghost-overlay route or a scan session that broke
+        // before it had a valid flow/pose/uri and fell back to a plain
+        // single). Neither route can ever produce a scored scan asset (those
+        // are written directly by createProgressScanSession/
+        // addProgressScanAsset/finishProgressScanSession, never through this
+        // sheet), so the permanent unscored fence (founder gate F2, tag
+        // route; widened to guided singles per founder decision 2026-07-09)
+        // applies unconditionally here: once true it can never be cleared by
+        // a later edit.
         await upsertPhotoMeta(uid, name, {
           takenAt,
           pose,
-          ...(savedFromPendingUri ? { unscored: true } : {}),
+          unscored: true,
         }, { throwOnError: true });
       }
       resetPending();

@@ -445,6 +445,47 @@ test('quick-add photos are permanently tagged unscored and never run analysis', 
   expect(createProgressScanSession).not.toHaveBeenCalled();
 });
 
+// Founder decision 2026-07-09 (widening the F2 tag route): a guided single
+// photo (the non-scan ghost-overlay route) is captured OUTSIDE any scan flow
+// and can never become a scan asset either, so it gets the SAME permanent
+// unscored tag as a quick-add. This closes the narrow same-day-fallback edge
+// a check-in built entirely from guided singles could otherwise hit (wave 2's
+// resolveScanForCheckIn fence only ever checked the unscored flag itself).
+test('a guided single photo (non-scan ghost capture) is permanently tagged unscored', async () => {
+  mockAppAlert.mockImplementation(() => {});
+  const tree = await render();
+  // No route pressed: ProgressGhostCapture is always mounted (every Modal in
+  // this screen renders its children regardless of `visible`, same as the
+  // resultsContract suite relies on), and `scanFlow` is still its pristine
+  // initial null here, exactly the "no scan flow active" case ghost capture's
+  // own onCaptured branches on (screen ~1880-1883).
+  const capture = tree.root.findAll((n) => n.type === 'ProgressGhostCapture')[0];
+  expect(capture).toBeTruthy();
+  await act(async () => {
+    capture.props.onCaptured('1700000000000.jpg', {
+      name: '1700000000000.jpg',
+      uri: 'file:///photos/1700000000000.jpg',
+      ts: 1700000000000,
+    });
+    await Promise.resolve();
+  });
+  await flush();
+
+  expect(allTexts(tree).join(' ')).toContain('Photo details');
+  await pressLabel(tree, 'Save the progress photo');
+  await flush();
+
+  expect(saveProgressPhoto).not.toHaveBeenCalled();
+  expect(upsertPhotoMeta).toHaveBeenCalledTimes(1);
+  const [uid, name, patch] = upsertPhotoMeta.mock.calls[0];
+  expect(uid).toBe(USER_ID);
+  expect(name).toBe('1700000000000.jpg');
+  expect(patch.unscored).toBe(true);
+  expect(analyseProgressScanPhoto).not.toHaveBeenCalled();
+  expect(addProgressScanAsset).not.toHaveBeenCalled();
+  expect(createProgressScanSession).not.toHaveBeenCalled();
+});
+
 test('a quick-add photo saved without a pose is not tagged for a pose and skips the baseline sentence', async () => {
   mockAppAlert.mockImplementation(() => {});
   const tree = await render();
