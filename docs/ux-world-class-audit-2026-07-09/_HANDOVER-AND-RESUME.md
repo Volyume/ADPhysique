@@ -353,3 +353,13 @@ OAuth SHA-1; Cut 4 seed walk.
   loaded plan / measurable staples only" founder rule + tests. Agent added
   the band exercises (bodyweight context fixed), pinned current state in a
   test, left the loaded-profile question OPEN -> founder round.
+- ENGINE D8 build: implementation COMPLETE + tested (founder repro now 4+4+3
+  angle-diverse, weekly volume preserved; biceps subregion added; two
+  pre-existing weekly-MRV trim bugs fixed to respect the new caps; mesocycle
+  progression verified cap-safe; builder nudge live). Agent STOPPED correctly
+  pre-commit on a new fork: 2-3 simultaneous weak points can inflate a session
+  to 111-126 min (trim constants calibrated for old 2-exercise regime). LEAD
+  RULING (under D8's recorded "bounded by the existing session budget"):
+  Option A - retune WEAKPOINT/STRUCTURAL_SESSION_FLOOR_CAP + trim ceiling so
+  the honest time ceiling wins; agent resumed to implement + commit; lead
+  hands-on review of the FULL engine diff before push.
