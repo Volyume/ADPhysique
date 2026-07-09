@@ -206,3 +206,16 @@ OAuth SHA-1; Cut 4 seed walk.
   CO-3 WorkoutSummary links; CO-5 "goal" 3 meanings; CO-6 tab-label grammar.
   CO-4 TodayStrip weight-only = founder-awareness only. Strong: navigateCrossTab,
   DiaryScreen training-day wiring, NAV-5 tab reset.
+- Cohesion-02 (novice/psychology) LANDED: cohesion-02-novice-psychology.md,
+  4 findings ALL SAFE (NV-1 plan-balance legend via GLOSSARY.volumeBands
+  tooltip; NV-2 superset gloss in ManualBuilder + glossary entry; NV-3
+  onboarding "starting volume" -> plain English; NV-4 baseline set/rep
+  glossary entry). Daily loops friction-counted near best-in-class; no
+  ED/shame/dark-pattern drift found; WorkoutSummary "down" verdict flagged
+  PROTECT-THIS. NV fixes -> next build batch.
+- FOUNDER DIRECTIVE (new): exercise-library expansion + weak-point
+  set-stacking fix (6-set lat pulldown = junk volume; cap 3-4 sets/exercise;
+  specialisation adds a DIFFERENT-angle exercise instead). PLAN-FIRST with
+  agents: 2 Sonnet planners running -> docs/exercise-planning-2026-07-09/
+  plan-A-library-expansion.md + plan-B-weak-point-sets.md (diagnosis +
+  options + founder multiple-choice; engine changes remain founder-gated).
