@@ -286,3 +286,10 @@ OAuth SHA-1; Cut 4 seed walk.
   + see doc) -> QUEUED with the B-5 uppercase tail for the next small-batch
   slot. Old task #105 satisfied by this triage; opens go to ONE consolidated
   founder round later (not now - round fatigue).
+- NV cohesion fixes LANDED (2b026dd): NV-1 Plan-balance InfoTooltip
+  (GLOSSARY.volumeBands); NV-2 superset glossary entry + builder tooltip
+  (copy modelled on the live-session modal so both teach the same thing);
+  NV-3 onboarding line -> "Setting how much you'll train each muscle" (copy
+  only, staging untouched, not in ONBOARDING_SEQUENCE_LOCKED); NV-4 set/rep
+  glossary entries surfaced via ActiveWorkout's existing once-ever first-use
+  hint gate. Suite green. Cohesion-02's four SAFE items now ALL BUILT.
