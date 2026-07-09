@@ -741,3 +741,15 @@ OAuth SHA-1; Cut 4 seed walk.
   onboarding + first coach output. NEXT PAIR: (1) notifications agent
   (amend Surface 6 to current strings + rest-day spec doc), (2) plan-G
   build agent (engine diff gets hands-on lead review at landing).
+- BURST LANDING 1/8 NOTIFICATIONS (Sonnet, lead-reviewed): Surface 6
+  amended per D15 (weekly-coach-ready + both cascade-gate strings now
+  match code verbatim, dated founder-amendment addendum; cascade-21 got
+  its missing entry; NOTIFICATIONS_LOCKED already matched). Rest-day spec
+  written (rest-day-notification-spec.md): 2 copy variants, habit-class
+  trigger, quiet-hours shift, 5 founder questions FQ-1..5. CRITICAL
+  FINDING FQ-1: @volyume_schedule_v1 (the training-day reminder's own
+  schedule substrate) appears NEVER WRITTEN anywhere - the existing
+  training reminder may be dead on live devices; founder question, not
+  patched. EXTRA DRIFT flagged NOT amended (needs founder): B41 weekly
+  check-in reminder strings; payment-failure push (appStore.ts:248) -
+  both added to tomorrow's rounds queue.

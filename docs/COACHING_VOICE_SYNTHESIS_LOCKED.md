@@ -487,15 +487,20 @@ Daily check-in reminder:
 Weekly check-in reminder:
 "Weekly check-in is open. Your update lands Monday morning."
 
-Weekly coach output ready:
-"This week's update is ready. Precision Coaching has set new
-targets."
+Weekly coach output ready (amended 2026-07-09, see addendum below):
+Title: "Your coaching for the week is ready"
+Body:  "Have a look at what's changed for you this week, and the
+       thinking behind it."
 
-Cascade gate (day 12 of 14):
-"Your Complete trial ends in 2 days. Tap to choose what's next."
+Cascade gate, trial winding down (amended 2026-07-09, see addendum below):
+Title: "Your free Pro trial ends in two days"
+Body:  "Hope you've been enjoying it. Have a look at your options
+       whenever you're ready."
 
-Cascade gate (day 26 of 28):
-"Your Pro trial ends in 2 days. Tap to choose what's next."
+Cascade gate, auto-downgrade fired (amended 2026-07-09, see addendum below):
+Title: "You're back on the free plan"
+Body:  "Everything you've logged is safe and waiting. You can go Pro
+       again any time."
 
 Subscription payment failure:
 "Payment didn't go through. Precision Coaching kept your data.
@@ -818,3 +823,63 @@ The rule (supersedes any single-name reading of Section 4 / Pattern 1):
 - Safety copy is unaffected in substance: locked Surfaces 1-8 render their
   locked text verbatim; where a locked surface names "Precision Coaching",
   that is the text.
+
+---
+
+## Addendum 2026-07-09: notification drift (weekly-coach-ready + cascade-gate)
+
+Authority: founder ruling D15, 2026-07-09, "amend the locked doc", recorded in
+`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`. D15 verbatim:
+"Notification drift: AMEND THE LOCKED DOC. The current in-app weekly-coach-
+ready and cascade-gate strings become canonical; Surface 6 in
+COACHING_VOICE_SYNTHESIS_LOCKED.md is updated to match them verbatim
+(documented as a founder amendment, not silent drift)."
+
+Background: the audit (`docs/design-usability-audit-2026-07-09/01-copy-and-
+voice.md`, items A23 and B42) found the live scheduler copy for these two
+categories had drifted from the Surface 6 text above; the founder ruled the
+shipped code is now canonical and the doc is amended to match it, rather than
+the code being rewritten to match the doc.
+
+Surface 6 changes (old locked text -> new canonical text, verified against
+`src/lib/notifications/scheduler.js`):
+
+1. **Weekly coach output ready** (`scheduler.js:1054-1057`,
+   `COACH_READY_COPY`):
+   - Old: `"This week's update is ready. Precision Coaching has set new targets."`
+   - New: Title `"Your coaching for the week is ready"` / Body `"Have a
+     look at what's changed for you this week, and the thinking behind it."`
+
+2. **Cascade gate, trial winding down** (`scheduler.js:452-455`,
+   `CASCADE_19_COPY`, fires 2 days before the trial cutover):
+   - Old: `"Your Complete trial ends in 2 days. Tap to choose what's next."`
+     (and the day-26-of-28 variant, `"Your Pro trial ends in 2 days. Tap to
+     choose what's next."`) — both reflected the retired 3-tier
+     (Complete/Pro) cascade model.
+   - New: Title `"Your free Pro trial ends in two days"` / Body `"Hope
+     you've been enjoying it. Have a look at your options whenever you're
+     ready."` — the single current two-stage cascade (day 19 warning, day 21
+     downgrade).
+
+3. **Cascade gate, auto-downgrade fired** (`scheduler.js:456-459`,
+   `CASCADE_21_COPY`) — this variant had no Surface 6 entry at all (Surface 6
+   only ever listed the two now-retired trial-warning variants). Added as a
+   new Surface 6 entry so the cascade-gate pair is documented in full:
+   - New: Title `"You're back on the free plan"` / Body `"Everything you've
+     logged is safe and waiting. You can go Pro again any time."`
+
+`NOTIFICATIONS_LOCKED.md` already carries these three strings verbatim in its
+main "Copy" section (Weekly coach output ready; Cascade day 19; Cascade day
+21) and required no change — the drift was isolated to Surface 6 of this
+document, which predates those strings.
+
+**Not amended under this ruling — flagged for the lead's eyes:** the audit
+(same file, item B41) also flagged the "Weekly check-in reminder" Surface 6
+line as drifted (`scheduler.js:318-323`, `checkinCopy`: old Surface 6 text
+`"Weekly check-in is open. Your update lands Monday morning."` vs live title
+`` `How has your week gone${name}` `` / body `"A two-minute check-in is all
+it takes, and your coach tunes next week around it."`). D15's ruling text
+names only "weekly-coach-ready and cascade-gate" strings as canonical: it
+does not name the weekly check-in reminder. Rather than assume this was
+folded in by implication, this string is left as-is pending an explicit
+founder/lead ruling on whether it is included.
