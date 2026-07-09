@@ -14,11 +14,19 @@ describe('WorkoutSummaryScreen feedback controls', () => {
   });
 
   test('keeps completed-workout footer compact and stable', () => {
+    // old -> new (design-usability-audit-2026-07-09 Batch 2 wave B, Button
+    // adoption): Close/Share were hand-rolled TouchableOpacity elements; they
+    // now render through the shared Button primitive (variant="secondary" /
+    // "tertiary"), passing the SAME doneBtn/shareFooterBtn/*Text style
+    // objects via Button's style/textStyle props, so the pinned literal
+    // style assertions below are unchanged. The "Saving"/"Close" text swap
+    // and the share icon are now Button props (title/icon), not raw JSX, so
+    // those two assertions are re-pointed at the Button call sites.
     expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
     expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>');
     expect(SOURCE).toContain('<TouchableOpacity');
-    expect(SOURCE).toContain('<Text style={styles.doneBtnText}>{saving ? \'Saving\' : \'Close\'}</Text>');
-    expect(SOURCE).toContain('<Ionicons name="share-social-outline" size={16} color={colors.primary} />');
+    expect(SOURCE).toContain("title={saving ? 'Saving' : 'Close'}");
+    expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);

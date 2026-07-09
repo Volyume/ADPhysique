@@ -549,7 +549,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Card tone="primary" style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
                 <Ionicons name="trophy" size={18} color={colors.primary} />
-                <Text style={styles.prHighlightTitle}>Personal bests</Text>
+                <SectionLabel tone="muted">Personal bests</SectionLabel>
               </View>
               <View style={styles.prHighlightRow}>
                 {displayPR && (
@@ -596,10 +596,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
         {/* Goal section */}
         {!goal && (
-          <TouchableOpacity style={styles.goalSetLink} onPress={openGoalSheet} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Set a target weight">
-            <Ionicons name="flag-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.goalSetLinkText}>Set a target weight</Text>
-          </TouchableOpacity>
+          <Button
+            title="Set a target weight"
+            icon="flag-outline"
+            variant="outline"
+            size="sm"
+            fullWidth={false}
+            onPress={openGoalSheet}
+            style={styles.goalSetLink}
+            accessibilityLabel="Set a target weight"
+          />
         )}
 
         {goal && (
@@ -607,7 +613,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.goalCardHeader}>
               <View style={styles.goalCardLeft}>
                 <Ionicons name="flag" size={14} color={colors.primary} />
-                <Text style={styles.goalCardTitle}>Target</Text>
+                <SectionLabel tone="muted">Target</SectionLabel>
               </View>
               <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Edit target">
                 <Ionicons name="pencil-outline" size={14} color={colors.textMuted} />
@@ -751,14 +757,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Text style={styles.historyEmptyText}>
               You haven't logged this exercise yet. Add it to a session to start tracking your progress.
             </Text>
-            <TouchableOpacity
-              style={styles.historyEmptyAction}
+            <Button
+              title="Start workout"
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
               onPress={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
-              accessibilityRole="button"
               accessibilityLabel="Start a workout"
-            >
-              <Text style={styles.historyEmptyActionText}>Start workout</Text>
-            </TouchableOpacity>
+            />
           </Card>
         )}
 
@@ -924,10 +930,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             />
 
             {goal && (
-              <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Remove goal">
-                <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.removeGoalLinkText}>Remove goal</Text>
-              </TouchableOpacity>
+              <Button
+                title="Remove goal"
+                icon="trash-outline"
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                onPress={handleRemoveGoal}
+                style={styles.removeGoalLink}
+                accessibilityLabel="Remove goal"
+              />
             )}
           </View>
         </KeyboardAvoidingView>
@@ -1031,18 +1043,6 @@ const styles = StyleSheet.create({
     minWidth: 180,
     color: colors.textMuted,
   },
-  historyEmptyAction: {
-    minHeight: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyEmptyActionText: {
-    ...type.label,
-    color: colors.primary,
-  },
   section: { gap: spacing.md },
   historyCard: {
     gap: spacing.sm,
@@ -1094,12 +1094,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  prHighlightTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
   },
   prHighlightRow: {
     flexDirection: 'row',
@@ -1176,22 +1170,7 @@ const styles = StyleSheet.create({
   },
   // Goal section
   goalSetLink: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  goalSetLinkText: {
-    ...type.label,
-    color: colors.textPrimary,
   },
   goalCard: {
     gap: spacing.sm,
@@ -1205,12 +1184,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  goalCardTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
   },
   goalWeightRow: {
     flexDirection: 'row',
@@ -1322,21 +1295,6 @@ const styles = StyleSheet.create({
     color: colors.onPrimary,
   },
   removeGoalLink: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
     alignSelf: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  removeGoalLinkText: {
-    ...type.label,
-    color: colors.textPrimary,
   },
 });

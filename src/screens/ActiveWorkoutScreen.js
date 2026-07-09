@@ -16,6 +16,7 @@ import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1946,16 +1947,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {targetComplete && !extraSetArmed && isLastExercise ? (
               <View style={styles.headerTapTarget} />
             ) : (
-              <TouchableOpacity
+              <Button
+                title="Finish"
+                icon="checkmark-done"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
                 onPress={handleFinishWorkout}
                 style={[styles.headerTapTarget, styles.headerFinishButton]}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
                 accessibilityLabel="Finish workout"
-              >
-                <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
-                <Text style={styles.headerFinishText}>Finish</Text>
-              </TouchableOpacity>
+              />
             )}
           </View>
         </View>
@@ -3258,10 +3259,16 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
           <Text style={styles.timerText}>{elapsed}</Text>
         </View>
         <View style={styles.headerSideRight}>
-          <TouchableOpacity onPress={onFinish} style={[styles.headerTapTarget, styles.headerFinishButton]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
-            <Ionicons name="checkmark-done" size={15} color={colors.textPrimary} />
-            <Text style={styles.headerFinishText}>Finish</Text>
-          </TouchableOpacity>
+          <Button
+            title="Finish"
+            icon="checkmark-done"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            onPress={onFinish}
+            style={[styles.headerTapTarget, styles.headerFinishButton]}
+            accessibilityLabel="Finish workout"
+          />
         </View>
       </View>
 
@@ -3313,7 +3320,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  headerFinishText: { ...type.label, color: colors.textPrimary, textAlign: 'right' },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   timerText: { ...type.num('title'), color: colors.primary },
   starterBanner: {

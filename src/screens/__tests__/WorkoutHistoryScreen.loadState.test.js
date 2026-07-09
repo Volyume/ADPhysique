@@ -287,15 +287,28 @@ describe('WorkoutHistoryScreen summary polish', () => {
     expect(WORKOUT_HISTORY_SOURCE).toContain('accessibilityState={{ expanded: isExpanded }}');
     expect(WORKOUT_HISTORY_SOURCE).toContain('Double-tap to show or hide the exercise breakdown');
     expect(WORKOUT_HISTORY_SOURCE).toContain('accessibilityLabel="View summary"');
-    expect(WORKOUT_HISTORY_SOURCE).toContain('<Text style={styles.viewBtnText}>View summary</Text>');
-    expect(WORKOUT_HISTORY_SOURCE).toContain('<Text style={styles.fullSummaryBtnText}>View summary</Text>');
+    // old -> new (design-usability-audit-2026-07-09 Batch 2 wave B, Button
+    // adoption): both "View summary" actions now render through the shared
+    // Button primitive (title prop, not a raw <Text> child), reusing the
+    // SAME viewBtnText/fullSummaryBtnText style objects via Button's
+    // textStyle prop, so this pins the Button call sites instead of the JSX.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?style=\{styles\.viewBtn\}[\s\S]*?textStyle=\{styles\.viewBtnText\}/);
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?trailingIcon="arrow-forward"/);
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View Details');
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View full summary');
   });
 
   test('summary and repeat actions use contained neutral controls, not amber text links', () => {
-    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="arrow-forward" size={14} color={colors.textSecondary}');
-    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="refresh-outline" size={16} color={colors.textSecondary}');
+    // old -> new: the arrow-forward/refresh-outline icons are now Button's
+    // `icon`/`trailingIcon` prop rather than a literal <Ionicons>, so Button
+    // (not the screen) now renders them at its own computed size/colour.
+    // Button gives icon and label the SAME foreground colour (no separate
+    // icon-tint slot), so the previous icon-vs-label two-tone (icon
+    // textSecondary, label textPrimary) collapses to one colour; both stay
+    // neutral (textPrimary via variant="secondary"), never amber, which is
+    // this guard's real intent.
+    expect(WORKOUT_HISTORY_SOURCE).toContain('trailingIcon="arrow-forward"');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('icon="refresh-outline"');
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/fullSummaryBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/repeatBtn: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(WORKOUT_HISTORY_SOURCE).toContain('fullSummaryBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
@@ -304,7 +317,8 @@ describe('WorkoutHistoryScreen summary polish', () => {
   });
 
   test('calendar reset uses a contained neutral control', () => {
-    expect(WORKOUT_HISTORY_SOURCE).toContain('Ionicons name="calendar-clear-outline" size={14} color={colors.textSecondary}');
+    // old -> new: same Button icon/textStyle migration as above.
+    expect(WORKOUT_HISTORY_SOURCE).toContain('icon="calendar-clear-outline"');
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/clearDayBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(WORKOUT_HISTORY_SOURCE).toContain('clearDayText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(WORKOUT_HISTORY_SOURCE).not.toMatch(/clearDayText: \{[\s\S]*color: colors\.primary/);

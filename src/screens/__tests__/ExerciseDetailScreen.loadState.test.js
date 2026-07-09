@@ -100,14 +100,19 @@ describe('ExerciseDetailScreen load states', () => {
 });
 
 describe('ExerciseDetailScreen polish guards', () => {
-  test('goal actions use contained neutral controls instead of underlined links', () => {
-    expect(EXERCISE_DETAIL_SOURCE).toContain('Ionicons name="flag-outline" size={14} color={colors.textSecondary}');
-    expect(EXERCISE_DETAIL_SOURCE).toContain('Ionicons name="trash-outline" size={14} color={colors.textSecondary}');
-    expect(EXERCISE_DETAIL_SOURCE).toMatch(/goalSetLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(EXERCISE_DETAIL_SOURCE).toMatch(/removeGoalLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(EXERCISE_DETAIL_SOURCE).toContain('goalSetLinkText: {\n    ...type.label,\n    color: colors.textPrimary,');
-    expect(EXERCISE_DETAIL_SOURCE).toContain('removeGoalLinkText: {\n    ...type.label,\n    color: colors.textPrimary,');
-    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/goalSetLinkText: \{[\s\S]*textDecorationLine: 'underline'/);
-    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/removeGoalLinkText: \{[\s\S]*textDecorationLine: 'underline'/);
+  // old -> new (design-usability-audit-2026-07-09 Batch 2 wave B, Button adoption):
+  // "Set a target weight" / "Remove goal" were hand-rolled TouchableOpacity pills
+  // (goalSetLink/removeGoalLink, contained neutral, not underlined links). They
+  // now render through the shared Button primitive (variant="outline", which is
+  // itself a contained neutral control: colors.surface fill, colors.border edge,
+  // no underline) with the same icon/title/onPress. This guard is re-pointed at
+  // the Button call sites to keep pinning "contained neutral, never underlined".
+  test('goal actions use the shared Button (contained neutral) instead of underlined links', () => {
+    expect(EXERCISE_DETAIL_SOURCE).toContain('title="Set a target weight"');
+    expect(EXERCISE_DETAIL_SOURCE).toContain('title="Remove goal"');
+    expect(EXERCISE_DETAIL_SOURCE).toMatch(/title="Set a target weight"[\s\S]*?icon="flag-outline"[\s\S]*?variant="outline"/);
+    expect(EXERCISE_DETAIL_SOURCE).toMatch(/title="Remove goal"[\s\S]*?icon="trash-outline"[\s\S]*?variant="outline"/);
+    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/goalSetLinkText|removeGoalLinkText/);
+    expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/textDecorationLine: 'underline'/);
   });
 });

@@ -481,10 +481,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
         ListFooterComponent={
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddExercise(true)} accessibilityRole="button" accessibilityLabel="Add exercise">
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={styles.addBtnText}>Add exercise</Text>
-          </TouchableOpacity>
+          <Button
+            title="Add exercise"
+            icon="add"
+            variant="tertiary"
+            onPress={() => setShowAddExercise(true)}
+            style={[styles.addBtn, { backgroundColor: 'transparent' }]}
+            textStyle={styles.addBtnText}
+            accessibilityLabel="Add exercise"
+          />
         }
         ListEmptyComponent={
           !exercises.length ? (
@@ -627,15 +632,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </Text>
             }
             ListFooterComponent={
-              <TouchableOpacity
-                style={styles.swapSearchAll}
+              <Button
+                title="Search all exercises or create your own"
+                icon="search"
+                variant="tertiary"
                 onPress={() => setShowSwapPicker(true)}
-                accessibilityRole="button"
+                style={[styles.swapSearchAll, { backgroundColor: 'transparent' }]}
+                textStyle={styles.swapSearchAllText}
                 accessibilityLabel="Search all exercises or create your own"
-              >
-                <Ionicons name="search" size={18} color={colors.primary} />
-                <Text style={styles.swapSearchAllText}>Search all exercises or create your own</Text>
-              </TouchableOpacity>
+              />
             }
           />
         </SafeAreaView>

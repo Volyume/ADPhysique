@@ -1042,35 +1042,46 @@ export default function ManualBuilderScreen({ navigation, route }) {
                   })}
 
                   {selected.size >= 2 && (
-                    <TouchableOpacity
-                      style={styles.groupBtn}
+                    <Button
+                      title={`Group ${selected.size} into superset`}
+                      icon="link"
+                      variant="tertiary"
+                      size="sm"
                       onPress={() => handleGroupSuperset(dayIdx)}
-                      accessibilityRole="button"
+                      style={styles.groupBtn}
+                      textStyle={styles.groupBtnText}
                       accessibilityLabel={`Group ${selected.size} exercises into a superset`}
-                    >
-                      <Ionicons name="link" size={16} color={colors.primary} />
-                      <Text style={styles.groupBtnText}>
-                        Group {selected.size} into superset
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   )}
                 </View>
               );
             })()}
 
             {/* Add exercise button */}
-            <TouchableOpacity style={styles.addExBtn} onPress={() => openPicker(dayIdx)} accessibilityRole="button" accessibilityLabel="Add exercise">
-              <Ionicons name="add" size={16} color={colors.primary} />
-              <Text style={styles.addExText}>Add exercise</Text>
-            </TouchableOpacity>
+            <Button
+              title="Add exercise"
+              icon="add"
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
+              onPress={() => openPicker(dayIdx)}
+              style={styles.addExBtn}
+              textStyle={styles.addExText}
+              accessibilityLabel="Add exercise"
+            />
           </Card>
         ))}
 
         {/* Add day */}
-        <TouchableOpacity style={styles.addDayBtn} onPress={handleAddDay} accessibilityRole="button" accessibilityLabel="Add day">
-          <Ionicons name="add-circle-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.addDayText}>Add day</Text>
-        </TouchableOpacity>
+        <Button
+          title="Add day"
+          icon="add-circle-outline"
+          variant="outline"
+          onPress={handleAddDay}
+          style={styles.addDayBtn}
+          textStyle={styles.addDayText}
+          accessibilityLabel="Add day"
+        />
 
         {/* Plan balance */}
         <PlanBalanceCard days={days} />

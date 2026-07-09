@@ -15,8 +15,9 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import SectionLabel from '../components/SectionLabel';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -200,7 +201,7 @@ export default function CardioHistoryScreen() {
           ListHeaderComponent={weeks.length > 0 ? <CardioTrend weeks={weeks} goal={goal} /> : null}
           getItemType={(item) => (item._kind === 'header' ? 'header' : 'row')}
           renderItem={({ item }) => (item._kind === 'header' ? (
-            <Text style={styles.dayHeader}>{prettyCardioDate(item.title)}</Text>
+            <SectionLabel style={styles.dayHeader}>{prettyCardioDate(item.title)}</SectionLabel>
           ) : (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -229,8 +230,6 @@ const styles = StyleSheet.create({
   loadingList: { paddingHorizontal: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   dayHeader: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary,
-    letterSpacing: letterSpacing.overline, textTransform: 'uppercase',
     marginTop: spacing.md, marginBottom: spacing.xs, backgroundColor: colors.background,
   },
   row: {

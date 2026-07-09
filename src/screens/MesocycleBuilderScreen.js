@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
@@ -243,16 +244,17 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 {meso.focus ? <Text style={styles.metaItem}>{meso.focus}</Text> : null}
               </View>
               {!isActive && (
-                <TouchableOpacity
-                  style={styles.summaryBtn}
+                <Button
+                  title="View block summary"
+                  icon="document-text-outline"
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
                   onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
+                  style={styles.summaryBtn}
+                  textStyle={styles.summaryBtnText}
                   accessibilityLabel={`View summary of ${meso.name}`}
-                >
-                  <Ionicons name="document-text-outline" size={14} color={colors.primary} />
-                  <Text style={styles.summaryBtnText}>View block summary</Text>
-                </TouchableOpacity>
+                />
               )}
               {isActive && (
                 <View style={styles.weekProgress}>

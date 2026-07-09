@@ -326,10 +326,16 @@ export default function BuildWorkoutScreen({ navigation }) {
           </View>
         ))}
 
-        <TouchableOpacity testID="volyume-btn-add-exercise" style={styles.addBtn} onPress={openPicker} accessibilityRole="button" accessibilityLabel="Add exercise">
-          <Ionicons name="add" size={20} color={colors.primary} />
-          <Text style={styles.addBtnText}>Add exercise</Text>
-        </TouchableOpacity>
+        <Button
+          testID="volyume-btn-add-exercise"
+          title="Add exercise"
+          icon="add"
+          variant="tertiary"
+          onPress={openPicker}
+          style={[styles.addBtn, { backgroundColor: 'transparent' }]}
+          textStyle={styles.addBtnText}
+          accessibilityLabel="Add exercise"
+        />
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -439,14 +445,16 @@ export default function BuildWorkoutScreen({ navigation }) {
                 <Ionicons name="search-outline" size={24} color={colors.textMuted} />
                 <Text style={styles.pickerEmptyTitle}>No matching exercises</Text>
                 <Text style={styles.pickerEmptyText}>Try a shorter search, or clear it and browse the full library.</Text>
-                <TouchableOpacity
-                  style={styles.pickerEmptyBtn}
+                <Button
+                  title="Clear search"
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
                   onPress={() => setQuery('')}
-                  accessibilityRole="button"
+                  style={styles.pickerEmptyBtn}
+                  textStyle={styles.pickerEmptyBtnText}
                   accessibilityLabel="Clear exercise search"
-                >
-                  <Text style={styles.pickerEmptyBtnText}>Clear search</Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
             ListFooterComponent={filteredTruncated ? (

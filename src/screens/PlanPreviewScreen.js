@@ -6,9 +6,10 @@
  * account wall ("Save your plan", never "sign up to continue"). No calories or
  * macros, the honesty note says they come after, with permission.
  */
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight, type, letterSpacing } from '../styles/theme';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { buildPlanPreview } from '../lib/onboarding/planPreview';
@@ -37,10 +38,13 @@ export default function PlanPreviewScreen({ navigation }) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.cta} onPress={toAccount} accessibilityRole="button"
-          accessibilityLabel="Create an account to keep your plan">
-          <Text style={styles.ctaText}>Create an account to keep it</Text>
-        </TouchableOpacity>
+        <Button
+          title="Create an account to keep it"
+          onPress={toAccount}
+          style={styles.cta}
+          textStyle={styles.ctaText}
+          accessibilityLabel="Create an account to keep your plan"
+        />
         <Text style={styles.fine}>No payment card. Nothing charged unless you choose.</Text>
       </View>
     </SafeAreaView>

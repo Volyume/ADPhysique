@@ -982,27 +982,29 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 </Text>
               </View>
               <View style={styles.partnerBeatActions}>
-                <TouchableOpacity
-                  style={styles.partnerWinBtn}
+                <Button
+                  title="Preview win"
+                  icon="trophy-outline"
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
                   onPress={handlePreviewPartnerWin}
-                  accessibilityRole="button"
+                  style={styles.partnerWinBtn}
+                  textStyle={styles.partnerCheerText}
                   accessibilityLabel="Preview this workout win for a partner"
-                >
-                  <Ionicons name="trophy-outline" size={14} color={colors.primary} />
-                  <Text style={styles.partnerCheerText}>Preview win</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.partnerCheerBtn, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerBtnDone]}
+                />
+                <Button
+                  title={postWorkoutCheerSending ? 'Sending' : partners.cheerEnabled ? 'Cheer' : 'Sent'}
+                  icon={postWorkoutCheerSending ? 'hourglass-outline' : 'hand-left-outline'}
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
                   onPress={handlePostWorkoutCheer}
                   disabled={!partners.cheerEnabled || postWorkoutCheerSending}
-                  accessibilityRole="button"
+                  style={[styles.partnerCheerBtn, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerBtnDone]}
+                  textStyle={[styles.partnerCheerText, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerTextDone]}
                   accessibilityLabel={postWorkoutCheerSending ? 'Sending cheer' : partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
-                >
-                  <Ionicons name={postWorkoutCheerSending ? 'hourglass-outline' : 'hand-left-outline'} size={14} color={partners.cheerEnabled && !postWorkoutCheerSending ? colors.primary : colors.textSecondary} />
-                  <Text style={[styles.partnerCheerText, (!partners.cheerEnabled || postWorkoutCheerSending) && styles.partnerCheerTextDone]}>
-                    {postWorkoutCheerSending ? 'Sending' : partners.cheerEnabled ? 'Cheer' : 'Sent'}
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             </Card>
           </RevealSection>
@@ -1203,16 +1205,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 What's next: start the next block with sensible progressions from this one.
               </Text>
               <View style={styles.phaseActions}>
-                <TouchableOpacity
-                  style={styles.phaseActionBtn}
-                  activeOpacity={0.85}
+                <Button
+                  title="Watch your block story"
+                  icon="sparkles"
+                  variant="tertiary"
+                  size="sm"
                   onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
-                  accessibilityRole="button"
+                  style={[styles.phaseActionBtn, { backgroundColor: 'transparent' }]}
+                  textStyle={styles.phaseActionText}
                   accessibilityLabel="Watch your block story"
-                >
-                  <Ionicons name="sparkles" size={15} color={colors.primary} />
-                  <Text style={styles.phaseActionText}>Watch your block story</Text>
-                </TouchableOpacity>
+                />
                 <TouchableOpacity
                   style={styles.phaseShareBtn}
                   activeOpacity={0.85}
@@ -1337,26 +1339,28 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         ) : null}
         <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[styles.doneBtn, saving && styles.footerBtnDisabled]}
+          <Button
+            title={saving ? 'Saving' : 'Close'}
+            variant="secondary"
             onPress={handleDone}
             disabled={saving}
-            accessibilityRole="button"
+            style={styles.doneBtn}
+            textStyle={styles.doneBtnText}
             accessibilityLabel="Close"
             accessibilityState={{ disabled: saving }}
-          >
-            <Text style={styles.doneBtnText}>{saving ? 'Saving' : 'Close'}</Text>
-          </TouchableOpacity>
+          />
           {!readOnly && (
-            <TouchableOpacity
-              style={styles.shareFooterBtn}
+            <Button
+              title="Share"
+              icon="share-social-outline"
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
               onPress={handleShareCard}
-              accessibilityRole="button"
+              style={styles.shareFooterBtn}
+              textStyle={styles.shareFooterBtnText}
               accessibilityLabel="Share session"
-            >
-              <Ionicons name="share-social-outline" size={16} color={colors.primary} />
-              <Text style={styles.shareFooterBtnText}>Share</Text>
-            </TouchableOpacity>
+            />
           )}
         </View>
       </View>
@@ -1768,7 +1772,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  footerBtnDisabled: { opacity: 0.55 },
   shareFooterBtnText: {
     ...type.label,
     color: colors.primary,

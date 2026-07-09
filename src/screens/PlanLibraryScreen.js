@@ -7,6 +7,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
@@ -579,23 +580,24 @@ export default function PlanLibraryScreen({ navigation, route }) {
               </TouchableOpacity>
 
               <View style={styles.planCardFooter}>
-                <TouchableOpacity
-                  style={styles.previewBtn}
+                <Button
+                  title="Preview plan"
+                  variant="secondary"
+                  size="sm"
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
-                  accessibilityRole="button"
+                  style={styles.previewBtn}
+                  textStyle={styles.previewText}
                   accessibilityLabel={`Preview ${plan.name}`}
-                >
-                  <Text style={styles.previewText}>Preview plan</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                />
+                <Button
                   testID="volyume-btn-copy-from-library"
-                  style={styles.addBtn}
+                  title="Add to my plans"
+                  size="sm"
                   onPress={() => handleAddToMyPlans(plan)}
-                  accessibilityRole="button"
+                  style={styles.addBtn}
+                  textStyle={styles.addBtnText}
                   accessibilityLabel={`Add ${plan.name} to my plans`}
-                >
-                  <Text style={styles.addBtnText}>Add to my plans</Text>
-                </TouchableOpacity>
+                />
               </View>
             </Card>
           );
@@ -672,17 +674,21 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     </Text>
                   )}
                 </Card>
-                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizStartPlan} activeOpacity={0.88} accessibilityRole="button" accessibilityLabel={`Add ${quizResult.name}`}>
-                  <Text style={styles.quizStartText}>Add this plan</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.quizBrowseBtn}
+                <Button
+                  title="Add this plan"
+                  onPress={handleQuizStartPlan}
+                  style={styles.quizStartBtn}
+                  textStyle={styles.quizStartText}
+                  accessibilityLabel={`Add ${quizResult.name}`}
+                />
+                <Button
+                  title="Preview first"
+                  variant="secondary"
                   onPress={() => { dismissQuiz(); navigation.navigate('PlanDetail', { planId: quizResult.id, isLibrary: true }); }}
-                  accessibilityRole="button"
+                  style={styles.quizBrowseBtn}
+                  textStyle={styles.quizBrowseText}
                   accessibilityLabel={`Preview ${quizResult.name}`}
-                >
-                  <Text style={styles.quizBrowseText}>Preview first</Text>
-                </TouchableOpacity>
+                />
                 <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse} accessibilityRole="button">
                   <Text style={styles.quizSkipText}>Browse all plans instead</Text>
                 </TouchableOpacity>
@@ -692,9 +698,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
               <>
                 <Text style={styles.quizResultTitle}>No exact match found</Text>
                 <Text style={styles.quizResultDesc}>Browse all the plans below to find one that suits you.</Text>
-                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizBrowse} activeOpacity={0.88} accessibilityRole="button">
-                  <Text style={styles.quizStartText}>Browse all plans</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Browse all plans"
+                  onPress={handleQuizBrowse}
+                  style={styles.quizStartBtn}
+                  textStyle={styles.quizStartText}
+                />
               </>
             )}
           </Pressable>

@@ -14,6 +14,7 @@ import { isSameDay } from 'date-fns/isSameDay';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
@@ -443,8 +444,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
             )}
 
             {/* View summary */}
-            <TouchableOpacity
-              style={styles.fullSummaryBtn}
+            <Button
+              title="View summary"
+              trailingIcon="arrow-forward"
+              variant="secondary"
+              size="sm"
               onPress={() =>
                 navigation.navigate('WorkoutSummary', {
                   workoutId: workout.id,
@@ -459,20 +463,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              accessibilityRole="button"
+              style={styles.fullSummaryBtn}
+              textStyle={styles.fullSummaryBtnText}
               accessibilityLabel="View summary"
-            >
-              <Text style={styles.fullSummaryBtnText}>View summary</Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
-            </TouchableOpacity>
+            />
           </View>
         )}
 
         {/* Card actions */}
         <View style={styles.cardActions}>
           {!isExpanded && (
-            <TouchableOpacity
-              style={styles.viewBtn}
+            <Button
+              title="View summary"
+              variant="secondary"
+              size="sm"
               onPress={() =>
                 navigation.navigate('WorkoutSummary', {
                   workoutId: workout.id,
@@ -487,21 +491,21 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              accessibilityRole="button"
+              style={styles.viewBtn}
+              textStyle={styles.viewBtnText}
               accessibilityLabel="View summary"
-            >
-              <Text style={styles.viewBtnText}>View summary</Text>
-            </TouchableOpacity>
+            />
           )}
-          <TouchableOpacity
-            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
+          <Button
+            title="Repeat"
+            icon="refresh-outline"
+            variant="secondary"
+            size="sm"
             onPress={() => handleRepeatWorkout(workout)}
-            accessibilityRole="button"
+            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
+            textStyle={styles.repeatBtnText}
             accessibilityLabel="Repeat session"
-          >
-            <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.repeatBtnText}>Repeat</Text>
-          </TouchableOpacity>
+          />
           <TouchableOpacity
             style={styles.deleteBtn}
             onPress={() => handleDeleteWorkout(workout)}
@@ -697,10 +701,17 @@ export default function WorkoutHistoryScreen({ navigation }) {
           </View>
           {renderCalendarGrid()}
           {selectedDay && (
-            <TouchableOpacity onPress={() => setSelectedDay(null)} style={styles.clearDayBtn} accessibilityRole="button" accessibilityLabel="Show all this month">
-              <Ionicons name="calendar-clear-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.clearDayText}>Show all this month</Text>
-            </TouchableOpacity>
+            <Button
+              title="Show all this month"
+              icon="calendar-clear-outline"
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={() => setSelectedDay(null)}
+              style={styles.clearDayBtn}
+              textStyle={styles.clearDayText}
+              accessibilityLabel="Show all this month"
+            />
           )}
         </Card>
       )}

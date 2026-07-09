@@ -9,6 +9,16 @@ jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
 }));
+// PlanPreviewScreen's CTA moved onto the shared Button primitive (design
+// campaign 2026-07-09 Batch 2 wave B), which pulls in ../../lib/haptics ->
+// expo-haptics; mock it the same way other Button-rendering screen tests do.
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
 
 import useAppStore from '../../store/useAppStore';
 import QuizScreen from '../QuizScreen';
