@@ -41,7 +41,9 @@ Updated at every phase boundary. Branch: `claude/codebase-audit-docs-pv6mjd`.
 
 ## Campaign plan (batches)
 
-- **Batch 1 (IN PROGRESS):** three Sonnet agents + hands-on work.
+- **Batch 1 (PARTIALLY LANDED, salvage pass committed `1b47687`; original
+  agent scope below is NOT fully done — see gap list):** three Sonnet
+  agents + hands-on work.
   - Agent A: lane-01 SAFE copy fixes + D4 naming sweep (excludes
     ED-safety/consent/billing files, src/lib safety modules, notifications).
   - Agent B: lane-03 layout fixes (FoodSearchScreen inset + ModalHeader +
@@ -52,10 +54,63 @@ Updated at every phase boundary. Branch: `claude/codebase-audit-docs-pv6mjd`.
     RecipeBuilder ModalHeader; shadow.glow applied at 3 sites; off-scale
     radius/padding literals; full letterSpacing sweep to tokens + new
     ESLint ban; header trio documented in styling.md/DESIGN_SYSTEM.md).
-  - Hands-on (Fable): theme spine (DONE, committed); locked-surface
-    restorations (IN PROGRESS): GoalLockConsent Surface 4 restored;
-    whyThisTemplates A14, weeklyCoach A15, differentialPaywall A21 +
-    snapshot test, voice-doc D4 addendum still to do.
+  - Hands-on (Fable): theme spine (DONE, committed `214b057`); locked-surface
+    restorations DONE (`de9a165`): GoalLockConsent Surface 4, whyThisTemplates
+    A14, weeklyCoach A15, differentialPaywall A21 + snapshot test, voice-doc
+    D4 addendum.
+
+  **What actually landed vs the scope above.** The three agents' work
+  stalled mid-run; only a SUBSET of the scope above had reached the working
+  tree as uncommitted changes across 16 files, and even that subset had a
+  defect (YearOfLiftsScreen's `Dimensions.get -> useWindowDimensions`
+  migration was half-finished: `useWindowDimensions` imported but unused,
+  `SCREEN_W` undefined at three sites). A follow-up Sonnet session (this
+  entry) did NOT re-run the agents or attempt their full original scope —
+  per instructions it finished and verified only what was already in the
+  tree: completed the YearOfLifts migration (SCREEN_W now read inside the
+  component via useWindowDimensions; StoryCard takes a `width` prop applied
+  inline since a hook value cannot live in StyleSheet.create at module
+  scope), fixed five pre-existing test files whose expectations pinned
+  copy/structure the sweep deliberately changed (each has an inline
+  old -> new note: planPreview's em-dash removal, LiftProgress's
+  e1RM -> "est. max" jargon fix, FoodSearchScreen's ModalHeader +
+  sticky-plate-bar-inset adoption), then committed as `1b47687`. Lint clean;
+  full suite green bar three pre-existing, unrelated failures left
+  untouched: `weeklyCoach.ffmFloor.test.js` (ED-safety module, out of
+  scope), `ActiveWorkoutScreen.usability.guard.test.js`'s cueCount assertion
+  (pre-existing on HEAD before this campaign touched the file), and
+  `progressScanVision.test.js` (environment-only).
+
+  **Confirmed STILL OUTSTANDING (checked directly, 2026-07-09) — not in
+  `1b47687`, not anywhere else on this branch:**
+  - Agent C's PartnerScreen/MealPlanScreen skeleton loaders: no `Skeleton`
+    reference in either screen.
+  - Agent C's RecipeBuilderScreen ModalHeader adoption: no `ModalHeader`
+    import in that screen.
+  - Agent C's `shadow.glow` application at the three Pro-moment sites
+    (WelcomeScreen/ProOnboardingScreen/ProUpgradeScreen): zero screens
+    reference `shadow.glow`, even though the token itself exists in
+    `theme.js` (theme-spine work, D2). D2 is authorised but not applied.
+  - Agent C's full letterSpacing sweep + new ESLint ban: the `overline`/
+    `wordmark` tokens exist in `theme.js`, and a few sites already route
+    through `letterSpacing.caption` (PartnerScreen, PartnerPrivacyReceipt),
+    but raw non-zero `letterSpacing` literals remain in at least
+    CardioHistoryScreen, ImportScreen, MesocycleBuilderScreen (×2),
+    PlanPreviewScreen, SettingsAboutScreen (×2, includes an unconverted
+    wordmark candidate), and PRCelebration (unconverted wordmark
+    candidate). No ESLint rule bans raw `letterSpacing` yet.
+  - Agent C's header-trio documentation in styling.md/DESIGN_SYSTEM.md:
+    neither doc mentions `letterSpacing`, "header trio" or `ModalHeader`.
+  - Agent B's "8 Dimensions.get → useWindowDimensions migrations": only 4
+    were found done anywhere on the branch (BodyMetrics, ExerciseDetail,
+    FoodInsights, YearOfLifts). The other 4 sites Agent B was assigned are
+    unidentified and unconverted.
+
+  A fresh session resuming Batch 1 should treat the above as the real
+  remaining backlog, NOT re-open the four items already confirmed
+  complete (theme spine, locked-surface restorations, the 16-file salvage
+  in `1b47687`, or FoodSearchScreen's inset+ModalHeader+radius-literal
+  trio, which layout tests now pin).
 - **Batch 2 (QUEUED):** Card adoption (155 hand-rolled blocks, heaviest:
   NutritionTargets 12, ActiveWorkout 12, WorkoutSummary 10,
   ExerciseDetail 10); Button adoption on true CTAs among ~840 raw
