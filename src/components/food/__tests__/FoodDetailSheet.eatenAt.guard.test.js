@@ -36,7 +36,10 @@ describe('FoodDetailSheet: eaten-at field (edit mode only)', () => {
 
   test('a clear action returns an entry to the honest untimed state', () => {
     expect(SRC).toMatch(/accessibilityLabel="Clear the eaten time"/);
-    expect(SRC).toMatch(/onPress=\{\(\) => setEatenAt\(null\)\}/);
+    // Haptics completion pass (2026-07-10): a haptics.selection() call was
+    // added alongside the clear; the regex tolerates that one extra
+    // leading statement without loosening the real pin (setEatenAt(null)).
+    expect(SRC).toMatch(/onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?setEatenAt\(null\); \}\}/);
   });
 
   test('handleSave sends eatenAt only in edit mode; add mode sends undefined (db layer\'s own "log now" default applies)', () => {

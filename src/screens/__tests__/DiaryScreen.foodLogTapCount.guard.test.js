@@ -60,7 +60,11 @@ describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
     test('TAP #1: MealSection has a TouchableOpacity button labelled "Add food"', () => {
       expect(MEAL_SECTION_SRC).toMatch(/TouchableOpacity/);
       expect(MEAL_SECTION_SRC).toMatch(/addFoodButton/);
-      expect(MEAL_SECTION_SRC).toMatch(/onPress=\{onAdd\}/);
+      // Haptics completion pass (2026-07-10): a haptics.selection() call was
+      // added alongside onAdd (neutral navigation into FoodSearchScreen,
+      // not a log write); still exactly ONE tap, TAP_BUDGET unaffected, so
+      // the regex tolerates the wrap without loosening the tap-count pin.
+      expect(MEAL_SECTION_SRC).toMatch(/onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?onAdd\?\.\(\); \}\}/);
       expect(MEAL_SECTION_SRC).toMatch(/Add food/);
     });
 

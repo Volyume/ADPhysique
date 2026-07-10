@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
+import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
 // idle → loading → success morph; the commit haptic is its success beat.
@@ -231,7 +232,10 @@ export default function FoodDetailSheet({
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            try { await onDelete?.(); } catch (_) {}
+            // Haptics completion pass (2026-07-10): data-first, mirrors
+            // DiaryScreen.requestDelete -- the commit beat fires only after
+            // the delete actually succeeds, never on a swallowed failure.
+            try { await onDelete?.(); haptics.commit(); } catch (_) {}
             onClose?.();
           },
         },
@@ -279,7 +283,7 @@ export default function FoodDetailSheet({
                   key={u.key}
                   label={u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
                   selected={unitKey === u.key}
-                  onPress={() => selectUnit(u.key)}
+                  onPress={() => { haptics.selection(); selectUnit(u.key); }}
                   style={styles.unitBtn}
                   labelStyle={styles.unitBtnText}
                   selectedLabelStyle={styles.unitBtnTextActive}
@@ -292,7 +296,7 @@ export default function FoodDetailSheet({
           ) : null}
           <View style={styles.stepper}>
             <Pressable
-              onPress={() => adjustAmount(-1)}
+              onPress={() => { haptics.selection(); adjustAmount(-1); }}
               style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Decrease amount"
@@ -313,7 +317,7 @@ export default function FoodDetailSheet({
               accessibilityLabel="Amount"
             />
             <Pressable
-              onPress={() => adjustAmount(1)}
+              onPress={() => { haptics.selection(); adjustAmount(1); }}
               style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Increase amount"
@@ -338,7 +342,7 @@ export default function FoodDetailSheet({
                 <Chip
                   label="Raw"
                   selected={weightState === 'raw'}
-                  onPress={() => setWeightState('raw')}
+                  onPress={() => { haptics.selection(); setWeightState('raw'); }}
                   style={styles.unitBtn}
                   labelStyle={styles.unitBtnText}
                   selectedLabelStyle={styles.unitBtnTextActive}
@@ -348,7 +352,7 @@ export default function FoodDetailSheet({
                 <Chip
                   label="Cooked"
                   selected={weightState === 'cooked'}
-                  onPress={() => setWeightState('cooked')}
+                  onPress={() => { haptics.selection(); setWeightState('cooked'); }}
                   style={styles.unitBtn}
                   labelStyle={styles.unitBtnText}
                   selectedLabelStyle={styles.unitBtnTextActive}
@@ -393,7 +397,7 @@ export default function FoodDetailSheet({
               <Text style={styles.fieldLabel}>Eaten at</Text>
               <View style={styles.unitRow}>
                 <Pressable
-                  onPress={() => setShowTimePicker(true)}
+                  onPress={() => { haptics.selection(); setShowTimePicker(true); }}
                   style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, pressed && { opacity: 0.7 }]}
                   accessibilityRole="button"
                   accessibilityLabel={eatenAt
@@ -408,7 +412,7 @@ export default function FoodDetailSheet({
                 </Pressable>
                 {eatenAt != null ? (
                   <Pressable
-                    onPress={() => setEatenAt(null)}
+                    onPress={() => { haptics.selection(); setEatenAt(null); }}
                     style={({ pressed }) => [styles.unitBtn, pressed && { opacity: 0.7 }]}
                     accessibilityRole="button"
                     accessibilityLabel="Clear the eaten time"
@@ -427,7 +431,7 @@ export default function FoodDetailSheet({
                 key={s.key}
                 label={s.label}
                 selected={mealSlot === s.key}
-                onPress={() => setMealSlot(s.key)}
+                onPress={() => { haptics.selection(); setMealSlot(s.key); }}
                 style={styles.mealBtn}
                 labelStyle={styles.mealBtnText}
                 selectedLabelStyle={styles.mealBtnTextActive}

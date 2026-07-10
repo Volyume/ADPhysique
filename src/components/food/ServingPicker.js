@@ -13,6 +13,7 @@ import { View, StyleSheet } from 'react-native';
 import TextField from '../TextField';
 import Chip from '../Chip';
 import { colors, spacing } from '../../styles/theme';
+import * as haptics from '../../lib/haptics';
 
 const DEFAULT_UNITS = ['g', 'oz'];
 
@@ -53,7 +54,7 @@ export default function ServingPicker({
               key={u}
               label={u}
               selected={active}
-              onPress={() => onChangeUnit(u)}
+              onPress={() => { haptics.selection(); onChangeUnit(u); }}
               accessibilityRole="radio"
               accessibilityLabel={`Unit: ${u}`}
               style={styles.unit}

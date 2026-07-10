@@ -45,6 +45,7 @@ import { searchFoods } from '../lib/food/waterfall';
 import NetInfo from '@react-native-community/netinfo';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
+import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
@@ -753,6 +754,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.ctaRow}
           onPress={() => {
+            haptics.selection();
             if (item.action === 'custom') return newCustomFood();
             if (item.action === 'scan') return navigation.navigate('ScanBarcode', { mealSlot, entryDate });
             if (item.action === 'quick') { quickSavedRef.current = false; setShowQuickAdd(true); return null; }
@@ -947,7 +949,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           <TouchableOpacity
             key={t.key}
             style={styles.tab}
-            onPress={() => setActiveTab(t.key)}
+            onPress={() => { haptics.selection(); setActiveTab(t.key); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: activeTab === t.key }}
           >
@@ -1016,7 +1018,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <View style={[styles.plateBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
           <TouchableOpacity
             style={styles.plateInfo}
-            onPress={() => setShowPlate(true)}
+            onPress={() => { haptics.selection(); setShowPlate(true); }}
             accessibilityRole="button"
             accessibilityLabel="Review selected foods"
           >

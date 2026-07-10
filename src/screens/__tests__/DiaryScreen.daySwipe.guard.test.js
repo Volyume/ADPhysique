@@ -36,8 +36,13 @@ describe('DiaryScreen day-swipe gesture wiring', () => {
   });
 
   test('gotoYesterday and gotoTomorrow still call shiftDate the same way (chevrons untouched)', () => {
-    expect(SRC).toMatch(/function gotoYesterday\(\)\s*\{\s*setSelectedDate\(shiftDate\(selectedDate, -1\)\);\s*\}/);
-    expect(SRC).toMatch(/function gotoTomorrow\(\)\s*\{\s*setSelectedDate\(shiftDate\(selectedDate, 1\)\);\s*\}/);
+    // Haptics completion pass (2026-07-10): a haptics.selection() call was
+    // added inside each handler (so the swipe gesture, which shares these
+    // exact closures via dayNavRef below, gets the same feel as the
+    // chevron tap); the regex now tolerates that one extra leading
+    // statement without loosening the real pin (shiftDate direction/sign).
+    expect(SRC).toMatch(/function gotoYesterday\(\)\s*\{\s*(?:haptics\.selection\(\);\s*)?setSelectedDate\(shiftDate\(selectedDate, -1\)\);\s*\}/);
+    expect(SRC).toMatch(/function gotoTomorrow\(\)\s*\{\s*(?:haptics\.selection\(\);\s*)?setSelectedDate\(shiftDate\(selectedDate, 1\)\);\s*\}/);
   });
 
   test('a LEFT fling maps to next day (gotoTomorrow)', () => {

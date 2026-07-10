@@ -57,6 +57,9 @@ jest.mock('../../lib/food/db', () => ({
   applyRecipeToDiary: jest.fn(),
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+// Haptics completion pass (2026-07-10): the screen now imports the haptics
+// vocabulary, which reaches expo-haptics (a native module) at import time.
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 
 import MyRecipesScreen from '../MyRecipesScreen';
 import { listRecipesWithTotals } from '../../lib/food/db';

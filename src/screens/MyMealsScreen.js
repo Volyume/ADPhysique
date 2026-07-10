@@ -48,6 +48,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { audit } from '../lib/observability';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 export default function MyMealsScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -144,6 +145,11 @@ export default function MyMealsScreen({ navigation, route }) {
                     toast.show('Couldn\'t delete that meal.', { variant: 'error' });
                     return;
                   }
+                  // Haptics completion pass (2026-07-10): data-first, this
+                  // deletes the saved-meal TEMPLATE (past diary entries
+                  // logged from it are unaffected), so it carries none of
+                  // the diary-marking exclusion.
+                  haptics.commit();
                   reload();
                 },
               },
@@ -171,6 +177,10 @@ export default function MyMealsScreen({ navigation, route }) {
   }
 
   function renderItem({ item }) {
+    // Haptics completion pass (2026-07-10): the row tap logs the meal
+    // directly (C6, no confirm step), excluded per the campaign's
+    // diary-marking/ED-pattern-detection rule -- left without an added
+    // haptic.
     return (
       <TouchableOpacity
         style={styles.row}
@@ -189,7 +199,7 @@ export default function MyMealsScreen({ navigation, route }) {
         <View style={styles.rowActions}>
           <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
           <TouchableOpacity
-            onPress={() => setInspecting(item)}
+            onPress={() => { haptics.selection(); setInspecting(item); }}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={`View ${item.name}`}
@@ -197,7 +207,7 @@ export default function MyMealsScreen({ navigation, route }) {
             <Ionicons name="information-circle-outline" size={22} color={colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => openMenu(item)}
+            onPress={() => { haptics.selection(); openMenu(item); }}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={`More actions for ${item.name}`}

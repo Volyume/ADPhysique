@@ -39,6 +39,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import * as haptics from '../lib/haptics';
 
 export default function PaywallScreen({ navigation, route }) {
   const trigger = route?.params?.trigger ?? 'unknown';
@@ -229,7 +230,7 @@ export default function PaywallScreen({ navigation, route }) {
         {/* COMP-007: annual first (left) + preselected, monthly visible second. */}
         <BillingPeriodSelector
           value={period}
-          onChange={setPeriod}
+          onChange={(p) => { haptics.selection(); setPeriod(p); }}
           monthlyPrice={monthlyPrice}
           annualPrice={annualPrice}
           style={styles.periodSelector}
@@ -243,6 +244,9 @@ export default function PaywallScreen({ navigation, route }) {
         <Text style={styles.terms}>{termsText}</Text>
 
         <View style={styles.legalRow}>
+          {/* Haptics completion pass (2026-07-10): billing-consequential
+              (restore purchases), explicitly excluded -- left without an
+              added haptic. */}
           <TouchableOpacity
             onPress={handleRestore}
             disabled={busy}
@@ -255,7 +259,7 @@ export default function PaywallScreen({ navigation, route }) {
             <Text style={styles.legalLink}>Restore purchases</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
             hitSlop={hitSlop}
             style={styles.legalButton}
             accessibilityRole="button"
@@ -265,7 +269,7 @@ export default function PaywallScreen({ navigation, route }) {
             <Text style={styles.legalLink}>Subscription terms</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => Linking.openURL(LINKS.privacyPolicy).catch(() => {})}
+            onPress={() => { haptics.selection(); Linking.openURL(LINKS.privacyPolicy).catch(() => {}); }}
             hitSlop={hitSlop}
             style={styles.legalButton}
             accessibilityRole="button"

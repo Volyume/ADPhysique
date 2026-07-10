@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
+import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
 import { mealSlotLabel, slotOrder } from '../../lib/food/mealSlots';
 
@@ -98,7 +99,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
             <Pressable
               key={r.key}
               style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-              onPress={onSelectMeal ? () => onSelectMeal(r.key) : undefined}
+              onPress={onSelectMeal ? () => { haptics.selection(); onSelectMeal(r.key); } : undefined}
               disabled={!onSelectMeal}
               accessibilityRole={onSelectMeal ? 'button' : undefined}
               accessibilityLabel={onSelectMeal ? `Go to ${r.label}` : undefined}
@@ -114,7 +115,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
         </View>
       )}
 
-      <Pressable style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
+      <Pressable style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]} onPress={() => { haptics.selection(); onClose?.(); }} accessibilityRole="button" accessibilityLabel="Done">
         <Text style={styles.doneText}>Done</Text>
       </Pressable>
     </BottomSheet>

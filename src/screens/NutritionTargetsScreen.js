@@ -25,6 +25,7 @@ import { daysToActivityLevel } from '../lib/coachingGoals';
 import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import * as haptics from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
@@ -106,7 +107,7 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
             key={key}
             label={label}
             selected={selected === key}
-            onPress={() => onSelect(key)}
+            onPress={() => { haptics.selection(); onSelect(key); }}
           />
         );
       })}
@@ -170,7 +171,7 @@ function WhySection({ icon, color, title, body }) {
     <View style={styles.whySection}>
       <TouchableOpacity
         style={styles.whySectionHeader}
-        onPress={() => setOpen(v => !v)}
+        onPress={() => { haptics.selection(); setOpen(v => !v); }}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -522,7 +523,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Education entry point, surfaces a 5-min nutrition primer for
               users new to tracking. Doesn't change targets, just teaches. */}
           <Card
-            onPress={() => navigation.navigate('NutritionEducation')}
+            onPress={() => { haptics.selection(); navigation.navigate('NutritionEducation'); }}
             radius="md"
             padding="md"
             style={styles.eduCard}
@@ -556,7 +557,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   return (
                     <Card
                       key={g.key}
-                      onPress={() => setGoal(g.key)}
+                      onPress={() => { haptics.selection(); setGoal(g.key); }}
                       radius="md"
                       padding="md"
                       style={[styles.goalCard, active && styles.goalCardActive]}
@@ -642,7 +643,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.fineTuneLink}
-                onPress={() => setFormCollapsed(false)}
+                onPress={() => { haptics.selection(); setFormCollapsed(false); }}
                 accessibilityRole="button"
                 accessibilityLabel="Fine-tune these numbers"
               >
@@ -747,7 +748,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               return (
                 <Card
                   key={g.key}
-                  onPress={() => setGoal(g.key)}
+                  onPress={() => { haptics.selection(); setGoal(g.key); }}
                   radius="md"
                   padding="md"
                   style={[styles.goalCard, active && styles.goalCardActive]}
@@ -795,7 +796,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             return (
               <Card
                 key={key}
-                onPress={() => setProteinApproach(key)}
+                onPress={() => { haptics.selection(); setProteinApproach(key); }}
                 radius="md"
                 padding="md"
                 style={[styles.approachCard, active && styles.approachCardActive]}
@@ -1019,7 +1020,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                             <TouchableOpacity
                               key={n}
                               style={[styles.mealCountChip, active && styles.mealCountChipActive]}
-                              onPress={() => changeMealsPerDay(n)}
+                              onPress={() => { haptics.selection(); changeMealsPerDay(n); }}
                               accessibilityRole="button"
                               accessibilityLabel={`${n} meals per day${isRecommended ? ', recommended' : ''}`}
                               accessibilityState={{ selected: active }}
@@ -1188,7 +1189,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <View style={styles.whyGroup}>
                     <TouchableOpacity
                       style={styles.whyHeader}
-                      onPress={() => setWhyExpanded(v => !v)}
+                      onPress={() => { haptics.selection(); setWhyExpanded(v => !v); }}
                       activeOpacity={0.7}
                       accessibilityRole="button"
                       accessibilityState={{ expanded: whyExpanded }}
@@ -1269,6 +1270,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const easedGoal = { aggressive_cut: 'mild_cut', mild_cut: 'recomp', recomp: 'maintain' }[results.goal];
                 if (!easedGoal) return null;
                 return (
+                  // Haptics completion pass (2026-07-10): this is the
+                  // energy-availability-caution "ease this cut" nudge --
+                  // ED-safety-adjacent (wellbeing.js/nutritionEngine.js
+                  // territory) -- left without an added haptic.
                   <TouchableOpacity
                     style={styles.easeNudge}
                     onPress={() => { setGoal(easedGoal); handleCalculate(easedGoal); }}
@@ -1309,7 +1314,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* How calculated (expandable) */}
               <Card
-                onPress={() => setExpanded(v => !v)}
+                onPress={() => { haptics.selection(); setExpanded(v => !v); }}
                 radius="md"
                 padding="md"
                 style={styles.expandHeader}

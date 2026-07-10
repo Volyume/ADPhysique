@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
+import * as haptics from '../../lib/haptics';
 
 export function friendlyFoodName(entry) {
   if (entry?._name && typeof entry._name === 'string') return entry._name;
@@ -55,7 +56,11 @@ export function EntryRow({
       style={[styles.entryRow, selected && styles.entryRowSelected]}
       // E10 read-only lapse views: a view-only row carries no edit, selection
       // or long-press affordance; it is a plain fact of what was logged.
-      onPress={readOnly ? undefined : (selectionMode ? onToggleSelect : onEdit)}
+      // Haptics completion pass (2026-07-10, campaign item 5): a tap either
+      // opens the edit sheet or toggles multi-select, both neutral
+      // "row-opens-sheet"/selection interactions, never the food-log write
+      // itself.
+      onPress={readOnly ? undefined : () => { haptics.selection(); (selectionMode ? onToggleSelect : onEdit)?.(); }}
       onLongPress={readOnly ? undefined : onLongPress}
       delayLongPress={300}
       disabled={readOnly}

@@ -46,8 +46,12 @@ describe('SettingsWorkoutScreen is registered like every other Settings sub-page
 
 describe('Settings root: "Workout & units" is a row, not an inline block (CP-6)', () => {
   test('renders a SettingRow that navigates to SettingsWorkout, matching sibling rows (icon + label + sub)', () => {
+    // Haptics completion pass (2026-07-10): every Settings-root row now
+    // fires haptics.selection() alongside its navigate() call; the regex
+    // tolerates that one extra leading statement without loosening the
+    // real pin (still a plain row, still navigating to SettingsWorkout).
     expect(SETTINGS_ROOT).toMatch(
-      /<SettingRow\s+icon="body-outline"\s+label="Workout & units"\s+sub="[^"]+"\s+onPress=\{\(\) => navigation\.navigate\('SettingsWorkout'\)\}\s*\/>/,
+      /<SettingRow\s+icon="body-outline"\s+label="Workout & units"\s+sub="[^"]+"\s+onPress=\{\(\) => \{ (?:haptics\.selection\(\); )?navigation\.navigate\('SettingsWorkout'\); \}\}\s*\/>/,
     );
   });
 

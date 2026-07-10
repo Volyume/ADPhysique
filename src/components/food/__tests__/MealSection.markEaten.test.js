@@ -22,6 +22,10 @@ jest.mock('react-native-gesture-handler/Swipeable', () => {
     return React.createElement('Swipeable', props, props.children);
   };
 });
+// Haptics completion pass (2026-07-10): the component now imports the
+// haptics vocabulary, which reaches expo-haptics (a native module) at
+// import time; stub it the same way foodComponents.test.js does.
+jest.mock('../../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 
 import MealSection from '../MealSection';
 

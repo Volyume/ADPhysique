@@ -37,6 +37,7 @@ import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary } from '../lib/
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 export default function MyRecipesScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -136,6 +137,11 @@ export default function MyRecipesScreen({ navigation, route }) {
               toast.show('Couldn\'t delete that recipe.', { variant: 'error' });
               return;
             }
+            // Haptics completion pass (2026-07-10): data-first, this
+            // deletes the recipe TEMPLATE (past diary entries logged from
+            // it are unaffected), so it carries none of the diary-marking
+            // exclusion.
+            haptics.commit();
             reload();
           },
         },
@@ -149,7 +155,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.rowMain}
-          onPress={() => onLog(item)}
+          onPress={() => { haptics.selection(); onLog(item); }}
           disabled={!!loggingId}
           accessibilityRole="button"
           accessibilityLabel={`Log ${item.name}`}
@@ -184,7 +190,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         </TouchableOpacity>
         <View style={styles.rowActions}>
           <TouchableOpacity
-            onPress={() => onEdit(item)}
+            onPress={() => { haptics.selection(); onEdit(item); }}
             disabled={!!loggingId}
             hitSlop={12}
             accessibilityRole="button"
@@ -213,7 +219,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       <BackHeader
         title="Recipes"
         right={(
-          <TouchableOpacity onPress={onCreate} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
+          <TouchableOpacity onPress={() => { haptics.selection(); onCreate(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
             <Ionicons name="add" size={26} color={colors.primary} />
           </TouchableOpacity>
         )}

@@ -45,6 +45,7 @@ import WeeklyMicronutrientsCard from '../components/food/WeeklyMicronutrientsCar
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 function isoDate(d) { return localDayKey(d.getTime()); } // TZ-1: local calendar day
 function shift(d, days) {
@@ -353,7 +354,7 @@ export default function FoodInsightsScreen({ navigation }) {
             <TouchableOpacity
               key={n}
               style={[styles.windowChip, selected && styles.windowChipOn]}
-              onPress={() => !selected && setWindowDays(n)}
+              onPress={() => { if (!selected) { haptics.selection(); setWindowDays(n); } }}
               disabled={selected}
               hitSlop={8}
               accessibilityRole="radio"

@@ -88,7 +88,11 @@ describe('DiaryScreen NAV-3 date-jump wiring', () => {
 
   test('a controlled visible state opens and closes the picker', () => {
     expect(SRC).toMatch(/const \[datePickerVisible, setDatePickerVisible\] = useState\(false\);/);
-    expect(SRC).toMatch(/const openDatePicker = useCallback\(\(\) => setDatePickerVisible\(true\), \[\]\);/);
+    // Haptics completion pass (2026-07-10): a haptics.selection() call was
+    // added inside the handler (not at the onPress={openDatePicker}
+    // callsite below, which the next test still pins as a bare reference),
+    // so the regex tolerates that one extra leading statement.
+    expect(SRC).toMatch(/const openDatePicker = useCallback\(\(\) => \{ (?:haptics\.selection\(\); )?setDatePickerVisible\(true\); \}, \[\]\);/);
     expect(SRC).toMatch(/const closeDatePicker = useCallback\(\(\) => setDatePickerVisible\(false\), \[\]\);/);
   });
 

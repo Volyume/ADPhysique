@@ -7,6 +7,7 @@ import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { CURATED_MEALS, mealItems } from '../../lib/food/curatedMeals';
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
+import * as haptics from '../../lib/haptics';
 
 /**
  * CuratedMealSheet, "visit" a suggested curated meal before logging it
@@ -89,13 +90,16 @@ export default function CuratedMealSheet({
 
           <View style={styles.actions}>
             <Pressable
-              onPress={onClose}
+              onPress={() => { haptics.selection(); onClose?.(); }}
               style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
               <Text style={styles.cancelText}>Close</Text>
             </Pressable>
+            {/* Haptics completion pass (2026-07-10): "Add to diary" is a direct
+                food-logging write, excluded per the campaign's diary-marking
+                rule -- left without an added haptic. */}
             <Pressable
               onPress={onLog}
               disabled={logging}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
 // idle → loading → success morph; the commit haptic is its success beat.
@@ -115,7 +116,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
                 key={s.key}
                 label={s.label}
                 selected={mealSlot === s.key}
-                onPress={() => setMealSlot(s.key)}
+                onPress={() => { haptics.selection(); setMealSlot(s.key); }}
                 accessibilityRole="radio"
                 accessibilityLabel={s.label}
                 style={styles.mealChip}

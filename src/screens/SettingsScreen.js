@@ -3,6 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import * as haptics from '../lib/haptics';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 
 // Settings landing. A short list of categories, each opening its own
@@ -30,19 +31,19 @@ export default function SettingsScreen({ navigation }) {
           icon="person-circle-outline"
           label="Account"
           sub={user?.email || (tier === 'pro' ? 'Volyume Pro' : 'Free plan')}
-          onPress={() => navigation.navigate('SettingsAccount')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsAccount'); }}
         />
         <SettingRow
           icon="person-outline"
           label="Profile"
           sub="Name, sex, height, date of birth and diet preference"
-          onPress={() => navigation.navigate('SettingsProfile')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsProfile'); }}
         />
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
           sub="Coach tone, cardio and weekly check-ins"
-          onPress={() => navigation.navigate('SettingsCoaching')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsCoaching'); }}
         />
         {/* CP-6 (2026-07-09 UX audit): this used to render inline on this
             screen (Hevy teardown 2026-06-29, R1/R2), breaking Settings' own
@@ -53,14 +54,14 @@ export default function SettingsScreen({ navigation }) {
           icon="body-outline"
           label="Workout & units"
           sub="Body-weight unit, default rest timer and rest alerts"
-          onPress={() => navigation.navigate('SettingsWorkout')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
         {tier === 'pro' ? (
           <SettingRow
             icon="nutrition-outline"
             label="Nutrition targets"
             sub="Your calorie and macro goals"
-            onPress={() => navigation.navigate('NutritionTargets')}
+            onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
           />
         ) : null}
         {tier === 'pro' ? (
@@ -68,7 +69,7 @@ export default function SettingsScreen({ navigation }) {
             icon="restaurant-outline"
             label="Meal names"
             sub="Rename your meals"
-            onPress={() => navigation.navigate('MealNames')}
+            onPress={() => { haptics.selection(); navigation.navigate('MealNames'); }}
           />
         ) : null}
         {tier === 'pro' ? (
@@ -76,7 +77,7 @@ export default function SettingsScreen({ navigation }) {
             icon="calendar-outline"
             label="Per-day targets"
             sub="Plan a different calorie target for each weekday"
-            onPress={() => navigation.navigate('PerDayTargets')}
+            onPress={() => { haptics.selection(); navigation.navigate('PerDayTargets'); }}
           />
         ) : null}
         {tier === 'pro' ? (
@@ -84,66 +85,66 @@ export default function SettingsScreen({ navigation }) {
             icon="leaf-outline"
             label="Dietary needs"
             sub="Diet, allergies and foods to avoid"
-            onPress={() => navigation.navigate('SettingsDietary')}
+            onPress={() => { haptics.selection(); navigation.navigate('SettingsDietary'); }}
           />
         ) : null}
         <SettingRow
           icon="notifications-outline"
           label="Notifications and reminders"
           sub="Training, meals, check-ins and quiet hours"
-          onPress={() => navigation.navigate('NotificationSettings')}
+          onPress={() => { haptics.selection(); navigation.navigate('NotificationSettings'); }}
         />
         {tier === 'pro' ? (
           <SettingRow
             icon="pulse-outline"
             label="Coaching reminders"
             sub="Morning weight log and weekly check-in"
-            onPress={() => navigation.navigate('CoachingReminders')}
+            onPress={() => { haptics.selection(); navigation.navigate('CoachingReminders'); }}
           />
         ) : null}
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"
           sub="Text size, contrast, motion"
-          onPress={() => navigation.navigate('SettingsDisplay')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsDisplay'); }}
         />
         <SettingRow
           icon="apps-outline"
           label="Home screen widget"
           sub="Your next session, right on your home screen"
-          onPress={() => appAlert(
+          onPress={() => { haptics.selection(); appAlert(
             'Home screen widget',
             Platform.OS === 'android'
               ? 'Volyume has two home screen widgets: your next session, and this week\'s consistency. Long-press an empty spot on your home screen, choose Widgets, then find Volyume to add one.'
               : 'Volyume has home screen widgets for your next session and this week\'s consistency, plus a lock screen widget for your consistency. Long-press your home screen, tap the + in the corner, then find Volyume to add a widget. For the lock screen widget, long-press your lock screen, tap Customise, then add Volyume from the widget gallery.',
             [{ text: 'Got it' }],
-          )}
+          ); }}
         />
         {healthOn && (
           <SettingRow
             icon="heart-outline"
             label={getHealthProviderLabel()}
             sub="Weight and workouts"
-            onPress={() => navigation.navigate('SettingsHealth')}
+            onPress={() => { haptics.selection(); navigation.navigate('SettingsHealth'); }}
           />
         )}
         <SettingRow
           icon="cloud-outline"
           label="Your data"
           sub="Sync, backup, import, export"
-          onPress={() => navigation.navigate('SettingsData')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsData'); }}
         />
         <SettingRow
           icon="shield-checkmark-outline"
           label="Privacy and legal"
           sub="Consent, data sharing and policy"
-          onPress={() => navigation.navigate('SettingsPrivacy')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsPrivacy'); }}
         />
         <SettingRow
           icon="information-circle-outline"
           label="Help and about"
           sub="Feedback, rating, version"
-          onPress={() => navigation.navigate('SettingsAbout')}
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsAbout'); }}
         />
       </View>
     </SettingsPage>

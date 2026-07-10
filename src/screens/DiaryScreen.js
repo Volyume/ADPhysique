@@ -745,8 +745,14 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [canWrite, userId, selectedDate, load, toast]);
 
-  function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
-  function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
+  // Haptics completion pass (2026-07-10): the haptic lives INSIDE the
+  // handler (not wrapped at the JSX callsite) so the swipe gesture, which
+  // shares these exact closures via dayNavRef (daySwipe.guard.test.js),
+  // gets the same feel as the chevron tap -- and the chevron's
+  // onPress={gotoYesterday}/{gotoTomorrow} wiring the guard pins stays a
+  // bare reference.
+  function gotoYesterday() { haptics.selection(); setSelectedDate(shiftDate(selectedDate, -1)); }
+  function gotoTomorrow()  { haptics.selection(); setSelectedDate(shiftDate(selectedDate, 1)); }
   function gotoToday()     { setSelectedDate(isoDate(new Date())); }
 
   // NAV-3 (elite audit 2026-07-04): the diary only had single-day chevrons
@@ -756,7 +762,10 @@ export default function DiaryScreen({ navigation, route }) {
   // are untouched. A read (viewing a different day), so it stays available
   // read-only too, same as the chevrons.
   const [datePickerVisible, setDatePickerVisible] = useState(false);
-  const openDatePicker = useCallback(() => setDatePickerVisible(true), []);
+  // Haptics completion pass (2026-07-10): haptic lives inside the handler
+  // (not the JSX callsite) so onPress={openDatePicker} stays a bare
+  // reference (raceGuardAndDateJump.guard.test.js pins the exact wiring).
+  const openDatePicker = useCallback(() => { haptics.selection(); setDatePickerVisible(true); }, []);
   const closeDatePicker = useCallback(() => setDatePickerVisible(false), []);
   const onPickDate = useCallback((iso) => setSelectedDate(iso), []);
 
@@ -921,6 +930,10 @@ export default function DiaryScreen({ navigation, route }) {
     const n = sel.length;
     audit('food.delete', { mealSlot: 'multi', count: n });
     await deleteEntries(userId, sel);
+    // Haptics completion pass (2026-07-10): data-first, mirrors the
+    // single-row requestDelete's commit beat -- fires only after the
+    // bulk delete has actually landed.
+    haptics.commit();
     exitSelection();
     await load();
     toast.show(`${n} ${n === 1 ? 'entry' : 'entries'} deleted.`, {
@@ -1221,13 +1234,13 @@ export default function DiaryScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
           {!isViewingToday ? (
-            <TouchableOpacity onPress={gotoToday} hitSlop={10} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
+            <TouchableOpacity onPress={() => { haptics.selection(); gotoToday(); }} hitSlop={10} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
               <Text style={styles.todayPillText}>Today</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly ? (
             <TouchableOpacity
-              onPress={openDiaryActions}
+              onPress={() => { haptics.selection(); openDiaryActions(); }}
               hitSlop={12}
               style={styles.dayPagerMore}
               accessibilityRole="button"
@@ -1249,7 +1262,7 @@ export default function DiaryScreen({ navigation, route }) {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('ProUpgrade')}
+              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade'); }}
               hitSlop={8}
               style={styles.readOnlyCtaButton}
               accessibilityRole="button"
@@ -1267,7 +1280,7 @@ export default function DiaryScreen({ navigation, route }) {
           {targetsChangedRecently ? (
             <TouchableOpacity
               style={styles.targetsChangedRow}
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
               accessibilityLabel="Targets updated. See why."
@@ -1280,6 +1293,12 @@ export default function DiaryScreen({ navigation, route }) {
           {showFirstFoodPrompt ? (
             <FirstFoodPrompt targetKcal={effectiveTargets?.targetKcal} energyUnit={energyUnit} />
           ) : (
+            // Haptics completion pass (2026-07-10): the MacroRings call site
+            // below (rollup/targets/planned/dayTypeLabel/onPress) is left
+            // byte-identical -- DiaryScreen.raceGuardAndDateJump.guard.test.js
+            // and DiaryScreen.firstFoodPrompt.guard.test.js both pin it
+            // "unchanged" (a concurrent-agent stability guard), a genuine
+            // pinned-test conflict, reported rather than forced through.
             <MacroRings
               rollup={rollup}
               targets={effectiveTargets}
@@ -1289,7 +1308,11 @@ export default function DiaryScreen({ navigation, route }) {
             />
           )}
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
-              row each; the confirm dialogs own the consequence copy. */}
+              row each; the confirm dialogs own the consequence copy.
+              Haptics completion pass (2026-07-10): both rows write straight
+              to the nutrition-target/macro-cycling profile fields the
+              coaching engine reads (macroCycle/refeed), ED-safety-adjacent
+              territory -- left without an added haptic. */}
           {!readOnly && macroCycle ? (
             <TouchableOpacity
               style={styles.targetModeRow}
@@ -1613,7 +1636,7 @@ export default function DiaryScreen({ navigation, route }) {
         <Text style={styles.savedFoodIntro}>Use a saved meal from your diary, or a recipe you built.</Text>
         <TouchableOpacity
           style={styles.savedFoodOption}
-          onPress={() => openSavedFoodRoute('MyMeals')}
+          onPress={() => { haptics.selection(); openSavedFoodRoute('MyMeals'); }}
           accessibilityRole="button"
           accessibilityLabel="Open saved meals"
         >
@@ -1628,7 +1651,7 @@ export default function DiaryScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.savedFoodOption}
-          onPress={() => openSavedFoodRoute('MyRecipes')}
+          onPress={() => { haptics.selection(); openSavedFoodRoute('MyRecipes'); }}
           accessibilityRole="button"
           accessibilityLabel="Open recipes"
         >
@@ -1658,6 +1681,7 @@ export default function DiaryScreen({ navigation, route }) {
         <TouchableOpacity
           style={scanFabStyle}
           onPress={() => {
+            haptics.selection();
             // Pass the likely meal slot so a scan no longer defaults to
             // 'snack'. The empty-day CTA uses the same inferred slot.
             navigation.navigate('ScanBarcode', { entryDate: selectedDate, mealSlot: likelyMealSlot });
@@ -1673,21 +1697,25 @@ export default function DiaryScreen({ navigation, route }) {
       {selectionMode && !readOnly ? (
         <View style={selectionBarStyle}>
           <View style={styles.selTopRow}>
-            <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
+            <TouchableOpacity onPress={() => { haptics.selection(); exitSelection(); }} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
               <Ionicons name="close" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.selCount}>{selectedIds.size} selected</Text>
           </View>
           <View style={styles.selActions}>
-            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to another meal">
+            <TouchableOpacity onPress={() => { haptics.selection(); setMovePickerVisible(true); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to another meal">
               <Ionicons name="swap-vertical" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>Move</Text>
             </TouchableOpacity>
+            {/* Haptics completion pass (2026-07-10): copying to today is a
+                bulk food-log write (diary-marking), excluded per the
+                campaign's ED-pattern-detection rule -- left without an
+                added haptic. */}
             <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Copy to today">
               <Ionicons name="copy-outline" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>To today</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={openSaveMeal} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Save selected as a meal">
+            <TouchableOpacity onPress={() => { haptics.selection(); openSaveMeal(); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Save selected as a meal">
               <Ionicons name="bookmark-outline" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>Save meal</Text>
             </TouchableOpacity>
@@ -1709,7 +1737,7 @@ export default function DiaryScreen({ navigation, route }) {
           <TouchableOpacity
             key={s.key}
             style={styles.moveOption}
-            onPress={() => doMoveSelected(s.key)}
+            onPress={() => { haptics.selection(); doMoveSelected(s.key); }}
             accessibilityRole="button"
             accessibilityLabel={`Move to ${s.label}`}
           >
@@ -1777,7 +1805,7 @@ export default function DiaryScreen({ navigation, route }) {
         </Text>
         <TouchableOpacity
           style={styles.diaryToolRow}
-          onPress={() => { setDiaryToolsOpen(false); openCopyPicker(); }}
+          onPress={() => { haptics.selection(); setDiaryToolsOpen(false); openCopyPicker(); }}
           accessibilityRole="button"
           accessibilityLabel="Copy food from another logged day"
         >
@@ -1792,7 +1820,7 @@ export default function DiaryScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.diaryToolRow}
-          onPress={() => { setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
+          onPress={() => { haptics.selection(); setDiaryToolsOpen(false); navigation.navigate('FoodInsights'); }}
           accessibilityRole="button"
           accessibilityLabel="Open nutrition trends and export"
         >
@@ -1817,6 +1845,10 @@ export default function DiaryScreen({ navigation, route }) {
           <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
         ) : (
           (copyDays || []).map((d) => (
+            // Haptics completion pass (2026-07-10): copying a day's foods is
+            // a direct diary-write (food-logging), excluded per the
+            // campaign's ED-pattern-detection rule -- left without an added
+            // haptic.
             <TouchableOpacity
               key={d.entry_date}
               style={styles.moveOption}
@@ -1893,7 +1925,7 @@ function WaterRow({
           {/* NU-9: the value doubles as the target editor. E10 read-only: the
               value is a plain fact; +/- and the target editor are writes. */}
           <TouchableOpacity
-            onPress={readOnly ? undefined : onEditTarget}
+            onPress={readOnly ? undefined : () => { haptics.selection(); onEditTarget?.(); }}
             disabled={readOnly}
             hitSlop={8}
             accessibilityRole={readOnly ? 'text' : 'button'}

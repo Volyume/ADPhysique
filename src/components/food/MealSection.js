@@ -4,6 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '.
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
+import * as haptics from '../../lib/haptics';
 import { SwipeableEntryRow } from './EntryRow';
 import AnimatedRow from '../AnimatedRow';
 
@@ -159,7 +160,7 @@ export default function MealSection({
         <View style={[styles.actionHub, hasEntries && styles.actionHubDivided]}>
           <TouchableOpacity
             style={styles.addFoodButton}
-            onPress={onAdd}
+            onPress={() => { haptics.selection(); onAdd?.(); }}
           accessibilityRole="button"
           accessibilityLabel={`Add food to ${slot.label}`}
         >

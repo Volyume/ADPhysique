@@ -15,6 +15,7 @@ import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import { fuzzySearch } from '../lib/exerciseFuzzySearch';
 import useAppStore from '../store/useAppStore';
+import * as haptics from '../lib/haptics';
 import Chip from './Chip';
 import SearchBar from './SearchBar';
 import SectionLabel from './SectionLabel';
@@ -216,7 +217,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
             <View style={[styles.pickerHeader, live.pickerHeader]}>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Back to exercise search"
-                onPress={() => setShowCreate(false)}
+                onPress={() => { haptics.selection(); setShowCreate(false); }}
                 style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
@@ -225,7 +226,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               <Text style={[styles.createTitle, live.createTitle]} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
-                onPress={onClose}
+                onPress={() => { haptics.selection(); onClose?.(); }}
                 style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
@@ -253,7 +254,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     key={m}
                     label={MUSCLE_DISPLAY_NAMES[m]}
                     selected={createMuscle === m}
-                    onPress={() => selectPrimaryMuscle(m)}
+                    onPress={() => { haptics.selection(); selectPrimaryMuscle(m); }}
                   />
                 ))}
               </View>
@@ -272,7 +273,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       key={m}
                       label={MUSCLE_DISPLAY_NAMES[m]}
                       selected={selected}
-                      onPress={() => toggleSecondaryMuscle(m)}
+                      onPress={() => { haptics.selection(); toggleSecondaryMuscle(m); }}
                       accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${MUSCLE_DISPLAY_NAMES[m]} as a secondary muscle`}
                     />
                   );
@@ -285,7 +286,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     key={eq}
                     label={eq}
                     selected={createEquipment === eq}
-                    onPress={() => setCreateEquipment(prev => prev === eq ? '' : eq)}
+                    onPress={() => { haptics.selection(); setCreateEquipment(prev => prev === eq ? '' : eq); }}
                   />
                 ))}
               </View>
@@ -300,7 +301,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     key={opt.key}
                     label={opt.label}
                     selected={createExerciseType === opt.key}
-                    onPress={() => setCreateExerciseType(opt.key)}
+                    onPress={() => { haptics.selection(); setCreateExerciseType(opt.key); }}
                     accessibilityLabel={`Exercise type: ${opt.label}`}
                   />
                 ))}
@@ -308,7 +309,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel={buttonLabel}
                 style={[styles.createSaveBtn, live.createSaveBtn, creating && { opacity: 0.5 }]}
-                onPress={handleCreate}
+                onPress={() => { haptics.commit(); handleCreate(); }}
                 disabled={creating}
               >
                 <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.onPrimary} />
@@ -328,7 +329,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               />
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
-                onPress={onClose}
+                onPress={() => { haptics.selection(); onClose?.(); }}
                 style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
@@ -352,7 +353,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       label={ex.name}
                       numberOfLines={1}
                       accessibilityLabel={`Add ${ex.name}`}
-                      onPress={() => { onSelect(ex); onClose(); }}
+                      onPress={() => { haptics.selection(); onSelect(ex); onClose(); }}
                       style={styles.recentChip}
                     />
                   ))}
@@ -376,7 +377,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       key={m}
                       label={MUSCLE_DISPLAY_NAMES[m]}
                       selected={muscleFilter === m}
-                      onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
+                      onPress={() => { haptics.selection(); setMuscleFilter(prev => (prev === m ? '' : m)); }}
                       accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
                       style={styles.filterChip}
                       labelStyle={[styles.filterChipText, live.filterChipText]}
@@ -395,7 +396,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       key={eq}
                       label={eq}
                       selected={equipmentFilter === eq}
-                      onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
+                      onPress={() => { haptics.selection(); setEquipmentFilter(prev => (prev === eq ? '' : eq)); }}
                       accessibilityLabel={`Filter by ${eq}`}
                       style={styles.filterChip}
                       labelStyle={[styles.filterChipText, live.filterChipText]}
@@ -415,7 +416,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 <TouchableOpacity accessibilityRole="button"
                   accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}`}
                   style={styles.pickerRow}
-                  onPress={() => { onSelect(item); onClose(); }}
+                  onPress={() => { haptics.selection(); onSelect(item); onClose(); }}
                 >
                   <View style={styles.pickerRowContent}>
                     <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
@@ -437,7 +438,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                     ? `Create ${query.trim()} as custom exercise`
                     : 'Create a custom exercise'}
                   style={[styles.createNewBtn, live.createNewBtn, { marginTop: spacing.md }]}
-                  onPress={openCreate}
+                  onPress={() => { haptics.selection(); openCreate(); }}
                 >
                   <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
                   <Text style={[styles.createNewBtnText, live.createNewBtnText]}>

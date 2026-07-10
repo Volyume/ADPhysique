@@ -15,6 +15,7 @@ import { useToast } from '../components/Toast';
 import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncAll, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
+import * as haptics from '../lib/haptics';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
@@ -409,7 +410,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               {!PRO_BETA_ACTIVE && !canTrial ? (
                 <BillingPeriodSelector
                   value={period}
-                  onChange={setPeriod}
+                  onChange={(p) => { haptics.selection(); setPeriod(p); }}
                   monthlyPrice={monthlyPrice}
                   annualPrice={annualPrice}
                   disabled={busy}
@@ -458,7 +459,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
           <TouchableOpacity
             style={styles.policyLink}
-            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Subscription terms"
@@ -469,6 +470,10 @@ export default function ProUpgradeScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
 
+          {/* Haptics completion pass (2026-07-10): "Maybe later" is neither a
+              plan-comparison segment nor a navigation row (the campaign's
+              allowed set for this screen family) -- left without an added
+              haptic. */}
           <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
             <Text style={styles.laterText}>Maybe later</Text>
           </TouchableOpacity>

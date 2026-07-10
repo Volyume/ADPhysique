@@ -1,6 +1,10 @@
 // mealBreakdown is pure; stub the store so importing the component
 // module doesn't drag the zustand/AsyncStorage chain into the test.
 jest.mock('../../../store/useAppStore', () => ({ __esModule: true, default: () => undefined }));
+// Haptics completion pass (2026-07-10): the component now imports the
+// haptics vocabulary, which reaches expo-haptics (a native module) at
+// import time; stub it the same way foodComponents.test.js does.
+jest.mock('../../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 
 import { mealBreakdown } from '../MacroBreakdownSheet';
 
