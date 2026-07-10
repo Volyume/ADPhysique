@@ -93,29 +93,66 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   6 SegmentedControl segments equal height, one line; 7 chips wrap as
   rows, never overflow the pill; 8 food source badge one line; 9 ED
   check: no animated numerals on any weight surface (unchanged).
-- ▶ PAIR 4 IN FLIGHT: (a) item 13 progress-photo gallery — LEAD DECISION
-  (product quality, D23 discipline): Reanimated/Gesture-Handler
-  HAND-ROLL, no new dependency (both libs proven in this codebase;
-  pinch/swipe/compare is well-understood; avoids a dep for one screen).
-  Photos stay on-device; suppression gates intact. (b) item 14
-  keyboard-controller + zeego adoption (D25-approved deps; D23
-  discipline: licence+health+lockfile same commit, register entry, EAS
-  flag; zeego lands on logged sets first). NOTE: fresh EAS build needed
-  after item 14 (native module) — founder-side.
-- ⏸ FOUNDER ORDER (2026-07-10, mid-Pair-4): PAUSE after the current
-  pair — 5-hour usage window near its limit. Pair 4 runs to completion
-  and is reviewed+landed; NO Pair 5 launches this session. On resume:
-  next slots are (1) the D30 dynamic-type codemod sweep (founder-ruled,
-  see DECISIONS D30) and (2) item 15 shared-element transitions +
-  Android polish, then the slate order continues (item 16 MLKit, Pair 6
-  drag reorder + giant sets, Pair 7 Live Activity + Android rest-timer
-  actions, Pair 8 dietary discoverability + small tails; smalls 7/9/10/
-  11 interleave). If this session dies before Pair 4 lands, the two
-  agents' uncommitted work sits in the tree: review the diff against
-  the briefs recorded above before committing anything; item 13's lane
-  is ProgressPhotos/Viewer/Compare + usePhotoSuppression guards; item
-  14's lane is package.json+lockfile+App.js+app.json+ActiveWorkout set
-  rows + non-sheet typing surfaces.
+- ✅ PAIR 4 LANDED + PUSHED. (a) `37abe1b` item 13 photo-gallery polish:
+  most of the spec already existed (pinch/double-tap/swipe were live);
+  built the genuine gaps — clamped zoom-pan (pure-arithmetic worklet,
+  no theme reads), paging + double-tap haptics (genuine moves only,
+  never at a boundary), TalkBack adjustable paging (increment/decrement
+  drive the same changePage as the swipe). No new dependency (lead
+  decision under D25). New test pins paging available under an active
+  suppression while the weight line stays withheld. (b) `f1bace6` item
+  14: adopted react-native-keyboard-controller 1.22.0 + zeego 3.0.6
+  (+3 pinned peers), lockfile in the same commit, register entry in the
+  stage log below. Keyboard: real cross-platform avoidance on
+  WorkoutSummary (which previously had NONE on its main scroll),
+  AddCustomFood, RecipeBuilder and the custom-exercise form; sheet
+  inputs keep BottomSheetTextInput. zeego first surface: long-press
+  menu on logged-set rows, Edit/Delete only; delete routes through the
+  existing confirm flow via a menu-only ref — lead-reviewed: the ref is
+  set ONLY by the menu path, so a normal row tap can never trigger it,
+  and the pinned zero-arg handleDeleteEditedSet is untouched. Lint +
+  full suite green at both landings (657 suites / 8,234 tests).
+
+## ⏸ SESSION PAUSED HERE (founder order 2026-07-10, usage window)
+
+**RESUME POINT — next slots, in order:**
+1. D30 dynamic-type codemod sweep (founder-ruled; DECISIONS D30 —
+   explicit maxFontSizeMultiplier on every raw Text/TextInput, house
+   value 1.3; RestTimer's 1.15 outlier and RollingNumber's uncapped
+   default stay untouched).
+2. Item 15 shared-element transitions + Android polish (themed icon,
+   edge-to-edge, splash fade).
+3. Then slate order: item 16 MLKit scanner; Pair 6 drag reorder + giant
+   sets (item 21 is ENGINE-ADJACENT — lead reviews the planEngine/
+   logging diff hands-on); Pair 7 iOS Live Activity wiring + Android
+   rest-timer actions; Pair 8 dietary discoverability + item 17 small
+   tails; smalls 7/9/10/11 interleave into spare slots. The theming
+   stage-4 tail continues as component/screen batches (coverage tracker
+   below); stage 5 stays honesty-gated.
+
+**OPEN FOUNDER ITEMS (new this session, ask when convenient):**
+- Repeat-set on the set-row context menu: no per-row repeat action
+  exists today (an old repeat button was deliberately removed), so the
+  menu shipped Edit/Delete only. Build a real repeat-set, or keep as
+  is?
+- zeego is ~16 months since its last publish (works on SDK 54 + New
+  Arch; awareness flag, not blocking).
+- MacroRings could carry its own tap selection() haptic internally (its
+  DiaryScreen call site is guard-pinned byte-identical) — fold into a
+  later batch if wanted.
+
+**FOUNDER-SIDE ACTIONS (updated this session):**
+- ⚠ FRESH EAS BUILD now REQUIRED before device-walking this branch:
+  item 14 added native modules (keyboard-controller, zeego + peers).
+- Device checklists to walk on that build: item 6 (max system font,
+  Pair-3 entry above); item 13 (zoom clamp, spring-back, haptic ticks,
+  zoom-wins-over-swipe, boundary no-op, TalkBack paging, reduce-motion
+  instant snaps, calm/ED suppression intact); item 14 (keyboard on the
+  four adopted surfaces incl. drag-dismiss, set-row long-press menu on
+  BOTH platforms, delete confirm intact).
+- Still outstanding from before: supabase migrations 110-116 to
+  EU-Dublin; refresh-off-snapshot workflow (OFF micronutrients); iOS
+  App Groups + Live Activity provisioning; Play OAuth SHA-1.
 - THEMING COVERAGE TRACKER (for the stage-5 honesty gate): after batch
   A, live = 20/85 screens (+3 in flight via item 8), ~52/111
   theme-consuming components. Remaining static components ~59 (food/*,
