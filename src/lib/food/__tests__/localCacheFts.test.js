@@ -187,6 +187,31 @@ describe('searchLocalByName over the real FTS index', () => {
     expect(dbSrc).toMatch(/INSERT INTO custom_foods \([\s\S]{0,600}ON CONFLICT\(id\) DO UPDATE SET/);
   });
 
+  test('accented names are found by an unaccented query, and case never matters (D25 FTS5 review)', async () => {
+    const raw = freshDb();
+    seedFood(raw, 'f10', 'Crème Brûlée Yoghurt');
+    seedFood(raw, 'f11', 'Jalapeño Poppers', 'Señor Snacks');
+    mockHandle = adapt(raw);
+    await ensureFoodSearchIndex(mockHandle);
+
+    // unicode61 folds diacritics and case at index-build time, so a plain
+    // ASCII, lower-case query still finds the accented name.
+    expect((await searchLocalByName('u1', 'creme brulee')).map((r) => r.name))
+      .toEqual(['Crème Brûlée Yoghurt']);
+    expect((await searchLocalByName('u1', 'jalapeno')).map((r) => r.name))
+      .toEqual(['Jalapeño Poppers']);
+    // Brand search inherits the same folding.
+    expect((await searchLocalByName('u1', 'senor')).map((r) => r.name))
+      .toEqual(['Jalapeño Poppers']);
+
+    // Case is irrelevant on either side of the match: an upper-case, accented
+    // query still finds the row (query text is lower-cased before reaching
+    // FTS, and the index itself is case-insensitive regardless).
+    expect((await searchLocalByName('u1', 'JALAPEÑO')).map((r) => r.name))
+      .toEqual(['Jalapeño Poppers']);
+    expect((await searchLocalByName('u1', 'CHICKEN')).map((r) => r.name)).toEqual([]);
+  });
+
   test('the sign-out wipe rebuilds the index so the next account inherits no tokens', () => {
     const fs = require('fs');
     const path = require('path');
