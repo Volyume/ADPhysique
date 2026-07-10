@@ -1,12 +1,20 @@
 # Volyume Widget Extension — setup steps
 
-The Live Activity Swift files in this directory need to live inside a Widget
-Extension target before they actually render. The main app target alone
-cannot host a Live Activity — Apple requires extensions for any system-
-managed widget.
+> **Status update (E6B/CP-2):** the manual "Adding the target in Xcode" and
+> "EAS build integration" sections below describe the ORIGINAL plan before
+> `plugins/withVolyumeWidget.js` existed. That config plugin now creates the
+> `VolyumeWidget` extension target automatically at every `expo prebuild`
+> (including inside an EAS build), copies these Swift files in, and sets
+> `NSSupportsLiveActivities` + the App Group entitlement on both targets. No
+> manual Xcode steps are needed for a normal build. The two sections are kept
+> below for historical reference and as a manual fallback if the plugin ever
+> needs debugging. The **"Provisioning"** section further down is still
+> accurate and still a required, one-time, founder-side manual step.
 
-This README walks through wiring the target up. Do it once, then EAS builds
-pick it up automatically.
+The Live Activity Swift files in this directory (plus the shared attributes
+file in `../ios/`) are compiled into a Widget Extension target. The main app
+target alone cannot host a Live Activity — Apple requires extensions for any
+system-managed widget.
 
 ## What goes where
 
@@ -78,9 +86,12 @@ The widget extension needs its own App ID + provisioning profile:
 
 ## What doesn't work yet
 
-- **Home-screen widgets** (next workout card, weekly volume tile) —
-  the bundle is ready to host them; add new `Widget` types to
-  `VolyumeWidgetBundle.body` and they'll appear in the widget gallery.
+- **Home-screen widgets** — done (CP-2, design-usability-audit-2026-07-09):
+  `VolyumeHomeWidgets.swift` (`VolyumeNextSessionWidget`,
+  `VolyumeConsistencyWidget`) is registered in `VolyumeWidgetBundle.swift`
+  alongside the Live Activity and reads its data from the App Group snapshot
+  `src/lib/widgets/storage.js` writes via `LiveActivityModule.
+  writeWidgetSnapshot`.
 - **Interactive Live Activities** (iOS 17 buttons inside the Live
   Activity) — would need an App Intent target on top of the widget
   extension. Worth a follow-up if you want a "Finish rest now" button

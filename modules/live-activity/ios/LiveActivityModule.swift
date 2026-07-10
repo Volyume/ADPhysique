@@ -9,11 +9,15 @@ import WidgetKit
  * rest-timer Activity per workout; callers can update or end it as
  * the user adjusts or finishes their rest.
  *
- * Activity content is defined in widget/VolyumeRestTimerAttributes.swift
- * and rendered by widget/VolyumeRestTimerLiveActivity.swift. Those
- * files live in a separate Widget Extension target — see
- * ios/widget/README.md for the build steps. Until that target is
- * added to the Xcode project, Activity.request() will throw at
+ * Activity content is defined in ../VolyumeRestTimerAttributes.swift
+ * (compiled into both this pod and the extension) and rendered by
+ * ../widget/VolyumeRestTimerLiveActivity.swift. Those rendering files
+ * live in a separate Widget Extension target, created automatically at
+ * prebuild time by plugins/withVolyumeWidget.js — no manual Xcode step
+ * is required (see modules/live-activity/widget/README.md and
+ * docs/live-activity-viability-2026-07-02.md). Until a build has run
+ * with that plugin registered (app.json) AND the founder has completed
+ * the one-time App ID/provisioning step, Activity.request() throws at
  * runtime and the JS layer treats every call as a no-op.
  *
  * Availability gates:

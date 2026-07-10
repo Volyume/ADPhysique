@@ -27,14 +27,19 @@
  *     Activities are enabled.
  *
  * The Live Activity widget extension itself (the SwiftUI view, the
- * Dynamic Island presentations, the activity attributes) lives in
- * ios/widget/. To make the Live Activity actually appear in a build,
- * a Widget Extension target needs to be added to the Xcode project
- * with the widget Swift files copied in — see ios/widget/README.md
- * for the step-by-step. Until that target exists, this module
- * compiles and links but Activity.request() throws and the Live
- * Activity never appears. The Android chronometer (rest-timer-live)
- * remains the lock-screen surface in the meantime.
+ * Dynamic Island presentations, the home/lock-screen widgets) lives in
+ * widget/, with the shared ActivityAttributes in ios/ (compiled into
+ * both the app pod and the extension). The extension target itself is
+ * created automatically at prebuild time by plugins/withVolyumeWidget.js
+ * (E6B/CP-2, docs/live-activity-viability-2026-07-02.md) — no manual
+ * Xcode step is required. The two things that ARE still manual, founder-
+ * side, one-time steps: provisioning the app.volyume.widget App ID (Live
+ * Activities + App Groups capabilities) in the Apple Developer portal and
+ * letting EAS credentials re-sync, then a fresh EAS build to pick up the
+ * new extension target (see modules/live-activity/widget/README.md's
+ * "Provisioning" section and docs/LIVE_ACTIVITY_IOS.md §4-5). The Android
+ * chronometer (rest-timer-live) remains the lock-screen surface on
+ * Android, where none of this applies.
  */
 
 import { Platform } from 'react-native';

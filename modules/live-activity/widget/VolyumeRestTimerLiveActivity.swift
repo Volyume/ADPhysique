@@ -34,8 +34,12 @@ private func volyumeSafeRestRange(_ endTime: Date) -> ClosedRange<Date> {
  * app or the widget process. Battery cost is effectively zero.
  *
  * IMPORTANT: this file must be part of the Widget Extension target,
- * NOT the main app target. The shared attributes file should be in
- * BOTH targets. See ios/widget/README.md for the Xcode setup.
+ * NOT the main app target. The shared attributes file (../ios/
+ * VolyumeRestTimerAttributes.swift) compiles into BOTH targets. The
+ * extension target itself is created automatically at prebuild time
+ * by plugins/withVolyumeWidget.js — see README.md in this directory
+ * for the (now largely historical) manual-Xcode walkthrough and the
+ * still-current provisioning steps.
  */
 @available(iOS 16.1, *)
 public struct VolyumeRestTimerLiveActivity: Widget {
