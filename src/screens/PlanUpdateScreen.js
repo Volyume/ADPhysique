@@ -209,13 +209,13 @@ export default function PlanUpdateScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
         </Text>
 
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
@@ -230,9 +230,9 @@ export default function PlanUpdateScreen({ navigation }) {
         {weakPointsApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text style={styles.optionalTag}>(optional, max 3)</Text>
+              Weak points <Text maxFontSizeMultiplier={1.3} style={styles.optionalTag}>(optional, max 3)</Text>
             </SectionLabel>
-            <Text style={styles.sectionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
@@ -250,7 +250,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
@@ -262,7 +262,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training schedule ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
@@ -282,7 +282,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Equipment ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
@@ -294,7 +294,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
           How well you're recovering between sessions. This sets how cautious Volyume should be with training volume.
         </Text>
         <Dropdown
@@ -326,21 +326,21 @@ export default function PlanUpdateScreen({ navigation }) {
       >
         {diff ? (
           <>
-            <Text style={styles.diffTitle}>Before you rebuild</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.diffTitle}>Before you rebuild</Text>
             {diff.identical ? (
-              <Text style={styles.diffSub}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.diffSub}>
                 Your training days, split and moves already match this setup. Rebuilding refreshes your sets and volume.
               </Text>
             ) : (
               <>
-                <Text style={styles.diffSub}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.diffSub}>
                   Here's what changes. Your current plan stays until you confirm.
                 </Text>
                 <View style={styles.diffTable}>
                   <View style={styles.diffHeadRow}>
-                    <Text style={[styles.diffCell, styles.diffCellLabel]} />
-                    <Text style={[styles.diffCell, styles.diffHeadText]}>Now</Text>
-                    <Text style={[styles.diffCell, styles.diffHeadText]}>After</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffCellLabel]} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffHeadText]}>Now</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffHeadText]}>After</Text>
                   </View>
                   <DiffRow label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
                   <DiffRow label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
@@ -353,17 +353,17 @@ export default function PlanUpdateScreen({ navigation }) {
                 </View>
                 {(diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
                   <View style={styles.diffMoves}>
-                    <Text style={styles.diffMovesLabel}>Moves changed</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.diffMovesLabel}>Moves changed</Text>
                     {diff.movesAdded.map(m => (
-                      <Text key={`add-${m}`} style={styles.diffMoveText}>Added: {m}</Text>
+                      <Text maxFontSizeMultiplier={1.3} key={`add-${m}`} style={styles.diffMoveText}>Added: {m}</Text>
                     ))}
                     {diff.movesDropped.map(m => (
-                      <Text key={`drop-${m}`} style={styles.diffMoveText}>Dropped: {m}</Text>
+                      <Text maxFontSizeMultiplier={1.3} key={`drop-${m}`} style={styles.diffMoveText}>Dropped: {m}</Text>
                     ))}
                   </View>
                 ) : null}
                 {staged?.partial ? (
-                  <Text style={styles.diffShortfall}>{planShortfallNote(staged.missedCount)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.diffShortfall}>{planShortfallNote(staged.missedCount)}</Text>
                 ) : null}
               </>
             )}
@@ -398,9 +398,9 @@ function DiffRow({ label, now, after, changed }) {
   const fmt = (v) => (v == null ? '-' : String(v));
   return (
     <View style={styles.diffRow}>
-      <Text style={[styles.diffCell, styles.diffCellLabel]}>{label}</Text>
-      <Text style={[styles.diffCell, styles.diffNow]}>{fmt(now)}</Text>
-      <Text style={[styles.diffCell, styles.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffCellLabel]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffNow]}>{fmt(now)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
     </View>
   );
 }

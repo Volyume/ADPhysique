@@ -111,8 +111,8 @@ export function AppAlertHost() {
           accessible={false}
           accessibilityViewIsModal
         >
-          {!!title && <Text style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
-          {!!message && <Text style={[styles.message, live.message]}>{message}</Text>}
+          {!!title && <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
+          {!!message && <Text maxFontSizeMultiplier={1.3} style={[styles.message, live.message]}>{message}</Text>}
           <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
             {buttons.map((b, i) => {
               const isCancel = b.style === 'cancel';
@@ -132,7 +132,7 @@ export function AppAlertHost() {
                     isCancel && styles.btnCancel,
                   ]}
                 >
-                  <Text
+                  <Text maxFontSizeMultiplier={1.3}
                     style={[
                       styles.btnText,
                       isPrimary && [styles.btnTextPrimary, live.btnTextPrimary],

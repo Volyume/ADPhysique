@@ -330,8 +330,8 @@ export default function VolyumeChart({
       {/* Tooltip card (RN overlay, easier to style than SVG text) */}
       {tip ? (
         <View style={[styles.tooltip, live.tooltip, { left: tipLeft, width: TIP_W }]} pointerEvents="none">
-          <Text style={[styles.tooltipTitle, live.tooltipTitle]} numberOfLines={1}>{tip.title}</Text>
-          {tip.sub ? <Text style={[styles.tooltipSub, live.tooltipSub]} numberOfLines={1}>{tip.sub}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={[styles.tooltipTitle, live.tooltipTitle]} numberOfLines={1}>{tip.title}</Text>
+          {tip.sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.tooltipSub, live.tooltipSub]} numberOfLines={1}>{tip.sub}</Text> : null}
         </View>
       ) : null}
     </View>

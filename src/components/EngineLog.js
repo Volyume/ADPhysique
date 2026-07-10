@@ -91,8 +91,8 @@ export default function EngineLog({ userId }) {
             <Ionicons name="pulse" size={18} color={colors.primary} />
           </View>
           <View>
-            <Text style={styles.headerLabel}>Engine Log</Text>
-            <Text style={styles.headerSub}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.headerLabel}>Engine Log</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.headerSub}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -109,11 +109,11 @@ export default function EngineLog({ userId }) {
               <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
               <View style={{ flex: 1 }}>
                 <View style={styles.regTitleRow}>
-                  <Text style={[styles.muscle, { color: colors.warning }]}>{w.exerciseName}: Rep regression</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.muscle, { color: colors.warning }]}>{w.exerciseName}: Rep regression</Text>
                   {/* U-F-5: define "rep regression" in lay terms (once is enough). */}
                   {i === 0 && <InfoTooltip text={GLOSSARY.repRegression} size={13} />}
                 </View>
-                {w.reason_text ? <Text style={styles.reason} numberOfLines={3}>{w.reason_text}</Text> : null}
+                {w.reason_text ? <Text maxFontSizeMultiplier={1.3} style={styles.reason} numberOfLines={3}>{w.reason_text}</Text> : null}
               </View>
             </View>
           ))}
@@ -136,13 +136,13 @@ export default function EngineLog({ userId }) {
               <View key={event.id || i} style={styles.row}>
                 <Ionicons name={icon} size={14} color={iconColor} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.muscle}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.muscle}>
                     {muscleLabel}
                     {event.delta != null && event.delta !== 0 ? ` ${event.delta > 0 ? '+' : ''}${event.delta} set` : ''}
                   </Text>
-                  {event.reason_text ? <Text style={styles.reason} numberOfLines={2}>{event.reason_text}</Text> : null}
+                  {event.reason_text ? <Text maxFontSizeMultiplier={1.3} style={styles.reason} numberOfLines={2}>{event.reason_text}</Text> : null}
                 </View>
-                <Text style={styles.date}>{date}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.date}>{date}</Text>
               </View>
             );
           })}

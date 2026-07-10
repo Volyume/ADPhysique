@@ -62,9 +62,9 @@ export default function DifferentialBadge({
     <View style={styles.wrap} accessibilityLabel="Differential paywall">
       <View style={styles.headerRow}>
         <Ionicons name="barbell-outline" size={16} color={colors.primary} />
-        <Text style={styles.headerText}>With Pro</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.headerText}>With Pro</Text>
       </View>
-      <Text style={styles.body}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.body}>
         {differential.with_food_data_message}
       </Text>
       <TouchableOpacity
@@ -73,14 +73,14 @@ export default function DifferentialBadge({
         accessibilityRole="button"
         accessibilityLabel={ctaLabel}
       >
-        <Text style={styles.ctaText}>{ctaLabel}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>{ctaLabel}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.dismissBtn}
         onPress={() => onTapCta?.('dismiss')}
         accessibilityRole="button"
       >
-        <Text style={styles.dismissText}>Not now</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.dismissText}>Not now</Text>
       </TouchableOpacity>
     </View>
   );

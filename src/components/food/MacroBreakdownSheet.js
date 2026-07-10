@@ -60,13 +60,13 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
     : null;
   return (
     <View style={styles.macroCell}>
-      <Text style={styles.rowMacros}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.rowMacros}>
         {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
       </Text>
-      <Text style={styles.rowMacroKcal}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.rowMacroKcal}>
         {protein}x4 + {carbs}x4 + {fat}x9 = {macroKcal} kcal
       </Text>
-      {split ? <Text style={styles.rowMacroSplit}>{split} of calories</Text> : null}
+      {split ? <Text maxFontSizeMultiplier={1.3} style={styles.rowMacroSplit}>{split} of calories</Text> : null}
     </View>
   );
 }
@@ -85,12 +85,12 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
       <View style={styles.header}>
-        <Text style={styles.title}>By meal</Text>
-        {dateLabel ? <Text style={styles.subtitle}>{dateLabel}</Text> : null}
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>By meal</Text>
+        {dateLabel ? <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>{dateLabel}</Text> : null}
       </View>
 
       {rows.length === 0 ? (
-        <Text style={styles.empty}>Nothing logged yet. Your macro breakdown will appear here.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.empty}>Nothing logged yet. Your macro breakdown will appear here.</Text>
       ) : (
         <View>
           {rows.map((r) => (
@@ -104,19 +104,19 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
               accessibilityRole={onSelectMeal ? 'button' : undefined}
               accessibilityLabel={onSelectMeal ? `Go to ${r.label}` : undefined}
             >
-              <Text style={styles.rowLabel}>{r.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{r.label}</Text>
               <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} energyUnit={energyUnit} />
             </Pressable>
           ))}
           <View style={[styles.row, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.totalLabel}>Total</Text>
             <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} energyUnit={energyUnit} />
           </View>
         </View>
       )}
 
       <Pressable style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]} onPress={() => { haptics.selection(); onClose?.(); }} accessibilityRole="button" accessibilityLabel="Done">
-        <Text style={styles.doneText}>Done</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.doneText}>Done</Text>
       </Pressable>
     </BottomSheet>
   );

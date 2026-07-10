@@ -425,8 +425,8 @@ export default function BeforeAfterShareSheet({
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.title, live.title]}>Private share image</Text>
-          <Text style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Private share image</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={t.colors.textPrimary} />
@@ -437,15 +437,15 @@ export default function BeforeAfterShareSheet({
         <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
             <Ionicons name="image-outline" size={16} color={t.colors.primary} />
-            <Text style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
           </View>
           <View style={styles.receiptRow}>
             <Ionicons name="lock-closed-outline" size={16} color={t.colors.primary} />
-            <Text style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
           </View>
           <View style={styles.receiptRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.primary} />
-            <Text style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
           </View>
         </View>
 
@@ -477,12 +477,12 @@ export default function BeforeAfterShareSheet({
                       <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                     </View>
                   ) : null}
-                  {range ? <Text style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
+                  {range ? <Text maxFontSizeMultiplier={1.3} style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          <Text style={[styles.hint, live.hint]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>
             {pairReady
               ? `Ready with two ${usingScans ? 'scans' : 'photos'}.`
               : `Choose two ${usingScans ? 'scans' : 'photos'} for the image.`}
@@ -512,7 +512,7 @@ export default function BeforeAfterShareSheet({
               />
             ) : (
               <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
-                {pairReady ? <ActivityIndicator color={t.colors.primary} /> : <Text style={[styles.hint, live.hint]}>Choose two photos</Text>}
+                {pairReady ? <ActivityIndicator color={t.colors.primary} /> : <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>Choose two photos</Text>}
               </View>
             )}
           </View>
@@ -523,7 +523,7 @@ export default function BeforeAfterShareSheet({
         <View style={styles.section}>
           <View style={[styles.togglesCard, live.togglesCard]}>
             <View style={[styles.toggleRow, live.toggleRow, styles.toggleRowLast]}>
-              <Text style={[styles.toggleLabel, live.toggleLabel]}>Include weight on this export</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Include weight on this export</Text>
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
@@ -534,22 +534,22 @@ export default function BeforeAfterShareSheet({
           </View>
           <View style={[styles.exportReceipt, live.exportReceipt]}>
             <View style={styles.exportReceiptCol}>
-              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Included</Text>
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Included</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
               {usingScans && !hideScanRange ? (
-                <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
               ) : null}
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
             </View>
             <View style={styles.exportReceiptCol}>
-              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Kept private</Text>
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Raw photo files</Text>
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Name, notes and measurements</Text>
-              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Your photo library</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Kept private</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Raw photo files</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Name, notes and measurements</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Your photo library</Text>
             </View>
           </View>
-          <Text style={[styles.privacyNote, live.privacyNote]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.privacyNote, live.privacyNote]}>
             The exported file is a single composed image. It includes only the two photos, dates, optional Volyume Score, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
           </Text>
         </View>
@@ -607,7 +607,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityLabel={label}
     >
       <Ionicons name={icon} size={15} color={active ? t.colors.primary : t.colors.textMuted} />
-      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }

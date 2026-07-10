@@ -432,7 +432,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             {pendingMilestone ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
                 {pendingMilestone >= 12 ? (
                   <TouchableOpacity
                     style={styles.milestoneCtaButton}
@@ -441,7 +441,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                     accessibilityLabel="Create share image"
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.milestoneCta}>Create share image</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -449,7 +449,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             {perfectMonth ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
                 <TouchableOpacity
                   style={styles.milestoneCtaButton}
                   onPress={makePerfectMonthCard}
@@ -457,14 +457,14 @@ export default function AnalyticsScreen({ navigation, route }) {
                   accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.milestoneCta}>Create share image</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
             {longestRunPb ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text style={styles.milestoneText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>
                   {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
                 <TouchableOpacity
@@ -474,7 +474,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.milestoneCta}>Create share image</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -489,7 +489,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           <View style={styles.section}>
             <View style={styles.milestoneRow}>
               <Ionicons name="barbell-outline" size={16} color={colors.primary} />
-              <Text style={styles.milestoneText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>
                 {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
               <TouchableOpacity
@@ -499,7 +499,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                 accessibilityLabel="Create share image"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.milestoneCta}>Create share image</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -533,7 +533,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             blank area before the charts arrive. ── */}
         {!loading && !trendsStartHidden && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
           <View style={styles.momentumRow}>
-            <Text style={styles.momentumText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.momentumText}>
               Good start. A couple more sessions and your trends really take shape.
             </Text>
             <TouchableOpacity
@@ -557,7 +557,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
             <Ionicons name="newspaper-outline" size={18} color={colors.primary} />
-            <Text style={styles.recapCardText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.recapCardText}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
             <TouchableOpacity
@@ -638,7 +638,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                 accessibilityLabel="See all sessions"
               >
                 <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.seeAll}>All sessions</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
             </View>
             {recentSessions.map(w => {
@@ -721,22 +721,22 @@ export default function AnalyticsScreen({ navigation, route }) {
             <SectionLabel>Lifetime totals</SectionLabel>
             <Card radius="md" padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
-                <Text style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
-                <Text style={styles.lifetimeLabel}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>
                   {completedWorkoutCount === 1 ? 'session' : 'sessions'}
                 </Text>
               </View>
               <View style={styles.lifetimeDivider} />
               <View style={styles.lifetimeCell}>
-                <Text style={styles.lifetimeValue}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>
                   {formatNumber(lifetimeTonnage)}
                 </Text>
-                <Text style={styles.lifetimeLabel}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
               </View>
               <View style={styles.lifetimeDivider} />
               <View style={styles.lifetimeCell}>
-                <Text style={styles.lifetimeValue}>{formatNumber(lifetimeReps)}</Text>
-                <Text style={styles.lifetimeLabel}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>{formatNumber(lifetimeReps)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>
                   {lifetimeReps === 1 ? 'rep' : 'reps'}
                 </Text>
               </View>
@@ -821,7 +821,7 @@ function InsightRow({ insight, onDismiss }) {
   return (
     <Card padding="md" radius="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
-      <Text style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -855,7 +855,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
         accessibilityRole="button"
         accessibilityLabel="This week's volume. Open the heatmap."
       >
-        <Text style={styles.volEmptyText}>Nothing logged this week yet.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.volEmptyText}>Nothing logged this week yet.</Text>
       </Card>
     );
   }
@@ -888,18 +888,18 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
     >
       <View style={styles.volSummaryTop}>
         <View style={styles.volSummaryMain}>
-          <Text style={styles.volSummaryCount}>{trained.length}</Text>
-          <Text style={styles.volSummaryLabel}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryCount}>{trained.length}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryLabel}>
             {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
           </Text>
         </View>
         <View style={styles.volSummaryFlags}>
           {flags.length === 0 ? (
-            <Text style={styles.volSummaryClear}>All in range</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryClear}>All in range</Text>
           ) : flags.map(f => (
             <View key={f.key} style={styles.volLegendItem}>
               <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
-              <Text style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
             </View>
           ))}
         </View>
@@ -943,16 +943,16 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
   const unit = units === 'lbs' ? 'lbs' : 'kg';
   return (
     <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
-      <Text style={styles.heroEyebrow}>Training load</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.heroEyebrow}>Training load</Text>
       <View style={styles.heroValueRow}>
         <RollingNumber
           value={active.value}
           style={styles.heroValue}
           accessibilityLabel={`${formatNumber(active.value)} ${unit}`}
         />
-        <Text style={styles.heroUnit}>{unit}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.heroUnit}>{unit}</Text>
       </View>
-      <Text style={styles.heroSub}>{weekLabel} - weight lifted</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.heroSub}>{weekLabel} - weight lifted</Text>
       <View
         style={styles.heroChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -971,8 +971,8 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         )}
       </View>
       <View style={styles.rowBetween}>
-        <Text style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
-        <Text style={styles.heroAxisLabel}>this week</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.heroAxisLabel}>this week</Text>
       </View>
       {/* S4: share image extended to training load, reflective and factual,
           never a comparison to anyone else. */}
@@ -983,7 +983,7 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         accessibilityLabel="Create share image"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text style={styles.milestoneCta}>Create share image</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -1001,8 +1001,8 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
     >
-      <Text style={styles.sparkLabel}>{label}</Text>
-      <Text style={styles.sparkValue}>{formatNumber(value)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sparkLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sparkValue}>{formatNumber(value)}</Text>
       <View
         style={styles.sparkChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -1017,7 +1017,7 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
           />
         )}
       </View>
-      <Text style={styles.sparkSub}>{sub}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sparkSub}>{sub}</Text>
     </Card>
   );
 }
@@ -1034,15 +1034,15 @@ function SessionCard({ workout, onPress }) {
       accessibilityLabel={`View summary for ${name}`}
     >
       <View style={styles.sessionLeft}>
-        <Text style={styles.sessionName} numberOfLines={1}>{name}</Text>
-        <Text style={styles.sessionMeta}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sessionName} numberOfLines={1}>{name}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sessionMeta}>
           {at ? format(new Date(at), 'EEE d MMM') : ''}
           {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>
       {diff != null && (
         <View style={[styles.diffChip, { backgroundColor: diffChipBg(diff) }]}>
-          <Text style={[styles.diffText, { color: diffChipColor(diff) }]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.diffText, { color: diffChipColor(diff) }]}>
             {diff}/10
           </Text>
         </View>
@@ -1078,11 +1078,11 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
         color={locked ? colors.textMuted : color}
       />
       <View style={styles.navTileLabelRow}>
-        <Text style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
         {pro ? <ProBadge size="sm" /> : null}
       </View>
       {locked && lockedSub ? (
-        <Text style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
       ) : null}
     </TouchableOpacity>
   );

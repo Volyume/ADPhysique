@@ -99,23 +99,23 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
             <SkeletonRow />
           </View>
         ) : error ? (
-          <Text style={styles.emptyText}>Couldn't load this. Try again later.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>Couldn't load this. Try again later.</Text>
         ) : !result?.hasEntries ? (
-          <Text style={styles.emptyText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
             Log food across the week to see a picture build here.
           </Text>
         ) : included.length === 0 ? (
-          <Text style={styles.emptyText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
             Not enough foods with known values yet to show an average.
           </Text>
         ) : (
           <>
-            <Text style={styles.introText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.introText}>
               A rough picture from the foods with known values. Gaps mean unknown, not zero.
             </Text>
             {includedVitamins.length ? (
               <>
-                <Text style={[styles.groupLabel, styles.groupLabelSpacer]}>Vitamins</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, styles.groupLabelSpacer]}>Vitamins</Text>
                 {includedVitamins.map((n) => (
                   <WeeklyRow key={n.key} nutrient={n} avg={result.averages[n.key].avgPerDay} />
                 ))}
@@ -123,13 +123,13 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
             ) : null}
             {includedMinerals.length ? (
               <>
-                <Text style={[styles.groupLabel, styles.groupLabelSpacer]}>Minerals</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, styles.groupLabelSpacer]}>Minerals</Text>
                 {includedMinerals.map((n) => (
                   <WeeklyRow key={n.key} nutrient={n} avg={result.averages[n.key].avgPerDay} />
                 ))}
               </>
             ) : null}
-            <Text style={styles.cardFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
               {`Average over ${result.loggedDays} ${result.loggedDays === 1 ? 'day' : 'days'} logged this week.`}
             </Text>
           </>
@@ -146,8 +146,8 @@ function WeeklyRow({ nutrient, avg }) {
       accessible
       accessibilityLabel={`${nutrient.label}, ${avg} ${nutrient.unit} a day on average`}
     >
-      <Text style={styles.rowLabel}>{nutrient.label}</Text>
-      <Text style={styles.rowValue}>{`${avg} ${nutrient.unit}/day`}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{nutrient.label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.rowValue}>{`${avg} ${nutrient.unit}/day`}</Text>
     </View>
   );
 }

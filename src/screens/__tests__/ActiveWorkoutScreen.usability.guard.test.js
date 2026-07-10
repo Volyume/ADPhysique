@@ -120,9 +120,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): exerciseName/targetText
     // gained a live.* override in their style arrays (source: useTheme.js);
     // the frozen `styles` definitions asserted next are byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.targetText, live.targetText]} numberOfLines={1}>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.targetText, live.targetText]} numberOfLines={1}>');
     expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
     expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
@@ -183,9 +183,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sheetOptionLabel
     // gained a live.sheetOptionLabel override in its style array (source:
     // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
     expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
     // Stale pin -> corrected: commit 214b057 (design campaign 2026-07-09)
     // renamed the collapsed banner rail from "N cues" to "N notes" per the
     // U-A-1 contract (see ActiveWorkoutScreen.js:365,2036,2039,3342); the
@@ -197,7 +197,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
@@ -220,7 +220,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.sheetTitle
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
     expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
     expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
     expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');

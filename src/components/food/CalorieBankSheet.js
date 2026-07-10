@@ -105,8 +105,8 @@ export default function CalorieBankSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a higher-calorie day">
-      <Text style={styles.title}>Plan a higher-calorie day</Text>
-      <Text style={styles.intro}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Plan a higher-calorie day</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
         Got a meal out or an occasion coming up? Pick that day and we will move some
         calories onto it from the rest of the week, so you eat a little less on the
         other days to make room. Your weekly total stays the same, and that's what
@@ -116,11 +116,11 @@ export default function CalorieBankSheet({
 
       {existingBank ? (
         <View style={styles.activeRow}>
-          <Text style={styles.activeText} numberOfLines={2}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.activeText} numberOfLines={2}>
             A higher-calorie day is planned for {dayLabel(existingBank.bigDayKey)}.
           </Text>
           <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned higher-calorie day">
-            <Text style={styles.clearText}>Clear</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.clearText}>Clear</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -138,7 +138,7 @@ export default function CalorieBankSheet({
               accessibilityLabel={dayLabel(d)}
               style={({ pressed }) => [styles.dayChip, active && styles.dayChipActive, pressed && { opacity: 0.7 }]}
             >
-              <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{dayLabel(d)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dayChipText, active && styles.dayChipTextActive]}>{dayLabel(d)}</Text>
             </Pressable>
           );
         })}
@@ -156,7 +156,7 @@ export default function CalorieBankSheet({
         >
           <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.stepValue} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.stepValue} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
         <TouchableOpacity
           onPress={() => step(BUMP_STEP)}
           disabled={requestedBump >= stepMax}
@@ -170,11 +170,11 @@ export default function CalorieBankSheet({
       </View>
 
       {plan.ok ? (
-        <Text style={styles.preview}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.preview}>
           {dayLabel(bigDay)}: {toEnergy(bigNewKcal, energyUnit)} {energyUnitLabel(energyUnit)}. The other {others} days drop by about {toEnergy(perOther, energyUnit)} {energyUnitLabel(energyUnit)} each. Your weekly total stays the same.
         </Text>
       ) : (
-        <Text style={styles.error}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.error}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
       )}
 
       <TouchableOpacity
@@ -184,7 +184,7 @@ export default function CalorieBankSheet({
         accessibilityRole="button"
         accessibilityLabel="Apply the higher-calorie day"
       >
-        <Text style={styles.applyText}>Plan it</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.applyText}>Plan it</Text>
       </TouchableOpacity>
     </BottomSheet>
   );

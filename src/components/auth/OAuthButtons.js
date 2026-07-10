@@ -56,7 +56,7 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
             accessibilityLabel="Continue with Apple"
           >
             <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
-            <Text style={styles.btnAppleText}>Continue with Apple</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.btnAppleText}>Continue with Apple</Text>
           </TouchableOpacity>
         )
       )}
@@ -73,13 +73,13 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           accessibilityLabel="Continue with Google"
         >
           <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-          <Text style={styles.btnText}>Continue with Google</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.btnText}>Continue with Google</Text>
         </TouchableOpacity>
       )}
       {dividerLabel ? (
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>{dividerLabel}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.dividerText}>{dividerLabel}</Text>
           <View style={styles.dividerLine} />
         </View>
       ) : null}

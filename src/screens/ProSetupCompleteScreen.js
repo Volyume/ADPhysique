@@ -219,7 +219,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <View style={styles.brandRow}>
             <VolyumeIcon size={22} />
             <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
             </View>
           </View>
 
@@ -228,23 +228,23 @@ export default function ProSetupCompleteScreen({ navigation }) {
           </View>
           <View style={styles.doneRow}>
             <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-            <Text style={styles.doneEyebrow}>Setup complete</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.doneEyebrow}>Setup complete</Text>
           </View>
 
-          <Text style={styles.headline}>You're all set, {firstName}.</Text>
-          <Text style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.headline}>You're all set, {firstName}.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
           <View style={styles.readyGrid} accessibilityLabel="Setup summary">
             <View style={styles.readyItem}>
               <Ionicons name="flame-outline" size={15} color={colors.primary} />
-              <Text style={styles.readyText}>Targets saved</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>Targets saved</Text>
             </View>
             <View style={styles.readyItem}>
               <Ionicons name="barbell-outline" size={15} color={colors.primary} />
-              <Text style={styles.readyText}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
             <View style={styles.readyItem}>
               <Ionicons name="calendar-outline" size={15} color={colors.primary} />
-              <Text style={styles.readyText}>Coach reminders set</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>Coach reminders set</Text>
             </View>
           </View>
           </Animated.View>
@@ -257,8 +257,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="scale-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>1. Log your weight</Text>
-                <Text style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>1. Log your weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                   Every morning before food, after the bathroom. Three seconds. Feeds your weight trend so Coach can make calmer weekly decisions.
                 </Text>
               </View>
@@ -275,7 +275,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Ionicons name="flame-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.routineTitle}>2. Hit your daily targets</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>2. Hit your daily targets</Text>
                 </View>
               </View>
               {/* Wave A B5: the primer is offered BEFORE the numbers. Most
@@ -290,7 +290,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 accessibilityLabel="New to calories and macros? Open the five-minute guide"
               >
                 <Ionicons name="book-outline" size={14} color={colors.primary} />
-                <Text style={styles.eduLearnText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>
                   New to calories and macros? 5-minute guide
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -302,8 +302,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   yet. No "remaining" readout, that belongs in the diary. */}
               <View style={styles.ringWrap}>
                 <View style={styles.ring}>
-                  <Text style={styles.ringValue}>{toEnergy(nutritionSummary.targetKcal, energyUnit)}</Text>
-                  <Text style={styles.ringSub}>{energyUnitLabel(energyUnit)} per day</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.ringValue}>{toEnergy(nutritionSummary.targetKcal, energyUnit)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.ringSub}>{energyUnitLabel(energyUnit)} per day</Text>
                 </View>
               </View>
               {/* Same horizontal macro bars the Nutrition tab uses. */}
@@ -311,8 +311,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 {macroTargets.map(m => (
                   <View key={m.label} style={styles.macroBar}>
                     <View style={styles.macroBarTop}>
-                      <Text style={[styles.macroBarLabel, m.primary && styles.macroBarLabelPrimary]}>{m.label}</Text>
-                      <Text style={[styles.macroBarValue, m.primary && styles.macroBarValuePrimary]}>{m.g}g</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarLabel, m.primary && styles.macroBarLabelPrimary]}>{m.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarValue, m.primary && styles.macroBarValuePrimary]}>{m.g}g</Text>
                     </View>
                     <View style={styles.macroTrack}>
                       <View style={[styles.macroFill, { width: `${Math.round((m.kcal / maxMacroKcal) * 100)}%` }]} />
@@ -327,16 +327,16 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     size={11}
                     color={colors.primary}
                   />
-                  <Text style={styles.goalChipText}>{goalLabel}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.goalChipText}>{goalLabel}</Text>
                 </View>
                 {phaseLabel ? (
                   <View style={styles.goalChip}>
                     <Ionicons name="layers-outline" size={11} color={colors.textMuted} />
-                    <Text style={[styles.goalChipText, { color: colors.textMuted }]}>{phaseLabel}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, { color: colors.textMuted }]}>{phaseLabel}</Text>
                   </View>
                 ) : null}
               </View>
-              <Text style={styles.targetsNote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.targetsNote}>
                 Hit these most days. Logging your meals sharpens your coaching, and your weight trend carries the rest.
               </Text>
               {/* Optional head start: a full week of meals built to these
@@ -344,7 +344,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               {mealsBuilt ? (
                 <View style={styles.eduLearnRow}>
                   <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                  <Text style={[styles.eduLearnText, { color: colors.textSecondary }]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, { color: colors.textSecondary }]}>
                     Your first week of meals is ready in Meal planning.
                   </Text>
                 </View>
@@ -358,7 +358,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   accessibilityLabel="Create my first week of meals to these targets"
                 >
                   <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
-                  <Text style={styles.eduLearnText}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>
                     {buildingMeals ? 'Creating your week' : 'Create my first week of meals'}
                   </Text>
                   {!buildingMeals ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} /> : null}
@@ -383,13 +383,13 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="barbell-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>3. Train your split</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>3. Train your split</Text>
                 {hasPlan ? (
-                  <Text style={styles.routineBody}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                     {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
                   </Text>
                 ) : (
-                  <Text style={styles.routineBody}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                     Create or choose a routine before your first session.
                   </Text>
                 )}
@@ -407,14 +407,14 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 {/* The richer engine rationale supersedes the one-line split
                     note when it's available. */}
                 {!whyThis && planRoutines[0]?.split_type ? (
-                  <Text style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
                 ) : null}
                 {planRoutines.map((r, i) => (
                   <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
                     <View style={styles.splitBadge}>
-                      <Text style={styles.splitBadgeText}>{i + 1}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.splitBadgeText}>{i + 1}</Text>
                     </View>
-                    <Text style={styles.splitName}>{r.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.splitName}>{r.name}</Text>
                   </View>
                 ))}
                 {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
@@ -423,7 +423,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     {WHY_ORDER.filter(k => whyThis[k]).map(k => (
                       <View key={k} style={styles.whyPlanItem}>
                         <View style={styles.whyPlanBullet} />
-                        <Text style={styles.whyPlanText}>{whyThis[k]}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={styles.whyPlanText}>{whyThis[k]}</Text>
                       </View>
                     ))}
                   </View>
@@ -441,8 +441,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.routineTitle}>4. Check in once a week</Text>
-                <Text style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>4. Check in once a week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                   {firstReviewLabel
                     ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. Your coach then explains any calorie or training change before you apply it.`
                     : 'At the end of your training week, review how it went. Your coach then explains any calorie or training change before you apply it.'}
@@ -462,12 +462,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     logging only means it never needs that same gate). The
                     other placement is CoachOutputScreen's first real weekly
                     output. */}
-                <Text style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                   The more sessions you log, the better your coach understands how your body responds, so it can get your weights and your lighter weeks right.
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}
-                <Text style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
                   Your full access runs for 14 days. If you decide not to
                   continue after that, your training log, plans and personal
                   bests stay free forever.
@@ -484,7 +484,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 accessibilityLabel="How Precision Coaching works"
             >
               <Ionicons name="bulb-outline" size={14} color={colors.primary} />
-              <Text style={styles.eduLearnText}>How Precision Coaching works</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>How Precision Coaching works</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>

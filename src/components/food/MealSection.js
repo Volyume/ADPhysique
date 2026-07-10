@@ -64,14 +64,14 @@ export default function MealSection({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.mealName}>{slot.label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.mealName}>{slot.label}</Text>
         {hasEntries ? (
-          <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
         ) : null}
       </View>
       {showEmptyActions && showUsuals ? (
         <View style={styles.emptySlot}>
-          <Text style={styles.emptySlotText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.emptySlotText}>
             Your usual foods are below. Pick something else if this meal was different.
           </Text>
         </View>
@@ -87,7 +87,7 @@ export default function MealSection({
               accessibilityLabel={`Add ${food.name ?? 'food'} to ${slot.label}`}
             >
               <Ionicons name="add" size={14} color={colors.primary} />
-              <Text style={styles.usualChipText} numberOfLines={1}>{food.name ?? 'Food'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.usualChipText} numberOfLines={1}>{food.name ?? 'Food'}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -129,8 +129,8 @@ export default function MealSection({
               register as ADDITIONS_INTRO/CuratedMealSheet's "Optional extras"
               heading (src/lib/food/mealAdditions.js), so this inline row can't
               be misread as a checklist. */}
-          <Text style={styles.seasonText}>
-            <Text style={styles.seasonLabel}>Optional extras, add any you fancy: </Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.seasonText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.seasonLabel}>Optional extras, add any you fancy: </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
         </View>
@@ -142,7 +142,7 @@ export default function MealSection({
           runs without this explicit tap. */}
       {showMarkEaten ? (
         <View style={styles.plannedRow}>
-          <Text style={styles.plannedRowText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.plannedRowText}>
             {plannedCount === 1 ? 'This meal is planned.' : `${plannedCount} foods planned in this meal.`}
           </Text>
           <TouchableOpacity
@@ -151,7 +151,7 @@ export default function MealSection({
             accessibilityRole="button"
             accessibilityLabel={`Mark ${slot.label} as eaten`}
           >
-            <Text style={styles.markEatenText}>Mark eaten</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.markEatenText}>Mark eaten</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -165,7 +165,7 @@ export default function MealSection({
           accessibilityLabel={`Add food to ${slot.label}`}
         >
             <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.addFoodText}>Add food</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.addFoodText}>Add food</Text>
           </TouchableOpacity>
         </View>
       ) : null}

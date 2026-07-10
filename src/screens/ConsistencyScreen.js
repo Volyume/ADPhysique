@@ -56,8 +56,8 @@ export default function ConsistencyScreen({ navigation }) {
           <Card tone="warning" style={styles.deloadBanner}>
             <Ionicons name="moon-outline" size={18} color={colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.deloadTitle}>Lighter week recommended</Text>
-              <Text style={styles.deloadSub}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.deloadTitle}>Lighter week recommended</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.deloadSub}>
                 {deloadAlert.reasons?.[0] ?? 'Your body is signalling it needs a recovery week.'}
               </Text>
             </View>

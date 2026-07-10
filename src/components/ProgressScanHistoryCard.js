@@ -140,7 +140,7 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text style={styles.scanTitle}>Photo results</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.scanTitle}>Photo results</Text>
         </View>
       </View>
       {scans.map((scan) => {
@@ -149,12 +149,12 @@ export default function ProgressScanHistoryCard({
           <View key={scan.id} style={styles.scanEntry}>
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
-                <Text style={styles.scanDate}>{dateLabel}</Text>
-                <Text style={styles.scanEntryTitle}>{comparisonLabel(scan)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanDate}>{dateLabel}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanEntryTitle}>{comparisonLabel(scan)}</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={styles.confidencePill}>
-                  <Text style={styles.confidencePillText} numberOfLines={1}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.confidencePillText} numberOfLines={1}>
                     Read quality: {confidenceLabel(scan)}
                   </Text>
                 </View>
@@ -173,24 +173,24 @@ export default function ProgressScanHistoryCard({
             </View>
             <View style={styles.scanInsightGrid}>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Leanness</Text>
-                <Text style={styles.scanInsightValue} numberOfLines={1}>{bandLabel(scan)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Leanness</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{bandLabel(scan)}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Change</Text>
-                <Text style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Change</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Volyume Score</Text>
-                <Text style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Volyume Score</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={styles.scanInsightCell}>
-                <Text style={styles.scanInsightLabel}>Weight</Text>
-                <Text style={styles.scanInsightValue} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
               </View>
             </View>
             <View style={styles.scanReasonBox}>
-              <Text style={styles.scanBody} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanBody} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
               <View style={styles.scanAssetRow}>
@@ -210,7 +210,7 @@ export default function ProgressScanHistoryCard({
                       recyclingKey={asset.photoName || String(asset.id)}
                       transition={reduceMotion ? 0 : motion.state}
                     />
-                    <Text style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

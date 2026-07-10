@@ -44,10 +44,10 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
       accessibilityLabel="Open workout history"
     >
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <Text style={[styles.lastSessionLabel, live.lastSessionLabel]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionLabel, live.lastSessionLabel]}>
           Last session - {relativeDay}
         </Text>
-        <Text style={[styles.lastSessionName, live.lastSessionName]} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionName, live.lastSessionName]} numberOfLines={1}>
           {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
               & Thickness"). The workout's own `name` is overwritten at
               finish with an exercise-derived summary ("Cable & Iso-Lateral"),
@@ -56,7 +56,7 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
           {lastSession.routineName || lastSession.name || 'Session'}
         </Text>
         {meta ? (
-          <Text style={[styles.lastSessionMeta, live.lastSessionMeta]} numberOfLines={1}>{meta}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionMeta, live.lastSessionMeta]} numberOfLines={1}>{meta}</Text>
         ) : null}
       </View>
       <TouchableOpacity
@@ -68,7 +68,7 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
         accessibilityLabel="Repeat last session"
       >
         <Ionicons name="refresh-outline" size={13} color={t.colors.primary} />
-        <Text style={[styles.repeatBtnText, live.repeatBtnText]}>Repeat</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.repeatBtnText, live.repeatBtnText]}>Repeat</Text>
       </TouchableOpacity>
     </Card>
   );

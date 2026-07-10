@@ -44,7 +44,7 @@ export default function ConsentCheckboxRow({
           />
         ) : null}
       </View>
-      <Text style={[
+      <Text maxFontSizeMultiplier={1.3} style={[
         styles.label,
         compact ? styles.labelSm : styles.labelMd,
         labelStyle,

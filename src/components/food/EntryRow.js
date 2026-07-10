@@ -86,23 +86,23 @@ export function EntryRow({
       ) : null}
       <View style={styles.entryMain}>
         <View style={styles.entryNameRow}>
-          <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.entryName} numberOfLines={1}>{name}</Text>
           {/* Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet
               tag, all that is left of the old per-meal card identity in the
               flat timeline. Decorative only (no accessibility change; the
               row's own accessibilityLabel below is unaffected). */}
           {mealLabel ? (
             <View style={styles.mealTag}>
-              <Text style={styles.mealTagText} numberOfLines={1}>{mealLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.mealTagText} numberOfLines={1}>{mealLabel}</Text>
             </View>
           ) : null}
         </View>
-        {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
-        {metaLine ? <Text style={styles.entryQuantity}>{metaLine}</Text> : null}
+        {brand ? <Text maxFontSizeMultiplier={1.3} style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
+        {metaLine ? <Text maxFontSizeMultiplier={1.3} style={styles.entryQuantity}>{metaLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
-        <Text style={styles.entryKcal}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-        <Text style={styles.entryMacroLine}>{p}P {c}C {f}F</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.entryKcal}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.entryMacroLine}>{p}P {c}C {f}F</Text>
       </View>
     </TouchableOpacity>
   );
@@ -123,7 +123,7 @@ export function SwipeableEntryRow({
       onPress={() => onDelete?.(entry, () => ref.current?.close?.())}
     >
       <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
-      <Text style={styles.swipeDeleteText}>Delete</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.swipeDeleteText}>Delete</Text>
     </TouchableOpacity>
   ), [entry, onDelete]);
   return (

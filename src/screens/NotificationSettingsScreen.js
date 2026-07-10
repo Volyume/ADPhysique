@@ -584,7 +584,7 @@ export default function NotificationSettingsScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Notifications" />
       <View style={styles.subtitleWrap}>
-        <Text style={styles.subtitle}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
           Volyume uses local notifications only. No marketing, ever.
         </Text>
       </View>
@@ -597,7 +597,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {permissionStatus === 'denied' && (
           <View style={styles.permissionBanner}>
             <Ionicons name="alert-circle-outline" size={20} color={colors.warning} style={styles.bannerIcon} />
-            <Text style={styles.bannerText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.bannerText}>
               Notifications are currently disabled. Enable them in your device settings to use these features.
             </Text>
           </View>
@@ -622,8 +622,8 @@ export default function NotificationSettingsScreen({ navigation }) {
               <Ionicons name="pulse-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.crossLinkTitle}>Coaching reminders</Text>
-              <Text style={styles.crossLinkSub}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.crossLinkTitle}>Coaching reminders</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.crossLinkSub}>
                 Morning weight and weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
@@ -640,7 +640,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={styles.toggleIconWrap}>
               <Ionicons name="barbell-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Remind me to train</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
@@ -661,8 +661,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set reminder time"
               >
-                <Text style={styles.timePickerLabel}>Reminder time</Text>
-                <Text style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Reminder time</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
                   {`${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -672,7 +672,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
           {/* Helper text */}
           <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
               Pick the time. Volyume learns the days you usually train from your recent workouts, and reminds you then.
             </Text>
           </View>
@@ -685,7 +685,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={styles.toggleIconWrap}>
               <Ionicons name="rocket-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Getting-started nudges</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Getting-started nudges</Text>
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
@@ -696,7 +696,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             />
           </View>
           <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
               A gentle reminder in your first couple of weeks if you have not logged a session yet. It stops on its own once you are into a routine.
             </Text>
           </View>
@@ -712,7 +712,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <View style={styles.toggleIconWrap}>
                   <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
                 </View>
-                <Text style={styles.toggleLabel}>{r.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>{r.label}</Text>
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
@@ -729,8 +729,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Set ${r.label} reminder time`}
                 >
-                  <Text style={styles.timePickerLabel}>Reminder time</Text>
-                  <Text style={styles.timePickerValue}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Reminder time</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
                     {`${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`}
                   </Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -739,7 +739,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             </View>
           ))}
           <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
               Optional reminders to log meals. No streaks and no pressure. Turn any of them off whenever you like.
             </Text>
           </View>
@@ -752,7 +752,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={styles.toggleIconWrap}>
               <Ionicons name="moon-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Quiet hours</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Quiet hours</Text>
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
@@ -770,8 +770,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours start time"
               >
-                <Text style={styles.timePickerLabel}>Starts</Text>
-                <Text style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Starts</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
                   {`${String(quietHours.startHour).padStart(2, '0')}:${String(quietHours.startMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -782,8 +782,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours end time"
               >
-                <Text style={styles.timePickerLabel}>Ends</Text>
-                <Text style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Ends</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
                   {`${String(quietHours.endHour).padStart(2, '0')}:${String(quietHours.endMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -791,7 +791,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             </>
           )}
           <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
               A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.
             </Text>
           </View>
@@ -799,14 +799,14 @@ export default function NotificationSettingsScreen({ navigation }) {
 
         {/* Bottom note */}
         <View style={styles.bottomNote}>
-          <Text style={styles.bottomNoteText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.bottomNoteText}>
             Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings.
           </Text>
         </View>
 
         {/* Save status */}
-        {saving && <Text style={styles.savingText}>Saving...</Text>}
-        {!saving && saved && <Text style={styles.savedText}>Saved</Text>}
+        {saving && <Text maxFontSizeMultiplier={1.3} style={styles.savingText}>Saving...</Text>}
+        {!saving && saved && <Text maxFontSizeMultiplier={1.3} style={styles.savedText}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );

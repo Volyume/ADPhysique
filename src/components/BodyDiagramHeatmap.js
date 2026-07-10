@@ -322,8 +322,8 @@ export default function BodyDiagramHeatmap({
 
       {/* Figure labels */}
       <View style={styles.labelRow}>
-        <Text style={styles.figureLabel}>Front</Text>
-        <Text style={styles.figureLabel}>Back</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.figureLabel}>Front</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.figureLabel}>Back</Text>
       </View>
 
       {/* Legend */}
@@ -341,13 +341,13 @@ export default function BodyDiagramHeatmap({
           triangles re-present the volume overlay the plan generator already
           applied for this division; nothing here is computed fresh. */}
       {divisionMarkers && divisionLabel ? (
-        <Text
+        <Text maxFontSizeMultiplier={1.3}
           style={styles.divisionLegendText}
           accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
         >
-          <Text style={{ color: colors.primary }}>▲</Text>
+          <Text maxFontSizeMultiplier={1.3} style={{ color: colors.primary }}>▲</Text>
           {` Elevated for ${divisionLabel} · `}
-          <Text style={{ color: colors.textMuted }}>▼</Text>
+          <Text maxFontSizeMultiplier={1.3} style={{ color: colors.textMuted }}>▼</Text>
           {' Capped'}
         </Text>
       ) : null}
@@ -365,7 +365,7 @@ function LegendSwatch({ color, label, bordered }) {
           bordered && { borderWidth: 1, borderColor: colors.border },
         ]}
       />
-      <Text style={styles.legendText}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.legendText}>{label}</Text>
     </View>
   );
 }

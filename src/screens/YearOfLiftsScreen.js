@@ -426,31 +426,31 @@ function StoryCard({ card, width }) {
 
         {card.type === 'stat' && (
           <>
-            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+            <Text maxFontSizeMultiplier={1.3} style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
               {card.value}
             </Text>
-            <Text style={styles.statUnit}>{card.unit}</Text>
-            <Text style={styles.statCaption}>{card.caption}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.statUnit}>{card.unit}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.statCaption}>{card.caption}</Text>
           </>
         )}
 
         {(card.type === 'intro' || card.type === 'outro') && (
           <>
-            <Text style={styles.heroHeadline}>{card.headline}</Text>
-            <Text style={styles.heroSubline}>{card.subline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroHeadline}>{card.headline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroSubline}>{card.subline}</Text>
           </>
         )}
 
         {card.type === 'list' && (
           <View style={styles.listWrap}>
-            <Text style={styles.listHeadline}>{card.headline}</Text>
-            <Text style={styles.listSubline}>{card.subline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.listHeadline}>{card.headline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.listSubline}>{card.subline}</Text>
             <View style={styles.listRows}>
               {card.rows.map((row, i) => (
                 <View key={i} style={styles.listRow}>
-                  <Text style={styles.listRank}>{i + 1}</Text>
-                  <Text style={styles.listPrimary} numberOfLines={1}>{row.primary}</Text>
-                  <Text style={styles.listSecondary}>{row.secondary}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.listRank}>{i + 1}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.listPrimary} numberOfLines={1}>{row.primary}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.listSecondary}>{row.secondary}</Text>
                 </View>
               ))}
             </View>
@@ -648,7 +648,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {loading && (
         <View style={styles.loadingWrap}>
-          <Text style={styles.loadingText}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.loadingText}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
         </View>
       )}
 

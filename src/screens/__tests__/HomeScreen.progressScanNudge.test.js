@@ -51,7 +51,7 @@ describe('HomeScreen check-in nudge scan subline', () => {
     // !photoScanSuppressed, positioned between body and CTA) is unchanged --
     // the static coachingNudgeScanSubline definition (asserted below) is
     // byte-identical to before.
-    expect(cardBlock).toMatch(/\{!photoScanSuppressed && \(\s*\n\s*<Text style=\{\[styles\.coachingNudgeScanSubline, live\.coachingNudgeScanSubline\]\}>/);
+    expect(cardBlock).toMatch(/\{!photoScanSuppressed && \(\s*\n\s*<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.coachingNudgeScanSubline, live\.coachingNudgeScanSubline\]\}>/);
     expect(cardBlock).toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
   });
 

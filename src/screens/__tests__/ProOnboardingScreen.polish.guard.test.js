@@ -32,7 +32,7 @@ describe('ProOnboardingScreen premium polish guards', () => {
   });
 
   test('header outcome chips and dense rows are shrink-safe on phones', () => {
-    expect(SOURCE).toMatch(/<Text style=\{styles\.outcomeChipText\} numberOfLines=\{1\}>/);
+    expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.outcomeChipText\} numberOfLines=\{1\}>/);
     expect(SOURCE).toMatch(/outcomeChipText: \{[^}]*flexShrink: 1/);
     expect(SOURCE).toMatch(/heightImperialRow: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.md \}/);
     expect(SOURCE).toMatch(/inputHalf: \{ flex: 1, minWidth: 140 \}/);
@@ -61,7 +61,7 @@ describe('ProOnboardingScreen premium polish guards', () => {
     // FR-4/D7: pill copy softened to "Part of your coaching"; the reminder
     // itself stays non-optional (morningEnabled/checkinEnabled true, no
     // toggle handlers below) - tone only, gate assertions unchanged.
-    expect(SOURCE).toContain('<Text style={styles.requiredPillText}>Part of your coaching</Text>');
+    expect(SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.requiredPillText}>Part of your coaching</Text>');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time"');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day"');
     expect(SOURCE).toContain('accessibilityState={{ checked: morningHour === h }}');

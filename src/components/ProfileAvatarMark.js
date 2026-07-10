@@ -72,7 +72,7 @@ export default function ProfileAvatarMark({
 
   return (
     <View style={baseStyle}>
-      <Text style={[styles.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
       {editable ? (
         <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
           <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />

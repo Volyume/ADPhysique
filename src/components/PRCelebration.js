@@ -254,8 +254,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
         <Animated.View style={[styles.toast, live.toast, { opacity: cardOpacity }]}>
           <Ionicons name={prIcon} size={20} color={t.colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
-            <Text style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -306,9 +306,9 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
         <View style={[styles.iconContainer, live.iconContainer]}>
           <Ionicons name={prIcon} size={48} color={t.colors.gold} />
         </View>
-        <Text style={[styles.prBadge, live.prBadge]}>PERSONAL RECORD</Text>
-        <Text style={[styles.prType, live.prType]}>{prLabel}</Text>
-        <Text style={[styles.prValue, live.prValue]}>{pr.label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.prBadge, live.prBadge]}>PERSONAL RECORD</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.prType, live.prType]}>{prLabel}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>{pr.label}</Text>
         {pr.previousValue > 0 && pr.value > 0 && (() => {
           // Show "+X% over previous PR" so the user feels the magnitude.
           // Only show for meaningful improvements (>=1%); below that
@@ -316,12 +316,12 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
           const pct = ((pr.value - pr.previousValue) / pr.previousValue) * 100;
           if (pct < 1) return null;
           return (
-            <Text style={[styles.prDelta, live.prDelta]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.prDelta, live.prDelta]}>
               +{pct.toFixed(pct >= 10 ? 0 : 1)}% over your previous best
             </Text>
           );
         })()}
-        <Text style={[styles.dismiss, live.dismiss]}>Tap to continue</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.dismiss, live.dismiss]}>Tap to continue</Text>
       </Animated.View>
     </TouchableOpacity>
   );

@@ -38,7 +38,7 @@ describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () 
     // definition is byte-identical -- this is a mechanical literal update,
     // the pinned clause wording is unchanged.
     expect(ACTIVE_WORKOUT).toContain(
-      "<Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>",
+      "<Text maxFontSizeMultiplier={1.3} style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>",
     );
   });
 

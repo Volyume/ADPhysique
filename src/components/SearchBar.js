@@ -35,7 +35,7 @@ export default function SearchBar({
   return (
     <View style={[styles.bar, live.bar, style]}>
       <Ionicons name="search-outline" size={iconSize.sm} color={t.colors.textMuted} />
-      <TextInput
+      <TextInput maxFontSizeMultiplier={1.3}
         style={[styles.input, live.input]}
         value={value}
         onChangeText={onChangeText}

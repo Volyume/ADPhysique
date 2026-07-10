@@ -364,7 +364,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               style={styles.importButton}
             />
           </View>
-          <Text style={styles.importHint}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.importHint}>
             We match each ingredient to a food and add a rough amount. Check the amounts after importing.
           </Text>
         </View>
@@ -416,7 +416,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
         <View style={styles.section}>
           <View style={styles.ingHeader}>
-            <Text style={styles.label}>Ingredients</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.label}>Ingredients</Text>
             <Button
               title="Add ingredient"
               icon="add"
@@ -431,15 +431,15 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </View>
 
           {ingredients.length === 0 ? (
-            <Text style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
           ) : ingredients.map((ing, i) => (
             <View key={`${ing.food_ref}-${i}`} style={styles.ingRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ingName} numberOfLines={1}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.ingName} numberOfLines={1}>
                   {ing.food?.name ?? ing.food_ref}
                 </Text>
                 {ing.food?.brand ? (
-                  <Text style={styles.ingBrand} numberOfLines={1}>{ing.food.brand}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.ingBrand} numberOfLines={1}>{ing.food.brand}</Text>
                 ) : null}
               </View>
               <TextField
@@ -453,7 +453,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 fieldStyle={styles.qtyField}
                 inputStyle={styles.qtyInput}
               />
-              <Text style={styles.qtyUnit}>g</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.qtyUnit}>g</Text>
               <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
                 <Ionicons name="close-circle" size={22} color={colors.textMuted} />
               </TouchableOpacity>
@@ -469,7 +469,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             <MacroPill label="C" value={`${macros.perServing.carbs}g`} />
             <MacroPill label="F" value={`${macros.perServing.fat}g`} />
           </View>
-          <Text style={styles.macrosSub}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.macrosSub}>
             Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
           </Text>
         </View>
@@ -483,8 +483,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 function MacroPill({ label, value }) {
   return (
     <View style={styles.pill}>
-      <Text style={styles.pillVal}>{value}</Text>
-      <Text style={styles.pillLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.pillVal}>{value}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.pillLabel}>{label}</Text>
     </View>
   );
 }

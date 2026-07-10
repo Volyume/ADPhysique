@@ -105,7 +105,7 @@ export default function DebugLogScreen() {
               accessibilityState={{ selected: on }}
               accessibilityLabel={`${level}, ${count}`}
             >
-              <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.chipLabel, on && styles.chipLabelOn]}>
                 {level} · {count}
               </Text>
             </TouchableOpacity>
@@ -116,26 +116,26 @@ export default function DebugLogScreen() {
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.actionBtn} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
           <Ionicons name="share-outline" size={16} color={colors.primary} />
-          <Text style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={handleDiagnose} accessibilityRole="button" accessibilityLabel="Run sync diagnostics">
           <Ionicons name="medkit-outline" size={16} color={colors.primary} />
-          <Text style={[styles.actionLabel, { color: colors.primary }]}>Sync diag</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.primary }]}>Sync diag</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear} accessibilityRole="button" accessibilityLabel="Clear logs">
           <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text style={[styles.actionLabel, { color: colors.error }]}>Clear</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.error }]}>Clear</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {crash && (
           <View style={styles.crashCard}>
-            <Text style={styles.crashTitle}>Most recent fatal crash</Text>
-            <Text style={styles.crashWhen}>{new Date(crash.ts).toLocaleString()}</Text>
-            <Text style={styles.crashMsg} selectable>{crash.message}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.crashTitle}>Most recent fatal crash</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.crashWhen}>{new Date(crash.ts).toLocaleString()}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.crashMsg} selectable>{crash.message}</Text>
             {crash.stack ? (
-              <Text style={styles.crashStack} selectable>{crash.stack.slice(0, 1200)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.crashStack} selectable>{crash.stack.slice(0, 1200)}</Text>
             ) : null}
           </View>
         )}
@@ -143,22 +143,22 @@ export default function DebugLogScreen() {
         {!loading && filtered.length === 0 && (
           <View style={styles.empty}>
             <Ionicons name="checkmark-circle-outline" size={36} color={colors.success} />
-            <Text style={styles.emptyText}>No {filter === 'all' ? '' : filter + ' '}entries.</Text>
-            <Text style={styles.emptyHint}>Errors caught by handlers will appear here.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No {filter === 'all' ? '' : filter + ' '}entries.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyHint}>Errors caught by handlers will appear here.</Text>
           </View>
         )}
 
         {filtered.map((e, i) => (
           <View key={`${e.ts}-${i}`} style={[styles.entry, levelStyle(e.level)]}>
             <View style={styles.entryHeader}>
-              <Text style={[styles.entryLevel, levelLabelStyle(e.level)]}>{e.level}</Text>
-              <Text style={styles.entryScope}>{e.scope}</Text>
-              <Text style={styles.entryWhen}>{formatWhen(e.ts)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.entryLevel, levelLabelStyle(e.level)]}>{e.level}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.entryScope}>{e.scope}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.entryWhen}>{formatWhen(e.ts)}</Text>
             </View>
-            <Text style={styles.entryMessage} selectable>{e.message}</Text>
-            {e.context ? <Text style={styles.entryContext} selectable>ctx: {e.context}</Text> : null}
+            <Text maxFontSizeMultiplier={1.3} style={styles.entryMessage} selectable>{e.message}</Text>
+            {e.context ? <Text maxFontSizeMultiplier={1.3} style={styles.entryContext} selectable>ctx: {e.context}</Text> : null}
             {e.stack ? (
-              <Text style={styles.entryStack} selectable numberOfLines={6}>{e.stack}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.entryStack} selectable numberOfLines={6}>{e.stack}</Text>
             ) : null}
           </View>
         ))}

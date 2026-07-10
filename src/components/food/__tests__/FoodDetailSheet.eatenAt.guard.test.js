@@ -27,7 +27,7 @@ describe('FoodDetailSheet: eaten-at field (edit mode only)', () => {
   });
 
   test('the "Eaten at" field is gated to edit mode only, keeping the add-mode fast path untouched', () => {
-    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<Text style=\{styles\.fieldLabel\}>Eaten at<\/Text>/);
+    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.fieldLabel\}>Eaten at<\/Text>/);
   });
 
   test('a bulk-confirmed entry (no eaten_at) opens with "No time set", never a false timestamp', () => {

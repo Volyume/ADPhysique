@@ -95,10 +95,10 @@ export default function SnapshotsScreen() {
     <SettingsPage title="Restore a snapshot">
       <View style={[styles.section, live.section]}>
         {snapshots === null ? (
-          <Text style={[localStyles.note, liveText.note]}>Loading…</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[localStyles.note, liveText.note]}>Loading…</Text>
         ) : loadError ? (
           <>
-            <Text style={[localStyles.note, liveText.note]}>
+            <Text maxFontSizeMultiplier={1.3} style={[localStyles.note, liveText.note]}>
               Could not load snapshots from this device. Try again before restoring a backup.
             </Text>
             <SettingRow
@@ -109,7 +109,7 @@ export default function SnapshotsScreen() {
             />
           </>
         ) : snapshots.length === 0 ? (
-          <Text style={[localStyles.note, liveText.note]}>
+          <Text maxFontSizeMultiplier={1.3} style={[localStyles.note, liveText.note]}>
             No snapshots yet. Volyume saves an automatic safety copy before each
             app update, so one will appear here the next time the app updates.
           </Text>
@@ -126,7 +126,7 @@ export default function SnapshotsScreen() {
           ))
         )}
       </View>
-      <Text style={[localStyles.footer, liveText.footer]}>
+      <Text maxFontSizeMultiplier={1.3} style={[localStyles.footer, liveText.footer]}>
         Snapshots are automatic safety copies of your database, kept on this
         device only. The most recent few are retained.
       </Text>

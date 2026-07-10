@@ -163,7 +163,7 @@ export default function Button({
     <>
       <Ionicons name="checkmark" size={s.icon} color={v.fg} />
       {successLabel ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {successLabel}
         </Text>
       ) : null}
@@ -172,7 +172,7 @@ export default function Button({
     <>
       {icon ? <Ionicons name={icon} size={s.icon} color={v.fg} /> : null}
       {title != null ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {title}
         </Text>
       ) : null}

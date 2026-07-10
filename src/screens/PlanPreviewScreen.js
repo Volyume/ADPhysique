@@ -27,14 +27,14 @@ export default function PlanPreviewScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.kicker}>YOUR PLAN</Text>
-        <Text style={styles.h1}>{p.headline}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.kicker}>YOUR PLAN</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.h1}>{p.headline}</Text>
         <Card style={styles.card}>
-          <Text style={styles.splitName}>{p.splitName}</Text>
-          <Text style={styles.structure}>{p.structure}</Text>
-          {p.phaseLabel ? <Text style={styles.phase}>{`Built ${p.phaseLine}.`}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={styles.splitName}>{p.splitName}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.structure}>{p.structure}</Text>
+          {p.phaseLabel ? <Text maxFontSizeMultiplier={1.3} style={styles.phase}>{`Built ${p.phaseLine}.`}</Text> : null}
         </Card>
-        <Text style={styles.note}>{p.nutritionNote}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.note}>{p.nutritionNote}</Text>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -45,7 +45,7 @@ export default function PlanPreviewScreen({ navigation }) {
           textStyle={styles.ctaText}
           accessibilityLabel="Create an account to keep your plan"
         />
-        <Text style={styles.fine}>No payment card. Nothing charged unless you choose.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.fine}>No payment card. Nothing charged unless you choose.</Text>
       </View>
     </SafeAreaView>
   );

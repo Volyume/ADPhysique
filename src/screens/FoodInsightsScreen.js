@@ -361,7 +361,7 @@ export default function FoodInsightsScreen({ navigation }) {
               accessibilityState={{ selected }}
               accessibilityLabel={`Last ${n} days`}
             >
-              <Text style={[styles.windowChipText, selected && styles.windowChipTextOn]}>{n}d</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.windowChipText, selected && styles.windowChipTextOn]}>{n}d</Text>
             </TouchableOpacity>
           );
         })}
@@ -391,23 +391,23 @@ export default function FoodInsightsScreen({ navigation }) {
           <>
             <SectionLabel style={styles.sectionLabelSpacing}>{periodHeadline}</SectionLabel>
             <Card style={styles.card}>
-              <Text
+              <Text maxFontSizeMultiplier={1.3}
                 style={styles.summaryValue}
                 accessibilityLabel={`Averaging ${toEnergy(periodAvg.current.avg, energyUnit)} ${energyWord} a day ${periodPhrase}`}
               >
                 {formatEnergy(periodAvg.current.avg, energyUnit)} {energyUnitLabel(energyUnit)}/day
               </Text>
-              <Text style={styles.summaryCaption}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.summaryCaption}>
                 Average over {periodAvg.current.n} {periodAvg.current.n === 1 ? 'day' : 'days'} logged{periodIsWeek ? ' this week' : ` in the last ${windowDays} days`}.
               </Text>
               {periodAvg.delta != null ? (
-                <Text style={styles.summaryDelta}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.summaryDelta}>
                   {periodAvg.delta === 0
                     ? `Same as the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`
                     : `${periodAvg.delta > 0 ? '+' : '−'}${formatEnergy(Math.abs(periodAvg.delta), energyUnit)} ${energyUnitLabel(energyUnit)}/day vs the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`}
                 </Text>
               ) : (
-                <Text style={styles.summaryDelta}>No logged days before that to compare.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.summaryDelta}>No logged days before that to compare.</Text>
               )}
             </Card>
           </>
@@ -444,11 +444,11 @@ export default function FoodInsightsScreen({ navigation }) {
                 }}
               />
               {targets?.targetKcal ? (
-                <Text style={styles.cardFootnote}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
                   {`Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`}
                 </Text>
               ) : (
-                <Text
+                <Text maxFontSizeMultiplier={1.3}
                   style={[styles.cardFootnote, styles.cardFootnoteLink]}
                   onPress={goToNutritionTargets}
                   accessibilityRole="link"
@@ -459,7 +459,7 @@ export default function FoodInsightsScreen({ navigation }) {
               )}
             </>
           ) : (
-            <Text style={styles.emptyText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
               Log at least two days to see your calorie trend.
             </Text>
           )}
@@ -477,7 +477,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 accessible
                 accessibilityLabel={`${b.label}, ${toEnergy(b.kcal, energyUnit)} ${energyUnitLabel(energyUnit)}${isWeekly ? ' average' : ''}${targetMet ? ', on target' : ''}`}
               >
-                <Text style={styles.barDay}>{b.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.barDay}>{b.label}</Text>
                 <View style={styles.barTrack}>
                   <View style={[
                     styles.barFill,
@@ -485,18 +485,18 @@ export default function FoodInsightsScreen({ navigation }) {
                     targetMet && { backgroundColor: colors.success },
                   ]} />
                 </View>
-                <Text style={styles.barValue}>{toEnergy(b.kcal, energyUnit)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.barValue}>{toEnergy(b.kcal, energyUnit)}</Text>
               </View>
             );
           })}
           {targets?.targetKcal ? (
-            <Text style={styles.cardFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
               {isWeekly
                 ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
                 : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
             </Text>
           ) : (
-            <Text
+            <Text maxFontSizeMultiplier={1.3}
               style={[styles.cardFootnote, styles.cardFootnoteLink]}
               onPress={goToNutritionTargets}
               accessibilityRole="link"
@@ -516,7 +516,7 @@ export default function FoodInsightsScreen({ navigation }) {
           <>
             <SectionLabel style={styles.sectionLabelSpacing}>PROTEIN</SectionLabel>
             <Card style={styles.card}>
-              <Text style={styles.proteinHeadline}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.proteinHeadline}>
                 You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
               </Text>
               {/* Protein grams over time (reuses the calorie-trend chart pattern):
@@ -548,7 +548,7 @@ export default function FoodInsightsScreen({ navigation }) {
                   />
                 </View>
               ) : null}
-              <Text style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
                 {targets?.proteinG
                   ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
                   : 'Hit = within target range.'}
@@ -566,16 +566,16 @@ export default function FoodInsightsScreen({ navigation }) {
               <AdherenceRow label="Carbs"    hit={adherence.cDays}     total={adherence.logged} />
               <AdherenceRow label="Fat"      hit={adherence.fDays}     total={adherence.logged} />
               <AdherenceRow label="Fibre"    hit={adherence.fibreDays} total={adherence.logged} />
-              <Text style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
                 Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
               </Text>
-              <Text style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
                 Fibre counts on days you reached {FIBRE_AIM_G} g or more. More is fine.
               </Text>
             </>
           ) : (
             <View style={styles.emptyActionStack}>
-              <Text style={styles.emptyText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
                 Log food on a few days to see this view fill out.
               </Text>
               <Button
@@ -605,16 +605,16 @@ export default function FoodInsightsScreen({ navigation }) {
                   accessible
                   accessibilityLabel={`${row.label}, ${nutrientAverages.avg[row.key]} grams a day on average`}
                 >
-                  <Text style={styles.nutrientLabel}>{row.label}</Text>
-                  <Text style={styles.nutrientValue}>{nutrientAverages.avg[row.key]} g/day</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.nutrientLabel}>{row.label}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.nutrientValue}>{nutrientAverages.avg[row.key]} g/day</Text>
                 </View>
               ))}
-              <Text style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
                 Average over {nutrientAverages.days} {nutrientAverages.days === 1 ? 'day' : 'days'} logged.
               </Text>
             </>
           ) : (
-            <Text style={styles.emptyText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
               Log food on a few days to see your averages.
             </Text>
           )}
@@ -652,11 +652,11 @@ function AdherenceRow({ label, hit, total }) {
   const pct = total > 0 ? Math.round((hit / total) * 100) : 0;
   return (
     <View style={styles.adherenceRow} accessible accessibilityLabel={`${label}, hit ${hit} of ${total} days`}>
-      <Text style={styles.adherenceLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.adherenceLabel}>{label}</Text>
       <View style={styles.adherenceTrack}>
         <View style={[styles.adherenceFill, { width: `${pct}%` }]} />
       </View>
-      <Text style={styles.adherenceValue}>{hit}/{total}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.adherenceValue}>{hit}/{total}</Text>
     </View>
   );
 }

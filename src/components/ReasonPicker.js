@@ -45,7 +45,7 @@ export default function ReasonPicker({ reason, text, onSelectReason, onChangeTex
               <View style={[styles.radio, selected && styles.radioSelected]}>
                 {selected ? <View style={styles.radioDot} /> : null}
               </View>
-              <Text style={[styles.rowText, selected && styles.rowTextSelected]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.rowText, selected && styles.rowTextSelected]}>
                 {r.label}
               </Text>
             </Pressable>

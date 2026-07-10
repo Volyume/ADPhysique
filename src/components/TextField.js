@@ -80,7 +80,7 @@ const TextField = forwardRef(function TextField({
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? (
-        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }, labelStyle]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }, labelStyle]}>
           {label}
         </Text>
       ) : null}

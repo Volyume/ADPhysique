@@ -37,7 +37,7 @@ const DAY = 86400000;
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDetailsSheet.js'), 'utf8');
 
 test('date field copy is narrow-screen safe', () => {
-  expect(SOURCE).toMatch(/<Text style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+  expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

@@ -39,7 +39,7 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
         <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text
+        <Text maxFontSizeMultiplier={1.3}
           style={[
             styles.settingLabel,
             { ...t.type.body, color: t.colors.textPrimary },
@@ -49,12 +49,12 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
           {label}
         </Text>
         {sub ? (
-          <Text style={[styles.settingSub, { ...t.type.captionTight, color: t.colors.textMuted }]}>{sub}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.settingSub, { ...t.type.captionTight, color: t.colors.textMuted }]}>{sub}</Text>
         ) : null}
       </View>
       <View style={styles.settingRight}>
         {value ? (
-          <Text style={[styles.settingValue, { fontSize: t.fontSize.sm, color: t.colors.textSecondary }]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.settingValue, { fontSize: t.fontSize.sm, color: t.colors.textSecondary }]}>
             {value}
           </Text>
         ) : null}

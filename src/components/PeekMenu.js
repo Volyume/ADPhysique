@@ -124,10 +124,10 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
       >
         <View style={styles.handle} />
         {config.title ? (
-          <Text style={styles.title} numberOfLines={1}>{config.title}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title} numberOfLines={1}>{config.title}</Text>
         ) : null}
         {config.subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={2}>{config.subtitle}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle} numberOfLines={2}>{config.subtitle}</Text>
         ) : null}
         <View style={styles.itemList}>
           {config.items.map((item, i) => (
@@ -146,7 +146,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
                 size={18}
                 color={item.destructive ? colors.error : colors.primary}
               />
-              <Text
+              <Text maxFontSizeMultiplier={1.3}
                 style={[
                   styles.itemText,
                   item.destructive && { color: colors.error },
@@ -163,7 +163,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
           accessibilityRole="button"
           accessibilityLabel="Cancel"
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>Cancel</Text>
         </Pressable>
       </Animated.View>
     </Modal>

@@ -338,7 +338,7 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={handleClearHistory}
         />
       </View>
-      <Text style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
         Your data is always yours. Export workout sets, create a JSON database backup, or restore a safety snapshot any time. Photo image files stay on this device unless you share or export them yourself.
       </Text>
     </SettingsPage>

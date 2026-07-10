@@ -399,7 +399,7 @@ export default function VolumeHeatmapScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.label}
               >
-                <Text
+                <Text maxFontSizeMultiplier={1.3}
                   style={[
                     styles.windowBtnText,
                     { color: active ? colors.primary : colors.textSecondary },
@@ -415,7 +415,7 @@ export default function VolumeHeatmapScreen() {
         {/* Rolling window note */}
         <View style={styles.windowNote}>
           <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.windowNoteText}>{windowNoteText}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.windowNoteText}>{windowNoteText}</Text>
         </View>
 
         {showNoVolumeGuidance && (
@@ -491,7 +491,7 @@ export default function VolumeHeatmapScreen() {
                   rowOffsets.current[muscle] = (rowOffsets.current.__cardY || 0) + rowY;
                 }}
               >
-                <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.barTrack}>
                   <View
                     style={[
@@ -508,8 +508,8 @@ export default function VolumeHeatmapScreen() {
                   <View style={[styles.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
                   <View style={[styles.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
                 </View>
-                <Text style={[styles.setsCount, { color }]}>{sets}</Text>
-                <Text style={styles.mrvLabel}>/{mrv}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.setsCount, { color }]}>{sets}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.mrvLabel}>/{mrv}</Text>
                 {lastTrainedMap[muscle] != null && (() => {
                   // Reuse the already-computed days-since-trained as the
                   // freshness input. The dot is the recovery layer; the text is
@@ -526,7 +526,7 @@ export default function VolumeHeatmapScreen() {
                           accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${meta.label}`}
                         />
                       )}
-                      <Text style={[
+                      <Text maxFontSizeMultiplier={1.3} style={[
                         styles.lastTrainedChip,
                         lastTrainedMap[muscle].daysAgo <= 1 && styles.lastTrainedRecent,
                       ]}>
@@ -546,7 +546,7 @@ export default function VolumeHeatmapScreen() {
             <SectionLabel>Volume trend</SectionLabel>
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
               accessibilityPrefix="volume trend window" />
-            {!!volTakeaway && <Text style={styles.trendTakeaway}>{volTakeaway}</Text>}
+            {!!volTakeaway && <Text maxFontSizeMultiplier={1.3} style={styles.trendTakeaway}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
                 key={muscle}
@@ -561,11 +561,11 @@ export default function VolumeHeatmapScreen() {
         {/* Edit volume targets */}
         {editing ? (
           <Card style={styles.editSection}>
-            <Text style={styles.editTitle}>Edit volume targets</Text>
-            <Text style={styles.editSubtitle}>Weekly sets per muscle - minimum / target / ceiling</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.editTitle}>Edit volume targets</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.editSubtitle}>Weekly sets per muscle - minimum / target / ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
-                <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
                   {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
                     <TextField
@@ -637,7 +637,7 @@ function LegendItem({ color, label }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ width: 10, height: 10, borderRadius: circle(10), backgroundColor: color }} />
-      <Text style={{ fontSize: fontSize.micro, color: colors.textMuted }}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: fontSize.micro, color: colors.textMuted }}>{label}</Text>
     </View>
   );
 }
@@ -668,7 +668,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
 
   return (
     <View style={trendStyles.row}>
-      <Text style={trendStyles.muscleName} numberOfLines={1}>
+      <Text maxFontSizeMultiplier={1.3} style={trendStyles.muscleName} numberOfLines={1}>
         {MUSCLE_DISPLAY_NAMES[muscle]}
       </Text>
       <View style={trendStyles.sparkContainer}>
@@ -689,7 +689,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           })}
         />
       </View>
-      <Text
+      <Text maxFontSizeMultiplier={1.3}
         style={[
           trendStyles.currentCount,
           { color: volumeStatusColor(getVolumeStatus(showCount, muscle, customLandmarks).status) },

@@ -50,7 +50,7 @@ export default function EatenTimePicker({ visible, value, onChange, onClose }) {
       <Modal transparent visible animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={onClose}>
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.title}>What time did you eat this?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.title}>What time did you eat this?</Text>
             <DateTimePicker
               value={current}
               mode="time"

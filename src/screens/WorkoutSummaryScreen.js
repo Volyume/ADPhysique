@@ -108,8 +108,8 @@ function RatingRow({ label, field, value, max, onChange }) {
   return (
     <View style={styles.ratingRow}>
       <View style={styles.ratingLabelRow}>
-        <Text style={[styles.ratingLabel, live.ratingLabel]}>{label}</Text>
-        {labels?.[value] ? <Text style={[styles.ratingValueLabel, live.ratingValueLabel]}>{labels[value]}</Text> : null}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.ratingLabel, live.ratingLabel]}>{label}</Text>
+        {labels?.[value] ? <Text maxFontSizeMultiplier={1.3} style={[styles.ratingValueLabel, live.ratingValueLabel]}>{labels[value]}</Text> : null}
       </View>
       <View style={styles.ratingBtns} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {values.map((i) => (
@@ -122,7 +122,7 @@ function RatingRow({ label, field, value, max, onChange }) {
             accessibilityState={{ selected: value === i }}
             accessibilityLabel={labels?.[i] ? `${i}, ${labels[i]}` : String(i)}
           >
-            <Text style={[styles.ratingBtnText, live.ratingBtnText, value === i && [styles.ratingBtnTextActive, live.ratingBtnTextActive]]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.ratingBtnText, live.ratingBtnText, value === i && [styles.ratingBtnTextActive, live.ratingBtnTextActive]]}>
               {i}
             </Text>
           </TouchableOpacity>
@@ -973,11 +973,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
             <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
-            <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
           </View>
-          <Text style={[styles.completionDate, live.completionDate]}>{completionDate}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.completionDate, live.completionDate]}>{completionDate}</Text>
           {firstSessionLine ? (
-            <Text style={[styles.firstSessionLine, live.firstSessionLine]}>{firstSessionLine}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.firstSessionLine, live.firstSessionLine]}>{firstSessionLine}</Text>
           ) : null}
         </View>
 
@@ -992,8 +992,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Ionicons name={milestone.icon} size={22} color={t.colors.gold} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.milestoneTitle, live.milestoneTitle]}>{milestone.title}</Text>
-                <Text style={[styles.milestoneBody, live.milestoneBody]}>{milestone.body}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneTitle, live.milestoneTitle]}>{milestone.title}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneBody, live.milestoneBody]}>{milestone.body}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.milestoneShareBtn, live.milestoneShareBtn]}
@@ -1053,8 +1053,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   color={accent}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.verdictHeadline, live.verdictHeadline, { color: accent }]}>{headline}</Text>
-                  <Text style={[styles.verdictSub, live.verdictSub]}>{sub}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.verdictHeadline, live.verdictHeadline, { color: accent }]}>{headline}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.verdictSub, live.verdictSub]}>{sub}</Text>
                 </View>
               </View>
             );
@@ -1089,7 +1089,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Card style={styles.partnerBeatRow}>
                 <View style={styles.partnerBeatTop}>
                   <Ionicons name="people-outline" size={18} color={t.colors.primary} />
-                  <Text style={[styles.partnerBeatText, live.partnerBeatText]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.partnerBeatText, live.partnerBeatText]}>
                     {moment
                       ? moment.line
                       : pair.rowState === 'resting'
@@ -1134,9 +1134,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && !calmSuppressed && mesoWeek?.plannedWeeks >= 2 && (
           <RevealSection delay={1160}>
             <Card style={styles.blockArcSection}>
-              <Text style={[styles.sectionTitle, live.sectionTitle]}>Your block</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>Your block</Text>
               {mesoWeek.mesoName ? (
-                <Text style={[styles.blockArcName, live.blockArcName]}>{mesoWeek.mesoName}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.blockArcName, live.blockArcName]}>{mesoWeek.mesoName}</Text>
               ) : null}
               <BlockShapeCard
                 weekIndex={mesoWeek.weekIndex}
@@ -1161,17 +1161,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 );
                 return (
                   <View key={ex.exerciseId || i} style={[styles.exerciseListRow, live.exerciseListRow]}>
-                    <Text style={[styles.exerciseListName, live.exerciseListName]} numberOfLines={1}>{ex.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseListName, live.exerciseListName]} numberOfLines={1}>{ex.name}</Text>
                     {workingSets.length > 0 ? (
                       <View style={styles.exerciseSetsList}>
                         {workingSets.map((s, si) => (
-                          <Text key={si} style={[styles.exerciseSetChip, live.exerciseSetChip]}>
+                          <Text maxFontSizeMultiplier={1.3} key={si} style={[styles.exerciseSetChip, live.exerciseSetChip]}>
                             {s.weight > 0 ? `${s.weight}${units}` : 'BW'} x {s.reps}
                           </Text>
                         ))}
                       </View>
                     ) : (
-                      <Text style={[styles.exerciseListMeta, live.exerciseListMeta]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseListMeta, live.exerciseListMeta]}>
                         {ex.recommendedSets} x {ex.repsMin}-{ex.repsMax}
                       </Text>
                     )}
@@ -1186,7 +1186,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1340}>
           <View style={[styles.prRow, live.prRow]}>
             <Ionicons name="trophy-outline" size={18} color={t.colors.warning} />
-            <Text style={[styles.prRowText, live.prRowText]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.prRowText, live.prRowText]}>
               {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
               {prExerciseNames ? ` - ${prExerciseNames}` : ''}
             </Text>
@@ -1213,7 +1213,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   accessibilityLabel={progressLinkLabel}
                 >
                   <Ionicons name="trending-up-outline" size={14} color={t.colors.textSecondary} />
-                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>{progressLinkLabel}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.onwardLinkText, live.onwardLinkText]}>{progressLinkLabel}</Text>
                 </TouchableOpacity>
               )}
               {showCoachLink && (
@@ -1225,7 +1225,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   accessibilityLabel="See this week's coaching review"
                 >
                   <Ionicons name="pulse-outline" size={14} color={t.colors.textSecondary} />
-                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>See this week&apos;s coaching review</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.onwardLinkText, live.onwardLinkText]}>See this week&apos;s coaching review</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1253,7 +1253,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1460}>
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={[styles.sectionTitle, live.sectionTitle]}>This week's volume</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>This week's volume</Text>
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
                 'Green = Good range: enough training to grow without overdoing it\n' +
@@ -1282,15 +1282,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
                   <View style={styles.volumeRowMain}>
-                    <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
-                      <Text style={[styles.statusText, live.statusText, { color }]}>{label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.statusText, live.statusText, { color }]}>{label}</Text>
                     </View>
                   </View>
                   {insight ? (
-                    <Text style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
                   ) : (
-                    <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.volumeInsightText, live.volumeInsightText]}>
                       {Math.round(data.workingSets)} sets this week
                     </Text>
                   )}
@@ -1303,7 +1303,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         style={[styles.volumeWhyToggle, live.volumeWhyToggle]}
                         >
-                        <Text style={[styles.volumeWhyToggleText, live.volumeWhyToggleText]}>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.volumeWhyToggleText, live.volumeWhyToggleText]}>
                           {isExpanded ? 'Hide explanation' : 'Why this status?'}
                         </Text>
                         <Ionicons
@@ -1313,7 +1313,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                         />
                       </TouchableOpacity>
                       {isExpanded && (
-                        <Text style={[styles.volumeWhyBody, live.volumeWhyBody]}>{why}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.volumeWhyBody, live.volumeWhyBody]}>{why}</Text>
                       )}
                     </>
                   )}
@@ -1337,7 +1337,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               accessibilityLabel="Watch your block story"
             >
               <Ionicons name="film-outline" size={16} color={t.colors.textSecondary} />
-              <Text style={[styles.blockRecapText, live.blockRecapText]}>You&apos;ve finished this block. Have a look back at how it went.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.blockRecapText, live.blockRecapText]}>You&apos;ve finished this block. Have a look back at how it went.</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           </RevealSection>
@@ -1352,17 +1352,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Card tone="gold" style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
                 <Ionicons name="flag" size={18} color={t.colors.gold} />
-                <Text style={[styles.phaseTitle, live.phaseTitle]}>Block complete</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.phaseTitle, live.phaseTitle]}>Block complete</Text>
               </View>
               {blockStory.name ? (
-                <Text style={[styles.phaseName, live.phaseName]}>{blockStory.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.phaseName, live.phaseName]}>{blockStory.name}</Text>
               ) : null}
-              <Text style={[styles.phaseRecap, live.phaseRecap]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.phaseRecap, live.phaseRecap]}>
                 {Number.isFinite(mesoWeek?.plannedWeeks)
                   ? `${mesoWeek.plannedWeeks} weeks completed, including your recovery week.`
                   : 'A full training block completed.'}
               </Text>
-              <Text style={[styles.phaseNext, live.phaseNext]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.phaseNext, live.phaseNext]}>
                 What's next: start the next block with sensible progressions from this one.
               </Text>
               <View style={styles.phaseActions}>
@@ -1397,7 +1397,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1520}>
             <View style={[styles.adjustedSummaryRow, live.adjustedSummaryRow]}>
               <Ionicons name="sparkles" size={15} color={t.colors.primary} />
-              <Text style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
                 ).join(' - ')}
@@ -1413,10 +1413,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && (
           <Card style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>
-              <Text style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
             </View>
-            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
             <TouchableOpacity
               style={[styles.feedbackToggleBtn, live.feedbackToggleBtn]}
               onPress={() => setFeedbackExpanded(e => !e)}
@@ -1425,7 +1425,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               accessibilityState={{ expanded: feedbackExpanded }}
               accessibilityLabel={feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
             >
-              <Text style={[styles.feedbackToggleBtnText, live.feedbackToggleBtnText]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.feedbackToggleBtnText, live.feedbackToggleBtnText]}>
                 {feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
               </Text>
               <Ionicons
@@ -1456,7 +1456,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
             )}
             <View style={[styles.coachZoneDivider, live.coachZoneDivider]} />
-            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
             <TextField accessibilityLabel="Notes for next time"
               fieldStyle={styles.nextTimeNoteField}
               inputStyle={styles.nextTimeNoteInput, live.nextTimeNoteInput}
@@ -1497,7 +1497,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {saveError ? (
           <View style={[styles.saveErrorCard, live.saveErrorCard]}>
             <Ionicons name="warning-outline" size={16} color={t.colors.error} />
-            <Text style={[styles.saveErrorText, live.saveErrorText]}>{saveError}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.saveErrorText, live.saveErrorText]}>{saveError}</Text>
           </View>
         ) : null}
         <View style={styles.footerRow}>
@@ -1539,7 +1539,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           behavior="padding"
         >
           <Card radius="xl" padding="xl" style={styles.templateModalCard}>
-            <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
             <TextField accessibilityLabel="Workout template name"
               fieldStyle={styles.templateModalField}
               inputStyle={styles.templateModalInput, live.templateModalInput}
@@ -1663,7 +1663,7 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
       accessibilityLabel={String(value)}
     />
   ) : (
-    <Text style={[frozenStyle, liveStyle]}>{value}</Text>
+    <Text maxFontSizeMultiplier={1.3} style={[frozenStyle, liveStyle]}>{value}</Text>
   ));
 
   if (hero) {
@@ -1671,7 +1671,7 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
       <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
         {numeral(styles.heroValue, live.heroValue)}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-          <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
         </View>
       </Animated.View>
@@ -1683,7 +1683,7 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
       <Ionicons name={icon} size={20} color={t.colors.textSecondary} />
       {numeral(styles.statValue, live.statValue)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-        <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
       </View>
     </Animated.View>

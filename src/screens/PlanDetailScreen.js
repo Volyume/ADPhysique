@@ -274,42 +274,42 @@ export default function PlanDetailScreen({ navigation, route }) {
           <View style={styles.planHeaderBadgeRow}>
             {isLibrary && (
               <View style={styles.libraryBadge}>
-                <Text style={styles.libraryBadgeText}>Library</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.libraryBadgeText}>Library</Text>
               </View>
             )}
             {isActive && (
               <View style={styles.activeBadge}>
-                <Text style={styles.activeBadgeText}>Active plan</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.activeBadgeText}>Active plan</Text>
               </View>
             )}
             {plan.tags && plan.tags.includes('featured') && (
               <View style={styles.featuredBadge}>
                 <Ionicons name="star" size={9} color={colors.onPrimary} />
-                <Text style={styles.featuredBadgeText}>Featured</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.featuredBadgeText}>Featured</Text>
               </View>
             )}
           </View>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.planName}>{plan.name}</Text>
           {plan.description ? (
-            <Text style={styles.planDesc}>{plan.description}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.planDesc}>{plan.description}</Text>
           ) : null}
           <View style={styles.planStats}>
             <View style={styles.planStat}>
-              <Text style={styles.planStatValue}>{workouts.length}</Text>
-              <Text style={styles.planStatLabel}>Workouts</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>{workouts.length}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Workouts</Text>
             </View>
             {totalWorkingSets > 0 && (
               <View style={styles.planStat}>
-                <Text style={styles.planStatValue}>~{totalWorkingSets}</Text>
-                <Text style={styles.planStatLabel}>Est. sets/week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>~{totalWorkingSets}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Est. sets/week</Text>
               </View>
             )}
             {plan.difficulty != null && (
               <View style={styles.planStat}>
-                <Text style={styles.planStatValue}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>
                   {['Beginner', 'Intermediate', 'Advanced'][plan.difficulty] ?? 'Intermediate'}
                 </Text>
-                <Text style={styles.planStatLabel}>Level</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Level</Text>
               </View>
             )}
           </View>
@@ -334,7 +334,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={isReordering ? 'Done reordering workouts' : 'Reorder workouts'}
               >
-                <Text style={[styles.reorderToggleText, isReordering && styles.reorderToggleTextActive]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.reorderToggleText, isReordering && styles.reorderToggleTextActive]}>
                   {isReordering ? 'Done' : 'Reorder'}
                 </Text>
               </TouchableOpacity>
@@ -342,7 +342,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
           {workouts.length === 0 ? (
             <Card padding="xl" style={styles.emptyCard}>
-              <Text style={styles.emptyCardText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyCardText}>
                 {isLibrary ? 'No workouts in this plan.' : 'No workouts yet. Edit the plan to add workouts.'}
               </Text>
             </Card>
@@ -350,16 +350,16 @@ export default function PlanDetailScreen({ navigation, route }) {
             workouts.map((routine, i) => (
               <Card key={routine.id} style={styles.workoutCard}>
                 <View style={styles.workoutIndex}>
-                  <Text style={styles.workoutIndexText}>{i + 1}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.workoutIndexText}>{i + 1}</Text>
                 </View>
                 <View style={styles.workoutInfo}>
-                  <Text style={styles.workoutName}>{routine.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.workoutName}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
-                    <Text style={styles.workoutMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>
                       {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
                     </Text>
                   ) : (
-                    <Text style={styles.workoutMeta}>No exercises yet</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>No exercises yet</Text>
                   )}
                 </View>
                 {!isLibrary && (
@@ -426,7 +426,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
                   <View style={styles.whyBullet} />
-                  <Text style={styles.whyText}>{whyThis[k]}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.whyText}>{whyThis[k]}</Text>
                 </View>
               ))}
             </Card>
@@ -441,18 +441,18 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={colors.primary} />
-                <Text style={styles.manageRowText}>Edit plan</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.manageRowText}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                <Text style={styles.manageRowText}>Duplicate plan</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.manageRowText}>Duplicate plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={colors.error} />
-                  <Text style={[styles.manageRowText, { color: colors.error }]}>Archive plan</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, { color: colors.error }]}>Archive plan</Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               )}

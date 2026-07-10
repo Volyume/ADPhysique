@@ -115,7 +115,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       {showWeightReps && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -180,7 +180,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       {exerciseType === 'duration' && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -233,7 +233,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       <>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Distance ({units === 'kg' ? 'm' : 'yd'})</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Distance ({units === 'kg' ? 'm' : 'yd'})</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -279,7 +279,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       </View>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -331,10 +331,10 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       {(showWeightReps || exerciseType === 'reps_only') && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
           {live1RM != null && live1RM > 0 && (
             <View style={styles.e1rmRow}>
-              <Text style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
               {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
               <InfoTooltip text={GLOSSARY.estMax} size={13} />
             </View>

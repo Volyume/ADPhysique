@@ -74,7 +74,7 @@ export default function PhotoDatePicker({
       >
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.title}>When was this taken?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.title}>When was this taken?</Text>
             <DateTimePicker
               value={value}
               mode="date"

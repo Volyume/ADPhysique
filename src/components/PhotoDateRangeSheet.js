@@ -102,10 +102,10 @@ export default function PhotoDateRangeSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.sheetTitle}>Filter by date</Text>
-            <Text style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Filter by date</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
 
-            <Text style={styles.sectionLabel}>From</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>From</Text>
             <TouchableOpacity
               style={styles.dateField}
               onPress={() => { setToPickerOpen(false); setFromPickerOpen(true); }}
@@ -113,11 +113,11 @@ export default function PhotoDateRangeSheet({
               accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
 
-            <Text style={styles.sectionLabel}>To</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>To</Text>
             <TouchableOpacity
               style={styles.dateField}
               onPress={() => { setFromPickerOpen(false); setToPickerOpen(true); }}
@@ -125,7 +125,7 @@ export default function PhotoDateRangeSheet({
               accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
           </ScrollView>

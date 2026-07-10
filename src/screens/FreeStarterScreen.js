@@ -156,8 +156,8 @@ export default function FreeStarterScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.content}>
         {!onResultStep ? (
           <>
-            <Text style={styles.question}>{FREE_STARTER_STEPS[step].question}</Text>
-            <Text style={styles.questionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.question}>{FREE_STARTER_STEPS[step].question}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.questionSub}>
               {step === 0
                 ? "There's no wrong answer. You can change direction any time."
                 : step === 1
@@ -177,7 +177,7 @@ export default function FreeStarterScreen({ navigation, route }) {
                   {opt.icon ? (
                     <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
                   ) : null}
-                  <Text style={styles.optionText}>{opt.label}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>{opt.label}</Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
@@ -188,20 +188,20 @@ export default function FreeStarterScreen({ navigation, route }) {
             <View style={styles.resultIcon}>
               <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
             </View>
-            <Text style={styles.resultTitle}>Your starter plan</Text>
-            <Text style={styles.resultIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.resultTitle}>Your starter plan</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.resultIntro}>
               Built for people starting out. Every session tells you exactly what to do:
               the exercises, the sets, and the reps.
             </Text>
             <Card style={styles.resultCard}>
               <View style={styles.resultBadge}>
-                <Text style={styles.resultBadgeText}>Beginner friendly</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.resultBadgeText}>Beginner friendly</Text>
               </View>
-              <Text style={styles.resultName}>{recommendation.name}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.resultName}>{recommendation.name}</Text>
               {recommendation.description ? (
-                <Text style={styles.resultDesc} numberOfLines={4}>{recommendation.description}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.resultDesc} numberOfLines={4}>{recommendation.description}</Text>
               ) : null}
-              <Text style={styles.resultMeta}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.resultMeta}>
                 {[
                   recDays ? `${recDays} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
@@ -215,14 +215,14 @@ export default function FreeStarterScreen({ navigation, route }) {
               onPress={handleStartPlan}
               accessibilityLabel={`Start with ${recommendation.name}`}
             />
-            <Text style={styles.resultFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.resultFootnote}>
               The first couple of weeks are for learning the movements. That counts as progress.
             </Text>
           </>
         ) : (
           <>
-            <Text style={styles.resultTitle}>We couldn't pick a plan</Text>
-            <Text style={styles.resultIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.resultTitle}>We couldn't pick a plan</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.resultIntro}>
               The plan library hasn't loaded yet. You can browse it yourself, or try again in a moment.
             </Text>
             <Button
@@ -243,7 +243,7 @@ export default function FreeStarterScreen({ navigation, route }) {
             accessibilityLabel="Browse all plans instead"
           >
             <Ionicons name="library-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.skipLinkText}>Browse all plans instead</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.skipLinkText}>Browse all plans instead</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -255,7 +255,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityLabel="Skip, I'll choose a plan myself"
         >
           <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
-          <Text style={styles.skipLinkText}>Skip, I'll choose myself</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.skipLinkText}>Skip, I'll choose myself</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

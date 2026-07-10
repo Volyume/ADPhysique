@@ -118,7 +118,11 @@ describe('CoachOutputScreen v2 assessment receipt: card render', () => {
   test('the card renders the receipt headline, optional detail, and the deduped usedSentence, gated on scanAssessmentPacket', () => {
     const cardStart = SCREEN.indexOf('{canShowProgressScanCoachContext ? (');
     expect(cardStart).toBeGreaterThan(-1);
-    const cardBlock = SCREEN.slice(cardStart, cardStart + 1200);
+    // Window widened 1200 -> 1400 (dynamic-type codemod sweep, campaign item
+    // 6 / D30, 2026-07-10): the inserted maxFontSizeMultiplier attributes
+    // pushed {scanAssessmentUsedSentence} to offset 1304 within this block.
+    // Assertions unchanged.
+    const cardBlock = SCREEN.slice(cardStart, cardStart + 1400);
     expect(cardBlock).toMatch(/\{scanAssessmentPacket \? \(/);
     expect(cardBlock).toMatch(/\{scanAssessmentPacket\.receipt\.headline\}/);
     expect(cardBlock).toMatch(/scanAssessmentPacket\.receipt\.detail \? \(/);

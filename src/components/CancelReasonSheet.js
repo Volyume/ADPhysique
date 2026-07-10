@@ -84,8 +84,8 @@ export default function CancelReasonSheet({
       keyboardAvoiding
       accessibilityLabel="Before you go"
     >
-      <Text style={styles.title}>Before you go: what's the main reason?</Text>
-      <Text style={styles.sub}>Optional. It helps us decide what to build.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Before you go: what's the main reason?</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sub}>Optional. It helps us decide what to build.</Text>
 
       <ReasonPicker
         reason={reason}
@@ -96,7 +96,7 @@ export default function CancelReasonSheet({
 
       {reason === 'temporary_break' ? (
         <View style={styles.breakBlock}>
-          <Text style={styles.breakPrompt}>When do you think you'll be back?</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.breakPrompt}>When do you think you'll be back?</Text>
           <View style={styles.chipRow}>
             {BREAK_WINDOWS.map((w) => {
               const selected = breakWindow === w.key;
@@ -112,14 +112,14 @@ export default function CancelReasonSheet({
             })}
           </View>
           {Platform.OS === 'android' ? (
-            <Text style={styles.pauseHint}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.pauseHint}>
               Your subscription settings may also let you pause instead of cancel.
             </Text>
           ) : null}
         </View>
       ) : null}
 
-      <Text style={styles.disclosure}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.disclosure}>
         You'll keep your features until the current billing period ends. Your
         training history, food log and check-ins all stay.
       </Text>

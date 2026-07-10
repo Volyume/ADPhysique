@@ -28,11 +28,11 @@ export default function FirstFoodPrompt({ targetKcal, energyUnit = 'kcal' }) {
   return (
     <View style={styles.card} accessibilityRole="summary">
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
-      <Text style={styles.headline}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.headline}>
         Log your first food to see your day take shape.
       </Text>
       {targetKcal != null ? (
-        <Text style={styles.target}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.target}>
           {`Today's target is ${toEnergy(targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`}
         </Text>
       ) : null}

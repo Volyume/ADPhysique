@@ -261,7 +261,7 @@ export default function SettingsHealthScreen() {
           />
         )}
       </View>
-      <Text style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
         Volyume only uses the Health scopes you switch on. Everything else stays untouched.
       </Text>
     </SettingsPage>

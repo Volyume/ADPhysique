@@ -237,7 +237,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>Unknown cascade variant: {variant}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.errorText}>Unknown cascade variant: {variant}</Text>
         </View>
       </SafeAreaView>
     );
@@ -248,8 +248,8 @@ export default function CascadeGateScreen({ navigation, route }) {
       <ModalHeader title="Subscription" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>{content.title}</Text>
-        <Text style={styles.subtitle}>{content.subtitle}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>{content.title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>{content.subtitle}</Text>
 
         {/* TierComparisonStrip was a 3-tier Pro-vs-Complete strip;
             in the 2-tier model the gate is a single Pro / Free

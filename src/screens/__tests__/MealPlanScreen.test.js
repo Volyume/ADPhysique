@@ -316,7 +316,7 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('<Text style={styles.emptyTitle}>Meal builder</Text>');
+    expect(source).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.emptyTitle}>Meal builder</Text>');
     expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
     expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
     expect(source).toContain('title="Build today"');

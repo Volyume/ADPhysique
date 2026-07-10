@@ -36,7 +36,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).not.toMatch(/Add body weight and main lifts/);
     expect(source).not.toMatch(/Add in Progress/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
-    expect(source).toMatch(/<Text style=\{styles\.heroFocus\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
+    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.heroFocus\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
     expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
     expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
@@ -78,7 +78,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(settingsProfileSource).toContain('next weekly check-in');
     expect(settingsProfileSource).not.toMatch(/weekly coach run/);
     expect(coachSource).toMatch(/function profileFocusLine\(profile = \{\}\)/);
-    expect(coachSource).toMatch(/<Text style=\{styles\.profileFocus\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
+    expect(coachSource).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.profileFocus\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
     expect(coachSource).toMatch(/label="Upgrade to Pro"/);
     expect(coachSource).toMatch(/pro=\{!isPro\}/);
   });

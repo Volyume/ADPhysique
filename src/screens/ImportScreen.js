@@ -155,7 +155,7 @@ export default function ImportScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         {/* The BackHeader title already reads "Import history"; the body copy
             below explains the flow rather than repeating a second heading. */}
-        <Text style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
           Import a workout-history CSV from Hevy or Strong. Sessions, sets, weights and reps all
           come across; unmatched exercises are created in your library so nothing is lost.
         </Text>
@@ -167,9 +167,9 @@ export default function ImportScreen({ navigation }) {
                 <Card key={src.key}>
                   <View style={styles.sourceHead}>
                     <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
-                    <Text style={styles.sourceName}>{src.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.sourceName}>{src.name}</Text>
                   </View>
-                  <Text style={styles.sourceText}>{src.instructions}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.sourceText}>{src.instructions}</Text>
                 </Card>
               ))}
             </View>
@@ -181,21 +181,21 @@ export default function ImportScreen({ navigation }) {
               style={styles.primaryButton}
             />
 
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text maxFontSizeMultiplier={1.3} style={styles.errorText}>{error}</Text> : null}
           </>
         )}
 
         {stage === 'parsing' && (
           <View style={styles.workingBlock}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.workingText}>Reading your file…</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.workingText}>Reading your file…</Text>
           </View>
         )}
 
         {stage === 'preview' && analysis && (
           <>
             <Card style={styles.previewCard}>
-              <Text style={styles.previewSource}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.previewSource}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
               <View style={styles.statRow}>
                 <Stat label="Sessions" value={analysis.workoutCount} />
                 <Stat label="Sets" value={analysis.setCount} />
@@ -204,14 +204,14 @@ export default function ImportScreen({ navigation }) {
 
               <View style={styles.breakdownRow}>
                 <BreakdownDot tone="success" />
-                <Text style={styles.breakdownText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
                   {analysis.mappedCount} matched to existing exercises
                 </Text>
               </View>
               {analysis.unmappedCount > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="warning" />
-                  <Text style={styles.breakdownText}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
                     {analysis.unmappedCount} will be created as custom exercises
                   </Text>
                 </View>
@@ -219,7 +219,7 @@ export default function ImportScreen({ navigation }) {
               {analysis.alreadyImported > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="muted" />
-                  <Text style={styles.breakdownText}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
                     {analysis.alreadyImported} already in Volyume, will skip
                   </Text>
                 </View>
@@ -227,14 +227,14 @@ export default function ImportScreen({ navigation }) {
 
               {analysis.unmappedCount > 0 && (
                 <View style={styles.unmappedBlock}>
-                  <Text style={styles.unmappedHead}>New custom exercises</Text>
-                  <Text style={styles.unmappedText}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedHead}>New custom exercises</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedText}>
                     {analysis.unmappedNames.join(', ')}
                     {analysis.unmappedCount > analysis.unmappedNames.length
                       ? ` +${analysis.unmappedCount - analysis.unmappedNames.length} more`
                       : ''}
                   </Text>
-                  <Text style={styles.unmappedHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedHint}>
                     You can edit muscle, equipment and notes later in Exercise Library.
                   </Text>
                 </View>
@@ -260,8 +260,8 @@ export default function ImportScreen({ navigation }) {
         {stage === 'importing' && (
           <View style={styles.workingBlock}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.workingText}>Bringing your history in…</Text>
-            <Text style={styles.workingSub}>This usually takes a few seconds.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.workingText}>Bringing your history in…</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.workingSub}>This usually takes a few seconds.</Text>
           </View>
         )}
 
@@ -269,8 +269,8 @@ export default function ImportScreen({ navigation }) {
           <>
             <Card padding="xl" style={styles.doneCard}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={styles.doneTitle}>Welcome to Volyume</Text>
-              <Text style={styles.doneBody}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.doneTitle}>Welcome to Volyume</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.doneBody}>
                 {result.workouts} sessions, {result.sets} sets and {result.exercisesCreated} new exercises
                 are now in your library.{result.skipped > 0
                   ? ` Skipped ${result.skipped} that were already imported.`
@@ -298,8 +298,8 @@ export default function ImportScreen({ navigation }) {
 function Stat({ label, value }) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statValue}>{Number(value || 0).toLocaleString()}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.statValue}>{Number(value || 0).toLocaleString()}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.statLabel}>{label}</Text>
     </View>
   );
 }

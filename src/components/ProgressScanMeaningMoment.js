@@ -18,8 +18,8 @@ export default function ProgressScanMeaningMoment({ onDismiss }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <Text style={styles.title}>{MEANING_MOMENT_TITLE}</Text>
-        <Text style={styles.body}>{MEANING_MOMENT_BODY}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>{MEANING_MOMENT_TITLE}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.body}>{MEANING_MOMENT_BODY}</Text>
         <Button
           title={MEANING_MOMENT_BUTTON}
           onPress={onDismiss}

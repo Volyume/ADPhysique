@@ -128,7 +128,7 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/styles\.topBarCompact/);
   expect(SOURCE).toMatch(/styles\.controlsCompact/);
   expect(SOURCE).toMatch(/!\s*compactOverlay \? \(/);
-  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text style=\{styles\.countdownHint\}>Step into the frame<\/Text> : null/);
+  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.countdownHint\}>Step into the frame<\/Text> : null/);
   expect(SOURCE).toMatch(/key: 'strong'/);
   expect(SOURCE).toMatch(/\$\{preset\.label\} overlay strength/);
   expect(SOURCE).toMatch(/useSafeAreaInsets/);

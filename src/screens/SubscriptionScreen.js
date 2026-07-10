@@ -139,11 +139,11 @@ export default function SubscriptionScreen({ navigation, route }) {
 
         {/* Current state card */}
         <Card borderless style={styles.card}>
-          <Text style={styles.cardLabel}>Your plan</Text>
-          <Text style={styles.cardValue}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardLabel}>Your plan</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardValue}>
             {tier === 'pro' ? 'Pro' : 'Free'}
           </Text>
-          <Text style={styles.cardSub}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardSub}>
             {STAGE_LABEL[stage] ?? '-'}
             {daysLeft != null ? ` - ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
@@ -151,11 +151,11 @@ export default function SubscriptionScreen({ navigation, route }) {
 
         {currentSku ? (
           <Card borderless style={styles.card}>
-            <Text style={styles.cardLabel}>Price</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardLabel}>Price</Text>
             {/* PLAY-002: the store's localised price, or a short placeholder
                 until the active store responds. Never a hardcoded fallback. */}
-            <Text style={styles.cardValue}>{priceFor('pro', period) ?? '...'}</Text>
-            <Text style={styles.cardSub}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardValue}>{priceFor('pro', period) ?? '...'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardSub}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>
           </Card>
@@ -188,7 +188,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        <Text style={styles.footnote}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.footnote}>
           Billing is handled by {platformStore}.
           To change your payment method or cancel, open subscription settings in
           {` ${platformStore}`}.

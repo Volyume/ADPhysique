@@ -75,7 +75,7 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(bottomBarWindow).toContain('accessibilityLabel="Move to next exercise"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
     // appended after the frozen style, same mechanical change as above.
-    expect(bottomBarWindow).toContain('<Text style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>');
+    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>');
   });
 
   test('reaching target on the last exercise shows "Finish workout" instead, routed through handleFinishWorkout', () => {
@@ -85,7 +85,7 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(bottomBarWindow).toContain('accessibilityLabel="Finish workout"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
     // appended after the frozen style, same mechanical change as above.
-    expect(bottomBarWindow).toContain('<Text style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>');
+    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>');
   });
 
   test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {

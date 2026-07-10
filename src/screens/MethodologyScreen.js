@@ -140,7 +140,7 @@ export default function MethodologyScreen({ route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="How Precision Coaching works" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.intro, live.intro]}>{INTRO}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>{INTRO}</Text>
 
         {SECTIONS.map(s => (
           <CollapsibleSection
@@ -152,7 +152,7 @@ export default function MethodologyScreen({ route }) {
           />
         ))}
 
-        <Text style={[styles.credentialNote, live.credentialNote]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNote, live.credentialNote]}>
           Built on published training and sports-medicine science. Every change has
           a reason. Every non-change has a reason too.
         </Text>

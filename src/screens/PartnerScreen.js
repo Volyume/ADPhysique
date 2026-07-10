@@ -179,7 +179,7 @@ function CheerPill({ enabled, onPress, style }) {
         accessibilityLabel={enabled ? 'Send a cheer' : 'Cheer sent today'}
       >
         <Ionicons name="hand-left" size={iconSize.sm} color={enabled ? colors.onPrimary : colors.textSecondary} />
-        <Text style={[styles.cheerPillText, !enabled && styles.cheerPillTextDone]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.cheerPillText, !enabled && styles.cheerPillTextDone]}>
           {enabled ? 'Send a cheer' : 'Sent today'}
         </Text>
       </TouchableOpacity>
@@ -191,7 +191,7 @@ function PersonRow({ phrase, resting }) {
   return (
     <View style={styles.personRow}>
       <View style={[styles.dot, resting ? styles.dotResting : styles.dotActive]} />
-      <Text style={styles.personText}>{phrase}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.personText}>{phrase}</Text>
     </View>
   );
 }
@@ -199,7 +199,7 @@ function PersonRow({ phrase, resting }) {
 function MomentCard({ line, cheerEnabled, onCheer }) {
   return (
     <EntranceView duration={motion.state} style={styles.momentCard}>
-      <Text style={styles.momentLine}>{line}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.momentLine}>{line}</Text>
       <CheerPill enabled={cheerEnabled} onPress={onCheer} />
     </EntranceView>
   );
@@ -247,9 +247,9 @@ function PartnerGuidedWeekCard({
       <View style={styles.supportPlanHead}>
         <View style={styles.supportPlanTitleRow}>
           <Ionicons name="eye-outline" size={iconSize.sm} color={colors.textSecondary} />
-          <Text style={styles.supportPlanTitle}>{supportPlan.title}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.supportPlanTitle}>{supportPlan.title}</Text>
         </View>
-        <Text style={styles.supportPlanHeadline}>{supportPlan.headline}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.supportPlanHeadline}>{supportPlan.headline}</Text>
       </View>
       {showAction ? (
         <TouchableOpacity
@@ -260,10 +260,10 @@ function PartnerGuidedWeekCard({
           accessibilityLabel={action.accessibilityLabel || action.label}
         >
           <Ionicons name={actionIcon} size={iconSize.sm} color={colors.onPrimary} />
-          <Text style={styles.supportPlanActionText}>{action.label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.supportPlanActionText}>{action.label}</Text>
         </TouchableOpacity>
       ) : null}
-      <Text style={styles.supportPlanPrivacy}>{supportPlan.privacyLine}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.supportPlanPrivacy}>{supportPlan.privacyLine}</Text>
     </Card>
   );
 }
@@ -283,8 +283,8 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
         <Ionicons name="trophy-outline" size={iconSize.sm} color={colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text style={styles.shareWinsTitle}>Share an update</Text>
-        <Text style={styles.shareWinsText}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.shareWinsTitle}>Share an update</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.shareWinsText}>
           Send a workout, PR, or progress update. You approve the preview before {name} sees it.
         </Text>
       </View>
@@ -307,14 +307,14 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
   if (!visible.length) return null;
   return (
     <View style={styles.partnerWins}>
-      <Text style={styles.partnerWinsTitle}>Shared updates</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinsTitle}>Shared updates</Text>
       {visible.map((card) => {
         const mine = card.senderId === userId;
         const date = formatWinCardDate(card.createdAt);
         return (
           <Card key={card.id} surface="surface2" radius="md" padding="md" style={[styles.partnerWinCard, styles.partnerWinCardBorder]}>
             <View style={styles.partnerWinTop}>
-              <Text style={styles.partnerWinMeta}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinMeta}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
               {mine ? (
                 <TouchableOpacity
                   onPress={() => onRevoke(card)}
@@ -324,13 +324,13 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
                   accessibilityLabel={`Delete shared update ${card.title}`}
                 >
                   <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
-                  <Text style={styles.partnerWinDelete}>Delete</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinDelete}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text style={styles.partnerWinTitle}>{card.title}</Text>
-            <Text style={styles.partnerWinSummary}>{card.summary}</Text>
-            <Text style={styles.partnerWinDetail}>{card.detail}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinTitle}>{card.title}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinSummary}>{card.summary}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.partnerWinDetail}>{card.detail}</Text>
           </Card>
         );
       })}
@@ -351,7 +351,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
         accessibilityLabel="Start a new run together"
       >
         <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.textSecondary} />
-        <Text style={styles.reconnectText}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.reconnectText}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={onDismiss}
@@ -360,7 +360,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
         accessibilityRole="button"
         accessibilityLabel="Not now"
       >
-        <Text style={styles.reconnectDismissText}>Not now</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.reconnectDismissText}>Not now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -380,12 +380,12 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.blockStatusTitle}>{status.title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockStatusTitle}>{status.title}</Text>
       </View>
-      <Text style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
-      <Text style={styles.blockStatusCopy}>{status.copy}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.blockStatusName} numberOfLines={1}>{block.blockName}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.blockStatusCopy}>{status.copy}</Text>
       <View style={styles.blockStatusAction}>
-        <Text style={styles.blockStatusActionText}>Sharing settings</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockStatusActionText}>Sharing settings</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
       </View>
     </Card>
@@ -402,8 +402,8 @@ function LocalReadNotice({ onRefresh }) {
     >
       <Ionicons name="refresh-outline" size={iconSize.sm} color={colors.primary} />
       <View style={styles.localReadNoticeCopy}>
-        <Text style={styles.localReadNoticeTitle}>Refresh partner data</Text>
-        <Text style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.localReadNoticeTitle}>Refresh partner data</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.localReadNoticeText}>Your partner space is safe. Tap to refresh.</Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
     </TouchableOpacity>
@@ -430,11 +430,11 @@ function PairCard({
       <View style={styles.pairHead}>
         <View style={styles.partnerIdentity}>
           <View style={styles.partnerAvatar}>
-            <Text style={styles.partnerAvatarText}>{initialForName(name)}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.partnerAvatarText}>{initialForName(name)}</Text>
           </View>
           <View style={styles.partnerNameBlock}>
-            <Text style={styles.pairName} numberOfLines={1}>{name}</Text>
-            <Text style={styles.pairKicker}>Private partner area</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.pairName} numberOfLines={1}>{name}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.pairKicker}>Private partner area</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -459,12 +459,12 @@ function PairCard({
                 style={styles.heroNum}
                 accessibilityLabel={`${run} weeks running together`}
               />
-              <Text style={styles.heroWord}>weeks running together</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.heroWord}>weeks running together</Text>
             </View>
-            <Text style={styles.heroSub}>Counts towards each person's current plan. Rest weeks never break it.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroSub}>Counts towards each person's current plan. Rest weeks never break it.</Text>
           </View>
         ) : (
-          <Text style={styles.heroFirst}>Your first shared week is under way</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.heroFirst}>Your first shared week is under way</Text>
         )}
 
         <View style={styles.people}>
@@ -491,7 +491,7 @@ function PairCard({
         <PartnerWinCards cards={pair.winCards || []} userId={userId} onRevoke={onRevokeWin} />
       </View>
 
-      {pair.weekKept ? <Text style={styles.keptLine}>{KEPT_LINE}</Text> : null}
+      {pair.weekKept ? <Text maxFontSizeMultiplier={1.3} style={styles.keptLine}>{KEPT_LINE}</Text> : null}
 
       {hasChip ? (
         <BlockStatusCard
@@ -525,7 +525,7 @@ function SheetRow({ icon, label, danger, onPress }) {
       accessibilityLabel={label}
     >
       <Ionicons name={icon} size={iconSize.md} color={danger ? colors.error : colors.textPrimary} />
-      <Text style={[styles.sheetRowText, danger && styles.sheetRowDanger]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sheetRowText, danger && styles.sheetRowDanger]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -1031,9 +1031,9 @@ export default function PartnerScreen({ route }) {
               <Card style={styles.incomingShareNotice}>
                 <View style={styles.incomingShareNoticeHead}>
                   <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.incomingShareNoticeTitle}>Choose who receives it</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.incomingShareNoticeTitle}>Choose who receives it</Text>
                 </View>
-                <Text style={styles.incomingShareNoticeText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.incomingShareNoticeText}>
                   Nothing has been sent. Pick Share an update under the right partner and approve the preview first.
                 </Text>
               </Card>
@@ -1065,7 +1065,7 @@ export default function PartnerScreen({ route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Invite another partner"
               >
-                <Text style={styles.inviteAnotherText}>Invite another partner</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.inviteAnotherText}>Invite another partner</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
             ) : null}
@@ -1081,8 +1081,8 @@ export default function PartnerScreen({ route }) {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="people-outline" size={iconSize.xl} color={colors.primary} />
             </View>
-            <Text style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
-            <Text style={styles.emptyBody}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyTitle}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyBody}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent yet. Pair with someone you know and trust to start sharing.'
                 : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the updates you choose to send. Food, photos, body metrics and notes stay private.'}
@@ -1092,9 +1092,9 @@ export default function PartnerScreen({ route }) {
               <Card style={styles.incomingShareNotice}>
                 <View style={styles.incomingShareNoticeHead}>
                   <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
-                  <Text style={styles.incomingShareNoticeTitle}>Your update stays private</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.incomingShareNoticeTitle}>Your update stays private</Text>
                 </View>
-                <Text style={styles.incomingShareNoticeText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.incomingShareNoticeText}>
                   Invite your partner first. Once they accept, you can choose exactly which update to send.
                 </Text>
               </Card>
@@ -1151,8 +1151,8 @@ export default function PartnerScreen({ route }) {
               <View style={styles.redeemSyncCard}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <View style={styles.redeemSyncCopy}>
-                  <Text style={styles.redeemSyncTitle}>Partner invite accepted</Text>
-                  <Text style={styles.redeemSyncText}>We are finishing the private link on this device.</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.redeemSyncTitle}>Partner invite accepted</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.redeemSyncText}>We are finishing the private link on this device.</Text>
                 </View>
               </View>
             ) : null}
@@ -1257,8 +1257,8 @@ export default function PartnerScreen({ route }) {
 function AckSheetBody({ pair, onSend, sendingKey = null }) {
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Send a cheer</Text>
-      <Text style={styles.blockPitch}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Send a cheer</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.blockPitch}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
       {ACKNOWLEDGEMENTS.map((ack) => {
         const sending = sendingKey === ack.key;
         const disabled = !!sendingKey;
@@ -1277,7 +1277,7 @@ function AckSheetBody({ pair, onSend, sendingKey = null }) {
             ) : (
               <Ionicons name="heart-outline" size={iconSize.sm} color={colors.primary} />
             )}
-            <Text style={styles.ackRowText}>{sending ? 'Sending...' : ack.line}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.ackRowText}>{sending ? 'Sending...' : ack.line}</Text>
           </TouchableOpacity>
         );
       })}
@@ -1309,10 +1309,10 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   }
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share an update</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Share an update</Text>
       <View style={styles.shareWinPreviewIntro}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
-        <Text style={styles.shareWinPreviewIntroText}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPreviewIntroText}>
           Pick one update, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
@@ -1328,7 +1328,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
               accessibilityState={{ selected: active }}
               accessibilityLabel={`Preview ${preview.draft.title.toLowerCase()}`}
             >
-              <Text style={[styles.shareWinChoiceTitle, active && styles.shareWinChoiceTitleActive]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinChoiceTitle, active && styles.shareWinChoiceTitleActive]}>
                 {preview.draft.title}
               </Text>
             </TouchableOpacity>
@@ -1338,18 +1338,18 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       {selectedPreview ? (
         <Card surface="surface2" radius="md" padding="md" style={[styles.shareWinPreviewCard, styles.shareWinPreviewCardBorder]}>
           <View style={styles.shareWinPreviewTop}>
-            <Text style={styles.shareWinPreviewStatus}>{selectedPreview.status}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPreviewStatus}>{selectedPreview.status}</Text>
             <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.primary} />
           </View>
-          <Text style={styles.shareWinExampleTitle}>{selectedPreview.draft.title}</Text>
-          <Text style={styles.shareWinExampleSummary}>{selectedPreview.draft.summary}</Text>
-          <Text style={styles.shareWinExampleDetail}>{selectedPreview.draft.detail}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.shareWinExampleTitle}>{selectedPreview.draft.title}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.shareWinExampleSummary}>{selectedPreview.draft.summary}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.shareWinExampleDetail}>{selectedPreview.draft.detail}</Text>
           <View style={styles.shareWinReceipt}>
             <View style={styles.shareWinReceiptHead}>
               <Ionicons name="eye-outline" size={iconSize.sm} color={colors.primary} />
-              <Text style={styles.shareWinReceiptTitle}>{partnerName} will see</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.shareWinReceiptTitle}>{partnerName} will see</Text>
             </View>
-            <Text style={styles.shareWinReceiptBody}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.shareWinReceiptBody}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
           </View>
           <TouchableOpacity
             style={styles.shareWinPrivacyToggle}
@@ -1358,19 +1358,19 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
             accessibilityLabel={privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
           >
             <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.textSecondary} />
-            <Text style={styles.shareWinPrivacyToggleText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPrivacyToggleText}>
               {privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
             </Text>
             <Ionicons name={privacyOpen ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={colors.textSecondary} />
           </TouchableOpacity>
           {privacyOpen ? (
             <View style={styles.shareWinPrivacyPanel}>
-              <Text style={styles.shareWinPrivacyTitle}>Stays private</Text>
-              <Text style={styles.shareWinPrivacyText}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
-              <Text style={styles.shareWinPrivacyText}>{SHARE_WIN_POLICY.excluded}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPrivacyTitle}>Stays private</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPrivacyText}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.shareWinPrivacyText}>{SHARE_WIN_POLICY.excluded}</Text>
             </View>
           ) : null}
-          <Text style={styles.shareWinExampleConsent}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.shareWinExampleConsent}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
           <Button
             title={sentType === selectedPreview.type ? 'Sent' : `Send to ${partnerName}`}
             onPress={sendSelected}
@@ -1418,11 +1418,11 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
     <Card style={styles.pendingCard} radius="lg" padding="lg">
       <View style={styles.pendingRow}>
         <Ionicons name="hourglass-outline" size={iconSize.md} color={colors.textSecondary} />
-        <Text style={styles.pendingText}>Invitation sent. Waiting for your partner.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.pendingText}>Invitation sent. Waiting for your partner.</Text>
       </View>
-      <Text style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
-      <Text style={styles.pendingHint}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
-      {checkLine ? <Text style={styles.pendingCheckLine}>{checkLine}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={styles.pendingExpiry}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.pendingHint}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
+      {checkLine ? <Text maxFontSizeMultiplier={1.3} style={styles.pendingCheckLine}>{checkLine}</Text> : null}
       <Button
         title="Share invite again"
         icon="share-outline"
@@ -1452,7 +1452,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         accessibilityLabel="Cancel invitation"
       >
         <Ionicons name="close-circle-outline" size={iconSize.sm} color={colors.error} />
-        <Text style={styles.cancelText}>Cancel invitation</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>Cancel invitation</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -1484,10 +1484,10 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
         >
           {beat === 1 ? (
             <EntranceView key="beat1" duration={motion.enter} style={styles.beat}>
-              <Text style={styles.beatTitle}>A partner, not an audience</Text>
-              <Text style={styles.beatLine}>One person you already know and trust.</Text>
-              <Text style={styles.beatLine}>No feed, no followers, no public numbers.</Text>
-              <Text style={styles.beatLine}>Just whether you each trained against your current plan.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.beatTitle}>A partner, not an audience</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.beatLine}>One person you already know and trust.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.beatLine}>No feed, no followers, no public numbers.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.beatLine}>Just whether you each trained against your current plan.</Text>
               <Button
                 title="Continue"
                 style={styles.primaryBtn}
@@ -1501,7 +1501,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
           {beat === 2 ? (
             <EntranceView key="beat2" duration={motion.enter} style={styles.beat}>
               <PartnerPrivacyReceipt />
-              <Text style={styles.beatConsent}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.beatConsent}>
                 Pairing means you both agree to share this, and only this. Notice v{PARTNER_PRIVACY_NOTICE_VERSION}.
               </Text>
               <Button
@@ -1518,8 +1518,8 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
 
           {beat === 3 ? (
             <EntranceView key="beat3" duration={motion.enter} style={styles.beat}>
-              <Text style={styles.codeDisplay}>{minted?.code || ''}</Text>
-              <Text style={styles.codeSub}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.codeDisplay}>{minted?.code || ''}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.codeSub}>
                 One person can use this code. It expires in {spellNumber(INVITE_EXPIRY_DAYS)} days.
               </Text>
               <View style={styles.channelRow}>
@@ -1534,7 +1534,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
                 accessibilityLabel="More options"
               >
                 <Ionicons name="share-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.moreOptionsText}>More options</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.moreOptionsText}>More options</Text>
               </TouchableOpacity>
             </EntranceView>
           ) : null}
@@ -1553,7 +1553,7 @@ function ChannelButton({ icon, label, onPress, primary = false }) {
       accessibilityLabel={`Send by ${label}`}
     >
       <Ionicons name={icon} size={iconSize.md} color={primary ? colors.onPrimary : colors.textSecondary} />
-      <Text style={[styles.channelBtnText, primary && styles.channelBtnTextPrimary]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.channelBtnText, primary && styles.channelBtnTextPrimary]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -1565,8 +1565,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Shared training phase</Text>
-        <Text style={styles.blockPitch}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Shared training phase</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockPitch}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing this phase name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1575,8 +1575,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Phase name sent</Text>
-        <Text style={styles.blockPitch}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Phase name sent</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockPitch}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
         <SheetRow icon="close-circle-outline" label="Withdraw phase name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1585,8 +1585,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={styles.sheetHeading}>Phase name suggested</Text>
-        <Text style={styles.blockPitch}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Phase name suggested</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockPitch}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Share this phase name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
@@ -1596,14 +1596,14 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={styles.sheetHeading}>Share phase name</Text>
-      <Text style={styles.blockPitch}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sheetHeading}>Share phase name</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.blockPitch}>
         Choose the phase name to show {name}. This does not share workouts, weights or notes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={colors.primary} />
       ) : programmes.length === 0 ? (
-        <Text style={styles.blockEmpty}>Create or choose a training block in Plans first.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.blockEmpty}>Create or choose a training block in Plans first.</Text>
       ) : (
         programmes.map((prog) => (
           <SheetRow
@@ -1614,7 +1614,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           />
         ))
       )}
-      <Text style={styles.blockFooter}>You can stop sharing the phase name at any time.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.blockFooter}>You can stop sharing the phase name at any time.</Text>
     </View>
   );
 }

@@ -46,10 +46,10 @@ describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9)', () => {
     // reads a live theme (src/hooks/useTheme.js); sheetOptionLabel gained a
     // live.sheetOptionLabel override in its style array. Frozen `styles`
     // block (asserted elsewhere) is byte-identical -- mechanical only.
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise up</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise up</Text>');
     expect(ACTIVE_WORKOUT).toContain('{canMoveDown && (');
     expect(ACTIVE_WORKOUT).toContain("onPress={() => { setShowOverflow(false); handleMoveExercise('down'); }}");
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Move exercise down"');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise down</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise down</Text>');
   });
 });

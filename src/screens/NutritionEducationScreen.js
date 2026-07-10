@@ -21,7 +21,7 @@ export default function NutritionEducationScreen() {
       <BackHeader title="Nutrition basics" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
           If you've never tracked calories or macros, this is the 5-minute
           version of why they matter and how to use them without it taking
           over your life.
@@ -178,7 +178,7 @@ export default function NutritionEducationScreen() {
             Ship what's there or hide it." The teaser was promising a diet
             builder that doesn't exist. */}
 
-        <Text style={styles.footer}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.footer}>
           Volyume's starting numbers are estimates. The 2 to 4 week trend is what
           counts. That's exactly what the coach watches for you.
         </Text>
@@ -196,7 +196,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </Card>
@@ -204,18 +204,18 @@ function Section({ icon, tint, title, children }) {
 }
 
 function Body({ children }) {
-  return <Text style={styles.body}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={styles.body}>{children}</Text>;
 }
 
 function Strong({ children }) {
-  return <Text style={styles.strong}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={styles.strong}>{children}</Text>;
 }
 
 function KeyPoint({ children }) {
   return (
     <View style={styles.keypoint}>
       <Ionicons name="bookmark" size={14} color={colors.primary} />
-      <Text style={styles.keypointText}>{children}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.keypointText}>{children}</Text>
     </View>
   );
 }
@@ -226,10 +226,10 @@ function MacroLine({ color, name, kcalPerG, role }) {
       <View style={[styles.macroDot, { backgroundColor: color }]} />
       <View style={{ flex: 1 }}>
         <View style={styles.macroHead}>
-          <Text style={styles.macroName}>{name}</Text>
-          <Text style={styles.macroKcal}>{kcalPerG}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.macroName}>{name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.macroKcal}>{kcalPerG}</Text>
         </View>
-        <Text style={styles.macroRole}>{role}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.macroRole}>{role}</Text>
       </View>
     </View>
   );
@@ -239,10 +239,10 @@ function PhaseLine({ name, rate, gist }) {
   return (
     <View style={styles.phaseLine}>
       <View style={styles.phaseHead}>
-        <Text style={styles.phaseName}>{name}</Text>
-        <Text style={styles.phaseRate}>{rate}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.phaseName}>{name}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.phaseRate}>{rate}</Text>
       </View>
-      <Text style={styles.phaseGist}>{gist}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.phaseGist}>{gist}</Text>
     </View>
   );
 }
@@ -250,7 +250,7 @@ function PhaseLine({ name, rate, gist }) {
 function BulletRow({ num, children }) {
   return (
     <View style={styles.bulletRow}>
-      <View style={styles.bulletChip}><Text style={styles.bulletChipText}>{num}</Text></View>
+      <View style={styles.bulletChip}><Text maxFontSizeMultiplier={1.3} style={styles.bulletChipText}>{num}</Text></View>
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );

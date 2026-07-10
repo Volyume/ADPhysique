@@ -72,7 +72,7 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
     expect(cardBody).toMatch(/style=\{\[styles\.planEditLink, live\.planEditLink\]\}/);
     expect(cardBody).toMatch(/accessibilityRole="button"/);
     expect(cardBody).toMatch(/accessibilityLabel="See your updated plan"/);
-    expect(cardBody).toMatch(/<Text style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}>See your updated plan<\/Text>/);
+    expect(cardBody).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}>See your updated plan<\/Text>/);
   });
 
   test('navigates to the Plans tab landing screen (no specific routine/plan id is tracked on this screen)', () => {

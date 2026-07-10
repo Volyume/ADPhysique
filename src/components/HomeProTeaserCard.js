@@ -27,7 +27,7 @@ function HomeProTeaserCard({ totalSessions, teaserInsight, onPress }) {
       <View style={styles.proTeaserLeft}>
         <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.proTeaserTitle, live.proTeaserTitle]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.proTeaserTitle, live.proTeaserTitle]}>
             {teaserInsight?.progressed && teaserInsight?.stalled
               ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
               : teaserInsight?.progressed

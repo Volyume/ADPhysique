@@ -153,8 +153,8 @@ describe('DiaryScreen diary tools', () => {
     // Batch 2 wave B (B-5 section-label consolidation): moveTitle is now a raw
     // <Text> routed through the shared SectionLabel overline role, not a plain <Text>.
     expect(SRC).toMatch(/<SectionLabel style=\{styles\.moveTitle\}>Day tools<\/SectionLabel>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
     expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
@@ -165,7 +165,7 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.textSecondary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.buildPlanLabel\}>Meal builder<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.buildPlanLabel\}>Meal builder<\/Text>/);
     expect(SRC).toMatch(/Create today or the week from your targets\. You review everything before it is logged\./);
     expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.border/);
   });
@@ -232,9 +232,9 @@ describe('DiaryScreen saved food entry points', () => {
     expect(SRC).toMatch(/const \[savedPickerSlot, setSavedPickerSlot\] = useState\(null\);/);
     expect(SRC).toMatch(/function addSavedMeal\(slot\) \{\s*setSavedPickerSlot\(slot\);\s*\}/);
     expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
-    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodTitle\}>Saved meals and recipes<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodOptionTitle\}>Saved meals<\/Text>/);
-    expect(SRC).toMatch(/<Text style=\{styles\.savedFoodOptionTitle\}>Recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodTitle\}>Saved meals and recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodOptionTitle\}>Saved meals<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodOptionTitle\}>Recipes<\/Text>/);
     expect(SRC).toMatch(/is in Saved meals/);
     expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);

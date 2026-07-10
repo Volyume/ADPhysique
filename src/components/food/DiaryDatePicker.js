@@ -70,7 +70,7 @@ export default function DiaryDatePicker({
       >
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.title}>Jump to a date</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.title}>Jump to a date</Text>
             <DateTimePicker
               value={value}
               mode="date"

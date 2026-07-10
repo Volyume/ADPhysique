@@ -21,7 +21,7 @@ const CURATED_MEAL_SHEET = fs.readFileSync(
 describe('Eat meal-card polish', () => {
   test('empty meal cards keep one centred add-food CTA without an icon pile', () => {
     expect(MEAL_SECTION).toContain('style={styles.addFoodButton}');
-    expect(MEAL_SECTION).toContain('<Text style={styles.addFoodText}>Add food</Text>');
+    expect(MEAL_SECTION).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.addFoodText}>Add food</Text>');
     expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={colors.textSecondary} />');
     expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');

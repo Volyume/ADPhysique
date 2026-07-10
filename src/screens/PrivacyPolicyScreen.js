@@ -11,7 +11,7 @@ export default function PrivacyPolicyScreen() {
       <BackHeader title="Privacy Policy" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.updated}>Last updated {LAST_UPDATED}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.updated}>Last updated {LAST_UPDATED}</Text>
 
         <Section title="What Volyume collects">
           <Body>
@@ -126,14 +126,14 @@ export default function PrivacyPolicyScreen() {
 function Section({ title, children }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       {children}
     </View>
   );
 }
 
 function Body({ children }) {
-  return <Text style={styles.body}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={styles.body}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({

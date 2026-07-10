@@ -9,7 +9,7 @@ export default function SectionLabel({ children, style, tone = 'default', varian
   const t = useTheme();
   const live = buildLiveStyles(t);
   return (
-    <Text
+    <Text maxFontSizeMultiplier={1.3}
       {...textProps}
       style={[
         variant === 'title' ? [styles.title, live.title] : [styles.label, live.label],

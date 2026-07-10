@@ -59,8 +59,8 @@ function StatTile({ label, value, sub }) {
   return (
     <Card style={styles.statTile}>
       <SectionLabel tone="muted">{label}</SectionLabel>
-      <Text style={styles.statValue} numberOfLines={2}>{value}</Text>
-      {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={styles.statValue} numberOfLines={2}>{value}</Text>
+      {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.statSub}>{sub}</Text> : null}
     </Card>
   );
 }
@@ -206,14 +206,14 @@ function Row({ icon, label, sub, onPress, pro, status = null }) {
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
-          <Text style={styles.rowLabel}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+        {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.rowSub}>{sub}</Text> : null}
       </View>
       {statusLabel ? (
         <View style={[styles.statusPill, styles[`statusPill_${status}`]]}>
-          <Text style={[styles.statusPillText, styles[`statusPillText_${status}`]]}>{statusLabel}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.statusPillText, styles[`statusPillText_${status}`]]}>{statusLabel}</Text>
         </View>
       ) : null}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
@@ -433,17 +433,17 @@ export default function AthleteProfileScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.heroInfo}>
             <View style={styles.nameLine}>
-              <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.name} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {loading ? (
               <Skeleton width={120} height={12} />
             ) : (
-            <Text style={styles.heroSub}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroSub}>
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text style={styles.heroFocus} numberOfLines={2}>{focusTile.value}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroFocus} numberOfLines={2}>{focusTile.value}</Text>
           </View>
         </Card>
 
@@ -457,8 +457,8 @@ export default function AthleteProfileScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text style={styles.loadErrorTitle}>Couldn't refresh profile data</Text>
-              <Text style={styles.loadErrorBody}>Some numbers may be out of date. Tap to try again.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorTitle}>Couldn't refresh profile data</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorBody}>Some numbers may be out of date. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
           </Card>
@@ -481,14 +481,14 @@ export default function AthleteProfileScreen({ navigation }) {
               accessibilityLabel={`Open ${row.name}`}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.liftName} numberOfLines={1}>{row.name}</Text>
-                <Text style={styles.liftSub}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.liftName} numberOfLines={1}>{row.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.liftSub}>
                   {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x bodyweight` : `${Math.round(level.ratio * 100)}% bodyweight`}
                   {level.nextLabel && level.nextTarget ? ` - ${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}` : ''}
                 </Text>
               </View>
               <View style={styles.levelPill}>
-                <Text style={styles.levelPillText}>{level.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.levelPillText}>{level.label}</Text>
               </View>
             </Card>
           )) : (
@@ -557,8 +557,8 @@ export default function AthleteProfileScreen({ navigation }) {
       >
         <View style={styles.avatarSheetHeader}>
           <View style={styles.avatarSheetCopy}>
-            <Text style={styles.avatarSheetTitle}>Profile picture</Text>
-            <Text style={styles.avatarSheetIntro}>Choose a photo from your phone or pick a Volyume avatar.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.avatarSheetTitle}>Profile picture</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.avatarSheetIntro}>Choose a photo from your phone or pick a Volyume avatar.</Text>
           </View>
           {avatarUri || avatarPreset ? (
             <TouchableOpacity
@@ -567,7 +567,7 @@ export default function AthleteProfileScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Clear current avatar"
             >
-              <Text style={styles.avatarClearText}>Clear</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.avatarClearText}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -581,12 +581,12 @@ export default function AthleteProfileScreen({ navigation }) {
             <Ionicons name="image-outline" size={20} color={colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
-            <Text style={styles.photoOptionTitle}>Photo from phone</Text>
-            <Text style={styles.photoOptionSub}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.photoOptionTitle}>Photo from phone</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.photoOptionSub}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>
-        <Text style={styles.avatarGalleryLabel}>Choose an avatar</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.avatarGalleryLabel}>Choose an avatar</Text>
         <View style={styles.avatarPresetGrid}>
           {AVATAR_PRESETS.map((preset) => {
             const selected = avatarPreset === preset.key && !avatarUri;
@@ -605,7 +605,7 @@ export default function AthleteProfileScreen({ navigation }) {
                   size={62}
                   selected={selected}
                 />
-                <Text style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
                   {preset.label}
                 </Text>
               </TouchableOpacity>

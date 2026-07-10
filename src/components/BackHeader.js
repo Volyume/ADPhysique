@@ -52,7 +52,7 @@ export default function BackHeader({ title, onBack, right }) {
       >
         <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
       </TouchableOpacity>
-      <Text style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
         {title}
       </Text>
       <View style={styles.right}>{right ?? null}</View>

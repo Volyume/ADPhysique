@@ -26,8 +26,8 @@ export default function OptionCard({ icon, label, detail, active, onPress, iconS
         <Ionicons name={icon} size={iconSize} color={active ? t.colors.primary : t.colors.textSecondary} />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.label, live.label, active && [styles.labelActive, live.labelActive]]}>{label}</Text>
-        {detail ? <Text style={[styles.detail, live.detail]}>{detail}</Text> : null}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label, active && [styles.labelActive, live.labelActive]]}>{label}</Text>
+        {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.detail, live.detail]}>{detail}</Text> : null}
       </View>
       {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} /> : null}
     </TouchableOpacity>

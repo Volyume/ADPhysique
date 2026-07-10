@@ -62,14 +62,14 @@ function MiniBarStatus() {
         accessibilityLabel={`Rest, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
       >
         <Ionicons name="timer-outline" size={13} color={t.colors.primary} />
-        <Text style={[styles.statusTimer, { fontSize: t.fontSize.sm, color: t.colors.primary }]}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.statusTimer, { fontSize: t.fontSize.sm, color: t.colors.primary }]}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
       </Animated.View>
     );
   }
   const label = recommended && setsDone < recommended
     ? `Set ${setsDone + 1} of ${recommended}`
     : `${setsDone} ${setsDone === 1 ? 'set' : 'sets'} done`;
-  return <Text style={[styles.statusText, { ...t.type.captionStrong, color: t.colors.textMuted }]}>{label}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={[styles.statusText, { ...t.type.captionStrong, color: t.colors.textMuted }]}>{label}</Text>;
 }
 
 // The pulsing "live" dot: one opacity worklet on motion.pulse; static under
@@ -120,7 +120,7 @@ export default function ActiveSessionMiniBar({ navigation }) {
         accessibilityLabel={`Workout in progress: ${exerciseName}. Return to your session.`}
       >
         <LiveDot reduceMotion={reduceMotion} live={live.liveDot} />
-        <Text style={[styles.exercise, live.exercise]} numberOfLines={1}>{exerciseName}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.exercise, live.exercise]} numberOfLines={1}>{exerciseName}</Text>
         <MiniBarStatus />
         <Ionicons name="chevron-up" size={16} color={t.colors.textMuted} />
       </PressableCard>

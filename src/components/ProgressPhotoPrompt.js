@@ -173,12 +173,12 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
           <Ionicons name="camera-outline" size={20} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Mark the moment</Text>
-          <Text style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Mark the moment</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
             You've just hit a milestone. If you'd like, add a photo.
             Your own pace, always private to this phone.
           </Text>
-          <Text style={styles.body}>The scale can't tell muscle from water. Photos can.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>The scale can't tell muscle from water. Photos can.</Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -207,7 +207,7 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons name="notifications-off-outline" size={14} color={colors.textMuted} />
-        <Text style={styles.optOutText}>Don&apos;t ask again</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.optOutText}>Don&apos;t ask again</Text>
       </TouchableOpacity>
     </Card>
   );

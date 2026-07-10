@@ -142,10 +142,10 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
-        <Text style={[styles.macroBarLabel, live.macroBarLabel, primary && [styles.macroBarLabelPrimary, live.macroBarLabelPrimary]]}>{label}</Text>
-        <Text style={[styles.macroBarValue, live.macroBarValue, primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary]]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarLabel, live.macroBarLabel, primary && [styles.macroBarLabelPrimary, live.macroBarLabelPrimary]]}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarValue, live.macroBarValue, primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary]]}>
           {value}{target != null ? ` / ${target}` : ''}g
-          {planned > 0 ? <Text style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${Math.round(planned)} planned`}</Text> : null}
+          {planned > 0 ? <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${Math.round(planned)} planned`}</Text> : null}
         </Text>
       </View>
       <View style={[styles.macroTrack, live.macroTrack]}>
@@ -156,8 +156,8 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
       </View>
       {(sub || remainingText) ? (
         <View style={styles.macroBarSubRow}>
-          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
-          {remainingText ? <Text style={[styles.macroBarRemaining, live.macroBarRemaining]}>{remainingText}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
+          {remainingText ? <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarRemaining, live.macroBarRemaining]}>{remainingText}</Text> : null}
         </View>
       ) : null}
     </View>
@@ -326,7 +326,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={1.3} />
-            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}
       </View>
@@ -347,9 +347,9 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         ) : null}
       </View>
       {macroSplit ? (
-        <Text style={[styles.macroSplit, live.macroSplit]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.macroSplit, live.macroSplit]}>
           {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
-          <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
         </Text>
       ) : null}
     </TouchableOpacity>

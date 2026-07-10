@@ -91,8 +91,8 @@ export default function PhotoDetailsSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.sheetTitle}>Photo details</Text>
-            <Text style={styles.sheetIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Photo details</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sheetIntro}>
               Add the date and pose so Progress Photos can keep this image in the right place.
             </Text>
             {previewUri ? (
@@ -109,12 +109,12 @@ export default function PhotoDetailsSheet({
             ) : null}
             <View style={styles.contextBox}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-              <Text style={styles.contextText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.contextText}>
                 Date and pose make future reviews fairer by grouping photos from the same day together.
               </Text>
             </View>
 
-            <Text style={styles.helper}>When was this photo taken?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.helper}>When was this photo taken?</Text>
             <TouchableOpacity
               style={styles.dateField}
               onPress={() => setPickerOpen(true)}
@@ -122,11 +122,11 @@ export default function PhotoDetailsSheet({
               accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </TouchableOpacity>
 
-            <Text style={styles.sectionLabel}>Pose</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>Pose</Text>
             <View style={styles.poseSelector}>
               {POSES.map((p) => {
                 const active = pose === p.key;
@@ -144,7 +144,7 @@ export default function PhotoDetailsSheet({
                       size={iconSize.sm}
                       color={active ? colors.primary : colors.textMuted}
                     />
-                    <Text style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
                       {p.label}
                     </Text>
                   </TouchableOpacity>

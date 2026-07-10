@@ -331,8 +331,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
           <View style={styles.successCircle}>
             <Ionicons name="checkmark" size={40} color={colors.onPrimary} />
           </View>
-          <Text style={styles.successTitle}>You're Pro.</Text>
-          <Text style={styles.successBody}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.successTitle}>You're Pro.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.successBody}>
             {needsSetup
               ? 'Everything is ready and your data is backed up. Set up your training plan and nutrition targets and the coach can start.'
               : 'Everything is ready and your data is backed up.'}
@@ -368,8 +368,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
           <View style={styles.iconWrap}>
             <Ionicons name="barbell-outline" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Go Pro</Text>
-          <Text style={styles.subtitle}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Go Pro</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
             Free keeps your training log. Pro reads it like a coach and adjusts your plan as you go.
           </Text>
 
@@ -379,12 +379,12 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 <View style={styles.perkIcon}>
                   <Ionicons name={p.icon} size={16} color={colors.primary} />
                 </View>
-                <Text style={styles.perkText}>{p.text}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.perkText}>{p.text}</Text>
               </View>
             ))}
           </View>
 
-          <Text style={styles.credentialNote}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.credentialNote}>
             Precision Coaching follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
 
@@ -398,7 +398,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
           {hasAccount ? (
             <>
-              <Text style={styles.accountNote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.accountNote}>
                 {PRO_BETA_ACTIVE
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
@@ -429,7 +429,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             </>
           ) : (
             <>
-              <Text style={styles.accountNote}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.accountNote}>
                 Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
               </Text>
 
@@ -448,11 +448,11 @@ export default function ProUpgradeScreen({ navigation, route }) {
               legal links. Plain headings (this screen has no collapse
               pattern); each answer is one or two calm, honest sentences. */}
           <View style={styles.faqWrap}>
-            <Text style={styles.faqTitle}>Common questions</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.faqTitle}>Common questions</Text>
             {FAQ_ITEMS.map(item => (
               <View key={item.q} style={styles.faqItem}>
-                <Text style={styles.faqQ}>{item.q}</Text>
-                <Text style={styles.faqA}>{item.a}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.faqQ}>{item.q}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.faqA}>{item.a}</Text>
               </View>
             ))}
           </View>
@@ -465,7 +465,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             accessibilityLabel="Subscription terms"
           >
             <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.policyLinkText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.policyLinkText}>
               What stays if you switch back to Free later
             </Text>
           </TouchableOpacity>
@@ -475,7 +475,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               allowed set for this screen family) -- left without an added
               haptic. */}
           <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
-            <Text style={styles.laterText}>Maybe later</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.laterText}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

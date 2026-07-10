@@ -80,7 +80,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
 
   return (
     <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
-      <Text style={[styles.label, live.label]}>Your trend</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Your trend</Text>
 
       {hasSparkline && lineData.length >= 2 && (
         <View
@@ -104,8 +104,8 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
           once there is a meaningful smoothed value (state 2+). */}
       {state >= 2 && ewmaNow != null && (
         <View style={styles.statRow}>
-          <Text style={[styles.ewmaValue, live.ewmaValue]}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
-          {showRate && rateText && <Text style={[styles.rateValue, live.rateValue]}>{rateText}</Text>}
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaValue, live.ewmaValue]}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
+          {showRate && rateText && <Text maxFontSizeMultiplier={1.3} style={[styles.rateValue, live.rateValue]}>{rateText}</Text>}
         </View>
       )}
 
@@ -115,27 +115,27 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
         {dotColor && (
           <View style={[styles.dot, { backgroundColor: dotColor }]} accessibilityElementsHidden importantForAccessibility="no" />
         )}
-        <Text style={[styles.insight, live.insight]}>{insight}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.insight, live.insight]}>{insight}</Text>
       </View>
 
       {maintenance && (
         maintenance.building ? (
-          <Text style={[styles.maintenanceBuilding, live.maintenanceBuilding]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceBuilding, live.maintenanceBuilding]}>
             Your coach is building your estimate. Keep logging and it appears in about a week.
           </Text>
         ) : (
           <View style={styles.maintenanceBlock}>
-            <Text style={[styles.maintenanceValue, live.maintenanceValue]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceValue, live.maintenanceValue]}>
               ~{maintenance.kcal.toLocaleString()} kcal/day estimated maintenance
             </Text>
-            <Text style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
           </View>
         )
       )}
 
       {/* COMP-026 (B): step-trend line, only in a week the modifier sized the
           change. Already suppressed under an open ED flag by the view-model. */}
-      {stepTrendLine && <Text style={[styles.stepTrendLine, live.stepTrendLine]}>{stepTrendLine}</Text>}
+      {stepTrendLine && <Text maxFontSizeMultiplier={1.3} style={[styles.stepTrendLine, live.stepTrendLine]}>{stepTrendLine}</Text>}
     </View>
   );
 }

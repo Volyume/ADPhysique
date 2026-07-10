@@ -28,7 +28,7 @@ export default function ModalHeader({ title, onClose, closePosition = 'right', r
   return (
     <View style={[styles.header, { borderBottomColor: t.colors.borderSubtle }]}>
       {closePosition === 'left' ? closeButton : <View style={styles.side} />}
-      <Text style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
         {title}
       </Text>
       {closePosition === 'left' ? rightSlot : closeButton}

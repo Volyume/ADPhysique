@@ -74,7 +74,7 @@ export default function WelcomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
-          <Text style={styles.tagline}>Less thinking. More lifting.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.tagline}>Less thinking. More lifting.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -88,9 +88,9 @@ export default function WelcomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.proTitleRow}>
-                  <Text style={styles.proTitle}>The full app, free for 14 days</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.proTitle}>The full app, free for 14 days</Text>
                 </View>
-                <Text style={styles.proSubtitle}>Clear coaching that adjusts from your logged training.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.proSubtitle}>Clear coaching that adjusts from your logged training.</Text>
               </View>
             </View>
 
@@ -100,7 +100,7 @@ export default function WelcomeScreen({ navigation }) {
               {TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
-                  <Text style={styles.bulletText}>{b}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.bulletText}>{b}</Text>
                   {/* U-E-1: inline gloss for the coach term on first appearance. */}
                   {b.includes('Coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
@@ -109,14 +109,14 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text style={styles.trialNote}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trialNote}>
               {monthlyPrice
                 ? `No payment card needed. Afterwards it's ${monthlyPrice} a month on ${storeName()}, or carry on free.`
                 : `No payment card needed. Afterwards it's a monthly subscription on ${storeName()}, or carry on free.`}
             </Text>
 
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Start your 14 days</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.proCtaText}>Start your 14 days</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
             </View>
           </Card>
@@ -130,8 +130,8 @@ export default function WelcomeScreen({ navigation }) {
                 <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.freeTitle}>Yours free, always</Text>
-                <Text style={styles.freeSubtitle}>If you don&apos;t subscribe after the trial, these stay.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.freeTitle}>Yours free, always</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.freeSubtitle}>If you don&apos;t subscribe after the trial, these stay.</Text>
               </View>
             </View>
 
@@ -139,7 +139,7 @@ export default function WelcomeScreen({ navigation }) {
               {AFTER_TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark" size={14} color={colors.textSecondary} />
-                  <Text style={styles.freeBulletText}>{b}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.freeBulletText}>{b}</Text>
                 </View>
               ))}
             </View>
@@ -157,13 +157,13 @@ export default function WelcomeScreen({ navigation }) {
             accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
           >
             <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text style={styles.trustText}>Works fully offline</Text>
-            <Text style={styles.trustDot}>-</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>Works fully offline</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trustDot}>-</Text>
             <Ionicons name="download-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text style={styles.trustText}>Exports anytime</Text>
-            <Text style={styles.trustDot}>-</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>Exports anytime</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trustDot}>-</Text>
             <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text style={styles.trustText}>No ads, ever</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>No ads, ever</Text>
           </View>
         </Animated.View>
 
@@ -175,8 +175,8 @@ export default function WelcomeScreen({ navigation }) {
             onPress={() => navigation.navigate('Login')}
             hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
           >
-            <Text style={styles.signInText}>Already have an account?</Text>
-            <Text style={styles.signInAction}> Sign in</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.signInText}>Already have an account?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.signInAction}> Sign in</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

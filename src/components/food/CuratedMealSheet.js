@@ -44,9 +44,9 @@ export default function CuratedMealSheet({
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Meal details">
       {meal ? (
         <>
-          <Text style={styles.title}>{meal.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title}>{meal.name}</Text>
           {macros ? (
-            <Text style={styles.subtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
               {'Adds to your diary - '}
               {toEnergy(macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {Math.round(macros.protein)}g protein - {Math.round(macros.carbs)}g carbs - {Math.round(macros.fat)}g fat
             </Text>
@@ -58,8 +58,8 @@ export default function CuratedMealSheet({
                 <SectionLabel>In this meal</SectionLabel>
                 {items.map((it) => (
                   <View key={it.foodRef} style={styles.itemRow}>
-                    <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
-                    <Text style={styles.itemMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.itemName} numberOfLines={1}>{it.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.itemMeta}>
                       {Math.round(it.quantityG)}g | {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                   </View>
@@ -76,14 +76,14 @@ export default function CuratedMealSheet({
                   <Ionicons name="leaf-outline" size={15} color={colors.primary} />
                   <SectionLabel>Optional extras</SectionLabel>
                 </View>
-                <Text style={styles.intro}>{ADDITIONS_INTRO}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.intro}>{ADDITIONS_INTRO}</Text>
                 {additions.map((a) => (
                   <View key={a.name} style={styles.addRow}>
-                    <Text style={styles.addName}>{a.name}</Text>
-                    <Text style={styles.addWhy}>{a.why}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.addName}>{a.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.addWhy}>{a.why}</Text>
                   </View>
                 ))}
-                <Text style={styles.footnote}>{ADDITIONS_FOOTNOTE}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.footnote}>{ADDITIONS_FOOTNOTE}</Text>
               </View>
             ) : null}
           </ScrollView>
@@ -95,7 +95,7 @@ export default function CuratedMealSheet({
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Text style={styles.cancelText}>Close</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>Close</Text>
             </Pressable>
             {/* Haptics completion pass (2026-07-10): "Add to diary" is a direct
                 food-logging write, excluded per the campaign's diary-marking
@@ -109,7 +109,7 @@ export default function CuratedMealSheet({
             >
               {logging
                 ? <ActivityIndicator color={colors.onPrimary} size="small" />
-                : <Text style={styles.logText}>Add to diary</Text>}
+                : <Text maxFontSizeMultiplier={1.3} style={styles.logText}>Add to diary</Text>}
             </Pressable>
           </View>
         </>

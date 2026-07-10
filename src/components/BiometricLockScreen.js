@@ -28,8 +28,8 @@ export default function BiometricLockScreen({ authenticating = false, lastFailed
           <View style={styles.iconWrap}>
             <Ionicons name="lock-closed" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Volyume is locked</Text>
-          <Text style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Volyume is locked</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
             {lastFailed
               ? "That didn't go through. You can try again, or use your device passcode."
               : 'Unlock with Face ID, your fingerprint, or your device passcode to continue.'}

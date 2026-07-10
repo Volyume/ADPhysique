@@ -78,8 +78,8 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
       keyboardAvoiding
       accessibilityLabel="Your Pro subscription has ended"
     >
-      <Text style={styles.title}>Your Pro subscription has ended</Text>
-      <Text style={styles.body}>{BODY}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Your Pro subscription has ended</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.body}>{BODY}</Text>
 
       <Button
         title={SUBSCRIPTION_LINK_TEXT}
@@ -93,7 +93,7 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
 
       {askReason ? (
         <>
-          <Text style={styles.sub}>One quick question, if you have a moment. Optional.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.sub}>One quick question, if you have a moment. Optional.</Text>
           <ReasonPicker
             reason={reason}
             text={text}

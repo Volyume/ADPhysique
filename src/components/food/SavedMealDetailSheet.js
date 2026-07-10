@@ -37,9 +37,9 @@ export default function SavedMealDetailSheet({ visible, meal, energyUnit = 'kcal
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel={meal ? `${meal.name} details` : 'Meal details'}>
       {meal ? (
         <>
-          <Text style={styles.title} numberOfLines={2}>{meal.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.title} numberOfLines={2}>{meal.name}</Text>
           {totals ? (
-            <Text style={styles.subtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
               Total - {toEnergy(totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {totals.protein}g protein | {totals.carbs}g carbs | {totals.fat}g fat
             </Text>
           ) : null}
@@ -50,8 +50,8 @@ export default function SavedMealDetailSheet({ visible, meal, energyUnit = 'kcal
                 <SectionLabel>In this meal</SectionLabel>
                 {items.map((it, i) => (
                   <View key={it.foodRef ? `${it.foodRef}-${i}` : i} style={styles.itemRow}>
-                    <Text style={styles.itemName} numberOfLines={1}>{it.name ?? 'Food'}</Text>
-                    <Text style={styles.itemMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.itemName} numberOfLines={1}>{it.name ?? 'Food'}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.itemMeta}>
                       {Math.round(it.quantityG ?? 0)}g | {toEnergy(it.kcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                   </View>
@@ -59,7 +59,7 @@ export default function SavedMealDetailSheet({ visible, meal, energyUnit = 'kcal
               </View>
             </ScrollView>
           ) : (
-            <Text style={styles.emptyNote}>No food-by-food detail is stored for this meal.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyNote}>No food-by-food detail is stored for this meal.</Text>
           )}
 
           <View style={styles.actions}>

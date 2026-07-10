@@ -234,16 +234,16 @@ export default function LiftProgressScreen({ navigation }) {
         <View style={styles.standingCard}>
           {standing ? (
             <View style={styles.standingHeadline}>
-              <Text style={styles.standingLabel}>{standing.overallLabel}</Text>
-              <Text style={styles.standingSub}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.standingLabel}>{standing.overallLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.standingSub}>
                 overall across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
               </Text>
               {standing.nearest ? (
-                <Text style={styles.standingNext}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.standingNext}>
                   {standing.nearest.delta} {units} from {standing.nearest.toLabel} on {standing.nearest.lift}
                 </Text>
               ) : (
-                <Text style={styles.standingNext}>At the top of the standards on every tracked lift.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.standingNext}>At the top of the standards on every tracked lift.</Text>
               )}
             </View>
           ) : null}
@@ -254,19 +254,19 @@ export default function LiftProgressScreen({ navigation }) {
               text={'How your best estimated lifts compare to your own body weight.\n\n1.0x = you can lift your body weight\n1.5x = strong for most people\n2.0x = advanced\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
             />
           </View>
-          <Text style={styles.sectionSub}>Based on {bodyWeight} {units} body weight</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>Based on {bodyWeight} {units} body weight</Text>
           {Object.entries(strengthLevels).map(([name, lvl]) => (
             <View key={name} style={styles.strengthRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.strengthName} numberOfLines={1}>{name}</Text>
-                <Text style={styles.strengthNarrative}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.strengthName} numberOfLines={1}>{name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.strengthNarrative}>
                   {lvl.ratio >= 1
                     ? `${lvl.ratio.toFixed(2)}x your body weight`
                     : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
               <View style={[styles.levelBadge, { backgroundColor: withAlpha(getLevelColor(lvl.label), 0.133) }]}>
-                <Text style={[styles.levelBadgeText, { color: getLevelColor(lvl.label) }]}>{lvl.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.levelBadgeText, { color: getLevelColor(lvl.label) }]}>{lvl.label}</Text>
               </View>
             </View>
           ))}
@@ -281,8 +281,8 @@ export default function LiftProgressScreen({ navigation }) {
         >
           <Ionicons name="body-outline" size={20} color={colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.bwPromptTitle}>Add your body weight</Text>
-            <Text style={styles.bwPromptText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.bwPromptTitle}>Add your body weight</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.bwPromptText}>
               Add your body weight once and we'll show you how your lifts compare to your body weight.
             </Text>
           </View>
@@ -301,7 +301,7 @@ export default function LiftProgressScreen({ navigation }) {
               accessibilityState={{ selected: filter === f }}
               accessibilityLabel={f === 'all' ? 'All lifts' : 'Recent bests'}
             >
-              <Text style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>
                 {f === 'all' ? 'All lifts' : 'Recent bests'}
               </Text>
             </TouchableOpacity>
@@ -324,7 +324,7 @@ export default function LiftProgressScreen({ navigation }) {
               accessibilityState={{ selected: metric === m.key }}
               accessibilityLabel={`Show ${m.label} trend`}
             >
-              <Text style={[styles.metricChipText, metric === m.key && styles.metricChipTextActive]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.metricChipText, metric === m.key && styles.metricChipTextActive]}>
                 {m.label}
               </Text>
             </TouchableOpacity>
@@ -375,30 +375,30 @@ export default function LiftProgressScreen({ navigation }) {
             >
               <View style={styles.cardMain}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.name} numberOfLines={1}>{item.name}</Text>
                   {best && (
                     <View style={styles.prTag}>
-                      <Text style={styles.prTagText}>PR</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.prTagText}>PR</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.meta}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.meta}>
                   {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} - last {format(new Date(item.lastTrainedAt), 'd MMM')}
                 </Text>
                 {/* C1: the last logged session's own numbers, distinct from the
                     all-time best headline below. liftProgress.js tracks the
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
-                <Text style={styles.lastTime}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.lastTime}>
                   Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
-                  <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
-                  <Text style={styles.statLabel}>est. max</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.statValue}>{item.bestE1rm}{units}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.statLabel}>est. max</Text>
                   {/* U-D-3: plain-English gloss for estimated 1RM on the row. */}
                   <InfoTooltip text={GLOSSARY.estMax} size={11} />
                   {item.deltaPct != null && item.sessions > 1 && (
-                    <Text style={[styles.delta, { color: trendColor(item.deltaPct) }]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
                     </Text>
                   )}
@@ -411,7 +411,7 @@ export default function LiftProgressScreen({ navigation }) {
                 {(series?.length ?? 0) > 2 ? (
                   <Sparkline data={series} width={84} height={34} color={trendColor(item.deltaPct)} />
                 ) : (
-                  <Text style={styles.trendBuilding}>Building</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.trendBuilding}>Building</Text>
                 )}
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </View>
@@ -434,10 +434,10 @@ export default function LiftProgressScreen({ navigation }) {
           ) : (
             <View style={styles.empty}>
               <Ionicons name={q ? 'search-outline' : 'barbell-outline'} size={56} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyTitle}>
                 {q ? 'No matching lifts' : filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
               </Text>
-              <Text style={styles.emptyText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
                 {q
                   ? "No lift name matches your search. Try a different search."
                   : filter === 'best'

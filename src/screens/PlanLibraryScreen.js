@@ -179,7 +179,7 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 function PlanBadge({ label, amber }) {
   return (
     <View style={[styles.badge, amber && styles.badgeAmber]}>
-      <Text style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
     </View>
   );
 }
@@ -187,10 +187,10 @@ function PlanBadge({ label, amber }) {
 function DivisionGrid({ selectedDivision, onSelectDivision }) {
   return (
     <View style={styles.divisionSection}>
-      <Text style={styles.divisionIntroDesc}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.divisionIntroDesc}>
         Plans for stage categories, or anyone training for that shape. Pick a division to narrow the library.
       </Text>
-      <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_MEN.map(d => (
           <Chip
@@ -206,7 +206,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
         ))}
       </View>
 
-      <Text style={[styles.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_WOMEN.map(d => (
           <Chip
@@ -226,7 +226,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
         const d = ALL_DIVISIONS.find(x => x.key === selectedDivision);
         return d ? (
           <Card surface="surface2" radius="md" padding="md" style={styles.divisionDesc}>
-            <Text style={styles.divisionDescText}>{d.desc}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.divisionDescText}>{d.desc}</Text>
           </Card>
         ) : null;
       })()}
@@ -496,8 +496,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.quizBannerTitle}>Not sure where to start?</Text>
-                <Text style={styles.quizBannerBody}>Answer two quick questions and we'll point you to the right plan.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizBannerTitle}>Not sure where to start?</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizBannerBody}>Answer two quick questions and we'll point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
             </Card>
@@ -567,16 +567,16 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     )}
                   </View>
                   {wc ? (
-                    <Text style={styles.workoutCount}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutCount}>
                       {wc} workout{wc !== 1 ? 's' : ''}
                     </Text>
                   ) : null}
                 </View>
 
-                <Text style={styles.planName}>{plan.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.planName}>{plan.name}</Text>
 
                 {plan.description ? (
-                  <Text style={styles.planDesc} numberOfLines={2}>{plan.description}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.planDesc} numberOfLines={2}>{plan.description}</Text>
                 ) : null}
               </TouchableOpacity>
 
@@ -632,7 +632,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     />
                   ))}
                 </View>
-                <Text style={styles.quizQuestion}>{QUIZ_STEPS[quizStep].question}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizQuestion}>{QUIZ_STEPS[quizStep].question}</Text>
                 <View style={styles.quizOptions}>
                   {QUIZ_STEPS[quizStep].options.map(opt => (
                     <Card
@@ -647,13 +647,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       {opt.icon && (
                         <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
                       )}
-                      <Text style={styles.quizOptionText}>{opt.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.quizOptionText}>{opt.label}</Text>
                       <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
                     </Card>
                   ))}
                 </View>
                 <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz} accessibilityRole="button">
-                  <Text style={styles.quizSkipText}>Skip and browse all plans</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.quizSkipText}>Skip and browse all plans</Text>
                 </TouchableOpacity>
               </>
             ) : quizResult ? (
@@ -662,14 +662,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <View style={styles.quizResultIcon}>
                   <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
                 </View>
-                <Text style={styles.quizResultTitle}>Here's our suggestion</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultTitle}>Here's our suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
-                  <Text style={styles.quizResultName}>{quizResult.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.quizResultName}>{quizResult.name}</Text>
                   {quizResult.description ? (
-                    <Text style={styles.quizResultDesc} numberOfLines={3}>{quizResult.description}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.quizResultDesc} numberOfLines={3}>{quizResult.description}</Text>
                   ) : null}
                   {quizResult.difficulty != null && (
-                    <Text style={styles.quizResultMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.quizResultMeta}>
                       {DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate'}
                       {workoutCounts[quizResult.id] ? ` - ${workoutCounts[quizResult.id]} workouts` : ''}
                     </Text>
@@ -691,14 +691,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   accessibilityLabel={`Preview ${quizResult.name}`}
                 />
                 <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse} accessibilityRole="button">
-                  <Text style={styles.quizSkipText}>Browse all plans instead</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.quizSkipText}>Browse all plans instead</Text>
                 </TouchableOpacity>
               </>
             ) : (
               // No result
               <>
-                <Text style={styles.quizResultTitle}>No exact match found</Text>
-                <Text style={styles.quizResultDesc}>Browse all the plans below to find one that suits you.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultTitle}>No exact match found</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultDesc}>Browse all the plans below to find one that suits you.</Text>
                 <Button
                   title="Browse all plans"
                   onPress={handleQuizBrowse}

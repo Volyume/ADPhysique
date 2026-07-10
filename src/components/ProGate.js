@@ -99,7 +99,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         >
           <View style={styles.lockChip}>
             <Ionicons name="lock-closed" size={13} color={colors.onPrimary} />
-            <Text style={styles.lockChipText}>Pro</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.lockChipText}>Pro</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -114,10 +114,10 @@ export default function ProGate({ children, feature = 'This feature', style }) {
             <Ionicons name="lock-closed-outline" size={28} color={colors.primary} />
           </View>
 
-          <Text style={styles.sheetTitle}>{feature}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>{feature}</Text>
           {/* COMP-CLARITY: per-feature line so the inline sheet matches what
               the user tapped, falling back to the coaching-layer pitch. */}
-          <Text style={styles.sheetBody}>{benefitFor(feature)}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.sheetBody}>{benefitFor(feature)}</Text>
 
           <Button
             title="Upgrade to Pro"
@@ -200,10 +200,10 @@ export function ProLocked({ feature = 'This' }) {
         <View style={styles.lockedIcon}>
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
-        <Text style={styles.lockedTitle}>{feature} is part of Pro</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.lockedTitle}>{feature} is part of Pro</Text>
         {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
             why it is Pro, instead of the same coaching pitch on every lock. */}
-        <Text style={styles.lockedBody}>{benefitFor(feature)}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.lockedBody}>{benefitFor(feature)}</Text>
         {/* Show-then-sell (founder decision #6): the read-only example day,
             below the headline so it reads in context. Nutrition lock only.
             The teaser LOOKS tappable (four meal cards), so the whole block is
@@ -227,7 +227,7 @@ export function ProLocked({ feature = 'This' }) {
           activeOpacity={0.88}
         >
           <Ionicons name="barbell-outline" size={16} color={colors.onPrimary} />
-          <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity accessibilityRole="button"
           style={styles.lockedBack}
@@ -239,7 +239,7 @@ export function ProLocked({ feature = 'This' }) {
             else navigation.navigate('HomeTab');
           }}
         >
-          <Text style={styles.lockedBackText}>Not now</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.lockedBackText}>Not now</Text>
         </TouchableOpacity>
         {/* COMP-CLARITY: Play-required restore, so a reinstalled paid user can
             recover Pro from the lock without buying again. Same read-only
@@ -252,7 +252,7 @@ export function ProLocked({ feature = 'This' }) {
           accessibilityLabel="Restore purchases"
         >
           <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.lockedRestoreText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.lockedRestoreText}>
             {restoring ? 'Restoring...' : 'Restore purchases'}
           </Text>
         </TouchableOpacity>
@@ -340,7 +340,7 @@ export function ProBadge({ size = 'sm' }) {
   return (
     <View style={[styles.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
       <Ionicons name="barbell" size={isSmall ? 8 : 10} color={colors.onPrimary} />
-      <Text style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
 }

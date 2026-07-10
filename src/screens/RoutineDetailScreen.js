@@ -77,7 +77,7 @@ function MuscleTagRow({ exercises }) {
             : tagStyles.chipTextLow;
           return (
             <View key={muscle} style={[tagStyles.chip, chipStyle]}>
-              <Text style={[tagStyles.chipText, textStyle]}>
+              <Text maxFontSizeMultiplier={1.3} style={[tagStyles.chipText, textStyle]}>
                 {displayName} ×{count}
               </Text>
             </View>
@@ -312,7 +312,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -336,10 +336,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
             />
             <MuscleTagRow exercises={exercises} />
             {divisionLine ? (
-              <Text style={styles.divisionLine}>{divisionLine}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.divisionLine}>{divisionLine}</Text>
             ) : null}
             {routine.split_type ? (
-              <Text style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
             ) : null}
           </>
         }
@@ -369,17 +369,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
             <View style={[styles.orderBadge, exercise.unresolved && styles.orderBadgeUnresolved]}>
-              <Text style={styles.orderNum}>{index + 1}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.orderNum}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
-                <Text style={[styles.exerciseName, exercise.unresolved && styles.exerciseNameUnresolved]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, exercise.unresolved && styles.exerciseNameUnresolved]}>
                   {exercise.name || 'Exercise (couldn’t restore)'}
                 </Text>
                 {exercise.unresolved && (
                   <View style={styles.relinkChip}>
                     <Ionicons name="link-outline" size={12} color={colors.warning} />
-                    <Text style={styles.relinkChipText}>Tap to re-link</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.relinkChipText}>Tap to re-link</Text>
                   </View>
                 )}
                 {(() => {
@@ -389,31 +389,31 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   return (
                     <View style={styles.supersetChip}>
                       <Ionicons name="link" size={11} color={colors.primary} />
-                      <Text style={styles.supersetChipText}>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.supersetChipText}>
                         Superset {String.fromCharCode(65 + gIdx)}
                       </Text>
                     </View>
                   );
                 })()}
               </View>
-              <Text style={styles.exerciseMeta}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.exerciseMeta}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
               {routineExercise.startingWeight > 0 ? (
-                <Text style={styles.exerciseStartWeight}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.exerciseStartWeight}>
                   Start: {routineExercise.startingWeight} kg
                 </Text>
               ) : null}
-              <Text style={styles.exerciseMuscle}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.exerciseMuscle}>
                 {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ||
                   (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
               {(() => {
                 const why = getExerciseWhyThis(exercise.name, exercise.subregion);
-                return why ? <Text style={styles.exerciseWhy}>{why}</Text> : null;
+                return why ? <Text maxFontSizeMultiplier={1.3} style={styles.exerciseWhy}>{why}</Text> : null;
               })()}
             </View>
             {isReordering ? (
@@ -500,7 +500,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         ListEmptyComponent={
           !exercises.length ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No exercises yet. Add some below.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No exercises yet. Add some below.</Text>
             </View>
           ) : null
         }
@@ -530,7 +530,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               below, and accessibilityViewIsModal traps screen-reader
               navigation to the sheet (same pattern as AppAlert.js). */}
           <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1} accessible={false} accessibilityViewIsModal>
-            <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
@@ -620,15 +620,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
             BottomSheet.js/AppAlert.js/FeedbackSheet.js/PeekMenu.js). */}
         <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']} accessibilityViewIsModal>
           <View style={styles.swapHeader}>
-            <Text style={styles.swapTitle}>Swap exercise</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.swapTitle}>Swap exercise</Text>
             <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.swapSubtitle}>
-            Replacing: <Text style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.swapSubtitle}>
+            Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
-          <Text style={styles.swapNote}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.swapNote}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlashList
@@ -644,14 +644,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.swapItemName}>{item.exercise.name}</Text>
-                  <Text style={styles.swapItemReason}>{item.reason}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.swapItemName}>{item.exercise.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.swapItemReason}>{item.reason}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
               </Card>
             )}
             ListEmptyComponent={
-              <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+              <Text maxFontSizeMultiplier={1.3} style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 No close matches yet.
               </Text>
             }

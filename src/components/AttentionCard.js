@@ -78,7 +78,7 @@ export default function AttentionCard({
       >
         <View style={styles.trialBannerTopRow}>
           <Ionicons name="checkmark-done-outline" size={18} color={t.colors.primary} />
-          <Text style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
           <TouchableOpacity
             onPress={onTrialDismiss}
@@ -91,7 +91,7 @@ export default function AttentionCard({
         </View>
         {trialBanner.ledger?.rows?.length ? (
           <View style={styles.trialLedger}>
-            <Text style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
             {trialBanner.ledger.rows.map((row) => (
               <View key={row.key} style={styles.trialLedgerRow}>
                 <Ionicons
@@ -99,7 +99,7 @@ export default function AttentionCard({
                   size={14}
                   color={row.done ? t.colors.success : t.colors.textMuted}
                 />
-                <Text style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
                   {row.label}
                 </Text>
               </View>
@@ -116,7 +116,7 @@ export default function AttentionCard({
           style={[styles.trialMethodologyButton, live.trialMethodologyButton]}
         >
           <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text style={[styles.trialBannerLink, live.trialBannerLink]}>How Precision Coaching works</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.trialBannerLink, live.trialBannerLink]}>How Precision Coaching works</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function AttentionCard({
       <View style={[styles.freeCoachCard, live.freeCoachCard]}>
         <View style={styles.freeCoachTopRow}>
           <Ionicons name="pulse-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-          <Text style={[styles.freeCoachLineText, live.freeCoachLineText]}>{freeCoachLine}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.freeCoachLineText, live.freeCoachLineText]}>{freeCoachLine}</Text>
           <TouchableOpacity
             onPress={onFreeLineDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -146,7 +146,7 @@ export default function AttentionCard({
           style={[styles.freeCoachFooterButton, live.freeCoachFooterButton]}
         >
           <Ionicons name="lock-open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text style={[styles.freeCoachFooter, live.freeCoachFooter]}>Pro reads the full story</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.freeCoachFooter, live.freeCoachFooter]}>Pro reads the full story</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       </View>

@@ -104,8 +104,8 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Your weeks</Text>
-        <Text style={styles.runLine} numberOfLines={2}>{runLine}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Your weeks</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.runLine} numberOfLines={2}>{runLine}</Text>
       </View>
 
       {/* 12-week glyph strip */}
@@ -134,7 +134,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         ].map(({ state, label }) => (
           <View key={state} style={styles.glyphKeyItem}>
             <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
-            <Text style={styles.glyphKeyLabel}>{label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.glyphKeyLabel}>{label}</Text>
           </View>
         ))}
       </View>
@@ -142,18 +142,18 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
       {justRepaired ? (
         <View style={styles.repairRow}>
           <Ionicons name="git-compare" size={14} color={colors.primary} />
-          <Text style={styles.repairLine}>A lighter week, and you came back. Your run carried on.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.repairLine}>A lighter week, and you came back. Your run carried on.</Text>
         </View>
       ) : null}
 
       {longestRun > 0 ? (
-        <Text style={styles.longest}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.longest}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
       ) : null}
 
       {/* Manual-goal editor, plan-less users only */}
       {!hasTarget ? (
         <View style={styles.goalBlock}>
-          <Text style={styles.goalLabel}>How many sessions a week are you aiming for?</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.goalLabel}>How many sessions a week are you aiming for?</Text>
           <View style={styles.goalChips}>
             {[1, 2, 3, 4, 5, 6].map(n => {
               const sel = vm.manualGoal === n;
@@ -166,7 +166,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
                   accessibilityState={{ selected: sel }}
                   accessibilityLabel={`${n} sessions a week`}
                 >
-                  <Text style={[styles.goalChipText, sel && styles.goalChipTextOn]}>{n}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, sel && styles.goalChipTextOn]}>{n}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -181,7 +181,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         accessibilityLabel="Pause your run"
       >
         <Ionicons name="pause-outline" size={16} color={colors.textSecondary} />
-        <Text style={styles.pauseBtnText}>Pause</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.pauseBtnText}>Pause</Text>
       </TouchableOpacity>
 
       <BottomSheet
@@ -189,7 +189,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         onClose={() => setPauseOpen(false)}
         accessibilityLabel="Pause your run options"
       >
-        <Text style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
         {PAUSE_OPTIONS.map(opt => (
           <TouchableOpacity
             key={opt.weeks}
@@ -198,7 +198,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
             accessibilityRole="button"
             accessibilityLabel={`Pause for ${opt.label}`}
           >
-            <Text style={styles.sheetOptionText}>{opt.label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sheetOptionText}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>

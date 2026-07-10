@@ -200,8 +200,8 @@ export default function PaywallScreen({ navigation, route }) {
       <ModalHeader title="Upgrade" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Start Precision Coaching</Text>
-        <Text style={styles.subtitle}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Start Precision Coaching</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
           Volyume reads your training, weight, food and check-ins together, then updates your plan and targets with a written reason for every change.
         </Text>
 
@@ -215,8 +215,8 @@ export default function PaywallScreen({ navigation, route }) {
                 <Ionicons key={i} name="star" size={13} color={colors.primary} />
               ))}
             </View>
-            <Text style={styles.reviewQuote} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
-            <Text style={styles.reviewMeta}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.reviewQuote} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.reviewMeta}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
           </View>
         ) : null}
 
@@ -241,7 +241,7 @@ export default function PaywallScreen({ navigation, route }) {
           <Button title="Not now" variant="tertiary" disabled={busy} onPress={dismiss} />
         </View>
 
-        <Text style={styles.terms}>{termsText}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.terms}>{termsText}</Text>
 
         <View style={styles.legalRow}>
           {/* Haptics completion pass (2026-07-10): billing-consequential
@@ -256,7 +256,7 @@ export default function PaywallScreen({ navigation, route }) {
             accessibilityLabel="Restore purchases"
           >
             <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.legalLink}>Restore purchases</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Restore purchases</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
@@ -266,7 +266,7 @@ export default function PaywallScreen({ navigation, route }) {
             accessibilityLabel="Subscription terms"
           >
             <Ionicons name="document-text-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.legalLink}>Subscription terms</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Subscription terms</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); Linking.openURL(LINKS.privacyPolicy).catch(() => {}); }}
@@ -276,7 +276,7 @@ export default function PaywallScreen({ navigation, route }) {
             accessibilityLabel="Privacy policy"
           >
             <Ionicons name="shield-checkmark-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.legalLink}>Privacy</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Privacy</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

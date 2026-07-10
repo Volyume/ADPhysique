@@ -38,7 +38,7 @@ const day = (y, m, d) => new Date(y, m - 1, d).getTime();
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDateRangeSheet.js'), 'utf8');
 
 test('date range fields are narrow-screen safe', () => {
-  expect(SOURCE.match(/<Text style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
+  expect(SOURCE.match(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

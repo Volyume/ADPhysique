@@ -525,7 +525,7 @@ export default function PlansScreen({ navigation }) {
         >
           <View style={styles.planCardMetaRow}>
             {planWorkoutCounts[plan.id] ? (
-              <Text style={styles.planCardMeta}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.planCardMeta}>
                 {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
               </Text>
             ) : <View />}
@@ -539,7 +539,7 @@ export default function PlansScreen({ navigation }) {
               <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
         </PressableCard>
         <View style={styles.planCardFooter}>
           <TouchableOpacity
@@ -548,7 +548,7 @@ export default function PlansScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel={`View ${plan.name}`}
           >
-            <Text style={styles.planCardFooterGhost}>View plan</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.planCardFooterGhost}>View plan</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleSetActive(plan)}
@@ -556,7 +556,7 @@ export default function PlansScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel={`Set ${plan.name} as active plan`}
           >
-            <Text style={styles.planCardFooterPrimary}>Set as active</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.planCardFooterPrimary}>Set as active</Text>
           </TouchableOpacity>
         </View>
       </Card>
@@ -604,17 +604,17 @@ export default function PlansScreen({ navigation }) {
                   color={blockIconColor(blockAdvice.action)}
                 />
               </View>
-              <Text style={styles.blockCardTitle}>{blockAdvice.headline}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.blockCardTitle}>{blockAdvice.headline}</Text>
             </View>
 
-            <Text style={styles.blockCardBody}>{blockAdvice.body}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.blockCardBody}>{blockAdvice.body}</Text>
 
             {/* Signal chips, shown for early_deload and heads_up */}
             {blockAdvice.signals?.filter(s => s.severity !== 'info').length > 0 && (
               <View style={styles.signalRow}>
                 {blockAdvice.signals.filter(s => s.severity !== 'info').map((sig, i) => (
                   <View key={i} style={[styles.signalChip, sig.severity === 'high' && styles.signalChipHigh]}>
-                    <Text style={[styles.signalChipText, sig.severity === 'high' && styles.signalChipTextHigh]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.signalChipText, sig.severity === 'high' && styles.signalChipTextHigh]}>
                       {sig.label}
                     </Text>
                   </View>
@@ -626,17 +626,17 @@ export default function PlansScreen({ navigation }) {
             {blockAdvice.nextBlock && (
               <View style={styles.nextBlockSection}>
                 {blockAdvice.action === 'in_recovery' && (
-                  <Text style={styles.nextBlockPreLabel}>After your recovery week</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.nextBlockPreLabel}>After your recovery week</Text>
                 )}
-                <Text style={styles.nextBlockHeadline}>{blockAdvice.nextBlock.headline}</Text>
-                <Text style={styles.nextBlockBody}>{blockAdvice.nextBlock.body}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.nextBlockHeadline}>{blockAdvice.nextBlock.headline}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.nextBlockBody}>{blockAdvice.nextBlock.body}</Text>
 
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
                     <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={blockAdvice.nextBlock.actionLabel}>
                       <Ionicons name="refresh-outline" size={15} color={colors.onPrimary} />
-                      <Text style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.blockNewBtn}
@@ -645,7 +645,7 @@ export default function PlansScreen({ navigation }) {
                       accessibilityRole="button"
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
                     >
-                      <Text style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -656,10 +656,10 @@ export default function PlansScreen({ navigation }) {
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
                 <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Got it, ease off this week">
-                  <Text style={styles.blockRestartBtnText}>Got it, ease off this week</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.blockRestartBtnText}>Got it, ease off this week</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Keep going">
-                  <Text style={styles.blockNewBtnText}>Keep going</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.blockNewBtnText}>Keep going</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -674,7 +674,7 @@ export default function PlansScreen({ navigation }) {
                   ? 'Remind me after recovery week'
                   : 'Not quite ready. Remind me later.'}
               >
-                <Text style={styles.blockSnoozeText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.blockSnoozeText}>
                   {blockAdvice.action === 'in_recovery'
                     ? 'Remind me after recovery week'
                     : 'Not quite ready. Remind me later.'}
@@ -688,7 +688,7 @@ export default function PlansScreen({ navigation }) {
                 will surface the banner again if conditions still apply. */}
             {blockAdvice.action === 'heads_up' && (
               <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze} accessibilityRole="button" accessibilityLabel="Got it">
-                <Text style={styles.blockSnoozeText}>Got it</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.blockSnoozeText}>Got it</Text>
               </TouchableOpacity>
             )}
           </Card>
@@ -700,25 +700,25 @@ export default function PlansScreen({ navigation }) {
             <Card style={styles.activePlanCard}>
               <View style={styles.activePlanHeader}>
                 <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>Active</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.activeBadgeText}>Active</Text>
                 </View>
                 <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
                   <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.activePlanName}>{activePlan.name}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.activePlanName}>{activePlan.name}</Text>
               {planWorkoutCounts[activePlan.id] ? (
-                <Text style={styles.activePlanMeta}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.activePlanMeta}>
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
                 </Text>
               ) : null}
               {blockAdvice?.action === 'continue' && blockAdvice.blockStatus && (
-                <Text style={styles.activePlanWeek}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.activePlanWeek}>
                   Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
                 </Text>
               )}
               {tier === 'pro' && (
-                <Text style={styles.proCoachNote}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.proCoachNote}>
                   Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
                 </Text>
               )}
@@ -730,7 +730,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityLabel="Start next workout"
                 >
                   <Ionicons name="play" size={15} color={colors.onPrimary} />
-                  <Text style={styles.startNextBtnText}>Start next workout</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.startNextBtnText}>Start next workout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.viewPlanBtn}
@@ -738,7 +738,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="View plan"
                 >
-                  <Text style={styles.viewPlanBtnText}>View plan</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.viewPlanBtnText}>View plan</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -752,9 +752,9 @@ export default function PlansScreen({ navigation }) {
               <View style={styles.noPlanCardIcon}>
                 <Ionicons name="compass-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.noPlanCardTitle}>No active plan yet</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.noPlanCardTitle}>No active plan yet</Text>
             </View>
-            <Text style={styles.noPlanCardBody}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.noPlanCardBody}>
               Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself.
             </Text>
             <View style={styles.noPlanCardActions}>
@@ -774,7 +774,7 @@ export default function PlansScreen({ navigation }) {
         ) : (
           <Card style={styles.noActivePlanRow}>
             <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.noActivePlanText}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.noActivePlanText}>
               No active plan · Start with a plan, browse the library, or create your own.
             </Text>
           </Card>
@@ -805,8 +805,8 @@ export default function PlansScreen({ navigation }) {
                       color={colors.textSecondary}
                     />
                     <Ionicons name="folder-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.folderName} numberOfLines={1}>{folder.name}</Text>
-                    <Text style={styles.folderCount}>{filed.length}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.folderName} numberOfLines={1}>{folder.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.folderCount}>{filed.length}</Text>
                     <TouchableOpacity
                       style={styles.moreBtn}
                       onPress={() => handleFolderOptions(folder)}
@@ -820,7 +820,7 @@ export default function PlansScreen({ navigation }) {
                   {!collapsed && (
                     filed.length > 0
                       ? <View style={styles.folderBody}>{filed.map((plan, i) => renderPlanCard(plan, i))}</View>
-                      : <Text style={styles.folderEmpty}>No plans in here yet. Use a plan&apos;s options to move it in.</Text>
+                      : <Text maxFontSizeMultiplier={1.3} style={styles.folderEmpty}>No plans in here yet. Use a plan&apos;s options to move it in.</Text>
                   )}
                 </View>
               );
@@ -848,7 +848,7 @@ export default function PlansScreen({ navigation }) {
               accessibilityState={{ expanded: archivedExpanded }}
               accessibilityLabel={`Archived plans, ${archivedPlans.length}`}
             >
-              <Text style={styles.archivedHeaderText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.archivedHeaderText}>
                 Archived plans · {archivedPlans.length}
               </Text>
               <Ionicons
@@ -867,7 +867,7 @@ export default function PlansScreen({ navigation }) {
                 >
                   <View style={styles.planCardMetaRow}>
                     {planWorkoutCounts[plan.id] ? (
-                      <Text style={styles.planCardMeta}>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.planCardMeta}>
                         {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
                       </Text>
                     ) : <View />}
@@ -881,7 +881,7 @@ export default function PlansScreen({ navigation }) {
                       <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
-                  <Text style={[styles.planCardName, styles.archivedPlanCardName]} numberOfLines={2}>{plan.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, styles.archivedPlanCardName]} numberOfLines={2}>{plan.name}</Text>
                 </PressableCard>
                 <View style={styles.planCardFooter}>
                   <TouchableOpacity
@@ -890,7 +890,7 @@ export default function PlansScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`View ${plan.name}`}
                   >
-                    <Text style={styles.planCardFooterGhost}>View plan</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
@@ -898,7 +898,7 @@ export default function PlansScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Restore ${plan.name}`}
                   >
-                    <Text style={styles.planCardFooterPrimary}>Restore</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.planCardFooterPrimary}>Restore</Text>
                   </TouchableOpacity>
                 </View>
               </Card>
@@ -910,13 +910,13 @@ export default function PlansScreen({ navigation }) {
         {templates.length > 0 && (
           <View style={styles.section}>
             <SectionLabel>Workout templates</SectionLabel>
-            <Text style={styles.sectionSubtitle}>Saved workouts you can start directly.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSubtitle}>Saved workouts you can start directly.</Text>
             {templates.map(routine => (
               <Card key={routine.id} style={styles.templateCard}>
                 <View style={styles.templateMain}>
-                  <Text style={styles.templateName} numberOfLines={2}>{routine.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.templateName} numberOfLines={2}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
-                    <Text style={styles.templateMeta}>{exerciseCounts[routine.id]} exercises</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.templateMeta}>{exerciseCounts[routine.id]} exercises</Text>
                   ) : null}
                 </View>
                 <View style={styles.templateActions}>
@@ -927,7 +927,7 @@ export default function PlansScreen({ navigation }) {
                     accessibilityLabel={`Start ${routine.name}`}
                   >
                     <Ionicons name="play" size={13} color={colors.onPrimary} />
-                    <Text style={styles.startTemplateBtnText}>Start</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.startTemplateBtnText}>Start</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.moreBtn}
@@ -954,8 +954,8 @@ export default function PlansScreen({ navigation }) {
             <Ionicons name="layers-outline" size={20} color={colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.trainingBlocksLabel}>Training blocks</Text>
-            <Text style={styles.trainingBlocksSub}>View completed blocks and long-term progress</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trainingBlocksLabel}>Training blocks</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.trainingBlocksSub}>View completed blocks and long-term progress</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </Card>
@@ -967,7 +967,7 @@ export default function PlansScreen({ navigation }) {
             {isProWithPlan ? 'Switch your plan' : 'Start with a plan'}
           </SectionLabel>
           {isProWithPlan && (
-            <Text style={styles.sectionSubtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSubtitle}>
               Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
             </Text>
           )}
@@ -985,14 +985,14 @@ export default function PlansScreen({ navigation }) {
                 </View>
                 <View style={styles.actionCardBody}>
                   <View style={styles.actionCardTitleRow}>
-                    <Text style={styles.actionCardTitle}>{card.title}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.actionCardTitle}>{card.title}</Text>
                     {card.badge ? (
                       <View style={styles.actionCardBadge}>
-                        <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={styles.actionCardBadgeText}>{card.badge}</Text>
                       </View>
                     ) : null}
                   </View>
-                  <Text style={styles.actionCardDesc}>{card.description}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={featured ? colors.primary : colors.textMuted} />
               </Card>
@@ -1020,7 +1020,7 @@ export default function PlansScreen({ navigation }) {
         >
           <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
             <Pressable style={styles.folderSheet} onPress={() => {}} accessible={false}>
-              <Text style={styles.folderSheetTitle}>Rename folder</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.folderSheetTitle}>Rename folder</Text>
               <TextField
                 fieldStyle={styles.folderInputField}
                 inputStyle={styles.folderInput}

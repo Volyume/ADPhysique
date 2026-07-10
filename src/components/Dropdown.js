@@ -25,14 +25,14 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
       {label ? (
         tip ? (
           <View style={styles.labelRow}>
-            <Text style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
             <InfoTooltip text={tip} size={13} />
           </View>
         ) : (
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
         )
       ) : null}
-      {hint ? <Text style={[styles.fieldHint, live.fieldHint]}>{hint}</Text> : null}
+      {hint ? <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>{hint}</Text> : null}
       <TouchableOpacity
         style={[
           styles.dropdownTrigger, live.dropdownTrigger,
@@ -45,7 +45,7 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
         accessibilityLabel={label || placeholder}
         accessibilityState={{ expanded: open }}
       >
-        <Text style={[styles.dropdownValue, live.dropdownValue, !value && [styles.dropdownPlaceholder, live.dropdownPlaceholder]]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.dropdownValue, live.dropdownValue, !value && [styles.dropdownPlaceholder, live.dropdownPlaceholder]]}>
           {selected?.label ?? placeholder}
         </Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? t.colors.primary : t.colors.textMuted} />
@@ -66,10 +66,10 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
               accessibilityState={{ selected: value === opt.value }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={[styles.dropdownItemLabel, live.dropdownItemLabel, value === opt.value && [styles.dropdownItemLabelActive, live.dropdownItemLabelActive]]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.dropdownItemLabel, live.dropdownItemLabel, value === opt.value && [styles.dropdownItemLabelActive, live.dropdownItemLabelActive]]}>
                   {opt.label}
                 </Text>
-                {opt.sub ? <Text style={[styles.dropdownItemSub, live.dropdownItemSub]}>{opt.sub}</Text> : null}
+                {opt.sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.dropdownItemSub, live.dropdownItemSub]}>{opt.sub}</Text> : null}
               </View>
               {value === opt.value && <Ionicons name="checkmark" size={16} color={t.colors.primary} />}
             </TouchableOpacity>

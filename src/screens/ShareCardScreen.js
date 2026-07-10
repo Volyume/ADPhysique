@@ -444,8 +444,8 @@ export default function ShareCardScreen({ route }) {
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`Feature ${name}`}
                     >
-                      <Text style={[styles.prChipText, active && styles.prChipTextActive]} numberOfLines={1}>{name}</Text>
-                      {detail ? <Text style={[styles.prChipSub, active && styles.prChipSubActive]}>{detail}</Text> : null}
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.prChipText, active && styles.prChipTextActive]} numberOfLines={1}>{name}</Text>
+                      {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.prChipSub, active && styles.prChipSubActive]}>{detail}</Text> : null}
                     </TouchableOpacity>
                   );
                 })}
@@ -477,7 +477,7 @@ export default function ShareCardScreen({ route }) {
               </>
             )}
           </View>
-          <Text style={styles.privacyNote}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.privacyNote}>
             {isWeekly
               ? 'Only this week’s progress, lifts and sessions are shown. Your measurements and private notes are never included.'
               : 'Name, bodyweight, measurements and private notes are never included.'}
@@ -536,7 +536,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityState={{ selected: active }}
     >
       {icon}
-      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -544,7 +544,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
 function ToggleRow({ label, value, onChange, last }) {
   return (
     <View style={[styles.toggleRow, last && styles.toggleRowLast]}>
-      <Text style={styles.toggleLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}

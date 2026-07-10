@@ -23,13 +23,13 @@ export default function CollapsibleSection({ title, body, open, onToggle, childr
         accessibilityState={{ expanded: open }}
         accessibilityLabel={title}
       >
-        <Text style={[styles.sectionTitle, live.sectionTitle]}>{title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>{title}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.textSecondary} />
       </TouchableOpacity>
       {open
         ? (children != null
           ? <View style={styles.sectionChildren}>{children}</View>
-          : (body ? <Text style={[styles.sectionBody, live.sectionBody]}>{body}</Text> : null))
+          : (body ? <Text maxFontSizeMultiplier={1.3} style={[styles.sectionBody, live.sectionBody]}>{body}</Text> : null))
         : null}
     </View>
   );

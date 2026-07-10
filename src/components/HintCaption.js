@@ -20,14 +20,14 @@ export default function HintCaption({ text, onDismiss, style }) {
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.row, style]}>
-      <Text style={[styles.text, live.text]}>{text}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.text, live.text]}>{text}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel="Got it, dismiss this hint"
       >
-        <Text style={[styles.dismiss, live.dismiss]}>Got it</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.dismiss, live.dismiss]}>Got it</Text>
       </TouchableOpacity>
     </View>
   );

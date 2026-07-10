@@ -227,21 +227,21 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
         ) : null}
         <VolyumeIcon size={22} />
         <View style={styles.proBadge}>
-          <Text style={styles.proBadgeText}>PRO</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
         </View>
       </View>
       <ProOnboardingProgressBar step={step} />
-      <Text style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
-      <Text style={styles.stepTitle}>{title}</Text>
-      {sub ? <Text style={styles.stepSub}>{sub}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.stepTitle}>{title}</Text>
+      {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.stepSub}>{sub}</Text> : null}
       {outcomes.length ? (
         <View style={styles.outcomeCard}>
-          <Text style={styles.outcomeEyebrow}>This step sets</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.outcomeEyebrow}>This step sets</Text>
           <View style={styles.outcomeGrid}>
             {outcomes.map((item) => (
               <View key={item.label} style={styles.outcomeChip}>
                 <Ionicons name={item.icon} size={14} color={colors.primary} />
-                <Text style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
               </View>
             ))}
           </View>
@@ -259,8 +259,8 @@ function QuestionGroup({ icon, title, sub, children }) {
           <Ionicons name={icon} size={18} color={colors.primary} />
         </View>
         <View style={styles.questionGroupCopy}>
-          <Text style={styles.questionGroupTitle}>{title}</Text>
-          {sub ? <Text style={styles.questionGroupSub}>{sub}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={styles.questionGroupTitle}>{title}</Text>
+          {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.questionGroupSub}>{sub}</Text> : null}
         </View>
       </View>
       {children}
@@ -1098,7 +1098,7 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="Name, sex, age, height and body weight are the minimum safe inputs for your first targets."
             >
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>First name</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>First name</Text>
                 <TextField accessibilityLabel="First name"
                   ref={nameRef}
                   fieldStyle={styles.inputField}
@@ -1116,8 +1116,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Biological sex</Text>
-                <Text style={styles.fieldHint}>Used by the calorie formula and safety floors. This stays private.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Biological sex</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used by the calorie formula and safety floors. This stays private.</Text>
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
@@ -1127,8 +1127,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Age</Text>
-                <Text style={styles.fieldHint}>Used with your height and weight to set your calorie targets.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Age</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used with your height and weight to set your calorie targets.</Text>
                 <TextField accessibilityLabel="Age"
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
@@ -1145,7 +1145,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <View style={styles.fieldLabelRow}>
-                  <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
                   {/* UI-3: single-select controls carry radio semantics, matching
                       the shared SegmentedControl. */}
                   <View style={styles.segmentRowSmall} accessibilityRole="radiogroup" accessibilityLabel="Height units">
@@ -1158,14 +1158,14 @@ export default function ProOnboardingScreen({ navigation }) {
                         accessibilityState={{ selected: localHeightUnits === u.key }}
                         accessibilityLabel={u.label}
                       >
-                        <Text style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
                           {u.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
-                <Text style={styles.fieldHint}>Used with your weight and age to set your calorie targets.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used with your weight and age to set your calorie targets.</Text>
                 {localHeightUnits === 'imperial' ? (
                   <View style={styles.heightImperialRow}>
                     <View style={styles.inputHalf}>
@@ -1213,7 +1213,7 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Body weight units</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Body weight units</Text>
                 <SegmentedControl
                   options={[
                     { label: 'Stone+lbs', value: 'st' },
@@ -1227,8 +1227,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.sectionLast}>
-                <Text style={styles.fieldLabel}>Current body weight</Text>
-                <Text style={styles.fieldHint}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Current body weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
                   This sets your starting trend and first calorie target. Update it from Today once setup is complete.
                 </Text>
                 {localBWUnits === 'st' ? (
@@ -1279,7 +1279,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
             ) : null}
 
             <Button
@@ -1321,8 +1321,8 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="Your best current estimate helps the first plan. Progress Photos can refine physique change later with your Volyume Score."
             >
               <View style={styles.sectionLast}>
-                <Text style={styles.fieldLabel}>Body fat estimate % (optional)</Text>
-                <Text style={styles.fieldHint}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Body fat estimate % (optional)</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
                   Enter your best current estimate or a measured value. Leave it blank only if you genuinely do not know.
                 </Text>
                 <TextField
@@ -1342,7 +1342,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   <View style={{ marginTop: spacing.sm }}>
                     {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
                     <View style={styles.measuredRow}>
-                      <Text style={styles.fieldHint}>Estimate source</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Estimate source</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
                     <SegmentedControl
@@ -1404,8 +1404,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Session length</Text>
-                <Text style={styles.fieldHint}>Pick the time you can usually finish, including warm-ups.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Session length</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Pick the time you can usually finish, including warm-ups.</Text>
                 <SegmentedControl
                   options={SESSION_LENGTH_OPTIONS}
                   value={sessionLengthMinutes}
@@ -1415,8 +1415,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Training days per week</Text>
-                <Text style={styles.fieldHint}>Choose the number of days you can repeat most weeks.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Training days per week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Choose the number of days you can repeat most weeks.</Text>
                 <SegmentedControl
                   options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
                   value={daysPerWeek}
@@ -1438,7 +1438,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text style={styles.continueHint}>Choose your experience and equipment to continue.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Choose your experience and equipment to continue.</Text>
             ) : null}
 
             <Button
@@ -1527,7 +1527,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   placeholder="Choose your focus"
                 />
                 {provisionalKcal ? (
-                  <Text style={styles.provisionalKcal}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.provisionalKcal}>
                     Provisionally about {provisionalKcal.toLocaleString('en-GB')} kcal a day for this focus. Your exact targets are set when your plan is built.
                   </Text>
                 ) : null}
@@ -1553,10 +1553,10 @@ export default function ProOnboardingScreen({ navigation }) {
                   is fine, it just means a balanced plan. */}
               {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
                 <View style={styles.wpSection}>
-                  <Text style={styles.wpLabel}>
-                    Anything to bring up? <Text style={styles.wpOptional}>(optional, up to 3)</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.wpLabel}>
+                    Anything to bring up? <Text maxFontSizeMultiplier={1.3} style={styles.wpOptional}>(optional, up to 3)</Text>
                   </Text>
-                  <Text style={styles.wpHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.wpHint}>
                     Pick one to three muscles you want to bring up. Not sure? Leave it blank for a balanced plan.
                   </Text>
                   <View style={styles.wpGrid}>
@@ -1583,11 +1583,11 @@ export default function ProOnboardingScreen({ navigation }) {
               >
                 <View style={styles.proteinCopy}>
                   <View style={styles.measuredRow}>
-                    <Text style={styles.fieldLabel}>Protein target</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Protein target</Text>
                     {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
                     <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
                   </View>
-                  <Text style={styles.fieldHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
                     {PROTEIN_APPROACHES[proteinApproach]?.label} - {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
                   </Text>
                 </View>
@@ -1612,15 +1612,15 @@ export default function ProOnboardingScreen({ navigation }) {
                       >
                         <View style={styles.proteinOptionCopy}>
                           <View style={styles.proteinOptTop}>
-                            <Text style={styles.proteinOptLabel}>{opt.label}</Text>
-                            <Text style={styles.proteinOptRange}>{opt.range}</Text>
+                            <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptLabel}>{opt.label}</Text>
+                            <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptRange}>{opt.range}</Text>
                             {recommended ? (
                               <View style={styles.recBadge}>
-                                <Text style={styles.recBadgeText}>Recommended</Text>
+                                <Text maxFontSizeMultiplier={1.3} style={styles.recBadgeText}>Recommended</Text>
                               </View>
                             ) : null}
                           </View>
-                          <Text style={styles.proteinOptDesc}>{PROTEIN_SHORT[key]}</Text>
+                          <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptDesc}>{PROTEIN_SHORT[key]}</Text>
                         </View>
                         {active ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
                       </TouchableOpacity>
@@ -1663,7 +1663,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.brandRow}>
                 <VolyumeIcon size={22} />
                 <View style={styles.proBadge}>
-                  <Text style={styles.proBadgeText}>PRO</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
                 </View>
               </View>
               <View style={styles.progressTrack}>
@@ -1675,8 +1675,8 @@ export default function ProOnboardingScreen({ navigation }) {
                     <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
                   </View>
                   <View style={styles.seqHeroCopy}>
-                    <Text style={styles.seqHeading}>Building your first plan</Text>
-                    <Text style={styles.seqSub}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.seqHeading}>Building your first plan</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.seqSub}>
                       Using your body data, goal, training week and recovery to set a sensible starting point.
                     </Text>
                   </View>
@@ -1691,7 +1691,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         ) : (
                           <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
                         )}
-                        <Text style={styles.seqLine}>{line}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={styles.seqLine}>{line}</Text>
                       </View>
                     );
                   })}
@@ -1718,9 +1718,9 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={styles.notifIconWrap}>
                 <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
               </View>
-              <Text style={styles.coachCardTitle}>How your coaching works</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
-            <Text style={styles.coachCardBody}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.coachCardBody}>
               Volyume uses your morning weigh-ins and weekly check-in to shape coaching. Food logging helps refine it, and the app stays cautious when data is missing.
             </Text>
           </View>
@@ -1744,8 +1744,8 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Coaching reminders</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
@@ -1753,8 +1753,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   <Ionicons name="scale-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text style={styles.notifTitle}>Morning weight reminder</Text>
-                  <Text style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Morning weight reminder</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
                     A quick morning weigh-in gives a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
@@ -1762,12 +1762,12 @@ export default function ProOnboardingScreen({ navigation }) {
                     tone only, this reminder is still non-optional; see
                     coverage-05-first-run.md FR-4. */}
                 <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
-                  <Text style={styles.requiredPillText}>Part of your coaching</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.requiredPillText}>Part of your coaching</Text>
                 </View>
               </View>
 
               <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>Remind me at</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timeLabel}>Remind me at</Text>
                 <View accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time">
                 <ScrollView
                   horizontal
@@ -1784,7 +1784,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       accessibilityState={{ checked: morningHour === h }}
                       accessibilityLabel={`Remind me at ${fmt12(h)}`}
                     >
-                      <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
                         {fmt12(h)}
                       </Text>
                     </TouchableOpacity>
@@ -1800,8 +1800,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text style={styles.notifTitle}>Weekly check-in reminder</Text>
-                  <Text style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Weekly check-in reminder</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
                     Pick the day you are most likely to review training, food and recovery honestly.
                   </Text>
                 </View>
@@ -1809,12 +1809,12 @@ export default function ProOnboardingScreen({ navigation }) {
                     tone only, this reminder is still non-optional; see
                     coverage-05-first-run.md FR-4. */}
                 <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
-                  <Text style={styles.requiredPillText}>Part of your coaching</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.requiredPillText}>Part of your coaching</Text>
                 </View>
               </View>
 
               <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>Check in on</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.timeLabel}>Check in on</Text>
                 <View accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day">
                 <ScrollView
                   horizontal
@@ -1831,7 +1831,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       accessibilityState={{ checked: checkinDay === i }}
                       accessibilityLabel={`Check in on ${d}`}
                     >
-                      <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
                         {d.slice(0, 3)}
                       </Text>
                     </TouchableOpacity>
@@ -1843,8 +1843,8 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Cardio</Text>
-            <Text style={styles.fieldHint}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Cardio</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
@@ -1852,8 +1852,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   <Ionicons name="heart-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text style={styles.notifTitle}>Cardio</Text>
-                  <Text style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Cardio</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
                     {cardioOn
                       ? 'On. You can log cardio if you do it. The plan only uses it when it is genuinely needed.'
                       : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
@@ -1874,7 +1874,7 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           {!canContinue ? (
-            <Text style={styles.continueHint}>Choose your recovery rating to finish setup.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Choose your recovery rating to finish setup.</Text>
           ) : null}
 
           <Button

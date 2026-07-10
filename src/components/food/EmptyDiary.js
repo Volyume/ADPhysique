@@ -25,7 +25,7 @@ export default function EmptyDiary({
   return (
     <View style={styles.card} accessibilityRole="summary">
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
-      <Text style={styles.body}>{EMPTY_DIARY_COPY}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.body}>{EMPTY_DIARY_COPY}</Text>
       {onPlanDay ? (
         <TouchableOpacity
           style={styles.planRow}
@@ -38,8 +38,8 @@ export default function EmptyDiary({
             <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
           </View>
           <View style={styles.planCopy}>
-            <Text style={styles.planTitle}>Meal builder</Text>
-            <Text style={styles.planText}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.planTitle}>Meal builder</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.planText}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
         </TouchableOpacity>

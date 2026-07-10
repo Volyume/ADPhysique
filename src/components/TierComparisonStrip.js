@@ -44,13 +44,13 @@ export default function TierComparisonStrip({
         highlighted === 'free' && styles.colHighlighted,
       ]}
     >
-      <Text style={styles.colHeader}>Free</Text>
-      <Text style={styles.colPrice}>£0</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>Free</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colPrice}>£0</Text>
       {/* COMP-007: empty cadence spacer keeps Free's rows aligned with Pro's
           (only Pro shows a real "per year/month" line). */}
-      <Text style={styles.colCadence}> </Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colCadence}> </Text>
       {COMPARISON_ROWS.map((row, i) => (
-        <Text key={`free-${i}`} style={styles.rowText} numberOfLines={2}>
+        <Text maxFontSizeMultiplier={1.3} key={`free-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.free}
         </Text>
       ))}
@@ -67,12 +67,12 @@ export default function TierComparisonStrip({
         pressed && { opacity: 0.7 },
       ]}
     >
-      <Text style={styles.colHeader}>Pro</Text>
-      <Text style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>Pro</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
       {/* COMP-007: cadence suffix so the annual price isn't misread as monthly. */}
-      <Text style={styles.colCadence}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.colCadence}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
-        <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
+        <Text maxFontSizeMultiplier={1.3} key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.pro}
         </Text>
       ))}

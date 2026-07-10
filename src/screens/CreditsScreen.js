@@ -37,59 +37,59 @@ export default function CreditsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        <Text style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
           The food data Volyume uses comes from open datasets and APIs published by the people and organisations below. Where their licence calls for it, the required attribution is shown verbatim.
         </Text>
 
         {/* OpenFoodFacts */}
         <Card borderless style={styles.card}>
-          <Text style={styles.cardTitle}>OpenFoodFacts</Text>
-          <Text style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>OpenFoodFacts</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
             Branded UK food data, both bundled (weekly snapshot) and live (barcode misses fall through to OFF's API).
           </Text>
-          <Text style={styles.attribution}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.attribution}>
             Data licensed under the Open Database License (ODbL) 1.0. Derivative works are licensed under the same terms.
           </Text>
           <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://world.openfoodfacts.org/')} accessibilityRole="link" accessibilityLabel="Open Food Facts website">
             <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
-            <Text style={styles.link}>world.openfoodfacts.org</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.link}>world.openfoodfacts.org</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
         {/* CoFID */}
         <Card borderless style={styles.card}>
-          <Text style={styles.cardTitle}>McCance and Widdowson's Composition of Foods (CoFID)</Text>
-          <Text style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>McCance and Widdowson's Composition of Foods (CoFID)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
             Generic UK foods (raw chicken breast, plain oats, etc.) bundled into Volyume from the 7th edition (2021) dataset published by Public Health England / OHID.
           </Text>
-          <Text style={styles.attribution}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.attribution}>
             Contains public sector information licensed under the Open Government Licence v3.0.
           </Text>
           <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')} accessibilityRole="link" accessibilityLabel="CoFID dataset on gov.uk">
             <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
-            <Text style={styles.link}>gov.uk - CoFID</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.link}>gov.uk - CoFID</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
         {/* USDA */}
         <Card borderless style={styles.card}>
-          <Text style={styles.cardTitle}>USDA FoodData Central</Text>
-          <Text style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>USDA FoodData Central</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
             North-American food data, hit only when both the bundled snapshot and OpenFoodFacts miss. Used for imported items and occasional UK gaps.
           </Text>
-          <Text style={styles.attribution}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.attribution}>
             Public domain data published by the U.S. Department of Agriculture, Agricultural Research Service.
           </Text>
           <TouchableOpacity style={styles.linkButton} onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
             <Ionicons name="open-outline" size={iconSize.sm} color={colors.textSecondary} />
-            <Text style={styles.link}>fdc.nal.usda.gov</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.link}>fdc.nal.usda.gov</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
-        <Text style={styles.footnote}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.footnote}>
           Research, design, and code by the Volyume team. Bug reports and missing-product reports are welcome at support@volyume.app.
         </Text>
       </ScrollView>

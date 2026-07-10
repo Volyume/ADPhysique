@@ -60,8 +60,8 @@ export default function FirstRunScreen({ navigation }) {
           found below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>You&apos;re almost set up.</Text>
-        <Text style={styles.subtitle}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>You&apos;re almost set up.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
           Just your name, then a few quick questions to get you set up.
         </Text>
 
@@ -92,9 +92,9 @@ export default function FirstRunScreen({ navigation }) {
 
         <Card radius="md" padding="md" style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-          <Text style={styles.hintText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.hintText}>
             Next, three quick questions and we'll suggest a starter plan.{' '}
-            Prefer to pick your own? You can <Text style={styles.hintBold}>skip</Text>{' '}
+            Prefer to pick your own? You can <Text maxFontSizeMultiplier={1.3} style={styles.hintBold}>skip</Text>{' '}
             and browse the library instead.
           </Text>
         </Card>

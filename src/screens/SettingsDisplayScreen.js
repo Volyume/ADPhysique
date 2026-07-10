@@ -111,8 +111,8 @@ export default function SettingsDisplayScreen() {
   return (
     <SettingsPage title="Display & accessibility">
       <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Appearance</Text>
-        <Text style={[local.sub, liveText.sub]}>
+        <Text maxFontSizeMultiplier={1.3} style={[local.title, liveText.title]}>Appearance</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[local.sub, liveText.sub]}>
           Dark is the Volyume default. Light is easier to read in daylight. Match phone follows your system setting.
         </Text>
         <View style={[local.segment, liveText.segment]} accessibilityRole="radiogroup">
@@ -142,8 +142,8 @@ export default function SettingsDisplayScreen() {
       </View>
 
       <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Energy units</Text>
-        <Text style={[local.sub, liveText.sub]}>
+        <Text maxFontSizeMultiplier={1.3} style={[local.title, liveText.title]}>Energy units</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[local.sub, liveText.sub]}>
           How food energy is shown. kJ (kilojoules) matches the energy on EU food labels. This changes the
           display only. Your targets and coaching stay the same.
         </Text>
@@ -167,7 +167,7 @@ export default function SettingsDisplayScreen() {
       </View>
 
       <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Home</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[local.title, liveText.title]}>Home</Text>
         <SettingRow
           icon="restaurant-outline"
           label="Show nutrition on Home"
@@ -185,8 +185,8 @@ export default function SettingsDisplayScreen() {
       </View>
 
       <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Nutrients shown</Text>
-        <Text style={[local.sub, liveText.sub]}>
+        <Text maxFontSizeMultiplier={1.3} style={[local.title, liveText.title]}>Nutrients shown</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[local.sub, liveText.sub]}>
           Which extra nutrients appear under a food's calories and macros, when the food carries them. Shown for that food only. This never changes your targets or daily totals.
         </Text>
         <SettingRow
@@ -305,7 +305,7 @@ export default function SettingsDisplayScreen() {
             />
           }
         />
-        <Text style={[styles.a11yNote, live.a11yNote]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.a11yNote, live.a11yNote]}>
           Reduce motion takes effect immediately. Appearance, larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after changing them.
         </Text>
       </View>

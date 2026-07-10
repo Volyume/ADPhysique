@@ -39,11 +39,11 @@ export default function BillingPeriodSelector({
           >
             {isAnnual ? (
               <View style={styles.saveBadge}>
-                <Text style={styles.saveBadgeText}>Save {savingsPct}%</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.saveBadgeText}>Save {savingsPct}%</Text>
               </View>
             ) : null}
-            <Text style={[styles.label, selected && styles.textActive]}>{label}</Text>
-            <Text style={[styles.price, selected && styles.textActive]}>{price}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.label, selected && styles.textActive]}>{label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.price, selected && styles.textActive]}>{price}</Text>
           </TouchableOpacity>
         );
       })}

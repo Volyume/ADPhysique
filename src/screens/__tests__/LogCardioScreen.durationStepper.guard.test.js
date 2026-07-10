@@ -26,8 +26,8 @@ describe('LogCardioScreen duration stepper', () => {
     // (`[styles.activityName, live.activityName]`), so the pin matches the
     // array form instead of the bare `styles.X` reference. Same call sites,
     // same frozen style objects, still asserted below.
-    expect(source).toMatch(/<Text style=\{\[styles\.activityName, live\.activityName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
-    expect(source).toMatch(/<Text style=\{\[styles\.chosenName, live\.chosenName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.activityName, live\.activityName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.chosenName, live\.chosenName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(source).toMatch(/chosenCopy: \{ flex: 1, minWidth: 0 \}/);
   });
 });

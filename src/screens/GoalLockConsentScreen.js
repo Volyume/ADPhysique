@@ -82,18 +82,18 @@ export default function GoalLockConsentScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Goal lock" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>A note on aggressive cuts</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.title}>A note on aggressive cuts</Text>
         {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
             Precision Coaching named as the decider, signals named plainly,
             no vague personification. */}
-        <Text style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
           You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
-        <Text style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
           These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
         </Text>
 
-        <Text style={styles.fieldLabel}>Confirm one of these</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Confirm one of these</Text>
 
         <View accessibilityRole="radiogroup" accessibilityLabel="Confirm your experience with aggressive cuts">
         <Pressable
@@ -105,7 +105,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           <View style={[styles.radio, choice === 'advanced' && styles.radioActive]}>
             {choice === 'advanced' ? <View style={styles.radioDot} /> : null}
           </View>
-          <Text style={styles.optionText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>
             I have prior experience managing aggressive cuts safely, or I'm working with a coach. Raise the safety threshold from 2 signals to 3.
           </Text>
         </Pressable>
@@ -119,19 +119,19 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           <View style={[styles.radio, choice === 'standard' && styles.radioActive]}>
             {choice === 'standard' ? <View style={styles.radioDot} /> : null}
           </View>
-          <Text style={styles.optionText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>
             I'm new to this and want Volyume's standard safety checks to apply.
           </Text>
         </Pressable>
         </View>
 
-        <Text style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
           Either choice keeps the absolute safety floor (eating below the minimum lean-mass energy threshold) in place.
         </Text>
 
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.noteText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.noteText}>
             You can change this any time from You → Goal lock.
           </Text>
         </View>
@@ -144,7 +144,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           accessibilityState={{ disabled: !choice || busy }}
           accessibilityLabel={editMode ? 'Save' : 'Continue'}
         >
-          <Text style={styles.ctaText}>{editMode ? 'Save' : 'Continue'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>{editMode ? 'Save' : 'Continue'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

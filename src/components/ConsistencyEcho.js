@@ -69,11 +69,11 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
     <View style={styles.wrap}>
       <View style={styles.echoRow} accessible accessibilityLabel={line}>
         <Ionicons name="ellipse" size={9} color={t.colors.primary} />
-        <Text style={[styles.echoText, live.echoText]}>{line}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.echoText, live.echoText]}>{line}</Text>
       </View>
       {!explainerSeen ? (
         <View style={[styles.explainer, live.explainer]}>
-          <Text style={[styles.explainerText, live.explainerText]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.explainerText, live.explainerText]}>
             One off week never breaks your run. Life happens, and your run carries on.
           </Text>
           <TouchableOpacity

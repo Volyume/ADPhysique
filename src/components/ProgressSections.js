@@ -20,11 +20,11 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     return (
       <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
         <Ionicons name="layers-outline" size={32} color={colors.primaryDim} />
-        <Text style={styles.mesoEmptyTitle}>No plan running yet</Text>
-        <Text style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptyTitle}>No plan running yet</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={styles.mesoEmptyBtn}>
           <Ionicons name="compass-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.mesoEmptyBtnText}>Browse plans</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptyBtnText}>Browse plans</Text>
         </View>
       </TouchableOpacity>
     );
@@ -47,8 +47,8 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
-          <Text style={styles.mesoWeek}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.mesoWeek}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')
               : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
@@ -64,7 +64,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
           <View style={styles.mesoProgressTrack}>
             <View style={[styles.mesoProgressFill, { width: progWidth }]} />
           </View>
-          <Text style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
         </>
       )}
 
@@ -72,8 +72,8 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
-            <Text style={styles.sparkLabel}>Weekly load</Text>
-            <Text style={styles.sparkValue}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sparkLabel}>Weekly load</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sparkValue}>
               {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
             </Text>
           </View>
@@ -131,10 +131,10 @@ export function TrainingCalendar({ values }) {
       </View>
       <View style={styles.calLegend}>
         <View style={[styles.calDot, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]} />
-        <Text style={styles.calLegendText}>Rest</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.calLegendText}>Rest</Text>
         <View style={[styles.calDot, { backgroundColor: colors.primary }]} />
-        <Text style={styles.calLegendText}>Trained</Text>
-        <Text style={[styles.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.calLegendText}>Trained</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
     </View>
   );
@@ -176,14 +176,14 @@ export function SessionDurationChart({ bars }) {
                 { height: barH, width: BAR_W, backgroundColor: barColor(bar.avgMin) },
               ]} />
               {bar.avgMin > 0 && (
-                <Text style={styles.durationBarValue}>{bar.avgMin}m</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.durationBarValue}>{bar.avgMin}m</Text>
               )}
-              <Text style={styles.durationBarLabel}>{bar.weekLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.durationBarLabel}>{bar.weekLabel}</Text>
             </View>
           );
         })}
       </View>
-      <Text style={styles.durationCoach}>{coachingLine}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.durationCoach}>{coachingLine}</Text>
     </View>
   );
 }
@@ -196,15 +196,15 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
     <View style={styles.freqWrap}>
       {visible.map(({ muscle, thisWeek, lastWeek }) => (
         <View key={muscle} style={styles.freqRow}>
-          <Text style={styles.freqMuscle} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.freqMuscle} numberOfLines={1}>
             {MUSCLE_DISPLAY_NAMES[muscle] ?? muscle}
           </Text>
-          <Text style={styles.freqCounts}>
-            <Text style={[styles.freqCountBold, thisWeek > lastWeek && styles.freqCountUp]}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.freqCounts}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.freqCountBold, thisWeek > lastWeek && styles.freqCountUp]}>
               {thisWeek}
             </Text>
-            <Text style={styles.freqDivider}> this · </Text>
-            <Text style={styles.freqLastWeek}>{lastWeek} last</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.freqDivider}> this · </Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.freqLastWeek}>{lastWeek} last</Text>
           </Text>
         </View>
       ))}
@@ -217,7 +217,7 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
           accessibilityState={{ expanded: showAll }}
           accessibilityLabel={showAll ? 'Show less' : `Show all ${rows.length}`}
         >
-          <Text style={styles.freqToggleText}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.freqToggleText}>
             {showAll ? 'Show less' : `Show all (${rows.length})`}
           </Text>
           <Ionicons
@@ -257,7 +257,7 @@ export function WorkloadCard({ data }) {
   return (
     <View style={styles.workloadCard}>
       <View style={styles.rowBetween}>
-        <Text style={styles.workloadTitle}>Training load</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.workloadTitle}>Training load</Text>
         <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8 to 1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
       </View>
 
@@ -267,21 +267,21 @@ export function WorkloadCard({ data }) {
 
       <View style={styles.workloadStats}>
         <View style={styles.workloadStat}>
-          <Text style={styles.workloadStatValue}>{(ratio).toFixed(2)}</Text>
-          <Text style={styles.workloadStatLabel}>vs recent average</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{(ratio).toFixed(2)}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>vs recent average</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text style={styles.workloadStatValue}>{acute.toLocaleString('en-GB')}</Text>
-          <Text style={styles.workloadStatLabel}>This week (kg)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{acute.toLocaleString('en-GB')}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>This week (kg)</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text style={styles.workloadStatValue}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text style={styles.workloadStatLabel}>4-wk avg (kg)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{chronic.toLocaleString('en-GB')}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>4-wk avg (kg)</Text>
         </View>
       </View>
 
-      <Text style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
-      {!!takeaway && <Text style={styles.workloadTakeaway}>{takeaway}</Text>}
+      <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
+      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={styles.workloadTakeaway}>{takeaway}</Text>}
     </View>
   );
 }

@@ -24,7 +24,7 @@ export default function SubscriptionPolicyScreen() {
       <BackHeader title="Free, Pro, and your data" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
           Here's what you get on Free, what Pro adds, and what happens to
           your data if you ever switch back.
         </Text>
@@ -117,7 +117,7 @@ export default function SubscriptionPolicyScreen() {
           </Body>
         </Section>
 
-        <Text style={styles.footer}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.footer}>
           We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.
         </Text>
       </ScrollView>
@@ -132,7 +132,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
@@ -140,18 +140,18 @@ function Section({ icon, tint, title, children }) {
 }
 
 function Body({ children }) {
-  return <Text style={styles.body}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={styles.body}>{children}</Text>;
 }
 
 function Strong({ children }) {
-  return <Text style={styles.strong}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={1.3} style={styles.strong}>{children}</Text>;
 }
 
 function Bullet({ children }) {
   return (
     <View style={styles.bulletRow}>
       <View style={styles.bulletDot} />
-      <Text style={styles.bulletText}>{children}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.bulletText}>{children}</Text>
     </View>
   );
 }
@@ -160,7 +160,7 @@ function KeyPoint({ children }) {
   return (
     <View style={styles.keypoint}>
       <Ionicons name="bookmark" size={14} color={colors.primary} />
-      <Text style={styles.keypointText}>{children}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.keypointText}>{children}</Text>
     </View>
   );
 }

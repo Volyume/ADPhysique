@@ -39,15 +39,15 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
     <View style={styles.cardioCard}>
       <View style={styles.cardioHeader}>
         <Ionicons name="heart-outline" size={18} color={colors.primary} />
-        <Text style={styles.cardioTitle}>Cardio this week</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.cardioTitle}>Cardio this week</Text>
         {done > 0 ? (
           <TouchableOpacity style={styles.cardioHistoryBtn} onPress={onHistory} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cardio history">
             <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.cardioHistoryLink}>History</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.cardioHistoryLink}>History</Text>
           </TouchableOpacity>
         ) : null}
       </View>
-      <Text style={styles.cardioSub}>{sub}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.cardioSub}>{sub}</Text>
       <Button
         title="Log cardio"
         variant="outline"
@@ -59,7 +59,7 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
       {/* COMP-011: only when there's logged cardio to misread; the empty
           state has nothing to double-count and stays clean. */}
       {done > 0 ? (
-        <Text style={styles.cardioFootnote}>
+        <Text maxFontSizeMultiplier={1.3} style={styles.cardioFootnote}>
           Cardio is already counted in your calorie target. Nothing to add back.
         </Text>
       ) : null}

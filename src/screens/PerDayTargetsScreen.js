@@ -114,19 +114,19 @@ export default function PerDayTargetsScreen({ navigation }) {
       <BackHeader title="Per-day targets" />
       <ScrollView contentContainerStyle={settingsStyles.content}>
         <View style={local.section}>
-          <Text style={[local.intro, liveText.intro]}>
+          <Text maxFontSizeMultiplier={1.3} style={[local.intro, liveText.intro]}>
             Plan a different calorie target for each day of the week. The diary shows that day's target shifted by your
             offset. This is planning only. It never changes your coaching, your weekly average, or your safety floor.
           </Text>
           {baseKcal > 0 ? (
-            <Text style={[local.baseLine, liveText.baseLine]}>
+            <Text maxFontSizeMultiplier={1.3} style={[local.baseLine, liveText.baseLine]}>
               Base target: {toEnergy(baseKcal, energyUnit)} {unitLabel}. No day can go below your safe floor of {toEnergy(floorKcal, energyUnit)} {unitLabel}.
             </Text>
           ) : (
             // L05-cross (2026-07-09 design audit): this named a screen with
             // no way to actually get there. Same stack as this screen, so a
             // plain in-stack navigate is enough (no cross-tab jump needed).
-            <Text
+            <Text maxFontSizeMultiplier={1.3}
               style={[local.baseLine, liveText.baseLine, local.baseLineLink, liveText.baseLineLink]}
               onPress={() => navigation.navigate('NutritionTargets')}
               accessibilityRole="link"
@@ -148,13 +148,13 @@ export default function PerDayTargetsScreen({ navigation }) {
             return (
               <View key={key} style={[local.row, liveText.row]}>
                 <View style={local.rowLabel}>
-                  <Text style={[local.day, liveText.day]} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
-                  <Text style={[local.dayTarget, liveText.dayTarget]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[local.day, liveText.day]} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[local.dayTarget, liveText.dayTarget]}>
                     {baseKcal > 0 ? `${toEnergy(displayed, energyUnit)} ${unitLabel}` : '-'}
                     {baseKcal > 0 && offsetMag > 0 ? (
-                      <Text style={[local.dayDelta, liveText.dayDelta]}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[local.dayDelta, liveText.dayDelta]}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
                     ) : null}
-                    {floored ? <Text style={[local.floorTag, liveText.floorTag]}>  floor</Text> : null}
+                    {floored ? <Text maxFontSizeMultiplier={1.3} style={[local.floorTag, liveText.floorTag]}>  floor</Text> : null}
                   </Text>
                 </View>
                 <Stepper

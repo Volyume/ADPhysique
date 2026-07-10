@@ -229,7 +229,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               >
                 <Ionicons name="arrow-back" size={24} color={t.colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={[styles.createTitle, live.createTitle]} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.createTitle, live.createTitle]} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
                 onPress={() => { haptics.selection(); onClose?.(); }}
@@ -253,7 +253,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 fieldStyle={styles.createNameInputField}
                 inputStyle={[styles.createNameInputText, live.createNameInputText]}
               />
-              <Text style={[styles.createLabel, live.createLabel]}>Muscle group</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.createLabel, live.createLabel]}>Muscle group</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.map(m => (
                   <Chip
@@ -270,7 +270,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   secondary_muscles column already does. The current primary
                   muscle is left out of the list so the same muscle cannot be
                   picked as both. */}
-              <Text style={[styles.createLabel, live.createLabel]}>Secondary muscles (optional)</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.createLabel, live.createLabel]}>Secondary muscles (optional)</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.filter(m => m !== createMuscle).map(m => {
                   const selected = createSecondaryMuscles.includes(m);
@@ -285,7 +285,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   );
                 })}
               </View>
-              <Text style={[styles.createLabel, live.createLabel]}>Equipment</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.createLabel, live.createLabel]}>Equipment</Text>
               <View style={styles.chipRow}>
                 {PICKER_EQUIPMENT.map(eq => (
                   <Chip
@@ -300,7 +300,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   exercise_type enum so a custom plank/carry/sprint can get the
                   correct SetEntry input schema instead of always defaulting
                   to weight_reps. */}
-              <Text style={[styles.createLabel, live.createLabel]}>Exercise type</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.createLabel, live.createLabel]}>Exercise type</Text>
               <View style={styles.chipRow}>
                 {EXERCISE_TYPE_OPTIONS.map(opt => (
                   <Chip
@@ -319,7 +319,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 disabled={creating}
               >
                 <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.onPrimary} />
-                <Text style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </KeyboardAwareScrollView>
           </KeyboardGestureArea>
@@ -425,9 +425,9 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   onPress={() => { haptics.selection(); onSelect(item); onClose(); }}
                 >
                   <View style={styles.pickerRowContent}>
-                    <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
                     {item.primaryMuscle ? (
-                      <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
                     ) : null}
                   </View>
                   <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={t.colors.textSecondary} />
@@ -447,7 +447,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   onPress={() => { haptics.selection(); openCreate(); }}
                 >
                   <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
-                  <Text style={[styles.createNewBtnText, live.createNewBtnText]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.createNewBtnText, live.createNewBtnText]}>
                     {query.trim().length > 0
                       ? `Create "${query.trim()}" as custom exercise`
                       : 'Create a custom exercise'}
@@ -457,7 +457,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               ListEmptyComponent={
                 <View style={styles.pickerEmpty}>
                   <Ionicons name="search-outline" size={32} color={t.colors.textMuted} style={{ marginBottom: spacing.md }} />
-                  <Text style={[styles.pickerEmptyText, live.pickerEmptyText]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.pickerEmptyText, live.pickerEmptyText]}>
                     {isSwapAction ? 'No swaps found. Try a different search.' : 'No matches found. Try a different search.'}
                   </Text>
                 </View>
