@@ -113,22 +113,79 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   and the pinned zero-arg handleDeleteEditedSet is untouched. Lint +
   full suite green at both landings (657 suites / 8,234 tests).
 
-## ⏸ SESSION PAUSED HERE (founder order 2026-07-10, usage window)
+- ✅ PAIR 5 (part) LANDED + PUSHED 2026-07-10 (resumed session). (a)
+  `579dedd` D30 dynamic-type codemod sweep: new re-runnable script
+  `scripts/codemods/add-max-font-multiplier.js` (AST-guided via
+  @babel/parser, no new dep, idempotent, --check dry-run); 2,076 caps
+  across 169 files, inserted BEFORE existing props so callers override;
+  32 already-capped sites (incl. RestTimer 1.15) untouched; RollingNumber
+  excluded by order; 19 guard suites pin-EXTENDED only (each literal now
+  also pins the cap; CoachOutput progressScanAssessment window 1200->1400
+  minimal, dated comment). Suite green 657/8,234, lint clean. The item-15
+  lane files were EXCLUDED from the sweep — re-run the committed script on
+  them in a spare slot: RootNavigator, ProgressPhotosScreen,
+  ProgressPhotoViewer, ExerciseDetailScreen.
+  (b) `3415e9f` item 15 ANDROID-POLISH HALF: expo-splash-screen ~31.0.13
+  (first-party Expo, MIT — dependency register) with the splash held
+  until themeReady then hidden (kills the black pre-theme cut; the fade
+  option is iOS-only in this version — honest note); android
+  monochromeImage derived programmatically (the raw foreground's glow
+  blob would smear under launcher tinting; mask thresholded, glow cut at
+  y=660, re-centred, inside the safe zone). FRESH EAS BUILD REQUIRED
+  (new native module + config plugin).
+- ⚠ OPEN FOUNDER ROUND — item 15 transitions half (recon complete, NO
+  build yet): Reanimated sharedTransitionTag DOES NOT EXIST in the
+  installed 4.1.7 (grep-verified against node_modules, not training
+  data) — the named technique is dead on this stack. Photo grid->viewer:
+  hand-rolled measure+clone hero morph is the strong case (same
+  component tree, image content, contained blast radius). Exercise
+  card->detail is the fork: (A) true cloned-card morph (max fidelity;
+  hard back-gesture handling on the JS stack) vs (B) origin-aware zoom —
+  extend heroZoomTransition (RootNavigator.js:266-290) to grow the
+  incoming screen from the tapped card's measured rect (not a true
+  shared element; benefits every heroZoom route; graceful fallback when
+  origin params absent). PressableCard needs a small ref/measure
+  addition either way. DO NOT build until the founder rules.
+- 📋 EDGE-TO-EDGE FINDINGS (item 15 recon; fixes = follow-up slot):
+  E2E is ON in SDK 54 builds (no app.json opt-out; targetSdk 35 via
+  build-properties). (1) App.js:989 StatusBar backgroundColor is a no-op
+  under E2E (the CP-10 stage-2 live status-bar colour does nothing on
+  Android); (2) same class at YearOfLiftsScreen.js:604; (3) 9 raw RN
+  Modal surfaces need inset audits (AppAlert, EatenTimePicker,
+  HomeChangeWorkoutSheet, HomeBlockShapeSheet, InfoTooltip,
+  WorkoutSummary, PlanLibrary, ActiveWorkout — its swap modal at :3722
+  is already correct — RoutineDetail); overlaps item 17's Modal->gorhom
+  migration; (4) edges={['top']}-only screens are fine under tabs, check
+  stack-pushed uses; (5) light-theme 3-button nav shows a grey contrast
+  scrim (tunable via androidNavigationBar.enforceContrast once screens
+  verified).
 
-**RESUME POINT — next slots, in order:**
-1. D30 dynamic-type codemod sweep (founder-ruled; DECISIONS D30 —
-   explicit maxFontSizeMultiplier on every raw Text/TextInput, house
-   value 1.3; RestTimer's 1.15 outlier and RollingNumber's uncapped
-   default stay untouched).
-2. Item 15 shared-element transitions + Android polish (themed icon,
-   edge-to-edge, splash fade).
-3. Then slate order: item 16 MLKit scanner; Pair 6 drag reorder + giant
-   sets (item 21 is ENGINE-ADJACENT — lead reviews the planEngine/
-   logging diff hands-on); Pair 7 iOS Live Activity wiring + Android
-   rest-timer actions; Pair 8 dietary discoverability + item 17 small
-   tails; smalls 7/9/10/11 interleave into spare slots. The theming
-   stage-4 tail continues as component/screen batches (coverage tracker
-   below); stage 5 stays honesty-gated.
+## ⏸ RESUME POINT — next slots, in order:
+1. Item 15 transitions half — BLOCKED on the founder fork above. Photo
+   grid->viewer hero morph is buildable the moment the round is answered
+   (its technique is fixed either way); then sweep the 4 excluded lane
+   files with the D30 codemod.
+2. Item 16 MLKit scanner (Pair 5's second half, not started).
+3. Then slate order: Pair 6 drag reorder + giant sets (item 21 is
+   ENGINE-ADJACENT — lead reviews the planEngine/logging diff hands-on);
+   Pair 7 iOS Live Activity wiring + Android rest-timer actions; Pair 8
+   dietary discoverability + item 17 small tails (+ the edge-to-edge
+   fixes above); smalls 7/9/10/11 interleave into spare slots. The
+   theming stage-4 tail continues as component/screen batches (coverage
+   tracker below); stage 5 stays honesty-gated.
+
+**SUPABASE / MIGRATIONS (2026-07-10 resumed session, IN PROGRESS):**
+Founder connected a Supabase MCP connector to the session and proposed
+switching cloud migrations from founder-run to CLAUDE-RUN. Verified
+from the merged commits: Codex wrote NO SQL migration files — its only
+backend change is the app-store-notifications edge function fix
+(0987ecf, auto-deploys on main; deployed version to be verified via the
+connector). The cloud gap is exactly migrate_110..116. Plan: read-only
+schema audit first, then a structured founder round covering (a) the
+run-against-production confirmation for the missing files (constitution
+still requires that exact phrase) and (b) recording the founder-run ->
+Claude-run change in CLAUDE.md and supabase/README. 049/059 stay HELD
+regardless.
 
 **OPEN FOUNDER ITEMS (new this session, ask when convenient):**
 - Repeat-set on the set-row context menu: no per-row repeat action
